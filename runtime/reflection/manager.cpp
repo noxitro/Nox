@@ -1,0 +1,95 @@
+﻿///	@file	manager.cpp
+///	@brief	manager
+#include	"stdafx.h"
+#include	"manager.h"
+
+#include	"class_info.h"
+#include	"enum_info.h"
+
+using namespace nox;
+using namespace nox::reflection;
+
+const ClassInfo* Reflection::FindClassInfo(u32 typeID)const noexcept
+{
+	if (class_data_map_.contains(typeID) == false)
+	{
+		return nullptr;
+	}
+	return class_data_map_.at(typeID).class_info_ptr;
+}
+
+const ClassInfo* Reflection::FindClassInfo(std::u8string_view name)const noexcept
+{
+	if (class_data_ptr_map_with_name_.contains(name) == false)
+	{
+		return nullptr;
+	}
+	return class_data_ptr_map_with_name_.at(name)->class_info_ptr;
+}
+
+void Reflection::Register(const class ClassInfo& data)
+{
+	NOX_CONDITINAL_DEBUG(nox::debug::Assert(class_data_map_.contains(data.GetTypeID()), u""));
+
+	class_data_map_.emplace(data.GetTypeID(), ClassData{ .class_info_ptr = &data });
+
+	//	親子関係の構築
+	//	親より先に子が登録された場合の保険処理
+	ClassData& newClassData = class_data_map_.at(data.GetTypeID());
+	const std::span<const Type*const> baseTypeList = data.GetBaseTypeList();
+	for (const auto& baseType : baseTypeList)
+	{
+		if (class_data_map_.contains(baseType->GetTypeID()) == false)
+		{
+			class_data_map_.emplace(baseType->GetTypeID(), ClassData());
+		}
+	}
+
+	for (const Type*const baseType : baseTypeList)
+	{
+		ClassData& parentClassData = class_data_map_.at(baseType->GetTypeID());
+		if (parentClassData.child_ptr == nullptr)
+		{
+			parentClassData.child_ptr = &newClassData;
+		}
+		else
+		{
+			for (ClassData* classDataPtr = parentClassData.child_ptr;/*none*/; classDataPtr = classDataPtr->next_ptr)
+			{
+				if (classDataPtr->next_ptr == nullptr)
+				{
+					classDataPtr->next_ptr = &newClassData;
+					newClassData.prev_ptr = classDataPtr;
+					break;
+				}
+			}
+		}
+	}
+
+	//	グローバル空間への登録
+	const u32 namespaceID = data.GetNamespaceID();
+	if (global_data_map_.contains(namespaceID) == false)
+	{
+		global_data_map_.emplace(namespaceID, GlobalData());
+	}
+	GlobalData& globalData = global_data_map_.at(namespaceID);
+	globalData.class_info_ptr_map.emplace(data.GetTypeID(), &data);
+}
+
+void Reflection::Unregister(const class ClassInfo& data)
+{
+	if (class_data_map_.erase(data.GetTypeID()) == 0)
+	{
+		NOX_CONDITINAL_DEBUG(debug::Assert(false, u"クラスデータの登録に失敗しました"));
+	}
+}
+
+void Reflection::Register(const EnumInfo& data)
+{
+
+}
+
+void Reflection::Unregister(const EnumInfo& data)
+{
+
+}

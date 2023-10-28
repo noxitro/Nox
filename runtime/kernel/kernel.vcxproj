@@ -1,0 +1,474 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Master|x64">
+      <Configuration>Master</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="if\advanced_definition.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="if\advanced_type.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="if\algorithm.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="if\any.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="if\assertion.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="if\basic_definition.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="if\basic_type.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="if\convert_string.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="if\crc32.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="if\delegate.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="if\function.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="if\intrusive_ptr.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="if\log_trace.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="if\string.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="kernel.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="math\color.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="math\math.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="math\matrix3d.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="math\matrix4d.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="math\point2d.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="math\point3d.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="math\point3x3.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="math\point4d.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="math\point4x4.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="math\quaternion.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="math\vector2d.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="math\vector3d.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="math\vector4d.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="math\vector_util.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="memory\memory.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="memory\memory_definition.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="memory\memory_util.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="memory\stl_allocate_adapter.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="os\detail\atomic_x64.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="os\detail\win64.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="os\mutex.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="os\mutex_x64.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="os\os.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="os\x64.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="type_traits\concepts.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="type_traits\field_signature.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="type_traits\function_signature.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="type_traits\type_name.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="type_traits\type_traits.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="if\advanced_definition.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="if\advanced_type.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="if\algorithm.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="if\any.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="if\assertion.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="if\basic_definition.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="if\basic_type.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="if\convert_string.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="if\crc32.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="if\delegate.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="if\function.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="if\intrusive_ptr.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="if\log_trace.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="if\string.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="math\color.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="math\math.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="math\matrix3d.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="math\matrix4d.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="math\point2d.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="math\point3d.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="math\point3x3.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="math\point4d.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="math\point4x4.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="math\quaternion.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="math\vector2d.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="math\vector3d.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="math\vector4d.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="math\vector_util.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="memory\memory.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="memory\memory_definition.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="memory\memory_util.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="memory\stl_allocate_adapter.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="os\detail\atomic_x64.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="os\detail\win64.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="os\mutex.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="os\mutex_x64.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="os\os.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="os\x64.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <SubType>
+      </SubType>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Master|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="type_traits\concepts.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="type_traits\field_signature.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="type_traits\function_signature.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="type_traits\type_name.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="type_traits\type_traits.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{ce18e5d8-faa4-48b4-a1d2-dab85fc1acbb}</ProjectGuid>
+    <RootNamespace>kernel</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\property_sheet\nox_common.props" />
+    <Import Project="..\property_sheet\nox_debug.props" />
+    <Import Project="..\property_sheet\nox_x64.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\property_sheet\nox_common.props" />
+    <Import Project="..\property_sheet\nox_release.props" />
+    <Import Project="..\property_sheet\nox_x64.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\property_sheet\nox_common.props" />
+    <Import Project="..\property_sheet\nox_master.props" />
+    <Import Project="..\property_sheet\nox_x64.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

@@ -1,0 +1,220 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Master|x64">
+      <Configuration>Master</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="definition.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="detail\details.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="detail\field_signature.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="detail\function_signature.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="enum_info.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="field_info.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="global_info.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="manager.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="method_info.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="reflection.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="reflection_object.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="type.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="class_info.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="utility.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="definition.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="detail\details.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="detail\field_signature.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="detail\function_signature.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="enum_info.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="field_info.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="global_info.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="manager.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="method_info.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="reflection_object.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <SubType>
+      </SubType>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Master|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="type.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="class_info.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="utility.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{45ab985e-3772-4261-95ec-c6de7d26edbb}</ProjectGuid>
+    <RootNamespace>reflection</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\property_sheet\nox_common.props" />
+    <Import Project="..\property_sheet\nox_debug.props" />
+    <Import Project="..\property_sheet\nox_x64.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\property_sheet\nox_common.props" />
+    <Import Project="..\property_sheet\nox_release.props" />
+    <Import Project="..\property_sheet\nox_x64.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\property_sheet\nox_common.props" />
+    <Import Project="..\property_sheet\nox_master.props" />
+    <Import Project="..\property_sheet\nox_x64.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile />
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <ClCompile />
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'">
+    <ClCompile>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
