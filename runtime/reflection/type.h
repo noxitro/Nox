@@ -11,6 +11,7 @@ namespace nox::reflection
 	namespace detail
 	{
 		struct ReflectionTypeActivator;
+		struct ReflectionTypeActivatorImpl;
 	}
 
 	/// @brief 汎用型情報
@@ -18,46 +19,44 @@ namespace nox::reflection
 	{
 		friend struct nox::reflection::detail::ReflectionTypeActivator;
 
-		[[nodiscard]] inline constexpr Type()noexcept :
-			id_(0U),
-			kind_(TypeKind::Invalid),
-			attribute_flags_(TypeAttributeFlag::None),
-			size_(0U),
-			alignment_(0U),
-			fullname_{}
-		{}
-
 		[[nodiscard]] inline constexpr explicit Type(
 			const std::uint32_t _id,
 			const TypeKind _kind,
 			const TypeAttributeFlag _attribute_flags,
 			const size_t _size,
 			const size_t _alignment,
-			const std::u8string_view _name
+			const std::u8string_view name,
+			const Type* pointee_type,
+			const Type* desugar_type
 		)noexcept :
 			id_(_id),
 			kind_(_kind),
 			attribute_flags_(_attribute_flags),
 			size_(_size),
 			alignment_(_alignment),
-			fullname_(_name)
+			name_(name),
+			pointee_type_(pointee_type),
+			desugar_type_(desugar_type)
 		{}
 	public:
 
-		[[nodiscard]] inline constexpr Type(const Type&)noexcept = delete;
-		[[nodiscard]] inline constexpr Type(const Type&&)noexcept = delete;
+	//	[[nodiscard]] inline constexpr Type(const Type&)noexcept = delete;
+	//	[[nodiscard]] inline constexpr Type(const Type&&)noexcept = delete;
 
 		/// @brief 等価比較
 		inline	constexpr	bool	Equal(const Type& type)const noexcept { return id_ == type.id_; }
 
-
+		/// @brief 変換可能かどうか
+		/// @param to 
+		/// @return 
+		bool	IsConvertible(const Type& to)const noexcept;
 
 #pragma region アクセサ
 		/// @brief 型IDを取得
 		[[nodiscard]] inline	constexpr	std::uint32_t GetTypeID()const noexcept { return id_; }
 
 		/// @brief 型の名前を取得
-		[[nodiscard]] inline	constexpr std::u8string_view GetTypeName()const noexcept { return fullname_; }
+		[[nodiscard]] inline	constexpr std::u8string_view GetTypeName()const noexcept { return name_; }
 
 		/// @brief 型のサイズを取得
 		[[nodiscard]] inline	constexpr std::size_t GetTypeSize()const noexcept { return size_; }
@@ -92,7 +91,7 @@ namespace nox::reflection
 #pragma endregion
 
 #pragma region operator
-		[[nodiscard]] inline constexpr bool operator =(const Type&)noexcept = delete;
+	//	[[nodiscard]] inline constexpr bool operator =(const Type&)noexcept = delete;
 
 		[[nodiscard]] inline constexpr bool operator ==(const Type& type)const noexcept { return Equal(type); }
 
@@ -118,53 +117,62 @@ namespace nox::reflection
 
 		/// @brief		型名
 		/// @details	コンパイル時に判断された名前なので、開発ビルド以外では使用禁止
-		std::u8string_view fullname_;
+		std::u8string_view name_;
+
+		/// @brief ポインタが指す型
+		const Type* pointee_type_;
+
+		/// @brief 糖衣構文
+		const Type* desugar_type_;
+
 	};
 	
+	class TypeImpl : public Type
+	{
+	public:
+
+	};
 
 	namespace detail
 	{
 		struct ReflectionTypeActivator
 		{
+			/// @brief 無効タイプ
+			static inline	constexpr	Type TypeofNone()noexcept { return Type(
+				0U,
+				TypeKind::Invalid,
+				TypeAttributeFlag::None,
+				0U,
+				0U,
+				u8"",
+				nullptr,
+				nullptr
+			); }
+
 			template<class T>
 			static inline	constexpr	Type TypeofImpl()noexcept
 			{
-				if constexpr (IsSizeofTypeValue<T> == true)
-				{
-					return Type(
-						util::GetUniqueTypeID<T>(),
-						nox::reflection::GetTypeKind<T>(),
-						nox::reflection::GetTypeAttributeFlags<T>(),
-						sizeof(T),
-						std::alignment_of_v<T>,
-						util::GetTypeName<T>()
-					);
-				}
-				//	sizeofできない型 void型など
-				else
-				{
-					return Type(
-						util::GetUniqueTypeID<T>(),
-						nox::reflection::GetTypeKind<T>(),
-						nox::reflection::GetTypeAttributeFlags<T>(),
-						0U,
-						0U,
-						util::GetTypeName<T>()
-					);
-				}
+				return Type(
+					util::GetUniqueTypeID<T>(),
+					nox::reflection::GetTypeKind<T>(),
+					nox::reflection::GetTypeAttributeFlags<T>(),
+					IsSizeofTypeValue<T> ? sizeof(T) : 0,
+					std::alignment_of_v<T>,
+					util::GetTypeName<T>(),
+					nullptr,
+					nullptr
+				);
 			}
+		};	
 
-			static inline	constexpr	Type TypeofNone()noexcept { return Type(); }
-		};
+		/// @brief 無効型
+		constexpr Type InvalidTypeImpl = reflection::detail::ReflectionTypeActivator::TypeofNone();
 
 		template<class T>
 		struct ReflectionTypeHolder
 		{
 			static constexpr Type value = reflection::detail::ReflectionTypeActivator::TypeofImpl<T>();
 		};
-
-		/// @brief 無効型
-		constexpr Type InvalidTypeImpl = reflection::detail::ReflectionTypeActivator::TypeofNone();
 	}
 
 	/// @brief 無効型
@@ -175,7 +183,7 @@ namespace nox::reflection
 	/// @tparam T 型
 	/// @return 型情報
 	template<class T>
-	[[nodiscard]] inline	constexpr const Type& Typeof()noexcept
+	[[nodiscard]] inline	consteval const Type& Typeof()noexcept
 	{
 		return reflection::detail::ReflectionTypeHolder<T>::value;
 	}

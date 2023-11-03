@@ -13,12 +13,6 @@ namespace nox::reflection
 	class ClassInfo
 	{
 	public:
-		inline explicit ClassInfo(const Type& _type)noexcept :
-			type_(_type) 
-		{
-
-		}
-
 #pragma region アクセサ
 		[[nodiscard]] inline	constexpr	std::u8string_view GetName()const noexcept { return fullname_; }
 		[[nodiscard]] inline	constexpr	std::u8string_view GetNamespace()const noexcept { return namespace_; }
@@ -78,6 +72,9 @@ namespace nox::reflection
 
 		/// @brief 自身のタイプ
 		const Type& type_;
+
+		/// @brief 自身が所属するクラスのID
+		const std::uint32_t	external_class_type_id_;
 
 		/// @brief 継承型テーブル
 		const reflection::Type*const* base_type_table_;

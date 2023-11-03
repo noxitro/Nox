@@ -9,7 +9,18 @@
 using namespace nox;
 using namespace nox::reflection;
 
-const ClassInfo* Reflection::FindClassInfo(u32 typeID)const noexcept
+template<class T, typename FuncType> 
+	requires(std::is_pointer_v<FunctionReturnType<FuncType>>)
+inline constexpr FunctionReturnType<FuncType> At(T& map, typename T::key_type key, FuncType func)
+{
+	if (map.contains(key) == false)
+	{
+		return nullptr;
+	}
+	return std::invoke(func, map.at(key));
+}
+
+const ClassInfo* Reflection::FindClassInfo(std::uint32_t typeID)const noexcept
 {
 	if (class_data_map_.contains(typeID) == false)
 	{
@@ -18,13 +29,13 @@ const ClassInfo* Reflection::FindClassInfo(u32 typeID)const noexcept
 	return class_data_map_.at(typeID).class_info_ptr;
 }
 
-const ClassInfo* Reflection::FindClassInfo(std::u8string_view name)const noexcept
+const ClassInfo* Reflection::FindClassInfoFromNameHash(const std::uint32_t namehash)const noexcept
 {
-	if (class_data_ptr_map_with_name_.contains(name) == false)
+	if (class_data_ptr_map_with_name_.contains(namehash) == false)
 	{
 		return nullptr;
 	}
-	return class_data_ptr_map_with_name_.at(name)->class_info_ptr;
+	return class_data_ptr_map_with_name_.at(namehash)->class_info_ptr;
 }
 
 void Reflection::Register(const class ClassInfo& data)

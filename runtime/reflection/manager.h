@@ -7,35 +7,35 @@ namespace nox::reflection
 	class Reflection
 	{
 	private:
+		/// @brief クラスデータ
 		struct ClassData
 		{
 			const class ClassInfo* class_info_ptr = nullptr;
 			ClassData* next_ptr = nullptr;
 			const ClassData* prev_ptr = nullptr;
 			ClassData* child_ptr = nullptr;
-
-		/*	inline constexpr explicit ClassData(const class ClassInfo* _classInfoPtr)noexcept:
-				class_info_ptr(_classInfoPtr)
-			{
-
-			}*/
 		};
 
 		/// @brief 名前空間に所属する情報
 		struct GlobalData
 		{
-			UnorderedMap<u32, const class ClassInfo*> class_info_ptr_map;
 			const class GlobalInfo* global_into_ptr = nullptr;
+			UnorderedMap<u32, const class ClassInfo*> class_info_ptr_map;
 		};
 	public:
 		
-		const class ClassInfo* FindClassInfo(u32 typeID)const noexcept;
-		const class ClassInfo* FindClassInfo(std::u8string_view fullName)const noexcept;
+		const class ClassInfo* FindClassInfo(std::uint32_t typeID)const noexcept;
+		const class ClassInfo* FindClassInfoFromNameHash(std::uint32_t namehash)const noexcept;
+		const class ClassInfo* FindClassInfoFromName(std::u8string_view fullName)const noexcept { return FindClassInfoFromNameHash(util::crc32(fullName)); }
 
 		template<concepts::ClassUnion T>
 		inline const class ClassInfo* FindClassInfo()const noexcept {
 			return FindClassInfo(util::GetUniqueTypeID<T>());
 		}
+
+		const class EnumInfo* FindEnumInfo(std::uint32_t typeID)const noexcept;
+		const class EnumInfo* FindEnumInfoFromNameHash(std::uint32_t namehash)const noexcept;
+		const class EnumInfo* FindEnumInfoFromName(std::u8string_view fullName)const noexcept { return FindEnumInfoFromNameHash(util::crc32(fullName)); }
 
 
 		static	inline	void		CreateInstance() { instance_ = new Reflection(); }
@@ -60,7 +60,7 @@ namespace nox::reflection
 
 		/// @brief		クラスアドレスデータマップ
 		///	@details	key: fullname, value: class data pointer
-		UnorderedMap<std::u8string_view, const ClassData*> class_data_ptr_map_with_name_;
+		UnorderedMap<u32, const ClassData*> class_data_ptr_map_with_name_;
 
 		/// @brief		列挙体ポインタマップ
 		/// @details	key: typeID, value: enum info pointer

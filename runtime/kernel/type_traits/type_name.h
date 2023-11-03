@@ -14,7 +14,7 @@ namespace nox::util
 	/**
 	 * @brief 型名を取得
 	*/
-	template <class T> requires(!std::is_const_v<T> && !std::is_volatile_v<T>)
+	template <class T>// requires(!std::is_const_v<T> && !std::is_volatile_v<T>)
 		[[nodiscard]]	constexpr auto GetTypeName(void)noexcept
 	{
 #if defined(__clang__)

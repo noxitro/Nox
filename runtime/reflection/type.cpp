@@ -5,6 +5,23 @@
 
 using namespace nox::reflection;
 
+bool	Type::IsConvertible(const Type& to)const noexcept
+{
+	if (*this == to)
+	{
+		return true;
+	}
+
+	//	修飾子を取り除いた型が一致するか
+
+
+	//	非ポインタ型のconst型かどうか
+
+
+
+	return false;
+}
+
 bool	nox::reflection::IsConvertible(const Type& a, const Type& b)
 {
 	if (a.Equal(b) == true)
@@ -12,6 +29,7 @@ bool	nox::reflection::IsConvertible(const Type& a, const Type& b)
 		return true;
 	}
 
+	
 
 	return true;
 }

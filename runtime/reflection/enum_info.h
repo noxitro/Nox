@@ -6,6 +6,7 @@
 namespace nox::reflection
 {
 	class ReflectionObject;
+
 	/// @brief Enum値情報
 	class EnumVariableInfo
 	{
@@ -267,11 +268,31 @@ namespace nox::reflection
 		/// @brief 属性テーブルの長さ
 		std::uint8_t attribute_length_;
 	};
+
+	/// @brief Enum情報
 	class EnumInfo
 	{
+		inline constexpr explicit EnumInfo(const EnumInfo&)noexcept = delete;
+		inline constexpr explicit EnumInfo(const EnumInfo&&)noexcept = delete;
 	public:
+		inline constexpr explicit EnumInfo(
+			std::u8string_view fullname,
+			const ReflectionObject* const* attribute_ptr_table,
+			std::uint8_t attribute_length,
+			const EnumVariableInfo* const* variable_ptr_table,
+			std::uint8_t variable_length,
+			const Type& type
+		)noexcept :
+			fullname_(fullname),
+			attribute_ptr_table_(attribute_ptr_table),
+			attribute_length_(attribute_length),
+			variable_ptr_table_(variable_ptr_table),
+			variable_length_(variable_length),
+			type_(type)
+		{}
 
 	private:
+		/// @brief 型名
 		std::u8string_view	fullname_;
 
 		/// @brief 属性テーブル
@@ -280,8 +301,43 @@ namespace nox::reflection
 		/// @brief 属性テーブルの長さ
 		std::uint8_t attribute_length_;
 
+		/// @brief Enum値情報テーブル
+		const EnumVariableInfo* const* variable_ptr_table_;
+
+		/// @brief Enum値情報テーブルの長さ
+		std::uint8_t	variable_length_;
+
+		/// @brief 型情報
 		const Type& type_;
 	};
 
-
+	namespace detail
+	{
+		/// @brief Enum値情報を作成
+		/// @tparam T 
+		/// @param fullname_ 
+		/// @param attribute_ptr_table 
+		/// @param attribute_length 
+		/// @param variable_ptr_table 
+		/// @param variable_length 
+		/// @return 
+		template<class T> requires(std::is_enum_v<T>)
+		inline constexpr EnumInfo CreateEnumInfo(
+			std::u8string_view fullname_,
+			const ReflectionObject* const* attribute_ptr_table,
+			std::uint8_t attribute_length,
+			const EnumVariableInfo* const* variable_ptr_table,
+			std::uint8_t variable_length
+		)noexcept
+		{
+			return EnumInfo(
+				fullname_,
+				attribute_ptr_table,
+				attribute_length,
+				variable_ptr_table,
+				variable_length,
+				Typeof<T>()
+			);
+		}
+	}
 }

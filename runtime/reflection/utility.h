@@ -66,7 +66,7 @@ namespace nox::reflection
 	 * @return タイプ識別
 	*/
 	template<class T>
-		requires(std::is_pointer_v<T> == false && std::is_reference_v<T> == false)
+		//requires(std::is_pointer_v<T> == false && std::is_reference_v<T> == false)
 	[[nodiscard]] constexpr TypeKind	GetTypeKind()noexcept
 	{
 		if constexpr (std::is_same_v<T, void> == true)
@@ -142,7 +142,7 @@ namespace nox::reflection
 			return TypeKind::Enum;
 		}
 		//	else if constexpr (std::is_scoped_enum_v<T> == true)
-		else if constexpr (IsScopedEnumV<T> == true)
+		else if constexpr (IsScopedEnumValue<T> == true)
 		{
 			return TypeKind::ScopedEnum;
 		}
@@ -226,15 +226,15 @@ namespace nox::reflection
 		{
 			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeAttributeFlag::Unsigned);
 		}
-		if constexpr (IsConstPointerV<T> == true)
+		if constexpr (IsConstPointerValue<T> == true)
 		{
 			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeAttributeFlag::ConstPointer);
 		}
-		if constexpr (IsConstLvalueReferenceV<T> == true)
+		if constexpr (IsConstLvalueReferenceValue<T> == true)
 		{
 			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeAttributeFlag::ConstLvalueReference);
 		}
-		if constexpr (IsConstRvalueReferenceV<T> == true)
+		if constexpr (IsConstRvalueReferenceValue<T> == true)
 		{
 			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeAttributeFlag::ConstRvalueReference);
 		}

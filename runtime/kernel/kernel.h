@@ -22,3 +22,5 @@
 #include	"if/log_trace.h"
 
 #include	"if/advanced_definition.h"
+
+#include	"math/math.h"

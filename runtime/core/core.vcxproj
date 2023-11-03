@@ -15,12 +15,20 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="object.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="stdafx.h">
       <SubType>
       </SubType>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="object.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <SubType>
       </SubType>

@@ -2,6 +2,7 @@
 ///	@brief	reflection
 #pragma once
 
-#include	"../kernel/kernel.h"
+#include	"manager.h"
+#include	"reflection_object.h"
 
-#include	"typeinfo_class.h"
+#include	"field_info.h"

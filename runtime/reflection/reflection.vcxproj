@@ -15,6 +15,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="attribute.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="definition.h">
       <SubType>
       </SubType>
@@ -71,12 +75,20 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="typeof.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="utility.h">
       <SubType>
       </SubType>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="attribute.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="definition.cpp">
       <SubType>
       </SubType>
@@ -129,6 +141,10 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="class_info.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="typeof.cpp">
       <SubType>
       </SubType>
     </ClCompile>

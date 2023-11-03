@@ -8,6 +8,34 @@
 
 namespace nox
 {
+#pragma region ContainerElementType
+	namespace detail
+	{
+		template<class T>
+		struct ContainerElement
+		{
+			using type = T;
+		};
+
+		template<class T> requires(std::is_array_v<T>)
+			struct ContainerElement<T>
+		{
+			using type = std::remove_extent_t<T>;
+		};
+
+		template<class T> requires(std::is_same_v<typename T::value_type, typename T::value_type> && !std::is_array_v<T>)
+		struct ContainerElement<T>
+		{
+			using type = typename T::value_type;
+		};
+	}
+	template<class T>
+	using ContainerElementType = typename detail::ContainerElement<T>::type;
+
+	
+#pragma endregion
+
+
 	namespace detail
 	{
 		/// @brief グローバル関数ポインタ型か
@@ -193,7 +221,7 @@ namespace nox
 	/// @brief const pointer型を表現する
 	/// @tparam T 
 	template<class T>
-	using AddConstPointerT = std::conditional_t<
+	using AddConstPointerType = std::conditional_t<
 		std::is_pointer_v<T>,
 		std::add_pointer_t<std::add_const_t<std::remove_pointer_t<T>>>,
 		T>;
@@ -202,7 +230,7 @@ namespace nox
 	 * @brief const pointerからconstを除去する
 	*/
 	template<class T>
-	using RemoveConstPointerT = std::conditional_t<
+	using RemoveConstPointerType = std::conditional_t<
 		std::is_pointer_v<T>,
 		std::add_pointer_t<std::remove_const_t<std::remove_pointer_t<T>>>,
 		T>;
@@ -211,7 +239,7 @@ namespace nox
 	 * @brief const lvalue reference型を表現する
 	*/
 	template<class T>
-	using RemoveConstLvalueReferenceT = std::conditional_t<
+	using RemoveConstLvalueReferenceType = std::conditional_t<
 		std::is_lvalue_reference_v<T>,
 		std::add_lvalue_reference_t<std::remove_const_t<std::remove_reference_t<T>>>,
 		T>;
@@ -220,7 +248,7 @@ namespace nox
 	 * @brief lvalue reference型を表現する
 	*/
 	template<class T>
-	using AddConstLvalueReferenceT =
+	using AddConstLvalueReferenceType =
 		std::conditional_t<
 		std::is_lvalue_reference_v<T>,
 		std::add_lvalue_reference_t<std::add_const_t<std::remove_reference_t<T>>>,
@@ -230,7 +258,7 @@ namespace nox
 	 * @brief const rvalue reference型を表現する
 	*/
 	template<class T>
-	using RemoveConstRvalueReferenceT = std::conditional_t<
+	using RemoveConstRvalueReferenceType = std::conditional_t<
 		std::is_rvalue_reference_v<T>,
 		std::add_rvalue_reference_t<std::remove_const_t<std::remove_reference_t<T>>>,
 		T>;
@@ -239,7 +267,7 @@ namespace nox
 	 * @brief rvalue reference型を表現する
 	*/
 	template<class T>
-	using AddConstRvalueReferenceT =
+	using AddConstRvalueReferenceType =
 		std::conditional_t<
 		std::is_rvalue_reference_v<T>,
 		std::add_rvalue_reference_t<std::add_const_t<std::remove_reference_t<T>>>,
@@ -249,41 +277,41 @@ namespace nox
 	 * @brief constを除去
 	*/
 	template<class T>
-	using remove_const_pointer_reference_t = RemoveConstRvalueReferenceT<RemoveConstLvalueReferenceT<RemoveConstPointerT<T>>>;
+	using RemoveConstPointerReferenceType = RemoveConstRvalueReferenceType<RemoveConstLvalueReferenceType<RemoveConstPointerType<T>>>;
 
 	/**
 	 * @brief const pointer型かどうか
 	*/
 	template<class T>
-	constexpr bool IsConstPointerV = std::is_pointer_v<T> && std::is_same_v <T, AddConstPointerT<T>>;
+	constexpr bool IsConstPointerValue = std::is_pointer_v<T> && std::is_same_v <T, AddConstPointerType<T>>;
 
 	/**
 	 * @brief const lvalue reference型かどうか
 	*/
 	template<class T>
-	constexpr bool IsConstLvalueReferenceV = std::is_lvalue_reference_v<T> && std::is_same_v<T, AddConstLvalueReferenceT<T>>;
+	constexpr bool IsConstLvalueReferenceValue = std::is_lvalue_reference_v<T> && std::is_same_v<T, AddConstLvalueReferenceType<T>>;
 
 	/**
 	 * @brief const rvalue reference型かどうか
 	*/
 	template<class T>
-	constexpr bool IsConstRvalueReferenceV = std::is_rvalue_reference_v<T> && std::is_same_v<T, AddConstRvalueReferenceT<T>>;
+	constexpr bool IsConstRvalueReferenceValue = std::is_rvalue_reference_v<T> && std::is_same_v<T, AddConstRvalueReferenceType<T>>;
 
 	/**
 	 * @brief あらゆるconst型か
 	*/
 	template<class T>
-	constexpr bool IsConstAllV = std::is_const_v<T> || IsConstPointerV<T> || IsConstLvalueReferenceV<T> || IsConstRvalueReferenceV<T>;
+	constexpr bool IsConstAllValue = std::is_const_v<T> || IsConstPointerValue<T> || IsConstLvalueReferenceValue<T> || IsConstRvalueReferenceValue<T>;
 
 	/**
 	 * @brief シーケンスコンテナ
 	*/
 	template<class T>
-	constexpr bool IsSequenceContainerClassV = detail::IsStdArrayV<T> || detail::IsVectorV<T>;
+	constexpr bool IsSequenceContainerClassValue = detail::IsStdArrayV<T> || detail::IsVectorV<T>;
 
 	/// @brief スコープ付きの列挙型か
 	template<class T>
-	constexpr bool IsScopedEnumV =
+	constexpr bool IsScopedEnumValue =
 #if defined(__clang__)
 		detail::IsScopedEnum<T>::value;
 #else
@@ -411,4 +439,24 @@ namespace nox
 
 	template<class T>
 	constexpr bool IsStringClassAllValue = IsStringClassValue<T> || IsStringViewClassValue<T>;
+
+	namespace concepts::detail
+	{
+		template<class T>
+		concept HasDefaultOperator = requires(T & x) {
+			x.operator=(x);
+		};
+
+		template<class T>
+		concept HasIndexOperator = requires(T & x) {
+			x.operator[](0);
+		};
+	}
+
+	template<class T>
+	constexpr bool IsInvokableDefaultOperatorValue = nox::concepts::detail::HasDefaultOperator<T>;
+
+	template<class T>
+	constexpr bool HasIndexOperatorValue = nox::concepts::detail::HasIndexOperator<T>;
+
 }

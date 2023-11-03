@@ -59,7 +59,7 @@ NOX_REFLECTION_DECLARE(ClassType)
 		NOX_DECLARE_REFLECTION_OBJECT(ReflectionObject);
 	protected:
 		[[nodiscard]] inline constexpr ReflectionObject()noexcept = default;
-
+		inline constexpr virtual ~ReflectionObject()noexcept {}
 	private:
 		inline constexpr ReflectionObject(const ReflectionObject&)noexcept = delete;
 		inline constexpr ReflectionObject(const ReflectionObject&&)noexcept = delete;
@@ -68,6 +68,7 @@ NOX_REFLECTION_DECLARE(ClassType)
 		inline constexpr void operator =(const ReflectionObject&&)noexcept = delete;
 	};
 
+	/// @brief 属性クラスインターフェース
 	struct IAttribute
 	{
 	protected:
