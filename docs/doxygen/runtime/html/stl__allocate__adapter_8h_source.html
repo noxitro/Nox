@@ -1,0 +1,118 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="ja">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.9.7"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>NitroEngine: C:/github/Rex/runtime/kernel/memory/stl_allocate_adapter.h ソースファイル</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<link href="doxygen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="0">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectalign">
+   <div id="projectname">NitroEngine
+   </div>
+  </td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- 構築: Doxygen 1.9.7 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() {
+  initMenu('',true,false,'search.php','検索');
+  $(document).ready(function() { init_search(); });
+});
+/* @license-end */
+</script>
+<div id="main-nav"></div>
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">読み取り中…</div>
+<div class="SRStatus" id="Searching">検索中…</div>
+<div class="SRStatus" id="NoMatches">一致する文字列を見つけられません</div>
+</div>
+</div>
+</div>
+</div>
+
+<div id="nav-path" class="navpath">
+  <ul>
+<li class="navelem"><a class="el" href="dir_cb031e414f281a658b23dddb30bb9d2c.html">runtime</a></li><li class="navelem"><a class="el" href="dir_0d3038de0b364db20de003aaecd0ab18.html">kernel</a></li><li class="navelem"><a class="el" href="dir_6e91e385dc2feb9ce38c64aec2b9f1e9.html">memory</a></li>  </ul>
+</div>
+</div><!-- top -->
+<div class="header">
+  <div class="headertitle"><div class="title">stl_allocate_adapter.h</div></div>
+</div><!--header-->
+<div class="contents">
+<a href="stl__allocate__adapter_8h.html">[詳解]</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="preprocessor">#pragma once</span></div>
+<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span> </div>
+<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span><span class="preprocessor">#include    &quot;<a class="code" href="memory_8h.html">memory.h</a>&quot;</span></div>
+<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span> </div>
+<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="keyword">namespace </span><a class="code hl_namespace" href="namespacerex_1_1memory.html">rex::memory</a></div>
+<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span>{</div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span>    <span class="keyword">template</span>&lt;<span class="keyword">class</span> T&gt;</div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno"><a class="line" href="classrex_1_1memory_1_1_stl_allocate_adapter.html">   12</a></span>    <span class="keyword">class </span><a class="code hl_class" href="classrex_1_1memory_1_1_stl_allocate_adapter.html">StlAllocateAdapter</a></div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span>    {</div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span>    <span class="keyword">public</span>:</div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno"><a class="line" href="classrex_1_1memory_1_1_stl_allocate_adapter.html#ab9929081b67b38363085fe15d87abbb2">   18</a></span>        <span class="keyword">using </span><a class="code hl_typedef" href="classrex_1_1memory_1_1_stl_allocate_adapter.html#ab9929081b67b38363085fe15d87abbb2">value_type</a> = T;</div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span> </div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>    <span class="keyword">public</span>:</div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno"><a class="line" href="classrex_1_1memory_1_1_stl_allocate_adapter.html#a34707be17b5ca32c130a8c1c1befdac7">   26</a></span>        <span class="keyword">inline</span> T* <a class="code hl_function" href="classrex_1_1memory_1_1_stl_allocate_adapter.html#a34707be17b5ca32c130a8c1c1befdac7">allocate</a>(<span class="keyword">const</span> <span class="keywordtype">size_t</span> num)</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>        {</div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>            <span class="keywordflow">return</span> <a class="code hl_function" href="namespacerex_1_1memory.html#aede8f044e1be30f4db409374f7902249">memory::Allocate</a>(<span class="keyword">sizeof</span>(T) * num, <a class="code hl_enumvalue" href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6eacf882e4dff84f3cd1858640897524f38">memory::AreaType::Stl</a>);</div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>        }</div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span> </div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno"><a class="line" href="classrex_1_1memory_1_1_stl_allocate_adapter.html#ae09eb3646c425086b67ac213496103e3">   36</a></span>        <span class="keyword">inline</span> <span class="keywordtype">void</span> <a class="code hl_function" href="classrex_1_1memory_1_1_stl_allocate_adapter.html#ae09eb3646c425086b67ac213496103e3">deallocate</a>(T* <span class="keyword">const</span> ptr, <span class="keyword">const</span> <span class="keywordtype">size_t</span> <span class="comment">/*num*/</span>)</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>        {</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>            <a class="code hl_function" href="namespacerex_1_1memory.html#a20d099a3bece694c0aad02a110bc4f97">memory::Deallocate</a>(ptr);</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>        }</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    };</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>}</div>
+<div class="ttc" id="aclassrex_1_1memory_1_1_stl_allocate_adapter_html"><div class="ttname"><a href="classrex_1_1memory_1_1_stl_allocate_adapter.html">rex::memory::StlAllocateAdapter</a></div><div class="ttdoc">STLアロケータアダプタ</div><div class="ttdef"><b>Definition</b> <a href="stl__allocate__adapter_8h_source.html#l00012">stl_allocate_adapter.h:13</a></div></div>
+<div class="ttc" id="aclassrex_1_1memory_1_1_stl_allocate_adapter_html_a34707be17b5ca32c130a8c1c1befdac7"><div class="ttname"><a href="classrex_1_1memory_1_1_stl_allocate_adapter.html#a34707be17b5ca32c130a8c1c1befdac7">rex::memory::StlAllocateAdapter::allocate</a></div><div class="ttdeci">T * allocate(const size_t num)</div><div class="ttdoc">メモリ領域を確保</div><div class="ttdef"><b>Definition</b> <a href="stl__allocate__adapter_8h_source.html#l00026">stl_allocate_adapter.h:26</a></div></div>
+<div class="ttc" id="aclassrex_1_1memory_1_1_stl_allocate_adapter_html_ab9929081b67b38363085fe15d87abbb2"><div class="ttname"><a href="classrex_1_1memory_1_1_stl_allocate_adapter.html#ab9929081b67b38363085fe15d87abbb2">rex::memory::StlAllocateAdapter::value_type</a></div><div class="ttdeci">T value_type</div><div class="ttdoc">確保する型</div><div class="ttdef"><b>Definition</b> <a href="stl__allocate__adapter_8h_source.html#l00018">stl_allocate_adapter.h:18</a></div></div>
+<div class="ttc" id="aclassrex_1_1memory_1_1_stl_allocate_adapter_html_ae09eb3646c425086b67ac213496103e3"><div class="ttname"><a href="classrex_1_1memory_1_1_stl_allocate_adapter.html#ae09eb3646c425086b67ac213496103e3">rex::memory::StlAllocateAdapter::deallocate</a></div><div class="ttdeci">void deallocate(T *const ptr, const size_t)</div><div class="ttdoc">メモリ領域を解放</div><div class="ttdef"><b>Definition</b> <a href="stl__allocate__adapter_8h_source.html#l00036">stl_allocate_adapter.h:36</a></div></div>
+<div class="ttc" id="amemory_8h_html"><div class="ttname"><a href="memory_8h.html">memory.h</a></div></div>
+<div class="ttc" id="anamespacerex_1_1memory_html"><div class="ttname"><a href="namespacerex_1_1memory.html">rex::memory</a></div><div class="ttdef"><b>Definition</b> <a href="advanced__type_8h_source.html#l00010">advanced_type.h:11</a></div></div>
+<div class="ttc" id="anamespacerex_1_1memory_html_a20d099a3bece694c0aad02a110bc4f97"><div class="ttname"><a href="namespacerex_1_1memory.html#a20d099a3bece694c0aad02a110bc4f97">rex::memory::Deallocate</a></div><div class="ttdeci">void Deallocate(not_null&lt; void * &gt; ptr)</div><div class="ttdoc">メモリ解放</div><div class="ttdef"><b>Definition</b> <a href="memory_8cpp_source.html#l00012">memory.cpp:12</a></div></div>
+<div class="ttc" id="anamespacerex_1_1memory_html_aede8f044e1be30f4db409374f7902249"><div class="ttname"><a href="namespacerex_1_1memory.html#aede8f044e1be30f4db409374f7902249">rex::memory::Allocate</a></div><div class="ttdeci">not_null&lt; void * &gt; Allocate(const size_t size, const AreaType areaType)</div><div class="ttdef"><b>Definition</b> <a href="memory_8cpp_source.html#l00007">memory.cpp:7</a></div></div>
+<div class="ttc" id="anamespacerex_1_1memory_html_af7f472fc45e96396c57aad7d67425e6eacf882e4dff84f3cd1858640897524f38"><div class="ttname"><a href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6eacf882e4dff84f3cd1858640897524f38">rex::memory::AreaType::Stl</a></div><div class="ttdeci">@ Stl</div></div>
+</div><!-- fragment --></div><!-- contents -->
+<!-- start footer part -->
+<hr class="footer"/><address class="footer"><small>
+構築:&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.7
+</small></address>
+</body>
+</html>

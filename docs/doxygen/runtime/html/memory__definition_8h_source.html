@@ -1,0 +1,116 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="ja">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.9.7"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>NitroEngine: C:/github/Rex/runtime/kernel/memory/memory_definition.h ソースファイル</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<link href="doxygen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="0">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectalign">
+   <div id="projectname">NitroEngine
+   </div>
+  </td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- 構築: Doxygen 1.9.7 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() {
+  initMenu('',true,false,'search.php','検索');
+  $(document).ready(function() { init_search(); });
+});
+/* @license-end */
+</script>
+<div id="main-nav"></div>
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">読み取り中…</div>
+<div class="SRStatus" id="Searching">検索中…</div>
+<div class="SRStatus" id="NoMatches">一致する文字列を見つけられません</div>
+</div>
+</div>
+</div>
+</div>
+
+<div id="nav-path" class="navpath">
+  <ul>
+<li class="navelem"><a class="el" href="dir_cb031e414f281a658b23dddb30bb9d2c.html">runtime</a></li><li class="navelem"><a class="el" href="dir_0d3038de0b364db20de003aaecd0ab18.html">kernel</a></li><li class="navelem"><a class="el" href="dir_6e91e385dc2feb9ce38c64aec2b9f1e9.html">memory</a></li>  </ul>
+</div>
+</div><!-- top -->
+<div class="header">
+  <div class="headertitle"><div class="title">memory_definition.h</div></div>
+</div><!--header-->
+<div class="contents">
+<a href="memory__definition_8h.html">[詳解]</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="preprocessor">#pragma once</span></div>
+<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="preprocessor">#include    &quot;../if/basic_type.h&quot;</span></div>
+<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span> </div>
+<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="keyword">namespace </span><a class="code hl_namespace" href="namespacerex_1_1memory.html">rex::memory</a></div>
+<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span>{</div>
+<div class="line"><a id="l00006" name="l00006"></a><span class="lineno"><a class="line" href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6e">    6</a></span>    <span class="keyword">enum class</span> <a class="code hl_enumeration" href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6e">AreaType</a> : <a class="code hl_typedef" href="basic__type_8h.html#a987e4d6cf789cb59dbb390728271e4d6">u8</a></div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span>    {</div>
+<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span>        <a class="code hl_enumvalue" href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6ea497031794414a552435f90151ac3b54b">Object</a>,</div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span>        <a class="code hl_enumvalue" href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6ea6a7be9ca15b371223130132b8e68fa8c">ManagedObject</a>,</div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span>        <a class="code hl_enumvalue" href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6eacf882e4dff84f3cd1858640897524f38">Stl</a>,</div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span>        <a class="code hl_enumvalue" href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6ea6311ae17c1ee52b36e68aaf4ad066387">Other</a>,</div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span>        <a class="code hl_enumvalue" href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6ea084260feed529f7277a136ec2240f43c">_Max</a></div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span>    };</div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span> </div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno"><a class="line" href="namespacerex_1_1memory.html#adcfbe0f9bf2a832362e4d1a665391c09">   15</a></span>    <span class="keyword">enum class</span> <a class="code hl_enumeration" href="namespacerex_1_1memory.html#adcfbe0f9bf2a832362e4d1a665391c09">SegmentType</a> : <a class="code hl_typedef" href="basic__type_8h.html#a987e4d6cf789cb59dbb390728271e4d6">u8</a></div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span>    {</div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span>        <a class="code hl_enumvalue" href="namespacerex_1_1memory.html#adcfbe0f9bf2a832362e4d1a665391c09a7a1920d61156abc05a60135aefe8bc67">Default</a>,</div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>        <a class="code hl_enumvalue" href="namespacerex_1_1memory.html#adcfbe0f9bf2a832362e4d1a665391c09a1bedc6fb14c15b2e99872ebdbc317bf2">Develop</a>,</div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span>    };</div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>}</div>
+<div class="ttc" id="abasic__type_8h_html_a987e4d6cf789cb59dbb390728271e4d6"><div class="ttname"><a href="basic__type_8h.html#a987e4d6cf789cb59dbb390728271e4d6">u8</a></div><div class="ttdeci">uint8_t u8</div><div class="ttdoc">uint8</div><div class="ttdef"><b>Definition</b> <a href="basic__type_8h_source.html#l00039">basic_type.h:39</a></div></div>
+<div class="ttc" id="anamespacerex_1_1memory_html"><div class="ttname"><a href="namespacerex_1_1memory.html">rex::memory</a></div><div class="ttdef"><b>Definition</b> <a href="advanced__type_8h_source.html#l00010">advanced_type.h:11</a></div></div>
+<div class="ttc" id="anamespacerex_1_1memory_html_adcfbe0f9bf2a832362e4d1a665391c09"><div class="ttname"><a href="namespacerex_1_1memory.html#adcfbe0f9bf2a832362e4d1a665391c09">rex::memory::SegmentType</a></div><div class="ttdeci">SegmentType</div><div class="ttdef"><b>Definition</b> <a href="memory__definition_8h_source.html#l00015">memory_definition.h:16</a></div></div>
+<div class="ttc" id="anamespacerex_1_1memory_html_adcfbe0f9bf2a832362e4d1a665391c09a1bedc6fb14c15b2e99872ebdbc317bf2"><div class="ttname"><a href="namespacerex_1_1memory.html#adcfbe0f9bf2a832362e4d1a665391c09a1bedc6fb14c15b2e99872ebdbc317bf2">rex::memory::SegmentType::Develop</a></div><div class="ttdeci">@ Develop</div></div>
+<div class="ttc" id="anamespacerex_1_1memory_html_adcfbe0f9bf2a832362e4d1a665391c09a7a1920d61156abc05a60135aefe8bc67"><div class="ttname"><a href="namespacerex_1_1memory.html#adcfbe0f9bf2a832362e4d1a665391c09a7a1920d61156abc05a60135aefe8bc67">rex::memory::SegmentType::Default</a></div><div class="ttdeci">@ Default</div></div>
+<div class="ttc" id="anamespacerex_1_1memory_html_af7f472fc45e96396c57aad7d67425e6e"><div class="ttname"><a href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6e">rex::memory::AreaType</a></div><div class="ttdeci">AreaType</div><div class="ttdef"><b>Definition</b> <a href="memory__definition_8h_source.html#l00006">memory_definition.h:7</a></div></div>
+<div class="ttc" id="anamespacerex_1_1memory_html_af7f472fc45e96396c57aad7d67425e6ea084260feed529f7277a136ec2240f43c"><div class="ttname"><a href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6ea084260feed529f7277a136ec2240f43c">rex::memory::AreaType::_Max</a></div><div class="ttdeci">@ _Max</div></div>
+<div class="ttc" id="anamespacerex_1_1memory_html_af7f472fc45e96396c57aad7d67425e6ea497031794414a552435f90151ac3b54b"><div class="ttname"><a href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6ea497031794414a552435f90151ac3b54b">rex::memory::AreaType::Object</a></div><div class="ttdeci">@ Object</div></div>
+<div class="ttc" id="anamespacerex_1_1memory_html_af7f472fc45e96396c57aad7d67425e6ea6311ae17c1ee52b36e68aaf4ad066387"><div class="ttname"><a href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6ea6311ae17c1ee52b36e68aaf4ad066387">rex::memory::AreaType::Other</a></div><div class="ttdeci">@ Other</div></div>
+<div class="ttc" id="anamespacerex_1_1memory_html_af7f472fc45e96396c57aad7d67425e6ea6a7be9ca15b371223130132b8e68fa8c"><div class="ttname"><a href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6ea6a7be9ca15b371223130132b8e68fa8c">rex::memory::AreaType::ManagedObject</a></div><div class="ttdeci">@ ManagedObject</div></div>
+<div class="ttc" id="anamespacerex_1_1memory_html_af7f472fc45e96396c57aad7d67425e6eacf882e4dff84f3cd1858640897524f38"><div class="ttname"><a href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6eacf882e4dff84f3cd1858640897524f38">rex::memory::AreaType::Stl</a></div><div class="ttdeci">@ Stl</div></div>
+</div><!-- fragment --></div><!-- contents -->
+<!-- start footer part -->
+<hr class="footer"/><address class="footer"><small>
+構築:&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.7
+</small></address>
+</body>
+</html>

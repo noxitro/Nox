@@ -1,0 +1,127 @@
+\doxysection{rex\+::memory 名前空間}
+\hypertarget{namespacerex_1_1memory}{}\label{namespacerex_1_1memory}\index{rex::memory@{rex::memory}}
+\doxysubsubsection*{クラス}
+\begin{DoxyCompactItemize}
+\item 
+class \mbox{\hyperlink{classrex_1_1memory_1_1_stl_allocate_adapter}{Stl\+Allocate\+Adapter}}
+\begin{DoxyCompactList}\small\item\em STLアロケータアダプタ \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{列挙型}
+\begin{DoxyCompactItemize}
+\item 
+enum class \mbox{\hyperlink{namespacerex_1_1memory_af7f472fc45e96396c57aad7d67425e6e}{Area\+Type}} \+: u8 \{ \newline
+\mbox{\hyperlink{namespacerex_1_1memory_af7f472fc45e96396c57aad7d67425e6ea497031794414a552435f90151ac3b54b}{Object}}
+, \mbox{\hyperlink{namespacerex_1_1memory_af7f472fc45e96396c57aad7d67425e6ea6a7be9ca15b371223130132b8e68fa8c}{Managed\+Object}}
+, \mbox{\hyperlink{namespacerex_1_1memory_af7f472fc45e96396c57aad7d67425e6eacf882e4dff84f3cd1858640897524f38}{Stl}}
+, \mbox{\hyperlink{namespacerex_1_1memory_af7f472fc45e96396c57aad7d67425e6ea6311ae17c1ee52b36e68aaf4ad066387}{Other}}
+, \newline
+\mbox{\hyperlink{namespacerex_1_1memory_af7f472fc45e96396c57aad7d67425e6ea084260feed529f7277a136ec2240f43c}{\+\_\+\+Max}}
+ \}
+\item 
+enum class \mbox{\hyperlink{namespacerex_1_1memory_adcfbe0f9bf2a832362e4d1a665391c09}{Segment\+Type}} \+: u8 \{ \mbox{\hyperlink{namespacerex_1_1memory_adcfbe0f9bf2a832362e4d1a665391c09a7a1920d61156abc05a60135aefe8bc67}{Default}}
+, \mbox{\hyperlink{namespacerex_1_1memory_adcfbe0f9bf2a832362e4d1a665391c09a1bedc6fb14c15b2e99872ebdbc317bf2}{Develop}}
+ \}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{関数}
+\begin{DoxyCompactItemize}
+\item 
+not\+\_\+null$<$ void \texorpdfstring{$\ast$}{*} $>$ \mbox{\hyperlink{namespacerex_1_1memory_aede8f044e1be30f4db409374f7902249}{Allocate}} (const size\+\_\+t size, const \mbox{\hyperlink{namespacerex_1_1memory_af7f472fc45e96396c57aad7d67425e6e}{Area\+Type}} area\+Type)
+\item 
+void \mbox{\hyperlink{namespacerex_1_1memory_a20d099a3bece694c0aad02a110bc4f97}{Deallocate}} (not\+\_\+null$<$ void \texorpdfstring{$\ast$}{*} $>$ ptr)
+\begin{DoxyCompactList}\small\item\em メモリ解放 \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{列挙型詳解}
+\Hypertarget{namespacerex_1_1memory_af7f472fc45e96396c57aad7d67425e6e}\label{namespacerex_1_1memory_af7f472fc45e96396c57aad7d67425e6e} 
+\index{rex::memory@{rex::memory}!AreaType@{AreaType}}
+\index{AreaType@{AreaType}!rex::memory@{rex::memory}}
+\doxysubsubsection{\texorpdfstring{AreaType}{AreaType}}
+{\footnotesize\ttfamily enum class \mbox{\hyperlink{namespacerex_1_1memory_af7f472fc45e96396c57aad7d67425e6e}{rex\+::memory\+::\+Area\+Type}} \+: \mbox{\hyperlink{basic__type_8h_a987e4d6cf789cb59dbb390728271e4d6}{u8}}\hspace{0.3cm}{\ttfamily [strong]}}
+
+\begin{DoxyEnumFields}{列挙値}
+\raisebox{\heightof{T}}[0pt][0pt]{\index{Object@{Object}!rex::memory@{rex::memory}}\index{rex::memory@{rex::memory}!Object@{Object}}}\Hypertarget{namespacerex_1_1memory_af7f472fc45e96396c57aad7d67425e6ea497031794414a552435f90151ac3b54b}\label{namespacerex_1_1memory_af7f472fc45e96396c57aad7d67425e6ea497031794414a552435f90151ac3b54b} 
+Object&\\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{ManagedObject@{ManagedObject}!rex::memory@{rex::memory}}\index{rex::memory@{rex::memory}!ManagedObject@{ManagedObject}}}\Hypertarget{namespacerex_1_1memory_af7f472fc45e96396c57aad7d67425e6ea6a7be9ca15b371223130132b8e68fa8c}\label{namespacerex_1_1memory_af7f472fc45e96396c57aad7d67425e6ea6a7be9ca15b371223130132b8e68fa8c} 
+Managed\+Object&\\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{Stl@{Stl}!rex::memory@{rex::memory}}\index{rex::memory@{rex::memory}!Stl@{Stl}}}\Hypertarget{namespacerex_1_1memory_af7f472fc45e96396c57aad7d67425e6eacf882e4dff84f3cd1858640897524f38}\label{namespacerex_1_1memory_af7f472fc45e96396c57aad7d67425e6eacf882e4dff84f3cd1858640897524f38} 
+Stl&\\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{Other@{Other}!rex::memory@{rex::memory}}\index{rex::memory@{rex::memory}!Other@{Other}}}\Hypertarget{namespacerex_1_1memory_af7f472fc45e96396c57aad7d67425e6ea6311ae17c1ee52b36e68aaf4ad066387}\label{namespacerex_1_1memory_af7f472fc45e96396c57aad7d67425e6ea6311ae17c1ee52b36e68aaf4ad066387} 
+Other&\\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{\_Max@{\_Max}!rex::memory@{rex::memory}}\index{rex::memory@{rex::memory}!\_Max@{\_Max}}}\Hypertarget{namespacerex_1_1memory_af7f472fc45e96396c57aad7d67425e6ea084260feed529f7277a136ec2240f43c}\label{namespacerex_1_1memory_af7f472fc45e96396c57aad7d67425e6ea084260feed529f7277a136ec2240f43c} 
+\+\_\+\+Max&\\
+\hline
+
+\end{DoxyEnumFields}
+
+
+ \mbox{\hyperlink{memory__definition_8h_source}{memory\+\_\+definition.\+h}} の \mbox{\hyperlink{memory__definition_8h_source_l00006}{6}} 行目に定義があります。
+
+\Hypertarget{namespacerex_1_1memory_adcfbe0f9bf2a832362e4d1a665391c09}\label{namespacerex_1_1memory_adcfbe0f9bf2a832362e4d1a665391c09} 
+\index{rex::memory@{rex::memory}!SegmentType@{SegmentType}}
+\index{SegmentType@{SegmentType}!rex::memory@{rex::memory}}
+\doxysubsubsection{\texorpdfstring{SegmentType}{SegmentType}}
+{\footnotesize\ttfamily enum class \mbox{\hyperlink{namespacerex_1_1memory_adcfbe0f9bf2a832362e4d1a665391c09}{rex\+::memory\+::\+Segment\+Type}} \+: \mbox{\hyperlink{basic__type_8h_a987e4d6cf789cb59dbb390728271e4d6}{u8}}\hspace{0.3cm}{\ttfamily [strong]}}
+
+\begin{DoxyEnumFields}{列挙値}
+\raisebox{\heightof{T}}[0pt][0pt]{\index{Default@{Default}!rex::memory@{rex::memory}}\index{rex::memory@{rex::memory}!Default@{Default}}}\Hypertarget{namespacerex_1_1memory_adcfbe0f9bf2a832362e4d1a665391c09a7a1920d61156abc05a60135aefe8bc67}\label{namespacerex_1_1memory_adcfbe0f9bf2a832362e4d1a665391c09a7a1920d61156abc05a60135aefe8bc67} 
+Default&\\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{Develop@{Develop}!rex::memory@{rex::memory}}\index{rex::memory@{rex::memory}!Develop@{Develop}}}\Hypertarget{namespacerex_1_1memory_adcfbe0f9bf2a832362e4d1a665391c09a1bedc6fb14c15b2e99872ebdbc317bf2}\label{namespacerex_1_1memory_adcfbe0f9bf2a832362e4d1a665391c09a1bedc6fb14c15b2e99872ebdbc317bf2} 
+Develop&\\
+\hline
+
+\end{DoxyEnumFields}
+
+
+ \mbox{\hyperlink{memory__definition_8h_source}{memory\+\_\+definition.\+h}} の \mbox{\hyperlink{memory__definition_8h_source_l00015}{15}} 行目に定義があります。
+
+
+
+\doxysubsection{関数詳解}
+\Hypertarget{namespacerex_1_1memory_aede8f044e1be30f4db409374f7902249}\label{namespacerex_1_1memory_aede8f044e1be30f4db409374f7902249} 
+\index{rex::memory@{rex::memory}!Allocate@{Allocate}}
+\index{Allocate@{Allocate}!rex::memory@{rex::memory}}
+\doxysubsubsection{\texorpdfstring{Allocate()}{Allocate()}}
+{\footnotesize\ttfamily not\+\_\+null$<$ void \texorpdfstring{$\ast$}{*} $>$ rex\+::memory\+::\+Allocate (\begin{DoxyParamCaption}\item[{const size\+\_\+t}]{size,  }\item[{const \mbox{\hyperlink{namespacerex_1_1memory_af7f472fc45e96396c57aad7d67425e6e}{Area\+Type}}}]{area\+Type }\end{DoxyParamCaption})}
+
+
+\begin{DoxyParams}{引数}
+{\em size} & \\
+\hline
+{\em area\+Type} & \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{戻り値}
+
+\end{DoxyReturn}
+
+
+ \mbox{\hyperlink{memory_8cpp_source}{memory.\+cpp}} の \mbox{\hyperlink{memory_8cpp_source_l00007}{7}} 行目に定義があります。
+
+\Hypertarget{namespacerex_1_1memory_a20d099a3bece694c0aad02a110bc4f97}\label{namespacerex_1_1memory_a20d099a3bece694c0aad02a110bc4f97} 
+\index{rex::memory@{rex::memory}!Deallocate@{Deallocate}}
+\index{Deallocate@{Deallocate}!rex::memory@{rex::memory}}
+\doxysubsubsection{\texorpdfstring{Deallocate()}{Deallocate()}}
+{\footnotesize\ttfamily void rex\+::memory\+::\+Deallocate (\begin{DoxyParamCaption}\item[{not\+\_\+null$<$ void \texorpdfstring{$\ast$}{*} $>$}]{ptr }\end{DoxyParamCaption})}
+
+
+
+メモリ解放 
+
+
+\begin{DoxyParams}{引数}
+{\em ptr} & 解放するアドレス \\
+\hline
+\end{DoxyParams}
+
+
+ \mbox{\hyperlink{memory_8cpp_source}{memory.\+cpp}} の \mbox{\hyperlink{memory_8cpp_source_l00012}{12}} 行目に定義があります。
+

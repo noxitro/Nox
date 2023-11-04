@@ -1,0 +1,106 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="ja">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.9.7"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>NitroEngine: C:/github/Rex/runtime/kernel/memory/memory.cpp ソースファイル</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<link href="doxygen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="0">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectalign">
+   <div id="projectname">NitroEngine
+   </div>
+  </td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- 構築: Doxygen 1.9.7 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() {
+  initMenu('',true,false,'search.php','検索');
+  $(document).ready(function() { init_search(); });
+});
+/* @license-end */
+</script>
+<div id="main-nav"></div>
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">読み取り中…</div>
+<div class="SRStatus" id="Searching">検索中…</div>
+<div class="SRStatus" id="NoMatches">一致する文字列を見つけられません</div>
+</div>
+</div>
+</div>
+</div>
+
+<div id="nav-path" class="navpath">
+  <ul>
+<li class="navelem"><a class="el" href="dir_cb031e414f281a658b23dddb30bb9d2c.html">runtime</a></li><li class="navelem"><a class="el" href="dir_0d3038de0b364db20de003aaecd0ab18.html">kernel</a></li><li class="navelem"><a class="el" href="dir_6e91e385dc2feb9ce38c64aec2b9f1e9.html">memory</a></li>  </ul>
+</div>
+</div><!-- top -->
+<div class="header">
+  <div class="headertitle"><div class="title">memory.cpp</div></div>
+</div><!--header-->
+<div class="contents">
+<a href="memory_8cpp.html">[詳解]</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="preprocessor">#include    &quot;stdafx.h&quot;</span></div>
+<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="preprocessor">#include    &quot;<a class="code" href="memory_8h.html">memory.h</a>&quot;</span></div>
+<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span> </div>
+<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="keyword">using namespace </span><a class="code hl_namespace" href="namespacerex.html">rex</a>;</div>
+<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="keyword">using namespace </span><a class="code hl_namespace" href="namespacerex_1_1memory.html">rex::memory</a>;</div>
+<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span> </div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno"><a class="line" href="namespacerex_1_1memory.html#aede8f044e1be30f4db409374f7902249">    7</a></span>not_null&lt;void*&gt; <a class="code hl_function" href="namespacerex_1_1memory.html#aede8f044e1be30f4db409374f7902249">memory::Allocate</a>(<span class="keyword">const</span> <span class="keywordtype">size_t</span> size, <span class="keyword">const</span> <a class="code hl_enumeration" href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6e">AreaType</a> areaType)</div>
+<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span>{</div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span>    <span class="keywordflow">return</span> std::malloc(size);</div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span>}</div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span> </div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno"><a class="line" href="namespacerex_1_1memory.html#a20d099a3bece694c0aad02a110bc4f97">   12</a></span><span class="keywordtype">void</span>    <a class="code hl_function" href="namespacerex_1_1memory.html#a20d099a3bece694c0aad02a110bc4f97">memory::Deallocate</a>(not_null&lt;void*&gt; ptr)</div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span>{</div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span>    std::free(ptr.get());</div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span>}</div>
+<div class="ttc" id="amemory_8h_html"><div class="ttname"><a href="memory_8h.html">memory.h</a></div></div>
+<div class="ttc" id="anamespacerex_1_1memory_html"><div class="ttname"><a href="namespacerex_1_1memory.html">rex::memory</a></div><div class="ttdef"><b>Definition</b> <a href="advanced__type_8h_source.html#l00010">advanced_type.h:11</a></div></div>
+<div class="ttc" id="anamespacerex_1_1memory_html_a20d099a3bece694c0aad02a110bc4f97"><div class="ttname"><a href="namespacerex_1_1memory.html#a20d099a3bece694c0aad02a110bc4f97">rex::memory::Deallocate</a></div><div class="ttdeci">void Deallocate(not_null&lt; void * &gt; ptr)</div><div class="ttdoc">メモリ解放</div><div class="ttdef"><b>Definition</b> <a href="memory_8cpp_source.html#l00012">memory.cpp:12</a></div></div>
+<div class="ttc" id="anamespacerex_1_1memory_html_aede8f044e1be30f4db409374f7902249"><div class="ttname"><a href="namespacerex_1_1memory.html#aede8f044e1be30f4db409374f7902249">rex::memory::Allocate</a></div><div class="ttdeci">not_null&lt; void * &gt; Allocate(const size_t size, const AreaType areaType)</div><div class="ttdef"><b>Definition</b> <a href="memory_8cpp_source.html#l00007">memory.cpp:7</a></div></div>
+<div class="ttc" id="anamespacerex_1_1memory_html_af7f472fc45e96396c57aad7d67425e6e"><div class="ttname"><a href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6e">rex::memory::AreaType</a></div><div class="ttdeci">AreaType</div><div class="ttdef"><b>Definition</b> <a href="memory__definition_8h_source.html#l00006">memory_definition.h:7</a></div></div>
+<div class="ttc" id="anamespacerex_html"><div class="ttname"><a href="namespacerex.html">rex</a></div><div class="ttdef"><b>Definition</b> <a href="advanced__type_8h_source.html#l00007">advanced_type.h:8</a></div></div>
+</div><!-- fragment --></div><!-- contents -->
+<!-- start footer part -->
+<hr class="footer"/><address class="footer"><small>
+構築:&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.7
+</small></address>
+</body>
+</html>

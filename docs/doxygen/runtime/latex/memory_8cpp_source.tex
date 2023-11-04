@@ -1,0 +1,21 @@
+\doxysection{memory.\+cpp}
+\hypertarget{memory_8cpp_source}{}\label{memory_8cpp_source}\index{C:/github/Rex/runtime/kernel/memory/memory.cpp@{C:/github/Rex/runtime/kernel/memory/memory.cpp}}
+\mbox{\hyperlink{memory_8cpp}{\mbox{[}詳解\mbox{]}}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{memory_8cpp_source_l00001}00001\ \textcolor{preprocessor}{\#include\ \ \ \ "{}stdafx.h"{}}}
+\DoxyCodeLine{\Hypertarget{memory_8cpp_source_l00002}00002\ \textcolor{preprocessor}{\#include\ \ \ \ "{}\mbox{\hyperlink{memory_8h}{memory.h}}"{}}}
+\DoxyCodeLine{\Hypertarget{memory_8cpp_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{memory_8cpp_source_l00004}00004\ \textcolor{keyword}{using\ namespace\ }\mbox{\hyperlink{namespacerex}{rex}};}
+\DoxyCodeLine{\Hypertarget{memory_8cpp_source_l00005}00005\ \textcolor{keyword}{using\ namespace\ }\mbox{\hyperlink{namespacerex_1_1memory}{rex::memory}};}
+\DoxyCodeLine{\Hypertarget{memory_8cpp_source_l00006}00006\ }
+\DoxyCodeLine{\Hypertarget{memory_8cpp_source_l00007}\mbox{\hyperlink{namespacerex_1_1memory_aede8f044e1be30f4db409374f7902249}{00007}}\ not\_null<void*>\ \mbox{\hyperlink{namespacerex_1_1memory_aede8f044e1be30f4db409374f7902249}{memory::Allocate}}(\textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ size,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{namespacerex_1_1memory_af7f472fc45e96396c57aad7d67425e6e}{AreaType}}\ areaType)}
+\DoxyCodeLine{\Hypertarget{memory_8cpp_source_l00008}00008\ \{}
+\DoxyCodeLine{\Hypertarget{memory_8cpp_source_l00009}00009\ \ \ \ \ \textcolor{keywordflow}{return}\ std::malloc(size);}
+\DoxyCodeLine{\Hypertarget{memory_8cpp_source_l00010}00010\ \}}
+\DoxyCodeLine{\Hypertarget{memory_8cpp_source_l00011}00011\ }
+\DoxyCodeLine{\Hypertarget{memory_8cpp_source_l00012}\mbox{\hyperlink{namespacerex_1_1memory_a20d099a3bece694c0aad02a110bc4f97}{00012}}\ \textcolor{keywordtype}{void}\ \ \ \ \mbox{\hyperlink{namespacerex_1_1memory_a20d099a3bece694c0aad02a110bc4f97}{memory::Deallocate}}(not\_null<void*>\ ptr)}
+\DoxyCodeLine{\Hypertarget{memory_8cpp_source_l00013}00013\ \{}
+\DoxyCodeLine{\Hypertarget{memory_8cpp_source_l00014}00014\ \ \ \ \ std::free(ptr.get());}
+\DoxyCodeLine{\Hypertarget{memory_8cpp_source_l00015}00015\ \}}
+
+\end{DoxyCode}

@@ -1,0 +1,111 @@
+\doxysection{rex\+::memory\+::Stl\+Allocate\+Adapter\texorpdfstring{$<$}{<} T \texorpdfstring{$>$}{>} クラステンプレート}
+\hypertarget{classrex_1_1memory_1_1_stl_allocate_adapter}{}\label{classrex_1_1memory_1_1_stl_allocate_adapter}\index{rex::memory::StlAllocateAdapter$<$ T $>$@{rex::memory::StlAllocateAdapter$<$ T $>$}}
+
+
+STLアロケータアダプタ  
+
+
+
+
+{\ttfamily \#include $<$stl\+\_\+allocate\+\_\+adapter.\+h$>$}
+
+\doxysubsubsection*{公開型}
+\begin{DoxyCompactItemize}
+\item 
+using \mbox{\hyperlink{classrex_1_1memory_1_1_stl_allocate_adapter_ab9929081b67b38363085fe15d87abbb2}{value\+\_\+type}} = T
+\begin{DoxyCompactList}\small\item\em 確保する型 \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{公開メンバ関数}
+\begin{DoxyCompactItemize}
+\item 
+T \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{classrex_1_1memory_1_1_stl_allocate_adapter_a34707be17b5ca32c130a8c1c1befdac7}{allocate}} (const size\+\_\+t num)
+\begin{DoxyCompactList}\small\item\em メモリ領域を確保 \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classrex_1_1memory_1_1_stl_allocate_adapter_ae09eb3646c425086b67ac213496103e3}{deallocate}} (T \texorpdfstring{$\ast$}{*}const ptr, const size\+\_\+t)
+\begin{DoxyCompactList}\small\item\em メモリ領域を解放 \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{詳解}
+\subsubsection*{template$<$class T$>$\newline
+class rex\+::memory\+::\+Stl\+Allocate\+Adapter$<$ T $>$}
+STLアロケータアダプタ 
+
+
+\begin{DoxyTemplParams}{テンプレート引数}
+{\em T} & 確保する型\\
+\hline
+\end{DoxyTemplParams}
+
+
+ \mbox{\hyperlink{stl__allocate__adapter_8h_source}{stl\+\_\+allocate\+\_\+adapter.\+h}} の \mbox{\hyperlink{stl__allocate__adapter_8h_source_l00012}{12}} 行目に定義があります。
+
+
+
+\doxysubsection{型定義メンバ詳解}
+\Hypertarget{classrex_1_1memory_1_1_stl_allocate_adapter_ab9929081b67b38363085fe15d87abbb2}\label{classrex_1_1memory_1_1_stl_allocate_adapter_ab9929081b67b38363085fe15d87abbb2} 
+\index{rex::memory::StlAllocateAdapter$<$ T $>$@{rex::memory::StlAllocateAdapter$<$ T $>$}!value\_type@{value\_type}}
+\index{value\_type@{value\_type}!rex::memory::StlAllocateAdapter$<$ T $>$@{rex::memory::StlAllocateAdapter$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{value\_type}{value\_type}}
+{\footnotesize\ttfamily template$<$class T $>$ \\
+using \mbox{\hyperlink{classrex_1_1memory_1_1_stl_allocate_adapter}{rex\+::memory\+::\+Stl\+Allocate\+Adapter}}$<$ T $>$\+::value\+\_\+type =  T}
+
+
+
+確保する型 
+
+
+
+ \mbox{\hyperlink{stl__allocate__adapter_8h_source}{stl\+\_\+allocate\+\_\+adapter.\+h}} の \mbox{\hyperlink{stl__allocate__adapter_8h_source_l00018}{18}} 行目に定義があります。
+
+
+
+\doxysubsection{関数詳解}
+\Hypertarget{classrex_1_1memory_1_1_stl_allocate_adapter_a34707be17b5ca32c130a8c1c1befdac7}\label{classrex_1_1memory_1_1_stl_allocate_adapter_a34707be17b5ca32c130a8c1c1befdac7} 
+\index{rex::memory::StlAllocateAdapter$<$ T $>$@{rex::memory::StlAllocateAdapter$<$ T $>$}!allocate@{allocate}}
+\index{allocate@{allocate}!rex::memory::StlAllocateAdapter$<$ T $>$@{rex::memory::StlAllocateAdapter$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{allocate()}{allocate()}}
+{\footnotesize\ttfamily template$<$class T $>$ \\
+T \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{classrex_1_1memory_1_1_stl_allocate_adapter}{rex\+::memory\+::\+Stl\+Allocate\+Adapter}}$<$ T $>$\+::allocate (\begin{DoxyParamCaption}\item[{const size\+\_\+t}]{num }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+メモリ領域を確保 
+
+
+\begin{DoxyParams}{引数}
+{\em num} & 個数 \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{戻り値}
+アドレス 
+\end{DoxyReturn}
+
+
+ \mbox{\hyperlink{stl__allocate__adapter_8h_source}{stl\+\_\+allocate\+\_\+adapter.\+h}} の \mbox{\hyperlink{stl__allocate__adapter_8h_source_l00026}{26}} 行目に定義があります。
+
+\Hypertarget{classrex_1_1memory_1_1_stl_allocate_adapter_ae09eb3646c425086b67ac213496103e3}\label{classrex_1_1memory_1_1_stl_allocate_adapter_ae09eb3646c425086b67ac213496103e3} 
+\index{rex::memory::StlAllocateAdapter$<$ T $>$@{rex::memory::StlAllocateAdapter$<$ T $>$}!deallocate@{deallocate}}
+\index{deallocate@{deallocate}!rex::memory::StlAllocateAdapter$<$ T $>$@{rex::memory::StlAllocateAdapter$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{deallocate()}{deallocate()}}
+{\footnotesize\ttfamily template$<$class T $>$ \\
+void \mbox{\hyperlink{classrex_1_1memory_1_1_stl_allocate_adapter}{rex\+::memory\+::\+Stl\+Allocate\+Adapter}}$<$ T $>$\+::deallocate (\begin{DoxyParamCaption}\item[{T \texorpdfstring{$\ast$}{*}const}]{ptr,  }\item[{const size\+\_\+t}]{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+メモリ領域を解放 
+
+
+\begin{DoxyParams}{引数}
+{\em ptr} & 解放アドレス \\
+\hline
+{\em num} & 個数 \\
+\hline
+\end{DoxyParams}
+
+
+ \mbox{\hyperlink{stl__allocate__adapter_8h_source}{stl\+\_\+allocate\+\_\+adapter.\+h}} の \mbox{\hyperlink{stl__allocate__adapter_8h_source_l00036}{36}} 行目に定義があります。
+
+
+
+このクラス詳解は次のファイルから抽出されました\+:\begin{DoxyCompactItemize}
+\item 
+C\+:/github/\+Rex/runtime/kernel/if/\mbox{\hyperlink{advanced__type_8h}{advanced\+\_\+type.\+h}}\item 
+C\+:/github/\+Rex/runtime/kernel/memory/\mbox{\hyperlink{stl__allocate__adapter_8h}{stl\+\_\+allocate\+\_\+adapter.\+h}}\end{DoxyCompactItemize}

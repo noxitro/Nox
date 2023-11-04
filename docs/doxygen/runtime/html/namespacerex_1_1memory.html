@@ -1,0 +1,248 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="ja">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.9.7"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>NitroEngine: rex::memory 名前空間</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<link href="doxygen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="0">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectalign">
+   <div id="projectname">NitroEngine
+   </div>
+  </td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- 構築: Doxygen 1.9.7 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() {
+  initMenu('',true,false,'search.php','検索');
+  $(document).ready(function() { init_search(); });
+});
+/* @license-end */
+</script>
+<div id="main-nav"></div>
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">読み取り中…</div>
+<div class="SRStatus" id="Searching">検索中…</div>
+<div class="SRStatus" id="NoMatches">一致する文字列を見つけられません</div>
+</div>
+</div>
+</div>
+</div>
+
+<div id="nav-path" class="navpath">
+  <ul>
+<li class="navelem"><a class="el" href="namespacerex.html">rex</a></li><li class="navelem"><a class="el" href="namespacerex_1_1memory.html">memory</a></li>  </ul>
+</div>
+</div><!-- top -->
+<div class="header">
+  <div class="summary">
+<a href="#nested-classes">クラス</a> &#124;
+<a href="#enum-members">列挙型</a> &#124;
+<a href="#func-members">関数</a>  </div>
+  <div class="headertitle"><div class="title">rex::memory 名前空間</div></div>
+</div><!--header-->
+<div class="contents">
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+クラス</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classrex_1_1memory_1_1_stl_allocate_adapter.html">StlAllocateAdapter</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">STLアロケータアダプタ  <a href="classrex_1_1memory_1_1_stl_allocate_adapter.html#details">[詳解]</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
+列挙型</h2></td></tr>
+<tr class="memitem:af7f472fc45e96396c57aad7d67425e6e"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6e">AreaType</a> : u8 { <br />
+&#160;&#160;<a class="el" href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6ea497031794414a552435f90151ac3b54b">Object</a>
+, <a class="el" href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6ea6a7be9ca15b371223130132b8e68fa8c">ManagedObject</a>
+, <a class="el" href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6eacf882e4dff84f3cd1858640897524f38">Stl</a>
+, <a class="el" href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6ea6311ae17c1ee52b36e68aaf4ad066387">Other</a>
+, <br />
+&#160;&#160;<a class="el" href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6ea084260feed529f7277a136ec2240f43c">_Max</a>
+<br />
+ }</td></tr>
+<tr class="separator:af7f472fc45e96396c57aad7d67425e6e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adcfbe0f9bf2a832362e4d1a665391c09"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacerex_1_1memory.html#adcfbe0f9bf2a832362e4d1a665391c09">SegmentType</a> : u8 { <a class="el" href="namespacerex_1_1memory.html#adcfbe0f9bf2a832362e4d1a665391c09a7a1920d61156abc05a60135aefe8bc67">Default</a>
+, <a class="el" href="namespacerex_1_1memory.html#adcfbe0f9bf2a832362e4d1a665391c09a1bedc6fb14c15b2e99872ebdbc317bf2">Develop</a>
+ }</td></tr>
+<tr class="separator:adcfbe0f9bf2a832362e4d1a665391c09"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+関数</h2></td></tr>
+<tr class="memitem:aede8f044e1be30f4db409374f7902249"><td class="memItemLeft" align="right" valign="top">not_null&lt; void * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacerex_1_1memory.html#aede8f044e1be30f4db409374f7902249">Allocate</a> (const size_t size, const <a class="el" href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6e">AreaType</a> areaType)</td></tr>
+<tr class="separator:aede8f044e1be30f4db409374f7902249"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a20d099a3bece694c0aad02a110bc4f97"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacerex_1_1memory.html#a20d099a3bece694c0aad02a110bc4f97">Deallocate</a> (not_null&lt; void * &gt; ptr)</td></tr>
+<tr class="memdesc:a20d099a3bece694c0aad02a110bc4f97"><td class="mdescLeft">&#160;</td><td class="mdescRight">メモリ解放  <br /></td></tr>
+<tr class="separator:a20d099a3bece694c0aad02a110bc4f97"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<h2 class="groupheader">列挙型詳解</h2>
+<a id="af7f472fc45e96396c57aad7d67425e6e" name="af7f472fc45e96396c57aad7d67425e6e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af7f472fc45e96396c57aad7d67425e6e">&#9670;&#160;</a></span>AreaType</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum class <a class="el" href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6e">rex::memory::AreaType</a> : <a class="el" href="basic__type_8h.html#a987e4d6cf789cb59dbb390728271e4d6">u8</a></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<table class="fieldtable">
+<tr><th colspan="2">列挙値</th></tr><tr><td class="fieldname"><a id="af7f472fc45e96396c57aad7d67425e6ea497031794414a552435f90151ac3b54b" name="af7f472fc45e96396c57aad7d67425e6ea497031794414a552435f90151ac3b54b"></a>Object&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="af7f472fc45e96396c57aad7d67425e6ea6a7be9ca15b371223130132b8e68fa8c" name="af7f472fc45e96396c57aad7d67425e6ea6a7be9ca15b371223130132b8e68fa8c"></a>ManagedObject&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="af7f472fc45e96396c57aad7d67425e6eacf882e4dff84f3cd1858640897524f38" name="af7f472fc45e96396c57aad7d67425e6eacf882e4dff84f3cd1858640897524f38"></a>Stl&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="af7f472fc45e96396c57aad7d67425e6ea6311ae17c1ee52b36e68aaf4ad066387" name="af7f472fc45e96396c57aad7d67425e6ea6311ae17c1ee52b36e68aaf4ad066387"></a>Other&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="af7f472fc45e96396c57aad7d67425e6ea084260feed529f7277a136ec2240f43c" name="af7f472fc45e96396c57aad7d67425e6ea084260feed529f7277a136ec2240f43c"></a>_Max&#160;</td><td class="fielddoc"></td></tr>
+</table>
+
+<p class="definition"> <a class="el" href="memory__definition_8h_source.html">memory_definition.h</a> の <a class="el" href="memory__definition_8h_source.html#l00006">6</a> 行目に定義があります。</p>
+
+</div>
+</div>
+<a id="adcfbe0f9bf2a832362e4d1a665391c09" name="adcfbe0f9bf2a832362e4d1a665391c09"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adcfbe0f9bf2a832362e4d1a665391c09">&#9670;&#160;</a></span>SegmentType</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum class <a class="el" href="namespacerex_1_1memory.html#adcfbe0f9bf2a832362e4d1a665391c09">rex::memory::SegmentType</a> : <a class="el" href="basic__type_8h.html#a987e4d6cf789cb59dbb390728271e4d6">u8</a></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<table class="fieldtable">
+<tr><th colspan="2">列挙値</th></tr><tr><td class="fieldname"><a id="adcfbe0f9bf2a832362e4d1a665391c09a7a1920d61156abc05a60135aefe8bc67" name="adcfbe0f9bf2a832362e4d1a665391c09a7a1920d61156abc05a60135aefe8bc67"></a>Default&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="adcfbe0f9bf2a832362e4d1a665391c09a1bedc6fb14c15b2e99872ebdbc317bf2" name="adcfbe0f9bf2a832362e4d1a665391c09a1bedc6fb14c15b2e99872ebdbc317bf2"></a>Develop&#160;</td><td class="fielddoc"></td></tr>
+</table>
+
+<p class="definition"> <a class="el" href="memory__definition_8h_source.html">memory_definition.h</a> の <a class="el" href="memory__definition_8h_source.html#l00015">15</a> 行目に定義があります。</p>
+
+</div>
+</div>
+<h2 class="groupheader">関数詳解</h2>
+<a id="aede8f044e1be30f4db409374f7902249" name="aede8f044e1be30f4db409374f7902249"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aede8f044e1be30f4db409374f7902249">&#9670;&#160;</a></span>Allocate()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">not_null&lt; void * &gt; rex::memory::Allocate </td>
+          <td>(</td>
+          <td class="paramtype">const size_t&#160;</td>
+          <td class="paramname"><em>size</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="namespacerex_1_1memory.html#af7f472fc45e96396c57aad7d67425e6e">AreaType</a>&#160;</td>
+          <td class="paramname"><em>areaType</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<dl class="params"><dt>引数</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">size</td><td></td></tr>
+    <tr><td class="paramname">areaType</td><td></td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>戻り値</dt><dd></dd></dl>
+
+<p class="definition"> <a class="el" href="memory_8cpp_source.html">memory.cpp</a> の <a class="el" href="memory_8cpp_source.html#l00007">7</a> 行目に定義があります。</p>
+
+</div>
+</div>
+<a id="a20d099a3bece694c0aad02a110bc4f97" name="a20d099a3bece694c0aad02a110bc4f97"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a20d099a3bece694c0aad02a110bc4f97">&#9670;&#160;</a></span>Deallocate()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void rex::memory::Deallocate </td>
+          <td>(</td>
+          <td class="paramtype">not_null&lt; void * &gt;&#160;</td>
+          <td class="paramname"><em>ptr</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>メモリ解放 </p>
+<dl class="params"><dt>引数</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">ptr</td><td>解放するアドレス </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition"> <a class="el" href="memory_8cpp_source.html">memory.cpp</a> の <a class="el" href="memory_8cpp_source.html#l00012">12</a> 行目に定義があります。</p>
+
+</div>
+</div>
+</div><!-- contents -->
+<!-- start footer part -->
+<hr class="footer"/><address class="footer"><small>
+構築:&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.7
+</small></address>
+</body>
+</html>

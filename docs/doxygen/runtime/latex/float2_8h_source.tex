@@ -1,0 +1,41 @@
+\doxysection{float2.\+h}
+\hypertarget{float2_8h_source}{}\label{float2_8h_source}\index{C:/github/Rex/runtime/kernel/math/float2.h@{C:/github/Rex/runtime/kernel/math/float2.h}}
+\mbox{\hyperlink{float2_8h}{\mbox{[}詳解\mbox{]}}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00001}00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00002}00002\ }
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00003}00003\ \textcolor{preprocessor}{\#include\ \ \ \ "{}../if/basic\_type.h"{}}}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00004}00004\ \textcolor{preprocessor}{\#include\ \ \ \ "{}../if/advanced\_type.h"{}}}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00005}00005\ }
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00006}00006\ \textcolor{keyword}{namespace\ }\mbox{\hyperlink{namespacerex}{rex}}}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00007}00007\ \{}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00008}\mbox{\hyperlink{structrex_1_1_float2}{00008}}\ \ \ \ \ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structrex_1_1_float2}{Float2}}}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00009}00009\ \ \ \ \ \{}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00010}\mbox{\hyperlink{structrex_1_1_float2_a05af55d6d0cdb14ea6351a7b3a9b5b90}{00010}}\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{basic__type_8h_aa3639c55989a3a2d49b194e57d187012}{f32}}\ \mbox{\hyperlink{structrex_1_1_float2_a05af55d6d0cdb14ea6351a7b3a9b5b90}{x}},\ \mbox{\hyperlink{structrex_1_1_float2_ad5360401bc5b09504a8091f1cedbb320}{y}};}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00011}00011\ }
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00012}00012\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ \ コンストラクタ}}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00013}\mbox{\hyperlink{structrex_1_1_float2_a5eb3c025e6814f7c42e60739acddd5a3}{00013}}\ \ \ \ \ \ \ \ \ \textcolor{keyword}{constexpr}\ \mbox{\hyperlink{structrex_1_1_float2_a5eb3c025e6814f7c42e60739acddd5a3}{Float2}}()\ noexcept\ :}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00014}00014\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structrex_1_1_float2_a05af55d6d0cdb14ea6351a7b3a9b5b90}{x}}(.0f),\ \mbox{\hyperlink{structrex_1_1_float2_ad5360401bc5b09504a8091f1cedbb320}{y}}(.0f)\ \{\}}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00015}00015\ }
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00016}\mbox{\hyperlink{structrex_1_1_float2_a75c03941148c18ad72733b635dbd9875}{00016}}\ \ \ \ \ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{explicit}\ \mbox{\hyperlink{structrex_1_1_float2_a75c03941148c18ad72733b635dbd9875}{Float2}}(\mbox{\hyperlink{basic__type_8h_aa3639c55989a3a2d49b194e57d187012}{f32}}\ \_x,\ \mbox{\hyperlink{basic__type_8h_aa3639c55989a3a2d49b194e57d187012}{f32}}\ \_y)noexcept\ :}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00017}00017\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structrex_1_1_float2_a05af55d6d0cdb14ea6351a7b3a9b5b90}{x}}(\_x),\ \mbox{\hyperlink{structrex_1_1_float2_ad5360401bc5b09504a8091f1cedbb320}{y}}(\_y)\ \{\}}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00018}00018\ }
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00019}\mbox{\hyperlink{structrex_1_1_float2_a3a058ae17353fba1c4be986f96bdab83}{00019}}\ \ \ \ \ \ \ \ \ \textcolor{keyword}{constexpr}\ \ \ \textcolor{keyword}{explicit}\ \mbox{\hyperlink{structrex_1_1_float2_a3a058ae17353fba1c4be986f96bdab83}{Float2}}(\textcolor{keyword}{const}\ rex::array<f32,\ 2>\&\ ary)\ :}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00020}00020\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structrex_1_1_float2_a05af55d6d0cdb14ea6351a7b3a9b5b90}{x}}(ary.at(0)),\ \mbox{\hyperlink{structrex_1_1_float2_ad5360401bc5b09504a8091f1cedbb320}{y}}(ary.at(1))\ \{\}}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00021}00021\ }
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00022}\mbox{\hyperlink{structrex_1_1_float2_a74b4c1169de53f2f979cbec40b1981cb}{00022}}\ \ \ \ \ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{explicit}\ \mbox{\hyperlink{structrex_1_1_float2_a74b4c1169de53f2f979cbec40b1981cb}{Float2}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{basic__type_8h_aa3639c55989a3a2d49b194e57d187012}{f32}}(\&ary)[2])noexcept\ :}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00023}00023\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structrex_1_1_float2_a05af55d6d0cdb14ea6351a7b3a9b5b90}{x}}(ary[0]),\ \mbox{\hyperlink{structrex_1_1_float2_ad5360401bc5b09504a8091f1cedbb320}{y}}(ary[1])\ \{\}}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00024}00024\ }
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00025}\mbox{\hyperlink{structrex_1_1_float2_afbb0d9e892e3d8eb8d14fef85b1f4c42}{00025}}\ \ \ \ \ \ \ \ \ \textcolor{keyword}{constexpr}\ \ \ \mbox{\hyperlink{structrex_1_1_float2_afbb0d9e892e3d8eb8d14fef85b1f4c42}{Float2}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{structrex_1_1_float2}{Float2}}\&\ \_v)noexcept\ :}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00026}00026\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structrex_1_1_float2_a05af55d6d0cdb14ea6351a7b3a9b5b90}{x}}(\_v.x),\ \mbox{\hyperlink{structrex_1_1_float2_ad5360401bc5b09504a8091f1cedbb320}{y}}(\_v.y)\ \{\}}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00027}00027\ }
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00028}00028\ \ \ \ \ \ \ \ \ \textcolor{comment}{//-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00029}00029\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ \ operator}}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00030}00030\ \ \ \ \ \ \ \ \ \textcolor{comment}{//-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00031}\mbox{\hyperlink{structrex_1_1_float2_a8f60093ba11a2e99e9d4b2355b2b7a29}{00031}}\ \ \ \ \ \ \ \ \ \textcolor{keyword}{constexpr}\ \mbox{\hyperlink{structrex_1_1_float2}{Float2}}\&\ \mbox{\hyperlink{structrex_1_1_float2_a8f60093ba11a2e99e9d4b2355b2b7a29}{operator==}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{structrex_1_1_float2}{Float2}}\&)\textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00032}\mbox{\hyperlink{structrex_1_1_float2_aaf7fa1d536de964090f5c8ed05892089}{00032}}\ \ \ \ \ \ \ \ \ \textcolor{keyword}{constexpr}\ \mbox{\hyperlink{structrex_1_1_float2}{Float2}}\&\ \mbox{\hyperlink{structrex_1_1_float2_aaf7fa1d536de964090f5c8ed05892089}{operator!=}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{structrex_1_1_float2}{Float2}}\&)\textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00033}\mbox{\hyperlink{structrex_1_1_float2_a8aa2e3510dce27961d6aed5942fd65c3}{00033}}\ \ \ \ \ \ \ \ \ \textcolor{keyword}{constexpr}\ \mbox{\hyperlink{structrex_1_1_float2}{Float2}}\&\ \mbox{\hyperlink{structrex_1_1_float2_a8aa2e3510dce27961d6aed5942fd65c3}{operator\ =\ }}(\textcolor{keyword}{const}\ \mbox{\hyperlink{structrex_1_1_float2}{Float2}}\&\ \_v)\textcolor{keyword}{noexcept}\ \{\ \mbox{\hyperlink{structrex_1_1_float2_a05af55d6d0cdb14ea6351a7b3a9b5b90}{x}}\ =\ \_v.x;\ \mbox{\hyperlink{structrex_1_1_float2_ad5360401bc5b09504a8091f1cedbb320}{y}}\ =\ \_v.y;\ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};\ \}}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00034}00034\ \ \ \ \ \};}
+\DoxyCodeLine{\Hypertarget{float2_8h_source_l00035}00035\ \}}
+
+\end{DoxyCode}
