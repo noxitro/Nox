@@ -33,3 +33,8 @@
 *.user
 /runtime/.vs/runtime
 /runtime/build
+/runtime/bin/source/ReflectionGenerator/.vs
+/runtime/bin/source/ReflectionGenerator/SampleCpp/x64/Debug
+/runtime/bin/source/ReflectionGenerator/x64/Debug
+/runtime/bin/source/ReflectionGenerator/bin/Debug/net7.0
+/runtime/bin/source/ReflectionGenerator/obj
