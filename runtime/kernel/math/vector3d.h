@@ -14,7 +14,12 @@ namespace nox
 		{
 			using ValueType = _ValueType;
 
-			_ValueType x, y, z;
+			_ValueType x;
+			_ValueType y;
+			_ValueType z;
+		private:
+			const _ValueType _padding = 0;
+		public:
 
 			//	コンストラクタ
 			[[nodiscard]]	constexpr Vector3D() noexcept :

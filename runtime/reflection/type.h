@@ -12,16 +12,18 @@ namespace nox::reflection
 
 	namespace detail
 	{
+		/// @brief Type生成構造体
 		struct ReflectionTypeActivator;
 
 		struct TypeExtraResultInfo
 		{
+			//	8byte
 			union
 			{
 				/**
 				 * @brief ダミー
 				*/
-				std::uintptr_t ret0;
+				std::uintptr_t ret0 = 0;
 
 				/**
 				 * @brief 配列の次元数
@@ -49,6 +51,7 @@ namespace nox::reflection
 				const class reflection::Type* extra_type_ptr;
 			};
 		};
+		static_assert(sizeof(TypeExtraResultInfo) <= sizeof(std::uintptr_t));
 
 		enum class TypeExtraAccessInfoType : u8
 		{
@@ -75,6 +78,8 @@ namespace nox::reflection
 			/// @brief ポインタの指す型
 			PointeeType,
 
+			DesugarType,
+
 			/**
 			 * @brief その他の型情報
 			*/
@@ -87,9 +92,13 @@ namespace nox::reflection
 			/// @brief 呼び出し内容
 			TypeExtraAccessInfoType request_type;
 
+			//	8byte
 			union
 			{
+				/// @brief ダミー
 				const std::uint64_t arg0 = 0;
+
+				/// @brief 配列の次元数
 				const std::uint32_t array_rank_index;
 			};
 		};
@@ -97,6 +106,11 @@ namespace nox::reflection
 		/// @brief 動的情報を取得するための関数型
 		using TypeExtraInfoFuncType = bool(*)(TypeExtraResultInfo& outInfo, const TypeExtraArgsInfo&)noexcept;
 
+		/// @brief 動的情報を取得する関数の宣言
+		/// @tparam T 型
+		/// @param out_info 戻り値
+		/// @param args 引数パラメータ
+		/// @return 成功したか
 		template<class T>
 		bool GetTypeExtraInfo(TypeExtraResultInfo& out_info, const TypeExtraArgsInfo& args)noexcept;
 	}
@@ -106,16 +120,7 @@ namespace nox::reflection
 	{
 		friend struct nox::reflection::detail::ReflectionTypeActivator;
 
-	protected:
-		[[nodiscard]] inline constexpr Type(const Type& other)noexcept :
-			id_(other.id_),
-			kind_(other.kind_),
-			attribute_flags_(other.attribute_flags_),
-			size_(other.size_),
-			alignment_(other.alignment_),
-			name_(other.name_)
-		{}
-
+	private:
 		[[nodiscard]] inline constexpr explicit Type(
 			const std::uint32_t _id,
 			const TypeKind _kind,
@@ -152,7 +157,12 @@ namespace nox::reflection
 			std::invoke(extra_func_, result, reflection::detail::TypeExtraArgsInfo{ .request_type = reflection::detail::TypeExtraAccessInfoType::PointeeType });
 			return util::Deref(result.extra_type_ptr);
 		}
-		const Type& GetDesugarType()const noexcept;
+		inline constexpr const Type& GetDesugarType()const noexcept
+		{
+			reflection::detail::TypeExtraResultInfo result;
+			std::invoke(extra_func_, result, reflection::detail::TypeExtraArgsInfo{ .request_type = reflection::detail::TypeExtraAccessInfoType::DesugarType });
+			return util::Deref(result.extra_type_ptr);
+		}
 
 #pragma region アクセサ
 		/// @brief 型IDを取得
@@ -218,6 +228,7 @@ namespace nox::reflection
 		/// @brief アライメントオフ
 		size_t alignment_;
 
+		/// @brief 動的情報取得関数
 		detail::TypeExtraInfoFuncType extra_func_;
 
 		/// @brief		型名
@@ -263,7 +274,7 @@ namespace nox::reflection
 		};	
 
 		/// @brief 無効型
-		constexpr Type InvalidTypeImpl = reflection::detail::ReflectionTypeActivator::CreateReflectionInvalidType() ;
+		constexpr Type InvalidTypeImpl{ reflection::detail::ReflectionTypeActivator::CreateReflectionInvalidType() };
 
 		/// @brief 型情報保持構造体
 		/// @tparam T 型
@@ -319,11 +330,22 @@ namespace nox::reflection
 					out_info.underlying_type_kind = GetTypeKind<std::underlying_type_t<T>>();
 					return true;
 				}
-
+				return false;
 			case TypeExtraAccessInfoType::PointeeType:
 				if constexpr (std::is_pointer_v<T> == true)
 				{
 					out_info.extra_type_ptr = &ReflectionTypeHolder<std::remove_pointer_t<T>>::value;
+				}
+				else
+				{
+					out_info.extra_type_ptr = &reflection::detail::InvalidTypeImpl;
+				}
+				return true;
+
+			case TypeExtraAccessInfoType::DesugarType:
+				if constexpr (std::is_const_v<T> == true)
+				{
+					out_info.extra_type_ptr = &ReflectionTypeHolder<std::remove_const_t<T>>::value;
 				}
 				else
 				{
