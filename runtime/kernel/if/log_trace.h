@@ -21,7 +21,7 @@ namespace nox::debug
 	}
 
 
-	inline	void	InfoLine(const U16String& message, const c16* const file = util::CharCast<c16>(__FILEW__), const u32 line = __LINE__) 
+	inline	void	InfoLine(const U16String& message, const c16* const file = util::CharCast<const c16*>(__FILEW__), const u32 line = __LINE__) 
 	{
 		nox::debug::detail::TraceDirect(debug::detail::LogCategory::Info, u"unknown", message, true, file, line);
 	}

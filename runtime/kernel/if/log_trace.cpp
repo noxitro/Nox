@@ -20,7 +20,7 @@ namespace
 void	debug::detail::TraceDirect(LogCategory log_category, std::u16string_view category, const U16String& message, bool isNewLine, const c16* file, u32 line)
 {
 //	std::array<c16, 1024> buffer = { 0 };
-	const wchar_t* converted_str = util::CharCast<wchar_t>(message.c_str());
+	const wchar_t* converted_str = util::CharCast<const wchar_t*>(message.c_str());
 
 
 	//	コンソールへの出力

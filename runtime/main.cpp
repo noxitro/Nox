@@ -61,6 +61,9 @@ int WINAPI::WinMain(_In_ ::HINSTANCE hInstance, _In_opt_ ::HINSTANCE /*hPrevInst
 {
 	Test test;
 
+	constexpr const auto& type = nox::reflection::Typeof<int*>();
+	const auto& n1 = type.GetPointeeType();
+
 	nox::Vec3* out;
 	field_info00.TryGetValue(out, test);
 

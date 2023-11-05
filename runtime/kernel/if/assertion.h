@@ -22,9 +22,9 @@ namespace nox
 			void	Assert(not_null<const c16*> message, not_null<const c16*> file, const u32 line);
 		}
 
-		inline	void	Assert(const bool expression, not_null<const c16*> message, not_null<const c16*> file = util::CharCast<c16>(__FILEW__), const u32 line = __LINE__)
+		inline	void	Assert(const bool expression, not_null<const c16*> message, not_null<const c16*> file = util::CharCast<const c16*>(__FILEW__), const u32 line = __LINE__)
 		{
-			if (expression)
+			if (!expression)
 			{
 				debug::detail::Assert(message, file, line);
 			}

@@ -5,6 +5,7 @@
 
 using namespace nox::reflection;
 
+
 bool	Type::IsConvertible(const Type& to)const noexcept
 {
 	if (*this == to)

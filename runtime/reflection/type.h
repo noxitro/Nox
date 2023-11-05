@@ -8,16 +8,113 @@
 namespace nox::reflection
 {
 	//	前方宣言
+	class Type;
+
 	namespace detail
 	{
 		struct ReflectionTypeActivator;
-		struct ReflectionTypeActivatorImpl;
+
+		struct TypeExtraResultInfo
+		{
+			union
+			{
+				/**
+				 * @brief ダミー
+				*/
+				std::uintptr_t ret0;
+
+				/**
+				 * @brief 配列の次元数
+				*/
+				std::uint32_t array_rank;
+
+				/**
+				 * @brief 配列サイズ
+				*/
+				std::uint32_t array_extent;
+
+				/**
+				 * @brief インスタンス
+				*/
+				void* instance_ptr;
+
+				/**
+				 * @brief 基底型のタイプ種別
+				*/
+				TypeKind underlying_type_kind;
+
+				/**
+				 * @brief 要素タイプ
+				*/
+				const class reflection::Type* extra_type_ptr;
+			};
+		};
+
+		enum class TypeExtraAccessInfoType : u8
+		{
+			/**
+			 * @brief 配列の次元数
+			*/
+			ArrayRank,
+
+			/**
+			 * @brief 配列の要素数
+			*/
+			ArrayExtent,
+
+			/**
+			 * @brief インスタンス作成
+			*/
+			CreateInstance,
+
+			/**
+			 * @brief 基底型
+			*/
+			UnderlyingTypeKind,
+
+			/// @brief ポインタの指す型
+			PointeeType,
+
+			/**
+			 * @brief その他の型情報
+			*/
+			ExtraType,
+		};
+
+		/// @brief 動的情報呼び出しの引数パラメータ
+		struct TypeExtraArgsInfo
+		{
+			/// @brief 呼び出し内容
+			TypeExtraAccessInfoType request_type;
+
+			union
+			{
+				const std::uint64_t arg0 = 0;
+				const std::uint32_t array_rank_index;
+			};
+		};
+
+		/// @brief 動的情報を取得するための関数型
+		using TypeExtraInfoFuncType = bool(*)(TypeExtraResultInfo& outInfo, const TypeExtraArgsInfo&)noexcept;
+
+		template<class T>
+		bool GetTypeExtraInfo(TypeExtraResultInfo& out_info, const TypeExtraArgsInfo& args)noexcept;
 	}
 
 	/// @brief 汎用型情報
-	class Type
+	class Type final
 	{
 		friend struct nox::reflection::detail::ReflectionTypeActivator;
+
+	protected:
+		[[nodiscard]] inline constexpr Type(const Type& other)noexcept :
+			id_(other.id_),
+			kind_(other.kind_),
+			attribute_flags_(other.attribute_flags_),
+			size_(other.size_),
+			alignment_(other.alignment_),
+			name_(other.name_)
+		{}
 
 		[[nodiscard]] inline constexpr explicit Type(
 			const std::uint32_t _id,
@@ -25,18 +122,16 @@ namespace nox::reflection
 			const TypeAttributeFlag _attribute_flags,
 			const size_t _size,
 			const size_t _alignment,
-			const std::u8string_view name,
-			const Type* pointee_type,
-			const Type* desugar_type
+			not_null<reflection::detail::TypeExtraInfoFuncType> extra_func,
+			const std::u8string_view name
 		)noexcept :
 			id_(_id),
 			kind_(_kind),
 			attribute_flags_(_attribute_flags),
 			size_(_size),
 			alignment_(_alignment),
-			name_(name),
-			pointee_type_(pointee_type),
-			desugar_type_(desugar_type)
+			extra_func_(extra_func.get()),
+			name_(name)
 		{}
 	public:
 
@@ -50,6 +145,14 @@ namespace nox::reflection
 		/// @param to 
 		/// @return 
 		bool	IsConvertible(const Type& to)const noexcept;
+
+		inline constexpr const Type& GetPointeeType()const noexcept 
+		{
+			reflection::detail::TypeExtraResultInfo result;
+			std::invoke(extra_func_, result, reflection::detail::TypeExtraArgsInfo{ .request_type = reflection::detail::TypeExtraAccessInfoType::PointeeType });
+			return util::Deref(result.extra_type_ptr);
+		}
+		const Type& GetDesugarType()const noexcept;
 
 #pragma region アクセサ
 		/// @brief 型IDを取得
@@ -99,7 +202,7 @@ namespace nox::reflection
 #pragma endregion
 
 
-	private:
+	protected:
 		/// @brief 型ID
 		std::uint32_t id_;
 
@@ -115,42 +218,34 @@ namespace nox::reflection
 		/// @brief アライメントオフ
 		size_t alignment_;
 
+		detail::TypeExtraInfoFuncType extra_func_;
+
 		/// @brief		型名
 		/// @details	コンパイル時に判断された名前なので、開発ビルド以外では使用禁止
 		std::u8string_view name_;
-
-		/// @brief ポインタが指す型
-		const Type* pointee_type_;
-
-		/// @brief 糖衣構文
-		const Type* desugar_type_;
-
 	};
 	
-	class TypeImpl : public Type
-	{
-	public:
-
-	};
-
 	namespace detail
 	{
 		struct ReflectionTypeActivator
 		{
 			/// @brief 無効タイプ
-			static inline	constexpr	Type TypeofNone()noexcept { return Type(
+			static inline	constexpr	Type CreateReflectionInvalidType()noexcept 
+			{ 
+				return Type(
 				0U,
 				TypeKind::Invalid,
 				TypeAttributeFlag::None,
 				0U,
 				0U,
-				u8"",
-				nullptr,
-				nullptr
+					+[](detail::TypeExtraResultInfo&, const detail::TypeExtraArgsInfo&)noexcept {
+						return false;
+					},
+				u8""
 			); }
 
 			template<class T>
-			static inline	constexpr	Type TypeofImpl()noexcept
+			static inline	constexpr	Type CreateReflectionType()noexcept
 			{
 				return Type(
 					util::GetUniqueTypeID<T>(),
@@ -158,26 +253,91 @@ namespace nox::reflection
 					nox::reflection::GetTypeAttributeFlags<T>(),
 					IsSizeofTypeValue<T> ? sizeof(T) : 0,
 					std::alignment_of_v<T>,
-					util::GetTypeName<T>(),
-					nullptr,
-					nullptr
+					+[](detail::TypeExtraResultInfo& out_info, const detail::TypeExtraArgsInfo& args)noexcept {
+						//memo:	複雑すぎてコンパイルエラーになるので、実行時処理に回避
+						return reflection::detail::GetTypeExtraInfo<T>(out_info, args);
+					},
+					util::GetTypeName<T>()
 				);
 			}
 		};	
 
 		/// @brief 無効型
-		constexpr Type InvalidTypeImpl = reflection::detail::ReflectionTypeActivator::TypeofNone();
+		constexpr Type InvalidTypeImpl = reflection::detail::ReflectionTypeActivator::CreateReflectionInvalidType() ;
 
+		/// @brief 型情報保持構造体
+		/// @tparam T 型
 		template<class T>
 		struct ReflectionTypeHolder
 		{
-			static constexpr Type value = reflection::detail::ReflectionTypeActivator::TypeofImpl<T>();
+			static constexpr Type value{ reflection::detail::ReflectionTypeActivator::CreateReflectionType<T>() };
 		};
+
+		template<class T>
+		bool GetTypeExtraInfo(TypeExtraResultInfo& out_info, const TypeExtraArgsInfo& args)noexcept
+		{
+			switch (args.request_type)
+			{
+			case TypeExtraAccessInfoType::ArrayRank:
+				if constexpr (std::is_array_v<T> == false)
+				{
+					out_info.array_rank = 0U;
+					return true;
+				}
+				else
+				{
+					out_info.array_rank = static_cast<u32>(std::rank_v<T>);
+					return true;
+				}
+				break;
+			case TypeExtraAccessInfoType::ArrayExtent:
+				if constexpr (std::is_array_v<T> == false)
+				{
+					out_info.array_extent = 0U;
+					return true;
+				}
+				else
+				{
+					out_info.array_extent = nox::util::GetArrayExtent<T>(args.array_rank_index);
+					return true;
+				}
+
+			case TypeExtraAccessInfoType::CreateInstance:
+				if constexpr (std::is_class_v<T> == true)
+				{
+					//	out_info.instance_ptr = TypeExtraCreateInstance<std::remove_const_t<T>>::Create();
+					return true;
+				}
+				else
+				{
+					out_info.instance_ptr = nullptr;
+				}
+
+			case TypeExtraAccessInfoType::UnderlyingTypeKind:
+				if constexpr (std::is_enum_v<T> == true)
+				{
+					out_info.underlying_type_kind = GetTypeKind<std::underlying_type_t<T>>();
+					return true;
+				}
+
+			case TypeExtraAccessInfoType::PointeeType:
+				if constexpr (std::is_pointer_v<T> == true)
+				{
+					out_info.extra_type_ptr = &ReflectionTypeHolder<std::remove_pointer_t<T>>::value;
+				}
+				else
+				{
+					out_info.extra_type_ptr = &reflection::detail::InvalidTypeImpl;
+				}
+				return true;
+			}
+
+			return false;
+		}
 	}
 
 	/// @brief 無効型
 	constexpr const Type& InvalidType = reflection::detail::InvalidTypeImpl;
-
 
 	/// @brief 型情報を取得
 	/// @tparam T 型

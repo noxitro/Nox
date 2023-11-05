@@ -50,6 +50,48 @@ namespace nox::util
 	}
 #pragma endregion
 
+#pragma region 配列に対する操作
+	namespace detail
+	{
+		template<concepts::Array T>
+		[[nodiscard]] inline	constexpr size_t GetArrayExtentImpl(const size_t array_rank_index, const size_t indexCounter = 0)noexcept
+		{
+			if (array_rank_index == indexCounter)
+			{
+				return std::extent_v<T>;
+			}
+			else
+			{
+				if (indexCounter >= std::rank_v<T>)
+				{
+					return 0U;
+				}
+				if constexpr (std::is_array_v<std::remove_extent_t<T>> == false)
+				{
+					return 0U;
+				}
+				else
+				{
+					return util::detail::GetArrayExtentImpl<std::remove_extent_t<T>>(array_rank_index, indexCounter + 1);
+				}
+			}
+		}
+	}
+
+	template<concepts::Array T>
+	[[nodiscard]] inline constexpr size_t GetArrayExtent(const size_t array_rank_index)noexcept
+	{
+		if (array_rank_index >= std::rank_v<T>)
+		{
+			return 0U;
+		}
+		else
+		{
+			return util::detail::GetArrayExtentImpl<T>(array_rank_index);
+		}
+	}
+#pragma endregion
+	
 
 	/// @brief 要素数の範囲外チェック
 	/// @tparam T 型

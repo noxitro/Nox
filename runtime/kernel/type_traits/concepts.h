@@ -26,4 +26,7 @@ namespace nox::concepts
 	/// @brief class or union
 	template<class T>
 	concept ClassUnion = std::is_class_v<T> || std::is_union_v<T>;
+
+	template<class T>
+	concept Array = std::is_array_v<T>;
 }

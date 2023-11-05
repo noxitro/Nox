@@ -13,10 +13,10 @@ namespace nox::reflection
 	public:
 #pragma region 変数アクセスの型定義
 
-		using SetterMemberFunc = void(*)(not_null<void*> instancePtr, const void* const valuePtr);
-		using GetterMemberFunc = void(*)(not_null<void*> outPtr, not_null<const void*> instancePtr);
-		using SetterArrayMemberFunc = bool(*)(not_null<void*> instancePtr, const void* const valuePtr, const std::uint32_t index);
-		using GetterArrayMemberFunc = bool(*)(not_null<void*> outPtr, not_null<const void*> instancePtr, const std::uint32_t index);
+		using SetterMemberFunc = void(*)(not_null<void*> instance_ptr, const void* const valuePtr);
+		using GetterMemberFunc = void(*)(not_null<void*> outPtr, not_null<const void*> instance_ptr);
+		using SetterArrayMemberFunc = bool(*)(not_null<void*> instance_ptr, const void* const valuePtr, const std::uint32_t index);
+		using GetterArrayMemberFunc = bool(*)(not_null<void*> outPtr, not_null<const void*> instance_ptr, const std::uint32_t index);
 
 		using SetterGlobalFunc = void(*)(const void* const value);
 		using GetterGlobalFunc = void(*)(not_null<void*> outPtr);
@@ -384,39 +384,39 @@ namespace nox::reflection
 #pragma region マクロ関連
 #pragma region メンバ関数
 ///	@brief	メンバ変数へのセット
-#define	NOX_FIELD_INFO_LAMBDA_SETTER(ClassName, FieldName) [](nox::not_null<void*> instancePtr, const void* const value){\
-	static_cast<ClassName*>(instancePtr.get())->FieldName = *static_cast<nox::AddConstPointerType<std::add_pointer_t<decltype(ClassName::FieldName)>>>(value);\
+#define	NOX_FIELD_INFO_LAMBDA_SETTER(ClassName, FieldName) [](nox::not_null<void*> instance_ptr, const void* const value){\
+	static_cast<ClassName*>(instance_ptr.get())->FieldName = *static_cast<nox::AddConstPointerType<std::add_pointer_t<decltype(ClassName::FieldName)>>>(value);\
 	}
 
 ///	@brief	メンバ変数の取得
-#define	NOX_FIELD_INFO_LAMBDA_GETTER(ClassName, FieldName) [](nox::not_null<void*> outValue, nox::not_null<const void*> instancePtr) {\
-	*static_cast<nox::RemoveConstPointerReferenceType<std::add_pointer_t<decltype(ClassName::FieldName)>>>(outValue.get()) = static_cast<const ClassName*>(instancePtr.get())->FieldName;\
+#define	NOX_FIELD_INFO_LAMBDA_GETTER(ClassName, FieldName) [](nox::not_null<void*> outValue, nox::not_null<const void*> instance_ptr) {\
+	*static_cast<nox::RemoveConstPointerReferenceType<std::add_pointer_t<decltype(ClassName::FieldName)>>>(outValue.get()) = static_cast<const ClassName*>(instance_ptr.get())->FieldName;\
 }
 
 ///	@brief	メンバ変数アドレスの取得
-#define	NOX_FIELD_INFO_LAMBDA_GETTER_ADDRESS(ClassName, FieldName) [](nox::not_null<void*> outValue, nox::not_null<const void*> instancePtr) {\
-	*static_cast<nox::RemoveConstPointerReferenceType<std::add_pointer_t<decltype(ClassName::FieldName)>>>(outValue.get()) = static_cast<const ClassName*>(instancePtr.get())->FieldName;\
+#define	NOX_FIELD_INFO_LAMBDA_GETTER_ADDRESS(ClassName, FieldName) [](nox::not_null<void*> outValue, nox::not_null<const void*> instance_ptr) {\
+	*static_cast<nox::RemoveConstPointerReferenceType<std::add_pointer_t<decltype(ClassName::FieldName)>>>(outValue.get()) = static_cast<const ClassName*>(instance_ptr.get())->FieldName;\
 }
 
 
-#define	NOX_FIELD_INFO_LAMBDA_SETTER_ARRAY(ClassName, FieldName) [](nox::not_null<void*> instancePtr, const void* const value, const u32 index) {\
-	if (nox::util::IsValidIndex(static_cast<const ClassName*>(instancePtr.get())->FieldName, index) == false) {\
+#define	NOX_FIELD_INFO_LAMBDA_SETTER_ARRAY(ClassName, FieldName) [](nox::not_null<void*> instance_ptr, const void* const value, const u32 index) {\
+	if (nox::util::IsValidIndex(static_cast<const ClassName*>(instance_ptr.get())->FieldName, index) == false) {\
 		return false;\
 	}\
-	static_cast<ClassName*>(instancePtr.get())->FieldName[index] = *static_cast<nox::AddConstPointerType<std::add_pointer_t<nox::ContainerElementType<decltype(ClassName::FieldName)>>>>(value);\
+	static_cast<ClassName*>(instance_ptr.get())->FieldName[index] = *static_cast<nox::AddConstPointerType<std::add_pointer_t<nox::ContainerElementType<decltype(ClassName::FieldName)>>>>(value);\
 	return true;\
 	}
 
-#define	NOX_FIELD_INFO_LAMBDA_GETTER_ARRAY(ClassName, FieldName) [](nox::not_null<void*> outValue, nox::not_null<const void*> instancePtr, const u32 index) {\
-	if (nox::util::IsValidIndex(static_cast<const ClassName*>(instancePtr.get())->FieldName, index) == false) {\
+#define	NOX_FIELD_INFO_LAMBDA_GETTER_ARRAY(ClassName, FieldName) [](nox::not_null<void*> outValue, nox::not_null<const void*> instance_ptr, const u32 index) {\
+	if (nox::util::IsValidIndex(static_cast<const ClassName*>(instance_ptr.get())->FieldName, index) == false) {\
 		return false;\
 	}\
-	*static_cast<RemoveConstPointerReferenceType<std::add_pointer_t<nox::ContainerElementType<decltype(ClassName::FieldName)>>>>(outValue.get()) = static_cast<const ClassName*>(instancePtr.get())->FieldName[index];\
+	*static_cast<RemoveConstPointerReferenceType<std::add_pointer_t<nox::ContainerElementType<decltype(ClassName::FieldName)>>>>(outValue.get()) = static_cast<const ClassName*>(instance_ptr.get())->FieldName[index];\
 	return true;\
 	}
 
-#define NOX_FIELD_INFO_LAMBDA_ADDRESS_GETTER(ClassName, FieldName) [](nox::not_null<void*> outValue, nox::not_null<const void*> instancePtr) {\
-	*static_cast<std::add_pointer_t<nox::AddConstPointerType<std::add_pointer_t<decltype(ClassName::FieldName)>>>>(outValue.get()) = &static_cast<const ClassName*>(instancePtr.get())->FieldName;\
+#define NOX_FIELD_INFO_LAMBDA_ADDRESS_GETTER(ClassName, FieldName) [](nox::not_null<void*> outValue, nox::not_null<const void*> instance_ptr) {\
+	*static_cast<std::add_pointer_t<nox::AddConstPointerType<std::add_pointer_t<decltype(ClassName::FieldName)>>>>(outValue.get()) = &static_cast<const ClassName*>(instance_ptr.get())->FieldName;\
 }
 
 

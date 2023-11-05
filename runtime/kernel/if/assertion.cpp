@@ -18,5 +18,5 @@ void	debug::detail::Assert(not_null<const c16*> message, not_null<const c16*> fi
 {
 	NOX_LOCAL_SCOPE(os::ScopedLock(kMutex));
 
-	::_wassert(util::CharCast<wchar_t>(message.get()), util::CharCast<wchar_t>(file.get()), line);
+	::_wassert(util::CharCast<const wchar_t*>(message), util::CharCast<const wchar_t*>(file.get()), line);
 }
