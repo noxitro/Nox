@@ -5,6 +5,8 @@
 
 #include	"class_info.h"
 #include	"enum_info.h"
+#include	"field_info.h"
+#include	"method_info.h"
 
 using namespace nox;
 using namespace nox::reflection;
@@ -36,6 +38,26 @@ const ClassInfo* Reflection::FindClassInfoFromNameHash(const std::uint32_t nameh
 		return nullptr;
 	}
 	return class_data_ptr_map_with_name_.at(namehash)->class_info_ptr;
+}
+
+const class EnumInfo* Reflection::FindEnumInfo(std::uint32_t typeID)const noexcept
+{
+	if (enum_info_map_.contains(typeID) == false)
+	{
+		return nullptr;
+	}
+
+	return enum_info_map_.at(typeID);
+}
+
+const class EnumInfo* Reflection::FindEnumInfoFromNameHash(std::uint32_t namehash)const noexcept
+{
+	if (enum_info_map_with_name_.contains(namehash) == false)
+	{
+		return nullptr;
+	}
+
+	return enum_info_map_with_name_.at(namehash);
 }
 
 void Reflection::Register(const class ClassInfo& data)
@@ -97,10 +119,30 @@ void Reflection::Unregister(const class ClassInfo& data)
 
 void Reflection::Register(const EnumInfo& data)
 {
-
+	enum_info_map_.emplace(data.GetTypeID(), &data);
 }
 
 void Reflection::Unregister(const EnumInfo& data)
+{
+
+}
+
+void Reflection::Register(const FieldInfo& data)
+{
+
+}
+
+void Reflection::Unregister(const FieldInfo& data)
+{
+
+}
+
+void Reflection::Register(const MethodInfo& data)
+{
+
+}
+
+void Reflection::Unregister(const MethodInfo& data)
 {
 
 }

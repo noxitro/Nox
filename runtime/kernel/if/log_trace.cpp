@@ -3,6 +3,8 @@
 #include	"stdafx.h"
 #include	"log_trace.h"
 
+#include	"../memory/stl_allocate_adapter.h"
+
 #if NOX_X64
 #include	"../os/x64.h"
 #endif // NOX_X64

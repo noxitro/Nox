@@ -1,7 +1,7 @@
 ﻿///	@file	log_trace.h
 ///	@brief	log_trace
 #pragma once
-#include	"memory/stl_allocate_adapter.h"
+
 #include	"advanced_type.h"
 #include	"convert_string.h"
 

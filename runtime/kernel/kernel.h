@@ -9,9 +9,7 @@
 
 #include	"type_traits/type_name.h"
 
-#include	"memory/stl_allocate_adapter.h"
-
-#include	"if/convert_string.h"
+#include	"if/string_format.h"
 
 #include	"os/os.h"
 #include	"if/assertion.h"
@@ -24,3 +22,5 @@
 #include	"if/advanced_definition.h"
 
 #include	"math/math.h"
+
+#include	"memory/stl_allocate_adapter.h"

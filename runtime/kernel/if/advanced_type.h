@@ -41,6 +41,9 @@ namespace nox
 	template<class ValueType>
 	using BasicString = std::basic_string< ValueType, std::char_traits<ValueType>, memory::StlAllocateAdapter<ValueType>>;
 
+	using CString = BasicString<char>;
+	using WString = BasicString<wchar_t>;
+
 	using U8String = BasicString<c8>;
 	using U16String = BasicString<c16>;
 }

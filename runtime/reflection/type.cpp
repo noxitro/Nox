@@ -14,7 +14,10 @@ bool	Type::IsConvertible(const Type& to)const noexcept
 	}
 
 	//	修飾子を取り除いた型が一致するか
-
+	if (GetDesugarType() == to)
+	{
+		return true;
+	}
 
 	//	非ポインタ型のconst型かどうか
 

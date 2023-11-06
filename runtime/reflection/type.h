@@ -157,12 +157,15 @@ namespace nox::reflection
 			std::invoke(extra_func_, result, reflection::detail::TypeExtraArgsInfo{ .request_type = reflection::detail::TypeExtraAccessInfoType::PointeeType });
 			return util::Deref(result.extra_type_ptr);
 		}
+
 		inline constexpr const Type& GetDesugarType()const noexcept
 		{
 			reflection::detail::TypeExtraResultInfo result;
 			std::invoke(extra_func_, result, reflection::detail::TypeExtraArgsInfo{ .request_type = reflection::detail::TypeExtraAccessInfoType::DesugarType });
 			return util::Deref(result.extra_type_ptr);
 		}
+
+		
 
 #pragma region アクセサ
 		/// @brief 型IDを取得
@@ -241,7 +244,7 @@ namespace nox::reflection
 		struct ReflectionTypeActivator
 		{
 			/// @brief 無効タイプ
-			static inline	constexpr	Type CreateReflectionInvalidType()noexcept 
+			static inline	constexpr	Type CreateReflectionInvalidType()noexcept
 			{ 
 				return Type(
 				0U,
@@ -274,14 +277,14 @@ namespace nox::reflection
 		};	
 
 		/// @brief 無効型
-		constexpr Type InvalidTypeImpl{ reflection::detail::ReflectionTypeActivator::CreateReflectionInvalidType() };
+		constexpr const Type InvalidTypeImpl = reflection::detail::ReflectionTypeActivator::CreateReflectionInvalidType();
 
 		/// @brief 型情報保持構造体
 		/// @tparam T 型
 		template<class T>
 		struct ReflectionTypeHolder
 		{
-			static constexpr Type value{ reflection::detail::ReflectionTypeActivator::CreateReflectionType<T>() };
+			static constexpr Type value = reflection::detail::ReflectionTypeActivator::CreateReflectionType<T>();
 		};
 
 		template<class T>
@@ -359,7 +362,7 @@ namespace nox::reflection
 	}
 
 	/// @brief 無効型
-	constexpr const Type& InvalidType = reflection::detail::InvalidTypeImpl;
+	//constexpr const Type& InvalidType = reflection::detail::InvalidTypeImpl;
 
 	/// @brief 型情報を取得
 	/// @tparam T 型

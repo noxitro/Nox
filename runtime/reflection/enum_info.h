@@ -276,14 +276,18 @@ namespace nox::reflection
 		inline constexpr explicit EnumInfo(const EnumInfo&&)noexcept = delete;
 	public:
 		inline constexpr explicit EnumInfo(
+			std::u8string_view name,
 			std::u8string_view fullname,
+			std::u8string_view _namespace,
 			const ReflectionObject* const* attribute_ptr_table,
 			std::uint8_t attribute_length,
 			const EnumVariableInfo* const* variable_ptr_table,
 			std::uint8_t variable_length,
 			const Type& type
 		)noexcept :
+			name_(name),
 			fullname_(fullname),
+			namespace_(_namespace),
 			attribute_ptr_table_(attribute_ptr_table),
 			attribute_length_(attribute_length),
 			variable_ptr_table_(variable_ptr_table),
@@ -291,9 +295,21 @@ namespace nox::reflection
 			type_(type)
 		{}
 
+		inline	constexpr	const Type& GetType()const noexcept { return type_; }
+		inline	constexpr	std::uint32_t	GetTypeID()const noexcept { return type_.GetTypeID(); }
+
+		inline	constexpr	std::u8string_view	GetNamespace()const noexcept { return namespace_; }
+
 	private:
+
+		std::u8string_view	name_;
+
 		/// @brief 型名
 		std::u8string_view	fullname_;
+
+
+		std::u8string_view namespace_;
+
 
 		/// @brief 属性テーブル
 		const class ReflectionObject* const* attribute_ptr_table_;
@@ -323,7 +339,9 @@ namespace nox::reflection
 		/// @return 
 		template<class T> requires(std::is_enum_v<T>)
 		inline constexpr EnumInfo CreateEnumInfo(
-			std::u8string_view fullname_,
+			std::u8string_view name,
+			std::u8string_view fullname,
+			std::u8string_view _namespace,
 			const ReflectionObject* const* attribute_ptr_table,
 			std::uint8_t attribute_length,
 			const EnumVariableInfo* const* variable_ptr_table,
@@ -331,7 +349,9 @@ namespace nox::reflection
 		)noexcept
 		{
 			return EnumInfo(
-				fullname_,
+				name,
+				fullname,
+				_namespace,
 				attribute_ptr_table,
 				attribute_length,
 				variable_ptr_table,

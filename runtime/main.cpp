@@ -27,12 +27,14 @@
 struct Test
 {
 	nox::Vec3 v;
+	const nox::Vec3 vc;
 	nox::Vec3* v_ptr;
 	const nox::Vec3* v_c_ptr;
 	const nox::Vec3& v_ref;
 
 	inline constexpr Test()noexcept :
 		v(nox::Vec3(1.0f, 1.0f, 1.0f)),
+		vc(nox::Vec3(1.0f, 1.0f, 1.0f)),
 		v_ptr(&v),
 		v_c_ptr(&v),
 		v_ref(v){}
@@ -47,26 +49,28 @@ constexpr auto field_info00 = nox::reflection::detail::CreateFieldInfo<Test>(
 	nox::reflection::AccessLevel::Public,
 	nullptr,
 	0,
-	nox::reflection::Typeof<decltype(Test::v)>(),
-	NOX_FIELD_INFO_LAMBDA_SETTER(Test, v),
-	NOX_FIELD_INFO_LAMBDA_GETTER(Test, v),
+	nox::reflection::Typeof<decltype(Test::vc)>(),
+	nullptr,
+	[](nox::not_null<void*> outValue, nox::not_null<const void*> instance_ptr) { 
+		using TempType = nox::RemoveConstPointerReferenceType<std::add_pointer_t<decltype(Test::vc)>>;
+		TempType* pp = nullptr;
+		*static_cast<TempType>(outValue.get()) = static_cast<const Test*>(instance_ptr.get())->vc;
+	},
 	nullptr,
 	nullptr,
 	nullptr,
 	nullptr
 );
 
-
 int WINAPI::WinMain(_In_ ::HINSTANCE hInstance, _In_opt_ ::HINSTANCE /*hPrevInstance*/, _In_ ::LPSTR /*lpCmdLine*/, _In_ int nCmdShow)
 {
 	Test test;
 
-	constexpr const auto& type = nox::reflection::Typeof<int*>();
+	constexpr const auto& type = nox::reflection::Typeof<int>();
 	const auto& n1 = type.GetPointeeType();
 
-	nox::Vec3* out;
-	field_info00.TryGetValue(out, test);
-
+	nox::Vec3* out = nullptr;
+	field_info00.TryGetValueAddress(out, test);
 
 	using namespace nox;
 	

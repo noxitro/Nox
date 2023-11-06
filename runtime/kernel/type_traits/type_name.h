@@ -11,15 +11,35 @@
 #include	"type_traits.h"
 namespace nox::util
 {
+#if defined(__clang__)
 	/**
 	 * @brief 型名を取得
 	*/
 	template <class T>// requires(!std::is_const_v<T> && !std::is_volatile_v<T>)
-		[[nodiscard]]	constexpr auto GetTypeName(void)noexcept
+	[[nodiscard]] constexpr auto GetTypeName(void)noexcept
 	{
-#if defined(__clang__)
-		return __func__;
+		return u8"";
+		/*constexpr std::u8string_view signature = reinterpret_cast<const c8*>(__PRETTY_FUNCTION__);
+		constexpr auto signatureSize = signature.size();
+
+		constexpr std::u8string_view preSignature = u8"auto __cdecl nox::util::GetTypeName<";
+		constexpr auto preSignatureSize = preSignature.size();
+
+		constexpr std::u8string_view lastSignature = u8">(void) noexcept";
+		constexpr auto lastSignatureSize = lastSignature.size();
+
+		constexpr std::u8string_view contentsName(signature.data() + preSignature.size(),
+			signatureSize - (preSignatureSize + lastSignatureSize));
+
+		return contentsName;*/
+	}
 #else
+	/**
+	 * @brief 型名を取得
+	*/
+	template <class T>// requires(!std::is_const_v<T> && !std::is_volatile_v<T>)
+	[[nodiscard]] constexpr auto GetTypeName(void)noexcept
+	{
 
 		constexpr std::u8string_view signature = NOX_DETAIL_TO_U8STRING(__FUNCSIG__);
 		constexpr auto signatureSize = signature.size();
@@ -33,6 +53,8 @@ namespace nox::util
 		constexpr std::u8string_view contentsName(signature.data() + preSignature.size(),
 			signatureSize - (preSignatureSize + lastSignatureSize));
 
+		return contentsName;
+#if false
 		//	class や namespaceを除去
 		constexpr std::u8string_view lastColon = u8"::";
 		constexpr std::u8string_view lastSpace = u8" ";
@@ -57,6 +79,9 @@ namespace nox::util
 			contentsName.size() - lastIndex);
 #endif
 	}
+#endif
+
+	
 
 	/// @brief 型IDを取得する
 	/// @tparam T 型

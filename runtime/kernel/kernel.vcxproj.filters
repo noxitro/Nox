@@ -153,7 +153,7 @@
     <ClInclude Include="os\detail\nox.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="os\detail\nox.h">
+    <ClInclude Include="if\string_format.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
@@ -290,7 +290,7 @@
     <ClCompile Include="if\advanced_definition.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="os\detail\nox.cpp">
+    <ClCompile Include="if\string_format.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

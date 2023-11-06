@@ -17,7 +17,7 @@ namespace nox::reflection
 		template<std::derived_from<class IAttribute> FirstType, std::derived_from<class IAttribute>... Types>
 		inline consteval bool CheckAttributes()noexcept
 		{
-
+			return true;
 		}
 	}
 

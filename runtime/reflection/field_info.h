@@ -108,7 +108,8 @@ namespace nox::reflection
 			const GetterGlobalFunc getter_global_func = nullptr,
 			const GetterGlobalFunc getter_address_global_func = nullptr,
 			const SetterArrayGlobalFunc setter_array_global_func = nullptr,
-			const GetterArrayGlobalFunc getter_array_global_func = nullptr
+			const GetterArrayGlobalFunc getter_array_global_func = nullptr,
+			const GetterArrayGlobalFunc getter_array_address_global_func = nullptr
 		)noexcept :
 			name_(name),
 			fullname_(fullname),
@@ -123,7 +124,8 @@ namespace nox::reflection
 			getter_global_func_(getter_global_func),
 			getter_address_global_func_(getter_address_global_func),
 			setter_array_global_func_(setter_array_global_func),
-			getter_array_global_func_(getter_array_global_func)
+			getter_array_global_func_(getter_array_global_func),
+			getter_array_address_global_func_(getter_array_address_global_func)
 		{}
 
 
@@ -156,10 +158,16 @@ namespace nox::reflection
 #pragma endregion
 
 #pragma region 変数の取得
+		/// @brief メンバ変数を取得
+		/// @tparam _ReturnType 
+		/// @tparam _InstanceType 
+		/// @param out_value 
+		/// @param owner_instance 
+		/// @return 
 		template<class _ReturnType, concepts::ClassUnion _InstanceType>
 		inline	constexpr	bool	TryGetValue(_ReturnType& out_value, const _InstanceType& owner_instance)const
 		{
-			return TryGetValueImpl(
+			return TryGetValueMemberImpl(
 				static_cast<void*>(&out_value),
 				Typeof<_ReturnType>(),
 				static_cast<const void*>(&owner_instance),
@@ -167,14 +175,42 @@ namespace nox::reflection
 			);
 		}
 
+		/// @brief メンバ変数のアドレスを取得
+		/// @tparam _InstanceType 
+		/// @tparam _ReturnType 
+		/// @param out_value 
+		/// @param owner_instance 
+		/// @return 
 		template<concepts::Pointer _ReturnType, concepts::ClassUnion _InstanceType> 
-		inline	constexpr	bool	TryGetValueAddress(_ReturnType out_value, const _InstanceType& owner_instance)const
+		inline	constexpr	bool	TryGetValueAddress(_ReturnType& out_value, _InstanceType& owner_instance)const
 		{
-			return TryGetValueImpl(
-				static_cast<void*>(out_value),
-				Typeof<_ReturnType>(),
+			return TryGetValueAddressMemberImpl(
+				static_cast<void*>(&out_value),
+				Typeof<std::remove_pointer_t<_ReturnType>>(),
 				static_cast<const void*>(&owner_instance),
 				Typeof<_InstanceType>()
+			);
+		}
+
+		/// @brief グローバル変数を取得
+		/// @tparam _ReturnType 
+		/// @param out_value 
+		/// @return 
+		template<class _ReturnType>
+		inline	constexpr	bool	TryGetValue(_ReturnType& out_value)const
+		{
+			return TryGetValueGlobalImpl(
+				static_cast<void*>(&out_value),
+				Typeof<_ReturnType>()
+			);
+		}
+
+		template<concepts::Pointer _ReturnType>
+		inline	constexpr	bool	TryGetValueAddress(_ReturnType& out_value)const
+		{
+			return TryGetValueAddressGlobalImpl(
+				static_cast<void*>(&out_value),
+				Typeof<_ReturnType>()
 			);
 		}
 #pragma endregion
@@ -202,25 +238,73 @@ namespace nox::reflection
 
 			return true;
 		}
+
+		inline constexpr	bool	CHeckAccess(const Type& return_type)const noexcept
+		{
+			if (IsMember() == true)
+			{
+				return false;
+			}
+
+			if (type_.IsConvertible(return_type) == false)
+			{
+				return false;
+			}
+
+			return true;
+		}
 #pragma endregion
 
 
 #pragma region 変数の取得の内部実装
 
-		inline	constexpr	bool	TryGetValueImpl(not_null<void*> out_ptr, const Type& return_type, not_null<const void*> ownerInstancePtr, const Type& owner_class_type)const
+		inline	constexpr	bool	TryGetValueMemberImpl(not_null<void*> out_ptr, const Type& out_type, not_null<const void*> ownerInstancePtr, const Type& owner_class_type)const
 		{
 			if (getter_member_func_ == nullptr)
 			{
 				return false;
 			}
 
-			if (CheckMemberAccess(return_type, owner_class_type) == false)
+			if (CheckMemberAccess(out_type, owner_class_type) == false)
 			{
 				return false;
 			}
 
 			std::invoke(getter_member_func_, out_ptr, ownerInstancePtr);
 
+			return true;
+		}
+
+		inline	constexpr	bool	TryGetValueAddressMemberImpl(not_null<void*> out_ptr,  const Type& out_pointee_type, not_null<const void*> ownerInstancePtr, const Type& owner_class_type)const
+		{
+			if (getter_address_member_func_ == nullptr)
+			{
+				return false;
+			}
+
+			if (CheckMemberAccess(out_pointee_type, owner_class_type) == false)
+			{
+				return false;
+			}
+
+			std::invoke(getter_address_member_func_, out_ptr, ownerInstancePtr);
+
+			return true;
+		}
+
+		constexpr bool TryGetValueGlobalImpl(not_null<void*> outPtr, const Type& out_type, const Type& getsetParamCannonicalType)const
+		{
+			if (getter_global_func_ == nullptr)
+			{
+				return false;
+			}
+
+			if (CHeckAccess(out_type) == false)
+			{
+				return false;
+			}
+
+			std::invoke(getter_global_func_, outPtr);
 			return true;
 		}
 #pragma endregion

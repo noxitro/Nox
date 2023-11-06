@@ -19,8 +19,10 @@ namespace nox::reflection
 		/// @brief 名前空間に所属する情報
 		struct GlobalData
 		{
-			const class GlobalInfo* global_into_ptr = nullptr;
 			UnorderedMap<u32, const class ClassInfo*> class_info_ptr_map;
+			UnorderedMap<u32, const class FieldInfo*> field_info_ptr_map;
+			UnorderedMap<u32, const class MethodInfo*> method_info_ptr_map;
+			UnorderedMap<u32, const class EnumInfo*> enum_info_ptr_map;
 		};
 	public:
 		
@@ -40,7 +42,7 @@ namespace nox::reflection
 
 		static	inline	void		CreateInstance() { instance_ = new Reflection(); }
 		static	inline	void		DeleteInstance() { delete instance_; }
-		static	inline	constexpr Reflection* Instance()noexcept { return instance_; }
+		static	inline	Reflection* Instance()noexcept { return instance_; }
 
 #pragma region 登録関数
 		void Register(const class ClassInfo& data);
@@ -48,6 +50,12 @@ namespace nox::reflection
 
 		void Register(const class EnumInfo& data);
 		void Unregister(const class EnumInfo& data);
+
+		void Register(const class FieldInfo& data);
+		void Unregister(const class FieldInfo& data);
+
+		void Register(const class MethodInfo& data);
+		void Unregister(const class MethodInfo& data);
 #pragma endregion
 
 
@@ -65,6 +73,10 @@ namespace nox::reflection
 		/// @brief		列挙体ポインタマップ
 		/// @details	key: typeID, value: enum info pointer
 		UnorderedMap<u32, const class EnumInfo*> enum_info_map_;
+
+		/// @brief		列挙体ポインタマップ
+		/// @details	key: nameHash, value: enum info pointer
+		UnorderedMap<u32, const class EnumInfo*> enum_info_map_with_name_;
 
 		/// @brief		グローバルデータマップ
 		///	@details	key: namespace hash, global data
