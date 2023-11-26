@@ -1,6 +1,7 @@
 ﻿
 
 using ClangSharp;
+using System.Runtime.InteropServices.Marshalling;
 
 namespace ReflectionGenerator
 {
@@ -19,6 +20,10 @@ namespace ReflectionGenerator
 
         #region 内部クラス定義
 
+		private class ConfigJsonData
+		{
+
+		}
 
 		private class MainArgsData
         {
@@ -88,10 +93,16 @@ namespace ReflectionGenerator
 			_Max
 		}
 
-
-        private static int Main(string[] args)
+		class Base
 		{
-			if(args.Length == (int)MainArgs._Max) 
+			public Base() { }
+			public Base(string name) { }
+
+		}
+
+		private static int Main(string[] args)
+		{
+            if (args.Length == (int)MainArgs._Max) 
 			{
 				Trace.Error(null, "コマンドライン引数が一致しません {0}", args.Length.ToString());
 				return -1;
@@ -129,8 +140,9 @@ namespace ReflectionGenerator
 			parser.Parse(
 				new Parser.CppParser.SetupParam() 
 				{
-					SourceFilePath = ""
-				}
+					SourceFilePath = "C:\\github\\Nox\\runtime\\bin\\source\\ReflectionGenerator\\Sample\\main.cpp",
+					IgnoreNamespaceList = new List<string>() { "std" }
+                }
 				);
 
 			//	コード出力

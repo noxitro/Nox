@@ -6,6 +6,37 @@ using System.Threading.Tasks;
 
 namespace ReflectionGenerator
 {
+    /// <summary>
+    /// リフレクション対象
+    /// </summary>
+    public enum ReflectionTarget : ulong
+    {
+        /// <summary>
+        /// リフレクションなし
+        /// </summary>
+        None = 0,
+
+        /// <summary>
+        /// リフレクション定義を付けたもの
+        /// </summary>
+        ReflectionDeclare = 1 << 0,
+
+        /// <summary>
+        /// リフレクション対象
+        /// </summary>
+        ReflectionObject = 1 << 1,
+
+        /// <summary>
+        /// リフレクション属性
+        /// </summary>
+        ReflectionAttribute = 1 << 2,
+
+        /// <summary>
+        /// 全てを対象
+        /// </summary>
+        All = 1 << 3
+    }
+
     public class RuntimeType
     {
         public RuntimeTypeKind Kind { get; set; } = RuntimeTypeKind.Invalid;
