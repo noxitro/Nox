@@ -37,13 +37,26 @@ namespace ReflectionGenerator
         All = 1 << 3
     }
 
+    /// <summary>
+    /// 型情報
+    /// </summary>
     public class RuntimeType
     {
-        public RuntimeTypeKind Kind { get; set; } = RuntimeTypeKind.Invalid;
+        public required bool IsVoid { get; init; }
+        public required string Name { get; init; }
+        public required string FullName { get; init; }
+        public required string Namespace { get; init; }
 
-        public string Name { get; set; }    = string.Empty;
-        public string FullName { get; set; } = string.Empty;
+        private RuntimeAttribute _AttributeFlags = RuntimeAttribute.Invalid;
 
+        public required ClangSharp.Interop.CXTypeKind TypeKind { private get; init; }
+
+        public bool IsArray => TypeKind == ClangSharp.Interop.CXTypeKind.CXType_ConstantArray;
+
+        public required bool IsTemplate { get; init; }
+
+        public required int TemplateListIndex { get; init; }
+        public required int TemplateIndex { get; init;}
     }
 
     /// <summary>

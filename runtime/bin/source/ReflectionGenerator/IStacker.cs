@@ -50,8 +50,8 @@ namespace ReflectionGenerator
         #endregion
 
         #region 非公開フィールド
-        protected List<T> _List = new List<T>();
-        protected Stack<T> _Stack = new Stack<T>();
+        protected readonly List<T> _List = new List<T>();
+        protected readonly Stack<T> _Stack = new Stack<T>();
         #endregion
     }
 }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ClangSharp.Interop;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -46,11 +47,6 @@ namespace ReflectionGenerator.Info
         public string ParentObjectClassName { get; set; } = string.Empty;
 
         /// <summary>
-        /// 親クラス
-        /// </summary>
-        public ClassInfo? ParentObjectClass { get; set; } = null;
-
-        /// <summary>
         /// 自身が含まれる外部クラス
         /// </summary>
         public ClassInfo? OutsideClass { get; set; } = null;
@@ -64,12 +60,12 @@ namespace ReflectionGenerator.Info
 
         public int DirtyResolveBaseInfo = 0;
 
-        public string[] BaseClassNameList { get; set; } = new string[0];
+        public required IReadOnlyList<string> BaseClassNameList { get; init; }
 
         /// <summary>
         /// 継承型リスト
         /// </summary>
-        public List<ClassInfo> BaseClassList { get; set; } = new List<ClassInfo>();
+        public IReadOnlyList<ClassInfo> BaseClassList { get; set; } = new List<ClassInfo>();
 
         public string RecordClassFullName { get; set; } = string.Empty;
 
@@ -100,6 +96,21 @@ namespace ReflectionGenerator.Info
         }
 
         /// <summary>
+        /// リフレクション対象ではないが、親子関係の構築のためだけに必要なもの
+        /// 並列用
+        /// </summary>
+        public int Fake = 0;
+
+        /// <summary>
+        /// リフレクション対象ではないが、親子関係の構築のためだけに必要なもの
+        /// </summary>
+        public required bool IsFake
+        {
+            get => Fake >= 1;
+            init => Fake = value ? 1 : 0;
+        }
+
+        /// <summary>
         /// 別名定義クラス
         /// </summary>
         public bool IsTypedef
@@ -111,17 +122,23 @@ namespace ReflectionGenerator.Info
         /// <summary>
         /// クラス名
         /// </summary>
-        public string Name { get; set; } = string.Empty;
+        public required string Name { get; init; }
 
         /// <summary>
         /// スコープを含めたクラス名
         /// </summary>
-        public string FullName { get; set; } = string.Empty;
+        public required string FullName { get; init; }
+
+        /// <summary>
+        /// 名前空間
+        /// </summary>
+        public required string Namespace { get; init; }
+
 
         /// <summary>
         /// アクセスレベル
         /// </summary>
-        public AccessLevel AccessLevel { get; set; } = AccessLevel.Private;
+        public required AccessLevel AccessLevel { get; init; }
 
         public AttributeFlag AttributeFlags { get; set; } = AttributeFlag.None;
 
@@ -187,12 +204,12 @@ namespace ReflectionGenerator.Info
         /// <summary>
         /// 関数リスト
         /// </summary>
-        public List<MethodInfo> MethodInfoList { get; set; } = new List<MethodInfo>();
+        public List<MethodInfo> MethodInfoList { get; } = new List<MethodInfo>();
 
         /// <summary>
         /// 変数リスト
         /// </summary>
-        public List<FieldInfo> FieldInfoList { get; set; } = new List<FieldInfo>();
+        public List<FieldInfo> FieldInfoList { get; } = new List<FieldInfo>();
         #endregion
     }
 
@@ -205,21 +222,25 @@ namespace ReflectionGenerator.Info
         /// <summary>
         /// クラス名に依る辞書
         /// </summary>
-        private Dictionary<string, ClassInfo> _InfoDic = new Dictionary<string, ClassInfo>();
+        private readonly Dictionary<string, ClassInfo> _InfoDic = new Dictionary<string, ClassInfo>();
 
         /// <summary>
         /// CXCursorに依る辞書
         /// </summary>
         private readonly Dictionary<ClangSharp.Interop.CXCursor, ClassInfo> _InfoDictFromCXCursor = new Dictionary<ClangSharp.Interop.CXCursor, ClassInfo>();
 
-        private List<ClassInfo> _TypedefClassInfoList = new List<ClassInfo>();
+        private readonly List<ClassInfo> _TypedefClassInfoList = new List<ClassInfo>();
         #endregion
 
         public override void Push(ClassInfo info)
         {
             base.Push(info);
+            Add(info);
+        }
 
-            if(_InfoDic.ContainsKey(info.FullName) == true)
+        public void Add(ClassInfo info)
+        {
+            if (_InfoDic.ContainsKey(info.FullName) == true)
             {
                 Trace.Error(this, string.Format("既に存在しています {0}:", info.FullName));
                 return;
@@ -234,18 +255,19 @@ namespace ReflectionGenerator.Info
             {
                 _TypedefClassInfoList.Add(info);
             }
+
         }
 
-        public bool Contains(string fullName) => _InfoDic.ContainsKey(fullName);
+        public bool Contains(string FullName) => _InfoDic.ContainsKey(FullName);
 
-        public ClassInfo? GetInfo(string fullName)
+        public ClassInfo? GetInfo(string FullName)
         {
-            if(_InfoDic.ContainsKey(fullName) == false)
+            if(_InfoDic.ContainsKey(FullName) == false)
             {
                 return null;
             }
 
-            return _InfoDic[fullName];
+            return _InfoDic[FullName];
         }
 
         public ClassInfo? GetInfo(ClangSharp.Interop.CXCursor cursor)

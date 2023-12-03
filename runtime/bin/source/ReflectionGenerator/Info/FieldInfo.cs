@@ -19,41 +19,31 @@ namespace ReflectionGenerator.Info
         /// <summary>
         /// 変数名
         /// </summary>
-        public string Name { get; set; } = string.Empty;
+        public required string Name { get; init; }
 
         /// <summary>
-        /// 完全な変数名
+        /// 型情報
         /// </summary>
-        public string FullName { get; set; } = string.Empty;
-
-        /// <summary>
-        /// ランタイムタイプ
-        /// </summary>
-        public RuntimeTypeKind RuntimeType { get; set; } = RuntimeTypeKind.S32;
-
-        /// <summary>
-        /// ランタイムタイプ属性
-        /// </summary>
-        public RuntimeAttribute RuntimeAttributes { get; set; } = RuntimeAttribute.Invalid;
+        public required RuntimeType RuntimeType { get; init; }
 
         /// <summary>
         /// アクセスレベル
         /// </summary>
-        public AccessLevel AccessLevel { get; set; } = AccessLevel.Private;
+        public required AccessLevel AccessLevel { get; init; }
 
         /// <summary>
         /// IsConstexpr
         /// </summary>
-        public bool IsConstexpr { get; set; } = false;
+        public required bool IsConstexpr { get; init; }
 
         /// <summary>
         /// Templateか
         /// </summary>
-        public bool IsTemplate { get; set; } = false;
+        public required bool IsTemplate { get; init; } 
 
         /// <summary>
         /// 属性リスト
         /// </summary>
-        public List<AttributeInfo> AttributeInfoList { get; set; } = new List<AttributeInfo>();
+        public required IReadOnlyList<AttributeInfo> AttributeInfoList { get; init; }
     }
 }

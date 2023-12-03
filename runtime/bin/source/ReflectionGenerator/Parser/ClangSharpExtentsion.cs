@@ -116,6 +116,90 @@ namespace ReflectionGenerator.Parser
         {
             return false;
         }
+
+        public static string GetNamespace(this ClangSharp.Interop.CXCursor cursor)
+        {
+            string str = string.Empty;
+
+            while (cursor != ClangSharp.Interop.CXCursor.Null)
+            {
+                if (cursor.Kind == ClangSharp.Interop.CXCursorKind.CXCursor_Namespace)
+                {
+                    if (str == string.Empty)
+                    {
+                        str = cursor.Spelling.CString;
+                    }
+                    else
+                    {
+                        str = $"{cursor.Spelling.CString}::{str}";
+                    }
+                }
+
+                cursor = cursor.Referenced.SemanticParent;
+            }
+
+            return str;
+        }
+
+        /// <summary>
+        /// 完全な型名を取得
+        /// </summary>
+        /// <param name="cursor"></param>
+        /// <returns></returns>
+        public static string GetCanonicalTypeFullName(this ClangSharp.Interop.CXCursor cursor)
+        {
+            if (cursor.IsTemplated == true)
+            {
+                return cursor.TemplatedDecl.Type.CanonicalType.Spelling.CString;
+            }
+            else
+            {
+                return cursor.Type.CanonicalType.Spelling.CString;
+            }
+        }
+
+        public static string GetCanonicalTypeName(this ClangSharp.Interop.CXCursor self)
+        {
+            return self.GetCanonicalDeclarationCursor().Spelling.CString;
+        }
+
+        public static ClangSharp.Interop.CXCursor GetCanonicalDeclarationCursor(this ClangSharp.Interop.CXCursor self)
+        {
+            if (self.IsTemplated == true)
+            {
+                return self.TemplatedDecl.Type.CanonicalType.Declaration;
+            }
+            else
+            {
+                return self.Type.CanonicalType.Declaration;
+            }
+        }
+
+        public static RuntimeType CreateRuntimeType(this ClangSharp.Interop.CXCursor cursor, ClangSharp.Interop.CXType type)
+        {
+            
+            string name;
+            if (cursor.IsTemplated == true)
+            {
+                name = type.CanonicalType.Spelling.CString;
+            }
+            else
+            {
+                name = type.CanonicalType.Declaration.Spelling.CString;
+            }
+            
+            return new RuntimeType()
+            {
+                IsVoid = type.kind == ClangSharp.Interop.CXTypeKind.CXType_Void,
+                Name = name,
+                FullName = type.CanonicalType.Spelling.CString,
+                Namespace = cursor.GetNamespace(),
+                TypeKind = type.kind,
+                IsTemplate = cursor.IsTemplated,
+                TemplateListIndex = cursor.TemplateTypeParmDepth,
+                TemplateIndex = cursor.TemplateTypeParmIndex,
+            };
+        }
         #endregion
     }
 }

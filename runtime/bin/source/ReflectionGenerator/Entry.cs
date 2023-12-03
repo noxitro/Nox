@@ -104,7 +104,7 @@ namespace ReflectionGenerator
 		{
             if (args.Length == (int)MainArgs._Max) 
 			{
-				Trace.Error(null, "コマンドライン引数が一致しません {0}", args.Length.ToString());
+				Trace.Error(null, $"コマンドライン引数が一致しません {args.Length}");
 				return -1;
 			}
 
@@ -140,8 +140,8 @@ namespace ReflectionGenerator
 			parser.Parse(
 				new Parser.CppParser.SetupParam() 
 				{
-					SourceFilePath = "C:\\github\\Nox\\runtime\\bin\\source\\ReflectionGenerator\\Sample\\main.cpp",
-					IgnoreNamespaceList = new List<string>() { "std" }
+					SourceFilePath = "D:\\github\\Nox\\runtime\\bin\\source\\ReflectionGenerator\\Sample\\main.cpp",
+					IgnoreNamespaceList = new List<string>() { "", "std" }
                 }
 				);
 

@@ -30,44 +30,31 @@ namespace ReflectionGenerator.Info
             /// <summary>
             /// 引数名
             /// </summary>
-            public string Name { get; set; } = string.Empty;
+            public required string Name { get; init; }
 
-            /// <summary>
-            /// 型名
-            /// </summary>
-            public string TypeName { get; set; } = string.Empty;
-
-            public string TypeNamespace { get; set; } = string.Empty;
+            public required RuntimeType RuntimeType { get; init; }
 
             /// <summary>
             /// 型
             /// </summary>
-            public ClangSharp.Interop.CXTypeKind CXTypeKind { get; set; } = ClangSharp.Interop.CXTypeKind.CXType_Invalid;
+            public required ClangSharp.Interop.CXTypeKind CXTypeKind { get; init; }
 
             /// <summary>
             /// デフォルト値を持つか
             /// </summary>
-            public bool HasDefaultValue { get; set; } = false;
+            public required bool HasDefaultValue { get; init; }
         }
 
-
-
-        public string Name { get; set; } = string.Empty;
-        public string FullName { get; set; } = string.Empty;
-
-        /// <summary>
-        /// 関数の型名
-        /// </summary>
-        public string MethodTypeName { get; set; } = string.Empty;
+        public required string Name { get; init; }
 
         private MethodAttributeFlag _MethodAttributeFlags = MethodAttributeFlag.None;
 
-        public bool IsVirtual
+        public required bool IsVirtual
         {
             get => _MethodAttributeFlags.HasFlag(MethodAttributeFlag.Virtual);
             set => _MethodAttributeFlags = (MethodAttributeFlag)Util.SetBit((uint)_MethodAttributeFlags, (uint)MethodAttributeFlag.Virtual, value);
         }
-        public bool IsAbstract
+        public required bool IsAbstract
         {
             get => _MethodAttributeFlags.HasFlag(MethodAttributeFlag.Abstract);
             set => _MethodAttributeFlags = (MethodAttributeFlag)Util.SetBit((uint)_MethodAttributeFlags, (uint)MethodAttributeFlag.Abstract, value);
@@ -76,7 +63,7 @@ namespace ReflectionGenerator.Info
         /// <summary>
         /// Constructorか
         /// </summary>
-        public bool IsConstructor
+        public required bool IsConstructor
         {
             get => _MethodAttributeFlags.HasFlag(MethodAttributeFlag.Constructor);
             set => _MethodAttributeFlags = (MethodAttributeFlag)Util.SetBit((uint)_MethodAttributeFlags, (uint)MethodAttributeFlag.Constructor, value);
@@ -87,27 +74,27 @@ namespace ReflectionGenerator.Info
             get => _MethodAttributeFlags.HasFlag(MethodAttributeFlag.Virtual);
             set => _MethodAttributeFlags = (MethodAttributeFlag)Util.SetBit((uint)_MethodAttributeFlags, (uint)MethodAttributeFlag.Virtual, value);
         }
-        public bool IsInline
+        public required bool IsInline
         {
             get => _MethodAttributeFlags.HasFlag(MethodAttributeFlag.Virtual);
             set => _MethodAttributeFlags = (MethodAttributeFlag)Util.SetBit((uint)_MethodAttributeFlags, (uint)MethodAttributeFlag.Virtual, value);
         }
-        public bool IsConstexpr
+        public required bool IsConstexpr
         {
             get => _MethodAttributeFlags.HasFlag(MethodAttributeFlag.Virtual);
             set => _MethodAttributeFlags = (MethodAttributeFlag)Util.SetBit((uint)_MethodAttributeFlags, (uint)MethodAttributeFlag.Virtual, value);
         }
-        public bool IsConst
+        public required bool IsConst
         {
             get => _MethodAttributeFlags.HasFlag(MethodAttributeFlag.Virtual);
             set => _MethodAttributeFlags = (MethodAttributeFlag)Util.SetBit((uint)_MethodAttributeFlags, (uint)MethodAttributeFlag.Virtual, value);
         }
-        public bool IsNoexcept
+        public required bool IsNoexcept
         {
             get => _MethodAttributeFlags.HasFlag(MethodAttributeFlag.Virtual);
             set => _MethodAttributeFlags = (MethodAttributeFlag)Util.SetBit((uint)_MethodAttributeFlags, (uint)MethodAttributeFlag.Virtual, value);
         }
-        public bool IsStatic
+        public required bool IsStatic
         {
             get => _MethodAttributeFlags.HasFlag(MethodAttributeFlag.Virtual);
             set => _MethodAttributeFlags = (MethodAttributeFlag)Util.SetBit((uint)_MethodAttributeFlags, (uint)MethodAttributeFlag.Virtual, value);
@@ -116,21 +103,21 @@ namespace ReflectionGenerator.Info
         /// <summary>
         /// 戻り値の型
         /// </summary>
-        public RuntimeType ReturnRuntimeType { get; set; } = new RuntimeType();
+        public required RuntimeType ReturnRuntimeType { get; init; }
 
         /// <summary>
         /// アクセスレベル
         /// </summary>
-        public AccessLevel AccessLevel { get; set; } = AccessLevel.Private;
+        public required AccessLevel AccessLevel { get; init; }
 
         /// <summary>
         /// 引数情報
         /// </summary>
-        public ArgInfo[] ArgInfoList { get; set; } = new ArgInfo[0];
+        public required IReadOnlyList<ArgInfo> ArgInfoList { get; init; }
 
         /// <summary>
         /// 属性リスト
         /// </summary>
-        public List<AttributeInfo> AttributeInfoList { get; set; } = new List<AttributeInfo>();
+        public required IReadOnlyList<AttributeInfo> AttributeInfoList { get; init; }
     }
 }

@@ -21,7 +21,7 @@ namespace ReflectionGenerator.Parser
             /// 解析対象ファイルパス
             /// </summary>
             public string SourceFilePath { get; set; } = string.Empty;
-            
+
             /// <summary>
             /// 解析対象外のroot namespaceリスト
             /// </summary>
@@ -46,7 +46,7 @@ namespace ReflectionGenerator.Parser
         /// <summary>
         /// 解析対象のroot namespace list
         /// </summary>
-        private string[] _EnableRootNamespaceList = new string[0];
+        private string[]? _EnableRootNamespaceList = new string[0];
 
         /// <summary>
         /// 
@@ -63,11 +63,11 @@ namespace ReflectionGenerator.Parser
         /// <summary>
         /// Enum情報
         /// </summary>
-        public Info.EnumInfoStack EnumInfoStack { get; } = new Info.EnumInfoStack(); 
+        public Info.EnumInfoStack EnumInfoStack { get; } = new Info.EnumInfoStack();
 
         public Info.ClassInfoStack ClassInfoStack { get; } = new Info.ClassInfoStack();
 
-        public Info.GlobalInfoContainer GlobalInfoContainer { get;} = new Info.GlobalInfoContainer();
+        public Info.GlobalInfoContainer GlobalInfoContainer { get; } = new Info.GlobalInfoContainer();
 
         /// <summary>
         /// 属性リスト
@@ -88,8 +88,8 @@ namespace ReflectionGenerator.Parser
             List<string> parseCommandLineList = new List<string>();
             parseCommandLineList.Add(CppParseDefine.GetCppVersionStr(setupParam.CppVersion));
 
-           ClangSharp.Interop.CXIndex cxIndex = ClangSharp.Interop.CXIndex.Create(true, true);
-           ClangSharp.Interop.CXTranslationUnit transUnit = null;
+            ClangSharp.Interop.CXIndex cxIndex = ClangSharp.Interop.CXIndex.Create(true, true);
+            ClangSharp.Interop.CXTranslationUnit transUnit = null;
             ClangSharp.Interop.CXTranslationUnit_Flags translationUnitFlags = ClangSharp.Interop.CXTranslationUnit_Flags.CXTranslationUnit_SkipFunctionBodies;
 
             //  コンパイル
@@ -109,14 +109,49 @@ namespace ReflectionGenerator.Parser
             }
 
             //  各種パラメータのセットアップ
-            if (setupParam.EnableRootNamespaceList != null)
-            {
-                _EnableRootNamespaceList = setupParam.EnableRootNamespaceList.ToArray();
-            }
+            _EnableRootNamespaceList = setupParam.EnableRootNamespaceList?.ToArray();
+
             _IgnoreNamespaceList = setupParam.IgnoreNamespaceList.ToArray();
 
             //  解析開始
             transUnit.Cursor.VisitChildren(VisitChild, clientData: default);
+
+            //  後処理
+            System.Threading.Tasks.Parallel.ForEach(ClassInfoStack.InfoList,
+                (Info.ClassInfo classInfo) =>
+                {
+                    Info.ClassInfo[] baseClassInfo = new Info.ClassInfo[classInfo.BaseClassNameList.Count];
+                    for (int i = 0; i < classInfo.BaseClassNameList.Count; ++i)
+                    {
+                        Info.ClassInfo? temp = ClassInfoStack.GetInfo(classInfo.BaseClassNameList[i]);
+                        System.Diagnostics.Debug.Assert(temp != null, $"クラスが見つかりませんでした:{classInfo.BaseClassNameList[i]}");
+                        baseClassInfo[i] = temp;
+
+                        if (baseClassInfo[i].IsFake == true)
+                        {
+                            System.Threading.Interlocked.Exchange(ref baseClassInfo[i].Fake, 1);
+                        }
+                    }
+                    classInfo.BaseClassList = baseClassInfo;
+                }
+                );
+
+            //  
+            Trace.Info(this, "クラス列挙開始");
+            foreach (var classInfo in ClassInfoStack.InfoList)
+            {
+                Trace.Info(this, $"\n\tClass\n\tNamespace:{classInfo.Namespace}\n\tFullName:{classInfo.FullName}\n\tName:{classInfo.Name}");
+
+                foreach (var fieldInfo in classInfo.FieldInfoList)
+                {
+                    Trace.Info(this, $"\n\tField:{fieldInfo.Name}\n\tNamespace:{fieldInfo.RuntimeType.Namespace}\n\tFullName:{fieldInfo.RuntimeType.FullName}\n\tName:{fieldInfo.RuntimeType.Name}");
+                }
+
+                foreach (var methodInfo in classInfo.MethodInfoList)
+                {
+                    Trace.Info(this, $"\n\tMethod:{methodInfo.Name}\n\tNamespace:{methodInfo.ReturnRuntimeType.Namespace}\n\tFullName:{methodInfo.ReturnRuntimeType.FullName}\n\tName:{methodInfo.ReturnRuntimeType.Name}");
+                }
+            }
 
             return true;
         }
@@ -125,32 +160,65 @@ namespace ReflectionGenerator.Parser
         #region 非公開メソッド
         private ClangSharp.Interop.CXChildVisitResult VisitChild(ClangSharp.Interop.CXCursor cursor, ClangSharp.Interop.CXCursor parent, void* client_data)
         {
-            //  
-            if(_EnableRootNamespaceList.Length > 0) 
+            if (cursor.Spelling.CString == "value1_")
             {
-                if(_NamespaceInfoStack.EmptyStack == false)
-                {
-                    return ClangSharp.Interop.CXChildVisitResult.CXChildVisit_Continue;
-                }
+                Trace.Info(this, "");
             }
+
+            cursor.VisitChildren(VisitChild, default);
+
+            if (cursor.IsTemplated)
+            {
+                System.Diagnostics.Debug.Assert(cursor.NumTemplateParameterLists <= 1, $"未対応の識別値です: {cursor.Spelling.CString}");
+            }
+
+            
 
             switch (cursor.Kind)
             {
+                //  namespace
+                case ClangSharp.Interop.CXCursorKind.CXCursor_Namespace:
+                    ParseNamespace(cursor);
+                    break;
+
                 //  class, struct, union
                 case ClangSharp.Interop.CXCursorKind.CXCursor_ClassDecl:
                 case ClangSharp.Interop.CXCursorKind.CXCursor_StructDecl:
                 case ClangSharp.Interop.CXCursorKind.CXCursor_UnionDecl:
+                case ClangSharp.Interop.CXCursorKind.CXCursor_CXXBaseSpecifier:
                 case ClangSharp.Interop.CXCursorKind.CXCursor_ClassTemplate:
+
                     ParseClassDecl(cursor);
+                    break;
+
+                //  templateは未対応
+
+                case ClangSharp.Interop.CXCursorKind.CXCursor_FunctionTemplate:
                     break;
 
                 //  関数
                 case ClangSharp.Interop.CXCursorKind.CXCursor_CXXMethod:
                 case ClangSharp.Interop.CXCursorKind.CXCursor_Constructor:
                 case ClangSharp.Interop.CXCursorKind.CXCursor_FunctionDecl:
-                case ClangSharp.Interop.CXCursorKind.CXCursor_FunctionTemplate:
                 case ClangSharp.Interop.CXCursorKind.CXCursor_Destructor:
+                    if (IsParseNamespace() == false)
+                    {
+                        break;
+                    }
                     ParseMethod(cursor);
+                    break;
+
+                case ClangSharp.Interop.CXCursorKind.CXCursor_VarDecl:
+                case ClangSharp.Interop.CXCursorKind.CXCursor_FieldDecl:
+                    if(IsParseNamespace() == false)
+                    {
+                        break;
+                    }
+                    ParseFieldDecl(cursor);
+                    break;
+
+                case ClangSharp.Interop.CXCursorKind.CXCursor_FirstDecl:
+                    cursor.VisitChildren(VisitChild, default);
                     break;
 
                 case ClangSharp.Interop.CXCursorKind.CXCursor_BinaryOperator:
@@ -159,6 +227,28 @@ namespace ReflectionGenerator.Parser
                 case ClangSharp.Interop.CXCursorKind.CXCursor_UnaryOperator:
                 case ClangSharp.Interop.CXCursorKind.CXCursor_CXXNewExpr:
                     Trace.Info(this, $"Kind:{cursor.Kind.ToString()}");
+                    System.Diagnostics.Debug.Assert(false, $"未対応の識別値です {cursor.Type.CanonicalType.KindSpelling.CString}");
+                    break;
+
+                case ClangSharp.Interop.CXCursorKind.CXCursor_TypeAliasDecl:
+                    switch (cursor.Type.CanonicalType.kind)
+                    {
+                        case ClangSharp.Interop.CXTypeKind.CXType_Record:
+                            ParseClassDecl(cursor);
+                            break;
+
+                        default:
+                            System.Diagnostics.Debug.Assert(false, $"未対応の識別値です {cursor.Type.CanonicalType.KindSpelling.CString}");
+                            break;
+                    }
+                    break;
+
+                case ClangSharp.Interop.CXCursorKind.CXCursor_TypeAliasTemplateDecl:
+                    Trace.Info(this, "");
+                    break;
+
+                default:
+
                     break;
 
             }
@@ -261,13 +351,13 @@ namespace ReflectionGenerator.Parser
             {
                 return new Info.Module() { ModuleName = moduleName };
             }
-            
+
             while (path != null)
             {
                 string[] vcxProjectFileList = Directory.GetFiles(path, "*.vcxproj");
-                if(vcxProjectFileList.Length > 0)
+                if (vcxProjectFileList.Length > 0)
                 {
-                    if(vcxProjectFileList.Length > 1)
+                    if (vcxProjectFileList.Length > 1)
                     {
                         Trace.Warning(this, $".vcxprojファイルが複数見つかりました　最初に見つかったファイルをmodule名として扱います\n{vcxProjectFileList}");
                     }
@@ -276,7 +366,7 @@ namespace ReflectionGenerator.Parser
                     break;
                 }
 
-                if(_ProjectRootDirectory == path)
+                if (_ProjectRootDirectory == path)
                 {
                     break;
                 }
@@ -309,7 +399,7 @@ namespace ReflectionGenerator.Parser
 
             int numTemplateParameterLists = cursor.NumTemplateParameterLists;
             Info.TemplateParam[][] templateParamListTable = new Info.TemplateParam[numTemplateParameterLists][];
-            
+
 
             for (uint templateListIndex = 0; templateListIndex < numTemplateParameterLists; ++templateListIndex)
             {
@@ -341,6 +431,56 @@ namespace ReflectionGenerator.Parser
 
             return templateParamListTable;
         }
+
+        
+        /// <summary>
+        /// 解析対象かどうかを判定
+        /// </summary>
+        /// <param name="cursor"></param>
+        /// <returns></returns>
+        private bool IsParseTarget(ClangSharp.Interop.CXCursor cursor)
+        {
+            string namespaceStr = cursor.GetNamespace();
+
+            if (_IgnoreNamespaceList.Length > 0)
+            {
+                if (_IgnoreNamespaceList.Contains(namespaceStr) == true)
+                {
+                    return false;
+                }
+            }
+
+            if (_EnableRootNamespaceList?.Length > 0)
+            {
+                if (_EnableRootNamespaceList.Contains(namespaceStr) == true)
+                {
+                    return true;
+                }
+            }
+
+            return true;
+        }
+
+        private bool IsParseNamespace()
+        {
+            if (_IgnoreNamespaceList.Length > 0)
+            {
+                if (_IgnoreNamespaceList.Contains(GetFullNamespaceScope()) == true)
+                {
+                    return false;
+                }
+            }
+
+            if (_EnableRootNamespaceList?.Length > 0)
+            {
+                if (_EnableRootNamespaceList.Contains(GetFullNamespaceScope()) == true)
+                {
+                    return true;
+                }
+            }
+
+            return true;
+        }
         #region パース関係
         private void ParseNamespace(ClangSharp.Interop.CXCursor cursor)
         {
@@ -349,16 +489,21 @@ namespace ReflectionGenerator.Parser
                 //  宣言のみはスルー
                 //return;
             }
-            
+
             string name = ClangSharp.Interop.clang.getCursorSpelling(cursor).CString;
 
             //  rootのnamespaceがparse対象か
-            if (_NamespaceInfoStack.InfoStack.Count == 0)
+            if (_NamespaceInfoStack.EmptyStack == false)
             {
-                if (_EnableRootNamespaceList.Contains(name) == false)
+                if (_EnableRootNamespaceList?.Contains(name) == false)
                 {
                     return;
                 }
+            }
+
+            if (_IgnoreNamespaceList.Contains(name) == true)
+            {
+                return;
             }
 
             Trace.Info(this, string.Format("{0}namespace:{1}", GetIndent(), ClangSharp.Interop.clang.getCursorSpelling(cursor).CString));
@@ -382,40 +527,40 @@ namespace ReflectionGenerator.Parser
         {
             //  継承型
             int numBase = cursor.NumBases;
-            string[] baseClassInfoList = new string[int.Max(0, numBase)];
+            string[] baseClassFullNameList = new string[int.Max(0, numBase)];
 
             if (numBase > 0)
             {
                 for (uint i = 0; i < numBase; ++i)
                 {
                     ClangSharp.Interop.CXCursor baseCursor = cursor.GetBase(i);
-                    baseClassInfoList[i] = baseCursor.Type.CanonicalType.Spelling.CString;
+                    baseClassFullNameList[i] = baseCursor.GetCanonicalTypeFullName();
                 }
             }
 
-            //  継承クラスがtemplateクラスの場合、class情報を作成する
+            //  
+            Info.ClassInfo newClassInfo;
 
-
-            //  nitro::Objectクラスを継承した親クラスを取得
-            //  ClassInfo? parentNitroObject = Array.Find(baseClassInfoList, x => x?.IsNitroObjectClass == true);
-            Info.ClassInfo newClassInfo = new Info.ClassInfo()
+            //  テンプレート
+            newClassInfo = new Info.ClassInfo()
             {
+                Namespace = cursor.GetNamespace(),
                 Module = CreateModule(cursor),
                 CXCursor = cursor,
-                Name = cursor.Spelling.CString,
-                FullName = cursor.Type.CanonicalType.Spelling.CString,
+                Name = cursor.GetCanonicalTypeName(),
+                FullName = cursor.GetCanonicalTypeFullName(),
                 AccessLevel = cursor.CXXAccessSpecifier.GetAccessLevel(),
-                IsTemplate = cursor.IsTemplated,
-                //   ParentObjectClass = parentNitroObject,
-                IsRootClass = baseClassInfoList.Length <= 0,
-                //  IsNitroObjectClass = IsNitroObjectClass(baseClassInfoList),
+
                 IsTypedef = cursor.Kind == ClangSharp.Interop.CXCursorKind.CXCursor_TypeAliasDecl,
                 AttributeInfoList = new List<Info.AttributeInfo>(AttributeInfoStack.InfoList),
-                BaseClassNameList = baseClassInfoList,
-                TemplateParamListTable = CreateTemplateParamListTable(cursor)
-            };
+                BaseClassNameList = baseClassFullNameList,
+                TemplateParamListTable = CreateTemplateParamListTable(cursor),
 
-            AttributeInfoStack.Clear();
+                //  attributes
+                IsTemplate = cursor.IsTemplated,
+                IsRootClass = baseClassFullNameList.Length <= 0,
+                IsFake = IsParseTarget(cursor) == false
+            };
 
             //  別名定義情報
             if (cursor.Kind == ClangSharp.Interop.CXCursorKind.CXCursor_TypeAliasDecl)
@@ -423,6 +568,7 @@ namespace ReflectionGenerator.Parser
                 newClassInfo.RecordClassFullName = cursor.Type.CanonicalType.Spelling.CString;
             }
 
+            AttributeInfoStack.Clear();
 
             return newClassInfo;
         }
@@ -442,6 +588,19 @@ namespace ReflectionGenerator.Parser
             }
             else
             {
+                //  前方宣言は無視
+                if (cursor.IsDefinition == false && cursor.Kind != ClangSharp.Interop.CXCursorKind.CXCursor_CXXBaseSpecifier)
+                {
+                    cursor.VisitChildren(VisitChild, default);
+                    return;
+                }
+
+                if (ClassInfoStack.Contains(cursor.GetCanonicalTypeFullName()) == true)
+                {
+                    cursor.VisitChildren(VisitChild, default);
+                    return;
+                }
+
                 Info.ClassInfo newClassInfo = CreateClassInfo(cursor);
 
                 ClassInfoStack.Push(newClassInfo);
@@ -462,16 +621,121 @@ namespace ReflectionGenerator.Parser
             }
 
             //  属性
-            if(AttributeInfoStack.EmptyStack == false)
+            if (AttributeInfoStack.EmptyStack == false)
             {
                 System.Diagnostics.Debug.Assert(cursor.NumMethods == 1, $"属性クラスに関数が複数定義されています:{AttributeInfoStack.Current.FullName}");
 
-                cursor.VisitChildren(VisitChild, default);
+                //  属性情報を取得する
+                if (cursor.NumArguments == 1)
+                {
+                    cursor.VisitChildren(VisitChild, default);
+                }
+                return;
+            }
+            //  通常関数
+
+            Info.MethodInfo.ArgInfo[] argInfoList = new Info.MethodInfo.ArgInfo[int.Max(0, cursor.IsTemplated == true ? cursor.NumTemplateArguments : cursor.NumArguments)];
+
+            for (uint i = 0; i < argInfoList.Length; i++)
+            {
+                ClangSharp.Interop.CXCursor argumentCursor = cursor.GetArgument(i);
+                argInfoList[i] = new Info.MethodInfo.ArgInfo()
+                {
+                    Name = argumentCursor.Spelling.CString,
+                    RuntimeType = argumentCursor.CreateRuntimeType(cursor.Type),
+                    CXTypeKind = argumentCursor.Type.kind,
+                    HasDefaultValue = cursor.HasDefaultArg,
+                };
+
+            //    cursor.VisitChildren(VisitChild, default);
+            }
+
+            Info.MethodInfo methodInfo = new Info.MethodInfo() 
+            { 
+                Module = CreateModule(cursor),
+                Name = cursor.Spelling.CString,
+                AccessLevel = cursor.CXXAccessSpecifier.GetAccessLevel(),
+                ReturnRuntimeType = cursor.CreateRuntimeType(cursor.ReturnType),
+
+                IsConst = cursor.Type.IsConstQualified,
+                IsInline = cursor.IsFunctionInlined,
+                IsConstexpr = cursor.IsConstexpr,
+                IsConstructor = cursor.IsConstructor(),
+                IsVirtual = cursor.CXXMethod_IsVirtual,
+                IsAbstract = cursor.CXXMethod_IsPureVirtual,
+                IsStatic = cursor.CXXMethod_IsStatic,
+                IsNoexcept = cursor.Type.ExceptionSpecificationType == ClangSharp.Interop.CXCursor_ExceptionSpecificationKind.CXCursor_ExceptionSpecificationKind_BasicNoexcept,
+
+                ArgInfoList = argInfoList,
+                AttributeInfoList = new List<Info.AttributeInfo>(AttributeInfoStack.InfoList),
+            };
+
+            AttributeInfoStack.Clear();
+
+            //  クラスのメンバ
+            if (ClassInfoStack.EmptyStack == false)
+            {
+                if (ClassInfoStack.Current.IsFake == false)
+                {
+                    ClassInfoStack.Current.MethodInfoList.Add(methodInfo);
+                }
+            }
+            //  グローバル
+            else
+            {
+                GlobalInfoContainer.Current?.MethodInfoList.Add(methodInfo);
+            }
+        }
+
+        private void ParseFieldDecl(ClangSharp.Interop.CXCursor cursor)
+        {
+            if (cursor.IsDefinition == false)
+            {
+                return;
+            }
+
+            if(cursor.IsTemplated)
+            {
+                Trace.Info(this, "");
+            }
+
+            if(cursor.Spelling.CString == "value_")
+            {
+                Trace.Info(this, "");
+            }
+
+            Info.FieldInfo field = new Info.FieldInfo()
+            {
+                Module = CreateModule(cursor),
+                Name = cursor.Spelling.CString,
+                RuntimeType = cursor.CreateRuntimeType(cursor.Type),
+                AccessLevel = cursor.CXXAccessSpecifier.GetAccessLevel(),
+                IsConstexpr = cursor.IsConstexpr,
+                IsTemplate = cursor.IsTemplated,
+                AttributeInfoList = new List<Info.AttributeInfo>(AttributeInfoStack.InfoList)
+            };
+
+            //  属性の付与
+            if (AttributeInfoStack.EmptyStack == false)
+            {
+                AttributeInfoStack.Clear();
+            }
+
+            //  クラスのメンバ
+            if (ClassInfoStack.EmptyStack == false)
+            {
+                if (ClassInfoStack.Current.IsFake == false)
+                {
+                    ClassInfoStack.Current.FieldInfoList.Add(field);
+                }
+            }
+            //  グローバル
+            else
+            {
+                GlobalInfoContainer.Current?.FieldInfoList.Add(field);
             }
         }
         #endregion
         #endregion
-
-
     }
 }

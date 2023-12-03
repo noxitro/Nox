@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ClangSharp" Version="16.0.0" />
+    <PackageReference Include="ClangSharp" Version="17.0.0" />
     <PackageReference Include="libclang" Version="17.0.4" />
     <PackageReference Include="libclang.runtime.win-x64" Version="17.0.4" />
     <PackageReference Include="libClangSharp" Version="17.0.4" />
