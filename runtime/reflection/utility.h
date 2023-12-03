@@ -253,7 +253,7 @@ namespace nox::reflection
 			retFlags = util::BitOr(retFlags, MethodAttributeFlag::Const);
 		}
 
-		if constexpr (IsFunctionMemberValue<T> == false)
+		if constexpr (std::is_member_function_pointer_v<T> == false)
 		{
 			retFlags = util::BitOr(retFlags, MethodAttributeFlag::Static);
 		}

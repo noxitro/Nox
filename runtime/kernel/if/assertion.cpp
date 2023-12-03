@@ -2,10 +2,13 @@
 ///	@brief	assertion
 #include	"stdafx.h"
 #include	"assertion.h"
-#include	"os/os.h"
 
 #include	<cassert>
 #include	<stacktrace>
+
+#include	"os/os.h"
+#include	"convert_string.h"
+
 using namespace nox;
 using namespace nox::debug;
 
@@ -14,9 +17,13 @@ namespace
 	os::Mutex kMutex;
 }
 
-void	debug::detail::Assert(not_null<const c16*> message, not_null<const c16*> file, const u32 line)
+void	debug::detail::Assert(RuntimeAssertErrorType errorType, not_null<const c16*> message, const std::source_location& source_location)noexcept(false)
 {
 	NOX_LOCAL_SCOPE(os::ScopedLock(kMutex));
 
-	::_wassert(util::CharCast<const wchar_t*>(message), util::CharCast<const wchar_t*>(file.get()), line);
+
+	std::array<wchar_t, 256> file_name;
+	util::ConvertWString(file_name, util::CharCast<const c8*>(source_location.file_name()));
+
+	::_wassert(util::CharCast<const wchar_t*>(message), file_name.data(), source_location.line());
 }

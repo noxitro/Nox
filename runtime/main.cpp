@@ -62,17 +62,63 @@ constexpr auto field_info00 = nox::reflection::detail::CreateFieldInfo<Test>(
 	nullptr
 );
 
+inline constexpr nox::Vec3	TestFunc(s32 a, s32 b = 1)noexcept
+{
+	return nox::Vec3(a, b, a + b);
+}
+
+class Base 
+{
+public:
+	inline static void* operator new(size_t size) = delete;
+	inline static void* operator new[](size_t size) = delete;
+};
+
+class Obj : public Base
+{
+public:
+	inline static void* operator new(size_t size) { return nullptr; }
+	inline static void* operator new[](size_t size) {return nullptr; }
+};
+
 int WINAPI::WinMain(_In_ ::HINSTANCE hInstance, _In_opt_ ::HINSTANCE /*hPrevInstance*/, _In_ ::LPSTR /*lpCmdLine*/, _In_ int nCmdShow)
 {
-	Test test;
-
-	constexpr const auto& type = nox::reflection::Typeof<int>();
-	const auto& n1 = type.GetPointeeType();
-
-	nox::Vec3* out = nullptr;
-	field_info00.TryGetValueAddress(out, test);
-
 	using namespace nox;
+
+	class V : public std::vector<int> {};
+
+	constexpr auto nnn01id = util::GetUniqueTypeID<V>();
+	constexpr auto nnn01id2 = util::GetUniqueTypeID<std::vector<int>>();
 	
+	c8* buffer = nullptr;
+	
+	Obj* obj = new Obj[1];
+
+	static constexpr std::array<reflection::MethodParameter, 2> method_param_list
+	{
+		reflection::MethodParameter(u8"", reflection::Typeof<s32>(), false),
+		reflection::MethodParameter(u8"", reflection::Typeof<s32>(), true)
+	};
+
+	constexpr auto method_info = nox::reflection::detail::CreateMethodInfo<std::decay_t<decltype(TestFunc)>>(
+		u8"",
+		u8"",
+		u8"",
+		nox::reflection::AccessLevel::Public,
+		nullptr,
+		0,
+		method_param_list.data(),
+		static_cast<u8>(method_param_list.size()),
+		false,
+		false,
+		+[](void* a)constexpr noexcept->decltype(auto) {return TestFunc(*reinterpret_cast<const s32*>(a)); },
+		+[](void* a, void* b)constexpr noexcept->decltype(auto) {return TestFunc(*reinterpret_cast<const s32*>(a), *reinterpret_cast<const s32*>(b)); }
+	);
+
+	s32 out;
+	constexpr int aaa = 10;
+	int bbb = 10;
+	nox::Vec3 r = method_info.Invoke<nox::Vec3>(aaa);
+
 	return 0;
 }

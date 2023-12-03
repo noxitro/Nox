@@ -38,23 +38,6 @@ namespace nox
 
 	namespace detail
 	{
-		/// @brief グローバル関数ポインタ型か
-	/// @tparam T 型
-		template<class T>
-		struct IsGlobalFunctionPointer : std::false_type {};
-
-		/// @brief グローバル関数ポインタ型か
-		/// @tparam _ReturnType 戻り値の型
-		/// @tparam ...Args 引数の型
-		template<class _ReturnType, class... Args>
-		struct IsGlobalFunctionPointer<_ReturnType(*)(Args...)> : std::true_type {};
-
-		/// @brief グローバル関数ポインタ型か(noexcept版)
-		/// @tparam _ReturnType  戻り値の型
-		/// @tparam ...Args 引数の型
-		template<class _ReturnType, class... Args>
-		struct IsGlobalFunctionPointer<_ReturnType(*)(Args...)noexcept> : std::true_type {};
-
 		/// @brief 関数の型にnoexceptが修飾されているかどうか
 		/// @tparam F 関数の型
 		/// @tparam ...Args 関数の引数の型
@@ -107,7 +90,13 @@ namespace nox
 	/// @brief グローバル関数ポインタ型か
 	/// @tparam T 型
 	template<class T>
-	constexpr bool IsGlobalFunctionPointerValue = detail::IsGlobalFunctionPointer<T>::value;
+	constexpr bool IsGlobalFunctionPointerValue = std::is_function_v<std::remove_pointer_t<std::decay_t<T>>>;
+
+	namespace concepts
+	{
+		template<class T>
+		concept GlobalFunctionPointer = IsGlobalFunctionPointerValue<T>;
+	}
 
 	namespace detail
 	{

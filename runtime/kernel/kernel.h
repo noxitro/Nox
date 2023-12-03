@@ -11,10 +11,10 @@
 
 #include	"if/string_format.h"
 
-#include	"os/os.h"
 #include	"if/assertion.h"
 #include	"memory/memory.h"
 #include	"memory/memory_util.h"
+#include	"os/os.h"
 
 #include	"if/function.h"
 #include	"if/log_trace.h"

@@ -6,7 +6,6 @@
 
 #include	"../type_traits/concepts.h"
 #include	"../type_traits/type_traits.h"
-#include	"convert_string.h"
 
 namespace nox
 {
@@ -19,15 +18,29 @@ namespace nox
 
 		namespace detail
 		{
-			void	Assert(not_null<const c16*> message, not_null<const c16*> file, const u32 line);
+			void	Assert(RuntimeAssertErrorType errorType, not_null<const c16*> message, const std::source_location& source_location)noexcept(false);
 		}
 
-		inline	void	Assert(const bool expression, not_null<const c16*> message, not_null<const c16*> file = util::CharCast<const c16*>(__FILEW__), const u32 line = __LINE__)
+		inline	void	Assert(RuntimeAssertErrorType errorType, const bool expression, not_null<const c16*> message, const std::source_location location = std::source_location::current())
 		{
 			if (!expression)
 			{
-				debug::detail::Assert(message, file, line);
+				debug::detail::Assert(errorType, message, location);
+			}
+		}
+
+		inline	void	Assert(const bool expression, not_null<const c16*> message, const std::source_location location = std::source_location::current())
+		{
+			if (!expression)
+			{
+				debug::detail::Assert(RuntimeAssertErrorType::Other, message, location);
 			}
 		}
 	}
 }
+
+#if NOX_DEBUG || NOX_RELEASE
+#define	NOX_ASSERT(...) nox::debug::Assert(__VA_ARGS__)
+#else
+#define	NOX_ASSERT(...) 
+#endif // NOX_DEBUG || NOX_RELEASE

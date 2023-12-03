@@ -150,9 +150,6 @@
     <ClInclude Include="if\advanced_definition.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="os\detail\nox.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="if\string_format.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>

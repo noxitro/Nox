@@ -62,7 +62,7 @@ const class EnumInfo* Reflection::FindEnumInfoFromNameHash(std::uint32_t namehas
 
 void Reflection::Register(const class ClassInfo& data)
 {
-	NOX_CONDITINAL_DEBUG(nox::debug::Assert(class_data_map_.contains(data.GetTypeID()), u""));
+	NOX_CONDITINAL_DEVELOP(nox::debug::Assert(class_data_map_.contains(data.GetTypeID()), u""));
 
 	class_data_map_.emplace(data.GetTypeID(), ClassData{ .class_info_ptr = &data });
 
@@ -113,7 +113,7 @@ void Reflection::Unregister(const class ClassInfo& data)
 {
 	if (class_data_map_.erase(data.GetTypeID()) == 0)
 	{
-		NOX_CONDITINAL_DEBUG(debug::Assert(false, u"クラスデータの登録に失敗しました"));
+//		NOX_CONDITINAL_DEVELOP(debug::Assert(false, util::Format(u"クラスデータの登録に失敗しました:{}", data.GetFullName())));
 	}
 }
 
@@ -139,7 +139,6 @@ void Reflection::Unregister(const FieldInfo& data)
 
 void Reflection::Register(const MethodInfo& data)
 {
-
 }
 
 void Reflection::Unregister(const MethodInfo& data)

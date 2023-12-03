@@ -38,7 +38,7 @@ namespace nox::util
 	template<class... _Types>
 	inline nox::U16String Format(const c16* const fmt, _Types&&... _Args)
 	{
-		nox::WString from_str = util::Format(reinterpret_cast<const wchar_t*>(fmt), util::CastStringSafe<const w16*>(_Args)...);
+		nox::WString from_str = util::Format(reinterpret_cast<const wchar_t*>(fmt), util::ConvertStringSafe<nox::WString>(_Args)...);
 		return nox::U16String(util::CharCast<const c16*>(from_str.c_str()));
 	}
 }

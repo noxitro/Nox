@@ -9,7 +9,7 @@ namespace nox::util
 	template<class T> requires(std::is_pointer_v<T>)
 		inline constexpr std::remove_pointer_t<T>& Deref(const T& ptr)
 	{
-		NOX_CONDITINAL_DEBUG(debug::Assert(ptr != nullptr, u"null ptr"));
+		NOX_CONDITINAL_DEVELOP(debug::Assert(ptr != nullptr, u"null ptr"));
 		return *ptr;
 	}
 

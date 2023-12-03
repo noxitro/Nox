@@ -92,7 +92,8 @@ namespace nox::util
 #if defined(__clang__)
 		return util::crc32(__PRETTY_FUNCTION__);
 #else
-		return util::crc32(NOX_DETAIL_TO_U8STRING(__FUNCSIG__));
+		//	crc32で余分な計算をしないように__FUNCSIG__ではなく型名を渡す
+		return util::crc32(GetTypeName<T>());
 #endif // defined(__clang__)
 	}
 

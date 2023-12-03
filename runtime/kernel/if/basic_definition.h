@@ -101,8 +101,8 @@ static_assert(false, "not support compiler");
 
 
 #if NOX_DEBUG || NOX_RELEASE
-#define	NOX_CONDITINAL_DEBUG(x) x
+#define	NOX_CONDITINAL_DEVELOP(x) x
 #else
-#define	NOX_CONDITINAL_DEBUG(x)
+#define	NOX_CONDITINAL_DEVELOP(x)
 #endif // NOX_DEBUG
 

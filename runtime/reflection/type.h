@@ -1,9 +1,9 @@
 ﻿///	@file	type.h
 ///	@brief	type
 #pragma once
+#include	<string_view>
 
 #include	"utility.h"
-#include	<string_view>
 
 namespace nox::reflection
 {
@@ -96,7 +96,7 @@ namespace nox::reflection
 			union
 			{
 				/// @brief ダミー
-				const std::uint64_t arg0 = 0;
+				const std::uint64_t _ = 0;
 
 				/// @brief 配列の次元数
 				const std::uint32_t array_rank_index;
@@ -116,7 +116,7 @@ namespace nox::reflection
 	}
 
 	/// @brief 汎用型情報
-	class Type final
+	class Type
 	{
 		friend struct nox::reflection::detail::ReflectionTypeActivator;
 
@@ -165,8 +165,6 @@ namespace nox::reflection
 			return util::Deref(result.extra_type_ptr);
 		}
 
-		
-
 #pragma region アクセサ
 		/// @brief 型IDを取得
 		[[nodiscard]] inline	constexpr	std::uint32_t GetTypeID()const noexcept { return id_; }
@@ -204,6 +202,8 @@ namespace nox::reflection
 
 #pragma region Qualifier
 		[[nodiscard]]	inline	constexpr	bool	IsConstQualified()const noexcept { return util::IsBitAnd(attribute_flags_, TypeAttributeFlag::Const); }
+		[[nodiscard]]	inline	constexpr	bool	IsReference()const noexcept { return util::IsBitAnd(attribute_flags_, TypeAttributeFlag::LvalueReference) || util::IsBitAnd(attribute_flags_, TypeAttributeFlag::RvalueReference); }
+
 #pragma endregion
 
 #pragma region operator
@@ -261,23 +261,39 @@ namespace nox::reflection
 			template<class T>
 			static inline	constexpr	Type CreateReflectionType()noexcept
 			{
-				return Type(
-					util::GetUniqueTypeID<T>(),
-					nox::reflection::GetTypeKind<T>(),
-					nox::reflection::GetTypeAttributeFlags<T>(),
-					IsSizeofTypeValue<T> ? sizeof(T) : 0,
-					std::alignment_of_v<T>,
-					+[](detail::TypeExtraResultInfo& out_info, const detail::TypeExtraArgsInfo& args)noexcept {
-						//memo:	複雑すぎてコンパイルエラーになるので、実行時処理に回避
-						return reflection::detail::GetTypeExtraInfo<T>(out_info, args);
-					},
-					util::GetTypeName<T>()
-				);
+				if constexpr (IsSizeofTypeValue<T>)
+				{
+					return Type(
+						util::GetUniqueTypeID<T>(),
+						nox::reflection::GetTypeKind<T>(),
+						nox::reflection::GetTypeAttributeFlags<T>(),
+						sizeof(T),
+						std::alignment_of_v<T>,
+						+[](detail::TypeExtraResultInfo& out_info, const detail::TypeExtraArgsInfo& args)noexcept {
+							//memo:	複雑すぎてコンパイルエラーになるので、実行時処理に回避
+							return reflection::detail::GetTypeExtraInfo<T>(out_info, args);
+						},
+						util::GetTypeName<T>()
+					);
+				}
+				else
+				{
+					return Type(
+						util::GetUniqueTypeID<T>(),
+						nox::reflection::GetTypeKind<T>(),
+						nox::reflection::GetTypeAttributeFlags<T>(),
+						0,
+						0,
+						+[](detail::TypeExtraResultInfo& out_info, const detail::TypeExtraArgsInfo& args)noexcept {
+							//memo:	複雑すぎてコンパイルエラーになるので、実行時処理に回避
+							return reflection::detail::GetTypeExtraInfo<T>(out_info, args);
+						},
+						util::GetTypeName<T>()
+					);
+				}
+				
 			}
 		};	
-
-		/// @brief 無効型
-		constexpr const Type InvalidTypeImpl = reflection::detail::ReflectionTypeActivator::CreateReflectionInvalidType();
 
 		/// @brief 型情報保持構造体
 		/// @tparam T 型
@@ -286,7 +302,13 @@ namespace nox::reflection
 		{
 			static constexpr Type value = reflection::detail::ReflectionTypeActivator::CreateReflectionType<T>();
 		};
+	}
 
+	/// @brief 無効型
+	constexpr const Type InvalidType = reflection::detail::ReflectionTypeActivator::CreateReflectionInvalidType();
+
+	namespace detail
+	{
 		template<class T>
 		bool GetTypeExtraInfo(TypeExtraResultInfo& out_info, const TypeExtraArgsInfo& args)noexcept
 		{
@@ -325,6 +347,7 @@ namespace nox::reflection
 				else
 				{
 					out_info.instance_ptr = nullptr;
+					return true;
 				}
 
 			case TypeExtraAccessInfoType::UnderlyingTypeKind:
@@ -339,9 +362,13 @@ namespace nox::reflection
 				{
 					out_info.extra_type_ptr = &ReflectionTypeHolder<std::remove_pointer_t<T>>::value;
 				}
+				else if constexpr (std::is_reference_v<T> == true)
+				{
+					out_info.extra_type_ptr = &ReflectionTypeHolder<std::remove_reference_t<T>>::value;
+				}
 				else
 				{
-					out_info.extra_type_ptr = &reflection::detail::InvalidTypeImpl;
+					out_info.extra_type_ptr = &InvalidType;
 				}
 				return true;
 
@@ -352,7 +379,7 @@ namespace nox::reflection
 				}
 				else
 				{
-					out_info.extra_type_ptr = &reflection::detail::InvalidTypeImpl;
+					out_info.extra_type_ptr = &InvalidType;
 				}
 				return true;
 			}
@@ -360,9 +387,6 @@ namespace nox::reflection
 			return false;
 		}
 	}
-
-	/// @brief 無効型
-	//constexpr const Type& InvalidType = reflection::detail::InvalidTypeImpl;
 
 	/// @brief 型情報を取得
 	/// @tparam T 型
@@ -373,12 +397,78 @@ namespace nox::reflection
 		return reflection::detail::ReflectionTypeHolder<T>::value;
 	}
 
-#pragma region 関数群
-	/// @brief 変換可能か
-	/// @param a 
-	/// @param b 
-	/// @return 
-	bool	IsConvertible(const Type& a, const Type& b);
-#pragma endregion
+	namespace detail
+	{
+	/*	/// @brief 型比較用
+		/// @tparam T 
+		template<class T>
+		struct TypeChunk
+		{
+			static constexpr const Type& type = Typeof<T>();
+			static 	constexpr const Type& pointee_type = Typeof<
+				std::conditional_t<std::is_pointer_v<T>, std::remove_pointer_t<T>,
+				std::conditional_t<std::is_reference_v<T>, std::remove_reference_t<T>, std::remove_reference_t<T>>>
+				>();
+			static constexpr const Type& desugar_type = Typeof<std::remove_const_t<T>>();
+			static constexpr const Type& pointee_desugar_type = Typeof<
+				std::remove_const_t<
+				std::conditional_t<std::is_pointer_v<T>, std::remove_pointer_t<T>,
+				std::conditional_t<std::is_reference_v<T>, std::remove_reference_t<T>, std::remove_reference_t<T>>>
+				>
+				>();
+		};*/
 
+
+		struct TypeChunk
+		{
+			const Type& type;
+			const Type& pointee_type;
+			const Type& desugar_type;
+			const Type& pointee_desugar_type;
+
+			inline consteval TypeChunk(const Type& _type, const Type& _pointee_type, const Type& _desugar_type, const Type& _pointee_desugar_type)noexcept :
+				type(_type),
+				pointee_type(_pointee_type),
+				desugar_type(_desugar_type),
+				pointee_desugar_type(_pointee_desugar_type)
+			{}
+
+		};
+
+		template<class T>
+		inline	consteval	const Type&	GetPointeeDesugarType()noexcept
+		{
+			if constexpr (std::is_pointer_v<T> && std::is_const_v<std::remove_pointer_t<T>>)
+			{
+				return Typeof<std::remove_const_t<std::remove_pointer_t<T>>>();
+			}
+			else if constexpr (std::is_reference_v<T> && std::is_const_v<std::remove_reference_t<T>>)
+			{
+				Typeof<std::remove_const_t<std::remove_reference_t<T>>>();
+			}
+			else
+			{
+				return InvalidType;
+			}
+		}
+
+		template<class T>
+		inline	constexpr	TypeChunk	CreateTypeChunk()noexcept
+		{
+			constexpr const Type& pointee_type = std::is_pointer_v<T> ? Typeof<std::remove_pointer_t<T>>() :
+				std::is_reference_v<T> ? Typeof<std::remove_reference_t<T>>() : InvalidType;
+
+			constexpr const Type& desugar_type = std::is_const_v<T> ? Typeof<std::remove_const_t<T>>() : InvalidType;
+
+			return TypeChunk(
+				Typeof<T>(),
+				pointee_type,
+				desugar_type,
+				GetPointeeDesugarType<T>()
+			);
+		}
+	}
+
+#pragma region 関数群
+#pragma endregion
 }

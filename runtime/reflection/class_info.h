@@ -14,7 +14,8 @@ namespace nox::reflection
 	{
 	public:
 #pragma region アクセサ
-		[[nodiscard]] inline	constexpr	std::u8string_view GetName()const noexcept { return fullname_; }
+		[[nodiscard]] inline	constexpr	std::u8string_view GetName()const noexcept { return name_; }
+		[[nodiscard]] inline	constexpr	std::u8string_view GetFullName()const noexcept { return fullname_; }
 		[[nodiscard]] inline	constexpr	std::u8string_view GetNamespace()const noexcept { return namespace_; }
 		[[nodiscard]] inline	constexpr	u32 GetNamespaceID()const noexcept { return util::crc32(namespace_); }
 
@@ -65,6 +66,9 @@ namespace nox::reflection
 		inline constexpr void operator !=(const ClassInfo&&)noexcept = delete;
 	private:
 		/// @brief 名前
+		std::u8string_view name_;
+
+		/// @brief フルネーム
 		std::u8string_view fullname_;
 
 		/// @brief 名前空間

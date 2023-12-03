@@ -608,9 +608,6 @@ namespace nox
 	constexpr bool IsFunctionConstValue = FunctionSignature<T>::IsConst();
 
 	template<concepts::FunctionSignatureType T>
-	constexpr bool IsFunctionMemberValue = FunctionSignature<T>::IIsMemberFuncsConst();
-
-	template<concepts::FunctionSignatureType T>
 	constexpr bool IsFunctionLvalueValue = FunctionSignature<T>::IsLvalueRef();
 	
 	template<concepts::FunctionSignatureType T>

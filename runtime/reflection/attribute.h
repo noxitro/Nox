@@ -27,15 +27,17 @@ namespace nox::reflection
 #define	NOX_ATTR_TEXT(...)
 
 #if NOX_REFLECTION_GENERATOR
-#define	NOX_ATTR_RAW(...)
+#define	NOX_ATTR_RAW(...)\
+NOX_PP_CAT_I(class NoxReflectionAttributeContainer, __COUNTER__) \
+{inline constexpr void NoxReflectionAttributeContainer(const char16_t* text = #__VA_ARGS__)const noexcept = delete;}
 
 #define	NOX_ATTR(...)\
-NOX_PP_CAT_I(class NoxAttributeReflectionGenerator, __COUNTER__) \
-{inline constexpr void AttrContainer(const char* text = #__VA_ARGS__)const noexcept = delete;\
-};
+NOX_ATTR_RAW(#__VA_ARGS__)
+
 #else
-#define	NOX_ATTR(...) 
 #define	NOX_ATTR_RAW(...)
+#define	NOX_ATTR(...) \
+NOX_ATTR_RAW(#__VA_ARGS__)
 #endif // NOX_REFLECTION_GENERATOR
 
 #if NOX_DEVELOP

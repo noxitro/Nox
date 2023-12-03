@@ -14,12 +14,27 @@ namespace nox::util
 	template<class To> requires(std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<To>>, c16>)
 	constexpr inline To CharCast(not_null<const w16*> strPtr)noexcept { return reinterpret_cast<To>(strPtr.get()); }
 
+	template<class To> requires(std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<To>>, char>)
+	constexpr inline To CharCast(not_null<const c8*> strPtr)noexcept { return reinterpret_cast<To>(strPtr.get()); }
+
+	template<class To> requires(std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<To>>, c8>)
+	constexpr inline To CharCast(not_null<const char*> strPtr)noexcept { return reinterpret_cast<To>(strPtr.get()); }
+
+
+	template<class T> requires(nox::IsCharTypeValue<T>)
+	constexpr inline size_t GetStrLength(const T* strPtr)noexcept
+	{
+		return std::char_traits<T>::length(strPtr);
+	}
 
 #pragma region 変換
-	nox::WString	ConvertWString(const c16* const from);
+	bool	ConvertWString(std::span<wchar_t> buffer, const c8* from);
+	nox::WString	ConvertWString(const c8* from);
+	nox::WString	ConvertWString(const c16* from);
 
-	template<std::same_as<nox::WString> To, class From> requires(nox::IsCharTypeValue<From>)
-	inline	To	ConvertString(const From* const str)
+	template<std::same_as<nox::WString> To, class From> 
+	requires(!std::is_same_v<typename To::value_type, From>)
+	inline	To	ConvertString(const From* str)
 	{
 		return util::ConvertWString(str);
 	}
@@ -46,20 +61,44 @@ namespace nox::util
 	}
 
 	//	formatで異なる文字列を変換するための関数
+
+	/// @brief from other
+	/// @tparam To 
+	/// @tparam From 
+	/// @param object 
+	/// @return 
 	template<class To, class From>
-	inline From& ConvertStringSafe(From&& object) { return object; }
+		requires(
+	nox::IsStringClassValue<To> &&
+	!nox::IsCharTypeValue<std::remove_cvref_t<std::remove_pointer_t<From>>> &&
+	!nox::IsStringClassValue<std::remove_cvref_t<From>> &&
+		!nox::IsStringViewClassValue<std::remove_cvref_t<From>>
+		)
+	inline constexpr auto ConvertStringSafe(const From& object)noexcept { return object; }
 
-	template<class To, class From> requires((nox::IsStringClassAllValue<std::remove_cvref_t<From>> || nox::IsCharTypeValue< std::remove_cvref_t<From>>) && !util::detail::IsSameStringClassValue<To, std::remove_cvref_t<From>>)
-	inline To ConvertStringSafe(From&& object) { return nox::util::ConvertString<To>(object); }
+	/// @brief from pointer
+	/// @tparam To 
+	/// @tparam From 
+	/// @param object 
+	/// @return 
+	template<class To, class From> requires(nox::IsStringClassValue<To> && nox::IsCharTypeValue<From>)
+	inline To ConvertStringSafe(const From* object) { return util::ConvertString<To>(object); }
 
-	template<class To, class From>
-	inline From& CastStringSafe(From&& object) { return object; }
+	/// @brief from string class
+	/// @tparam To 
+	/// @tparam From 
+	/// @param object 
+	/// @return 
+	template<class To, class From> requires(nox::IsStringClassValue<To>&& nox::IsStringClassValue<std::remove_cvref_t<From>>)
+	inline To ConvertStringSafe(const From& object) { return nox::util::ConvertString<To>(object.c_str()); }
 
-	template<class To, class From> requires(nox::IsCharTypeValue<std::remove_cvref_t<std::remove_pointer_t<From>>>)
-	inline To CastStringSafe(const From* object) { return CharCast<To>(object); }
-
-	template<class To, class From> requires(nox::IsStringClassAllValue<std::remove_cvref_t<From>>)
-	inline To CastStringSafe(From&& object) { return CharCast<To>(object.c_str()); }
+	/// @brief	from string_view
+	/// @tparam To 
+	/// @tparam From 
+	/// @param object 
+	/// @return 
+	template<class To, class From> requires(nox::IsStringClassValue<To>&& nox::IsStringViewClassValue<std::remove_cvref_t<From>>)
+	inline To ConvertStringSafe(From object) { return nox::util::ConvertString<To>(object.c_str()); }
 
 #pragma endregion
 

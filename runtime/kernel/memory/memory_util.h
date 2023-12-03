@@ -2,6 +2,7 @@
 ///	@brief	memory_util
 #pragma once
 #include	<type_traits>
+#include	"../if/basic_definition.h"
 
 namespace nox::memory
 {
@@ -20,5 +21,13 @@ namespace nox::memory
 		inline void	ZeroMem(T ptr, size_t size) 
 	{
 		detail::ZeroMemImpl(ptr, size);
+	}
+
+	not_null<void*>	Copy(not_null<void*> dest, not_null<const void*> src, size_t size);
+
+	template<class Dest, class Source>
+	inline not_null<void*>	Copy(Dest& dest, const Source& src, size_t size = sizeof(Source))
+	{
+		return Copy(&dest, &src, size);
 	}
 }

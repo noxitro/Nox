@@ -278,65 +278,52 @@ namespace nox::reflection
 		Public
 	};
 
-	/**
-	 * @brief 関数属性情報
-	*/
+	/// @brief 関数属性情報
 	enum class MethodAttributeFlag : std::uint16_t
 	{
-		/**
-		 * @brief 無し
-		*/
+		/// @brief 無し
 		None = 0,
 
-		/**
-		 * @brief 純粋仮想関数
-		*/
+		/// @brief 純粋仮想関数
 		Abstract = 1 << 0,
 
-		/**
-		 * @brief 仮想関数
-		*/
+		/// @brief 仮想関数
 		Virtual = 1 << 1,
 
-		/**
-		 * @brief 可変指定子
-		*/
+		/// @brief 可変指定子
 		Const = 1 << 2,
 
-		/**
-		 * @brief noexcept
-		*/
+		/// @brief noexcept
 		Noexcept = 1 << 3,
 
-		/**
-		 * @brief static
-		*/
+		/// @brief static
 		Static = 1 << 4,
 
-		/**
-		 * @brief Volatile
-		*/
+		/// @brief Volatile
 		Volatile = 1 << 5,
 
-		/**
-		 * @brief 左辺値
-		*/
+		/// @brief 左辺値
 		LvalueRef = 1 << 6,
 
-		/**
-		 * @brief 右辺値
-		*/
+		/// @brief 右辺値
 		RvalueRef = 1 << 7,
 
-		/**
-		 * @brief inline
-		*/
+		/// @brief inline
 		Inline = 1 << 8,
 
-		/**
-		 * @brief override
-		*/
+		/// @brief override
 		Override = 1 << 9,
+
+		/// @brief constexpr
+		Constexpr = 1 << 10,
+
+		/// @brief Constructor
+		Constructor = 1 << 11,
+
+
+		ConstructorP = 1 << 12,
+
+		ConstructorNewArray = 1 << 13
 	};
 
 	/**
@@ -350,7 +337,7 @@ namespace nox::reflection
 		Default,
 
 		/**
-		 * @brief コンストラクタ
+		 * @brief コンストラクタ ( new operator )
 		*/
 		Constructor,
 	};
