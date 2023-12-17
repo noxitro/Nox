@@ -6,7 +6,7 @@
 #include	"object.h"
 namespace nox
 {
-	class Attribute : public Object, nox::reflection::IAttribute
+	class Attribute : public Object, public nox::reflection::IAttribute
 	{
 		NOX_DECLARE_OBJECT(Attribute, Object);
 	public:
@@ -17,6 +17,14 @@ namespace nox
 	{
 		NOX_DECLARE_OBJECT(DataMember, Object);
 	};
+
+	class IgnoreDataMember : public Attribute
+	{
+		NOX_DECLARE_OBJECT(IgnoreDataMember, Attribute);
+	};
+
+	template<>
+	struct nox::reflection::IgnoreAttribute<DataMember, IgnoreDataMember> : std::true_type {};
 
 	namespace dev
 	{

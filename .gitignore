@@ -40,3 +40,6 @@
 /runtime/bin/source/ReflectionGenerator/obj
 /runtime/bin/source/ReflectionGenerator/Sample/x64/Debug
 /runtime/bin/source/ReflectionGenerator/bin/Debug/net8.0
+/runtime/bin/source/MakeAllIncludeHeader/.vs
+/runtime/bin/source/MakeAllIncludeHeader/bin
+/runtime/bin/source/MakeAllIncludeHeader/obj

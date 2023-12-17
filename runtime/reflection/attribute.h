@@ -21,6 +21,11 @@ namespace nox::reflection
 		}
 	}
 
+	/// @brief 同時付与が不可能な属性の定義
+	/// @tparam T 
+	/// @tparam U 
+	template<std::derived_from<IAttribute> T, std::derived_from<IAttribute> U>
+	struct IgnoreAttribute : std::false_type {};
 
 #if NOX_REFLECTION_GENERATOR
 #define	NOX_ATTR(...)\

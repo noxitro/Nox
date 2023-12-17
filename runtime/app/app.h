@@ -3,3 +3,5 @@
 ///	@file	app.h
 ///	@brief	app
 #pragma once
+
+#include	"all_include.h"
