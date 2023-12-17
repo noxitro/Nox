@@ -38,11 +38,26 @@ namespace nox::reflection
 		struct GlobalRefHolder;
 	}
 
+///	@brief		属性付与(テキスト形式)
+///	@details	enum値など型定義が不可能なものに対して使う
+///				行番号で判定されるので、必ず付与対象の上行に書いてください
+#define	NOX_ATTR_TEXT(...)
+
+/// @brief		属性定義
+#if NOX_REFLECTION_GENERATOR
+#define	NOX_ATTR_RAW(...)\
+NOX_PP_CAT_I(class NoxReflectionAttributeContainer, __COUNTER__) \
+{inline constexpr void NoxReflectionAttributeContainer(const char16_t* text = #__VA_ARGS__)const noexcept = delete;}
+#else
+#define	NOX_ATTR_RAW(...)
+#endif
+
 	///	@brief		リフレクション定義
 	///	@details	クラス内で定義することで、privateメンバもリフレクション対象になります
-#define	NOX_REFLECTION_DECLARE(ClassType) \
+#define	NOX_DECLARE_REFLECTION(ClassType) \
 private:\
-	inline constexpr void __CheckStaticAssert()noexcept{ static_assert(std::is_same_v<ClassType, std::remove_cvref_t<decltype(*this)>>); }\
+	NOX_ATTR_TEXT(::nox::reflection::attr::IgnoreReflection);\
+	inline constexpr void StaticAssertNoxDeclareReflection()noexcept{ static_assert(std::is_same_v<ClassType, std::remove_cvref_t<decltype(*this)>>); }\
 	friend struct ::nox::reflection::gen::TypeInfoRefHolder<ClassType>
 
 	/// @brief		リフレクションオブジェクト定義
@@ -50,7 +65,7 @@ private:\
 #define NOX_DECLARE_REFLECTION_OBJECT(ClassType)\
 public:\
 constexpr virtual std::uint32_t GetUniqueTypeID()const noexcept{return ::nox::util::GetUniqueTypeID<ClassType>();}\
-NOX_REFLECTION_DECLARE(ClassType)
+NOX_DECLARE_REFLECTION(ClassType)
 
 
 	/// @brief 属性インターフェース

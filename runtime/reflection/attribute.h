@@ -21,23 +21,15 @@ namespace nox::reflection
 		}
 	}
 
-///	@brief		属性付与(テキスト形式)
-///	@details	enum値など型定義が不可能なものに対して使う
-///				行番号で判定されるので、必ず付与対象の上行に書いてください
-#define	NOX_ATTR_TEXT(...)
 
 #if NOX_REFLECTION_GENERATOR
-#define	NOX_ATTR_RAW(...)\
-NOX_PP_CAT_I(class NoxReflectionAttributeContainer, __COUNTER__) \
-{inline constexpr void NoxReflectionAttributeContainer(const char16_t* text = #__VA_ARGS__)const noexcept = delete;}
-
 #define	NOX_ATTR(...)\
 NOX_ATTR_RAW(#__VA_ARGS__)
 
 #else
-#define	NOX_ATTR_RAW(...)
 #define	NOX_ATTR(...) \
 NOX_ATTR_RAW(#__VA_ARGS__)
+
 #endif // NOX_REFLECTION_GENERATOR
 
 #if NOX_DEVELOP
@@ -50,22 +42,24 @@ NOX_ATTR_RAW(#__VA_ARGS__)
 		//	3.	リフレクションをしない
 
 		/// @brief リフレクション対象外属性
-		template<std::derived_from<class ReflectionObject> Base> requires(std::is_base_of_v<IAttribute, Base>)
-			class IgnoreReflection : public Base
+		template<std::derived_from<class ReflectionObject> Base>// requires(std::is_base_of_v<IAttribute, Base>)
+			class IgnoreReflectionBase : public Base
 		{
-			NOX_DECLARE_REFLECTION_OBJECT(IgnoreReflection);
+			NOX_DECLARE_REFLECTION_OBJECT(IgnoreReflectionBase);
 		protected:
-			inline constexpr IgnoreReflection()noexcept = default;
+			inline constexpr IgnoreReflectionBase()noexcept = default;
 		};
 
 		/// @brief リフレクション対象として表明
-		template<std::derived_from<class ReflectionObject> Base> requires(std::is_base_of_v<IAttribute, Base>)
+		template<std::derived_from<class ReflectionObject> Base>// requires(std::is_base_of_v<IAttribute, Base>)
 			class ExpressedReflection : public Base
 		{
 			NOX_DECLARE_REFLECTION_OBJECT(ExpressedReflection);
 		protected:
 			inline constexpr ExpressedReflection()noexcept = default;
 		};
+
+		using IgnoreReflection = ::nox::reflection::attr::IgnoreReflectionBase<class ReflectionObject>;
 	}
 
 

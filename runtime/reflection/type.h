@@ -399,73 +399,86 @@ namespace nox::reflection
 
 	namespace detail
 	{
-	/*	/// @brief 型比較用
-		/// @tparam T 
-		template<class T>
+		/// @brief 型変換に使用するためのデータ
 		struct TypeChunk
 		{
-			static constexpr const Type& type = Typeof<T>();
-			static 	constexpr const Type& pointee_type = Typeof<
-				std::conditional_t<std::is_pointer_v<T>, std::remove_pointer_t<T>,
-				std::conditional_t<std::is_reference_v<T>, std::remove_reference_t<T>, std::remove_reference_t<T>>>
-				>();
-			static constexpr const Type& desugar_type = Typeof<std::remove_const_t<T>>();
-			static constexpr const Type& pointee_desugar_type = Typeof<
-				std::remove_const_t<
-				std::conditional_t<std::is_pointer_v<T>, std::remove_pointer_t<T>,
-				std::conditional_t<std::is_reference_v<T>, std::remove_reference_t<T>, std::remove_reference_t<T>>>
-				>
-				>();
-		};*/
-
-
-		struct TypeChunk
-		{
+			/// @brief 型
 			const Type& type;
+
+			/// @brief ポインタ型
 			const Type& pointee_type;
+
+			/// @brief const を取り除いた型
 			const Type& desugar_type;
+
+			/// @brief ポインタ型からconst を取り除いた型
 			const Type& pointee_desugar_type;
 
-			inline consteval TypeChunk(const Type& _type, const Type& _pointee_type, const Type& _desugar_type, const Type& _pointee_desugar_type)noexcept :
+			[[nodiscard]]	inline consteval TypeChunk(const Type& _type, const Type& _pointee_type, const Type& _desugar_type, const Type& _pointee_desugar_type)noexcept :
 				type(_type),
 				pointee_type(_pointee_type),
 				desugar_type(_desugar_type),
 				pointee_desugar_type(_pointee_desugar_type)
 			{}
 
+			inline	constexpr	bool	IsConvertible(const TypeChunk& rhs)const noexcept
+			{
+				if (
+					type == rhs.type ||
+					pointee_type == rhs.pointee_type ||
+					desugar_type == rhs.desugar_type ||
+					pointee_desugar_type == rhs.pointee_desugar_type
+					)
+				{
+					return true;
+				}
+				return false;
+			}
 		};
 
 		template<class T>
-		inline	consteval	const Type&	GetPointeeDesugarType()noexcept
+		struct ReflectionTypeChunkHolder
 		{
-			if constexpr (std::is_pointer_v<T> && std::is_const_v<std::remove_pointer_t<T>>)
+//		private:
+			static	inline	consteval	const Type& GetPointeeDesugarType()noexcept
 			{
-				return Typeof<std::remove_const_t<std::remove_pointer_t<T>>>();
+				if constexpr (std::is_pointer_v<T> && std::is_const_v<std::remove_pointer_t<T>>)
+				{
+					return Typeof<std::remove_const_t<std::remove_pointer_t<T>>>();
+				}
+				else if constexpr (std::is_reference_v<T> && std::is_const_v<std::remove_reference_t<T>>)
+				{
+					return Typeof<std::remove_const_t<std::remove_reference_t<T>>>();
+				}
+				else
+				{
+					return InvalidType;
+				}
 			}
-			else if constexpr (std::is_reference_v<T> && std::is_const_v<std::remove_reference_t<T>>)
+
+			static	inline	consteval	TypeChunk	CreateTypeChunk()noexcept
 			{
-				Typeof<std::remove_const_t<std::remove_reference_t<T>>>();
+				constexpr const Type& pointee_type = std::is_pointer_v<T> ? Typeof<std::remove_pointer_t<T>>() :
+					std::is_reference_v<T> ? Typeof<std::remove_reference_t<T>>() : InvalidType;
+
+				constexpr const Type& desugar_type = std::is_const_v<T> ? Typeof<std::remove_const_t<T>>() : InvalidType;
+
+				return TypeChunk(
+					Typeof<T>(),
+					pointee_type,
+					desugar_type,
+					GetPointeeDesugarType()
+				);
 			}
-			else
-			{
-				return InvalidType;
-			}
-		}
+
+		public:
+			static constexpr TypeChunk value = CreateTypeChunk();
+		};
 
 		template<class T>
-		inline	constexpr	TypeChunk	CreateTypeChunk()noexcept
+		[[nodiscard]]	inline	consteval	const TypeChunk& GetTypeChunk()noexcept
 		{
-			constexpr const Type& pointee_type = std::is_pointer_v<T> ? Typeof<std::remove_pointer_t<T>>() :
-				std::is_reference_v<T> ? Typeof<std::remove_reference_t<T>>() : InvalidType;
-
-			constexpr const Type& desugar_type = std::is_const_v<T> ? Typeof<std::remove_const_t<T>>() : InvalidType;
-
-			return TypeChunk(
-				Typeof<T>(),
-				pointee_type,
-				desugar_type,
-				GetPointeeDesugarType<T>()
-			);
+			return ReflectionTypeChunkHolder<T>::value;
 		}
 	}
 

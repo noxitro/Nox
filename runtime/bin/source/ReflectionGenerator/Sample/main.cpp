@@ -2,16 +2,68 @@
 
 ///	@file	main.cpp
 ///	@brief	main
+namespace app
+{
+	struct Int {
+		int v;
+		constexpr Int(int _v) :v(_v) {}
+	};
+
+	Int intValue = Int(22);
+
+	struct LiteralArgument
+	{
+		int v;
+		constexpr LiteralArgument(int _v, const char8_t* c)noexcept :v(_v) {}
+	};
+
+	
+		template<class T>
+		struct LiteralData
+		{
+			LiteralArgument v;
+			constexpr LiteralData(LiteralArgument _v)noexcept :v(_v) {}
+		};
+		struct NDOT
+		{
+			template<class T, class U>
+			static consteval LiteralData<T> MakeLiteralData(LiteralArgument vaaa, U = U())noexcept {
+				return LiteralData<T>(vaaa);
+			}
+		};
+
+	template<class T, class U>
+	class Same {};
+
+	struct Namespace00
+	{
+		template<class T, class U>
+		class Same2 {};
+	};
+
+	template<int _Index, class T, LiteralData<T> data>
+	class As {};
 
 template<class T>
-class TClass {};
-
-inline auto testFunc()noexcept
+class TClass 
 {
-	TClass<int> value;
-	return sizeof(value);
-}
+	Namespace00::Same2<decltype(1), decltype(nullptr)> same2;
+//	Same<T, T> same;
+	Same<app::Same<T, T>, Namespace00::Same2<T, T>> same;
+	As<12,int, NDOT::MakeLiteralData<int, float>(LiteralArgument(int(23), u8""))> asBody;
+	As<12, int, LiteralData<int>(LiteralArgument(123, u8"abc"))> asValue;
 
+	using ttttt = decltype(&NDOT::MakeLiteralData<int, float>);
+
+};
+using TClass2 = TClass<int>;
+
+	inline auto testFunc()noexcept
+	{
+		TClass2 value;
+		return sizeof(value);
+	}
+}
 #include	<cstdint>
 #include	<type_traits>
 #include	<vector>
@@ -52,9 +104,17 @@ namespace app
 	template<class S>
 	struct Namespace
 	{
-		template<class T, template<class> class U = std::is_class, size_t I = 0> requires(std::is_class_v<T>)
+		template<class T, template<class, class> class U = std::is_same, template<class> class U2 = std::is_abstract, size_t I = 0> //requires(std::is_class_v<T>)
 			class Base
 		{
+			template<class ___T, class _U>
+			class Child {
+				___T** mmv = nullptr;
+				_U& re;
+			};
+
+			U<float, U2<int>> use22;
+
 			template<class Q>
 			static inline std::array<S*, sizeof(Q)> value1_ ;
 			T* value2_;

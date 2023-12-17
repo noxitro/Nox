@@ -20,10 +20,11 @@ namespace nox
 		private:
 			const _ValueType _padding = 0;
 		public:
+			inline	static	constexpr	Vector3D<_ValueType>	Zero()noexcept { return Vector3D<_ValueType>(); }
 
 			//	コンストラクタ
 			[[nodiscard]]	constexpr Vector3D() noexcept :
-				x(.0f), y(.0f), z(.0f) {}
+				x((_ValueType)0), y((_ValueType)0), z((_ValueType)0) {}
 
 			[[nodiscard]] constexpr explicit Vector3D(_ValueType _x, _ValueType _y, _ValueType _z)noexcept :
 				x(_x), y(_y), z(_z) {}

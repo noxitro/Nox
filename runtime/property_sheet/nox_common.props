@@ -6,7 +6,6 @@
     <OutDir>$(SolutionDir)build\$(SolutionName)\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)build\intermediate\$(SolutionName)\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <_PropertySheetDisplayName>nox_common</_PropertySheetDisplayName>
-    <EnableClangTidyCodeAnalysis>false</EnableClangTidyCodeAnalysis>
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup>
@@ -33,6 +32,7 @@
       <GenerateXMLDocumentationFiles>false</GenerateXMLDocumentationFiles>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <EnableModules>false</EnableModules>
+      <UseStandardPreprocessor>true</UseStandardPreprocessor>
     </ClCompile>
     <Link />
     <Lib>

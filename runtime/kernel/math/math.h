@@ -13,3 +13,5 @@
 #include	"quaternion.h"
 
 #include	"color.h"
+
+#include	"vector_util.h"

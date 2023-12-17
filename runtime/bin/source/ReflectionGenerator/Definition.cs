@@ -42,10 +42,14 @@ namespace ReflectionGenerator
     /// </summary>
     public class RuntimeType
     {
-        public required bool IsVoid { get; init; }
-        public required string Name { get; init; }
-        public required string FullName { get; init; }
-        public required string Namespace { get; init; }
+        public bool IsVoid => TypeKind == ClangSharp.Interop.CXTypeKind.CXType_Void;
+        public string Name { get; init; } = string.Empty;
+        public string FullName { get; init; } = string.Empty;
+        public string Namespace { get; init; } = string.Empty;
+
+        public string TemplateValueStr { get; set; } = string.Empty;
+
+        public List<RuntimeType> RuntimeValueList { get; } = new List<RuntimeType>();
 
         private RuntimeAttribute _AttributeFlags = RuntimeAttribute.Invalid;
 
@@ -53,10 +57,19 @@ namespace ReflectionGenerator
 
         public bool IsArray => TypeKind == ClangSharp.Interop.CXTypeKind.CXType_ConstantArray;
 
-        public required bool IsTemplate { get; init; }
+        public bool IsTemplate => TemplateDepth > 0 || TemplateIndex > 0;
 
-        public required int TemplateListIndex { get; init; }
-        public required int TemplateIndex { get; init;}
+        public int TemplateDepth { get; init; } = -1;
+        public int TemplateIndex { get; init; } = -1;
+
+        public required IReadOnlyList<RuntimeType> TemplateArgumentList { get; init; }
+
+        public static readonly IReadOnlyList<RuntimeType> DummyList = new List<RuntimeType>();
+        public static readonly RuntimeType Null = new RuntimeType() 
+        {
+           TemplateArgumentList = DummyList,
+           TypeKind = ClangSharp.Interop.CXTypeKind.CXType_Invalid,
+        };
     }
 
     /// <summary>

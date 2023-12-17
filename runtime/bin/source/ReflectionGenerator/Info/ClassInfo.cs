@@ -51,10 +51,7 @@ namespace ReflectionGenerator.Info
         /// </summary>
         public ClassInfo? OutsideClass { get; set; } = null;
 
-        /// <summary>
-        /// テンプレートパラメータリストテーブル
-        /// </summary>
-        public TemplateParam[][] TemplateParamListTable { get; init; } = new TemplateParam[0][];
+       
 
         public required ClangSharp.Interop.CXCursor CXCursor { get; init; }
 
@@ -272,8 +269,11 @@ namespace ReflectionGenerator.Info
 
         public ClassInfo? GetInfo(ClangSharp.Interop.CXCursor cursor)
         {
-            _InfoDictFromCXCursor.TryGetValue(cursor, out ClassInfo? info);
-            return info;
+            if (_InfoDictFromCXCursor.TryGetValue(cursor, out ClassInfo? outValue) == false)
+            {
+                return null;
+            }
+            return outValue;
         }
 
         public List<ClassInfo> GetTypedefClassInfoList() => _TypedefClassInfoList;

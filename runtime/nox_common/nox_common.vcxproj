@@ -14,97 +14,11 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="attribute_common.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="behavior.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="component.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="core.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="game_object.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="managed_object.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="object.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="object_definition.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="stdafx.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="transform.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="attribute_common.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="behavior.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="component.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="game_object.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="managed_object.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="object.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="object_definition.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="stdafx.cpp">
-      <SubType>
-      </SubType>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Master|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="transform.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\core2\core2.vcxproj" />
-  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{0d108199-d079-4739-83ad-ce83c4d53332}</ProjectGuid>
-    <RootNamespace>core</RootNamespace>
+    <ProjectGuid>{d97fb947-3058-4eb8-adcb-57586aa09120}</ProjectGuid>
+    <RootNamespace>noxcommon</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -191,6 +105,18 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="stdafx.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="stdafx.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

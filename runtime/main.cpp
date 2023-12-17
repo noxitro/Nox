@@ -96,8 +96,8 @@ int WINAPI::WinMain(_In_ ::HINSTANCE hInstance, _In_opt_ ::HINSTANCE /*hPrevInst
 
 	static constexpr std::array<reflection::MethodParameter, 2> method_param_list
 	{
-		reflection::MethodParameter(u8"", reflection::Typeof<s32>(), false),
-		reflection::MethodParameter(u8"", reflection::Typeof<s32>(), true)
+		reflection::detail::CreateMethodParameter<s32>(u8"", false),
+		reflection::detail::CreateMethodParameter<s32>(u8"", true)
 	};
 
 	constexpr auto method_info = nox::reflection::detail::CreateMethodInfo<std::decay_t<decltype(TestFunc)>>(
@@ -111,14 +111,18 @@ int WINAPI::WinMain(_In_ ::HINSTANCE hInstance, _In_opt_ ::HINSTANCE /*hPrevInst
 		static_cast<u8>(method_param_list.size()),
 		false,
 		false,
-		+[](void* a)constexpr noexcept->decltype(auto) {return TestFunc(*reinterpret_cast<const s32*>(a)); },
-		+[](void* a, void* b)constexpr noexcept->decltype(auto) {return TestFunc(*reinterpret_cast<const s32*>(a), *reinterpret_cast<const s32*>(b)); }
+		+[](void* a)noexcept->decltype(auto) {return TestFunc(*reinterpret_cast<const s32*>(a)); },
+		+[](void* a, void* b)noexcept->decltype(auto) {return TestFunc(*reinterpret_cast<const s32*>(a), *reinterpret_cast<const s32*>(b)); }
 	);
 
 	s32 out;
 	constexpr int aaa = 10;
 	int bbb = 10;
 	nox::Vec3 r = method_info.Invoke<nox::Vec3>(aaa);
+
+	constexpr auto nn12= nox::Vec3::Zero();
+
+	constexpr auto& ntype = reflection::detail::GetTypeChunk<int>();
 
 	return 0;
 }

@@ -7,3 +7,5 @@
 
 #include	"field_info.h"
 #include	"method_info.h"
+
+#include	"attribute.h"

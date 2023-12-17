@@ -3,12 +3,14 @@
 ///	@file	object.h
 ///	@brief	object
 #pragma once
+#include	"object_definition.h"
 
 namespace nox
 {
 	/// @brief 基底オブジェクト
 	class Object : public reflection::ReflectionObject
 	{
+		NOX_DECLARE_OBJECT_ROOT(Object);
 	private:
 
 	};

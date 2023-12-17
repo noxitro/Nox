@@ -13,7 +13,7 @@ namespace nox
 		{
 			_ValueType x, y, z, w;
 
-			[[nodiscard]]	inline	constexpr	Quaternion()noexcept : x(.0f), y(.0f), z(.0f), w(1.0f) {}
+			[[nodiscard]]	inline	constexpr	Quaternion()noexcept : x((_ValueType)0), y((_ValueType)0), z((_ValueType)0), w((_ValueType)1) {}
 			[[nodiscard]]	inline	constexpr explicit	Quaternion(_ValueType _x, _ValueType _y, _ValueType _z, _ValueType _w)noexcept : x(_x), y(_y), z(_z), w(_w) {}
 			[[nodiscard]]	inline	constexpr	Quaternion(const Quaternion& q)noexcept : x(q.x), y(q.y), z(q.z), w(q.w) {}
 			[[nodiscard]]	inline	constexpr explicit	Quaternion(const std::array<_ValueType, 4U>& ary)noexcept :
