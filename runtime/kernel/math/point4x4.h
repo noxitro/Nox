@@ -63,9 +63,9 @@ namespace nox
 		};
 	}
 
-	using Int4x4 = nox::detail::Point4x4<s32>;
-	using UInt4x4 = nox::detail::Point4x4<u32>;
-	using Float4x4 = nox::detail::Point4x4<f32>;
-	using Double4x4 = nox::detail::Point4x4<f64>;
+	using Int4x4 = nox::detail::Point4x4<int32>;
+	using UInt4x4 = nox::detail::Point4x4<uint32>;
+	using Float4x4 = nox::detail::Point4x4<float>;
+	using Double4x4 = nox::detail::Point4x4<double>;
 }
 #pragma warning(pop)

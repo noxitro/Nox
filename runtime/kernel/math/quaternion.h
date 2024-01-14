@@ -35,8 +35,8 @@ namespace nox
 			inline	constexpr Quaternion& operator *=(_ValueType v)noexcept { x *= v; y *= v; z *= v; w *= v; return *this; }
 			inline	constexpr Quaternion& operator /=(_ValueType v)noexcept { x /= v; y /= v; z /= v; w /= v; return *this; }
 
-			[[nodiscard]]	inline	_ValueType operator[](const u32 index)const noexcept { return reinterpret_cast<const _ValueType*>(this)[index]; }
-			[[nodiscard]]	inline	_ValueType& operator[](const u32 index)noexcept { return reinterpret_cast<_ValueType*>(this)[index]; }
+			[[nodiscard]]	inline	_ValueType operator[](const uint32 index)const noexcept { return reinterpret_cast<const _ValueType*>(this)[index]; }
+			[[nodiscard]]	inline	_ValueType& operator[](const uint32 index)noexcept { return reinterpret_cast<_ValueType*>(this)[index]; }
 
 			inline	constexpr Quaternion& operator =(const Quaternion& q) noexcept {
 				x = q.x; y = q.y; z = q.z; w = q.w;
@@ -62,5 +62,5 @@ namespace nox
 		};
 	}
 
-	using Quat = nox::detail::Quaternion<f32>;
+	using Quat = nox::detail::Quaternion<float>;
 }

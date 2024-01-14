@@ -33,6 +33,8 @@
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <EnableModules>false</EnableModules>
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
+      <BuildStlModules>false</BuildStlModules>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
     </ClCompile>
     <Link />
     <Lib>

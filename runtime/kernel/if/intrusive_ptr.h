@@ -1,16 +1,17 @@
 ﻿///	@file	intrusive_ptr.h
 ///	@brief	intrusive_ptr
 #pragma once
+#include	"assertion.h"
 
 namespace nox
 {
-	namespace concetps
+	namespace concepts
 	{
 		template<class T>
-		concept IntrusivePtrConcept = requires(T & x)
+		concept IntrusivePtrConcept = requires(T& x)
 		{
-			x.AddReference();
-			x.ReleaseReference();
+			IntrusivePtrAddReference(x);
+			IntrusivePtrReleaseReference(x);
 		};
 	}
 
@@ -19,9 +20,29 @@ namespace nox
 	template<class T>
 	class IntrusivePtr
 	{
-		private:
+	public:
+		inline constexpr IntrusivePtr()noexcept :
+			ptr_(nullptr) {}
 
+		inline ~IntrusivePtr()
+		{
+			if (ptr_ == nullptr)
+			{
+				return;
+			}
 
+			if constexpr (concepts::IntrusivePtrConcept<T> == true)
+			{
+				IntrusivePtrReleaseReference(*ptr_);
+			}
+			else
+			{
+				static_assert(concepts::IntrusivePtrConcept<T> == true);
+				NOX_ASSERT(false, u"ここには来ないはず");
+			}
+		}
 
+	private:
+		T* ptr_;
 	};
 }

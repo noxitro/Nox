@@ -11,17 +11,17 @@ namespace nox::reflection
 	class EnumVariableInfo
 	{
 	public:
-		inline constexpr EnumVariableInfo()noexcept :
-			value_int8_(0),
-			name_(u8""),
-			attribute_ptr_table_(nullptr),
-			attribute_length_(0) {}
+		//inline constexpr EnumVariableInfo()noexcept :
+		//	value_int8_(0),
+		//	name_(u8""),
+		//	attribute_ptr_table_(nullptr),
+		//	attribute_length_(0) {}
 
 		inline constexpr explicit EnumVariableInfo(
 			const std::int8_t value,
 			const std::u8string_view variableName,
 			const class ReflectionObject* const* const attributePtrAry,
-			const u8 attributeLength
+			const std::uint8_t attributeLength
 		)noexcept :
 			value_int8_(value),
 			name_(variableName),
@@ -32,7 +32,7 @@ namespace nox::reflection
 			const std::uint8_t value,
 			const std::u8string_view variableName,
 			const class ReflectionObject* const* const attributePtrAry,
-			const u8 attributeLength
+			const std::uint8_t attributeLength
 		)noexcept :
 			value_uint8_(value),
 			name_(variableName),
@@ -43,7 +43,7 @@ namespace nox::reflection
 			const std::int16_t value,
 			const std::u8string_view variableName,
 			const class ReflectionObject* const* const attributePtrAry,
-			const u8 attributeLength
+			const std::uint8_t attributeLength
 		)noexcept :
 			value_int16_(value),
 			name_(variableName),
@@ -54,7 +54,7 @@ namespace nox::reflection
 			const std::uint16_t value,
 			const std::u8string_view variableName,
 			const class ReflectionObject* const* const attributePtrAry,
-			const u8 attributeLength
+			const std::uint8_t attributeLength
 		)noexcept :
 			value_uint16_(value),
 			name_(variableName),
@@ -65,7 +65,7 @@ namespace nox::reflection
 			const std::int32_t value,
 			const std::u8string_view variableName,
 			const class ReflectionObject* const* const attributePtrAry,
-			const u8 attributeLength
+			const std::uint8_t attributeLength
 		)noexcept :
 			value_int32_(value),
 			name_(variableName),
@@ -76,7 +76,7 @@ namespace nox::reflection
 			const std::uint32_t value,
 			const std::u8string_view variableName,
 			const class ReflectionObject* const* const attributePtrAry,
-			const u8 attributeLength
+			const std::uint8_t attributeLength
 		)noexcept :
 			value_uint32_(value),
 			name_(variableName),
@@ -87,7 +87,7 @@ namespace nox::reflection
 			const std::int64_t value,
 			const std::u8string_view variableName,
 			const class ReflectionObject* const* const attributePtrAry,
-			const u8 attributeLength
+			const std::uint8_t attributeLength
 		)noexcept :
 			value_int64_(value),
 			name_(variableName),
@@ -98,7 +98,7 @@ namespace nox::reflection
 			const std::uint64_t value,
 			const std::u8string_view variableName,
 			const class ReflectionObject* const* const attributePtrAry,
-			const u8 attributeLength
+			const std::uint8_t attributeLength
 		)noexcept :
 			value_uint64_(value),
 			name_(variableName),
@@ -109,7 +109,7 @@ namespace nox::reflection
 			const char8_t value,
 			const std::u8string_view variableName,
 			const class ReflectionObject* const* const attributePtrAry,
-			const u8 attributeLength
+			const std::uint8_t attributeLength
 		)noexcept :
 			value_char8_(value),
 			name_(variableName),
@@ -120,7 +120,7 @@ namespace nox::reflection
 			const char16_t value,
 			const std::u8string_view variableName,
 			const class ReflectionObject* const* const attributePtrAry,
-			const u8 attributeLength
+			const std::uint8_t attributeLength
 		)noexcept :
 			value_char16_(value),
 			name_(variableName),
@@ -131,7 +131,7 @@ namespace nox::reflection
 			const char32_t value,
 			const std::u8string_view variableName,
 			const class ReflectionObject* const* const attributePtrAry,
-			const u8 attributeLength
+			const std::uint8_t attributeLength
 		)noexcept :
 			value_char32_(value),
 			name_(variableName),
@@ -142,7 +142,7 @@ namespace nox::reflection
 			const wchar_t value,
 			const std::u8string_view variableName,
 			const class ReflectionObject* const* const attributePtrAry,
-			const u8 attributeLength
+			const std::uint8_t attributeLength
 		)noexcept :
 			value_wchar16_(value),
 			name_(variableName),
@@ -153,7 +153,7 @@ namespace nox::reflection
 			const char value,
 			const std::u8string_view variableName,
 			const class ReflectionObject* const* const attributePtrAry,
-			const u8 attributeLength
+			const std::uint8_t attributeLength
 		)noexcept :
 			value_char_(value),
 			name_(variableName),
@@ -164,7 +164,7 @@ namespace nox::reflection
 			const unsigned char value,
 			const std::u8string_view variableName,
 			const Attribute* const* const attributePtrAry,
-			const u8 attributeLength
+			const std::uint8_t attributeLength
 		)noexcept :
 			mValueUChar(value),
 			name_(variableName),
@@ -175,7 +175,7 @@ namespace nox::reflection
 			const signed char value,
 			const std::u8string_view variableName,
 			const Attribute* const* const attributePtrAry,
-			const u8 attributeLength
+			const std::uint8_t attributeLength
 		)noexcept :
 			mValueSChar(value),
 			name_(variableName),
@@ -186,7 +186,7 @@ namespace nox::reflection
 			const bool value,
 			const std::u8string_view variableName,
 			const class ReflectionObject* const* const attributePtrAry,
-			const u8 attributeLength
+			const std::uint8_t attributeLength
 		)noexcept :
 			value_bool_(value),
 			name_(variableName),

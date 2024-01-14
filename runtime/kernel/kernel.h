@@ -12,6 +12,7 @@
 #include	"if/string_format.h"
 
 #include	"if/assertion.h"
+#include	"if/singleton.h"
 #include	"memory/memory.h"
 #include	"memory/memory_util.h"
 #include	"os/os.h"
@@ -23,4 +24,10 @@
 
 #include	"math/math.h"
 
-#include	"memory/stl_allocate_adapter.h"
+#include	"if/string.h"
+
+
+#include	"if/intrusive_ptr.h"
+
+#include	"preprocessor/repeat.h"
+

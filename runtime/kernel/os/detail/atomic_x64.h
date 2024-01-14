@@ -2,7 +2,7 @@
 ///	@brief	atomic_x64
 #pragma once
 
-#if NOX_X64
+#if NOX_WIN64
 
 #endif // NOX_WIN64
 

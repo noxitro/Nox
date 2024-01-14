@@ -11,13 +11,19 @@ namespace ReflectionGenerator.Info
     /// </summary>
     public class AttributeInfo 
     {
-        public required string FullName { get; init; } 
+        /// <summary>
+        /// 属性文字列
+        /// </summary>
+        public required string ValueStr { get; init; }
 
         /// <summary>
-        /// コンストラクタの引数
+        /// 属性クラス情報
         /// </summary>
-        public string ArgsStr { get; init; } = string.Empty;
+        public required ClassInfo AttributeClassInfo { get; init; }
 
+        /// <summary>
+        /// ConstexprなConstructorかどうか
+        /// </summary>
         public required bool IsConstexpr { get; init; }
     }
 

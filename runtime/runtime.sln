@@ -25,6 +25,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "reflection", "reflection\re
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "app", "app\app.vcxproj", "{E21D57C8-C4B7-4702-9F36-12C332B64433}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "reflection_generated", "reflection_generated\reflection_generated.vcxproj", "{3FA8CE37-1F60-456C-996C-140C5F8A65ED}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -95,6 +97,18 @@ Global
 		{E21D57C8-C4B7-4702-9F36-12C332B64433}.Release|x64.Build.0 = Release|x64
 		{E21D57C8-C4B7-4702-9F36-12C332B64433}.Release|x86.ActiveCfg = Release|x64
 		{E21D57C8-C4B7-4702-9F36-12C332B64433}.Release|x86.Build.0 = Release|x64
+		{3FA8CE37-1F60-456C-996C-140C5F8A65ED}.Debug|x64.ActiveCfg = Debug|x64
+		{3FA8CE37-1F60-456C-996C-140C5F8A65ED}.Debug|x64.Build.0 = Debug|x64
+		{3FA8CE37-1F60-456C-996C-140C5F8A65ED}.Debug|x86.ActiveCfg = Debug|x64
+		{3FA8CE37-1F60-456C-996C-140C5F8A65ED}.Debug|x86.Build.0 = Debug|x64
+		{3FA8CE37-1F60-456C-996C-140C5F8A65ED}.Master|x64.ActiveCfg = Master|x64
+		{3FA8CE37-1F60-456C-996C-140C5F8A65ED}.Master|x64.Build.0 = Master|x64
+		{3FA8CE37-1F60-456C-996C-140C5F8A65ED}.Master|x86.ActiveCfg = Master|x64
+		{3FA8CE37-1F60-456C-996C-140C5F8A65ED}.Master|x86.Build.0 = Master|x64
+		{3FA8CE37-1F60-456C-996C-140C5F8A65ED}.Release|x64.ActiveCfg = Release|x64
+		{3FA8CE37-1F60-456C-996C-140C5F8A65ED}.Release|x64.Build.0 = Release|x64
+		{3FA8CE37-1F60-456C-996C-140C5F8A65ED}.Release|x86.ActiveCfg = Release|x64
+		{3FA8CE37-1F60-456C-996C-140C5F8A65ED}.Release|x86.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

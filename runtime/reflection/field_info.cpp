@@ -11,5 +11,5 @@ using namespace nox::reflection;
 
 const ClassInfo* FieldInfo::GetOwnerClass()const noexcept
 {
-	return util::Deref(Reflection::Instance()).FindClassInfo(owner_class_type_.GetTypeID());
+	return Reflection::Instance().FindClassInfo(owner_class_type_.GetTypeID());
 }

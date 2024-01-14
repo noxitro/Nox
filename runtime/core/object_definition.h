@@ -16,20 +16,27 @@ namespace nox
 
 #define	NOX_DECLARE_OBJECT(ClassType, BaseType) \
 	NOX_DECLARE_REFLECTION_OBJECT(ClassType); \
-	NOX_ATTR(::nox::reflection::attr::IgnoreReflection);\
-	static inline consteval void	StaticAssertNoxDeclareObject()noexcept{\
-		static_assert(!std::is_same_v<BaseType, ClassType>, "base type failed");\
-		static_assert(std::is_base_of_v<BaseType, ClassType>, "base type failed");\
-		static_assert(!std::is_base_of_v<::nox::ManagedObject, ClassType>, "base type failed");\
-	}\
-	using Base = BaseType
+	private:\
+		NOX_ATTR(::nox::reflection::attr::IgnoreReflection())\
+		static inline consteval void	StaticAssertNoxDeclareObject()noexcept\
+		{\
+			static_assert(!std::is_same_v<BaseType, ClassType>, "base type failed");\
+			static_assert(std::is_base_of_v<BaseType, ClassType>, "base type failed");\
+			static_assert(!std::is_base_of_v<::nox::ManagedObject, ClassType>, "base type failed");\
+		}\
+	public:\
+		using Base = BaseType
 //	end define
 
 #define	NOX_DECLARE_MANAGED_OBJECT(ClassType, BaseType)\
-	NOX_ATTR(::nox::reflection::attr::IgnoreReflection);\
-	static	inline	consteval	void	StaticAssertNoxDeclareManagedObject()noexcept{\
-		static_assert(!std::is_same_v<BaseType, ClassType>, "base type failed");\
-		static_assert(std::is_base_of_v<class ::nox::ManagedObject, ClassType>, "managed object failed");\
-	}\
-	NOX_DECLARE_REFLECTION_OBJECT(ClassType)
+	private:\
+		NOX_ATTR(::nox::reflection::attr::IgnoreReflection())\
+		static	inline	consteval	void	StaticAssertNoxDeclareManagedObject()noexcept\
+		{\
+			static_assert(!std::is_same_v<BaseType, ClassType>, "base type failed");\
+			static_assert(std::is_base_of_v<class ::nox::ManagedObject, ClassType>, "managed object failed");\
+		}\
+		NOX_DECLARE_REFLECTION_OBJECT(ClassType); \
+	public:\
+		using Base = BaseType
 //	end define

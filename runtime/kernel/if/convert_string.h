@@ -1,10 +1,12 @@
 ﻿///	@file	convert_string.h
 ///	@brief	convert_string
 #pragma once
-#include	"basic_type.h"
 #include	"basic_definition.h"
+#include	"basic_type.h"
 
 #include	"../type_traits/type_traits.h"
+#include	"advanced_type.h"
+
 namespace nox::util
 {
 	//	安全なキャスト
@@ -28,16 +30,8 @@ namespace nox::util
 	}
 
 #pragma region 変換
-	bool	ConvertWString(std::span<wchar_t> buffer, const c8* from);
-	nox::WString	ConvertWString(const c8* from);
-	nox::WString	ConvertWString(const c16* from);
 
-	template<std::same_as<nox::WString> To, class From> 
-	requires(!std::is_same_v<typename To::value_type, From>)
-	inline	To	ConvertString(const From* str)
-	{
-		return util::ConvertWString(str);
-	}
+
 
 	namespace detail
 	{
@@ -62,43 +56,48 @@ namespace nox::util
 
 	//	formatで異なる文字列を変換するための関数
 
-	/// @brief from other
-	/// @tparam To 
-	/// @tparam From 
-	/// @param object 
-	/// @return 
-	template<class To, class From>
-		requires(
-	nox::IsStringClassValue<To> &&
-	!nox::IsCharTypeValue<std::remove_cvref_t<std::remove_pointer_t<From>>> &&
-	!nox::IsStringClassValue<std::remove_cvref_t<From>> &&
-		!nox::IsStringViewClassValue<std::remove_cvref_t<From>>
-		)
-	inline constexpr auto ConvertStringSafe(const From& object)noexcept { return object; }
+	///// @brief from other
+	///// @tparam To 
+	///// @tparam From 
+	///// @param object 
+	///// @return 
+	//template<class To, class From>
+	////	requires(
+	////nox::IsStringClassValue<To> &&
+	////!nox::IsCharTypeValue<std::remove_cvref_t<std::remove_pointer_t<From>>> &&
+	////!nox::IsStringClassValue<std::remove_cvref_t<From>> &&
+	////	!nox::IsStringViewClassValue<std::remove_cvref_t<From>>
+	////	)
+	//inline constexpr decltype(auto) ConvertStringSafe(From&& object)noexcept { return object; }
 
-	/// @brief from pointer
-	/// @tparam To 
-	/// @tparam From 
-	/// @param object 
-	/// @return 
-	template<class To, class From> requires(nox::IsStringClassValue<To> && nox::IsCharTypeValue<From>)
-	inline To ConvertStringSafe(const From* object) { return util::ConvertString<To>(object); }
+	///// @brief from pointer
+	///// @tparam To 
+	///// @tparam From 
+	///// @param object 
+	///// @return 
+	//template<class To, class From> requires(nox::IsCharTypeValue<From>)
+	//inline To ConvertStringSafe(const From* object) { 
+	////	return util::ConvertString<To>(object); 
+	//	return To();
+	//}
 
-	/// @brief from string class
-	/// @tparam To 
-	/// @tparam From 
-	/// @param object 
-	/// @return 
-	template<class To, class From> requires(nox::IsStringClassValue<To>&& nox::IsStringClassValue<std::remove_cvref_t<From>>)
-	inline To ConvertStringSafe(const From& object) { return nox::util::ConvertString<To>(object.c_str()); }
+	///// @brief from string class
+	///// @tparam To 
+	///// @tparam From 
+	///// @param object 
+	///// @return 
+	//template<class To, class From> requires(nox::IsStringClassValue<To>&& nox::IsCharTypeValue<From>)
+	//inline To ConvertStringSafe(const nox::BasicString<From>& object) { 
+	//	return nox::util::ConvertString<To>(object); 
+	//}
 
-	/// @brief	from string_view
-	/// @tparam To 
-	/// @tparam From 
-	/// @param object 
-	/// @return 
-	template<class To, class From> requires(nox::IsStringClassValue<To>&& nox::IsStringViewClassValue<std::remove_cvref_t<From>>)
-	inline To ConvertStringSafe(From object) { return nox::util::ConvertString<To>(object.c_str()); }
+	///// @brief	from string_view
+	///// @tparam To 
+	///// @tparam From 
+	///// @param object 
+	///// @return 
+	//template<class To, class From> requires(nox::IsStringClassValue<To>&& nox::IsCharTypeValue<From>)
+	//inline To ConvertStringSafe(const std::basic_string_view<From> object) { return nox::util::ConvertString<To>(object); }
 
 #pragma endregion
 

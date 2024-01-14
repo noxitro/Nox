@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -13,6 +14,9 @@ namespace ReflectionGenerator.Parser
     public static class ClangSharpExtension
     {
         #region 公開メソッド
+        public static bool IsReflectionAttribute(this ClangSharp.Interop.CXCursor self) => CppParseUtil.IsReflectionAttributeCursor(self);
+        public static string ExtractReflectionAttributeStr(this ClangSharp.Interop.CXCursor self) => CppParseUtil.ExtractReflectionAttributeFromCursor(self);
+
         /// <summary>
         /// CXCursorから子CXCursorリストを取得する
         /// </summary>
@@ -160,6 +164,23 @@ namespace ReflectionGenerator.Parser
             return str;
         }
 
+        public static List<string> GetNamespaceList(this ClangSharp.Interop.CXCursor cursor)
+        {
+            List<string> strList = new List<string>();
+
+            while (cursor != ClangSharp.Interop.CXCursor.Null)
+            {
+                if (cursor.Kind == ClangSharp.Interop.CXCursorKind.CXCursor_Namespace)
+                {
+                    strList.Insert(0, cursor.Spelling.CString);
+                }
+
+                cursor = cursor.Referenced.SemanticParent;
+            }
+
+            return strList;
+        }
+
         public static string GetLixicalsStr(this ClangSharp.Interop.CXCursor cursor)
         {
             string str = string.Empty;
@@ -210,6 +231,31 @@ namespace ReflectionGenerator.Parser
             string namespaceStr = GetNamespace(cursor);
 
             string str = type.CanonicalType.Spelling.CString;
+
+            if (namespaceStr != string.Empty)
+            {
+                str = str.Replace($"{namespaceStr}::", string.Empty);
+            }
+
+            if (lexicalParentStr != string.Empty)
+            {
+                str = $"{lexicalParentStr}::{str}";
+            }
+
+            if (namespaceStr != string.Empty)
+            {
+                str = $"{namespaceStr}::{str}";
+            }
+
+            return str;
+        }
+
+        public static string GetObjectFullName(this ClangSharp.Interop.CXCursor cursor)
+        {
+            string lexicalParentStr = GetLixicalsStr(cursor);
+            string namespaceStr = GetNamespace(cursor);
+
+            string str = cursor.Spelling.CString;
 
             if (namespaceStr != string.Empty)
             {
@@ -357,6 +403,36 @@ namespace ReflectionGenerator.Parser
                     "TlsKind"
                 }
             },
+             {
+                ClangSharp.Interop.CXCursorKind.CXCursor_UnaryExpr,
+                new HashSet<string>
+                {
+                    "TlsKind"
+                }
+            },
+              {
+                ClangSharp.Interop.CXCursorKind.CXCursor_IntegerLiteral,
+                new HashSet<string>
+                {
+                    "TlsKind"
+                }
+            },
+
+                {
+                ClangSharp.Interop.CXCursorKind.CXCursor_UnexposedExpr,
+                new HashSet<string>
+                {
+                    "TlsKind"
+                }
+            },
+    {
+                ClangSharp.Interop.CXCursorKind.CXCursor_LastExtraDecl,
+                new HashSet<string>
+                {
+                    "Visibility"
+                }
+            },
+
         };
 
 

@@ -20,6 +20,13 @@ namespace ReflectionGenerator
             _Max
         }
 
+        #region 定数
+        /// <summary>
+        /// リフレクション属性として認識する__attribute__(annotate(x))のpresuffix
+        /// </summary>
+        public const string REFLECTION_ATTRIBUTE_ANNOTATE_STR = "NOX_REFLECTION_ATTR_";
+        #endregion
+
         #region 非公開フィールド
         private static readonly string[] CppVersionStrTable = new string[(int)CppVersion._Max]
        {
@@ -56,8 +63,6 @@ namespace ReflectionGenerator
         {
             return CppVersionStrTable[(int)cppVersion];
         }
-
-     
         #endregion
     }
 }

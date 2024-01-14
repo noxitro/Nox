@@ -62,7 +62,7 @@ constexpr auto field_info00 = nox::reflection::detail::CreateFieldInfo<Test>(
 	nullptr
 );
 
-inline constexpr nox::Vec3	TestFunc(s32 a, s32 b = 1)noexcept
+inline constexpr nox::Vec3	TestFunc(nox::int32 a, nox::int32 b = 1)noexcept
 {
 	return nox::Vec3(a, b, a + b);
 }
@@ -81,23 +81,65 @@ public:
 	inline static void* operator new[](size_t size) {return nullptr; }
 };
 
+
+/// @brief 型生成クラス
+	/// @tparam T 
+template<class T> 
+struct ReflectionTypeActivator
+{
+	template<class... Args> requires(std::is_constructible_v<T, Args...>)
+	[[nodiscard]]	static inline constexpr T	CreateInstance(Args&&... args)noexcept { return T{ args... }; }
+};
+
+class NOX_ATTR_TYPE(nox::attr::IgnoreDataMember()) PrivateClass
+{
+	friend struct ReflectionTypeActivator<PrivateClass>;
+	PrivateClass(int a) 
+	{
+		std::printf("");
+	}
+
+	int a_ = 0;
+
+	inline PrivateClass& operator=(PrivateClass& rhs)noexcept
+	{
+		a_ = rhs.a_;
+		return *this;
+	}
+};
+
+
+namespace nox::reflection::detail
+{
+	template<class _TupleType>
+	inline bool CheckAttributes2()noexcept
+	{
+		return CheckAttributesTuple<_TupleType>::test();
+	}
+}
+
+
 int WINAPI::WinMain(_In_ ::HINSTANCE hInstance, _In_opt_ ::HINSTANCE /*hPrevInstance*/, _In_ ::LPSTR /*lpCmdLine*/, _In_ int nCmdShow)
 {
 	using namespace nox;
 
-	class V : public std::vector<int> {};
+	nox::String strbase;
 
-	constexpr auto nnn01id = util::GetUniqueTypeID<V>();
-	constexpr auto nnn01id2 = util::GetUniqueTypeID<std::vector<int>>();
-	
-	c8* buffer = nullptr;
-	
-	Obj* obj = new Obj[1];
+	auto n0 = util::GetTypeName<int>();
+	auto n1 = util::ConvertWString(util::GetTypeName<int>());
+	constexpr auto lstr = L"aaabb {} is null";
+
+	auto arg0 = util::ConvertWString("int");
+	auto arg1 = nox::WString(L"int");
+	auto fname1 = util::Format(lstr, arg0);
+	auto fname2 = util::Format(lstr, arg1);
+
+	reflection::Reflection::Instance();
 
 	static constexpr std::array<reflection::MethodParameter, 2> method_param_list
 	{
-		reflection::detail::CreateMethodParameter<s32>(u8"", false),
-		reflection::detail::CreateMethodParameter<s32>(u8"", true)
+		reflection::detail::CreateMethodParameter<int32>(u8"", nullptr, 0, false),
+		reflection::detail::CreateMethodParameter<int32>(u8"", nullptr, 0,true)
 	};
 
 	constexpr auto method_info = nox::reflection::detail::CreateMethodInfo<std::decay_t<decltype(TestFunc)>>(
@@ -108,14 +150,14 @@ int WINAPI::WinMain(_In_ ::HINSTANCE hInstance, _In_opt_ ::HINSTANCE /*hPrevInst
 		nullptr,
 		0,
 		method_param_list.data(),
-		static_cast<u8>(method_param_list.size()),
+		static_cast<uint8>(method_param_list.size()),
 		false,
 		false,
-		+[](void* a)noexcept->decltype(auto) {return TestFunc(*reinterpret_cast<const s32*>(a)); },
-		+[](void* a, void* b)noexcept->decltype(auto) {return TestFunc(*reinterpret_cast<const s32*>(a), *reinterpret_cast<const s32*>(b)); }
+		+[](void* a)noexcept->decltype(auto) {return TestFunc(*reinterpret_cast<const int32*>(a)); },
+		+[](void* a, void* b)noexcept->decltype(auto) {return TestFunc(*reinterpret_cast<const int32*>(a), *reinterpret_cast<const int32*>(b)); }
 	);
 
-	s32 out;
+	int32 out;
 	constexpr int aaa = 10;
 	int bbb = 10;
 	nox::Vec3 r = method_info.Invoke<nox::Vec3>(aaa);

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ClangSharp.Interop;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -13,25 +14,30 @@ namespace ReflectionGenerator.Parser
         public class SetupParam
         {
             /// <summary>
-            /// c++バージョン
-            /// </summary>
-            public CppParseDefine.CppVersion CppVersion { get; set; } = CppParseDefine.CppVersion.LastTest;
-
-            /// <summary>
             /// 解析対象ファイルパス
             /// </summary>
-            public string SourceFilePath { get; set; } = string.Empty;
+            public required string SourceFilePath { get; init; }
+
+            public required string ProjectFilePath { get; init; }
+
+            public required string Platform { get; init; }
+            public required string Configuration { get; init; }
+
+
+            public required string MSBuildBinPath { get; init; }
 
             /// <summary>
             /// 解析対象外のroot namespaceリスト
             /// </summary>
-            public List<string> IgnoreNamespaceList { get; set; } = new List<string>();
+            public required IReadOnlyList<string> IgnoreNamespaceList { get; init; }
 
             /// <summary>
             /// 解析対象のnamespace
             /// nullの場合、全てが対象
             /// </summary>
-            public List<string>? EnableRootNamespaceList { get; set; } = null;
+            public required IReadOnlyList<string> EnableRootNamespaceList { get; init; }
+
+            
         }
         #endregion
 
@@ -41,12 +47,13 @@ namespace ReflectionGenerator.Parser
         /// <summary>
         /// 無視するroot namespace list
         /// </summary>
-        private string[] _IgnoreNamespaceList = new string[0];
+        private IReadOnlyList<string> _IgnoreNamespaceList = new string[0];
+
 
         /// <summary>
         /// 解析対象のroot namespace list
         /// </summary>
-        private string[]? _EnableRootNamespaceList = new string[0];
+        private IReadOnlyList<string> _EnableRootNamespaceList = new string[0];
 
         /// <summary>
         /// 
@@ -63,6 +70,11 @@ namespace ReflectionGenerator.Parser
         /// 最後に、変換を行うため保持
         /// </summary>
         private readonly Dictionary<string, Info.TemplatedClassInfo> _TemplatedClassNameList = new Dictionary<string, Info.TemplatedClassInfo>();
+
+        /// <summary>
+        /// テンプレートクラスを解析するかどうか
+        /// </summary>
+        private const bool _EnabledTemplateParse = false;
         #endregion
 
         #region 公開プロパティ
@@ -71,19 +83,160 @@ namespace ReflectionGenerator.Parser
         /// </summary>
         public Info.EnumInfoStack EnumInfoStack { get; } = new Info.EnumInfoStack();
 
+        /// <summary>
+        /// 型情報
+        /// </summary>
         public Info.ClassInfoStack ClassInfoStack { get; } = new Info.ClassInfoStack();
 
+        /// <summary>
+        /// グローバル情報
+        /// </summary>
         public Info.GlobalInfoContainer GlobalInfoContainer { get; } = new Info.GlobalInfoContainer();
 
         /// <summary>
-        /// 属性リスト
+        /// モジュール名リスト
         /// </summary>
-        public Info.AttributeInfoStack AttributeInfoStack { get; } = new Info.AttributeInfoStack();
-
         public List<string> ModuleNameList { get; } = new List<string>();
         #endregion
 
         #region 公開メソッド
+        private bool parseBuildOptions(out List<string> outClangCommandLineList, string msbuildBinPath, string projectFilePath, string configuration, string platform, string sourceFilePath)
+        {
+            outClangCommandLineList = new List<string>();
+
+            string outputFilePath = System.IO.Path.GetFullPath($"{System.IO.Path.GetTempPath()}/tmpMSBuild.log");
+            
+            string msbuildPath = System.IO.Path.GetFullPath($"{msbuildBinPath}/MSBuild.exe");
+            string args = $"/p:Configuration={configuration};Platform={platform} {projectFilePath} /property:GenerateFullPaths=true /v:n /t:clean /t:ClCompile /p:SelectedFiles=\"{sourceFilePath}\"";
+
+            if(System.IO.File.Exists(projectFilePath.Replace("\"", "")) == false)
+            {
+                return false;
+            }
+
+            if(System.IO.File.Exists(msbuildPath) == false)
+            {
+                return false;
+            }
+
+            System.Diagnostics.Process process = new System.Diagnostics.Process();
+            var startInfo = process.StartInfo;
+            startInfo.FileName = msbuildPath;
+            startInfo.Arguments = args;
+            startInfo.Verb = "RunAs";
+            startInfo.UseShellExecute = false;
+            startInfo.RedirectStandardOutput = true;
+            startInfo.RedirectStandardError = true;
+
+            System.Diagnostics.Stopwatch stopwatchProcess = new System.Diagnostics.Stopwatch();
+            stopwatchProcess.Start();
+            process.Start();
+            if (process.WaitForExit(5000) == false)
+            {
+                return false;
+            }
+            stopwatchProcess.Stop();
+            Trace.Info(this, $"MSBuildにかかった時間:{stopwatchProcess.ElapsedMilliseconds.ToString()}msec");
+
+
+            if (process.ExitCode != 0)
+            {
+                return false;
+            }
+
+            //  CL.exeに渡している引数情報を取得する
+            string clArgs = string.Empty;
+            while (!process.StandardOutput.EndOfStream)
+            {
+                string? lineStr = process.StandardOutput.ReadLine();
+                if(lineStr == null)
+                {
+                    break;
+                }
+
+                int index = lineStr.IndexOf("CL.exe");
+                if (index < 0)
+                {
+                    continue;
+                }
+
+                clArgs = lineStr.Substring(index + "CL.exe".Length);
+            }
+            //       var regex = new System.Text.RegularExpressions.Regex(@"[\""].+?[\""]|[^ ]+");
+            //      var spilitClArgs = regex.Match(clArgs);
+
+            var splitClArgs = System.Text.RegularExpressions.Regex.Matches(clArgs, @"[\""].+?[\""]|[^ ]+")
+                           .Cast<System.Text.RegularExpressions.Match>()
+                           .Select(m => m.Value);
+
+            string commandLineOptionStr = string.Empty;
+            foreach(string splitArg in splitClArgs)
+            {
+                if(commandLineOptionStr != string.Empty)
+                {
+                    if (splitArg[0] != '/')
+                    {
+                        switch (commandLineOptionStr)
+                        {
+                            case "/D":
+                                outClangCommandLineList.Add($"-D {splitArg}");
+                                break;
+                        }
+                    }
+                    commandLineOptionStr = string.Empty;
+                }
+
+                switch(splitArg)
+                {
+                    case "/D":
+                        commandLineOptionStr = splitArg;
+                        continue;
+
+                    case "/MDd":
+                        outClangCommandLineList.Add("-D _DEBUG");
+                        continue;
+
+                    case "/GR-":
+                        outClangCommandLineList.Add("-fno-rtti");
+                        continue;
+
+                    //  最適化オプション
+                    case "/Od":
+                        outClangCommandLineList.Add("-O0");
+                        continue;
+                    case "/O1":
+                        outClangCommandLineList.Add("-O1");
+                        continue;
+                    case "/O2":
+                        outClangCommandLineList.Add("-O2");
+                        continue;
+                    case "/OX":
+                        outClangCommandLineList.Add("-O3");
+                        continue;
+                }
+
+                //  CPPバージョン
+                {
+                    int preIndex = splitArg.IndexOf("/std:c++");
+                    if (preIndex >= 0)
+                    {
+                        string cppVersionStr = splitArg.Substring(preIndex + "/std:c++".Length);
+
+                        if (cppVersionStr == "latest")
+                        {
+                            outClangCommandLineList.Add("-std=c++2b");
+                        }
+                        else
+                        {
+                            outClangCommandLineList.Add($"-std=c++{cppVersionStr}");
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
         /// <summary>
         /// 解析開始
         /// </summary>
@@ -91,24 +244,51 @@ namespace ReflectionGenerator.Parser
         /// <returns></returns>
         public bool Parse(SetupParam setupParam)
         {
+            if(parseBuildOptions(
+                out List<string> outCommandLineList,
+                msbuildBinPath: setupParam.MSBuildBinPath,
+                projectFilePath: setupParam.ProjectFilePath,
+                configuration: setupParam.Configuration, 
+                platform: setupParam.Platform,
+                sourceFilePath: 
+                setupParam.SourceFilePath) == false)
+            {
+                return false;
+            }
+
             //  引数
             List<string> parseCommandLineList = new List<string>();
 
-            parseCommandLineList.Add(CppParseDefine.GetCppVersionStr(setupParam.CppVersion));
+            //  MSBuildを通して展開したコマンドラインをセット
+            parseCommandLineList.AddRange(outCommandLineList);
+
+//            parseCommandLineList.Add(CppParseDefine.GetCppVersionStr(setupParam.CppVersion));
+            //  不明な属性を無視しない
+            parseCommandLineList.Add($"-D {Define.RUNTIME_REFLECTION_GENERATOR_DEFINE}");
 
             ClangSharp.Interop.CXIndex cxIndex = ClangSharp.Interop.CXIndex.Create(true, true);
             ClangSharp.Interop.CXTranslationUnit transUnit = null;
             ClangSharp.Interop.CXTranslationUnit_Flags translationUnitFlags = ClangSharp.Interop.CXTranslationUnit_Flags.CXTranslationUnit_SkipFunctionBodies;
 
+
+            ClangSharp.Interop.CXErrorCode cxErrorCode = default;
             //  コンパイル
-            ClangSharp.Interop.CXErrorCode cxErrorCode = ClangSharp.Interop.CXTranslationUnit.TryParse(
-             cxIndex,
-             setupParam.SourceFilePath,
-             parseCommandLineList.ToArray(),
-             Array.Empty<ClangSharp.Interop.CXUnsavedFile>(),
-             translationUnitFlags,
-             out transUnit
-             );
+            for (int i = 0; i < 100; ++i)
+            {
+                System.Diagnostics.Stopwatch stopwatchClangCompile = new System.Diagnostics.Stopwatch();
+                stopwatchClangCompile.Start();
+                cxErrorCode = ClangSharp.Interop.CXTranslationUnit.TryParse(
+                 cxIndex,
+                 setupParam.SourceFilePath,
+                 parseCommandLineList.ToArray(),
+                 Array.Empty<ClangSharp.Interop.CXUnsavedFile>(),
+                 translationUnitFlags,
+                 out transUnit
+                 );
+
+                stopwatchClangCompile.Stop();
+                Trace.Info(this, $"Clang Compile:{stopwatchClangCompile.ElapsedMilliseconds.ToString()}msec");
+            }
 
             if (cxErrorCode != ClangSharp.Interop.CXErrorCode.CXError_Success)
             {
@@ -117,9 +297,9 @@ namespace ReflectionGenerator.Parser
             }
 
             //  各種パラメータのセットアップ
-            _EnableRootNamespaceList = setupParam.EnableRootNamespaceList?.ToArray();
+            _EnableRootNamespaceList = setupParam.EnableRootNamespaceList;
 
-            _IgnoreNamespaceList = setupParam.IgnoreNamespaceList.ToArray();
+            _IgnoreNamespaceList = setupParam.IgnoreNamespaceList;
 
             //  解析開始
             transUnit.Cursor.VisitChildren(VisitChild, clientData: default);
@@ -144,9 +324,7 @@ namespace ReflectionGenerator.Parser
                     Info.ClassInfo[] baseClassInfo = new Info.ClassInfo[classInfo.BaseClassNameList.Count];
                     for (int i = 0; i < classInfo.BaseClassNameList.Count; ++i)
                     {
-                        Info.ClassInfo? temp = ClassInfoStack.GetInfo(classInfo.BaseClassNameList[i]);
-                        System.Diagnostics.Debug.Assert(temp != null, $"クラスが見つかりませんでした:{classInfo.BaseClassNameList[i]}");
-                        baseClassInfo[i] = temp;
+                        baseClassInfo[i] = ClassInfoStack.GetInfo(classInfo.BaseClassNameList[i]);
 
                         if (baseClassInfo[i].IsFake == true)
                         {
@@ -178,6 +356,40 @@ namespace ReflectionGenerator.Parser
         }
         #endregion
 
+        #region 共有関数
+        private List<Info.AttributeInfo> GetAttributeInfoList(ClangSharp.Interop.CXCursor cursor)
+        {
+            List<Info.AttributeInfo> attrList = new List<Info.AttributeInfo>();
+            if (cursor.HasAttrs == false)
+            {
+                return attrList;
+            }
+
+            int numAttr = cursor.NumAttrs;
+            for (uint i = 0; i < numAttr; ++i)
+            {
+                ClangSharp.Interop.CXCursor cursorAttr = cursor.GetAttr(i);
+                if (cursorAttr.IsReflectionAttribute() == false)
+                {
+                    continue;
+                }
+
+                string extractedStr = cursorAttr.ExtractReflectionAttributeStr();
+                string runtimeTypeName = extractedStr.Substring(0, extractedStr.IndexOf('('));
+                Info.AttributeInfo attrInfo = new Info.AttributeInfo()
+                {
+                    IsConstexpr = cursorAttr.IsConstexpr,
+                    AttributeClassInfo = ClassInfoStack.GetInfo(runtimeTypeName),
+                    ValueStr = extractedStr,
+                };
+
+                attrList.Add(attrInfo);
+            }
+
+            return attrList;
+        }
+        #endregion
+
         #region 非公開メソッド
         private ClangSharp.Interop.CXChildVisitResult VisitChild(ClangSharp.Interop.CXCursor cursor, ClangSharp.Interop.CXCursor parent, void* client_data)
         {
@@ -186,8 +398,6 @@ namespace ReflectionGenerator.Parser
                 cursor.Spelling.CString.Contains("app::Int") 
                 )
             {
-            //    Trace.Info(this, "");
-          //      cursor.VisitChildren(VisitChild, default);
             }
 
             if (
@@ -195,16 +405,12 @@ namespace ReflectionGenerator.Parser
                 parent.Spelling.CString.Contains("asValue") 
                 )
             {
-                Trace.Info(this, "");
-         //       cursor.VisitChildren(VisitChild, default);
             }
 
             if (cursor.IsTemplated)
             {
                 System.Diagnostics.Debug.Assert(cursor.NumTemplateParameterLists <= 1, $"未対応の識別値です: {cursor.Spelling.CString}");
             }
-
-            
 
             switch (cursor.Kind)
             {
@@ -237,7 +443,7 @@ namespace ReflectionGenerator.Parser
                     {
                         break;
                     }
-                    ParseMethod(cursor);
+                    ParseFunction(cursor);
                     break;
 
                 case ClangSharp.Interop.CXCursorKind.CXCursor_VarDecl:
@@ -284,6 +490,10 @@ namespace ReflectionGenerator.Parser
                 case ClangSharp.Interop.CXCursorKind.CXCursor_CompoundStmt:
                 case ClangSharp.Interop.CXCursorKind.CXCursor_DeclStmt:
                     cursor.VisitChildren(VisitChild, default);
+                    break;
+
+                case ClangSharp.Interop.CXCursorKind.CXCursor_EnumDecl:
+                    ParseEnum(cursor);
                     break;
 
                 case ClangSharp.Interop.CXCursorKind.CXCursor_BinaryOperator:
@@ -473,7 +683,7 @@ namespace ReflectionGenerator.Parser
             return templateParamListTable;
         }
 
-        
+
         /// <summary>
         /// 解析対象かどうかを判定
         /// </summary>
@@ -482,8 +692,7 @@ namespace ReflectionGenerator.Parser
         private bool IsParseTarget(ClangSharp.Interop.CXCursor cursor)
         {
             string namespaceStr = cursor.GetNamespace();
-
-            if (_IgnoreNamespaceList.Length > 0)
+            if (_IgnoreNamespaceList.Count > 0)
             {
                 if (_IgnoreNamespaceList.Contains(namespaceStr) == true)
                 {
@@ -491,20 +700,28 @@ namespace ReflectionGenerator.Parser
                 }
             }
 
-            if (_EnableRootNamespaceList?.Length > 0)
+            if (_EnableRootNamespaceList.Count <= 0)
             {
-                if (_EnableRootNamespaceList.Contains(namespaceStr) == true)
-                {
-                    return true;
-                }
+                return true;
             }
 
-            return true;
+            List<string> namespaceStrList = cursor.GetNamespaceList();
+            if (namespaceStrList.Count <= 0)
+            {
+                return false;
+            }
+
+            if (_EnableRootNamespaceList.Contains(namespaceStrList[0]) == true)
+            {
+                return true;
+            }
+
+            return false;
         }
 
         private bool IsParseNamespace()
         {
-            if (_IgnoreNamespaceList.Length > 0)
+            if (_IgnoreNamespaceList.Count > 0)
             {
                 if (_IgnoreNamespaceList.Contains(GetFullNamespaceScope()) == true)
                 {
@@ -512,11 +729,11 @@ namespace ReflectionGenerator.Parser
                 }
             }
 
-            if (_EnableRootNamespaceList?.Length > 0)
+            if (_EnableRootNamespaceList.Count > 0)
             {
-                if (_EnableRootNamespaceList.Contains(GetFullNamespaceScope()) == true)
+                if (_EnableRootNamespaceList.Contains(GetFullNamespaceScope()) == false)
                 {
-                    return true;
+                    return false;
                 }
             }
 
@@ -564,7 +781,7 @@ namespace ReflectionGenerator.Parser
             GlobalInfoContainer.Pop();
         }
 
-        private Info.ClassInfo CreateClassInfo(ClangSharp.Interop.CXCursor cursor, IReadOnlyList<Info.AttributeInfo> attrList)
+        private Info.ClassInfo CreateClassInfo(ClangSharp.Interop.CXCursor cursor)
         {
             //  継承型
             string[] baseClassFullNameList = new string[int.Max(0, cursor.NumBases)];
@@ -586,7 +803,7 @@ namespace ReflectionGenerator.Parser
                 AccessLevel = cursor.CXXAccessSpecifier.GetAccessLevel(),
 
                 IsTypedef = cursor.Kind == ClangSharp.Interop.CXCursorKind.CXCursor_TypeAliasDecl,
-                AttributeInfoList = new List<Info.AttributeInfo>(attrList),
+                AttributeInfoList = GetAttributeInfoList(cursor),
                 BaseClassNameList = baseClassFullNameList,
 
                 //  attributes
@@ -651,13 +868,7 @@ namespace ReflectionGenerator.Parser
             //  RexReflectionAttributeContainerか
             if (cursor.Spelling.CString.StartsWith(CppParseDefine.RexReflectionAttributeContainerClassName) == true)
             {
-                AttributeInfoStack.Push(
-                     new Info.AttributeInfo()
-                     {
-                         FullName = cursor.Type.CanonicalType.Spelling.CString,
-                         IsConstexpr = cursor.IsConstexpr
-                     }
-                     );
+                
             }
             else
             {
@@ -674,8 +885,7 @@ namespace ReflectionGenerator.Parser
                     return;
                 }
 
-                Info.ClassInfo newClassInfo = CreateClassInfo(cursor, AttributeInfoStack.InfoList);
-                AttributeInfoStack.Clear();
+                Info.ClassInfo newClassInfo = CreateClassInfo(cursor);
 
                 ClassInfoStack.Push(newClassInfo);
                 cursor.VisitChildren(VisitChild, default);
@@ -683,7 +893,7 @@ namespace ReflectionGenerator.Parser
             }
         }
 
-        private void ParseMethod(ClangSharp.Interop.CXCursor cursor)
+        private void ParseFunction(ClangSharp.Interop.CXCursor cursor)
         {
             //  所属クラスがリフレクション対象でなければ、AccessLevel::Publicのみ収集する
             if (ClassInfoStack.EmptyStack == false)
@@ -694,18 +904,9 @@ namespace ReflectionGenerator.Parser
                 }
             }
 
-            //  属性
-            if (AttributeInfoStack.EmptyStack == false)
-            {
-                System.Diagnostics.Debug.Assert(cursor.NumMethods == 1, $"属性クラスに関数が複数定義されています:{AttributeInfoStack.Current.FullName}");
+            //  属性の取得
+           
 
-                //  属性情報を取得する
-                if (cursor.NumArguments == 1)
-                {
-                    cursor.VisitChildren(VisitChild, default);
-                }
-                return;
-            }
             //  通常関数
 
             Info.MethodInfo.ArgInfo[] argInfoList = new Info.MethodInfo.ArgInfo[int.Max(0, cursor.IsTemplated == true ? cursor.NumTemplateArguments : cursor.NumArguments)];
@@ -728,6 +929,7 @@ namespace ReflectionGenerator.Parser
             { 
                 Module = CreateModule(cursor),
                 Name = cursor.Spelling.CString,
+                FullName  = cursor.GetObjectFullName(),
                 AccessLevel = cursor.CXXAccessSpecifier.GetAccessLevel(),
                 ReturnRuntimeType = cursor.CreateRuntimeType(cursor.ReturnType),
 
@@ -741,10 +943,8 @@ namespace ReflectionGenerator.Parser
                 IsNoexcept = cursor.Type.ExceptionSpecificationType == ClangSharp.Interop.CXCursor_ExceptionSpecificationKind.CXCursor_ExceptionSpecificationKind_BasicNoexcept,
 
                 ArgInfoList = argInfoList,
-                AttributeInfoList = new List<Info.AttributeInfo>(AttributeInfoStack.InfoList),
+                AttributeInfoList = GetAttributeInfoList(cursor)
             };
-
-            AttributeInfoStack.Clear();
 
             //  クラスのメンバ
             if (ClassInfoStack.EmptyStack == false)
@@ -770,32 +970,17 @@ namespace ReflectionGenerator.Parser
                 return;
             }
 
-            if(cursor.IsTemplated)
-            {
-                Trace.Info(this, "");
-            }
-
-            if(cursor.Spelling.CString == "value")
-            {
-                Trace.Info(this, "");
-            }
-
             Info.FieldInfo field = new Info.FieldInfo()
             {
                 Module = CreateModule(cursor),
                 Name = cursor.Spelling.CString,
+                FullName = cursor.GetObjectFullName(),
                 RuntimeType = cursor.CreateRuntimeType(cursor.Type),
                 AccessLevel = cursor.CXXAccessSpecifier.GetAccessLevel(),
                 IsConstexpr = cursor.IsConstexpr,
                 IsTemplate = cursor.IsTemplated,
-                AttributeInfoList = new List<Info.AttributeInfo>(AttributeInfoStack.InfoList)
+                AttributeInfoList = GetAttributeInfoList(cursor),
             };
-
-            //  属性の付与
-            if (AttributeInfoStack.EmptyStack == false)
-            {
-                AttributeInfoStack.Clear();
-            }
 
             //  クラスのメンバ
             if (ClassInfoStack.EmptyStack == false)
@@ -817,9 +1002,42 @@ namespace ReflectionGenerator.Parser
                 && cursor.Type.CanonicalType.Declaration.Kind != ClangSharp.Interop.CXCursorKind.CXCursor_NoDeclFound
                 )
             {
-                Info.ClassInfo classInfo = CreateClassInfo(cursor.Type.Declaration, new List<Info.AttributeInfo>());
+                Info.ClassInfo classInfo = CreateClassInfo(cursor.Type.Declaration);
                 ClassInfoStack.Add(classInfo);
             }
+        }
+
+        private void ParseEnum(ClangSharp.Interop.CXCursor cursor)
+        {
+            if (cursor.IsDefinition == false)
+            {
+                return;
+            }
+
+            Info.EnumInfo.EnumVariable[] enumVariableList = new Info.EnumInfo.EnumVariable[int.Max(0, cursor.NumEnumerators)];
+            for(uint i = 0; i < enumVariableList.Length; i++)
+            {
+                ClangSharp.Interop.CXCursor enumCursor = cursor.GetEnumerator(i);
+                enumVariableList[i] = new Info.EnumInfo.EnumVariable
+                {
+                    Name = enumCursor.Spelling.CString,
+                    AttributeInfoList = GetAttributeInfoList(enumCursor)
+                };
+            }
+
+            Info.EnumInfo enumInfo = new Info.EnumInfo
+            {
+                Name = cursor.Spelling.CString,
+                FullName = cursor.GetObjectFullName(),
+                Namespace = cursor.GetNamespace(),
+                Module = CreateModule(cursor),
+                VariableList = enumVariableList,
+                AccessLevel = cursor.CXXAccessSpecifier.GetAccessLevel(),
+
+                AttributeInfoList = GetAttributeInfoList(cursor),
+            };
+
+            EnumInfoStack.Push(enumInfo);
         }
         #endregion
         #endregion

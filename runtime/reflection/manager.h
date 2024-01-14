@@ -4,8 +4,9 @@
 
 namespace nox::reflection
 {
-	class Reflection
+	class Reflection : public ISingleton<Reflection>
 	{
+		friend class ISingleton<Reflection>;
 	private:
 		/// @brief クラスデータ
 		struct ClassData
@@ -19,10 +20,10 @@ namespace nox::reflection
 		/// @brief 名前空間に所属する情報
 		struct GlobalData
 		{
-			UnorderedMap<u32, const class ClassInfo*> class_info_ptr_map;
-			UnorderedMap<u32, const class FieldInfo*> field_info_ptr_map;
-			UnorderedMap<u32, const class MethodInfo*> method_info_ptr_map;
-			UnorderedMap<u32, const class EnumInfo*> enum_info_ptr_map;
+			UnorderedMap<std::uint32_t, const class ClassInfo*> class_info_ptr_map;
+			UnorderedMap<std::uint32_t, const class FieldInfo*> field_info_ptr_map;
+			UnorderedMap<std::uint32_t, const class MethodInfo*> method_info_ptr_map;
+			UnorderedMap<std::uint32_t, const class EnumInfo*> enum_info_ptr_map;
 		};
 	public:
 		
@@ -39,11 +40,6 @@ namespace nox::reflection
 		const class EnumInfo* FindEnumInfoFromNameHash(std::uint32_t namehash)const noexcept;
 		const class EnumInfo* FindEnumInfoFromName(std::u8string_view fullName)const noexcept { return FindEnumInfoFromNameHash(util::crc32(fullName)); }
 
-
-		static	inline	void		CreateInstance() { instance_ = new Reflection(); }
-		static	inline	void		DeleteInstance() { delete instance_; }
-		static	inline	Reflection* Instance()noexcept { return instance_; }
-
 #pragma region 登録関数
 		void Register(const class ClassInfo& data);
 		void Unregister(const class ClassInfo& data);
@@ -57,29 +53,30 @@ namespace nox::reflection
 		void Register(const class MethodInfo& data);
 		void Unregister(const class MethodInfo& data);
 #pragma endregion
-
+	private:
+		inline Reflection() {}
 
 	private:
 		static inline Reflection* instance_ = nullptr;
 
 		/// @brief		クラスデータマップ
 		/// @details	key: typeID, value: class data
-		UnorderedMap<u32, ClassData> class_data_map_;
+		UnorderedMap<std::uint32_t, ClassData> class_data_map_;
 
 		/// @brief		クラスアドレスデータマップ
 		///	@details	key: fullname, value: class data pointer
-		UnorderedMap<u32, const ClassData*> class_data_ptr_map_with_name_;
+		UnorderedMap<std::uint32_t, const ClassData*> class_data_ptr_map_with_name_;
 
 		/// @brief		列挙体ポインタマップ
 		/// @details	key: typeID, value: enum info pointer
-		UnorderedMap<u32, const class EnumInfo*> enum_info_map_;
+		UnorderedMap<std::uint32_t, const class EnumInfo*> enum_info_map_;
 
 		/// @brief		列挙体ポインタマップ
 		/// @details	key: nameHash, value: enum info pointer
-		UnorderedMap<u32, const class EnumInfo*> enum_info_map_with_name_;
+		UnorderedMap<std::uint32_t, const class EnumInfo*> enum_info_map_with_name_;
 
 		/// @brief		グローバルデータマップ
 		///	@details	key: namespace hash, global data
-		UnorderedMap<u32, GlobalData> global_data_map_;
+		UnorderedMap<std::uint32_t, GlobalData> global_data_map_;
 	};
 }

@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.7.34202.233
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ReflectionGenerator", "ReflectionGenerator.csproj", "{4EC112AD-A7EB-453C-88EE-2E7B89DAB567}"
+	ProjectSection(ProjectDependencies) = postProject
+		{5C508910-27F7-4C00-95C3-41962B2F935A} = {5C508910-27F7-4C00-95C3-41962B2F935A}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SampleCpp", "Sample\Sample.vcxproj", "{5C508910-27F7-4C00-95C3-41962B2F935A}"
 EndProject

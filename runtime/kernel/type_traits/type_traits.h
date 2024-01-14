@@ -54,11 +54,11 @@ namespace nox
 		//	他に方法が思いつかない...
 		/// @brief templateの引数の数を取得
 		template<template<class> class>
-		consteval u32 GetTemplateParamLength()noexcept { return 1U; }
+		consteval uint8 GetTemplateParamLength()noexcept { return 1U; }
 		template<template<class, class> class>
-		consteval u32 GetTemplateParamLength()noexcept { return 2U; }
+		consteval uint8 GetTemplateParamLength()noexcept { return 2U; }
 		template<template<class, class, class> class>
-		consteval u32 GetTemplateParamLength()noexcept { return 3U; }
+		consteval uint8 GetTemplateParamLength()noexcept { return 3U; }
 
 		template<class T>
 		struct IsVector : std::false_type {};

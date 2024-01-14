@@ -17,20 +17,24 @@ namespace nox::reflection
 		 * @param name 引数名
 		 * @param type 型情報
 		*/
-		constexpr explicit MethodParameter(
+		inline constexpr explicit MethodParameter(
 			const std::u8string_view name,
+			const class ReflectionObject*const* attribute_ptr_table,
+			const std::uint8_t attribute_length,
 			const reflection::detail::TypeChunk& _type_chunk,
 			const bool hasDefaultValue = false
 		)noexcept :
 			name_(name),
 			type_chunk_(_type_chunk),
+			attribute_ptr_table_(attribute_ptr_table),
+			attribute_length_(attribute_length),
 			has_default_value_(hasDefaultValue)
 		{}
 
 		/**
 		 * @brief デストラクタ
 		*/
-		inline constexpr ~MethodParameter() = default;
+		inline constexpr ~MethodParameter()noexcept = default;
 
 		/**
 		 * @brief 引数名を取得
@@ -49,20 +53,22 @@ namespace nox::reflection
 		[[nodiscard]] inline	constexpr bool HasDefaultValue()const noexcept { return has_default_value_; }
 
 	private:
-		/**
-		 * @brief 引数名
-		*/
+		/// @brief 引数名
 		const std::u8string_view name_;
 
-		/**
-		 * @brief タイプ情報
-		*/
+		/// @brief タイプ情報
 		const reflection::detail::TypeChunk& type_chunk_;
 
-		/**
-		 * @brief デフォルト値を持っているか
-		*/
+		/// @brief 属性テーブル
+		const class ReflectionObject* const* attribute_ptr_table_;
+
+		/// @brief 属性テーブルの長さ
+		std::uint8_t attribute_length_;
+
+		/// @brief デフォルト値を持っているか
 		const bool has_default_value_;
+
+		
 	};
 
 	/// @brief 関数情報
@@ -386,9 +392,13 @@ namespace nox::reflection
 		};
 
 		template<class T>
-		inline	consteval	MethodParameter	CreateMethodParameter(std::u8string_view name, bool hasDefaultValue)noexcept
+		inline	consteval	MethodParameter	CreateMethodParameter(
+			std::u8string_view name,
+			const class ReflectionObject* const* attribute_ptr_table,
+			std::uint8_t	attribute_length,
+			bool hasDefaultValue)noexcept
 		{
-			return MethodParameter(name, reflection::detail::GetTypeChunk<T>(), hasDefaultValue);
+			return MethodParameter(name, attribute_ptr_table, attribute_length, reflection::detail::GetTypeChunk<T>(), hasDefaultValue);
 		}
 
 		template<class RawFunction, class... _Functions>

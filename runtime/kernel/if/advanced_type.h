@@ -18,16 +18,18 @@
 #include	<stack>
 #include	<bitset>
 
+#include	"../memory/stl_allocate_adapter.h"
+
 /// @brief NITRO ENGINEのnamespace
 namespace nox
 {
 	/// @brief メモリ操作関係
-	namespace memory
-	{
-		//	前方宣言
-		template<class>
-		class StlAllocateAdapter;
-	}
+	//namespace memory
+	//{
+	//	//	前方宣言
+	//	template<class>
+	//	class StlAllocateAdapter;
+	//}
 
 	template<class T>
 	using Vector = std::vector<T, memory::StlAllocateAdapter<T>>;
@@ -44,6 +46,8 @@ namespace nox
 	using CString = BasicString<char>;
 	using WString = BasicString<wchar_t>;
 
-	using U8String = BasicString<c8>;
-	using U16String = BasicString<c16>;
+	using U8String = BasicString<char8>;
+	using U16String = BasicString<char16>;
+	using U32String = BasicString<char32>;
+
 }

@@ -8,6 +8,7 @@ namespace nox::reflection
 	//	前方宣言
 	class MethodInfo;
 	class FieldInfo;
+	class EnumInfo;
 
 	/// @brief クラス型情報
 	class ClassInfo
@@ -17,7 +18,7 @@ namespace nox::reflection
 		[[nodiscard]] inline	constexpr	std::u8string_view GetName()const noexcept { return name_; }
 		[[nodiscard]] inline	constexpr	std::u8string_view GetFullName()const noexcept { return fullname_; }
 		[[nodiscard]] inline	constexpr	std::u8string_view GetNamespace()const noexcept { return namespace_; }
-		[[nodiscard]] inline	constexpr	u32 GetNamespaceID()const noexcept { return util::crc32(namespace_); }
+		[[nodiscard]] inline	constexpr	std::uint32_t GetNamespaceID()const noexcept { return util::crc32(namespace_); }
 
 
 		[[nodiscard]] inline	constexpr	const Type& GetType()const noexcept { return type_; }

@@ -2,7 +2,7 @@
 ///	@brief		stdafx
 #include	"stdafx.h"
 
-#if NOX_X64
+#if NOX_WIN64
 #if NOX_DEBUG
 #pragma comment(lib, "./build/runtime/x64/Debug/kernel.lib")
 #pragma comment(lib, "./build/runtime/x64/Debug/reflection.lib")
@@ -20,4 +20,4 @@
 
 #endif // NOX_DEBUG
 
-#endif // NOX_X64
+#endif // NOX_WIN64

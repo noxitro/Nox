@@ -3,41 +3,182 @@
 ///	@file	attribute.h
 ///	@brief	attribute
 #pragma once
-
-#include	"reflection_object.h"
-
 namespace nox::reflection
 {
 	//	前方宣言
 	class ReflectionObject;
-	struct IAttribute;
-
-	namespace detail
+	
+	/// @brief 属性クラスインターフェース
+	struct IAttribute
 	{
-		template<std::derived_from<class IAttribute> FirstType, std::derived_from<class IAttribute>... Types>
-		inline consteval bool CheckAttributes()noexcept
-		{
-			return true;
-		}
-	}
+	protected:
+		[[nodiscard]] inline constexpr IAttribute()noexcept = default;
+	};
 
 	/// @brief 同時付与が不可能な属性の定義
 	/// @tparam T 
 	/// @tparam U 
-	template<std::derived_from<IAttribute> T, std::derived_from<IAttribute> U>
-	struct IgnoreAttribute : std::false_type {};
+	template<class T, class U> requires(!std::is_same_v<IAttribute, T> && std::is_base_of_v<IAttribute, T> && !std::is_same_v<IAttribute, U>&& std::is_base_of_v<IAttribute, U>)
+	struct IsIgnoreAttribute : std::false_type {};
 
+	/// @brief この属性を付けている場合、他の属性を付与できない
+	/// @tparam T 
+	template<class T> requires(!std::is_same_v<IAttribute, T> && std::is_base_of_v<IAttribute, T>)
+	struct IsOnlyAttribute : std::false_type {};
+
+#pragma region 属性型チェック
+	namespace detail
+	{
+		template<class _FirstType, class... _Types>
+		inline constexpr bool CheckAttributeType()noexcept
+		{
+			if constexpr (std::is_same_v<struct nox::reflection::IAttribute, _FirstType> == true)
+			{
+				static_assert(!std::is_same_v<struct nox::reflection::IAttribute, _FirstType>, "IAttirubte cannot be directly assigned");
+				return false;
+			}
+			else if constexpr (nox::reflection::IsOnlyAttribute< _FirstType>::value == true)
+			{
+				static_assert(!nox::reflection::IsOnlyAttribute< _FirstType>::value, "only attribute");
+				return false;
+			}
+			else if constexpr (std::is_base_of_v<struct nox::reflection::IAttribute, _FirstType> == false)
+			{
+				static_assert(std::is_base_of_v<struct nox::reflection::IAttribute, _FirstType>, "IAttirubte not inherited");
+				return false;
+			}
+			else if constexpr (sizeof...(_Types) <= 0)
+			{
+				return true;
+			}
+			//	属性が複数ある
+			else 
+			{
+				if constexpr (std::disjunction_v<std::is_same<_FirstType, _Types>...> == true)
+				{
+					static_assert(std::disjunction_v<std::is_same<_FirstType, _Types>...>, "duplication attribute");
+					return false;
+				}
+				else if constexpr (std::disjunction_v<nox::reflection::IsIgnoreAttribute<_FirstType, _Types>...>)
+				{
+					static_assert(!std::disjunction_v<nox::reflection::IsIgnoreAttribute<_FirstType, _Types>...>, "ignore attribute");
+					return false;
+				}
+				else if constexpr (std::disjunction_v<nox::reflection::IsIgnoreAttribute<_Types, _FirstType>...>)
+				{
+					static_assert(!std::disjunction_v<nox::reflection::IsIgnoreAttribute<_Types, _FirstType>...>, "ignore attribute");
+					return false;
+				}
+				else
+				{
+					return true;
+				}
+			}
+		}
+
+		template<class _FirstType, class... _Types>
+		inline constexpr bool CheckAttributesImpl()noexcept
+		{
+			if constexpr (CheckAttributeType<_FirstType, _Types...>() == false)
+			{
+				return false;
+			}
+			else if constexpr (sizeof...(_Types) <= 0)
+			{
+				return true;
+			}
+			else
+			{
+				return CheckAttributesImpl<_Types...>() == true;
+			}
+		}
+
+		///@brief	Tuple型で受け取り可変長テンプレート引数として処理するための構造体
+		template<class... _Types>
+		struct CheckAttributesTuple;
+
+		///@brief	Tuple型で受け取り可変長テンプレート引数として処理するための構造体
+		///@details	型が1つの場合
+		template<class _FirstType>
+		struct CheckAttributesTuple<std::tuple<_FirstType>>
+		{
+		private:
+			static inline constexpr bool CheckAttributeTypeSingle()noexcept
+			{
+				if constexpr (std::is_same_v<struct nox::reflection::IAttribute, _FirstType> == true)
+				{
+					static_assert(!std::is_same_v<struct nox::reflection::IAttribute, _FirstType>, "IAttirubte cannot be directly assigned");
+					return false;
+				}
+				else if constexpr (std::is_base_of_v<struct nox::reflection::IAttribute, _FirstType> == false)
+				{
+					static_assert(std::is_base_of_v<struct nox::reflection::IAttribute, _FirstType>, "IAttirubte not inherited");
+					return false;
+				}
+				else
+				{
+					return true;
+				}
+			}
+		public:
+			static constexpr bool value = CheckAttributeTypeSingle();
+		};
+
+		///@brief	Tuple型で受け取り可変長テンプレート引数として処理するための構造体
+		///@details	型が複数の場合
+		template<class _FirstType, class... _Types>
+		struct CheckAttributesTuple<std::tuple<_FirstType, _Types...>>
+		{
+			static constexpr bool value = CheckAttributesImpl<_FirstType, _Types...>();
+
+			static bool test()noexcept
+			{
+				return CheckAttributesImpl<_FirstType, _Types...>();
+			}
+		};
+
+		///@brief	属性群が定義可能かチェックする
+		///@details	Tuple型を受け取ります
+		template<class _TupleType>
+		inline constexpr bool CheckAttributes()noexcept
+		{
+			return CheckAttributesTuple<_TupleType>::value;
+		}
+	}
+#pragma endregion
+
+///@brief	属性の特殊化用マクロ
+#define	NOX_ATTIRBUTE_SPECIALIZATION(TypeTraitsClass, ...) \
+	namespace nox::reflection { \
+		template<>	\
+		struct TypeTraitsClass<__VA_ARGS__> : std::true_type {};	\
+	}
+	
+//	属性付与マクロ
 #if NOX_REFLECTION_GENERATOR
-#define	NOX_ATTR(...)\
-NOX_ATTR_RAW(#__VA_ARGS__)
-
+///@brief	属性付与のためのマクロ
+#define	NOX_DETAIL_ATTR_IMPL(x) __attribute__((annotate(#x)))
 #else
-#define	NOX_ATTR(...) \
-NOX_ATTR_RAW(#__VA_ARGS__)
-
+///@brief	属性付与のためのマクロ
+#define	NOX_DETAIL_ATTR_IMPL(x) //[[annotate(#x)]]
 #endif // NOX_REFLECTION_GENERATOR
 
-#if NOX_DEVELOP
+///@brief	属性付与
+#define	NOX_ATTR(...) NOX_PP_REPEAT_AUTO(NOX_DETAIL_ATTR_IMPL, __VA_ARGS__)
+
+///@brief	型に対しての属性付与
+#define	NOX_ATTR_TYPE(...) \
+	alignas([]()constexpr noexcept{return 0; static_assert(::nox::reflection::detail::CheckAttributes<decltype(std::make_tuple(__VA_ARGS__))>(), "failed attributes"); }())	\
+	NOX_ATTR(__VA_ARGS__)
+
+///@brief	Enumメンバに対しての属性付与
+#define	NOX_ATTR_ENUM(...) NOX_ATTR(__VA_ARGS__)
+
+///@brief	変数や関数などに対しての属性付与
+#define NOX_ATTR_OBJECT(...)	\
+	static_assert(::nox::reflection::detail::CheckAttributes<decltype(std::make_tuple(__VA_ARGS__))>(), "failed attributes");	\
+	NOX_ATTR(__VA_ARGS__)
+
 	/// @brief 属性
 	namespace attr
 	{
@@ -46,28 +187,22 @@ NOX_ATTR_RAW(#__VA_ARGS__)
 		//	2.	ExpressedReflectionを付けたもの、ReflectionObjectを継承したもの、NOX_REFLECTION_DECLAREを付けたものを対象にリフレクション
 		//	3.	リフレクションをしない
 
-		/// @brief リフレクション対象外属性
-		template<std::derived_from<class ReflectionObject> Base>// requires(std::is_base_of_v<IAttribute, Base>)
-			class IgnoreReflectionBase : public Base
+		/// @brief		リフレクション対象外属性
+		/// @details	システム属性
+		class IgnoreReflection : public IAttribute
 		{
-			NOX_DECLARE_REFLECTION_OBJECT(IgnoreReflectionBase);
-		protected:
-			inline constexpr IgnoreReflectionBase()noexcept = default;
 		};
 
-		/// @brief リフレクション対象として表明
-		template<std::derived_from<class ReflectionObject> Base>// requires(std::is_base_of_v<IAttribute, Base>)
-			class ExpressedReflection : public Base
+		/// @brief		リフレクション対象として表明
+		/// @details	システム属性
+		class ExpressedReflection : public IAttribute
 		{
-			NOX_DECLARE_REFLECTION_OBJECT(ExpressedReflection);
-		protected:
-			inline constexpr ExpressedReflection()noexcept = default;
 		};
-
-		using IgnoreReflection = ::nox::reflection::attr::IgnoreReflectionBase<class ReflectionObject>;
 	}
 
+	template<>
+	struct IsOnlyAttribute<attr::IgnoreReflection> : std::true_type {};
 
-#endif // NOX_DEVELOP
-
+	template<>
+	struct IsOnlyAttribute<attr::ExpressedReflection> : std::true_type {};
 }

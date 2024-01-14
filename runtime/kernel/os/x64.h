@@ -3,7 +3,7 @@
 #pragma once
 #include	"../if/basic_definition.h"
 
-#if NOX_X64
+#if NOX_WIN64
 
 //	型チェックを厳密に行う
 #define STRICT

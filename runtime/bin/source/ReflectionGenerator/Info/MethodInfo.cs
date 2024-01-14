@@ -47,6 +47,8 @@ namespace ReflectionGenerator.Info
 
         public required string Name { get; init; }
 
+        public required string FullName { get; init; }
+
         private MethodAttributeFlag _MethodAttributeFlags = MethodAttributeFlag.None;
 
         public required bool IsVirtual

@@ -64,8 +64,8 @@ namespace nox
 		};
 	}
 
-	using Int2 = nox::detail::Point2D<s32>;
-	using UInt2 = nox::detail::Point2D<u32>;
-	using Float2 = nox::detail::Point2D<f32>;
-	using Double2 = nox::detail::Point2D<f64>;
+	using Int2 = nox::detail::Point2D<int32>;
+	using UInt2 = nox::detail::Point2D<uint32>;
+	using Float2 = nox::detail::Point2D<float>;
+	using Double2 = nox::detail::Point2D<double>;
 }

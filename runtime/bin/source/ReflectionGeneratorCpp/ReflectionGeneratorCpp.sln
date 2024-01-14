@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34322.80
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ReflectionGeneratorCpp", "ReflectionGeneratorCpp.vcxproj", "{A6CDE9F7-999D-4525-890F-5C6359063263}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A6CDE9F7-999D-4525-890F-5C6359063263}.Debug|x64.ActiveCfg = Debug|x64
+		{A6CDE9F7-999D-4525-890F-5C6359063263}.Debug|x64.Build.0 = Debug|x64
+		{A6CDE9F7-999D-4525-890F-5C6359063263}.Debug|x86.ActiveCfg = Debug|Win32
+		{A6CDE9F7-999D-4525-890F-5C6359063263}.Debug|x86.Build.0 = Debug|Win32
+		{A6CDE9F7-999D-4525-890F-5C6359063263}.Release|x64.ActiveCfg = Release|x64
+		{A6CDE9F7-999D-4525-890F-5C6359063263}.Release|x64.Build.0 = Release|x64
+		{A6CDE9F7-999D-4525-890F-5C6359063263}.Release|x86.ActiveCfg = Release|Win32
+		{A6CDE9F7-999D-4525-890F-5C6359063263}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1DB5645A-6481-4372-9619-B08CC1734C33}
+	EndGlobalSection
+EndGlobal

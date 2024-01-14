@@ -5,6 +5,7 @@
 #pragma once
 
 #include	"managed_object.h"
+#include	"attribute_common.h"
 
 namespace nox
 {

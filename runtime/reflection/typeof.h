@@ -11,12 +11,12 @@ namespace nox::reflection
 	template<concepts::ClassUnion T>
 	inline const class ClassInfo* TypeofClass()
 	{
-		return util::Deref(Reflection::Instance()).FindClassInfo<T>();
+		return Reflection::Instance().FindClassInfo<T>();
 	}
 
 	inline const class ClassInfo* TypeofClass(const ReflectionObject& object)
 	{
-		return util::Deref(Reflection::Instance()).FindClassInfo(object.GetUniqueTypeID());
+		return Reflection::Instance().FindClassInfo(object.GetUniqueTypeID());
 	}
 
 	template<concepts::Enum T>

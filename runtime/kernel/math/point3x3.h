@@ -44,8 +44,8 @@ namespace nox
 	}
 
 	using Int3x3 = nox::detail::Point3x3<f32>;
-	using UInt3x3 = nox::detail::Point3x3<u32>;
-	using Float3x3 = nox::detail::Point3x3<f32>;
-	using Double3x3 = nox::detail::Point3x3<f64>;
+	using UInt3x3 = nox::detail::Point3x3<uint32>;
+	using Float3x3 = nox::detail::Point3x3<float>;
+	using Double3x3 = nox::detail::Point3x3<double>;
 }
 #pragma warning(pop)

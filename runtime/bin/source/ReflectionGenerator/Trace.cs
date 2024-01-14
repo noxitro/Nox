@@ -18,7 +18,8 @@ namespace ReflectionGenerator
 
         public static void Log(ConsoleColor color, object? obj, string log)
         {
-            Log(color, string.Format("[{0}]{1}", obj != null ? obj.ToString() : string.Empty, log));
+            string tag = obj == null ? string.Empty : $"[{obj.ToString()}]";
+            Log(color, string.Format($"{tag}{log}"));
         }
 
         public static void Info(object? obj, string log)

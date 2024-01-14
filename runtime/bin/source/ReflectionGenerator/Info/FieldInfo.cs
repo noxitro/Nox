@@ -22,6 +22,11 @@ namespace ReflectionGenerator.Info
         public required string Name { get; init; }
 
         /// <summary>
+        /// スコープ名を含めた名前
+        /// </summary>
+        public required string FullName { get; init; }
+
+        /// <summary>
         /// 型情報
         /// </summary>
         public required RuntimeType RuntimeType { get; init; }

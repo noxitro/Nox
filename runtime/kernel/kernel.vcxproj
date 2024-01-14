@@ -67,11 +67,23 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="if\singleton.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="if\string.h">
       <SubType>
       </SubType>
     </ClInclude>
     <ClInclude Include="if\string_format.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="if\unicode.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="if\unicode_converter.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -179,6 +191,26 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="preprocessor\cat.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="preprocessor\inc.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="preprocessor\repeat.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="preprocessor\util.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="preprocessor\va_length.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="stdafx.h">
       <SubType>
       </SubType>
@@ -257,11 +289,23 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="if\singleton.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="if\string.cpp">
       <SubType>
       </SubType>
     </ClCompile>
     <ClCompile Include="if\string_format.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="if\unicode.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="if\unicode_converter.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -365,6 +409,26 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="preprocessor\cat.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="preprocessor\inc.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="preprocessor\repeat.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="preprocessor\util.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="preprocessor\va_length.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <SubType>
       </SubType>
@@ -441,26 +505,14 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
-    </ClCompile>
+    <ClCompile />
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
-    </ClCompile>
+    <ClCompile />
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -469,14 +521,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'">
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
-    </ClCompile>
+    <ClCompile />
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>

@@ -12,10 +12,10 @@ namespace nox
 
 #if _WIN64
 ///	@brief X64環境か
-#define	NOX_X64 1
+#define	NOX_WIN64 1
 #else
 ///	@brief X64環境か
-#define	NOX_X64 0
+#define	NOX_WIN64 0
 #endif // _WIN64
 
 
@@ -65,39 +65,10 @@ namespace nox
 #define	NOX_DEVELOP 0
 #endif // NOX_DEBUG || NOX_RELEASE
 
-#define	NOX_PP(x) x
-
-///	文字列の連結
-#define	NOX_PP_CAT(a, b) a##b
-#define	NOX_PP_CAT_I(a, b) NOX_PP_CAT(a, b)
-
-#if defined(__clang__)
-
-#else
-///	u8文字列に置き換え
-#define	NOX_DETAIL_TO_U8STRING(x) NOX_PP_CAT(u8, x)
-#endif // 0
 
 #if !defined(_MSC_VER) && !defined(__clang__)
 static_assert(false, "not support compiler");
 #endif // defined()
-
-#if defined(__clang__)
-/*
-*@brief ユニークなローカル変数を定義します
-*@note 関数内でのみ使用できます
-*/
-#define	NOX_LOCAL_SCOPE(Instance) static_assert(__PRETTY_FUNCTION__); const auto NOX_PP_CAT_I(__local, __LINE__) = Instance
-#define	NOX_LOCAL_SCOPE_C(Instance) static_assert(__PRETTY_FUNCTION__); constexpr auto NOX_PP_CAT_I(__local, __LINE__) = Instance
-#elif defined(_MSC_VER)
-/*
-*@brief ユニークなローカル変数を定義します
-*@note 関数内でのみ使用できます
-*/
-#define	NOX_LOCAL_SCOPE(Instance) static_assert(__FUNCTION__); const auto NOX_PP_CAT_I(_local, __LINE__) = Instance
-#define	NOX_LOCAL_SCOPE_C(Instance) static_assert(__FUNCTION__); constexpr auto NOX_PP_CAT_I(_local, __LINE__) = Instance
-
-#endif
 
 
 #if NOX_DEBUG || NOX_RELEASE

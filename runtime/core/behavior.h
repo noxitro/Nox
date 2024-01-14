@@ -11,7 +11,7 @@ namespace nox
 	{
 		NOX_DECLARE_MANAGED_OBJECT(Behavior, Component);
 	private:
-		enum class MethodType : u8
+		enum class MethodType : uint8
 		{
 			Awake,
 			Start,

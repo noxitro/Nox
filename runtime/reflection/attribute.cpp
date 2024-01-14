@@ -4,4 +4,3 @@
 ///	@brief	attribute
 #include	"stdafx.h"
 #include	"attribute.h"
-

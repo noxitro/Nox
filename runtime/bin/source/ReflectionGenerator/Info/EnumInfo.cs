@@ -26,22 +26,12 @@ namespace ReflectionGenerator.Info
             /// <summary>
             /// 名前
             /// </summary>
-            public string Name { get; set; } = string.Empty;
-
-            /// <summary>
-            /// 
-            /// </summary>
-            public ulong UnsinedValue { get; set; } = 0U;
-
-            /// <summary>
-            /// 
-            /// </summary>
-            public long SinedValue { get; set; } = 0;
+            public required string Name { get; init; }
 
             /// <summary>
             /// 属性リスト
             /// </summary>
-            public List<AttributeInfo> AttributeInfoList { get; set; } = new List<AttributeInfo>();
+            public required IReadOnlyList<AttributeInfo> AttributeInfoList { get; init; }
             #endregion
         }
 
@@ -50,38 +40,24 @@ namespace ReflectionGenerator.Info
         /// <summary>
         /// フルネーム
         /// </summary>
-        public string FullName { get; set; } = string.Empty;
+        public required string FullName { get; init; }
 
         /// <summary>
         /// 名前
         /// </summary>
-        public string Name { set; get; } = string.Empty;
+        public required string Name { get; init; }
 
-        /// <summary>
-        /// 自身が含まれる外部クラス
-        /// </summary>
-        public ClassInfo? OutsideClass { get; set; } = null;
+        public required string Namespace { get; init; }
 
-
-        public AccessLevel AccessLevel { get; set; } = AccessLevel.Private;
-
-        /// <summary>
-        /// 基底型
-        /// </summary>
-        public RuntimeTypeKind UnderlyingType { get; set; } = RuntimeTypeKind.Invalid;
+        public required AccessLevel AccessLevel { get; init; }
 
         /// <summary>
         /// 要素リスト
         /// 定義順
         /// </summary>
-        public List<EnumVariable> VariableList { get; set; } = new List<EnumVariable>();
+        public required IReadOnlyList<EnumVariable> VariableList { get; init; }
 
-        /// <summary>
-        /// 符号なし型
-        /// </summary>
-        public bool IsUnsigned { get; set; } = false;
-
-        public List<AttributeInfo> AttributeInfoList { get; set; } = new List<AttributeInfo>();
+        public required IReadOnlyList<AttributeInfo> AttributeInfoList { get; init; }
         #endregion
     }
 

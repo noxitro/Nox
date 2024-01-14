@@ -44,6 +44,6 @@ namespace nox
 
 	private:
 		void* address_;
-		u32 id_;
+		uint32 id_;
 	};
 }

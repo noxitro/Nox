@@ -48,19 +48,35 @@ namespace ReflectionGenerator
 			/// </summary>
 			public List<ModuleData> ModuleDataList { get; set; } = new List<ModuleData>();
 
+			public string SourceFilePath { get; set; } = string.Empty;
+
 			public string OutputDirectory { get; set; } = string.Empty;
 			public string SolutionDirectory { get; set; } = string.Empty;
 
-			public string BuildSpec { get; set; } = string.Empty;
+			public string Configuration { get; set; } = string.Empty;
 			public string Platform { get; set; } = string.Empty;
 			public string BuildSpecDefine { get; set; } = string.Empty;
 			public string PlatformDefine { get; set; } = string.Empty;
+
+			public string MSBuildBinPath { get; set; } = string.Empty;
+			public string ProjectFilePath { get; set; } = string.Empty;
+
+			public List<string> IgnoreNamespaceList { get; } = new List<string>();
+
+			public List<string> EnableNamespaceList { get; } = new List<string>();
         }
         #endregion
 
         #region 非公開メソッド
 		private enum MainArgs : byte
 		{
+			Invalid,
+
+			/// <summary>
+			/// 解析対象のソースファイルパス
+			/// </summary>
+			SourceFilePath,
+
 			/// <summary>
 			/// 出力先
 			/// </summary>
@@ -74,7 +90,7 @@ namespace ReflectionGenerator
 			/// <summary>
 			/// ビルド構成
 			/// </summary>
-			BuildSpec,
+			Configuration,
 
 			/// <summary>
 			/// プラットフォーム
@@ -84,12 +100,28 @@ namespace ReflectionGenerator
 			/// <summary>
 			/// ビルド定義名
 			/// </summary>
-			BuildSpecDefine,
+			ConfigurationDefine,
 
 			/// <summary>
 			/// プラットフォーム定義名
 			/// </summary>
 			PlatformDefine,
+
+			/// <summary>
+			/// プロジェクトディレクトリ
+			/// </summary>
+			ProjectDirectory,
+
+			/// <summary>
+			/// プロジェクト名
+			/// </summary>
+			ProjectName,
+
+
+			ProjectPath,
+
+			MSBuildBinPath,
+
 			_Max
 		}
 
@@ -102,33 +134,122 @@ namespace ReflectionGenerator
 
 		private static int Main(string[] args)
 		{
-            if (args.Length == (int)MainArgs._Max) 
+#if true   //	Test            
+
+
+			string reflectionGenerateArgsFilePath = string.Empty;
+
+
+            string test = "runtime";
+		
+			//	sample
+			if (test == "sample")
 			{
-				Trace.Error(null, $"コマンドライン引数が一致しません {args.Length}");
-				return -1;
+				reflectionGenerateArgsFilePath = $"D:\\github\\Nox\\runtime\\bin\\source\\ReflectionGenerator\\reflectionGenerateArgs.txt";
+				
+			}
+			else if (test == "runtime")
+			{
+                reflectionGenerateArgsFilePath = $"D:\\github\\Nox\\runtime\\reflectionGenerateArgs.txt";
+            }
+
+            reflectionGenerateArgsFilePath = System.IO.Path.GetFullPath(reflectionGenerateArgsFilePath);
+
+            if (System.IO.File.Exists(reflectionGenerateArgsFilePath) == true)
+            {
+                args = System.IO.File.ReadAllLines(reflectionGenerateArgsFilePath);
+            }
+#endif
+
+            Dictionary<string, MainArgs> mainArgTypeDict = new Dictionary<string, MainArgs>();
+            {
+                MainArgs[] mainArgValueList = Enum.GetValues<MainArgs>();
+				string[] mainArgNameList = Enum.GetNames<MainArgs>();
+				for (int i = 0; i < mainArgNameList.Length; ++i)
+				{
+					mainArgTypeDict.Add(mainArgNameList[i], mainArgValueList[i]);
+				}
 			}
 
-            //  TestMsBuild();
-
-            args = new string[(int)MainArgs._Max]
+			//	引数の解析
+			MainArgsData mainArgsData = new MainArgsData();
+			MainArgs targetMainArgType = MainArgs.Invalid;
+            for (int i = 0; i < args.Length; ++i)
 			{
-                "C:\\NitroEngine\\Runtime\\TypeInfo\\CodeGen\\",
-                "C:/NitroEngine/Runtime/",
-                "Debug",
-				"x64",
-				"NITRO_DEBUG",
-				"NITRO_WIN64"
-			};
 
-			MainArgsData mainArgsData = new MainArgsData()
-			{
-				OutputDirectory = System.IO.Path.GetFullPath(args[(int)MainArgs.OutputDirectory]),
-				SolutionDirectory = System.IO.Path.GetFullPath(args[(int)MainArgs.SolutionDirectory]),
-				BuildSpec = args[(int)MainArgs.BuildSpec],
-				Platform = args[(int)MainArgs.Platform],
-				BuildSpecDefine = args[(int)MainArgs.BuildSpecDefine],
-				PlatformDefine = args[(int)MainArgs.PlatformDefine],
-			};
+				string arg = args[i];
+
+				if (arg.Length <= 0 || arg[0] != '-' || mainArgTypeDict.TryGetValue(arg[1..], out MainArgs outMainArgType) == false)
+				{
+
+				}
+				else
+				{
+					
+					switch(outMainArgType)
+					{
+						default:
+                            targetMainArgType = outMainArgType;
+
+                            continue;
+					}
+                }
+
+				string replaceArg = arg.Replace("\"", "");
+
+                switch (targetMainArgType)
+				{
+					case MainArgs.Invalid:
+						break;
+
+					case MainArgs.SourceFilePath:
+						mainArgsData.SourceFilePath = replaceArg;
+
+                        break;
+
+					case MainArgs.Configuration:
+                        mainArgsData.Configuration = arg;
+
+                        break;
+
+					case MainArgs.ConfigurationDefine:
+						mainArgsData.BuildSpecDefine = arg;
+
+                        break;
+
+					case MainArgs.SolutionDirectory:
+						mainArgsData.SolutionDirectory = arg;
+                        break;
+
+					case MainArgs.OutputDirectory:
+						mainArgsData.OutputDirectory = arg;
+                        break;
+					
+					case MainArgs.Platform:
+						mainArgsData.Platform = arg;
+                        break;
+                    case MainArgs.PlatformDefine:
+                        mainArgsData.PlatformDefine = arg;
+                        break;
+
+					case MainArgs.ProjectName:
+
+                        break;
+
+
+					case MainArgs.MSBuildBinPath:
+						mainArgsData.MSBuildBinPath = replaceArg;
+						break;
+
+					case MainArgs.ProjectPath:
+						mainArgsData.ProjectFilePath = arg;
+						break;
+
+					default:
+						System.Diagnostics.Debug.Assert(false);
+						break;
+                }
+            }
 
             return (int)MainProcess(mainArgsData);
 		}
@@ -140,13 +261,27 @@ namespace ReflectionGenerator
 			parser.Parse(
 				new Parser.CppParser.SetupParam() 
 				{
-					SourceFilePath = "D:\\github\\Nox\\runtime\\bin\\source\\ReflectionGenerator\\Sample\\main.cpp",
-					IgnoreNamespaceList = new List<string>() { "", "std" }
+					SourceFilePath = argsData.SourceFilePath,
+					ProjectFilePath = argsData.ProjectFilePath,
+					MSBuildBinPath = argsData.MSBuildBinPath,
+					Configuration = argsData.Configuration,
+					Platform = argsData.Platform,
+					IgnoreNamespaceList = argsData.IgnoreNamespaceList,
+					EnableRootNamespaceList = argsData.EnableNamespaceList
                 }
 				);
 
 			//	コード出力
-//			Generator.Generator generator = new Generator.Generator();
+			Generator.Generator generator = new Generator.Generator()
+			{
+				Parser = parser,
+				BuildSpec = argsData.Configuration,
+				BuildSpecDefine = argsData.BuildSpecDefine,
+				OutputDirectory = argsData.OutputDirectory,
+				Platform = argsData.Platform,
+				PlatformDefine = argsData.PlatformDefine,
+
+			};
 //			generator.Setup(parser, argsData.OutputDirectory, argsData.BuildSpec, argsData.Platform, argsData.BuildSpecDefine, argsData.PlatformDefine);
 //			generator.Generate();
 

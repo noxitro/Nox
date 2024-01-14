@@ -257,14 +257,22 @@ namespace ReflectionGenerator.Info
 
         public bool Contains(string FullName) => _InfoDic.ContainsKey(FullName);
 
-        public ClassInfo? GetInfo(string FullName)
+        public ClassInfo GetInfo(string fullName)
         {
-            if(_InfoDic.ContainsKey(FullName) == false)
+            System.Diagnostics.Debug.Assert(TryGetInfo(fullName, out ClassInfo? outClassInfo) && outClassInfo != null, $"{nameof(ClassInfo)}:{fullName}が見つかりませんでした");
+            return outClassInfo;
+        }
+
+        public bool TryGetInfo(string fullName,  out ClassInfo? info)
+        {
+            if (_InfoDic.ContainsKey(fullName) == false)
             {
-                return null;
+                info = null;
+                return false;
             }
 
-            return _InfoDic[FullName];
+            info = _InfoDic[fullName];
+            return true;
         }
 
         public ClassInfo? GetInfo(ClangSharp.Interop.CXCursor cursor)

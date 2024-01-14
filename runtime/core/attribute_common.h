@@ -6,39 +6,66 @@
 #include	"object.h"
 namespace nox
 {
-	class Attribute : public Object, public nox::reflection::IAttribute
+	namespace attr
 	{
-		NOX_DECLARE_OBJECT(Attribute, Object);
-	public:
-		inline constexpr Attribute()noexcept {}
-	};
+		/// @brief 属性基底
+		class Attribute : public Object, public nox::reflection::IAttribute
+		{
+			NOX_DECLARE_OBJECT(Attribute, Object);
+		public:
+			inline constexpr Attribute()noexcept {}
+		};
 
-	class DataMember : public Attribute
-	{
-		NOX_DECLARE_OBJECT(DataMember, Object);
-	};
+		/// @brief シリアライズ対象
+		class DataMember : public Attribute
+		{
+			NOX_DECLARE_OBJECT(DataMember, Attribute);
+		};
 
-	class IgnoreDataMember : public Attribute
-	{
-		NOX_DECLARE_OBJECT(IgnoreDataMember, Attribute);
-	};
+		/// @brief シリアライズ非対象
+		class IgnoreDataMember : public Attribute
+		{
+			NOX_DECLARE_OBJECT(IgnoreDataMember, Attribute);
+		};
+
+		class Hide : public Attribute
+		{
+			NOX_DECLARE_OBJECT(Hide, Attribute);
+		};
+
+		/// @brief リソースクラス
+		class Resource : public Attribute
+		{
+			NOX_DECLARE_OBJECT(Resource, Attribute);
+		public:
+			inline constexpr explicit Resource(std::u8string_view extension, int32 version)noexcept:
+				extension_(extension),
+				version_(version)
+			{}
+
+		private:
+			std::u8string_view extension_;
+			int32 version_;
+		};
+		
+		namespace dev
+		{
+			class DisplayName : public Attribute
+			{
+				NOX_DECLARE_OBJECT(DisplayName, Object);
+			private:
+
+			public:
+				inline	constexpr explicit DisplayName(const std::u32string_view display_name)noexcept :
+					display_name_(display_name) {}
+
+			private:
+				const std::u32string_view display_name_;
+			};
+		}
+	}
 
 	template<>
-	struct nox::reflection::IgnoreAttribute<DataMember, IgnoreDataMember> : std::true_type {};
+	struct nox::reflection::IsIgnoreAttribute<attr::DataMember, attr::IgnoreDataMember> : std::true_type {};
 
-	namespace dev
-	{
-		class DisplayName : public Attribute
-		{
-			NOX_DECLARE_OBJECT(DisplayName, Object);
-		private:
-
-		public:
-			inline	constexpr explicit DisplayName(const std::u16string_view display_name)noexcept :
-				display_name_(display_name) {}
-
-		private:
-			const std::u16string_view display_name_;
-		};
-	}
 }

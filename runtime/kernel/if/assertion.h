@@ -11,17 +11,18 @@ namespace nox
 {
 	namespace debug
 	{
-		enum class RuntimeAssertErrorType : u8
+		enum class RuntimeAssertErrorType : uint8
 		{
 			Other,
 		};
 
 		namespace detail
 		{
-			void	Assert(RuntimeAssertErrorType errorType, not_null<const c16*> message, const std::source_location& source_location)noexcept(false);
+			void	Assert(RuntimeAssertErrorType errorType, std::u16string_view message, const std::source_location& source_location)noexcept(false);
+			void	Assert(RuntimeAssertErrorType errorType, std::u32string_view message, const std::source_location& source_location)noexcept(false);
 		}
 
-		inline	void	Assert(RuntimeAssertErrorType errorType, const bool expression, not_null<const c16*> message, const std::source_location location = std::source_location::current())
+		inline	void	Assert(RuntimeAssertErrorType errorType, const bool expression, std::u16string_view message, const std::source_location location = std::source_location::current())
 		{
 			if (!expression)
 			{
@@ -29,7 +30,15 @@ namespace nox
 			}
 		}
 
-		inline	void	Assert(const bool expression, not_null<const c16*> message, const std::source_location location = std::source_location::current())
+		inline	void	Assert(const bool expression, std::u16string_view message, const std::source_location location = std::source_location::current())
+		{
+			if (!expression)
+			{
+				debug::detail::Assert(RuntimeAssertErrorType::Other, message, location);
+			}
+		}
+
+		inline	void	Assert(const bool expression, std::u32string_view message, const std::source_location location = std::source_location::current())
 		{
 			if (!expression)
 			{
@@ -40,7 +49,7 @@ namespace nox
 }
 
 #if NOX_DEBUG || NOX_RELEASE
-#define	NOX_ASSERT(...) nox::debug::Assert(__VA_ARGS__)
+#define	NOX_ASSERT(...) ::nox::debug::Assert(__VA_ARGS__)
 #else
 #define	NOX_ASSERT(...) 
 #endif // NOX_DEBUG || NOX_RELEASE

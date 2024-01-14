@@ -1,10 +1,13 @@
 ﻿///	@file	definition.h
 ///	@brief	definition
 #pragma once
+#include	<string_view>
 
 namespace nox::reflection
 {
-	
+	using ReflectionCharType = char32_t;
+	using ReflectionStringView = std::basic_string_view<char32_t>;
+
 
 	/// @brief タイプ種別
 	enum class TypeKind : std::uint8_t

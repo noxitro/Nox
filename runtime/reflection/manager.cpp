@@ -100,7 +100,7 @@ void Reflection::Register(const class ClassInfo& data)
 	}
 
 	//	グローバル空間への登録
-	const u32 namespaceID = data.GetNamespaceID();
+	const std::uint32_t namespaceID = data.GetNamespaceID();
 	if (global_data_map_.contains(namespaceID) == false)
 	{
 		global_data_map_.emplace(namespaceID, GlobalData());

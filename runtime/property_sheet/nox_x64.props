@@ -9,9 +9,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
     </Link>
-    <ClCompile>
-      <PreprocessorDefinitions>REX_X64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
+    <ClCompile />
   </ItemDefinitionGroup>
   <ItemGroup />
 </Project>

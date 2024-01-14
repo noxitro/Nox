@@ -9,6 +9,8 @@
 #include	"../if/basic_type.h"
 #include	"../if/crc32.h"
 #include	"type_traits.h"
+#include	"../preprocessor/cat.h"
+
 namespace nox::util
 {
 #if defined(__clang__)
@@ -18,20 +20,19 @@ namespace nox::util
 	template <class T>// requires(!std::is_const_v<T> && !std::is_volatile_v<T>)
 	[[nodiscard]] constexpr auto GetTypeName(void)noexcept
 	{
-		return u8"";
-		/*constexpr std::u8string_view signature = reinterpret_cast<const c8*>(__PRETTY_FUNCTION__);
+		constexpr std::string_view signature = __PRETTY_FUNCTION__;
 		constexpr auto signatureSize = signature.size();
 
-		constexpr std::u8string_view preSignature = u8"auto __cdecl nox::util::GetTypeName<";
+		constexpr std::string_view preSignature = "auto nox::util::GetTypeName()[T = ";
 		constexpr auto preSignatureSize = preSignature.size();
 
-		constexpr std::u8string_view lastSignature = u8">(void) noexcept";
+		constexpr std::string_view lastSignature = "]";
 		constexpr auto lastSignatureSize = lastSignature.size();
 
-		constexpr std::u8string_view contentsName(signature.data() + preSignature.size(),
+		constexpr std::string_view contentsName(signature.data() + preSignature.size(),
 			signatureSize - (preSignatureSize + lastSignatureSize));
 
-		return contentsName;*/
+		return contentsName;
 	}
 #else
 	/**
@@ -41,16 +42,16 @@ namespace nox::util
 	[[nodiscard]] constexpr auto GetTypeName(void)noexcept
 	{
 
-		constexpr std::u8string_view signature = NOX_DETAIL_TO_U8STRING(__FUNCSIG__);
+		constexpr std::string_view signature = __FUNCSIG__;
 		constexpr auto signatureSize = signature.size();
 
-		constexpr std::u8string_view preSignature = u8"auto __cdecl nox::util::GetTypeName<";
+		constexpr std::string_view preSignature = "auto __cdecl nox::util::GetTypeName<";
 		constexpr auto preSignatureSize = preSignature.size();
 
-		constexpr std::u8string_view lastSignature = u8">(void) noexcept";
+		constexpr std::string_view lastSignature = ">(void) noexcept";
 		constexpr auto lastSignatureSize = lastSignature.size();
 
-		constexpr std::u8string_view contentsName(signature.data() + preSignature.size(),
+		constexpr std::string_view contentsName(signature.data() + preSignature.size(),
 			signatureSize - (preSignatureSize + lastSignatureSize));
 
 		return contentsName;
@@ -87,7 +88,7 @@ namespace nox::util
 	/// @tparam T 型
 	/// @return ID(4byte)
 	template<class T>
-	inline constexpr u32 GetUniqueTypeID()noexcept
+	inline constexpr uint32 GetUniqueTypeID()noexcept
 	{
 #if defined(__clang__)
 		return util::crc32(__PRETTY_FUNCTION__);

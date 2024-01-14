@@ -37,8 +37,8 @@ namespace nox
 
 	}
 
-	using Int4 = nox::detail::Point4D<s32>;
-	using UInt4 = nox::detail::Point4D<u32>;
-	using Float4 = nox::detail::Point4D<f32>;
-	using Double4 = nox::detail::Point4D<f64>;
+	using Int4 = nox::detail::Point4D<int32>;
+	using UInt4 = nox::detail::Point4D<uint8>;
+	using Float4 = nox::detail::Point4D<float>;
+	using Double4 = nox::detail::Point4D<double>;
 }

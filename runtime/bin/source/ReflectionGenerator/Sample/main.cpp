@@ -2,6 +2,53 @@
 
 ///	@file	main.cpp
 ///	@brief	main
+/// 
+/// 
+/// 
+
+#define	PP_CAT(x,y) x##y
+#define	PP_CAT_I(x, y) PP_CAT(x, y)
+#define	PP_STR(x) #x
+#define	PP_STR_I(x) PP_STR(x)
+
+#define ATTR_1(x) __attribute__((annotate(PP_STR_I(PP_CAT_I(NOX_REFLECTION_ATTR_, x)))))
+#define ATTR_2(x, ...) ATTR_1(x) ATTR_1(__VA_ARGS__)
+#define ATTR_3(x, ...) ATTR_1(x) ATTR_2(__VA_ARGS__)
+#define ATTR_4(x, ...) ATTR_1(x) ATTR_3(__VA_ARGS__)
+// 以下、必要なだけ続ける
+
+#define GET_MACRO(_1,_2,_3,_4,NAME,...) NAME
+
+
+#define ATTR(...) // GET_MACRO(__VA_ARGS__, ATTR_4, ATTR_3, ATTR_2, ATTR_1)(__VA_ARGS__)
+
+// 使用例
+#if _DEBUG
+constexpr auto preprocesserValue = _DEBUG;
+#endif // _DEBUG
+
+class DisplayName
+{
+public:
+	inline explicit DisplayName(const char32_t* name) :
+		name_(name) {}
+
+private:
+	const char32_t* name_;
+};
+
+class IgnoreDataMember
+{
+public:
+	inline constexpr IgnoreDataMember()noexcept = default;
+};
+
+namespace app
+{
+	ATTR(DisplayName(u""), IgnoreDataMember())
+		int Do() { return 0; }
+}
+
 namespace app
 {
 	struct Int {

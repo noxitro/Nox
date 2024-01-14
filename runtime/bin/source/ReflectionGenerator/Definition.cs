@@ -129,6 +129,21 @@ namespace ReflectionGenerator
         public const string MsBuildExePath = VisualStudioDirectory + "Msbuild\\Current\\Bin\\MSBuild.exe";
 
         public const string NitroReflectionType = "reflection::Type";
+
+        public const string REFLECTION_GENERATED_HOLDER_STRUCT_FULL_NAME = "nox::reflection::gen::ReflectionGeneratedHolder";
+
+        public const string CREATE_METHOD_INFO_FUNCTION_NAME = $"{RUNTIME_ROOT_NAMESPACE_STR}::{RUNTIME_REFLECTION_NAMESPACE_STR}::{RUNTIME_REFLECTION_DETAIL_STR}CreateMethodInfo";
+
+        /// <summary>
+        /// clangビルド時に定義するdefine
+        /// </summary>
+        public const string RUNTIME_REFLECTION_GENERATOR_DEFINE = "NOX_REFLECTION_GENERATOR";
+
+        //  namespace
+        public const string RUNTIME_ROOT_NAMESPACE_STR = "nox";
+        public const string RUNTIME_REFLECTION_NAMESPACE_STR = "reflection";
+        public const string RUNTIME_REFLECTION_GEN_NAMESPACE_STR = "gen";
+        public const string RUNTIME_REFLECTION_DETAIL_STR = "detail";
         #endregion
     }
 }

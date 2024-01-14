@@ -61,8 +61,8 @@ namespace nox
 			[[nodiscard]]	constexpr Vector4D operator * (_ValueType _v) const noexcept { return Vector4D(x * _v, y * _v, z * _v, w * _v); }
 			[[nodiscard]]	constexpr Vector4D operator / (_ValueType _v) const noexcept { return Vector4D(x / _v, y / _v, z / _v, w / _v); }
 
-			inline	_ValueType operator[](const s32 index)const noexcept { return reinterpret_cast<const _ValueType*>(this)[index]; }
-			inline	_ValueType& operator[](const s32 index)noexcept { return reinterpret_cast<_ValueType*>(this)[index]; }
+			inline	_ValueType operator[](const int32 index)const noexcept { return reinterpret_cast<const _ValueType*>(this)[index]; }
+			inline	_ValueType& operator[](const int32 index)noexcept { return reinterpret_cast<_ValueType*>(this)[index]; }
 		};
 
 	}

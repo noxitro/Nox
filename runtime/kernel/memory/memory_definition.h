@@ -3,7 +3,7 @@
 
 namespace nox::memory
 {
-	enum class AreaType : u8
+	enum class AreaType : uint8
 	{
 		Object,
 		ManagedObject,
@@ -12,7 +12,7 @@ namespace nox::memory
 		_Max
 	};
 
-	enum class SegmentType : u8
+	enum class SegmentType : uint8
 	{
 		Default,
 		Develop,

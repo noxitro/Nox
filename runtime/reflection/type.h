@@ -53,7 +53,7 @@ namespace nox::reflection
 		};
 		static_assert(sizeof(TypeExtraResultInfo) <= sizeof(std::uintptr_t));
 
-		enum class TypeExtraAccessInfoType : u8
+		enum class TypeExtraAccessInfoType : std::uint8_t
 		{
 			/**
 			 * @brief 配列の次元数
@@ -128,7 +128,7 @@ namespace nox::reflection
 			const size_t _size,
 			const size_t _alignment,
 			not_null<reflection::detail::TypeExtraInfoFuncType> extra_func,
-			const std::u8string_view name
+			const std::string_view name
 		)noexcept :
 			id_(_id),
 			kind_(_kind),
@@ -170,7 +170,7 @@ namespace nox::reflection
 		[[nodiscard]] inline	constexpr	std::uint32_t GetTypeID()const noexcept { return id_; }
 
 		/// @brief 型の名前を取得
-		[[nodiscard]] inline	constexpr std::u8string_view GetTypeName()const noexcept { return name_; }
+		[[nodiscard]] inline	constexpr std::string_view GetTypeName()const noexcept { return name_; }
 
 		/// @brief 型のサイズを取得
 		[[nodiscard]] inline	constexpr std::size_t GetTypeSize()const noexcept { return size_; }
@@ -236,7 +236,7 @@ namespace nox::reflection
 
 		/// @brief		型名
 		/// @details	コンパイル時に判断された名前なので、開発ビルド以外では使用禁止
-		std::u8string_view name_;
+		std::string_view name_;
 	};
 	
 	namespace detail
@@ -252,10 +252,10 @@ namespace nox::reflection
 				TypeAttributeFlag::None,
 				0U,
 				0U,
-					+[](detail::TypeExtraResultInfo&, const detail::TypeExtraArgsInfo&)noexcept {
+					+[](reflection::detail::TypeExtraResultInfo&, const reflection::detail::TypeExtraArgsInfo&)noexcept {
 						return false;
 					},
-				u8""
+				""
 			); }
 
 			template<class T>
@@ -263,32 +263,32 @@ namespace nox::reflection
 			{
 				if constexpr (IsSizeofTypeValue<T>)
 				{
-					return Type(
-						util::GetUniqueTypeID<T>(),
+					return nox::reflection::Type(
+						nox::util::GetUniqueTypeID<T>(),
 						nox::reflection::GetTypeKind<T>(),
 						nox::reflection::GetTypeAttributeFlags<T>(),
 						sizeof(T),
 						std::alignment_of_v<T>,
-						+[](detail::TypeExtraResultInfo& out_info, const detail::TypeExtraArgsInfo& args)noexcept {
+						+[](reflection::detail::TypeExtraResultInfo& out_info, const reflection::detail::TypeExtraArgsInfo& args)noexcept {
 							//memo:	複雑すぎてコンパイルエラーになるので、実行時処理に回避
 							return reflection::detail::GetTypeExtraInfo<T>(out_info, args);
 						},
-						util::GetTypeName<T>()
+						nox::util::GetTypeName<T>()
 					);
 				}
 				else
 				{
 					return Type(
-						util::GetUniqueTypeID<T>(),
+						nox::util::GetUniqueTypeID<T>(),
 						nox::reflection::GetTypeKind<T>(),
 						nox::reflection::GetTypeAttributeFlags<T>(),
 						0,
 						0,
-						+[](detail::TypeExtraResultInfo& out_info, const detail::TypeExtraArgsInfo& args)noexcept {
+						+[](reflection::detail::TypeExtraResultInfo& out_info, const reflection::detail::TypeExtraArgsInfo& args)noexcept {
 							//memo:	複雑すぎてコンパイルエラーになるので、実行時処理に回避
 							return reflection::detail::GetTypeExtraInfo<T>(out_info, args);
 						},
-						util::GetTypeName<T>()
+						nox::util::GetTypeName<T>()
 					);
 				}
 				
@@ -322,7 +322,7 @@ namespace nox::reflection
 				}
 				else
 				{
-					out_info.array_rank = static_cast<u32>(std::rank_v<T>);
+					out_info.array_rank = static_cast<std::uint32_t>(std::rank_v<T>);
 					return true;
 				}
 				break;

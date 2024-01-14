@@ -2,7 +2,7 @@
 ///	@brief	os
 #pragma once
 
-#if NOX_X64
+#if NOX_WIN64
 #include	"mutex_x64.h"
 
 namespace nox::os

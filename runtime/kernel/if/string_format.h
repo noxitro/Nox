@@ -5,7 +5,8 @@
 #pragma once
 
 #include	<format>
-#include	"convert_string.h"
+//#include	"convert_string.h"
+#include	"unicode_converter.h"
 
 namespace nox::util
 {
@@ -27,18 +28,84 @@ namespace nox::util
 			std::vformat_to(std::back_insert_iterator{ _Str }, _Fmt, _Args);
 			return _Str;
 		}
+
+		template<class To>
+		struct FormatStringHolder;
+
+		template<class CharaType> 
+		struct FormatStringHolder<nox::BasicString<CharaType>>
+		{
+			template<class From> requires(!std::is_same_v< CharaType, From>)
+			static inline nox::BasicString<CharaType> Get(const From* arg)
+			{
+				return nox::unicode::ConvertString<nox::BasicString<CharaType>>(arg);
+			}
+
+			template<class From> requires(!std::is_same_v< CharaType, From>)
+			static inline  nox::BasicString<CharaType> Get(const nox::BasicString<From>& arg)
+			{
+				return nox::unicode::ConvertString<nox::BasicString<CharaType>>(arg);
+			}
+
+			template<class From> requires(!std::is_same_v< CharaType, From>)
+				static inline  nox::BasicString<CharaType> Get(const std::basic_string_view<From> arg)
+			{
+				return nox::unicode::ConvertString<nox::BasicString<CharaType>>(arg);
+			}
+
+			template<class From> requires(std::is_arithmetic_v<From>)
+			static constexpr inline  decltype(auto) Get(From arg)noexcept
+			{
+				return arg;
+			}
+
+			template<class From> requires(std::is_same_v< CharaType, From>)
+				static constexpr inline  decltype(auto) Get(const From* arg)noexcept
+			{
+				return arg;
+			}
+
+			template<class From> requires(std::is_same_v< CharaType, From>)
+				static constexpr inline  decltype(auto) Get(const nox::BasicString<From>& arg)noexcept
+			{
+				return arg;
+			}
+
+			template<class From> requires(std::is_same_v< CharaType, From>)
+				static constexpr inline  decltype(auto) Get(const std::basic_string_view<From> arg)noexcept
+			{
+				return arg;
+			}
+
+			
+		};
+
+		template<class To, class From>
+		inline decltype(auto) ToFormatArg(From&& arg)
+		{
+			return FormatStringHolder<To>::Get(arg);
+		}
+
 	}
 
 	template<class T, class... _Types>
-	inline	nox::BasicString<T>	Format(const T* const fmt, _Types&&... args)
+	inline	nox::BasicString<T>	FormatImpl(const T* const fmt, _Types&&... args)
 	{
 		return util::detail::VFormat<T>(fmt, std::make_format_args<util::detail::BasicFormatContext<T>>(args...));
 	}
 
 	template<class... _Types>
-	inline nox::U16String Format(const c16* const fmt, _Types&&... _Args)
+	inline nox::WString Format(const wchar16* const fmt, _Types&&... _Args)
 	{
-		nox::WString from_str = util::Format(reinterpret_cast<const wchar_t*>(fmt), util::ConvertStringSafe<nox::WString>(_Args)...);
-		return nox::U16String(util::CharCast<const c16*>(from_str.c_str()));
+		return util::FormatImpl(fmt, nox::util::detail::ToFormatArg<nox::WString>(_Args)...);
 	}
+
+	template<class... _Types>
+	inline nox::U16String Format(const char16* const fmt, _Types&&... _Args)
+	{
+		nox::WString from_str = util::Format(reinterpret_cast<const wchar_t*>(fmt), _Args...);
+		return nox::U16String(util::CharCast<const char16*>(from_str.c_str()), from_str.size());
+	}
+
+	
 }
