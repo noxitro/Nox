@@ -1,6 +1,7 @@
 ﻿///	@file	manager.h
 ///	@brief	manager
 #pragma once
+#include	"definition.h"
 
 namespace nox::reflection
 {
@@ -22,14 +23,14 @@ namespace nox::reflection
 		{
 			UnorderedMap<std::uint32_t, const class ClassInfo*> class_info_ptr_map;
 			UnorderedMap<std::uint32_t, const class FieldInfo*> field_info_ptr_map;
-			UnorderedMap<std::uint32_t, const class MethodInfo*> method_info_ptr_map;
+			UnorderedMap<std::uint32_t, const class FunctionInfo*> function_info_ptr_map;
 			UnorderedMap<std::uint32_t, const class EnumInfo*> enum_info_ptr_map;
 		};
 	public:
 		
 		const class ClassInfo* FindClassInfo(std::uint32_t typeID)const noexcept;
 		const class ClassInfo* FindClassInfoFromNameHash(std::uint32_t namehash)const noexcept;
-		const class ClassInfo* FindClassInfoFromName(std::u8string_view fullName)const noexcept { return FindClassInfoFromNameHash(util::crc32(fullName)); }
+		const class ClassInfo* FindClassInfoFromName(ReflectionStringView fullName)const noexcept { return FindClassInfoFromNameHash(util::Crc32(fullName)); }
 
 		template<concepts::ClassUnion T>
 		inline const class ClassInfo* FindClassInfo()const noexcept {
@@ -38,7 +39,7 @@ namespace nox::reflection
 
 		const class EnumInfo* FindEnumInfo(std::uint32_t typeID)const noexcept;
 		const class EnumInfo* FindEnumInfoFromNameHash(std::uint32_t namehash)const noexcept;
-		const class EnumInfo* FindEnumInfoFromName(std::u8string_view fullName)const noexcept { return FindEnumInfoFromNameHash(util::crc32(fullName)); }
+		const class EnumInfo* FindEnumInfoFromName(ReflectionStringView fullName)const noexcept { return FindEnumInfoFromNameHash(util::Crc32(fullName)); }
 
 #pragma region 登録関数
 		void Register(const class ClassInfo& data);
@@ -50,8 +51,8 @@ namespace nox::reflection
 		void Register(const class FieldInfo& data);
 		void Unregister(const class FieldInfo& data);
 
-		void Register(const class MethodInfo& data);
-		void Unregister(const class MethodInfo& data);
+		void Register(const class FunctionInfo& data);
+		void Unregister(const class FunctionInfo& data);
 #pragma endregion
 	private:
 		inline Reflection() {}

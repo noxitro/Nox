@@ -8,6 +8,20 @@
 
 namespace nox
 {
+	//template<class T>
+	//struct ExistsFunction
+	//{
+	//private:
+	//	template<class U>
+	//	static consteval std::true_type test(decltype(foo<U>())*);
+
+	//	template<class U>
+	//	static consteval std::false_type test(...);
+
+	//public:
+	//	static constexpr bool value = std::is_same_v<decltype(test<T>(nullptr)), std::true_type>;
+	//};
+
 #pragma region ContainerElementType
 	namespace detail
 	{
@@ -34,6 +48,18 @@ namespace nox
 
 	
 #pragma endregion
+
+	/// @brief 関数オブジェクト
+	template<class T, class... Args>
+	struct IsFunctionObject : std::false_type {};
+
+	/// @brief 関数オブジェクト
+	template<class T, class... Args> requires(std::is_invocable_v<decltype(&T::operator()), T, Args...>)
+		struct IsFunctionObject<T, Args...> : std::true_type {};
+
+	/// @brief 関数オブジェクト
+	template<class T, class... Args>
+	constexpr bool IsFunctionObjectValue = IsFunctionObject<T, Args...>::value;
 
 
 	namespace detail
@@ -440,6 +466,12 @@ namespace nox
 		concept HasIndexOperator = requires(T & x) {
 			x.operator[](0);
 		};
+
+		template<class T>
+		concept HasEqualityCompare = requires(T & x)
+		{
+			{x.operator==(x)}->std::same_as<bool>;
+		};
 	}
 
 	template<class T>
@@ -447,5 +479,8 @@ namespace nox
 
 	template<class T>
 	constexpr bool HasIndexOperatorValue = nox::concepts::detail::HasIndexOperator<T>;
+
+	template<class T>
+	constexpr bool HasEqualityCompareValue = nox::concepts::detail::HasEqualityCompare<T>;
 
 }

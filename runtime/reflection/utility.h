@@ -5,60 +5,60 @@
 
 namespace nox::reflection
 {
-	/**
-		 * @brief タイプ識別から名前を取得
-		 * @param typeKind
-		 * @return 名前
-		*/
-	[[nodiscard]] inline	constexpr std::u8string_view GetTypeKindName(const TypeKind typeKind)noexcept
-	{
-		switch (typeKind)
-		{
-		case TypeKind::Void:				return u8"Void";
-		case TypeKind::Bool:				return u8"Bool";
-		case TypeKind::Int8:				return u8"Int8";
-		case TypeKind::Uint8:				return u8"Uint8";
-		case TypeKind::Char8:				return u8"Char8";
-		case TypeKind::Int16:				return u8"Int16";
-		case TypeKind::Uint16:				return u8"UInt16";
-		case TypeKind::Char:				return u8"Char";
-		case TypeKind::SChar:				return u8"SChar";
-		case TypeKind::UChar:				return u8"UChar";
-		case TypeKind::Char16:				return u8"Char16";
-		case TypeKind::Wchar16:				return u8"Wchar16";
-		case TypeKind::Int32:				return u8"Int32";
-		case TypeKind::Uint32:				return u8"UInt32";
-		case TypeKind::Char32:				return u8"Char32";
-		case TypeKind::Int64:				return u8"Int64";
-		case TypeKind::UInt64:				return u8"UInt64";
-		case TypeKind::F32:					return u8"Float";
-		case TypeKind::F64:					return u8"Double";
-		case TypeKind::Enum:				return u8"Enum";
-		case TypeKind::ScopedEnum:			return u8"ScopedEnum";
-		case TypeKind::Class:				return u8"Class";
-		case TypeKind::Union:				return u8"Union";
-		default:break;
-		}
-		return u8"Invalid";
-	}
+	///**
+	//	 * @brief タイプ識別から名前を取得
+	//	 * @param typeKind
+	//	 * @return 名前
+	//	*/
+	//[[nodiscard]] inline	constexpr ReflectionStringView GetTypeKindName(const TypeKind typeKind)noexcept
+	//{
+	//	switch (typeKind)
+	//	{
+	//	case TypeKind::Void:				return u8"Void";
+	//	case TypeKind::Bool:				return u8"Bool";
+	//	case TypeKind::Int8:				return u8"Int8";
+	//	case TypeKind::Uint8:				return u8"Uint8";
+	//	case TypeKind::Char8:				return u8"Char8";
+	//	case TypeKind::Int16:				return u8"Int16";
+	//	case TypeKind::Uint16:				return u8"UInt16";
+	//	case TypeKind::Char:				return u8"Char";
+	//	case TypeKind::SChar:				return u8"SChar";
+	//	case TypeKind::UChar:				return u8"UChar";
+	//	case TypeKind::Char16:				return u8"Char16";
+	//	case TypeKind::Wchar16:				return u8"Wchar16";
+	//	case TypeKind::Int32:				return u8"Int32";
+	//	case TypeKind::Uint32:				return u8"UInt32";
+	//	case TypeKind::Char32:				return u8"Char32";
+	//	case TypeKind::Int64:				return u8"Int64";
+	//	case TypeKind::UInt64:				return u8"UInt64";
+	//	case TypeKind::F32:					return u8"Float";
+	//	case TypeKind::F64:					return u8"Double";
+	//	case TypeKind::Enum:				return u8"Enum";
+	//	case TypeKind::ScopedEnum:			return u8"ScopedEnum";
+	//	case TypeKind::Class:				return u8"Class";
+	//	case TypeKind::Union:				return u8"Union";
+	//	default:break;
+	//	}
+	//	return u8"Invalid";
+	//}
 
-	/**
-	 * @brief 名前からタイプ識別を取得
-	 * @param name
-	 * @return タイプ識別
-	*/
-	[[nodiscard]] inline	constexpr TypeKind	GetTypeKind(const std::u8string_view name)noexcept
-	{
-		for (std::underlying_type_t<TypeKind> i = 0; i < nox::util::ToUnderlying(TypeKind::_Max); ++i)
-		{
-			if (name == GetTypeKindName(static_cast<TypeKind>(i)))
-			{
-				return static_cast<TypeKind>(i);
-			}
-		}
+	///**
+	// * @brief 名前からタイプ識別を取得
+	// * @param name
+	// * @return タイプ識別
+	//*/
+	//[[nodiscard]] inline	constexpr TypeKind	GetTypeKind(const ReflectionStringView name)noexcept
+	//{
+	//	for (std::underlying_type_t<TypeKind> i = 0; i < nox::util::ToUnderlying(TypeKind::_Max); ++i)
+	//	{
+	//		if (name == GetTypeKindName(static_cast<TypeKind>(i)))
+	//		{
+	//			return static_cast<TypeKind>(i);
+	//		}
+	//	}
 
-		return TypeKind::Invalid;
-	}
+	//	return TypeKind::Invalid;
+	//}
 
 	/**
 	 * @brief 型からタイプ識別を取得
@@ -156,7 +156,7 @@ namespace nox::reflection
 		}
 		else if constexpr (std::is_function_v<T> == true)
 		{
-			return TypeKind::Function;
+			return TypeKind::Delegate;
 		}
 		else if constexpr (std::is_member_function_pointer_v<T> == true)
 		{
@@ -244,38 +244,38 @@ namespace nox::reflection
 
 
 	template<class T> //requires(std::is_member_function_pointer_v<T> || std::is_function_v<T>)
-	[[nodiscard]] inline constexpr MethodAttributeFlag GetMethodAttributeFlags()noexcept
+	[[nodiscard]] inline constexpr FunctionAttributeFlag GetFunctionAttributeFlags()noexcept
 	{
-		MethodAttributeFlag retFlags = MethodAttributeFlag::None;
+		FunctionAttributeFlag retFlags = FunctionAttributeFlag::None;
 
 		if constexpr (IsFunctionConstValue<T> == true)
 		{
-			retFlags = util::BitOr(retFlags, MethodAttributeFlag::Const);
+			retFlags = util::BitOr(retFlags, FunctionAttributeFlag::Const);
 		}
 
 		if constexpr (std::is_member_function_pointer_v<T> == false)
 		{
-			retFlags = util::BitOr(retFlags, MethodAttributeFlag::Static);
+			retFlags = util::BitOr(retFlags, FunctionAttributeFlag::Static);
 		}
 
 		if constexpr (IsFunctionVolatileValue<T> == true)
 		{
-			retFlags = util::BitOr(retFlags, MethodAttributeFlag::Volatile);
+			retFlags = util::BitOr(retFlags, FunctionAttributeFlag::Volatile);
 		}
 
 		if constexpr (IsFunctionLvalueValue<T> == true)
 		{
-			retFlags = util::BitOr(retFlags, MethodAttributeFlag::LvalueRef);
+			retFlags = util::BitOr(retFlags, FunctionAttributeFlag::LvalueRef);
 		}
 
 		if constexpr (IsFunctionRvalueValue<T> == true)
 		{
-			retFlags = util::BitOr(retFlags, MethodAttributeFlag::RvalueRef);
+			retFlags = util::BitOr(retFlags, FunctionAttributeFlag::RvalueRef);
 		}
 
 		if constexpr (IsFunctionNoexceptValue<T> == true)
 		{
-			retFlags = util::BitOr(retFlags, MethodAttributeFlag::Noexcept);
+			retFlags = util::BitOr(retFlags, FunctionAttributeFlag::Noexcept);
 		}
 
 		return retFlags;

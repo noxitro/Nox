@@ -15,9 +15,9 @@ namespace nox::memory
 
 	public:
 		// デフォルトコンストラクタ、コピーコンストラクタ、ムーブコンストラクタ
-		inline	constexpr StlAllocateAdapter()noexcept = default;
-		inline	constexpr explicit StlAllocateAdapter(const StlAllocateAdapter&)noexcept {}
-		inline	constexpr explicit StlAllocateAdapter(const StlAllocateAdapter&&)noexcept {}
+		inline	constexpr StlAllocateAdapter()noexcept {}
+		inline	constexpr StlAllocateAdapter(const StlAllocateAdapter&)noexcept {}
+		inline	constexpr StlAllocateAdapter(const StlAllocateAdapter&& )noexcept {}
 		inline ~StlAllocateAdapter()noexcept = default;
 
 		// 別のテンプレート実引数から生成するためのコンストラクタ

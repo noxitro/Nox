@@ -167,7 +167,19 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="os\detail\atomic_x64.h">
+    <ClInclude Include="os\atomic.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="os\detail\atomic_win64.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="os\detail\mutex_base.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="os\detail\thread_base.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -179,15 +191,23 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="os\mutex_x64.h">
+    <ClInclude Include="os\detail\mutex_x64.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="os\os.h">
+    <ClInclude Include="os\os_definition.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="os\x64.h">
+    <ClInclude Include="os\os_utility.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="os\thread.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="os\windows.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -385,7 +405,15 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="os\detail\atomic_x64.cpp">
+    <ClCompile Include="os\detail\atomic_win64.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="os\detail\mutex_base.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="os\detail\thread_base.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -393,11 +421,7 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="os\mutex.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="os\mutex_x64.cpp">
+    <ClCompile Include="os\detail\mutex_x64.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -405,7 +429,15 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="os\x64.cpp">
+    <ClCompile Include="os\os_definition.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="os\os_utility.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="os\windows.cpp">
       <SubType>
       </SubType>
     </ClCompile>

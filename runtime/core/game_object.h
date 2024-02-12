@@ -13,5 +13,9 @@ namespace nox
 	{
 		NOX_DECLARE_MANAGED_OBJECT(GameObject, ManagedObject);
 	public:
+
+	private:
+		/// @brief 名前
+		String name_;
 	};
 }

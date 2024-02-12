@@ -13,6 +13,17 @@ namespace nox
 		NOX_DECLARE_MANAGED_OBJECT(ManagedObject, Object);
 
 	public:
+		void	AddRef();
+		void	ReleaseRef();
 
+	protected:
+		ManagedObject();
+		~ManagedObject();
+
+	private:
+		/// @brief 参照カウンタ
+		int32 ref_count_;
 	};
+
+	
 }

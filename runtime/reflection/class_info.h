@@ -6,7 +6,7 @@
 namespace nox::reflection
 {
 	//	前方宣言
-	class MethodInfo;
+	class FunctionInfo;
 	class FieldInfo;
 	class EnumInfo;
 
@@ -15,10 +15,10 @@ namespace nox::reflection
 	{
 	public:
 #pragma region アクセサ
-		[[nodiscard]] inline	constexpr	std::u8string_view GetName()const noexcept { return name_; }
-		[[nodiscard]] inline	constexpr	std::u8string_view GetFullName()const noexcept { return fullname_; }
-		[[nodiscard]] inline	constexpr	std::u8string_view GetNamespace()const noexcept { return namespace_; }
-		[[nodiscard]] inline	constexpr	std::uint32_t GetNamespaceID()const noexcept { return util::crc32(namespace_); }
+		[[nodiscard]] inline	constexpr	ReflectionStringView GetName()const noexcept { return name_; }
+		[[nodiscard]] inline	constexpr	ReflectionStringView GetFullName()const noexcept { return fullname_; }
+		[[nodiscard]] inline	constexpr	ReflectionStringView GetNamespace()const noexcept { return namespace_; }
+		[[nodiscard]] inline	constexpr	std::uint32_t GetNamespaceID()const noexcept { return util::Crc32(namespace_); }
 
 
 		[[nodiscard]] inline	constexpr	const Type& GetType()const noexcept { return type_; }
@@ -67,13 +67,13 @@ namespace nox::reflection
 		inline constexpr void operator !=(const ClassInfo&&)noexcept = delete;
 	private:
 		/// @brief 名前
-		std::u8string_view name_;
+		ReflectionStringView name_;
 
 		/// @brief フルネーム
-		std::u8string_view fullname_;
+		ReflectionStringView fullname_;
 
 		/// @brief 名前空間
-		std::u8string_view namespace_;
+		ReflectionStringView namespace_;
 
 		/// @brief 自身のタイプ
 		const Type& type_;
@@ -91,7 +91,7 @@ namespace nox::reflection
 		const class FieldInfo* const* field_ptr_table_;
 
 		/// @brief 関数情報ポインタテーブル
-		const class MethodInfo* const* method_ptr_table_;
+		const class FunctionInfo* const* function_ptr_table_;
 
 		/// @brief 内部クラステーブル
 		const class ClassInfo* const* internal_class_ptr_table_;
@@ -109,7 +109,7 @@ namespace nox::reflection
 		std::uint8_t field_length_;
 
 		/// @brief 関数テーブルの長さ
-		std::uint8_t method_length_;
+		std::uint8_t function_length_;
 
 		/// @brief 内部クラスの長さ
 		std::uint8_t internal_class_length_;

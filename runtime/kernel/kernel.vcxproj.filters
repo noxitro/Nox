@@ -105,7 +105,7 @@
     <ClInclude Include="type_traits\field_signature.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="os\detail\atomic_x64.h">
+    <ClInclude Include="os\detail\atomic_win64.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="os\detail\win64.h">
@@ -123,16 +123,13 @@
     <ClInclude Include="if\convert_string.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="os\mutex_x64.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="os\os.h">
+    <ClInclude Include="os\detail\mutex_x64.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="os\mutex.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="os\x64.h">
+    <ClInclude Include="os\windows.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="if\function.h">
@@ -178,6 +175,24 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="if\unicode_converter.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="os\detail\mutex_base.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="os\detail\thread_base.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="os\os_utility.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="os\os_definition.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="os\thread.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="os\atomic.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
@@ -269,7 +284,7 @@
     <ClCompile Include="type_traits\field_signature.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="os\detail\atomic_x64.cpp">
+    <ClCompile Include="os\detail\atomic_win64.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="os\detail\win64.cpp">
@@ -287,16 +302,13 @@
     <ClCompile Include="if\convert_string.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="os\mutex_x64.cpp">
+    <ClCompile Include="os\detail\mutex_x64.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="os\os.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="os\mutex.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="os\x64.cpp">
+    <ClCompile Include="os\windows.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="if\function.cpp">
@@ -342,6 +354,18 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="if\unicode_converter.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="os\detail\mutex_base.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="os\detail\thread_base.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="os\os_utility.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="os\os_definition.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

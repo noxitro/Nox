@@ -5,8 +5,8 @@
 
 #include	"../memory/stl_allocate_adapter.h"
 
-#if NOX_WIN64
-#include	"../os/x64.h"
+#if NOX_WINDOWS
+#include	"../os/windows.h"
 #endif // NOX_WIN64
 
 
@@ -26,7 +26,7 @@ void	debug::detail::TraceDirect(LogCategory log_category, std::u16string_view ca
 
 
 	//	コンソールへの出力
-#if NOX_WIN64
+#if NOX_WINDOWS
 	//	デバッグウィンドウに出力
 	::OutputDebugStringW(converted_str);
 #endif // NOX_WIN64

@@ -15,7 +15,11 @@
 #include	"if/singleton.h"
 #include	"memory/memory.h"
 #include	"memory/memory_util.h"
-#include	"os/os.h"
+
+//	os
+#include	"os/atomic.h"
+#include	"os/mutex.h"
+#include	"os/thread.h"
 
 #include	"if/function.h"
 #include	"if/log_trace.h"
@@ -30,4 +34,5 @@
 #include	"if/intrusive_ptr.h"
 
 #include	"preprocessor/repeat.h"
+#include	"if/delegate.h"
 

@@ -1,7 +1,5 @@
 ﻿#pragma once
-#include	"../if/basic_type.h"
 #include	"../if/basic_definition.h"
-
 #include	"memory_definition.h"
 
 namespace nox::memory

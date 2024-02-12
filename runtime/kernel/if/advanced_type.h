@@ -1,22 +1,23 @@
 ﻿#pragma once
 
 #include	"basic_type.h"
-#include	<source_location>
-#include	<concepts>
 #include	<array>
-#include	<string_view>
-#include	<string>
-#include	<vector>
-#include    <span>
-#include	<list>
+#include	<bitset>
+#include	<concepts>
 #include	<deque>
+#include	<functional>
+#include	<list>
+#include	<map>
 #include	<queue>
 #include	<set>
-#include	<map>
-#include	<unordered_map>
-#include	<functional>
+#include	<source_location>
+#include    <span>
 #include	<stack>
-#include	<bitset>
+#include	<string>
+#include	<string_view>
+#include	<unordered_map>
+#include	<vector>
+#include	<utility>
 
 #include	"../memory/stl_allocate_adapter.h"
 
@@ -44,8 +45,14 @@ namespace nox
 	using BasicString = std::basic_string< ValueType, std::char_traits<ValueType>, memory::StlAllocateAdapter<ValueType>>;
 
 	using CString = BasicString<char>;
+
+	/// @brief Narrow String
+	using NString = BasicString<char>;
+
+	/// @brief Wide String
 	using WString = BasicString<wchar_t>;
 
+	/// @brief UTF8 String
 	using U8String = BasicString<char8>;
 	using U16String = BasicString<char16>;
 	using U32String = BasicString<char32>;

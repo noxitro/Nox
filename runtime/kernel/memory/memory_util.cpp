@@ -3,8 +3,8 @@
 #include	"stdafx.h"
 #include	"memory_util.h"
 
-#if NOX_WIN64
-#include	"../os/x64.h"
+#if NOX_WINDOWS
+#include	"../os/windows.h"
 #endif // NOX_WIN64
 
 
@@ -15,7 +15,7 @@ using namespace nox;
 
 void	memory::detail::ZeroMemImpl(void* ptr, size_t size)
 {
-#if NOX_WIN64
+#if NOX_WINDOWS
 	::SecureZeroMemory(ptr, size);
 #else
 	std::memset(ptr, 0, size);

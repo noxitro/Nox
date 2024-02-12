@@ -22,34 +22,28 @@ namespace nox
 			void	Assert(RuntimeAssertErrorType errorType, std::u32string_view message, const std::source_location& source_location)noexcept(false);
 		}
 
-		inline	void	Assert(RuntimeAssertErrorType errorType, const bool expression, std::u16string_view message, const std::source_location location = std::source_location::current())
+		inline	void	Assert(RuntimeAssertErrorType errorType, std::u16string_view message, const std::source_location location = std::source_location::current())noexcept(false)
 		{
-			if (!expression)
-			{
-				debug::detail::Assert(errorType, message, location);
-			}
+			debug::detail::Assert(errorType, message, location);
 		}
 
-		inline	void	Assert(const bool expression, std::u16string_view message, const std::source_location location = std::source_location::current())
+		inline	void	Assert(std::u16string_view message, const std::source_location location = std::source_location::current())noexcept(false)
 		{
-			if (!expression)
-			{
-				debug::detail::Assert(RuntimeAssertErrorType::Other, message, location);
-			}
+			debug::detail::Assert(RuntimeAssertErrorType::Other, message, location);
 		}
 
-		inline	void	Assert(const bool expression, std::u32string_view message, const std::source_location location = std::source_location::current())
+		inline	void	Assert(std::u32string_view message, const std::source_location location = std::source_location::current())noexcept(false)
 		{
-			if (!expression)
-			{
-				debug::detail::Assert(RuntimeAssertErrorType::Other, message, location);
-			}
+			debug::detail::Assert(RuntimeAssertErrorType::Other, message, location);
 		}
 	}
 }
 
 #if NOX_DEBUG || NOX_RELEASE
-#define	NOX_ASSERT(...) ::nox::debug::Assert(__VA_ARGS__)
+#define	NOX_ASSERT(expression, ...) \
+	static_assert(std::is_same_v<decltype(expression), bool>, "expression is not bool"); \
+	(void)((!!(expression)) || (::nox::debug::Assert(__VA_ARGS__), 0)); \
+	__analysis_assume(expression)
 #else
 #define	NOX_ASSERT(...) 
 #endif // NOX_DEBUG || NOX_RELEASE

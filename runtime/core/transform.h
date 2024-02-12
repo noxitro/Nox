@@ -11,7 +11,7 @@ namespace nox
 	class Transform : public Component
 	{
 	public:
-		inline	constexpr	Transform()noexcept :
+		inline	Transform()noexcept :
 			local_position_(vector::Vec3Zero) ,
 			local_scale_(vector::Vec3Zero) 
 		{}

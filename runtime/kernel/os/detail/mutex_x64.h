@@ -1,21 +1,21 @@
 ﻿///	@file	mutex_x64.h
 ///	@brief	mutex_x64
 #pragma once
-#include	"x64.h"
-#include	"mutex.h"
+#include	"../windows.h"
+#include	"mutex_base.h"
 
 namespace nox::os::detail
 {
-	class MutexX64 : public MutexBase
+	class MutexWin64 final: public MutexBase
 	{
 	public:
-		inline	MutexX64() :
+		inline	MutexWin64() :
 			criticalSection_(::CRITICAL_SECTION())
 		{
 			::InitializeCriticalSection(&criticalSection_);
 		}
 
-		inline ~MutexX64()
+		inline ~MutexWin64()
 		{
 			::DeleteCriticalSection(&criticalSection_);
 		}

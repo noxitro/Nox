@@ -5,9 +5,34 @@
 
 namespace nox::reflection
 {
+#if defined(NOX_REFLECTION_BUILD_CHAR)
+	/// @brief リフレクションシステムで扱う文字の型
+	using ReflectionCharType = char;
+#elif	defined(NOX_REFLECTION_BUILD_WCHAR)
+	/// @brief リフレクションシステムで扱う文字の型
+	using ReflectionCharType = wchar_t;
+#elif	defined(NOX_REFLECTION_BUILD_CHAR8)
+	/// @brief リフレクションシステムで扱う文字の型
+	using ReflectionCharType = char8_t;
+#elif	defined(NOX_REFLECTION_BUILD_CHAR16)
+	/// @brief リフレクションシステムで扱う文字の型
+	using ReflectionCharType = char16_t;
+#elif	defined(NOX_REFLECTION_BUILD_CHAR32)
+	/// @brief リフレクションシステムで扱う文字の型
 	using ReflectionCharType = char32_t;
-	using ReflectionStringView = std::basic_string_view<char32_t>;
+#else
+	/// @brief リフレクションシステムで扱う文字の型
+	using ReflectionCharType = char32_t;
+#endif // 
 
+#undef	NOX_REFLECTION_BUILD_CHAR
+#undef	NOX_REFLECTION_BUILD_WCHAR
+#undef	NOX_REFLECTION_BUILD_CHAR8
+#undef	NOX_REFLECTION_BUILD_CHAR16
+#undef	NOX_REFLECTION_BUILD_CHAR32
+
+	/// @brief リフレクションシステムで扱うstring_viewの型
+	using ReflectionStringView = std::basic_string_view<ReflectionCharType>;
 
 	/// @brief タイプ種別
 	enum class TypeKind : std::uint8_t
@@ -119,7 +144,7 @@ namespace nox::reflection
 		/**
 		 * @brief 関数
 		*/
-		Function,
+		Delegate,
 
 		/**
 		 * @brief メンバ関数
@@ -139,9 +164,7 @@ namespace nox::reflection
 		_Max
 	};
 
-	/**
-	 * @brief タイプ情報種別
-	*/
+	/// @brief タイプ情報種別
 	enum class TypeInfoKind : std::uint8_t
 	{
 		/**
@@ -166,9 +189,7 @@ namespace nox::reflection
 		Global,
 	};
 
-	/**
-	 * @brief タイプ属性
-	*/
+	/// @brief タイプ属性
 	enum class TypeAttributeFlag : std::uint16_t
 	{
 		None = 0,
@@ -239,9 +260,7 @@ namespace nox::reflection
 		ConstRvalueReference = 1 << 12,
 	};
 
-	/**
-	 * @brief 型修飾子
-	*/
+	/// @brief 型修飾子
 	enum class TypeQualifierFlag : std::uint8_t
 	{
 		None = 0,
@@ -260,9 +279,7 @@ namespace nox::reflection
 		Reference = 1 << 2
 	};
 
-	/**
-	 * @brief アクセスレベル
-	*/
+	/// @brief アクセスレベル
 	enum class AccessLevel : std::uint8_t
 	{
 		/**
@@ -282,7 +299,7 @@ namespace nox::reflection
 	};
 
 	/// @brief 関数属性情報
-	enum class MethodAttributeFlag : std::uint16_t
+	enum class FunctionAttributeFlag : std::uint16_t
 	{
 		/// @brief 無し
 		None = 0,
@@ -329,10 +346,8 @@ namespace nox::reflection
 		ConstructorNewArray = 1 << 13
 	};
 
-	/**
-	 * @brief メソッドの種類
-	*/
-	enum class MethodType : std::uint8_t
+	/// @brief メソッドの種類
+	enum class FunctionType : std::uint8_t
 	{
 		/**
 		 * @brief 通常の関数
@@ -345,9 +360,7 @@ namespace nox::reflection
 		Constructor,
 	};
 
-	/**
-	 * @brief フィールド属性情報
-	*/
+	/// @brief フィールド属性情報
 	enum class FieldAttributeFlag : std::uint8_t
 	{
 		None = 0,
@@ -358,9 +371,7 @@ namespace nox::reflection
 		Member = 1 << 0,
 	};
 
-	/**
-	 * @brief 修飾子識別
-	*/
+	/// @brief 修飾子識別
 	enum class Qualifier : std::uint16_t
 	{
 		None = 0,

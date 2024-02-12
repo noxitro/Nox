@@ -8,6 +8,30 @@
 
 namespace nox::unicode
 {
+#pragma region cstring
+	nox::NString	ConvertNString(const char32* str, size_t length);
+
+	template<class T> requires(
+		std::is_invocable_v<decltype(static_cast<nox::NString(*)(const T*, size_t)>(nox::unicode::ConvertNString)), const T*, size_t>
+		)
+		inline nox::NString	ConvertNString(std::basic_string_view<T> str)
+	{
+		return ConvertNString(str.data(), str.size());
+	}
+
+	template<class T> requires(
+		std::is_invocable_v<decltype(static_cast<nox::NString(*)(const T*, size_t)>(nox::unicode::ConvertNString)), const T*, size_t>
+		)
+		inline nox::NString	ConvertNString(const nox::BasicString<T>& str)
+	{
+		return ConvertNString(str.c_str(), str.size());
+	}
+#pragma endregion
+
+#pragma region char32
+#pragma endregion
+
+
 #pragma region wstring
 
 	bool	ConvertWString(std::span<wchar_t> buffer, const c8* from, size_t length);
@@ -39,7 +63,7 @@ namespace nox::unicode
 	template<class T> requires(
 		std::is_invocable_v<decltype(static_cast<nox::WString(*)(const T*, size_t)>(nox::unicode::ConvertWString)), const T*, size_t>
 		)
-		inline nox::WString	ConvertWString(std::basic_string<T> str)
+		inline nox::WString	ConvertWString(const nox::BasicString<T>& str)
 	{
 		return ConvertWString(str.c_str(), str.size());
 	}

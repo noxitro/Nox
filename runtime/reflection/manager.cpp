@@ -6,7 +6,7 @@
 #include	"class_info.h"
 #include	"enum_info.h"
 #include	"field_info.h"
-#include	"method_info.h"
+#include	"function_info.h"
 
 using namespace nox;
 using namespace nox::reflection;
@@ -62,7 +62,7 @@ const class EnumInfo* Reflection::FindEnumInfoFromNameHash(std::uint32_t namehas
 
 void Reflection::Register(const class ClassInfo& data)
 {
-	NOX_CONDITINAL_DEVELOP(nox::debug::Assert(class_data_map_.contains(data.GetTypeID()), u""));
+	NOX_ASSERT(class_data_map_.contains(data.GetTypeID()) == true, u"");
 
 	class_data_map_.emplace(data.GetTypeID(), ClassData{ .class_info_ptr = &data });
 
@@ -124,7 +124,7 @@ void Reflection::Register(const EnumInfo& data)
 
 void Reflection::Unregister(const EnumInfo& data)
 {
-
+	enum_info_map_.erase(data.GetTypeID());
 }
 
 void Reflection::Register(const FieldInfo& data)
@@ -137,11 +137,11 @@ void Reflection::Unregister(const FieldInfo& data)
 
 }
 
-void Reflection::Register(const MethodInfo& data)
+void Reflection::Register(const FunctionInfo& data)
 {
 }
 
-void Reflection::Unregister(const MethodInfo& data)
+void Reflection::Unregister(const FunctionInfo& data)
 {
 
 }

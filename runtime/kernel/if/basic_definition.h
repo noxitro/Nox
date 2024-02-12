@@ -13,9 +13,11 @@ namespace nox
 #if _WIN64
 ///	@brief X64環境か
 #define	NOX_WIN64 1
+#define	NOX_WINDOWS 1
 #else
 ///	@brief X64環境か
 #define	NOX_WIN64 0
+#define	NOX_WINDOWS 0
 #endif // _WIN64
 
 

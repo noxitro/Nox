@@ -1,5 +1,5 @@
-﻿///	@file	method_info.h
-///	@brief	method_info
+﻿///	@file	function.h
+///	@brief	function
 #pragma once
 #include	"type.h"
 
@@ -9,7 +9,7 @@ namespace nox::reflection
 	class ReflectionObject;
 
 	/// @brief 関数の1引数情報
-	class MethodParameter
+	class FunctionArgParameter
 	{
 	public:
 		/**
@@ -17,8 +17,8 @@ namespace nox::reflection
 		 * @param name 引数名
 		 * @param type 型情報
 		*/
-		inline constexpr explicit MethodParameter(
-			const std::u8string_view name,
+		inline constexpr explicit FunctionArgParameter(
+			const ReflectionStringView name,
 			const class ReflectionObject*const* attribute_ptr_table,
 			const std::uint8_t attribute_length,
 			const reflection::detail::TypeChunk& _type_chunk,
@@ -34,13 +34,13 @@ namespace nox::reflection
 		/**
 		 * @brief デストラクタ
 		*/
-		inline constexpr ~MethodParameter()noexcept = default;
+		inline constexpr ~FunctionArgParameter()noexcept = default;
 
 		/**
 		 * @brief 引数名を取得
 		 * @return 引数名
 		*/
-		[[nodiscard]] inline	constexpr const std::u8string_view GetName()const noexcept { return name_; }
+		[[nodiscard]] inline	constexpr const ReflectionStringView GetName()const noexcept { return name_; }
 
 		/**
 		 * @brief タイプ情報を取得
@@ -54,7 +54,7 @@ namespace nox::reflection
 
 	private:
 		/// @brief 引数名
-		const std::u8string_view name_;
+		const ReflectionStringView name_;
 
 		/// @brief タイプ情報
 		const reflection::detail::TypeChunk& type_chunk_;
@@ -72,7 +72,7 @@ namespace nox::reflection
 	};
 
 	/// @brief 関数情報
-	class MethodInfo
+	class FunctionInfo
 	{
 	protected:
 		/// @brief 関数呼び出し用の引数情報
@@ -136,19 +136,19 @@ namespace nox::reflection
 		};
 
 	protected:
-		inline	constexpr	explicit MethodInfo(
-			std::u8string_view	name,
-			std::u8string_view fullname,
-			std::u8string_view	_namespace,
+		inline	constexpr	explicit FunctionInfo(
+			ReflectionStringView	name,
+			ReflectionStringView fullname,
+			ReflectionStringView	_namespace,
 			const class ReflectionObject* const* attribute_ptr_table,
 			std::uint8_t	attribute_length,
-			const MethodParameter* method_param_table,
-			std::uint8_t	method_param_length,
+			const FunctionArgParameter* function_param_table,
+			std::uint8_t	function_param_length,
 			const Type& owner_class_type,
 			const reflection::detail::TypeChunk& result_type_chunk,
 			AccessLevel access_level,
-			MethodType	method_type,
-			MethodAttributeFlag method_attribute_flags
+			FunctionType	method_type,
+			FunctionAttributeFlag method_attribute_flags
 			)noexcept :
 			name_(name),
 			fullname_(fullname),
@@ -156,9 +156,9 @@ namespace nox::reflection
 			owner_class_type_(owner_class_type),
 			result_type_chunk_(result_type_chunk),
 			attribute_ptr_table_(attribute_ptr_table),
-			method_param_table_(method_param_table),
+			function_param_table_(function_param_table),
 			attribute_length_(attribute_length),
-			method_param_length_(method_param_length),
+			function_param_length_(function_param_length),
 			access_level_(access_level),
 			method_attribute_flags_(method_attribute_flags),
 			method_type_(method_type) {}
@@ -166,15 +166,14 @@ namespace nox::reflection
 	public:
 #pragma region アクセサ
 
-		[[nodiscard]] inline	constexpr	std::u8string_view GetName()const noexcept { return name_; }
-		[[nodiscard]] inline	constexpr	std::u8string_view GetFullName()const noexcept { return fullname_; }
-		[[nodiscard]] inline	constexpr	std::u8string_view GetNamespace()const noexcept { return namespace_; }
-		[[nodiscard]] inline	constexpr	std::uint32_t GetNamespaceID()const noexcept { return util::crc32(namespace_); }
+		[[nodiscard]] inline	constexpr	ReflectionStringView GetName()const noexcept { return name_; }
+		[[nodiscard]] inline	constexpr	ReflectionStringView GetFullName()const noexcept { return fullname_; }
+		[[nodiscard]] inline	constexpr	ReflectionStringView GetNamespace()const noexcept { return namespace_; }
 		[[nodiscard]] inline	constexpr	AccessLevel GetAccessLevel()const noexcept { return access_level_; }
 
-		[[nodiscard]] inline	constexpr	std::span<const MethodParameter*const> GetMethodParamList()const noexcept { return std::span(&method_param_table_, method_param_length_); }
-		[[nodiscard]] inline	constexpr	std::uint8_t GetMethodParamLength()const noexcept { return method_param_length_; }
-		[[nodiscard]] inline	constexpr	const MethodParameter& GetMethodParam(std::uint8_t index)const noexcept { return *GetMethodParamList()[index]; }
+		[[nodiscard]] inline	constexpr	std::span<const FunctionArgParameter*const> GetFunctionParamList()const noexcept { return std::span(&function_param_table_, function_param_length_); }
+		[[nodiscard]] inline	constexpr	std::uint8_t GetFunctionParamLength()const noexcept { return function_param_length_; }
+		[[nodiscard]] inline	constexpr	const FunctionArgParameter& GetFunctionParam(std::uint8_t index)const noexcept { return *GetFunctionParamList()[index]; }
 
 		[[nodiscard]] inline	constexpr	const Type& GetOwnerType()const noexcept { return owner_class_type_; }
 		[[nodiscard]] inline	constexpr	const Type& GetResultType()const noexcept { return result_type_chunk_.type; }
@@ -227,7 +226,7 @@ namespace nox::reflection
 			for (std::int32_t i = 0; i < static_cast<std::int32_t>(argument_list.size()); ++i)
 			{
 				//	型チェック
-				if (argument_list[i].type_chunk.IsConvertible(method_param_table_[i].GetTypeChunk()) == false)
+				if (argument_list[i].type_chunk.IsConvertible(function_param_table_[i].GetTypeChunk()) == false)
 				{
 					NOX_ASSERT(false, u"型チェックに失敗しました");
 				}
@@ -237,23 +236,23 @@ namespace nox::reflection
 			if constexpr (std::is_void_v<FunctionReturnType<Func>>)
 			{
 				//	戻り値なし
-				std::invoke(func, MethodInfo::ToInvokeParam<std::tuple_element_t<Indices, FunctionArgsType<Func>>>(argument_list[Indices])...);
+				std::invoke(func, FunctionInfo::ToInvokeParam<std::tuple_element_t<Indices, FunctionArgsType<Func>>>(argument_list[Indices])...);
 			}
 			else
 			{
-				return std::invoke(func, MethodInfo::ToInvokeParam<std::tuple_element_t<Indices, FunctionArgsType<Func>>>(argument_list[Indices])...);
+				return std::invoke(func, FunctionInfo::ToInvokeParam<std::tuple_element_t<Indices, FunctionArgsType<Func>>>(argument_list[Indices])...);
 			}
 		}
 	protected:
 
 		/// @brief 関数名
-		std::u8string_view	name_;
+		ReflectionStringView	name_;
 
 		/// @brief フルネーム
-		std::u8string_view	fullname_;
+		ReflectionStringView	fullname_;
 
 		/// @brief 名前空間
-		std::u8string_view	namespace_;
+		ReflectionStringView	namespace_;
 
 		/// @brief クラス情報
 		const Type& owner_class_type_;
@@ -265,54 +264,54 @@ namespace nox::reflection
 		const class ReflectionObject* const* attribute_ptr_table_;
 
 		/// @brief 引数テーブル
-		const MethodParameter* method_param_table_;
+		const FunctionArgParameter* function_param_table_;
 
 		/// @brief 属性テーブルの長さ
 		std::uint8_t attribute_length_;
 
 		/// @brief 引数の数
-		std::uint8_t method_param_length_;
+		std::uint8_t function_param_length_;
 
 		/// @brief アクセスレベル
 		AccessLevel access_level_;
 
 		/// @brief 関数の属性
-		MethodAttributeFlag	method_attribute_flags_;
+		FunctionAttributeFlag	method_attribute_flags_;
 
 		/// @brief 関数の種類
-		MethodType	method_type_;
+		FunctionType	method_type_;
 
 	};
 
 	namespace detail
 	{
 		template<concepts::GlobalFunctionPointer... _Functions>
-		class MethodInfoImpl : public MethodInfo
+		class FunctionInfoImpl : public FunctionInfo
 		{
 		public:
-			inline	constexpr	explicit	MethodInfoImpl(
-				std::u8string_view	name,
-				std::u8string_view fullname,
-				std::u8string_view	_namespace,
+			inline	constexpr	explicit	FunctionInfoImpl(
+				ReflectionStringView	name,
+				ReflectionStringView fullname,
+				ReflectionStringView	_namespace,
 				const class ReflectionObject* const* attribute_ptr_table,
 				std::uint8_t	attribute_length,
-				const MethodParameter* method_param_table,
-				std::uint8_t	method_param_length,
+				const FunctionArgParameter* function_param_table,
+				std::uint8_t	function_param_length,
 				const Type& owner_class_type,
 				const reflection::detail::TypeChunk& result_type_chunk,
 				AccessLevel access_level,
-				MethodType	method_type,
-				MethodAttributeFlag method_attribute_flags,
+				FunctionType	method_type,
+				FunctionAttributeFlag method_attribute_flags,
 				_Functions... functions
 			)noexcept :
-				MethodInfo(
+				FunctionInfo(
 					name,
 					fullname,
 					_namespace,
 					attribute_ptr_table,
 					attribute_length,
-					method_param_table,
-					method_param_length,
+					function_param_table,
+					function_param_length,
 					owner_class_type,
 					result_type_chunk,
 					access_level,
@@ -327,7 +326,7 @@ namespace nox::reflection
 			inline constexpr	void* TryInvokeImpl(void* result, const reflection::detail::TypeChunk& result_type, const std::span<InvokeArgument>& argument_list)const override
 			{
 				//	引数数チェック
-				if (static_cast<std::uint8_t>(argument_list.size()) > GetMethodParamLength())
+				if (static_cast<std::uint8_t>(argument_list.size()) > GetFunctionParamLength())
 				{
 					NOX_ASSERT(false, u"引数が一致しません");
 					return result;
@@ -347,18 +346,18 @@ namespace nox::reflection
 					{
 						if constexpr (std::is_void_v< FunctionReturnType<_F>> == true)
 						{
-							MethodInfo::TryInvokeImpl_Private(func, argument_list, std::make_index_sequence<std::tuple_size_v<FunctionArgsType<_F>>>());
+							FunctionInfo::TryInvokeImpl_Private(func, argument_list, std::make_index_sequence<std::tuple_size_v<FunctionArgsType<_F>>>());
 						}
 						else
 						{
 							if (result != nullptr)
 							{
 								*reinterpret_cast<FunctionReturnType<_F>*>(result) =
-									MethodInfo::TryInvokeImpl_Private(func, argument_list, std::make_index_sequence<std::tuple_size_v<FunctionArgsType<_F>>>());
+									FunctionInfo::TryInvokeImpl_Private(func, argument_list, std::make_index_sequence<std::tuple_size_v<FunctionArgsType<_F>>>());
 							}
 							else
 							{
-								MethodInfo::TryInvokeImpl_Private(func, argument_list, std::make_index_sequence<std::tuple_size_v<FunctionArgsType<_F>>>());
+								FunctionInfo::TryInvokeImpl_Private(func, argument_list, std::make_index_sequence<std::tuple_size_v<FunctionArgsType<_F>>>());
 							}
 						}
 
@@ -392,39 +391,39 @@ namespace nox::reflection
 		};
 
 		template<class T>
-		inline	consteval	MethodParameter	CreateMethodParameter(
-			std::u8string_view name,
+		inline	consteval	FunctionArgParameter	CreateMethodParameter(
+			ReflectionStringView name,
 			const class ReflectionObject* const* attribute_ptr_table,
 			std::uint8_t	attribute_length,
 			bool hasDefaultValue)noexcept
 		{
-			return MethodParameter(name, attribute_ptr_table, attribute_length, reflection::detail::GetTypeChunk<T>(), hasDefaultValue);
+			return FunctionArgParameter(name, attribute_ptr_table, attribute_length, reflection::detail::GetTypeChunk<T>(), hasDefaultValue);
 		}
 
 		template<class RawFunction, class... _Functions>
 		inline	constexpr	auto	CreateMethodInfo(
-			std::u8string_view	name,
-			std::u8string_view	fullname,
-			std::u8string_view	_namespace,
+			ReflectionStringView	name,
+			ReflectionStringView	fullname,
+			ReflectionStringView	_namespace,
 			AccessLevel access_level,
 			const class ReflectionObject* const* attribute_ptr_table,
 			std::uint8_t	attribute_length,
-			const MethodParameter* method_param_table,
-			std::uint8_t	method_param_length,
+			const FunctionArgParameter* function_param_table,
+			std::uint8_t	function_param_length,
 			bool is_constructor,
 			bool is_constexpr,
 			_Functions... functions
 		)noexcept
 		{
-			MethodAttributeFlag method_attribute_flags = GetMethodAttributeFlags<RawFunction>();
+			FunctionAttributeFlag method_attribute_flags = GetFunctionAttributeFlags<RawFunction>();
 			if (is_constexpr == true)
 			{
-				method_attribute_flags = util::BitOr(method_attribute_flags, MethodAttributeFlag::Constexpr);
+				method_attribute_flags = util::BitOr(method_attribute_flags, FunctionAttributeFlag::Constexpr);
 			}
 
 			if constexpr (std::is_member_function_pointer_v<RawFunction> == true)
 			{
-				return MethodInfoImpl(
+				return FunctionInfoImpl(
 					name,
 					fullname,
 					_namespace,
@@ -432,20 +431,20 @@ namespace nox::reflection
 					attribute_length,
 				
 					//	method param
-					method_param_table,
-					method_param_length,
+					function_param_table,
+					function_param_length,
 
 					Typeof<FunctionClassType<RawFunction>>(),
 					reflection::detail::GetTypeChunk<FunctionReturnType<RawFunction>>(),
 					access_level,
-					is_constructor == true ? MethodType::Constructor : MethodType::Default,
+					is_constructor == true ? FunctionType::Constructor : FunctionType::Default,
 					method_attribute_flags,
 					functions...
 				);
 			}
 			else
 			{
-				return MethodInfoImpl(
+				return FunctionInfoImpl(
 					name,
 					fullname,
 					_namespace,
@@ -453,13 +452,13 @@ namespace nox::reflection
 					attribute_length,
 					
 					//	method param
-					method_param_table,
-					method_param_length,
+					function_param_table,
+					function_param_length,
 
 					InvalidType,
 					reflection::detail::GetTypeChunk<FunctionReturnType<RawFunction>>(),
 					access_level,
-					is_constructor == true ? MethodType::Constructor : MethodType::Default,
+					is_constructor == true ? FunctionType::Constructor : FunctionType::Default,
 					method_attribute_flags,
 					functions...
 				);

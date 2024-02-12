@@ -3,7 +3,7 @@
 #include	"stdafx.h"
 #include	"class_info.h"
 
-#include	"method_info.h"
+#include	"function_info.h"
 #include	"field_info.h"
 using namespace nox;
 using namespace nox::reflection;

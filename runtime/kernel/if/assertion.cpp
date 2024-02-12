@@ -7,7 +7,7 @@
 #include	<stacktrace>
 
 #include	"../preprocessor/util.h"
-#include	"os/os.h"
+#include	"../os/mutex.h"
 #include	"../memory/stl_allocate_adapter.h"
 #include	"unicode_converter.h"
 
@@ -18,7 +18,7 @@ namespace
 {
 	os::Mutex kMutex;
 
-	void	AssertImpl(RuntimeAssertErrorType errorType, std::wstring_view message, const std::source_location& source_location)
+	void	AssertImpl(RuntimeAssertErrorType errorType, std::wstring_view message, const std::source_location& source_location)noexcept(false)
 	{
 		NOX_LOCAL_SCOPE(os::ScopedLock(kMutex));
 

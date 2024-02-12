@@ -19,7 +19,7 @@ namespace nox::reflection
 
 		inline constexpr explicit EnumVariableInfo(
 			const std::int8_t value,
-			const std::u8string_view variableName,
+			const ReflectionStringView variableName,
 			const class ReflectionObject* const* const attributePtrAry,
 			const std::uint8_t attributeLength
 		)noexcept :
@@ -30,7 +30,7 @@ namespace nox::reflection
 
 		inline constexpr explicit EnumVariableInfo(
 			const std::uint8_t value,
-			const std::u8string_view variableName,
+			const ReflectionStringView variableName,
 			const class ReflectionObject* const* const attributePtrAry,
 			const std::uint8_t attributeLength
 		)noexcept :
@@ -41,7 +41,7 @@ namespace nox::reflection
 
 		inline constexpr explicit EnumVariableInfo(
 			const std::int16_t value,
-			const std::u8string_view variableName,
+			const ReflectionStringView variableName,
 			const class ReflectionObject* const* const attributePtrAry,
 			const std::uint8_t attributeLength
 		)noexcept :
@@ -52,7 +52,7 @@ namespace nox::reflection
 
 		inline constexpr explicit EnumVariableInfo(
 			const std::uint16_t value,
-			const std::u8string_view variableName,
+			const ReflectionStringView variableName,
 			const class ReflectionObject* const* const attributePtrAry,
 			const std::uint8_t attributeLength
 		)noexcept :
@@ -63,7 +63,7 @@ namespace nox::reflection
 
 		inline constexpr explicit EnumVariableInfo(
 			const std::int32_t value,
-			const std::u8string_view variableName,
+			const ReflectionStringView variableName,
 			const class ReflectionObject* const* const attributePtrAry,
 			const std::uint8_t attributeLength
 		)noexcept :
@@ -74,7 +74,7 @@ namespace nox::reflection
 
 		inline constexpr explicit EnumVariableInfo(
 			const std::uint32_t value,
-			const std::u8string_view variableName,
+			const ReflectionStringView variableName,
 			const class ReflectionObject* const* const attributePtrAry,
 			const std::uint8_t attributeLength
 		)noexcept :
@@ -85,7 +85,7 @@ namespace nox::reflection
 
 		inline constexpr explicit EnumVariableInfo(
 			const std::int64_t value,
-			const std::u8string_view variableName,
+			const ReflectionStringView variableName,
 			const class ReflectionObject* const* const attributePtrAry,
 			const std::uint8_t attributeLength
 		)noexcept :
@@ -96,7 +96,7 @@ namespace nox::reflection
 
 		inline constexpr explicit EnumVariableInfo(
 			const std::uint64_t value,
-			const std::u8string_view variableName,
+			const ReflectionStringView variableName,
 			const class ReflectionObject* const* const attributePtrAry,
 			const std::uint8_t attributeLength
 		)noexcept :
@@ -107,7 +107,7 @@ namespace nox::reflection
 
 		inline constexpr explicit EnumVariableInfo(
 			const char8_t value,
-			const std::u8string_view variableName,
+			const ReflectionStringView variableName,
 			const class ReflectionObject* const* const attributePtrAry,
 			const std::uint8_t attributeLength
 		)noexcept :
@@ -118,7 +118,7 @@ namespace nox::reflection
 
 		inline constexpr explicit EnumVariableInfo(
 			const char16_t value,
-			const std::u8string_view variableName,
+			const ReflectionStringView variableName,
 			const class ReflectionObject* const* const attributePtrAry,
 			const std::uint8_t attributeLength
 		)noexcept :
@@ -129,7 +129,7 @@ namespace nox::reflection
 
 		inline constexpr explicit EnumVariableInfo(
 			const char32_t value,
-			const std::u8string_view variableName,
+			const ReflectionStringView variableName,
 			const class ReflectionObject* const* const attributePtrAry,
 			const std::uint8_t attributeLength
 		)noexcept :
@@ -140,7 +140,7 @@ namespace nox::reflection
 
 		inline constexpr explicit EnumVariableInfo(
 			const wchar_t value,
-			const std::u8string_view variableName,
+			const ReflectionStringView variableName,
 			const class ReflectionObject* const* const attributePtrAry,
 			const std::uint8_t attributeLength
 		)noexcept :
@@ -151,7 +151,7 @@ namespace nox::reflection
 
 		inline constexpr explicit EnumVariableInfo(
 			const char value,
-			const std::u8string_view variableName,
+			const ReflectionStringView variableName,
 			const class ReflectionObject* const* const attributePtrAry,
 			const std::uint8_t attributeLength
 		)noexcept :
@@ -162,7 +162,7 @@ namespace nox::reflection
 
 		/*inline constexpr explicit EnumVariableInfo(
 			const unsigned char value,
-			const std::u8string_view variableName,
+			const ReflectionStringView variableName,
 			const Attribute* const* const attributePtrAry,
 			const std::uint8_t attributeLength
 		)noexcept :
@@ -173,7 +173,7 @@ namespace nox::reflection
 
 		inline constexpr explicit EnumVariableInfo(
 			const signed char value,
-			const std::u8string_view variableName,
+			const ReflectionStringView variableName,
 			const Attribute* const* const attributePtrAry,
 			const std::uint8_t attributeLength
 		)noexcept :
@@ -184,7 +184,7 @@ namespace nox::reflection
 
 		inline constexpr explicit EnumVariableInfo(
 			const bool value,
-			const std::u8string_view variableName,
+			const ReflectionStringView variableName,
 			const class ReflectionObject* const* const attributePtrAry,
 			const std::uint8_t attributeLength
 		)noexcept :
@@ -197,7 +197,7 @@ namespace nox::reflection
 		 * @brief enum値の名前を取得
 		 * @return 名前
 		*/
-		[[nodiscard]] inline constexpr std::u8string_view GetVariableName()const noexcept { return name_; }
+		[[nodiscard]] inline constexpr ReflectionStringView GetVariableName()const noexcept { return name_; }
 		/**
 		 * @brief 整数型を指定して値を取得
 		 * @return 整数値
@@ -260,7 +260,7 @@ namespace nox::reflection
 		/**
 		 * @brief 名前
 		*/
-		std::u8string_view name_;
+		ReflectionStringView name_;
 
 		/// @brief 属性テーブル
 		const class ReflectionObject* const* attribute_ptr_table_;
@@ -276,9 +276,9 @@ namespace nox::reflection
 		inline constexpr explicit EnumInfo(const EnumInfo&&)noexcept = delete;
 	public:
 		inline constexpr explicit EnumInfo(
-			std::u8string_view name,
-			std::u8string_view fullname,
-			std::u8string_view _namespace,
+			ReflectionStringView name,
+			ReflectionStringView fullname,
+			ReflectionStringView _namespace,
 			const ReflectionObject* const* attribute_ptr_table,
 			std::uint8_t attribute_length,
 			const EnumVariableInfo* const* variable_ptr_table,
@@ -298,17 +298,17 @@ namespace nox::reflection
 		inline	constexpr	const Type& GetType()const noexcept { return type_; }
 		inline	constexpr	std::uint32_t	GetTypeID()const noexcept { return type_.GetTypeID(); }
 
-		inline	constexpr	std::u8string_view	GetNamespace()const noexcept { return namespace_; }
+		inline	constexpr	ReflectionStringView	GetNamespace()const noexcept { return namespace_; }
 
 	private:
 
-		std::u8string_view	name_;
+		ReflectionStringView	name_;
 
 		/// @brief 型名
-		std::u8string_view	fullname_;
+		ReflectionStringView	fullname_;
 
 
-		std::u8string_view namespace_;
+		ReflectionStringView namespace_;
 
 
 		/// @brief 属性テーブル
@@ -339,9 +339,9 @@ namespace nox::reflection
 		/// @return 
 		template<class T> requires(std::is_enum_v<T>)
 		inline constexpr EnumInfo CreateEnumInfo(
-			std::u8string_view name,
-			std::u8string_view fullname,
-			std::u8string_view _namespace,
+			ReflectionStringView name,
+			ReflectionStringView fullname,
+			ReflectionStringView _namespace,
 			const ReflectionObject* const* attribute_ptr_table,
 			std::uint8_t attribute_length,
 			const EnumVariableInfo* const* variable_ptr_table,

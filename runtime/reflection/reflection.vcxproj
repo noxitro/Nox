@@ -51,7 +51,7 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="method_info.h">
+    <ClInclude Include="function_info.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -121,7 +121,7 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="method_info.cpp">
+    <ClCompile Include="function_info.cpp">
       <SubType>
       </SubType>
     </ClCompile>

@@ -9,29 +9,29 @@
 namespace nox::reflection::detail
 {
 
-	inline	constexpr std::uint32_t	Crc32(const std::string_view str)noexcept
-	{
-		//			constexpr u32 CRC32POLY1 = 0x04C11DB7UL;
-		constexpr std::uint32_t CRC32POLY2 = 0xEDB88320UL;/* 左右逆転 */
+	//inline	constexpr std::uint32_t	Crc32(const std::string_view str)noexcept
+	//{
+	//	//			constexpr u32 CRC32POLY1 = 0x04C11DB7UL;
+	//	constexpr std::uint32_t CRC32POLY2 = 0xEDB88320UL;/* 左右逆転 */
 
-		std::uint32_t r = 0xFFFFFFFFUL;
-		for (std::int32_t i = 0; i < static_cast<std::int32_t>(str.length()); i++)
-		{
-			r ^= str.at(i);
-			for (std::int32_t j = 0; j < std::numeric_limits<std::int8_t>::digits; j++)
-			{
-				if (r & 1)
-				{
-					r = (r >> 1) ^ CRC32POLY2;
-				}
-				else
-				{
-					r >>= 1;
-				}
-			}
-		}
-		return r ^ 0xFFFFFFFFUL;
-	}
+	//	std::uint32_t r = 0xFFFFFFFFUL;
+	//	for (std::int32_t i = 0; i < static_cast<std::int32_t>(str.length()); i++)
+	//	{
+	//		r ^= str.at(i);
+	//		for (std::int32_t j = 0; j < std::numeric_limits<std::int8_t>::digits; j++)
+	//		{
+	//			if (r & 1)
+	//			{
+	//				r = (r >> 1) ^ CRC32POLY2;
+	//			}
+	//			else
+	//			{
+	//				r >>= 1;
+	//			}
+	//		}
+	//	}
+	//	return r ^ 0xFFFFFFFFUL;
+	//}
 
 	namespace detail
 	{

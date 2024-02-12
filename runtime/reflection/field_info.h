@@ -43,9 +43,9 @@ namespace nox::reflection
 		/// @param setter_array_global_func 
 		/// @param getter_array_global_func 
 		inline	constexpr	explicit	FieldInfo(
-			std::u8string_view name,
-			std::u8string_view fullname,
-			std::u8string_view _namespace,
+			ReflectionStringView name,
+			ReflectionStringView fullname,
+			ReflectionStringView _namespace,
 			AccessLevel access_level,
 			const class ReflectionObject* const* attribute_ptr_table,
 			std::uint8_t	attribute_length,
@@ -95,9 +95,9 @@ namespace nox::reflection
 		/// @param setter_array_global_func 
 		/// @param getter_array_global_func 
 		inline	constexpr	explicit	FieldInfo(
-			std::u8string_view name,
-			std::u8string_view fullname,
-			std::u8string_view _namespace,
+			ReflectionStringView name,
+			ReflectionStringView fullname,
+			ReflectionStringView _namespace,
 			AccessLevel access_level,
 			const class ReflectionObject* const* attribute_ptr_table,
 			std::uint8_t	attribute_length,
@@ -131,13 +131,13 @@ namespace nox::reflection
 
 #pragma region アクセサ
 		/// @brief 名前
-		inline	constexpr	std::u8string_view	GetName()const noexcept { return name_; }
+		inline	constexpr	ReflectionStringView	GetName()const noexcept { return name_; }
 
 		/// @brief 完全な名前
-		inline	constexpr	std::u8string_view	GetFullName()const noexcept { return fullname_; }
+		inline	constexpr	ReflectionStringView	GetFullName()const noexcept { return fullname_; }
 
 		/// @brief 名前空間
-		inline	constexpr	std::u8string_view	GetNamespace()const noexcept { return namespace_; }
+		inline	constexpr	ReflectionStringView	GetNamespace()const noexcept { return namespace_; }
 
 		/// @brief 所属するクラス情報を取得する
 		const class ClassInfo* GetOwnerClass()const noexcept;
@@ -310,13 +310,13 @@ namespace nox::reflection
 #pragma endregion
 	private:
 		/// @brief 名前
-		std::u8string_view name_;
+		ReflectionStringView name_;
 
 		/// @brief 完全な名前
-		std::u8string_view fullname_;
+		ReflectionStringView fullname_;
 
 		/// @brief 名前空間
-		std::u8string_view namespace_;
+		ReflectionStringView namespace_;
 
 		FieldAttributeFlag field_attribute_flgas_;
 
@@ -398,9 +398,9 @@ namespace nox::reflection
 		/// @return 
 		template<concepts::ClassUnion _OwnerType>
 		inline constexpr	FieldInfo	CreateFieldInfo(
-			std::u8string_view name,
-			std::u8string_view fullname,
-			std::u8string_view _namespace,
+			ReflectionStringView name,
+			ReflectionStringView fullname,
+			ReflectionStringView _namespace,
 			AccessLevel access_level,
 			const class ReflectionObject* const* attribute_ptr_table,
 			std::uint8_t	attribute_length,
@@ -433,9 +433,9 @@ namespace nox::reflection
 		}
 
 		/*inline constexpr	FieldInfo	CreateFieldInfo(
-			std::u8string_view name,
-			std::u8string_view fullname,
-			std::u8string_view _namespace,
+			ReflectionStringView name,
+			ReflectionStringView fullname,
+			ReflectionStringView _namespace,
 			AccessLevel access_level,
 			const class ReflectionObject* const* attribute_ptr_table,
 			std::uint8_t	attribute_length,

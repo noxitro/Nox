@@ -13,7 +13,7 @@ namespace nox
 		NOX_DECLARE_MANAGED_OBJECT(Component, ManagedObject);
 	public:
 	protected:
-		inline	constexpr	Component()noexcept :
+		inline	Component()noexcept :
 			owner_(nullptr) {}
 
 	private:
