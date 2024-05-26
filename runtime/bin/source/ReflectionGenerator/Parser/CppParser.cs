@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace ReflectionGenerator.Parser
 {
@@ -18,12 +17,24 @@ namespace ReflectionGenerator.Parser
             /// </summary>
             public required string SourceFilePath { get; init; }
 
+            /// <summary>
+            /// プロジェクトファイルパス
+            /// </summary>
             public required string ProjectFilePath { get; init; }
 
+            /// <summary>
+            /// プラットフォーム名
+            /// </summary>
             public required string Platform { get; init; }
+
+            /// <summary>
+            /// ビルド構成
+            /// </summary>
             public required string Configuration { get; init; }
 
-
+            /// <summary>
+            /// MSBuildのパス
+            /// </summary>
             public required string MSBuildBinPath { get; init; }
 
             /// <summary>
@@ -36,8 +47,6 @@ namespace ReflectionGenerator.Parser
             /// nullの場合、全てが対象
             /// </summary>
             public required IReadOnlyList<string> EnableRootNamespaceList { get; init; }
-
-            
         }
         #endregion
 
@@ -273,7 +282,7 @@ namespace ReflectionGenerator.Parser
 
             ClangSharp.Interop.CXErrorCode cxErrorCode = default;
             //  コンパイル
-            for (int i = 0; i < 100; ++i)
+         //   for (int i = 0; i < 100; ++i)
             {
                 System.Diagnostics.Stopwatch stopwatchClangCompile = new System.Diagnostics.Stopwatch();
                 stopwatchClangCompile.Start();
@@ -316,8 +325,6 @@ namespace ReflectionGenerator.Parser
             }
 
             //  後処理
-
-
             System.Threading.Tasks.Parallel.ForEach(ClassInfoStack.InfoList,
                 (Info.ClassInfo classInfo) =>
                 {
@@ -393,6 +400,19 @@ namespace ReflectionGenerator.Parser
         #region 非公開メソッド
         private ClangSharp.Interop.CXChildVisitResult VisitChild(ClangSharp.Interop.CXCursor cursor, ClangSharp.Interop.CXCursor parent, void* client_data)
         {
+            string scope = string.Empty;
+            for(ClangSharp.Interop.CXCursor tempParent = parent; tempParent != ClangSharp.Interop.CXCursor.Null; tempParent = tempParent.LexicalParent)
+            {
+                scope += "\t";
+            }
+
+            if (cursor.Kind == CXCursorKind.CXCursor_ClassDecl)
+            {
+                Trace.Info(this, $"{scope}{cursor.Spelling.CString}");
+            }
+            cursor.VisitChildren(VisitChild, default);
+            return CXChildVisitResult.CXChildVisit_Continue;
+
             if (
                 cursor.Spelling.CString.Contains("intValue") ||
                 cursor.Spelling.CString.Contains("app::Int") 
@@ -842,8 +862,11 @@ namespace ReflectionGenerator.Parser
                                 str = nativeArgumentInfo.AsIntegral.ToString();
                                 break;
 
+                            case CXTemplateArgumentKind.CXTemplateArgumentKind_Expression:
+                                break;
+
                             default:
-                                System.Diagnostics.Debug.Assert(false, $"未対応のTemplateArgumentKind:{nativeArgumentInfo.kind.ToString()}");
+                           //     System.Diagnostics.Debug.Assert(false, $"未対応のTemplateArgumentKind:{nativeArgumentInfo.kind.ToString()}");
                                 break;
                         }
 

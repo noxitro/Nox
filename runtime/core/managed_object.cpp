@@ -26,3 +26,4 @@ void	ManagedObject::ReleaseRef()
 {
 	os::atomic::Decrement(ref_count_);
 }
+

@@ -16,6 +16,6 @@ namespace nox
 
 	private:
 		/// @brief 名前
-		String name_;
+		//String name_;
 	};
 }

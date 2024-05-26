@@ -70,7 +70,7 @@
     <ClCompile />
     <Link />
     <PreBuildEvent>
-      <Command>$(SolutionDir)bin\createReflectionGenerateArgs.bat "$(SolutionDir)" "$(ProjectPath)" "$(ProjectDir)main.cpp" "$(Configuration)" "$(Platform)" "NOX_DEBUG" "NOX_X64" "$(MSBuildBinPath)"</Command>
+      <Command>$(SolutionDir)bin\createReflectionGenerateArgs.bat "$(SolutionDir)" "$(ProjectPath)" "$(ProjectDir)main.cpp" "$(Configuration)" "$(Platform)" "NOX_DEBUG" "NOX_X64" "$(MSBuildBinPath)" "nox"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -79,6 +79,9 @@
     <ClCompile />
     <ClCompile />
     <Link />
+    <PreBuildEvent>
+      <Command>$(SolutionDir)bin\createReflectionGenerateArgs.bat "$(SolutionDir)" "$(ProjectPath)" "$(ProjectDir)main.cpp" "$(Configuration)" "$(Platform)" "NOX_DEBUG" "NOX_X64" "$(MSBuildBinPath)" "nox"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'">
     <ClCompile />
@@ -86,6 +89,9 @@
     <ClCompile />
     <ClCompile />
     <Link />
+    <PreBuildEvent>
+      <Command>$(SolutionDir)bin\createReflectionGenerateArgs.bat "$(SolutionDir)" "$(ProjectPath)" "$(ProjectDir)main.cpp" "$(Configuration)" "$(Platform)" "NOX_DEBUG" "NOX_X64" "$(MSBuildBinPath)" "nox"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">

@@ -5,6 +5,12 @@
   <PropertyGroup>
     <_PropertySheetDisplayName>rex_release</_PropertySheetDisplayName>
   </PropertyGroup>
-  <ItemDefinitionGroup />
+  <ItemDefinitionGroup>
+    <ClCompile />
+    <ClCompile>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup />
 </Project>

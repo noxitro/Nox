@@ -22,6 +22,8 @@ namespace nox::reflection
 	template<concepts::Enum T>
 	inline const class EnumInfo* TypeofEnum()
 	{
-		return nullptr;
+		return Reflection::Instance().FindEnumInfo<T>();
 	}
+
+
 }

@@ -2,10 +2,10 @@
 ///	@brief	point2d
 #pragma once
 
-#include	"../if/basic_type.h"
+#include	"../basic_type.h"
 #include	"../type_traits/concepts.h"
 
-#include	"../if/basic_definition.h"
+#include	"../basic_definition.h"
 
 namespace nox
 {
@@ -36,16 +36,13 @@ namespace nox
 			[[nodiscard]] constexpr	Point2D(const Point2D& _v)noexcept :
 				x(_v.x), y(_v.y) {}
 
-			//------------------------------------------------------
-			//	operator
-			//------------------------------------------------------
+			static inline constexpr Point2D	Zero()noexcept { return Point2D(static_cast<_ValueType>(0), static_cast<_ValueType>(0)); }
+			static inline constexpr Point2D	One()noexcept { return Point2D(static_cast<_ValueType>(1), static_cast<_ValueType>(1)); }
+
+#pragma region operator
 			[[nodiscard]] inline constexpr bool operator==(const Point2D& _v)const noexcept
 			{
 				return x == _v.x && y == _v.y;
-			}
-			[[nodiscard]] inline constexpr bool operator!=(const Point2D& _v)const noexcept
-			{
-				return x != _v.x || y != _v.y;
 			}
 
 			[[nodiscard]] constexpr Point2D operator + () const noexcept { return Point2D(x, y); }
@@ -61,6 +58,8 @@ namespace nox
 			inline constexpr Point2D& operator -= (const Point2D& _v)noexcept { x -= _v.x; y -= _v.y;  return *this; }
 			inline constexpr Point2D& operator *= (_ValueType _v)noexcept { x *= _v; y *= _v; return *this; }
 			inline constexpr Point2D& operator /= (_ValueType _v)noexcept { x /= _v; y /= _v; return *this; }
+#pragma endregion
+
 		};
 	}
 

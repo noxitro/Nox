@@ -2,7 +2,8 @@
 ///	@brief	memory_util
 #pragma once
 #include	<type_traits>
-#include	"../if/basic_definition.h"
+#include	"../basic_definition.h"
+#include	"../basic_type.h"
 
 namespace nox::memory
 {
@@ -24,6 +25,10 @@ namespace nox::memory
 	}
 
 	not_null<void*>	Copy(not_null<void*> dest, not_null<const void*> src, size_t size);
+
+	nox::int32	Copy(not_null<void*> dest, size_t dest_size, not_null<const void*> src, size_t source_size);
+
+	nox::int32	WideCopy(not_null<nox::wchar16*> dest, size_t dest_size, not_null<const nox::wchar16*> source, size_t source_size);
 
 	template<class Dest, class Source>
 	inline not_null<void*>	Copy(Dest& dest, const Source& src, size_t size = sizeof(Source))

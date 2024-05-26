@@ -16,7 +16,6 @@ namespace nox
 		void	AddRef();
 		void	ReleaseRef();
 
-	protected:
 		ManagedObject();
 		~ManagedObject();
 
@@ -25,5 +24,17 @@ namespace nox
 		int32 ref_count_;
 	};
 
-	
+	template<>
+	inline void IntrusivePtrAddReference< ManagedObject>(ManagedObject&v) 
+	{
+		v.AddRef();
+	}
+
+	template<>
+	inline void IntrusivePtrReleaseReference< ManagedObject>(ManagedObject&v) 
+	{
+		v.ReleaseRef();
+	}
 }
+
+

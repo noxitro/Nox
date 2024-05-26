@@ -62,7 +62,7 @@ const class EnumInfo* Reflection::FindEnumInfoFromNameHash(std::uint32_t namehas
 
 void Reflection::Register(const class ClassInfo& data)
 {
-	NOX_ASSERT(class_data_map_.contains(data.GetTypeID()) == true, u"");
+	NOX_ASSERT(class_data_map_.contains(data.GetTypeID()) == true, U"");
 
 	class_data_map_.emplace(data.GetTypeID(), ClassData{ .class_info_ptr = &data });
 

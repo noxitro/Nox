@@ -1,7 +1,7 @@
 ﻿///	@file	x64.h
 ///	@brief	x64
 #pragma once
-#include	"../if/basic_definition.h"
+#include	"../basic_definition.h"
 
 #if NOX_WIN64
 

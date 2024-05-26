@@ -3,8 +3,8 @@
 #pragma once
 #include    <type_traits>
 
-#include	"../if/basic_type.h"
-#include	"../if/advanced_type.h"
+#include	"../advanced_type.h"
+#include	"../basic_type.h"
 
 namespace nox
 {
@@ -50,17 +50,16 @@ namespace nox
 #pragma endregion
 
 	/// @brief 関数オブジェクト
-	template<class T, class... Args>
+	template<class, class = void>
 	struct IsFunctionObject : std::false_type {};
 
 	/// @brief 関数オブジェクト
-	template<class T, class... Args> requires(std::is_invocable_v<decltype(&T::operator()), T, Args...>)
-		struct IsFunctionObject<T, Args...> : std::true_type {};
+	template<class T>
+	struct IsFunctionObject<T, std::void_t<decltype(&T::operator())>> : std::true_type {};
 
 	/// @brief 関数オブジェクト
-	template<class T, class... Args>
-	constexpr bool IsFunctionObjectValue = IsFunctionObject<T, Args...>::value;
-
+	template<class T>
+	constexpr bool IsFunctionObjectValue = IsFunctionObject<T>::value;
 
 	namespace detail
 	{
@@ -80,11 +79,11 @@ namespace nox
 		//	他に方法が思いつかない...
 		/// @brief templateの引数の数を取得
 		template<template<class> class>
-		consteval uint8 GetTemplateParamLength()noexcept { return 1U; }
+		consteval nox::uint8 GetTemplateParamLength()noexcept { return 1U; }
 		template<template<class, class> class>
-		consteval uint8 GetTemplateParamLength()noexcept { return 2U; }
+		consteval nox::uint8 GetTemplateParamLength()noexcept { return 2U; }
 		template<template<class, class, class> class>
-		consteval uint8 GetTemplateParamLength()noexcept { return 3U; }
+		consteval nox::uint8 GetTemplateParamLength()noexcept { return 3U; }
 
 		template<class T>
 		struct IsVector : std::false_type {};
@@ -432,11 +431,16 @@ namespace nox
 		struct IsStringViewClass<::std::basic_string_view<ValueType, TraitsType>> : ::std::true_type {};
 	}
 
-	/**
-	 * @brief 文字列型か
-	*/
+	/// @brief 文字列型か
 	template<class T>
 	constexpr bool IsCharTypeValue = detail::is_char_type<T>::value;
+
+	namespace concepts
+	{
+		/// @brief 文字列型
+		template<class T>
+		concept Char = IsCharTypeValue<T>;
+	}
 
 	/**
 	 * @brief string型かどうか
@@ -454,6 +458,38 @@ namespace nox
 
 	template<class T>
 	constexpr bool IsStringClassAllValue = IsStringClassValue<T> || IsStringViewClassValue<T>;
+
+	/// @brief 文字列関係の型から文字型を表す
+		/// @tparam T 文字列関係の型
+	template<class T>
+	struct StringChar;
+
+	/// @brief char type
+	template<class T> requires(nox::IsCharTypeValue<std::decay_t<std::remove_pointer_t<std::decay_t<T>>>>)
+		struct StringChar<T>
+	{
+		using type = std::decay_t<std::remove_pointer_t<std::decay_t<T>>>;
+	};
+
+
+	/// @brief string class
+	template<class T> requires(nox::IsStringClassValue<std::decay_t<T>>)
+		struct StringChar<T>
+	{
+		using type = typename std::decay_t<T>::value_type;
+	};
+
+	/// @brief string_view class
+	template<class T> requires(nox::IsStringViewClassValue<std::decay_t<T>>)
+		struct StringChar<T>
+	{
+		using type = typename std::decay_t<T>::value_type;
+	};
+
+	/// @brief 文字列関係の型から文字型を表す
+	/// @tparam T 文字列関係の型
+	template<class T> requires(std::is_void_v<std::void_t<typename StringChar<T>::type>>)
+	using StringCharType = typename StringChar<T>::type;
 
 	namespace concepts::detail
 	{

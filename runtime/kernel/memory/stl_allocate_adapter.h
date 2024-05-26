@@ -34,7 +34,7 @@ namespace nox::memory
 		*/
 		inline T* allocate(const size_t num)
 		{
-			return static_cast<T*>(memory::Allocate(sizeof(T) * num, memory::AreaType::Stl).get());
+			return static_cast<T*>(memory::Allocate(sizeof(T) * num, memory::AreaType::Stl));
 		}
 
 		/**

@@ -26,3 +26,13 @@ not_null<void*>	memory::Copy(not_null<void*> dest, not_null<const void*> src, si
 {
 	return std::memcpy(dest.get(), src.get(), size);
 }
+
+nox::int32	memory::Copy(not_null<void*> dest, size_t dest_size, not_null<const void*> src, size_t source_size)
+{
+	return ::memcpy_s(dest.get(), dest_size, src.get(), source_size);
+}
+
+nox::int32	memory::WideCopy(not_null<wchar16*> dest, size_t dest_size, not_null<const wchar16*> source, size_t source_size)
+{
+	return ::wmemcpy_s(dest.get(), dest_size, source.get(), source_size);
+}

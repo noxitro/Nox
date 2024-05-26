@@ -3,10 +3,12 @@
 ///	@file	os_definition.h
 ///	@brief	os_definition
 #pragma once
-#include	"../if/basic_type.h"
+#include	"../basic_type.h"
 
 namespace nox::os
 {
+	constexpr uint32 MAX_PATH_LENGTH = 256;
+
 	/**
 	 * @brief オペレーションシステムタイプ
 	*/

@@ -5,7 +5,11 @@
 #include	"stdafx.h"
 #include	"os_utility.h"
 
-#include	"../if/basic_definition.h"
+#include	"../basic_definition.h"
+
+#include	"assertion.h"
+
+#include	"string_format.h"
 
 #if NOX_WINDOWS
 #include	"windows.h"
@@ -37,4 +41,29 @@ uint8 os::GetHardwareConcurrency()
 #else
 	return -1;
 #endif // NOX_WINDOWS
+}
+
+void* os::detail::GetProcAddressImpl(void* const moduleHandle, const char* const procNamePtr)
+{
+	::FARPROC const proc = ::GetProcAddress(
+		static_cast<::HMODULE>(moduleHandle), procNamePtr);
+
+	NOX_ASSERT(proc != nullptr, util::Format(U"dll読み込みに失敗 procName = {0}", procNamePtr));
+
+	return proc;
+}
+
+
+void* os::LoadDLL(std::u16string_view path, void* handlePtr, const uint32 flags)
+{
+	const ::HMODULE moduleHandlePtr = ::LoadLibraryExW(util::CharCast<wchar16>(path.data()), handlePtr, static_cast<::DWORD>(flags));
+
+	NOX_ASSERT(moduleHandlePtr != nullptr, util::Format(U"dll読み込みに失敗 path = {0}", path));
+
+	return moduleHandlePtr;
+}
+
+bool os::UnloadDLL(nox::not_null<void*> moduleHandlePtr)
+{
+	return ::FreeLibrary(static_cast<::HMODULE>(moduleHandlePtr.get()));
 }

@@ -68,9 +68,9 @@ namespace nox::reflection
 		inline constexpr virtual ~ReflectionObject()noexcept {}
 	private: 
 		inline constexpr ReflectionObject(const ReflectionObject&)noexcept = delete;
-		inline constexpr ReflectionObject(const ReflectionObject&&)noexcept = delete;
+		inline constexpr ReflectionObject(ReflectionObject&&)noexcept = delete;
 
 		inline constexpr void operator =(const ReflectionObject&)noexcept = delete;
-		inline constexpr void operator =(const ReflectionObject&&)noexcept = delete;
+		inline constexpr void operator =(ReflectionObject&&)noexcept = delete;
 	};
 }

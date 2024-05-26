@@ -15,479 +15,207 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="if\advanced_definition.h">
+    <ClInclude Include="advanced_definition.h" />
+    <ClInclude Include="advanced_type.h" />
+    <ClInclude Include="algorithm.h" />
+    <ClInclude Include="any.h" />
+    <ClInclude Include="assertion.h" />
+    <ClInclude Include="basic_definition.h" />
+    <ClInclude Include="basic_type.h" />
+    <ClInclude Include="convert_string.h" />
+    <ClInclude Include="crc32.h" />
+    <ClInclude Include="delegate.h" />
+    <ClInclude Include="fixed_string.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="if\advanced_type.h">
+    <ClInclude Include="format_float.h" />
+    <ClInclude Include="function.h" />
+    <ClInclude Include="intrusive_ptr.h" />
+    <ClInclude Include="kernel.h" />
+    <ClInclude Include="log_trace.h" />
+    <ClInclude Include="math\color.h" />
+    <ClInclude Include="math\math.h" />
+    <ClInclude Include="math\math_algorithm.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="if\algorithm.h">
+    <ClInclude Include="math\math_definition.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="if\any.h">
+    <ClInclude Include="math\matrix3d.h" />
+    <ClInclude Include="math\matrix4d.h" />
+    <ClInclude Include="math\point2d.h" />
+    <ClInclude Include="math\point3d.h" />
+    <ClInclude Include="math\point3x3.h" />
+    <ClInclude Include="math\point4d.h" />
+    <ClInclude Include="math\point4x4.h" />
+    <ClInclude Include="math\quaternion.h" />
+    <ClInclude Include="math\quaternion_util.h" />
+    <ClInclude Include="math\vector2d.h" />
+    <ClInclude Include="math\vector3d.h" />
+    <ClInclude Include="math\vector4d.h" />
+    <ClInclude Include="math\vector_util.h" />
+    <ClInclude Include="memory\memory.h" />
+    <ClInclude Include="memory\memory_definition.h" />
+    <ClInclude Include="memory\memory_util.h" />
+    <ClInclude Include="memory\new_delete.h" />
+    <ClInclude Include="memory\stl_allocate_adapter.h" />
+    <ClInclude Include="multicast_delegate.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="if\assertion.h">
+    <ClInclude Include="nameof.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="if\basic_definition.h">
+    <ClInclude Include="nox_string_view.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="if\basic_type.h">
+    <ClInclude Include="os\atomic.h" />
+    <ClInclude Include="os\detail\atomic_win64.h" />
+    <ClInclude Include="os\detail\fie_win64.h" />
+    <ClInclude Include="os\detail\mutex_base.h" />
+    <ClInclude Include="os\detail\mutex_win64.h" />
+    <ClInclude Include="os\detail\thread_base.h" />
+    <ClInclude Include="os\detail\thread_win64.h" />
+    <ClInclude Include="os\detail\win64.h" />
+    <ClInclude Include="os\detail\window_win64.h" />
+    <ClInclude Include="os\file_system.h" />
+    <ClInclude Include="os\mutex.h" />
+    <ClInclude Include="os\network.h" />
+    <ClInclude Include="os\os.h" />
+    <ClInclude Include="os\os_definition.h" />
+    <ClInclude Include="os\os_utility.h" />
+    <ClInclude Include="os\thread.h" />
+    <ClInclude Include="os\window.h" />
+    <ClInclude Include="os\windows.h" />
+    <ClInclude Include="preprocessor\cat.h" />
+    <ClInclude Include="preprocessor\inc.h" />
+    <ClInclude Include="preprocessor\repeat.h" />
+    <ClInclude Include="preprocessor\util.h" />
+    <ClInclude Include="preprocessor\va_length.h" />
+    <ClInclude Include="singleton.h" />
+    <ClInclude Include="stack_trace.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="if\convert_string.h">
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="nox_string.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="if\crc32.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="if\delegate.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="if\function.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="if\intrusive_ptr.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="if\log_trace.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="if\singleton.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="if\string.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="if\string_format.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="if\unicode.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="if\unicode_converter.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="kernel.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="math\color.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="math\math.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="math\matrix3d.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="math\matrix4d.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="math\point2d.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="math\point3d.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="math\point3x3.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="math\point4d.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="math\point4x4.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="math\quaternion.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="math\quaternion_util.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="math\vector2d.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="math\vector3d.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="math\vector4d.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="math\vector_util.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="memory\memory.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="memory\memory_definition.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="memory\memory_util.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="memory\stl_allocate_adapter.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="os\atomic.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="os\detail\atomic_win64.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="os\detail\mutex_base.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="os\detail\thread_base.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="os\detail\win64.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="os\mutex.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="os\detail\mutex_x64.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="os\os_definition.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="os\os_utility.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="os\thread.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="os\windows.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="preprocessor\cat.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="preprocessor\inc.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="preprocessor\repeat.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="preprocessor\util.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="preprocessor\va_length.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="stdafx.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="type_traits\concepts.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="type_traits\field_signature.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="type_traits\function_signature.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="type_traits\type_name.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="type_traits\type_traits.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
+    <ClInclude Include="string_format.h" />
+    <ClInclude Include="type_traits\concepts.h" />
+    <ClInclude Include="type_traits\field_signature.h" />
+    <ClInclude Include="type_traits\function_signature.h" />
+    <ClInclude Include="type_traits\type_name.h" />
+    <ClInclude Include="type_traits\type_traits.h" />
+    <ClInclude Include="unicode.h" />
+    <ClInclude Include="unicode_converter.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="if\advanced_definition.cpp">
+    <ClCompile Include="advanced_definition.cpp" />
+    <ClCompile Include="advanced_type.cpp" />
+    <ClCompile Include="algorithm.cpp" />
+    <ClCompile Include="any.cpp" />
+    <ClCompile Include="assertion.cpp" />
+    <ClCompile Include="basic_definition.cpp" />
+    <ClCompile Include="basic_type.cpp" />
+    <ClCompile Include="convert_string.cpp" />
+    <ClCompile Include="crc32.cpp" />
+    <ClCompile Include="delegate.cpp" />
+    <ClCompile Include="fixed_string.cpp">
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="if\advanced_type.cpp">
+    <ClCompile Include="format_float.cpp" />
+    <ClCompile Include="function.cpp" />
+    <ClCompile Include="intrusive_ptr.cpp" />
+    <ClCompile Include="log_trace.cpp" />
+    <ClCompile Include="math\color.cpp" />
+    <ClCompile Include="math\math.cpp" />
+    <ClCompile Include="math\math_algorithm.cpp">
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="if\algorithm.cpp">
+    <ClCompile Include="math\math_definition.cpp">
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="if\any.cpp">
+    <ClCompile Include="math\matrix3d.cpp" />
+    <ClCompile Include="math\matrix4d.cpp" />
+    <ClCompile Include="math\point2d.cpp" />
+    <ClCompile Include="math\point3d.cpp" />
+    <ClCompile Include="math\point3x3.cpp" />
+    <ClCompile Include="math\point4d.cpp" />
+    <ClCompile Include="math\point4x4.cpp" />
+    <ClCompile Include="math\quaternion.cpp" />
+    <ClCompile Include="math\quaternion_util.cpp" />
+    <ClCompile Include="math\vector2d.cpp" />
+    <ClCompile Include="math\vector3d.cpp" />
+    <ClCompile Include="math\vector4d.cpp" />
+    <ClCompile Include="math\vector_util.cpp" />
+    <ClCompile Include="memory\memory.cpp" />
+    <ClCompile Include="memory\memory_definition.cpp" />
+    <ClCompile Include="memory\memory_util.cpp" />
+    <ClCompile Include="memory\new_delete.cpp" />
+    <ClCompile Include="memory\stl_allocate_adapter.cpp" />
+    <ClCompile Include="multicast_delegate.cpp">
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="if\assertion.cpp">
+    <ClCompile Include="nameof.cpp">
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="if\basic_definition.cpp">
+    <ClCompile Include="nox_string_view.cpp">
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="if\basic_type.cpp">
+    <ClCompile Include="os\detail\atomic_win64.cpp" />
+    <ClCompile Include="os\detail\fie_win64.cpp" />
+    <ClCompile Include="os\detail\mutex_base.cpp" />
+    <ClCompile Include="os\detail\mutex_win64.cpp" />
+    <ClCompile Include="os\detail\thread_base.cpp" />
+    <ClCompile Include="os\detail\thread_win64.cpp" />
+    <ClCompile Include="os\detail\win64.cpp" />
+    <ClCompile Include="os\detail\window_win64.cpp" />
+    <ClCompile Include="os\file_system.cpp" />
+    <ClCompile Include="os\network.cpp" />
+    <ClCompile Include="os\os.cpp" />
+    <ClCompile Include="os\os_definition.cpp" />
+    <ClCompile Include="os\os_utility.cpp" />
+    <ClCompile Include="os\window.cpp" />
+    <ClCompile Include="os\windows.cpp" />
+    <ClCompile Include="preprocessor\cat.cpp" />
+    <ClCompile Include="preprocessor\inc.cpp" />
+    <ClCompile Include="preprocessor\repeat.cpp" />
+    <ClCompile Include="preprocessor\util.cpp" />
+    <ClCompile Include="preprocessor\va_length.cpp" />
+    <ClCompile Include="singleton.cpp" />
+    <ClCompile Include="stack_trace.cpp">
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="if\convert_string.cpp">
+    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="nox_string.cpp">
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="if\crc32.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="if\delegate.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="if\function.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="if\intrusive_ptr.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="if\log_trace.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="if\singleton.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="if\string.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="if\string_format.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="if\unicode.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="if\unicode_converter.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="math\color.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="math\math.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="math\matrix3d.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="math\matrix4d.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="math\point2d.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="math\point3d.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="math\point3x3.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="math\point4d.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="math\point4x4.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="math\quaternion.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="math\quaternion_util.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="math\vector2d.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="math\vector3d.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="math\vector4d.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="math\vector_util.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="memory\memory.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="memory\memory_definition.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="memory\memory_util.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="memory\stl_allocate_adapter.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="os\detail\atomic_win64.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="os\detail\mutex_base.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="os\detail\thread_base.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="os\detail\win64.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="os\detail\mutex_x64.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="os\os.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="os\os_definition.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="os\os_utility.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="os\windows.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="preprocessor\cat.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="preprocessor\inc.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="preprocessor\repeat.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="preprocessor\util.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="preprocessor\va_length.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="stdafx.cpp">
-      <SubType>
-      </SubType>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Master|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="type_traits\concepts.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="type_traits\field_signature.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="type_traits\function_signature.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="type_traits\type_name.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="type_traits\type_traits.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
+    <ClCompile Include="string_format.cpp" />
+    <ClCompile Include="type_traits\concepts.cpp" />
+    <ClCompile Include="type_traits\field_signature.cpp" />
+    <ClCompile Include="type_traits\function_signature.cpp" />
+    <ClCompile Include="type_traits\type_name.cpp" />
+    <ClCompile Include="type_traits\type_traits.cpp" />
+    <ClCompile Include="unicode.cpp" />
+    <ClCompile Include="unicode_converter.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="kernel.vcxproj.bak" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

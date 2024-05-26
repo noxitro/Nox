@@ -4,13 +4,13 @@
 ///	@brief	thread
 #pragma once
 
-#include	"../if/basic_definition.h"
+#include	"../basic_definition.h"
 
 #if NOX_WIN64
-#include	"detail/mutex_x64.h"
+#include	"detail/thread_win64.h"
 namespace nox::os
 {
-	//using Mutex = os::detail::MutexWin64;
+	using Thread = nox::os::detail::ThreadWin64;
 }
 #else
 static_assert(false);

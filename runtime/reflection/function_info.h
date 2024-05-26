@@ -228,7 +228,7 @@ namespace nox::reflection
 				//	型チェック
 				if (argument_list[i].type_chunk.IsConvertible(function_param_table_[i].GetTypeChunk()) == false)
 				{
-					NOX_ASSERT(false, u"型チェックに失敗しました");
+					NOX_ASSERT(false, U"型チェックに失敗しました");
 				}
 			}
 			
@@ -328,14 +328,14 @@ namespace nox::reflection
 				//	引数数チェック
 				if (static_cast<std::uint8_t>(argument_list.size()) > GetFunctionParamLength())
 				{
-					NOX_ASSERT(false, u"引数が一致しません");
+					NOX_ASSERT(false, U"引数が一致しません");
 					return result;
 				}
 
 				//	戻り値のチェック
 				if (result != nullptr && result_type.IsConvertible(result_type_chunk_) == false)
 				{
-					NOX_ASSERT(false, u"戻り値の型が一致しません");
+					NOX_ASSERT(false, U"戻り値の型が一致しません");
 					return result;
 				}
 
@@ -379,7 +379,7 @@ namespace nox::reflection
 				},
 					functions_);
 
-				NOX_ASSERT(is_success, u"関数呼び出しに失敗しました");
+				NOX_ASSERT(is_success, U"関数呼び出しに失敗しました");
 				return result;
 			}
 

@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include	"../if/basic_type.h"
+#include	"../basic_type.h"
 
 namespace nox::memory
 {

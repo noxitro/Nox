@@ -1,7 +1,7 @@
 ﻿///	@file	matrix3d.h
 ///	@brief	matrix3d
 #pragma once
-#include	"../if/basic_type.h"
+#include	"../basic_type.h"
 #include	"../type_traits/concepts.h"
 
 namespace nox

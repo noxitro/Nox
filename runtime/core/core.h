@@ -6,3 +6,4 @@
 
 #include	"game_object.h"
 #include	"behavior.h"
+#include	"entry_point.h"

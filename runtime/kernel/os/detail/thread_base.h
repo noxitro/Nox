@@ -5,8 +5,8 @@
 #pragma once
 #include	"../os_utility.h"
 
-#include	<limits>
-#include	<array>
+#include	"../../advanced_type.h"
+#include	"../../delegate.h"
 
 namespace nox::os
 {
@@ -80,97 +80,96 @@ namespace nox::os
 
 	};
 
-	///**
-	// * @brief スレッド基底
-	// * Empty Base
-	//*/
-	//class ThreadBase : public ThreadInterface
-	//{
-	//public:
-	//	inline constexpr ThreadBase()noexcept :
-	//		mThreadId(-1),
-	//		mThreadState(ThreadState::Wait),
-	//		mThreadPriority(ThreadPriority::Normal),
-	//		mStackSize(0),
-	//		mThreadFunc(nullptr)
-	//	{
-	//		//	ThreadPool::Instance()->RegisterHandle(T::GetThreadId(), this);
-	//	}
+	/**
+	 * @brief スレッド基底
+	 * Empty Base
+	*/
+	class ThreadBase : public ThreadInterface
+	{
+	public:
+		inline constexpr ThreadBase()noexcept :
+			thread_id_(-1),
+			thread_state_(ThreadState::Wait),
+			thread_priority_(ThreadPriority::Normal),
+			stack_size_(0)
+		{
+			//	ThreadPool::Instance()->RegisterHandle(T::GetThreadId(), this);
+		}
 
-	//	inline ~ThreadBase() {
-	//		//	ThreadPool::Instance()->UnregisterHandle(T::GetThreadId());
-	//	}
+		inline ~ThreadBase() {
+			//	ThreadPool::Instance()->UnregisterHandle(T::GetThreadId());
+		}
 
-	//	/**
-	//		 * @brief CPUスレッド数を取得する
-	//		 * @return
-	//		*/
-	//	static inline s8 GetHardwareConcurrency()noexcept {
-	//		return os::GetHardwareConcurrency();
-	//	}
+		/**
+			 * @brief CPUスレッド数を取得する
+			 * @return
+			*/
+		static inline int8 GetHardwareConcurrency()noexcept {
+			return os::GetHardwareConcurrency();
+		}
 
-	//	inline constexpr explicit ThreadBase(const ThreadBase&)noexcept = delete;
-	//	inline constexpr explicit ThreadBase(const ThreadBase&&)noexcept = delete;
+		inline constexpr explicit ThreadBase(const ThreadBase&)noexcept = delete;
+		inline constexpr explicit ThreadBase(const ThreadBase&&)noexcept = delete;
 
-	//	static inline void	SetThreadName(const std::wstring_view name)noexcept { mThreadName = name; }
-	//	static inline std::wstring_view	GetThreadName()noexcept { return mThreadName; }
-	//	inline	constexpr	ThreadState GetThreadState()const noexcept { return mThreadState; }
-	//	inline	constexpr	void SetThreadPriority(ThreadPriority priority)noexcept { mThreadPriority = priority; }
-	//	inline	constexpr	ThreadPriority GetThreadPriority()const noexcept { return mThreadPriority; }
-	//	inline	constexpr	void SetStackSize(const u32 stackSize)noexcept { mStackSize = stackSize; }
+		static void	SetThreadName(std::u16string_view name)noexcept;
+		static inline std::u16string_view	GetThreadName()noexcept { return thread_name_.data(); }
+		inline	constexpr	ThreadState GetThreadState()const noexcept { return thread_state_; }
+		inline	constexpr	void SetThreadPriority(ThreadPriority priority)noexcept { thread_priority_ = priority; }
+		inline	constexpr	ThreadPriority GetThreadPriority()const noexcept { return thread_priority_; }
+		inline	constexpr	void SetStackSize(const int32 stackSize)noexcept { stack_size_ = stackSize; }
 
-	//	template<class FuncType, class... Args> requires(std::is_invocable_v<FuncType, Args...>)
-	//		static inline	constexpr	void SetTerminateFunc(FuncType func, const Args&... args)
-	//	{
-	//		mTerminateFuncTable.at(T::GetThreadId()) = [&func, &args...]() {std::invoke(func, args...); };
-	//	}
-	//protected:
+	/*	template<class FuncType, class... Args> requires(std::is_invocable_v<FuncType, Args...>)
+			static inline	constexpr	void SetTerminateFunc(FuncType func, const Args&... args)
+		{
+			terminate_func_table_.at(T::GetThreadId()) = [&func, &args...]() {std::invoke(func, args...); };
+		}*/
+	protected:
 
-	//	/**
-	//	 * @brief スレッドID
-	//	*/
-	//	static inline thread_local s8 mCurrentThreadId = -1;
+		/**
+		 * @brief スレッドID
+		*/
+		static inline thread_local int8 current_thread_id_ = -1;
 
-	//	/**
-	//	 * @brief 管理スレッド数
-	//	*/
-	//	static inline s8 mThreadCounter = 0;
+		/**
+		 * @brief 管理スレッド数
+		*/
+		static inline int8 thread_counter_ = 0;
 
-	//	/**
-	//	 * @brief スレッド名
-	//	*/
-	//	static inline thread_local std::wstring_view mThreadName = L"Unknown";
+		/**
+		 * @brief スレッド名
+		*/
+		static inline thread_local std::array<char16, 256> thread_name_;
 
-	//	/**
-	//	 * @brief スレッドID
-	//	*/
-	//	s8 mThreadId;
+		/**
+		 * @brief スレッドID
+		*/
+		int8 thread_id_;
 
-	//	/**
-	//	 * @brief スレッドの状態
-	//	*/
-	//	ThreadState mThreadState;
+		/**
+		 * @brief スレッドの状態
+		*/
+		ThreadState thread_state_;
 
-	//	/**
-	//	 * @brief 優先度
-	//	*/
-	//	ThreadPriority mThreadPriority;
+		/**
+		 * @brief 優先度
+		*/
+		ThreadPriority thread_priority_;
 
-	//	/**
-	//	 * @brief スタックサイズ
-	//	*/
-	//	u32 mStackSize;
+		/**
+		 * @brief スタックサイズ
+		*/
+		int32 stack_size_;
 
-	//	/**
-	//	 * @brief スレッド実行関数
-	//	*/
-	//	std::function<void()> mThreadFunc;
+		/**
+		 * @brief スレッド実行関数
+		*/
+		Delegate<void()> thread_func_;
 
-	//	/**
-	//	 * @brief スレッド終了時の関数テーブル
-	//	*/
-	//	static inline array<std::function<void()>, MAX_THREAD_ID> mTerminateFuncTable = { nullptr };
-	//};
+		/**
+		 * @brief スレッド終了時の関数テーブル
+		*/
+		static inline constinit std::array<Delegate<void()>, MAX_THREAD_ID> terminate_func_table_;
+	};
 
 
 }

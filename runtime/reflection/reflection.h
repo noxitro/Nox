@@ -9,3 +9,5 @@
 #include	"function_info.h"
 
 #include	"attribute.h"
+
+#include	"reflection_system.h"

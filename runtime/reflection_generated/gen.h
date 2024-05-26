@@ -7,8 +7,8 @@
 namespace nox::reflection
 {
 	/// @brief 初期化
-	void	Initialize();
+	void	InitializeGen();
 
 	/// @brief 破棄
-	void	Finalize();
+	void	FinalizeGen();
 }

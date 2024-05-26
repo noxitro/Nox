@@ -61,9 +61,9 @@ namespace ReflectionGenerator
 			public string MSBuildBinPath { get; set; } = string.Empty;
 			public string ProjectFilePath { get; set; } = string.Empty;
 
-			public List<string> IgnoreNamespaceList { get; } = new List<string>();
+			public List<string> IgnoreNamespaceList { get; set; } = new List<string>();
 
-			public List<string> EnableNamespaceList { get; } = new List<string>();
+			public List<string> EnableNamespaceList { get; set; } = new List<string>();
         }
         #endregion
 
@@ -122,25 +122,21 @@ namespace ReflectionGenerator
 
 			MSBuildBinPath,
 
+            EnableNamespaceList,
+
 			_Max
 		}
 
-		class Base
-		{
-			public Base() { }
-			public Base(string name) { }
-
-		}
-
+		/// <summary>
+		/// エントリーポイント
+		/// </summary>
+		/// <param name="args"></param>
+		/// <returns></returns>
 		private static int Main(string[] args)
 		{
 #if true   //	Test            
-
-
 			string reflectionGenerateArgsFilePath = string.Empty;
-
-
-            string test = "runtime";
+            string test = "sample";
 		
 			//	sample
 			if (test == "sample")
@@ -244,6 +240,11 @@ namespace ReflectionGenerator
 					case MainArgs.ProjectPath:
 						mainArgsData.ProjectFilePath = arg;
 						break;
+
+					case MainArgs.EnableNamespaceList:
+                        mainArgsData.EnableNamespaceList = replaceArg.Split(',').ToList();
+
+                        break;
 
 					default:
 						System.Diagnostics.Debug.Assert(false);

@@ -24,7 +24,6 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <OpenMPSupport>false</OpenMPSupport>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
-      <DisableLanguageExtensions>true</DisableLanguageExtensions>
       <CompileAsManaged>false</CompileAsManaged>
       <TranslateIncludes>false</TranslateIncludes>
       <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>

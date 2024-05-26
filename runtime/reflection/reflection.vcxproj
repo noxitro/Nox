@@ -63,6 +63,10 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="reflection_system.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="stdafx.h">
       <SubType>
       </SubType>
@@ -126,6 +130,10 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="reflection_object.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="reflection_system.cpp">
       <SubType>
       </SubType>
     </ClCompile>

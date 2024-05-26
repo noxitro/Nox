@@ -2,10 +2,12 @@
 ///	@brief	win64
 #pragma once
 
+//	型チェックを厳密に行う
 #define STRICT
+//	min maxマクロを定義させない
 #define NOMINMAX
 #define NODRAWTEXT
-#define NOGDI
+//#define NOGDI
 #define NOBITMAP
 #define NOMCX
 #define NOSERVICE

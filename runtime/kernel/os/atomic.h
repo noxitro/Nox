@@ -3,7 +3,7 @@
 ///	@file	atomic.h
 ///	@brief	atomic
 #pragma once
-#include	"../if/basic_definition.h"
+#include	"../basic_definition.h"
 
 #if NOX_WIN64
 #include	"detail/atomic_win64.h"

@@ -5,9 +5,9 @@
 #include	<type_traits>
 #include	<string_view>
 
-#include	"../if/basic_definition.h"
-#include	"../if/basic_type.h"
-#include	"../if/crc32.h"
+#include	"../basic_definition.h"
+#include	"../basic_type.h"
+#include	"../crc32.h"
 #include	"type_traits.h"
 #include	"../preprocessor/cat.h"
 

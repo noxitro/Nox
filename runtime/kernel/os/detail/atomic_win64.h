@@ -1,7 +1,7 @@
 ﻿///	@file	atomic_x64.h
 ///	@brief	atomic_x64
 #pragma once
-#include	"../../if/basic_definition.h"
+#include	"../../basic_definition.h"
 #if NOX_WIN64
 #include	"../windows.h"
 #include	"../os_definition.h"

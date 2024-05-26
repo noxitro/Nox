@@ -349,7 +349,7 @@ namespace nox::reflection
 			const GetterGlobalFunc getter_global_func_;
 		};
 
-		/// @brief getter address
+		/// @brief getter address_
 		union
 		{
 			const GetterMemberFunc getter_address_member_func_;
@@ -371,7 +371,7 @@ namespace nox::reflection
 			const GetterArrayGlobalFunc getter_array_global_func_;
 		};
 		
-		/// @brief 配列getter address
+		/// @brief 配列getter address_
 		union
 		{
 			const GetterArrayMemberFunc getter_array_address_member_func_;

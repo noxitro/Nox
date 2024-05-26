@@ -15,6 +15,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="application.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="attribute_common.h">
       <SubType>
       </SubType>
@@ -28,6 +32,10 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="core.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="entry_point.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -61,6 +69,10 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="application.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="attribute_common.cpp">
       <SubType>
       </SubType>
@@ -70,6 +82,10 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="component.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="entry_point.cpp">
       <SubType>
       </SubType>
     </ClCompile>

@@ -41,6 +41,11 @@ namespace nox::reflection
 		const class EnumInfo* FindEnumInfoFromNameHash(std::uint32_t namehash)const noexcept;
 		const class EnumInfo* FindEnumInfoFromName(ReflectionStringView fullName)const noexcept { return FindEnumInfoFromNameHash(util::Crc32(fullName)); }
 
+		template<concepts::Enum T>
+		inline const class EnumInfo* FindEnumInfo()const noexcept {
+			return FindEnumInfo(util::GetUniqueTypeID<T>());
+		}
+
 #pragma region 登録関数
 		void Register(const class ClassInfo& data);
 		void Unregister(const class ClassInfo& data);
@@ -58,7 +63,6 @@ namespace nox::reflection
 		inline Reflection() {}
 
 	private:
-		static inline Reflection* instance_ = nullptr;
 
 		/// @brief		クラスデータマップ
 		/// @details	key: typeID, value: class data

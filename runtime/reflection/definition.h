@@ -57,24 +57,22 @@ namespace nox::reflection
 		*/
 		Int8,
 
-		/**
-		 * @brief 8ビット符号なし整数
-		*/
+		/// @brief 8ビット符号なし整数
 		Uint8,
 
+		/// @brief 文字
 		Char,
+
+		/// @brief 符号付き文字
 		SChar,
+
+		/// @brief 符号なし文字
 		UChar,
 
-
-		/**
-		 * @brief
-		*/
+		/// @brief 8ビット符号付き整数
 		Char8,
 
-		/**
-		 * @brief 16ビット符号付き整数
-		*/
+		/// @brief 16ビット符号付き整数
 		Int16,
 
 		/**
@@ -111,54 +109,34 @@ namespace nox::reflection
 		*/
 		Char32,
 
-		/**
-		 * @brief 半精度浮動小数点数
-		*/
-		F32,
+		/// @brief 半精度浮動小数点数
+		Float,
 
-		/**
-		 * @brief 倍精度浮動小数点数
-		*/
-		F64,
+		/// @brief 倍精度浮動小数点数
+		Double,
 
-		/**
-		 * @brief 列挙型
-		*/
+		/// @brief 列挙型
 		Enum,
 
-		/**
-		 * @brief スコープを持つ列挙型
-		*/
+		/// @brief スコープを持つ列挙型
 		ScopedEnum,
 
-		/**
-		 * @brief クラス
-		*/
+		/// @brief クラス
 		Class,
 
-		/**
-		 * @brief 共用体
-		*/
+		/// @brief 共用体
 		Union,
 
-		/**
-		 * @brief 関数
-		*/
+		/// @brief 関数
 		Delegate,
 
-		/**
-		 * @brief メンバ関数
-		*/
+		/// @brief メンバ関数
 		MemberFunction,
 
-		/**
-		 * @brief ラムダ式
-		*/
+		/// @brief ラムダ式
 		Lambda,
 
-		/**
-		 * @brief キャプチャありラムダ式
-		*/
+		/// @brief キャプチャありラムダ式
 		CaptureLambda,
 
 		_Max

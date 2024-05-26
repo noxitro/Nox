@@ -7,12 +7,12 @@
 
 using namespace nox;
 
-void	nox::reflection::Initialize()
+void	nox::reflection::InitializeGen()
 {
-	nox::reflection::Reflection::CreateInstance();
+
 }
 
-void	nox::reflection::Finalize()
+void	nox::reflection::FinalizeGen()
 {
-	nox::reflection::Reflection::DeleteInstance();
+
 }
