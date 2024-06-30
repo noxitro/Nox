@@ -46,7 +46,7 @@ namespace ReflectionGenerator.Generator
         {
             if (Directory.Exists(_BaseDirectory) == false)
             {
-                Trace.Error("存在しないディレクトリです:{0}", _BaseDirectory);
+                Trace.ErrorLine("存在しないディレクトリです:{0}", _BaseDirectory);
                 return false;
             }
 

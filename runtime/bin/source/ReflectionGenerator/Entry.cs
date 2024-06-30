@@ -80,12 +80,12 @@ namespace ReflectionGenerator
 			/// <summary>
 			/// 出力先
 			/// </summary>
-			OutputDirectory,
+			OutputDir,
 
 			/// <summary>
 			/// ソリューションディレクトリ
 			/// </summary>
-			SolutionDirectory,
+			SolutionDir,
 
 			/// <summary>
 			/// ビルド構成
@@ -204,32 +204,31 @@ namespace ReflectionGenerator
                         break;
 
 					case MainArgs.Configuration:
-                        mainArgsData.Configuration = arg;
+                        mainArgsData.Configuration = replaceArg;
 
                         break;
 
 					case MainArgs.ConfigurationDefine:
-						mainArgsData.BuildSpecDefine = arg;
+						mainArgsData.BuildSpecDefine = replaceArg;
 
                         break;
 
-					case MainArgs.SolutionDirectory:
-						mainArgsData.SolutionDirectory = arg;
+					case MainArgs.SolutionDir:
+						mainArgsData.SolutionDirectory = replaceArg;
                         break;
 
-					case MainArgs.OutputDirectory:
-						mainArgsData.OutputDirectory = arg;
+					case MainArgs.OutputDir:
+						mainArgsData.OutputDirectory = replaceArg;
                         break;
 					
 					case MainArgs.Platform:
-						mainArgsData.Platform = arg;
+						mainArgsData.Platform = replaceArg;
                         break;
                     case MainArgs.PlatformDefine:
-                        mainArgsData.PlatformDefine = arg;
+                        mainArgsData.PlatformDefine = replaceArg;
                         break;
 
 					case MainArgs.ProjectName:
-
                         break;
 
 
@@ -238,7 +237,7 @@ namespace ReflectionGenerator
 						break;
 
 					case MainArgs.ProjectPath:
-						mainArgsData.ProjectFilePath = arg;
+						mainArgsData.ProjectFilePath = replaceArg;
 						break;
 
 					case MainArgs.EnableNamespaceList:

@@ -44,14 +44,14 @@ namespace ReflectionGenerator.Info
         }
 
         #region 公開プロパティ
+
+
         public string ParentObjectClassName { get; set; } = string.Empty;
 
         /// <summary>
         /// 自身が含まれる外部クラス
         /// </summary>
         public ClassInfo? OutsideClass { get; set; } = null;
-
-       
 
         public required ClangSharp.Interop.CXCursor CXCursor { get; init; }
 
@@ -239,7 +239,7 @@ namespace ReflectionGenerator.Info
         {
             if (_InfoDic.ContainsKey(info.FullName) == true)
             {
-                Trace.Error(this, string.Format("既に存在しています {0}:", info.FullName));
+                Trace.ErrorLine(this, string.Format("既に存在しています {0}:", info.FullName));
                 return;
             }
 
@@ -287,5 +287,101 @@ namespace ReflectionGenerator.Info
         public List<ClassInfo> GetTypedefClassInfoList() => _TypedefClassInfoList;
     }
 
+    public class Token
+    {
+        public Token[] TokenChildren { get; init; } = [];
+
+        public ClangSharp.Interop.CXCursor CXCursor { get; init; }
+    }
  
+    public class TypeInfo : Token
+    {
+        #region 公開プロパティ
+        /// <summary>
+        /// 完全型名
+        /// </summary>
+        public required string FullName { get; init; }
+
+        public required string Namespace { get; init; }
+
+        public TypeInfo? ParentTypeInfo { get; set; } = null;
+
+        /// <summary>
+        /// 別名リスト
+        /// </summary>
+        public HashSet<string> TypeAliasNameHashSet { get; } = new HashSet<string>();
+
+        public bool IsTemplate { get; set; } = false;
+
+        public virtual bool IsTemplateArgumentType { get; } = false;
+
+        public required ClangSharp.Interop.CXType CXType { get; init; }
+
+        public VariableInfo? DecltypeVariableInfo { get; init; } = null;
+        #region テンプレート用パラメータ
+        public Info.TemplateArgInfo[] TemplateArgumentInfoList { get; init; } = [];
+        #endregion
+        #endregion
+    }
+
+    public class VariableInfo
+    {
+        public required TypeInfo TypeInfo { get; init; }
+        public required ClangSharp.Interop.CXCursor CXCursor { get; init; }
+        public long IntValue { get; init; }
+    }
+
+    public class FunctionInfo : VariableInfo
+    {
+        public class ArgumentInfo
+        {
+            public required VariableInfo VariableInfo { get; init; }
+            public required string Name { get; init; }
+        }
+
+        public required ArgumentInfo[] ArgumentList { get; init; }
+        public required string Name { get; init; }
+    }
+
+    public class DecltypeInfo
+    {
+
+    }
+
+    public class TemplateTypeInfo : TypeInfo
+    {
+        public required uint TemplateDepth { get; init; }
+        public required uint TemplateListIndex { get; init; }
+    }
+
+    public struct TemplateArgument
+    {
+
+    }
+
+    public class TemplateArgInfo 
+    {
+        public enum TemplateArgKind : byte
+        {
+            Type,
+            Variable,
+        }
+
+        #region 公開プロパティ
+        public TemplateArgKind Kind { get; init; }
+        public required ClangSharp.Interop.CXType CXType { get; init; }
+        public required uint Depth { get; init; }
+        public required uint ListIndex { get; init; }
+        #endregion
+    }
+
+    public class TemplateArgTypeInfo : TemplateArgInfo
+    {
+        public TypeInfo? DefaultArgTypeInfo { get; init; } = null;
+    }
+
+    public class TemplateArgVariableInfo : TemplateArgInfo
+    {
+        public required TypeInfo TypeInfo { get; init; }
+    }
 }

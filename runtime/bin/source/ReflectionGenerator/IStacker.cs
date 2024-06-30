@@ -18,9 +18,9 @@ namespace ReflectionGenerator
         public bool EmptyStack => _Stack.Count <= 0;
 
         public IReadOnlyList<T> InfoList => _List;
-        public Stack<T> InfoStack => _Stack;
+        public IReadOnlyCollection<T> InfoStack => _Stack;
 
-        public T? Top => _List.FirstOrDefault();
+        public T Top => _List[0];
         #endregion
 
         #region 公開メソッド

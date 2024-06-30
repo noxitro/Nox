@@ -5,50 +5,217 @@
 /// 
 /// 
 /// 
+//
+//#define	PP_CAT(x,y) x##y
+//#define	PP_CAT_I(x, y) PP_CAT(x, y)
+//#define	PP_STR(x) #x
+//#define	PP_STR_I(x) PP_STR(x)
+//
+//#define ATTR_1(x) __attribute__((annotate(PP_STR_I(PP_CAT_I(NOX_REFLECTION_ATTR_, x)))))
+//#define ATTR_2(x, ...) ATTR_1(x) ATTR_1(__VA_ARGS__)
+//#define ATTR_3(x, ...) ATTR_1(x) ATTR_2(__VA_ARGS__)
+//#define ATTR_4(x, ...) ATTR_1(x) ATTR_3(__VA_ARGS__)
+//// 以下、必要なだけ続ける
+//
+//#define GET_MACRO(_1,_2,_3,_4,NAME,...) NAME
+//
+//
+//#define ATTR(...) // GET_MACRO(__VA_ARGS__, ATTR_4, ATTR_3, ATTR_2, ATTR_1)(__VA_ARGS__)
+//
+//// 使用例
+//#if _DEBUG
+//constexpr auto preprocesserValue = _DEBUG;
+//#endif // _DEBUG
+//
+//class DisplayName
+//{
+//public:
+//	inline explicit DisplayName(const char32_t* name) :
+//		name_(name) {}
+//
+//private:
+//	const char32_t* name_;
+//};
+//
+//class IgnoreDataMember
+//{
+//public:
+//	inline constexpr IgnoreDataMember()noexcept = default;
+//};
+//	#include	<type_traits>
 
-#define	PP_CAT(x,y) x##y
-#define	PP_CAT_I(x, y) PP_CAT(x, y)
-#define	PP_STR(x) #x
-#define	PP_STR_I(x) PP_STR(x)
-
-#define ATTR_1(x) __attribute__((annotate(PP_STR_I(PP_CAT_I(NOX_REFLECTION_ATTR_, x)))))
-#define ATTR_2(x, ...) ATTR_1(x) ATTR_1(__VA_ARGS__)
-#define ATTR_3(x, ...) ATTR_1(x) ATTR_2(__VA_ARGS__)
-#define ATTR_4(x, ...) ATTR_1(x) ATTR_3(__VA_ARGS__)
-// 以下、必要なだけ続ける
-
-#define GET_MACRO(_1,_2,_3,_4,NAME,...) NAME
-
-
-#define ATTR(...) // GET_MACRO(__VA_ARGS__, ATTR_4, ATTR_3, ATTR_2, ATTR_1)(__VA_ARGS__)
-
-// 使用例
-#if _DEBUG
-constexpr auto preprocesserValue = _DEBUG;
-#endif // _DEBUG
-
-class DisplayName
+namespace app
 {
-public:
-	inline explicit DisplayName(const char32_t* name) :
-		name_(name) {}
+	
 
-private:
-	const char32_t* name_;
-};
+	template<class T, class U>
+	struct MinSizeType
+	{
+		using type = T;
 
-class IgnoreDataMember
+	};
+
+//	using abtype = decltype([]()->auto {return typename MinSizeType <float, float>::type();; }());
+
+	template<class T = int, class U = decltype([]()->auto {return typename MinSizeType <decltype(typename MinSizeType <T, T>::type()), T>::type(); }), class H = typename MinSizeType <T, U>::type >
+	class IOOClass
+	{
+		U* value;
+	};
+
+	IOOClass<int> iooClass;
+
+	using uint0 = decltype(decltype([](auto x) {return x; })()(2.0));
+	//using uint1 = decltype(&FuncClass<int>::declFunc<float>);
+	//using uint2 = decltype([](uint1 x) {return 0; });
+
+	//using uint3 = app::uint1;
+	//using uint4 = uint1;
+
+	using lambdaType = decltype([](int x) {return x; });
+	using uint32 = unsigned int;
+
+	template<int Size = 12, class T = decltype([](){}), class ABC = decltype(23), class U = uint32>
+	class ClassApp {
+
+		template<class OIJ , class K = T>
+		class ChildTL {
+			T* p;
+			OIJ* p2;
+		};
+	};
+}
+
+template<class T>
+class Class00 {};
+
+template<class T>
+using AddPointerType = Class00<decltype([]() {return 0; }) > * const** const;
+
+template<class T>
+using AddPointerTypeWWW = Class00<float>* const** const;
+
+template<class T>
+using AddPointerTypeXXX = Class00<int>&;
+
+AddPointerType<int> globalPointer = nullptr;
+Class00<int> globalPointer2;
+
+template<class T, class U>
+using AddPointerType2 = T*;
+
+template<class T>
+class OwnerClass
 {
-public:
-	inline constexpr IgnoreDataMember()noexcept = default;
+	using ValueType = T;
+
+	template<class U  = T>
+	class ChildClass
+	{
+		inline void Func(T*, U*) {}
+	};
 };
 
 namespace app
 {
-	ATTR(DisplayName(u""), IgnoreDataMember())
-		int Do() { return 0; }
+//	ATTR(DisplayName(u""), IgnoreDataMember())
+//		int Do() { return 0; }
+	using int32 = int;
+	using UClass = AddPointerType<AddPointerType<int32>>;
+	using UClass2 = AddPointerType<AddPointerType<int32>>;
+	UClass* uClass = nullptr;
+	AddPointerType<int>* uClass2 = nullptr;
+
+	template<class T = decltype([]() {return sizeof(int32); }) > requires(sizeof(T) >= 0)
+//	template<class T = AddPointerType<decltype([]() {return 0; }())>> requires(sizeof(T) >= 0)
+//	template<class T = AddPointerType2<char*, int*>> requires(sizeof(T) >= 0)
+	class TestClass00
+	{
+
+	};
+
+	template<class T = AddPointerType<char*>> requires(sizeof(T) >= 0)
+		class TestClass001
+	{
+
+	};
+
+	template<class T = decltype([]() {return 10; }) >
+	class TestClass01
+	{
+
+	};
+
+	template<int V>
+	class TestClass02
+	{
+
+	};
+
+	template<int V = 13>
+	class TestClass03
+	{
+
+	};
+
+	template<template<class> class T>
+	class TestClass04
+	{
+
+	};
+
+	template<class... Types>
+	class TestClass05
+	{
+
+	};
+
+	template<int... Values>
+	class TestClass06
+	{
+
+	};
+
+	template<template<int> class T>
+	class TestClass07
+	{
+
+	};
+
+	template<template<class...> class T>
+	class TestClass08
+	{
+
+	};
+
+	template<template<class> class... T>
+	class TestClass09
+	{
+
+	};
+
+	template<template<class...> class... T>
+	class TestClass010
+	{
+
+	};
+
+	template<template<template<class>class U> class T >
+	class TestClass11
+	{
+	};
+
+	template<int V = []()constexpr {return 10; }() >
+	class TestClass12;
+
+	template<class T>
+	class TestClass13;
+
+	template<>
+	class TestClass13<int> {};
 }
 
+#if false
 namespace app
 {
 	struct Int {
@@ -201,8 +368,8 @@ namespace app
 
 	};
 }
-
-std::int32_t	main()
+#endif
+int	main()
 {
 	return 0;
 }

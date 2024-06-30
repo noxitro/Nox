@@ -6,11 +6,6 @@ using System.Threading.Tasks;
 
 namespace ReflectionGenerator.Info
 {
-    public class VariableInfo
-    {
-
-    }
-
     /// <summary>
     /// 変数情報
     /// </summary>

@@ -1,4 +1,5 @@
-﻿using ClangSharp.Interop;
+﻿using ClangSharp;
+using ClangSharp.Interop;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,13 +23,13 @@ namespace ReflectionGenerator.Parser
         /// </summary>
         /// <param name="parent"></param>
         /// <returns></returns>
-        public unsafe static IReadOnlyList<CXCursor> GetChildren(this ClangSharp.Interop.CXCursor parent)
+        public unsafe static IReadOnlyList<CXCursor> GetChildren(this ClangSharp.Interop.CXCursor parent, ClangSharp.Interop.CXChildVisitResult cxChildVisitResult = CXChildVisitResult.CXChildVisit_Continue)
         {
             List<CXCursor> cursors = new List<CXCursor>();
             parent.VisitChildren((cursor, parentCursor, clientData) =>
             {
                 cursors.Add(cursor);
-                return CXChildVisitResult.CXChildVisit_Continue;
+                return cxChildVisitResult;
             }, clientData: default);
             return cursors;
         }
@@ -48,7 +49,7 @@ namespace ReflectionGenerator.Parser
                 case CX_CXXAccessSpecifier.CX_CXXInvalidAccessSpecifier:
                     return AccessLevel.Public;
             }
-            Trace.Error(null, string.Format("不明なCX_CXXAccessSpecifierです :{0}", accessSpecifier.ToString()));
+            Trace.ErrorLine(null, string.Format("不明なCX_CXXAccessSpecifierです :{0}", accessSpecifier.ToString()));
             return AccessLevel.Public;
         }
         public static string GetBaseTypeName(this CXType cursor)
@@ -88,7 +89,7 @@ namespace ReflectionGenerator.Parser
                 case CXTypeKind.CXType_UShort:
                     return RuntimeTypeKind.U16;
                 case CXTypeKind.CXType_SChar:
-                    return RuntimeTypeKind.S8;
+                    return RuntimeTypeKind.Int8;
 
                 //case CXTypeKind.CXType_ULong
                 case CXTypeKind.CXType_Unexposed:
@@ -162,6 +163,11 @@ namespace ReflectionGenerator.Parser
             }
 
             return str;
+        }
+
+        public static string GetNamespace(this ClangSharp.Interop.CXType cxType)
+        {
+            return cxType.Declaration.GetNamespace();
         }
 
         public static List<string> GetNamespaceList(this ClangSharp.Interop.CXCursor cursor)
@@ -366,133 +372,207 @@ namespace ReflectionGenerator.Parser
                 //"LambdaStaticInvoker",
         };
 
-        private static readonly Dictionary<ClangSharp.Interop.CXCursorKind, HashSet<string>> IgnorePropertyNameListDict = new Dictionary<CXCursorKind, HashSet<string>>()
+        /// <summary>
+        /// 除外するプロパティ名リスト
+        /// </summary>
+        private static bool IsIgnoreProperty(CXCursor cursor, string propertyName)
         {
-            {
-                ClangSharp.Interop.CXCursorKind.CXCursor_TemplateTypeParameter,
-                new HashSet<string>
-                {
-                    "DefaultArgType",
-                }
-            }, 
-            {
-                ClangSharp.Interop.CXCursorKind.CXCursor_DeclRefExpr,
-                new HashSet<string>
-                {
-                    "TlsKind"
-                }
-            },
-            {
-                ClangSharp.Interop.CXCursorKind.CXCursor_ParmDecl,
-                new HashSet<string>
-                {
-                    "DeclObjCTypeEncoding"
-                }
-            },
-            {
-                ClangSharp.Interop.CXCursorKind.CXCursor_CallExpr,
-                new HashSet<string>
-                {
-                    "TlsKind"
-                }
-            },
-            {
-                ClangSharp.Interop.CXCursorKind.CXCursor_ReturnStmt,
-                new HashSet<string>
-                {
-                    "TlsKind"
-                }
-            },
-             {
-                ClangSharp.Interop.CXCursorKind.CXCursor_UnaryExpr,
-                new HashSet<string>
-                {
-                    "TlsKind"
-                }
-            },
-              {
-                ClangSharp.Interop.CXCursorKind.CXCursor_IntegerLiteral,
-                new HashSet<string>
-                {
-                    "TlsKind"
-                }
-            },
+            CXCursorKind cursorKind = cursor.Kind;
+            CXTypeKind typeKind = cursor.Type.kind;
+            CX_StorageClass storageClass = cursor.StorageClass;
 
-                {
-                ClangSharp.Interop.CXCursorKind.CXCursor_UnexposedExpr,
-                new HashSet<string>
-                {
-                    "TlsKind"
-                }
-            },
-    {
-                ClangSharp.Interop.CXCursorKind.CXCursor_LastExtraDecl,
-                new HashSet<string>
-                {
-                    "Visibility"
-                }
-            },
+            switch (propertyName)
+            {
+                case "DefaultArgType":
+                    switch(cursorKind)
+                    {
+                        case CXCursorKind.CXCursor_TemplateTypeParameter:
+                            switch(typeKind)
+                            {
 
-        };
+                            }
+                            return true;
+                    }
+                    break;
+                case "TlsKind":
+                    switch(cursorKind)
+                    {
+                        case CXCursorKind.CXCursor_CompoundStmt:
+                        case CXCursorKind.CXCursor_UnexposedExpr:
+                        case CXCursorKind.CXCursor_IntegerLiteral:
+                            switch (storageClass)
+                            {
+                                case CX_StorageClass.CX_SC_Invalid:
+                                    return true;
+                                //case CXTypeKind.CXType_Int:
+                                //case CXTypeKind.CXType_ULongLong:
+                                //    return true;
+                            }
+                            break;
+                        case CXCursorKind.CXCursor_UnaryExpr:
+                            switch(typeKind)
+                            {
+                                case CXTypeKind.CXType_ULongLong:
+                                    return true;
+                            }
+                            break;
+                        case CXCursorKind.CXCursor_ReturnStmt:
+                        case CXCursorKind.CXCursor_CallExpr:
+                        case CXCursorKind.CXCursor_DeclRefExpr:
+                        case CXCursorKind.CXCursor_LambdaExpr:
+                        case CXCursorKind.CXCursor_BinaryOperator:
+                        case CXCursorKind.CXCursor_ParenExpr:
+                        case CXCursorKind.CXCursor_UnaryOperator:
+                        case CXCursorKind.CXCursor_FloatingLiteral:
+                        case CXCursorKind.CXCursor_InvalidFile:
+                            return true;
+                    }
+                    break;
 
+                case "Visibility":
+                    switch(cursorKind)
+                    {
+                        case CXCursorKind.CXCursor_LastExtraDecl:
+                            return false;
+                    }
+                    break;
 
-        private static IReadOnlyList<(string,object)> GetCXCursorInfo(this ClangSharp.Interop.CXCursor cursor)
+                case "DeclObjCTypeEncoding":
+                    switch(cursorKind)
+                    {
+                        case CXCursorKind.CXCursor_ParmDecl:
+                        case CXCursorKind.CXCursor_NonTypeTemplateParameter:
+                        case CXCursorKind.CXCursor_VarDecl:
+                        case CXCursorKind.CXCursor_ConversionFunction:
+                        case CXCursorKind.CXCursor_CXXMethod:
+                        case CXCursorKind.CXCursor_FieldDecl:
+                            return true;
+                    }
+                    break;
+
+            }
+
+            return false;
+        }
+
+        private static bool IsIgnoreProperty(CXType cxType, string propertyName)
         {
-            List<(string, object)> list = new List<(string, object)>();
+
+
+            return false;
+        }
+
+
+        public static List<(string Name, System.Type Type, object Value, string comment)> GetMemberInfoList(this object instance)
+        {
+            CXCursor? cursor = instance as CXCursor?;
+
+            List<(string Name, System.Type Type, object Value, string comment)> list = new List<(string Name, System.Type Type, object Value, string comment)>();
+
+            if(cursor != null)
             {
-                var children = cursor.GetChildren();
+                var children = cursor.Value.GetChildren();
                 for (int i = 0; i < children.Count; ++i)
                 {
-                    list.Add(($"Children[{i}]{children[i].Kind.ToString()}:{children[i].Spelling.CString}", GetCXCursorInfo(children[i])));
+                    list.Add(($"Children[{i}]{children[i].Kind.ToString()}:{children[i].Spelling.CString}", children[i].GetType(), GetMemberInfoList(children[i]), string.Empty));
                 }
             }
 
-            Type type = cursor.GetType();
-            System.Reflection.FieldInfo[] fieldInfoList = type.GetFields((System.Reflection.BindingFlags)~0);
-            foreach(System.Reflection.FieldInfo field in fieldInfoList)
+            System.Type type = instance.GetType();
+            IReadOnlyList<System.Reflection.FieldInfo> fieldInfoList = type.GetFields((System.Reflection.BindingFlags)~0);
+            foreach (System.Reflection.FieldInfo field in fieldInfoList)
             {
-             //   Trace.Info(null, $"Field:{field.Name}");
-                object? value = field.GetValue(cursor);
-                if(value == null)
+                //     Trace.Info(null, $"Field:{field.Name}");
+                object? value = field.GetValue(instance);
+                if (value == null)
                 {
                     continue;
                 }
-                list.Add((field.Name, value));
+                list.Add((field.Name, field.FieldType, value, string.Empty));
             }
 
-            System.Reflection.PropertyInfo[] propertyInfoList = type.GetProperties((System.Reflection.BindingFlags)~0);
+            IReadOnlyList<System.Reflection.PropertyInfo> propertyInfoList = type.GetProperties((System.Reflection.BindingFlags)~0);
             foreach (System.Reflection.PropertyInfo propertyInfo in propertyInfoList)
             {
-                if(IgnorePropertyNameList.Contains(propertyInfo.Name) == true)
+                if (IgnorePropertyNameList.Contains(propertyInfo.Name) == true)
                 {
                     continue;
                 }
 
-                if(IgnorePropertyNameListDict.TryGetValue(cursor.Kind, out HashSet<string>? outIgnoreNameList) == true)
+                //  除外プロパティか
+
+                if (cursor.HasValue == true)
                 {
-                    if(outIgnoreNameList.Contains(propertyInfo.Name) == true)
+                    if (IsIgnoreProperty(cursor.Value, propertyInfo.Name) == true)
                     {
                         continue;
                     }
                 }
-                
+
                 try
                 {
-                    Trace.Info(null, $"Kind:{cursor.Kind.ToString()}, Property:{propertyInfo.Name}");
-                    object? value = propertyInfo.GetValue(cursor);
+                    switch (instance)
+                    {
+                        case ClangSharp.Interop.CXType cxType:
+                            Trace.Info(null, $"Kind:{cxType.kind.ToString()}, ");
+                            
+                            break;
+
+                        case ClangSharp.Interop.CXCursor cxCursor:
+                            Trace.Info(null, $"Kind:{cxCursor.Kind.ToString()}, ");
+                            break;
+
+                        default:
+
+                            break;
+                    }
+
+                    Trace.Info(null, $"Property:{propertyInfo.Name}, ");
+
+
+                    object? value = propertyInfo.GetValue(instance);
                     if (value == null)
                     {
+                        Trace.InfoLine(null, $"");
                         continue;
                     }
-                    list.Add((propertyInfo.Name, value));
+
+                    string comment;
+                    switch (value)
+                    {
+                        case ClangSharp.Interop.CXType cxType:
+                            comment = cxType.KindSpelling.CString;
+                            break;
+
+                        case ClangSharp.Interop.CXCursor cxCursor:
+                            comment = cxCursor.KindSpelling.CString;
+                            break;
+
+                        default:
+                            comment = string.Empty;
+                            
+                            break;
+                    }
+
+                    if (comment != string.Empty)
+                    {
+                        Trace.InfoLine(null, $"Value:{value.ToString()}[{comment}]");
+                    }
+                    else
+                    {
+                        Trace.InfoLine(null, $"Value:{value.ToString()}");
+                    }
+
+
+                    list.Add((propertyInfo.Name, propertyInfo.PropertyType, value, comment));
+
+                   
                 }
                 catch (Exception)
                 {
-                    Trace.Info(null, $"プロパティの取得に失敗:{propertyInfo.Name}");
+                    Trace.InfoLine(null, $"プロパティの取得に失敗:{propertyInfo.Name}");
                 }
             }
-
-            
 
             return list;
         }
@@ -673,36 +753,36 @@ namespace ReflectionGenerator.Parser
             switch (cursor.Kind)
             {
                 case CXCursorKind.CXCursor_IntegerLiteral:
-                    Trace.Info("CreateRuntimeValue", createSpace() + $"{cursor.Kind.ToString()}:{cursor.Spelling.CString}:{cursor.IntegerLiteralValue}");
+                    Trace.InfoLine("CreateRuntimeValue", createSpace() + $"{cursor.Kind.ToString()}:{cursor.Spelling.CString}:{cursor.IntegerLiteralValue}");
                     break;
 
                 case CXCursorKind.CXCursor_StringLiteral:
-                    Trace.Info("CreateRuntimeValue", createSpace() + $"{cursor.Kind.ToString()}:{cursor.Spelling.CString}:{cursor.StringLiteralValue}");
+                    Trace.InfoLine("CreateRuntimeValue", createSpace() + $"{cursor.Kind.ToString()}:{cursor.Spelling.CString}:{cursor.StringLiteralValue}");
                     break;
                 case CXCursorKind.CXCursor_InvalidFile:
-                    Trace.Info("CreateRuntimeValue", createSpace() + $"{cursor.Kind.ToString()}:{cursor.Spelling.CString}");
+                    Trace.InfoLine("CreateRuntimeValue", createSpace() + $"{cursor.Kind.ToString()}:{cursor.Spelling.CString}");
                     break;
 
                 case CXCursorKind.CXCursor_CallExpr:
-                    Trace.Info("CreateRuntimeValue", createSpace() + $"{cursor.Kind.ToString()}:{cursor.Spelling.CString}");
+                    Trace.InfoLine("CreateRuntimeValue", createSpace() + $"{cursor.Kind.ToString()}:{cursor.Spelling.CString}");
 
                     break;
 
                 case CXCursorKind.CXCursor_TemplateRef:
-                    Trace.Info("CreateRuntimeValue", createSpace() + $"{cursor.Kind.ToString()}:{cursor.Spelling.CString}");
+                    Trace.InfoLine("CreateRuntimeValue", createSpace() + $"{cursor.Kind.ToString()}:{cursor.Spelling.CString}");
 
                     {
                         int numTempalteArgument = cursor.NumTemplateArguments;
                         for(uint i = 0; i < numTempalteArgument; ++i)
                         {
                             var argument = cursor.GetTemplateArgument(i);
-                            Trace.Info("CreateRuntimeValue", $"\t{argument.kind.ToString()}:{argument.AsDecl.Spelling.CString}");
+                            Trace.InfoLine("CreateRuntimeValue", $"\t{argument.kind.ToString()}:{argument.AsDecl.Spelling.CString}");
                         }
                     }
                     break;
 
                 default:
-                    Trace.Info("CreateRuntimeValue", createSpace() + $"{cursor.Kind.ToString()}:{cursor.Spelling.CString}");
+                    Trace.InfoLine("CreateRuntimeValue", createSpace() + $"{cursor.Kind.ToString()}:{cursor.Spelling.CString}");
                     break;
             }
             ++depth;
@@ -711,7 +791,7 @@ namespace ReflectionGenerator.Parser
                 for (uint i = 0; i < numTemplateArg; ++i)
                 {
                     var templateArgument = cursor.Type.CanonicalType.GetTemplateArgument(i);
-                    Trace.Info("CreateRuntimeValue", createSpace() + $"{templateArgument.kind.ToString()}:{templateArgument.ToString()}");
+                    Trace.InfoLine("CreateRuntimeValue", createSpace() + $"{templateArgument.kind.ToString()}:{templateArgument.ToString()}");
                 }
             }
 
@@ -720,7 +800,7 @@ namespace ReflectionGenerator.Parser
                 for (uint i = 0; i < numTemplateArg; ++i)
                 {
                     var templateArgument = cursor.GetTemplateArgument(i);
-                    Trace.Info("CreateRuntimeValue", createSpace() + $"{templateArgument.kind.ToString()}:{templateArgument.ToString()}");
+                    Trace.InfoLine("CreateRuntimeValue", createSpace() + $"{templateArgument.kind.ToString()}:{templateArgument.ToString()}");
                 }
             }
 
@@ -870,7 +950,7 @@ namespace ReflectionGenerator.Parser
         //    if(type.Spelling.CString.Contains("Namespace00::Same2<decltype(1), decltype(nullptr)>"))
             if(type.Spelling.CString.Contains("asBody"))
             {
-                Trace.Info(null, "");
+                Trace.InfoLine(null, "");
             }
 
             var r = CreateRuntimeTypeImpl(cursor, type);

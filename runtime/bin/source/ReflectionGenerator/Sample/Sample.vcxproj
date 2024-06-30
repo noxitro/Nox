@@ -56,7 +56,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>$(ProjectDir)createReflectionGenerateArgs.bat "$(SolutionDir)" "$(ProjectPath)" "$(ProjectDir)main.cpp" "$(Configuration)" "$(Platform)" "DebugDefine" "x64Define" "$(MSBuildBinPath)"</Command>
+      <Command>$(SolutionDir)../../createReflectionGenerateArgs.bat "$(SolutionDir)" "$(ProjectPath)" "$(ProjectDir)main.cpp" "$(Configuration)" "$(Platform)" "DebugDefine" "x64Define" "$(MSBuildBinPath)" "" "$(ProjectDir)"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

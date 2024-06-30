@@ -64,7 +64,7 @@ namespace ReflectionGenerator
             if (_NestList.Count > 0 || _ScopeStack.Count > 0)
             {
 #if DEBUG
-                Trace.Error("ネストが正しく記述されていません thisName: ", _FilePath);
+                Trace.ErrorLine("ネストが正しく記述されていません thisName: ", _FilePath);
 #endif
             }
 
