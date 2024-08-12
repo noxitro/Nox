@@ -57,3 +57,8 @@
 /runtime/core/build/intermediate/x64/Debug/core
 /runtime/kernel/build/intermediate/x64/Debug/kernel
 /runtime/bin/source/ReflectionGeneratorCpp/build/.vs/LLVM
+/runtime/bin/source/ReflectionGeneratorCpp/build
+/runtime/bin/source/ReflectionGeneratorCpp/Reflecti.a6cde9f7/x64/Debug
+/runtime/bin/source/ReflectionGeneratorCpp/x64/Debug
+/runtime/bin/source/ReflectionGeneratorCpp/Sample/SampleCpp/x64/Debug
+/runtime/bin/source/ReflectionGeneratorCpp/Sample/x64
