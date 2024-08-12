@@ -19,10 +19,6 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="attribute_define.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
     <ClInclude Include="definition.h">
       <SubType>
       </SubType>
@@ -94,10 +90,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="attribute.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="attribute_define.cpp">
       <SubType>
       </SubType>
     </ClCompile>

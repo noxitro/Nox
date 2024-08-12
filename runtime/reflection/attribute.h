@@ -6,7 +6,7 @@
 namespace nox::reflection
 {
 	//	前方宣言
-	class ReflectionObject;
+//	class ReflectionObject;
 	
 	/// @brief 属性クラスインターフェース
 	struct IAttribute
