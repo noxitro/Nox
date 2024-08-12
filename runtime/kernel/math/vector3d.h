@@ -20,11 +20,15 @@ namespace nox
 		private:
 			const _ValueType _padding = 0;
 		public:
-			inline	static	consteval	Vector3D<_ValueType>	Zero()noexcept { return Vector3D<_ValueType>(); }
+			[[nodiscard]]	inline	static	constexpr	Vector3D<_ValueType>	Zero()noexcept { return Vector3D<_ValueType>(); }
+			[[nodiscard]]	inline	static	constexpr	Vector3D<_ValueType>	One()noexcept { return Vector3D<_ValueType>(1, 1, 1); }
+			[[nodiscard]]	inline	static	constexpr	Vector3D<_ValueType>	AxisX()noexcept { return Vector3D<_ValueType>(1, 0, 0); }
+			[[nodiscard]]	inline	static	constexpr	Vector3D<_ValueType>	AxisY()noexcept { return Vector3D<_ValueType>(0, 1, 0); }
+			[[nodiscard]]	inline	static	constexpr	Vector3D<_ValueType>	AxisZ()noexcept { return Vector3D<_ValueType>(0, 0, 1); }
 
 			//	コンストラクタ
 			[[nodiscard]]	constexpr Vector3D() noexcept :
-				x((_ValueType)0), y((_ValueType)0), z((_ValueType)0) {}
+				x(static_cast<_ValueType>(0)), y(static_cast<_ValueType>(0)), z(static_cast<_ValueType>(0)) {}
 
 			[[nodiscard]] constexpr explicit Vector3D(_ValueType _x, _ValueType _y, _ValueType _z)noexcept :
 				x(_x), y(_y), z(_z) {}
@@ -77,5 +81,5 @@ namespace nox
 		};
 	}
 
-	using Vec3 = nox::detail::Vector3D<f32>;
+	using Vec3 = nox::detail::Vector3D<nox::float_t>;
 }

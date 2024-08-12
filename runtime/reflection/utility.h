@@ -127,11 +127,11 @@ namespace nox::reflection
 		}
 		else if constexpr (std::is_same_v<T, std::float_t> == true)
 		{
-			return TypeKind::F32;
+			return TypeKind::Float;
 		}
 		else if constexpr (std::is_same_v<T, std::double_t> == true)
 		{
-			return TypeKind::F64;
+			return TypeKind::Double;
 		}
 		else if constexpr (std::is_same_v<T, char32_t> == true)
 		{
@@ -170,6 +170,26 @@ namespace nox::reflection
 		{
 			return TypeKind::CaptureLambda;
 		}
+		else if constexpr (std::is_array_v<T> == true)
+		{
+			return TypeKind::Array;
+		}
+		else if constexpr (std::is_unbounded_array_v<T> == true)
+		{
+			return TypeKind::UnboundedArray;
+		}
+		else if constexpr (std::is_pointer_v<T> == true)
+		{
+			return TypeKind::Pointer;
+		}
+		else if constexpr (std::is_lvalue_reference_v<T> == true)
+		{
+			return TypeKind::LvalueReference;
+		}
+		else if constexpr (std::is_rvalue_reference_v<T> == true)
+		{
+			return TypeKind::RvalueReference;
+		}
 		else
 		{
 			//NOX_ASSERT(false, u"不明な型");
@@ -186,18 +206,6 @@ namespace nox::reflection
 	[[nodiscard]] inline constexpr TypeAttributeFlag GetTypeAttributeFlags()noexcept
 	{
 		TypeAttributeFlag typeAttributeFlags = TypeAttributeFlag::None;
-		if constexpr (std::is_pointer_v<T> == true)
-		{
-			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeAttributeFlag::Pointer);
-		}
-		if constexpr (std::is_lvalue_reference_v<T> == true)
-		{
-			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeAttributeFlag::LvalueReference);
-		}
-		else if constexpr (std::is_rvalue_reference_v<T> == true)
-		{
-			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeAttributeFlag::RvalueReference);
-		}
 		if constexpr (std::is_const_v<T> == true)
 		{
 			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeAttributeFlag::Const);
@@ -214,29 +222,13 @@ namespace nox::reflection
 		{
 			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeAttributeFlag::Abstract);
 		}
-		if constexpr (std::is_array_v<T> == true)
-		{
-			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeAttributeFlag::Array);
-		}
-		if constexpr (std::is_unbounded_array_v<T> == true)
-		{
-			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeAttributeFlag::UnboundedArray);
-		}
 		if constexpr (std::is_unsigned_v<T> == true)
 		{
 			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeAttributeFlag::Unsigned);
 		}
-		if constexpr (IsConstPointerValue<T> == true)
+		if constexpr (std::is_polymorphic_v<T> == true)
 		{
-			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeAttributeFlag::ConstPointer);
-		}
-		if constexpr (IsConstLvalueReferenceValue<T> == true)
-		{
-			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeAttributeFlag::ConstLvalueReference);
-		}
-		if constexpr (IsConstRvalueReferenceValue<T> == true)
-		{
-			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeAttributeFlag::ConstRvalueReference);
+			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeAttributeFlag::Polymorphic);
 		}
 
 		return typeAttributeFlags;

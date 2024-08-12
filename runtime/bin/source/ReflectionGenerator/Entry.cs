@@ -51,7 +51,6 @@ namespace ReflectionGenerator
 			public string SourceFilePath { get; set; } = string.Empty;
 
 			public string OutputDirectory { get; set; } = string.Empty;
-			public string SolutionDirectory { get; set; } = string.Empty;
 
 			public string Configuration { get; set; } = string.Empty;
 			public string Platform { get; set; } = string.Empty;
@@ -60,8 +59,9 @@ namespace ReflectionGenerator
 
 			public string MSBuildBinPath { get; set; } = string.Empty;
 			public string ProjectFilePath { get; set; } = string.Empty;
+            public string SolutionFilePath { get; set; } = string.Empty;
 
-			public List<string> IgnoreNamespaceList { get; set; } = new List<string>();
+            public List<string> IgnoreNamespaceList { get; set; } = new List<string>();
 
 			public List<string> EnableNamespaceList { get; set; } = new List<string>();
         }
@@ -85,7 +85,7 @@ namespace ReflectionGenerator
 			/// <summary>
 			/// ソリューションディレクトリ
 			/// </summary>
-			SolutionDir,
+			SolutionPath,
 
 			/// <summary>
 			/// ビルド構成
@@ -136,7 +136,7 @@ namespace ReflectionGenerator
 		{
 #if true   //	Test            
 			string reflectionGenerateArgsFilePath = string.Empty;
-            string test = "sample";
+            string test = "runtime";
 		
 			//	sample
 			if (test == "sample")
@@ -146,7 +146,7 @@ namespace ReflectionGenerator
 			}
 			else if (test == "runtime")
 			{
-                reflectionGenerateArgsFilePath = $"D:\\github\\Nox\\runtime\\reflectionGenerateArgs.txt";
+                reflectionGenerateArgsFilePath = $"D:\\github\\Nox\\runtime\\build\\reflectionGenerateArgs.txt";
             }
 
             reflectionGenerateArgsFilePath = System.IO.Path.GetFullPath(reflectionGenerateArgsFilePath);
@@ -213,8 +213,8 @@ namespace ReflectionGenerator
 
                         break;
 
-					case MainArgs.SolutionDir:
-						mainArgsData.SolutionDirectory = replaceArg;
+					case MainArgs.SolutionPath:
+						mainArgsData.SolutionFilePath = replaceArg;
                         break;
 
 					case MainArgs.OutputDir:
@@ -262,6 +262,7 @@ namespace ReflectionGenerator
 				new Parser.CppParser.SetupParam() 
 				{
 					SourceFilePath = argsData.SourceFilePath,
+					SolutionPath = argsData.SolutionFilePath,
 					ProjectFilePath = argsData.ProjectFilePath,
 					MSBuildBinPath = argsData.MSBuildBinPath,
 					Configuration = argsData.Configuration,

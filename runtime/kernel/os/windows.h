@@ -20,13 +20,13 @@
 
 // ヘッダーからあまり使われない関数を省く
 #define WIN32_LEAN_AND_MEAN
-
+#pragma warning(push, 0)
+#pragma warning(disable:4820)
+#pragma warning(disable:26812)
 //	windows.hはwinsock2.hが先にインクルードされていないと、
 //	winsock.hを自動的にインクルードしてしまう。
 #include	<WinSock2.h>
 
-#pragma warning(push)
-#pragma warning(disable:26812)
 #include	<Windows.h>
 #pragma	warning(pop)
 #undef	near

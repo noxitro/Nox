@@ -1,4 +1,5 @@
-﻿#include	"stdafx.h"
+﻿
+#include	"stdafx.h"
 
 //	必須
 #include	"kernel/kernel.h"
@@ -11,8 +12,11 @@
 //	app
 #include	"app/app.h"
 
+//	third party
 #if NOX_DEBUG
-#pragma comment(lib, "./build/runtime/x64/Debug/fmtd.lib")
+#pragma comment(lib, "./build/third_party/x64/Debug/fmtd.lib")
+#else
+#pragma comment(lib, "./build/third_party/x64/Release/fmt.lib")
 #endif
 
 #if NOX_WIN64
@@ -37,13 +41,13 @@
 
 #include	<shellapi.h>
 
-int WINAPI::WinMain(_In_::HINSTANCE hInstance, _In_opt_::HINSTANCE /*hPrevInstance*/, _In_::LPSTR /*lpCmdLine*/, _In_ int nCmdShow)
+int WINAPI WinMain(_In_::HINSTANCE hInstance, _In_opt_::HINSTANCE /*hPrevInstance*/, _In_::LPSTR /*lpCmdLine*/, _In_ int nCmdShow)
 {
 	using namespace nox;
-
-	int32 arg_num;
-	const char16*const* argv = reinterpret_cast<const char16*const*>(::CommandLineToArgvW(::GetCommandLineW(), &arg_num));
+	
+	nox::int32 arg_num;
+	const nox::char16*const* argv = reinterpret_cast<const nox::char16*const*>(::CommandLineToArgvW(::GetCommandLineW(), &arg_num));
 	nox::EntryPoint({ argv, static_cast<size_t>(arg_num) });
-
+	
 	return 0;
 }

@@ -124,6 +124,14 @@
   <ItemGroup>
     <None Include="..\core2\core2.vcxproj" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\kernel\kernel.vcxproj">
+      <Project>{ce18e5d8-faa4-48b4-a1d2-dab85fc1acbb}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\reflection\reflection.vcxproj">
+      <Project>{45ab985e-3772-4261-95ec-c6de7d26edbb}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
@@ -177,6 +185,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <ClCompile />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile />
@@ -186,6 +195,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <ClCompile />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'">
     <ClCompile />
@@ -195,6 +205,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <ClCompile />
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

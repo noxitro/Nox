@@ -45,5 +45,7 @@ namespace ReflectionGenerator.Info
         /// 属性リスト
         /// </summary>
         public required IReadOnlyList<AttributeInfo> AttributeInfoList { get; init; }
+
+        
     }
 }

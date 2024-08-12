@@ -90,5 +90,5 @@ namespace nox
 		};
 	}
 
-	using Mat3 = nox::detail::Matrix3D<f32>;
+	using Mat3 = nox::detail::Matrix3D<nox::float_t>;
 }

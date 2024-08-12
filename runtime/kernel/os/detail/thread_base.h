@@ -145,9 +145,7 @@ namespace nox::os
 		*/
 		int8 thread_id_;
 
-		/**
-		 * @brief スレッドの状態
-		*/
+		/// @brief スレッド状態
 		ThreadState thread_state_;
 
 		/**

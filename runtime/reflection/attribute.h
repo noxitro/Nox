@@ -153,18 +153,24 @@ namespace nox::reflection
 		template<>	\
 		struct TypeTraitsClass<__VA_ARGS__> : std::true_type {};	\
 	}
-	
+//	end define
+
 //	属性付与マクロ
 #if NOX_REFLECTION_GENERATOR
-///@brief	属性付与のためのマクロ
-#define	NOX_DETAIL_ATTR_IMPL(x) __attribute__((annotate(#x)))
+//#if defined(__clang__)
+///@brief	属性付与のためのマクロ	エンジン外でannotate属性が使われることを想定して、NOX_REFLECTION_GENERATORを先頭に付けておく
+//#define	NOX_DETAIL_ATTR_IMPL3(x) __attribute__((annotate(#x)))
+//#define	NOX_DETAIL_ATTR_IMPL2(x) NOX_DETAIL_ATTR_IMPL3(x)
+//#define	NOX_DETAIL_ATTR_IMPL(x) NOX_DETAIL_ATTR_IMPL2(NOX_PP_CAT_I(NOX_REFLECTION_GENERATOR,x))
+	#define	NOX_DETAIL_ATTR_IMPL(x) __attribute__((annotate(#x)))
 #else
 ///@brief	属性付与のためのマクロ
-#define	NOX_DETAIL_ATTR_IMPL(x) //[[annotate(#x)]]
+#define	NOX_DETAIL_ATTR_IMPL(x) //	[[annotate(NOX_PP_TO_STRING(NOX_REFLECTION_GENERATOR##x))]]
 #endif // NOX_REFLECTION_GENERATOR
 
 ///@brief	属性付与
-#define	NOX_ATTR(...) NOX_PP_REPEAT_AUTO(NOX_DETAIL_ATTR_IMPL, __VA_ARGS__)
+///@details	エンジン外でannotate属性が使われることを想定して、annotate("NOX_REFLECTION_GENERATOR")を付与する
+#define	NOX_ATTR(...) NOX_DETAIL_ATTR_IMPL(NOX_REFLECTION_GENERATOR) NOX_PP_REPEAT_AUTO(NOX_DETAIL_ATTR_IMPL, __VA_ARGS__)
 
 ///@brief	型に対しての属性付与
 #define	NOX_ATTR_TYPE(...) \
@@ -172,10 +178,10 @@ namespace nox::reflection
 	NOX_ATTR(__VA_ARGS__)
 
 ///@brief	Enumメンバに対しての属性付与
-#define	NOX_ATTR_ENUM(...) NOX_ATTR(__VA_ARGS__)
+#define	NOX_ATTR_ENUMERATOR(...) NOX_ATTR(__VA_ARGS__)
 
-///@brief	変数や関数などに対しての属性付与
-#define NOX_ATTR_OBJECT(...)	\
+///@brief	変数や関数などの定義に対しての属性付与
+#define NOX_ATTR_DECLARATION(...)	\
 	static_assert(::nox::reflection::detail::CheckAttributes<decltype(std::make_tuple(__VA_ARGS__))>(), "failed attributes");	\
 	NOX_ATTR(__VA_ARGS__)
 

@@ -15,10 +15,7 @@ namespace ReflectionGenerator.Parser
     public static class ClangSharpExtension
     {
         #region 公開メソッド
-        public static bool IsReflectionAttribute(this ClangSharp.Interop.CXCursor self) => CppParseUtil.IsReflectionAttributeCursor(self);
-        public static string ExtractReflectionAttributeStr(this ClangSharp.Interop.CXCursor self) => CppParseUtil.ExtractReflectionAttributeFromCursor(self);
-
-        /// <summary>
+         /// <summary>
         /// CXCursorから子CXCursorリストを取得する
         /// </summary>
         /// <param name="parent"></param>
@@ -31,6 +28,43 @@ namespace ReflectionGenerator.Parser
                 cursors.Add(cursor);
                 return cxChildVisitResult;
             }, clientData: default);
+            return cursors;
+        }
+
+        public static IReadOnlyList<CXCursor> GetDeclList(this ClangSharp.Interop.CXCursor self)
+        {
+            
+            int numDecl = self.NumDecls;
+            if(numDecl <= 0)
+            {
+                return [];
+            }
+
+            CXCursor[] cursors = new CXCursor[numDecl];
+
+            for (uint i = 0; i < numDecl; ++i)
+            {
+                cursors[i] = self.GetDecl(i);
+            }
+
+            return cursors;
+        }
+
+        public static IReadOnlyList<CXCursor> GetSpecializationList(this ClangSharp.Interop.CXCursor self)
+        {
+            int numDecl = self.NumSpecializations;
+            if (numDecl <= 0)
+            {
+                return [];
+            }
+
+            CXCursor[] cursors = new CXCursor[numDecl];
+
+            for (uint i = 0; i < numDecl; ++i)
+            {
+                cursors[i] = self.GetSpecialization(i);
+            }
+
             return cursors;
         }
 
@@ -139,6 +173,91 @@ namespace ReflectionGenerator.Parser
         public static bool IsDefinedOperatorNew(this ClangSharp.Interop.CXCursor self)
         {
             return false;
+        }
+
+        public static IReadOnlyList<string> GetFullNameList(this ClangSharp.Interop.CXCursor cursor)
+        {
+            List<string> strList = new List<string>();
+            while (cursor.IsNull == false)
+            {
+                switch (cursor.Kind)
+                {
+                    case CXCursorKind.CXCursor_ClassDecl:
+                    case CXCursorKind.CXCursor_ClassTemplate:
+                    case CXCursorKind.CXCursor_Namespace:
+                    case CXCursorKind.CXCursor_StructDecl:
+                    case CXCursorKind.CXCursor_FieldDecl:
+                    case CXCursorKind.CXCursor_TypedefDecl:
+                        strList.Add(cursor.Spelling.CString);
+                        break;
+                }
+
+                cursor = cursor.SemanticParent;
+            }
+
+            return strList;
+        }
+
+        public static string GetFullName(this ClangSharp.Interop.CXCursor cursor)
+        {
+            ClangSharp.Interop.CXCursor parentCursor = cursor.SemanticParent;
+
+            switch(cursor.Kind)
+            {
+                case CXCursorKind.CXCursor_FunctionDecl:
+                case CXCursorKind.CXCursor_CXXMethod:
+                case CXCursorKind.CXCursor_FieldDecl:
+                case CXCursorKind.CXCursor_VarDecl:
+                    {
+                      
+                    }
+                    break;
+
+                default:
+                    if (parentCursor.Type.kind != CXTypeKind.CXType_Invalid)
+                    {
+                        return $"{parentCursor.Type.CanonicalType.Spelling.CString}::{cursor.Spelling.CString}";
+                    }
+                    break;
+            }
+            
+            switch(parentCursor.Kind)
+            {
+                case CXCursorKind.CXCursor_Namespace:
+                case CXCursorKind.CXCursor_NamespaceAlias:
+                case CXCursorKind.CXCursor_NamespaceRef:
+                    string fullName = cursor.Spelling.CString;
+                    for (; parentCursor.Kind == CXCursorKind.CXCursor_Namespace; parentCursor = parentCursor.SemanticParent)
+                    {
+                        fullName = $"{parentCursor.Spelling.CString}::{fullName}";
+                    }
+                    return fullName;
+
+                default:
+                    return $"{parentCursor.Type.CanonicalType.Spelling.CString}::{cursor.Spelling.CString}";
+            }
+
+            //ClangSharp.Interop.CXCursor parentCursor = cursor.SemanticParent;
+            //switch(parentCursor.Kind)
+            //{
+            //    case CXCursorKind.CXCursor_Namespace:
+            //        return 
+            //}
+
+            //string str = string.Empty;
+            //foreach (string s in GetFullNameList(cursor))
+            //{
+            //    if (str != string.Empty)
+            //    {
+            //        str = s + "::" + str;
+            //    }
+            //    else
+            //    {
+            //        str = s;
+            //    }
+            //}
+
+            //return str;
         }
 
         public static string GetNamespace(this ClangSharp.Interop.CXCursor cursor)
@@ -256,76 +375,75 @@ namespace ReflectionGenerator.Parser
             return str;
         }
 
-        public static string GetObjectFullName(this ClangSharp.Interop.CXCursor cursor)
-        {
-            string lexicalParentStr = GetLixicalsStr(cursor);
-            string namespaceStr = GetNamespace(cursor);
+       
 
-            string str = cursor.Spelling.CString;
+        //public static string GetObjectFullName(this ClangSharp.Interop.CXCursor cursor)
+        //{
+        //    string lexicalParentStr = GetLixicalsStr(cursor);
+        //    string namespaceStr = GetNamespace(cursor);
 
-            if (namespaceStr != string.Empty)
-            {
-                str = str.Replace($"{namespaceStr}::", string.Empty);
-            }
+        //    string str = cursor.Spelling.CString;
 
-            if (lexicalParentStr != string.Empty)
-            {
-                str = $"{lexicalParentStr}::{str}";
-            }
+        //    if (namespaceStr != string.Empty)
+        //    {
+        //        str = str.Replace($"{namespaceStr}::", string.Empty);
+        //    }
 
-            if (namespaceStr != string.Empty)
-            {
-                str = $"{namespaceStr}::{str}";
-            }
+        //    if (lexicalParentStr != string.Empty)
+        //    {
+        //        str = $"{lexicalParentStr}::{str}";
+        //    }
 
-            return str;
-        }
+        //    if (namespaceStr != string.Empty)
+        //    {
+        //        str = $"{namespaceStr}::{str}";
+        //    }
 
-        public static string GetFunctionFullName(this ClangSharp.Interop.CXCursor cursor)
-        {
-            switch(cursor.Kind)
-            {
-                case CXCursorKind.CXCursor_FunctionDecl:
-                case CXCursorKind.CXCursor_CXXMethod:
-                case CXCursorKind.CXCursor_ObjCClassMethodDecl:
-                case CXCursorKind.CXCursor_Constructor:
-                    break;
+        //    return str;
+        //}
 
-                default:
-                    return string.Empty;
-            }
+        //public static string GetFunctionFullName(this ClangSharp.Interop.CXCursor cursor)
+        //{
+        //    switch(cursor.Kind)
+        //    {
+        //        case CXCursorKind.CXCursor_FunctionDecl:
+        //        case CXCursorKind.CXCursor_CXXMethod:
+        //        case CXCursorKind.CXCursor_ObjCClassMethodDecl:
+        //        case CXCursorKind.CXCursor_Constructor:
+        //            break;
 
-            string lexicalParentStr = GetLixicalsStr(cursor);
-            string namespaceStr = GetNamespace(cursor);
+        //        default:
+        //            return string.Empty;
+        //    }
 
-            string str = cursor.Spelling.CString;
+        //    string lexicalParentStr = GetLixicalsStr(cursor);
+        //    string namespaceStr = GetNamespace(cursor);
 
-            if (namespaceStr != string.Empty)
-            {
-                str = str.Replace($"{namespaceStr}::", string.Empty);
-            }
+        //    string str = cursor.Spelling.CString;
 
-            if (lexicalParentStr != string.Empty)
-            {
-                str = $"{lexicalParentStr}::{str}";
-            }
+        //    if (namespaceStr != string.Empty)
+        //    {
+        //        str = str.Replace($"{namespaceStr}::", string.Empty);
+        //    }
 
-            if (namespaceStr != string.Empty)
-            {
-                str = $"{namespaceStr}::{str}";
-            }
+        //    if (lexicalParentStr != string.Empty)
+        //    {
+        //        str = $"{lexicalParentStr}::{str}";
+        //    }
 
-            return str;
-        }
+        //    if (namespaceStr != string.Empty)
+        //    {
+        //        str = $"{namespaceStr}::{str}";
+        //    }
+
+        //    return str;
+        //}
 
         public static string GetCanonicalTypeName(this ClangSharp.Interop.CXType type)
         {
-            if (type.CanonicalType.Declaration.Kind == CXCursorKind.CXCursor_NoDeclFound)
-            {
-                return type.CanonicalType.Spelling.CString;
-            }
-
-            return type.CanonicalType.Declaration.Spelling.CString;
+            System.Diagnostics.Debug.Assert(type.kind != CXTypeKind.CXType_Invalid, "無効な型");
+            System.Diagnostics.Debug.Assert(type.CanonicalType.kind != CXTypeKind.CXType_Invalid, "無効な型");
+            return type.CanonicalType.Spelling.CString;
         }
 
         public static ClangSharp.Interop.CXType GetDeepestPointeeType(this ClangSharp.Interop.CXType type)
@@ -425,6 +543,20 @@ namespace ReflectionGenerator.Parser
                         case CXCursorKind.CXCursor_UnaryOperator:
                         case CXCursorKind.CXCursor_FloatingLiteral:
                         case CXCursorKind.CXCursor_InvalidFile:
+                        case CXCursorKind.CXCursor_CXXNullPtrLiteralExpr:
+                        case CXCursorKind.CXCursor_CXXFunctionalCastExpr:
+                        case CXCursorKind.CXCursor_MemberRefExpr:
+                        case CXCursorKind.CXCursor_DeclStmt:
+                        case CXCursorKind.CXCursor_StringLiteral:
+                        case CXCursorKind.CXCursor_CStyleCastExpr:
+                            return true;
+                    }
+                    break;
+
+                case "LambdaStaticInvoker":
+                    switch(cursorKind)
+                    {
+                        case CXCursorKind.CXCursor_ClassDecl:
                             return true;
                     }
                     break;
@@ -450,6 +582,13 @@ namespace ReflectionGenerator.Parser
                     }
                     break;
 
+                case "IsGlobal":
+                    switch(cursorKind)
+                    {
+                        case CXCursorKind.CXCursor_NonTypeTemplateParameter:
+                            return true;
+                    }
+                    break;
             }
 
             return false;
@@ -463,18 +602,22 @@ namespace ReflectionGenerator.Parser
         }
 
 
-        public static List<(string Name, System.Type Type, object Value, string comment)> GetMemberInfoList(this object instance)
+        public static List<(string Name, System.Type Type, object Value, string comment)> GetMemberInfoList(this object instance, bool checkCHildren = true)
         {
             CXCursor? cursor = instance as CXCursor?;
 
-            List<(string Name, System.Type Type, object Value, string comment)> list = new List<(string Name, System.Type Type, object Value, string comment)>();
+            
+                List<(string Name, System.Type Type, object Value, string comment)> list = new List<(string Name, System.Type Type, object Value, string comment)>();
 
-            if(cursor != null)
+            if (cursor != null)
             {
-                var children = cursor.Value.GetChildren();
-                for (int i = 0; i < children.Count; ++i)
+                if (checkCHildren)
                 {
-                    list.Add(($"Children[{i}]{children[i].Kind.ToString()}:{children[i].Spelling.CString}", children[i].GetType(), GetMemberInfoList(children[i]), string.Empty));
+                    var children = cursor.Value.GetChildren();
+                    for (int i = 0; i < children.Count; ++i)
+                    {
+                        list.Add(($"Children[{i}]{children[i].Kind.ToString()}:{children[i].Spelling.CString}", children[i].GetType(), GetMemberInfoList(children[i]), string.Empty));
+                    }
                 }
             }
 
@@ -545,12 +688,17 @@ namespace ReflectionGenerator.Parser
                             break;
 
                         case ClangSharp.Interop.CXCursor cxCursor:
-                            comment = cxCursor.KindSpelling.CString;
+                            {
+                                var property = cxCursor.GetType().GetProperty("DebuggerDisplayString", (System.Reflection.BindingFlags)~0);
+                                string? propertyStr = (string?)property?.GetValue(cxCursor);
+                                System.Diagnostics.Debug.Assert(propertyStr != null);
+                                comment = propertyStr;
+
+                            }
                             break;
 
                         default:
-                            comment = string.Empty;
-                            
+                            comment = value.ToString() ?? string.Empty;
                             break;
                     }
 
@@ -576,389 +724,6 @@ namespace ReflectionGenerator.Parser
 
             return list;
         }
-
-        private unsafe static void CreateRuntimeValue2(RuntimeType parent, ClangSharp.Interop.CXCursor cursor)
-        {
-            RuntimeType runtimeType = RuntimeType.Null;
-            switch (cursor.Kind)
-            {
-                case CXCursorKind.CXCursor_IntegerLiteral:
-                    {
-                        runtimeType = new RuntimeType()
-                        {
-                            FullName = cursor.Type.GetCanonicalTypeFullName(),
-                            TemplateArgumentList = RuntimeType.DummyList,
-                            TypeKind = cursor.Type.kind
-                        };
-                        runtimeType.TemplateValueStr = cursor.IntegerLiteralValue.ToString();
-
-                        parent.RuntimeValueList.Add(runtimeType);
-                    }
-                    break;
-
-                case CXCursorKind.CXCursor_StringLiteral:
-                    {
-                        runtimeType = new RuntimeType()
-                        {
-                            FullName = cursor.Type.GetCanonicalTypeFullName(),
-                            TemplateArgumentList = RuntimeType.DummyList,
-                            TypeKind = cursor.Type.kind
-                        };
-                        runtimeType.TemplateValueStr = cursor.StringLiteralValue.CString;
-
-                        parent.RuntimeValueList.Add(runtimeType);
-                    }
-                    break;
-                case CXCursorKind.CXCursor_InvalidFile:
-                    break;
-
-                case CXCursorKind.CXCursor_CallExpr:
-                    {
-                        if (cursor.IsImplicit == true)
-                        {
-                            break;
-                        }
-
-                        runtimeType = new RuntimeType()
-                        {
-                            Name = cursor.Definition.Type.GetCanonicalTypeName(),
-                            FullName = cursor.Definition.Type.GetCanonicalTypeFullName(),
-                            TemplateArgumentList = RuntimeType.DummyList,
-                            TypeKind = cursor.Definition.Type.kind,
-                            TemplateValueStr = cursor.Definition.GetFunctionFullName()
-                        };
-
-                        parent.RuntimeValueList.Add(runtimeType);
-
-                        foreach (ClangSharp.Interop.CXCursor childCursor in cursor.GetChildren())
-                        {
-                            CreateRuntimeValue2(runtimeType, childCursor);
-                        }
-                    }
-                    break;
-
-                case CXCursorKind.CXCursor_TemplateRef:
-                    foreach (ClangSharp.Interop.CXCursor childCursor in cursor.GetChildren())
-                    {
-                        CreateRuntimeValue2(parent, childCursor);
-                    }
-                    break;
-
-                case CXCursorKind.CXCursor_CXXFunctionalCastExpr:
-                    //runtimeType = new RuntimeType()
-                    //{
-                    //    Name = cursor.Type.GetCanonicalTypeName(),
-                    //    FullName = cursor.Type.GetCanonicalTypeFullName(),
-                    //    TemplateArgumentList = RuntimeType.DummyList,
-                    //    TypeKind = cursor.Type.kind,
-                    //    TemplateValueStr = cursor.Type.GetCanonicalTypeFullName()
-                    //};
-                    //parent.RuntimeValueList.Add(runtimeType);
-                    foreach (ClangSharp.Interop.CXCursor childCursor in cursor.GetChildren())
-                    {
-                        CreateRuntimeValue2(parent, childCursor);
-                    }
-                    break;
-
-                case CXCursorKind.CXCursor_Constructor:
-                    {
-                        runtimeType = new RuntimeType()
-                        {
-                            Name = cursor.Type.GetCanonicalTypeName(),
-                            FullName = cursor.Type.GetCanonicalTypeFullName(),
-                            TemplateArgumentList = RuntimeType.DummyList,
-                            TypeKind = cursor.Type.kind,
-                            TemplateValueStr = cursor.GetFunctionFullName()
-                        };
-
-                        parent.RuntimeValueList.Add(runtimeType);
-
-                        foreach (ClangSharp.Interop.CXCursor childCursor in cursor.GetChildren())
-                        {
-                            CreateRuntimeValue2(runtimeType, childCursor);
-                        }
-                    }
-                    break;
-
-                case CXCursorKind.CXCursor_FunctionDecl:
-                case CXCursorKind.CXCursor_CXXMethod:
-                    if (cursor.IsImplicit == true)
-                    {
-                        break;
-                    }
-
-                    runtimeType = new RuntimeType()
-                    {
-                        Name = cursor.Type.GetCanonicalTypeName(),
-                        FullName = cursor.Type.GetCanonicalTypeFullName(),
-                        TemplateArgumentList = RuntimeType.DummyList,
-                        TypeKind = cursor.Type.kind,
-                        TemplateValueStr = cursor.GetFunctionFullName()
-                    };
-
-                    parent.RuntimeValueList.Add(runtimeType);
-
-                    foreach (ClangSharp.Interop.CXCursor childCursor in cursor.GetChildren())
-                    {
-                        CreateRuntimeValue2(runtimeType, childCursor);
-                    }
-                    break;
-
-                case CXCursorKind.CXCursor_DeclRefExpr:
-                case CXCursorKind.CXCursor_TypeRef:
-                    {
-                        ClangSharp.Interop.CXCursor primaryTemplate = cursor.Definition.PrimaryTemplate;
-                        if (primaryTemplate.IsTemplated == true)
-                        {
-                            int numTemplateArgument = primaryTemplate.NumTemplateArguments;
-                            for (uint i = 0; i < numTemplateArgument; ++i)
-                            {
-                                ClangSharp.Interop.CX_TemplateArgument templateArgument = primaryTemplate.GetTemplateArgument(i);
-                            }
-                        }
-
-                        foreach (ClangSharp.Interop.CXCursor childCursor in cursor.GetChildren())
-                        {
-                            CreateRuntimeValue2(parent, childCursor);
-                        }
-                    }
-                    break;
-
-                default:
-                    foreach (ClangSharp.Interop.CXCursor childCursor in cursor.GetChildren())
-                    {
-                        CreateRuntimeValue2(parent, childCursor);
-                    }
-                    break;
-            }
-
-           
-        }
-
-        private unsafe static RuntimeType CreateRuntimeValue(ClangSharp.Interop.CXCursor cursor, int depth = 0)
-        {
-            
-            string createSpace()
-            {
-                string space = string.Empty;
-                for(int i = 0; i < depth; ++i)
-                {
-                    space += '\t';
-                }
-                return space;
-            }
-
-            RuntimeType runtimeValue;
-
-            switch (cursor.Kind)
-            {
-                case CXCursorKind.CXCursor_IntegerLiteral:
-                    Trace.InfoLine("CreateRuntimeValue", createSpace() + $"{cursor.Kind.ToString()}:{cursor.Spelling.CString}:{cursor.IntegerLiteralValue}");
-                    break;
-
-                case CXCursorKind.CXCursor_StringLiteral:
-                    Trace.InfoLine("CreateRuntimeValue", createSpace() + $"{cursor.Kind.ToString()}:{cursor.Spelling.CString}:{cursor.StringLiteralValue}");
-                    break;
-                case CXCursorKind.CXCursor_InvalidFile:
-                    Trace.InfoLine("CreateRuntimeValue", createSpace() + $"{cursor.Kind.ToString()}:{cursor.Spelling.CString}");
-                    break;
-
-                case CXCursorKind.CXCursor_CallExpr:
-                    Trace.InfoLine("CreateRuntimeValue", createSpace() + $"{cursor.Kind.ToString()}:{cursor.Spelling.CString}");
-
-                    break;
-
-                case CXCursorKind.CXCursor_TemplateRef:
-                    Trace.InfoLine("CreateRuntimeValue", createSpace() + $"{cursor.Kind.ToString()}:{cursor.Spelling.CString}");
-
-                    {
-                        int numTempalteArgument = cursor.NumTemplateArguments;
-                        for(uint i = 0; i < numTempalteArgument; ++i)
-                        {
-                            var argument = cursor.GetTemplateArgument(i);
-                            Trace.InfoLine("CreateRuntimeValue", $"\t{argument.kind.ToString()}:{argument.AsDecl.Spelling.CString}");
-                        }
-                    }
-                    break;
-
-                default:
-                    Trace.InfoLine("CreateRuntimeValue", createSpace() + $"{cursor.Kind.ToString()}:{cursor.Spelling.CString}");
-                    break;
-            }
-            ++depth;
-            {
-                int numTemplateArg = cursor.Type.CanonicalType.NumTemplateArguments;
-                for (uint i = 0; i < numTemplateArg; ++i)
-                {
-                    var templateArgument = cursor.Type.CanonicalType.GetTemplateArgument(i);
-                    Trace.InfoLine("CreateRuntimeValue", createSpace() + $"{templateArgument.kind.ToString()}:{templateArgument.ToString()}");
-                }
-            }
-
-            {
-                int numTemplateArg = cursor.NumTemplateArguments;
-                for (uint i = 0; i < numTemplateArg; ++i)
-                {
-                    var templateArgument = cursor.GetTemplateArgument(i);
-                    Trace.InfoLine("CreateRuntimeValue", createSpace() + $"{templateArgument.kind.ToString()}:{templateArgument.ToString()}");
-                }
-            }
-
-            foreach (ClangSharp.Interop.CXCursor childCursor in cursor.GetChildren())
-            {
-                CreateRuntimeValue(childCursor, depth);
-            }
-
-            //if(cursor != cursor.Referenced && cursor.Referenced != ClangSharp.Interop.CXCursor.Null)
-            //{
-            //    foreach (ClangSharp.Interop.CXCursor childCursor in cursor.Referenced.GetChildren())
-            //    {
-            //        CreateRuntimeValue(childCursor, depth);
-            //    }
-            //}
-
-            //if (cursor != cursor.Definition && cursor.Definition != ClangSharp.Interop.CXCursor.Null)
-            //{
-            //    foreach (ClangSharp.Interop.CXCursor childCursor in cursor.Definition.GetChildren())
-            //    {
-            //        CreateRuntimeValue(childCursor, depth);
-            //    }
-            //}
-
-            switch (cursor.Kind)
-            {
-                case CXCursorKind.CXCursor_CallExpr:
-                case CXCursorKind.CXCursor_CXXFunctionalCastExpr:
-                    {
-                        runtimeValue = RuntimeType.Null;
-                        ClangSharp.Interop.CXCursor writtern = cursor.SubExprAsWritten;
-                  //      runtimeValue = CreateRuntimeValue(writtern.Definition, writtern.Definition.Type);
-                    }
-                    break;
-
-                case CXCursorKind.CXCursor_Constructor:
-                    {
-                        //int numArgument = cursor.NumArguments;
-                        //for(uint i = 0; i < numArgument; ++i)
-                        //{
-                        //    ClangSharp.Interop.CXCursor argument = cursor.GetArgument(i);
-                        //    CreateRuntimeValue(argument.Definition, argument.Definition.Type);
-                        //}
-
-                        
-
-                        runtimeValue = RuntimeType.Null;
-                    }
-                    break;
-
-                case CXCursorKind.CXCursor_ParmDecl:
-                    runtimeValue = RuntimeType.Null;
-                    break;
-
-                default:
-                    runtimeValue = RuntimeType.Null;
-                //    Trace.Error(null, $"未対応の識別値です: {cursor.Spelling.CString}, Kind:{cursor.Kind.ToString()}");
-                //    System.Diagnostics.Debug.Assert(false, $"未対応の識別値です: {cursor.Spelling.CString}, Kind:{cursor.Kind.ToString()}");
-
-                    break;
-            }
-
-            return runtimeValue;
-        }
-
-        private unsafe static RuntimeType CreateRuntimeTypeImpl(ClangSharp.Interop.CXCursor cursor, ClangSharp.Interop.CXType type)
-        {
-            RuntimeType templateData;
-
-            int numTemplateArg = type.CanonicalType.NumTemplateArguments;
-            RuntimeType[] argList = new RuntimeType[int.Max(0, numTemplateArg)];
-
-            switch (type.CanonicalType.TypeClass)
-            {
-                case CX_TypeClass.CX_TypeClass_TemplateTypeParm:
-                    templateData = new RuntimeType
-                    {
-                        TemplateDepth = type.CanonicalType.Depth,
-                        TemplateIndex = type.CanonicalType.Index,
-                        TypeKind = type.CanonicalType.kind,
-                        TemplateArgumentList = argList
-                    };
-                    break;
-
-                default:
-                    templateData = new RuntimeType
-                    {
-                        FullName = type.GetCanonicalTypeFullName(),
-                        Name = type.GetCanonicalTypeName(),
-                        Namespace = type.Declaration.GetNamespace(),
-                        TypeKind = type.CanonicalType.kind,
-                        TemplateArgumentList = argList
-                    };
-                    break;
-            }
-
-            if (numTemplateArg >= 0)
-            {
-                for(uint i = 0; i < numTemplateArg; ++i)
-                {
-                    ClangSharp.Interop.CX_TemplateArgument argument = type.CanonicalType.GetTemplateArgument(i);
-                    switch (argument.kind)
-                    {
-                        case CXTemplateArgumentKind.CXTemplateArgumentKind_Type:
-                            argList[i] = CreateRuntimeTypeImpl(cursor, argument.AsType);
-                            break;
-
-                        case CXTemplateArgumentKind.CXTemplateArgumentKind_Integral:
-                            argList[i] = new RuntimeType() 
-                            { 
-                                Name = argument.IntegralType.GetCanonicalTypeName(),
-                                Namespace = argument.IntegralType.Declaration.GetNamespace(),
-                                FullName = argument.IntegralType.GetCanonicalTypeFullName(),
-                                TypeKind = argument.IntegralType.kind,
-
-                                TemplateValueStr = argument.AsIntegral.ToString(),
-                                TemplateArgumentList = RuntimeType.DummyList,
-                            };
-                            break;
-
-                        case CXTemplateArgumentKind.CXTemplateArgumentKind_Declaration:
-                            //argument.AsDecl.NumSpecializations
-                            var argumentCursor = cursor.GetChildren()[(int)i];
-                            argList[i] = CreateRuntimeValue(argumentCursor);
-                            CreateRuntimeValue2(templateData, argumentCursor);
-                            break;
-
-                        default:
-                            System.Diagnostics.Debug.Assert(false, $"未対応の識別値です {type.Spelling.CString}");
-                            break;
-                    }
-                }
-            }
-
-            
-
-            return templateData;
-        }
-
-        //private static string RestoreTypeName(RuntimeType)
-        //{
-
-        //}
-
-        public static RuntimeType CreateRuntimeType(this ClangSharp.Interop.CXCursor cursor, ClangSharp.Interop.CXType type)
-        {
-        //    if(type.Spelling.CString.Contains("Namespace00::Same2<decltype(1), decltype(nullptr)>"))
-            if(type.Spelling.CString.Contains("asBody"))
-            {
-                Trace.InfoLine(null, "");
-            }
-
-            var r = CreateRuntimeTypeImpl(cursor, type);
-
-            string restoreName = RestoreRuntimeTypeStr(r);
-
-            return r;
-        }
-        #endregion
+         #endregion
     }
 }

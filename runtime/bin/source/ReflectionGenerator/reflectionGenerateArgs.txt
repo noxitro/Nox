@@ -13,4 +13,8 @@
 -PlatformDefine
 "x64Define"
 -MSBuildBinPath
-"C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\amd64"
+"C:\Program Files\Microsoft Visual Studio\2022\Preview\MSBuild\Current\Bin\amd64"
+-EnableNamespaceList
+""
+-OutputDir
+"D:\github\Nox\runtime\bin\source\ReflectionGenerator\Sample\"

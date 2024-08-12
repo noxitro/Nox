@@ -127,12 +127,12 @@ void Reflection::Unregister(const EnumInfo& data)
 	enum_info_map_.erase(data.GetTypeID());
 }
 
-void Reflection::Register(const FieldInfo& data)
+void Reflection::Register(const VariableInfo& data)
 {
 
 }
 
-void Reflection::Unregister(const FieldInfo& data)
+void Reflection::Unregister(const VariableInfo& data)
 {
 
 }

@@ -12,21 +12,35 @@ namespace ReflectionGenerator.Info
 
     }
 
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)]
+    public struct Integer64
+    {
+        [System.Runtime.InteropServices.FieldOffset(0)]
+        public long Int64;
+
+        [System.Runtime.InteropServices.FieldOffset(0)]
+        public ulong UInt64;
+    }
+
     /// <summary>
     /// 列挙体情報
     /// </summary>
-    public class EnumInfo : BaseInfo
+    public class EnumInfo : Info.TypeInfo
     {
         /// <summary>
         /// Enumの1要素
         /// </summary>
-        public class EnumVariable
+        public struct EnumVariable
         {
             #region 公開プロパティ
+            public required ClangSharp.Interop.CXTypeKind TypeKind { get; init; }
+
             /// <summary>
             /// 名前
             /// </summary>
             public required string Name { get; init; }
+
+            public required Integer64 Integer64 { get; init; }
 
             /// <summary>
             /// 属性リスト
@@ -38,26 +52,10 @@ namespace ReflectionGenerator.Info
 
         #region 公開プロパティ
         /// <summary>
-        /// フルネーム
-        /// </summary>
-        public required string FullName { get; init; }
-
-        /// <summary>
-        /// 名前
-        /// </summary>
-        public required string Name { get; init; }
-
-        public required string Namespace { get; init; }
-
-        public required AccessLevel AccessLevel { get; init; }
-
-        /// <summary>
         /// 要素リスト
         /// 定義順
         /// </summary>
         public required IReadOnlyList<EnumVariable> VariableList { get; init; }
-
-        public required IReadOnlyList<AttributeInfo> AttributeInfoList { get; init; }
         #endregion
     }
 

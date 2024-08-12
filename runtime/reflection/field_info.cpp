@@ -9,7 +9,7 @@
 using namespace nox;
 using namespace nox::reflection;
 
-const ClassInfo* FieldInfo::GetOwnerClass()const noexcept
+const ClassInfo* VariableInfo::GetOwnerClass()const noexcept
 {
 	return Reflection::Instance().FindClassInfo(owner_class_type_.GetTypeID());
 }

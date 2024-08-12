@@ -7,7 +7,6 @@
 #include	"../os/windows.h"
 #endif // NOX_WIN64
 
-
 #include	<memory>
 
 

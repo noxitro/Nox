@@ -8,6 +8,11 @@
 #define	NOX_PP_CAT(a, b) a##b
 #define	NOX_PP_CAT_I(a, b) NOX_PP_CAT(a, b)
 
+///@brief	文字列化
+#define NOX_PP_TO_STRING(x) #x
+#define NOX_PP_TO_STRING_I(x) NOX_PP_TO_STRING(x)
+#define NOX_PP_TO_STRING_U32(x) NOX_PP_CAT(U, #x)
+
 #if defined(__clang__)
 
 #else

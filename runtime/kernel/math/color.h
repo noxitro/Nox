@@ -25,7 +25,7 @@ namespace nox
 			b(static_cast<uint8>(_b * 255.0f)),
 			a(static_cast<uint8>(_a * 255.0f)) {}
 
-		[[nodiscard]]	inline constexpr explicit Color(f64 _r, f64 _g, f64 _b, f64 _a)noexcept :
+		[[nodiscard]]	inline constexpr explicit Color(nox::double_t _r, nox::double_t _g, nox::double_t _b, nox::double_t _a)noexcept :
 			r(static_cast<uint8>(_r * 255.0)),
 			g(static_cast<uint8>(_g * 255.0)),
 			b(static_cast<uint8>(_b * 255.0)),

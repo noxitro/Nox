@@ -7,7 +7,7 @@ namespace nox::reflection
 {
 	//	前方宣言
 	class FunctionInfo;
-	class FieldInfo;
+	class VariableInfo;
 	class EnumInfo;
 
 	/// @brief クラス型情報
@@ -51,8 +51,8 @@ namespace nox::reflection
 		template<concepts::ClassUnion T>
 		[[nodiscard]] inline constexpr const ClassInfo* GetInternalClass()const noexcept { return GetInternalClass(util::GetUniqueTypeID<T>()); }
 
-		[[nodiscard]] inline constexpr const std::span<const class FieldInfo* const> GetFieldList()const noexcept { return std::span(field_ptr_table_, field_length_); }
-		[[nodiscard]] const class FieldInfo* GetField(std::uint8_t typeID)const noexcept;
+		[[nodiscard]] inline constexpr const std::span<const class VariableInfo* const> GetFieldList()const noexcept { return std::span(field_ptr_table_, field_length_); }
+		[[nodiscard]] const class VariableInfo* GetField(std::uint8_t typeID)const noexcept;
 #pragma endregion
 
 	private:
@@ -88,7 +88,7 @@ namespace nox::reflection
 		const class ReflectionObject* const* attribute_ptr_table_;
 
 		/// @brief 変数情報ポインタテーブル
-		const class FieldInfo* const* field_ptr_table_;
+		const class VariableInfo* const* field_ptr_table_;
 
 		/// @brief 関数情報ポインタテーブル
 		const class FunctionInfo* const* function_ptr_table_;
@@ -117,6 +117,4 @@ namespace nox::reflection
 		/// @brief 列挙体の数
 		std::uint8_t enum_length_;
 	};
-
-	constexpr auto sizeo = sizeof(ClassInfo);
 }

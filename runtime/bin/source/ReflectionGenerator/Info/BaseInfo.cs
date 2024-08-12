@@ -19,11 +19,15 @@ namespace ReflectionGenerator.Info
         public required string ModuleName { get; init; } 
     }
 
+    public interface IBaseInfo
+    {
+    }
+
     /// <summary>
     /// パース情報基底
     /// </summary>
-    public abstract class BaseInfo
+    public abstract class BaseInfo : IBaseInfo
     {
-        public required Module Module { get; init; }
+        public Module Module { get; init; } = new Module() { ModuleName = "Core" };
     }
 }

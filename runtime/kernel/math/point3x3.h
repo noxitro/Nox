@@ -43,7 +43,7 @@ namespace nox
 		};
 	}
 
-	using Int3x3 = nox::detail::Point3x3<f32>;
+	using Int3x3 = nox::detail::Point3x3<nox::float_t>;
 	using UInt3x3 = nox::detail::Point3x3<uint32>;
 	using Float3x3 = nox::detail::Point3x3<float>;
 	using Double3x3 = nox::detail::Point3x3<double>;

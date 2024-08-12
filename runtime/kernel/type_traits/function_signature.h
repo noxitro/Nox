@@ -602,6 +602,9 @@ namespace nox
 	using FunctionArgsType = typename FunctionSignature<T>::ArgsType;
 
 	template<concepts::FunctionSignatureType T>
+	constexpr size_t FunctionArgsLength = std::tuple_size_v<FunctionArgsType<T>>;
+
+	template<concepts::FunctionSignatureType T>
 	constexpr bool IsFunctionNoexceptValue = FunctionSignature<T>::IsNoexcept();
 
 	template<concepts::FunctionSignatureType T>

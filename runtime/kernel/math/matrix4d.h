@@ -125,6 +125,6 @@ namespace nox
 		};
 	}
 
-	using Mat4 = nox::detail::Matrix4D<f32>;
+	using Mat4 = nox::detail::Matrix4D<nox::float_t>;
 }
 

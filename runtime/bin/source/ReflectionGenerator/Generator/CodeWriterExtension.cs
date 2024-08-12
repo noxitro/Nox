@@ -77,14 +77,14 @@ namespace ReflectionGenerator.Generator
             {
                 Info.AttributeInfo attrInfo = attrList[i];
 
-                if (attrInfo.IsConstexpr)
-                {
-                    codeWriter.WriteLine($"static constexpr {attrInfo.ValueStr} {GetAttributeName(i)} = {attrInfo.ValueStr}({attrInfo.ValueStr})");
-                }
-                else
-                {
-                    codeWriter.WriteLine($"static inline const {attrInfo.ValueStr} {GetAttributeName(i)} = {attrInfo.ValueStr}({attrInfo.ValueStr})");
-                }
+                //if (attrInfo.IsConstexpr)
+                //{
+                //    codeWriter.WriteLine($"static constexpr {attrInfo.ValueStr} {GetAttributeName(i)} = {attrInfo.ValueStr}({attrInfo.ValueStr})");
+                //}
+                //else
+                //{
+                //    codeWriter.WriteLine($"static inline const {attrInfo.ValueStr} {GetAttributeName(i)} = {attrInfo.ValueStr}({attrInfo.ValueStr})");
+                //}
             }
 
             //  属性テーブル
@@ -109,7 +109,7 @@ namespace ReflectionGenerator.Generator
         /// <param name="fieldName"></param>
         /// <param name="ownerClassInfo"></param>
         /// <param name="fieldInfo"></param>
-        public static void WriteLineTypeofFiled(this CodeWriter codeWriter, int fieldIndex, Info.ClassInfo? ownerClassInfo, Info.FieldInfo fieldInfo)
+        public static void WriteLineTypeofFiled(this CodeWriter codeWriter, int fieldIndex, Info.ClassInfoOld? ownerClassInfo, Info.FieldInfo fieldInfo)
         {
             string fieldName = GeneratorUtil.GetFieldName(fieldIndex);
 
@@ -209,7 +209,7 @@ namespace ReflectionGenerator.Generator
             codeWriter.PopScope();
         }
 
-        private static void WriteLineMethodInvokeLambda(this CodeWriter codeWriter, Info.ClassInfo? ownerClassInfo, Info.MethodInfo methodInfo, int minArgsLength)
+        private static void WriteLineMethodInvokeLambda(this CodeWriter codeWriter, Info.ClassInfoOld? ownerClassInfo, Info.MethodInfo methodInfo, int minArgsLength)
         {
             codeWriter.WriteNest();
 
@@ -307,7 +307,7 @@ namespace ReflectionGenerator.Generator
         /// <param name="fieldName"></param>
         /// <param name="ownerClassInfo"></param>
         /// <param name="fieldInfo"></param>
-        public static void WriteLineTypeofMethod(this CodeWriter codeWriter, int methodIndex, Info.ClassInfo? ownerClassInfo, Info.MethodInfo methodInfo)
+        public static void WriteLineTypeofMethod(this CodeWriter codeWriter, int methodIndex, Info.ClassInfoOld? ownerClassInfo, Info.MethodInfo methodInfo)
         {
             string methodName = GeneratorUtil.GetMethodName(methodIndex);
 
@@ -428,7 +428,7 @@ namespace ReflectionGenerator.Generator
             codeWriter.PopScope();
         }
 
-        public static void WriteLineTypeofClass(this CodeWriter codeWriter, Info.ClassInfo classInfo)
+        public static void WriteLineTypeofClass(this CodeWriter codeWriter, Info.ClassInfoOld classInfo)
         {
 
         }

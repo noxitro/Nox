@@ -8,7 +8,7 @@
 namespace nox
 {
 	/// @brief 基底オブジェクト
-	class Object : public reflection::ReflectionObject
+	class Object : public nox::reflection::ReflectionObject
 	{
 		NOX_DECLARE_OBJECT_ROOT(Object);
 	private:

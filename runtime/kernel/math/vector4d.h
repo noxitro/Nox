@@ -67,5 +67,5 @@ namespace nox
 
 	}
 
-	using Vec4 = nox::detail::Vector4D<f32>;
+	using Vec4 = nox::detail::Vector4D<nox::float_t>;
 }

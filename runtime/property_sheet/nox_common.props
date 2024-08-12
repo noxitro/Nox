@@ -25,7 +25,6 @@
       <OpenMPSupport>false</OpenMPSupport>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <CompileAsManaged>false</CompileAsManaged>
-      <TranslateIncludes>false</TranslateIncludes>
       <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAsWinRT>false</CompileAsWinRT>
       <GenerateXMLDocumentationFiles>false</GenerateXMLDocumentationFiles>
@@ -34,11 +33,15 @@
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
       <BuildStlModules>false</BuildStlModules>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <TreatSpecificWarningsAsErrors>5030;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
     </ClCompile>
     <Link />
     <Lib>
       <SubSystem>Windows</SubSystem>
     </Lib>
+    <Midl>
+      <WarningLevel>4</WarningLevel>
+    </Midl>
   </ItemDefinitionGroup>
   <ItemGroup />
 </Project>

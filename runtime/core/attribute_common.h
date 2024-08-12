@@ -62,6 +62,17 @@ namespace nox
 			private:
 				const std::u32string_view display_name_;
 			};
+
+			class Description : public Attribute
+			{
+				NOX_DECLARE_OBJECT(Description, Object);
+			public:
+				inline	constexpr explicit Description(const std::u32string_view description)noexcept :
+					description_(description) {}
+
+			private:
+				const std::u32string_view description_;
+			};
 		}
 	}
 

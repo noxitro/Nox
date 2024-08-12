@@ -8,7 +8,7 @@ namespace nox::reflection
 	//	前方宣言
 	class ReflectionObject;
 
-	class FieldInfo
+	class VariableInfo
 	{
 	public:
 #pragma region 変数アクセスの型定義
@@ -42,7 +42,7 @@ namespace nox::reflection
 		/// @param getter_global_func 
 		/// @param setter_array_global_func 
 		/// @param getter_array_global_func 
-		inline	constexpr	explicit	FieldInfo(
+		inline	constexpr	explicit	VariableInfo(
 			ReflectionStringView name,
 			ReflectionStringView fullname,
 			ReflectionStringView _namespace,
@@ -94,7 +94,7 @@ namespace nox::reflection
 		/// @param getter_global_func 
 		/// @param setter_array_global_func 
 		/// @param getter_array_global_func 
-		inline	constexpr	explicit	FieldInfo(
+		inline	constexpr	explicit	VariableInfo(
 			ReflectionStringView name,
 			ReflectionStringView fullname,
 			ReflectionStringView _namespace,
@@ -397,7 +397,7 @@ namespace nox::reflection
 		/// @param getter_array_member_func 
 		/// @return 
 		template<concepts::ClassUnion _OwnerType>
-		inline constexpr	FieldInfo	CreateFieldInfo(
+		inline constexpr	VariableInfo	CreateFieldInfo(
 			ReflectionStringView name,
 			ReflectionStringView fullname,
 			ReflectionStringView _namespace,
@@ -405,15 +405,15 @@ namespace nox::reflection
 			const class ReflectionObject* const* attribute_ptr_table,
 			std::uint8_t	attribute_length,
 			const Type& type,
-			const FieldInfo::SetterMemberFunc setter_member_func = nullptr,
-			const FieldInfo::GetterMemberFunc getter_member_func = nullptr,
-			const FieldInfo::GetterMemberFunc getter_address_member_func = nullptr,
-			const FieldInfo::SetterArrayMemberFunc setter_array_member_func = nullptr,
-			const FieldInfo::GetterArrayMemberFunc getter_array_member_func = nullptr,
-			const FieldInfo::GetterArrayMemberFunc getter_array_address_member_func = nullptr
+			const VariableInfo::SetterMemberFunc setter_member_func = nullptr,
+			const VariableInfo::GetterMemberFunc getter_member_func = nullptr,
+			const VariableInfo::GetterMemberFunc getter_address_member_func = nullptr,
+			const VariableInfo::SetterArrayMemberFunc setter_array_member_func = nullptr,
+			const VariableInfo::GetterArrayMemberFunc getter_array_member_func = nullptr,
+			const VariableInfo::GetterArrayMemberFunc getter_array_address_member_func = nullptr
 		)noexcept
 		{
-			return FieldInfo(
+			return VariableInfo(
 				name,
 				fullname,
 				_namespace,
@@ -432,7 +432,7 @@ namespace nox::reflection
 			);
 		}
 
-		/*inline constexpr	FieldInfo	CreateFieldInfo(
+		/*inline constexpr	VariableInfo	CreateFieldInfo(
 			ReflectionStringView name,
 			ReflectionStringView fullname,
 			ReflectionStringView _namespace,
@@ -440,13 +440,13 @@ namespace nox::reflection
 			const class ReflectionObject* const* attribute_ptr_table,
 			std::uint8_t	attribute_length,
 			const Type& type,
-			const FieldInfo::SetterGlobalFunc setter_member_func = nullptr,
-			const FieldInfo::GetterGlobalFunc getter_member_func = nullptr,
-			const FieldInfo::SetterArrayGlobalFunc setter_array_member_func = nullptr,
-			const FieldInfo::GetterArrayGlobalFunc getter_array_member_func = nullptr
+			const VariableInfo::SetterGlobalFunc setter_member_func = nullptr,
+			const VariableInfo::GetterGlobalFunc getter_member_func = nullptr,
+			const VariableInfo::SetterArrayGlobalFunc setter_array_member_func = nullptr,
+			const VariableInfo::GetterArrayGlobalFunc getter_array_member_func = nullptr
 		)noexcept
 		{
-			return FieldInfo(
+			return VariableInfo(
 				name,
 				fullname,
 				_namespace,

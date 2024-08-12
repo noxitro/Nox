@@ -24,8 +24,8 @@ namespace nox
 			constexpr	Vector2D(const Vector2D& _v)noexcept :
 				x(_v.x), y(_v.y) {}
 
-			constexpr explicit Vector2D(const f32* pArray)noexcept :
-				x(pArray[0]), y(pArray[1]) {}
+			//inline constexpr explicit Vector2D(const std::float_t* pArray)noexcept :
+			//	x(pArray[0]), y(pArray[1]) {}
 
 			//	オペレータ
 			[[nodiscard]] constexpr bool operator == (const Vector2D& _v) const noexcept { return x == _v.x && y == _v.y; }
@@ -50,5 +50,5 @@ namespace nox
 		};
 	}
 
-	using Vec2 = nox::detail::Vector2D<f32>;
+	using Vec2 = nox::detail::Vector2D<nox::float_t>;
 }

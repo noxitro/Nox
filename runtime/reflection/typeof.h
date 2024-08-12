@@ -16,7 +16,8 @@ namespace nox::reflection
 
 	inline const class ClassInfo* TypeofClass(const ReflectionObject& object)
 	{
-		return Reflection::Instance().FindClassInfo(object.GetUniqueTypeID());
+		return nullptr;
+	//	return Reflection::Instance().FindClassInfo(object.GetType());
 	}
 
 	template<concepts::Enum T>

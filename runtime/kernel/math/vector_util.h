@@ -13,7 +13,7 @@ namespace nox::vector
 		constexpr	nox::detail::Vector3D<T> Vector3DZero = nox::detail::Vector3D<T>(.0f, .0f, .0f);
 	}
 
-	constexpr	Vec3	Vec3Zero = vector::detail::Vector3DZero<f32>;
+	constexpr	Vec3	Vec3Zero = vector::detail::Vector3DZero<nox::float_t>;
 #pragma endregion
 
 }

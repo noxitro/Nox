@@ -7,6 +7,7 @@
 
 #include	"../basic_definition.h"
 #include	"../basic_type.h"
+//#include	"../crc32.h"
 #include	"../crc32.h"
 #include	"type_traits.h"
 #include	"../preprocessor/cat.h"

@@ -37,19 +37,13 @@ namespace nox::reflection
 	/// @brief タイプ種別
 	enum class TypeKind : std::uint8_t
 	{
-		/**
-		 * @brief 不明
-		*/
+		/// @brief 
 		Invalid,
 
-		/**
-		 * @brief void
-		*/
+		/// @brief 
 		Void,
 
-		/**
-		 * @brief Boolean
-		*/
+		/// @brief 
 		Bool,
 
 		/**
@@ -80,33 +74,26 @@ namespace nox::reflection
 		*/
 		Uint16,
 
+		/// @brief 
 		Int64,
+
+		/// @brief 
 		UInt64,
 
-		/**
-		 * @brief
-		*/
+		/// @brief 
 		Char16,
 
-		/**
-		 * @brief
-		*/
+		/// @brief 
 		Wchar16,
 
-		/**
-		 * @brief 32ビット符号付き整数
-		*/
+		/// @brief 32ビット符号付き整数
 		Int32,
 
-		/**
-		 * @brief 32ビット符号なし整数
-		*/
+		/// @brief  32ビット符号なし整数
 		Uint32,
 
 
-		/**
-		 * @brief
-		*/
+		/// @brief 
 		Char32,
 
 		/// @brief 半精度浮動小数点数
@@ -138,6 +125,21 @@ namespace nox::reflection
 
 		/// @brief キャプチャありラムダ式
 		CaptureLambda,
+
+		/// @brief 配列
+		Array,
+
+		/// @brief 要素数が判明していない配列
+		UnboundedArray,
+
+		/// @brief ポインタ
+		Pointer,
+
+		/// @brief 左辺参照
+		LvalueReference,
+
+		/// @brief 右辺参照
+		RvalueReference,
 
 		_Max
 	};
@@ -172,70 +174,23 @@ namespace nox::reflection
 	{
 		None = 0,
 
-		/**
-		 * @brief const 修飾子
-		*/
+		/// @brief const 修飾子
 		Const = 1 << 0,
 
-		/**
-		 * @brief volatile 修飾子
-		*/
+		/// @brief volatile 修飾子
 		Volatile = 1 << 1,
 
-		/**
-		 * @brief ポインタ
-		*/
-		Pointer = 1 << 2,
+		/// @brief final修飾子
+		Final = 1 << 2,
 
-		/**
-		 * @brief 左辺参照
-		*/
-		LvalueReference = 1 << 3,
+		/// @brief abstract 修飾子
+		Abstract = 1 << 3,
 
-		/**
-		 * @brief 右辺参照
-		*/
-		RvalueReference = 1 << 4,
+		/// @brief 符号なし
+		Unsigned = 1 << 4,
 
-		/**
-		 * @brief final修飾子
-		*/
-		Final = 1 << 5,
-
-		/**
-		 * @brief abstract 修飾子
-		*/
-		Abstract = 1 << 6,
-
-		/**
-		 * @brief 配列
-		*/
-		Array = 1 << 7,
-
-		/**
-		 * @brief 要素数が判明していない配列
-		*/
-		UnboundedArray = 1 << 8,
-
-		/**
-		 * @brief 符号なし
-		*/
-		Unsigned = 1 << 9,
-
-		/**
-		 * @brief const pointer修飾子
-		*/
-		ConstPointer = 1 << 10,
-
-		/**
-		 * @brief const lvalue reference修飾子
-		*/
-		ConstLvalueReference = 1 << 11,
-
-		/**
-		 * @brief const rvalue reference修飾子
-		*/
-		ConstRvalueReference = 1 << 12,
+		/// @brief 多相的
+		Polymorphic = 1 << 5
 	};
 
 	/// @brief 型修飾子
@@ -243,14 +198,10 @@ namespace nox::reflection
 	{
 		None = 0,
 
-		/**
-		 * @brief const 修飾子
-		*/
+		/// @brief const 修飾子
 		Const = 1 << 0,
 
-		/**
-		 * @brief volatile 修飾子
-		*/
+		/// @brief volatile 修飾子
 		Volatile = 1 << 1,
 
 		/// @brief 参照　修飾子
@@ -318,10 +269,11 @@ namespace nox::reflection
 		/// @brief Constructor
 		Constructor = 1 << 11,
 
+		/// @brief コピーコンストラクタ
+		CopyConstructor = 1 << 12,
 
-		ConstructorP = 1 << 12,
-
-		ConstructorNewArray = 1 << 13
+		/// @brief ムーブコンストラクタ
+		MoveConstructor = 1 << 13,
 	};
 
 	/// @brief メソッドの種類
@@ -356,8 +308,4 @@ namespace nox::reflection
 		Const = 1 << 0,
 		Noexcept = 1 << 2
 	};
-
-
-
-	
 }

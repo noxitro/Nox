@@ -12,23 +12,25 @@ namespace ReflectionGenerator.Info
     public class AttributeInfo 
     {
         /// <summary>
-        /// 属性文字列
+        /// 属性の種類
         /// </summary>
-        public required string ValueStr { get; init; }
-
-        /// <summary>
-        /// 属性クラス情報
-        /// </summary>
-        public required ClassInfo AttributeClassInfo { get; init; }
-
-        /// <summary>
-        /// ConstexprなConstructorかどうか
-        /// </summary>
-        public required bool IsConstexpr { get; init; }
+        public required ClangSharp.Interop.CX_AttrKind AttrKind { get; init; }
     }
 
-    public class AttributeInfoStack : IStacker<AttributeInfo>
+    /// <summary>
+    /// UserCustomAttribute情報
+    /// </summary>
+    public class EngineAnnotateAttribute : AttributeInfo
     {
+        /// <summary>
+        /// 属性文字列
+        /// </summary>
+        public required string Value { get; init; }
 
+        /// <summary>
+        /// コンパイル時定数かどうか
+        /// 未実装
+        /// </summary>
+        public required bool IsConstexpr { get; init; }
     }
 }

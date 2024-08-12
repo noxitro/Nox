@@ -70,8 +70,9 @@
     <ClCompile />
     <Link />
     <PreBuildEvent>
-      <Command>$(SolutionDir)bin\createReflectionGenerateArgs.bat "$(SolutionDir)" "$(ProjectPath)" "$(ProjectDir)main.cpp" "$(Configuration)" "$(Platform)" "NOX_DEBUG" "NOX_X64" "$(MSBuildBinPath)" "nox"</Command>
+      <Command>$(SolutionDir)bin\createReflectionGenerateArgs.bat "$(SolutionDir)" "$(SolutionPath)" "$(ProjectPath)" "$(ProjectDir)main.cpp" "$(Configuration)" "$(Platform)" "NOX_DEBUG" "NOX_X64" "$(MSBuildBinPath)" "nox" "reflection_generated"</Command>
     </PreBuildEvent>
+    <ClCompile />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile />
@@ -80,8 +81,9 @@
     <ClCompile />
     <Link />
     <PreBuildEvent>
-      <Command>$(SolutionDir)bin\createReflectionGenerateArgs.bat "$(SolutionDir)" "$(ProjectPath)" "$(ProjectDir)main.cpp" "$(Configuration)" "$(Platform)" "NOX_DEBUG" "NOX_X64" "$(MSBuildBinPath)" "nox"</Command>
+      <Command>$(SolutionDir)bin\createReflectionGenerateArgs.bat "$(SolutionDir)" "$(SolutionPath)" "$(ProjectPath)" "$(ProjectDir)main.cpp" "$(Configuration)" "$(Platform)" "NOX_DEBUG" "NOX_X64" "$(MSBuildBinPath)" "nox" "reflection_generated"</Command>
     </PreBuildEvent>
+    <ClCompile />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'">
     <ClCompile />
@@ -90,8 +92,9 @@
     <ClCompile />
     <Link />
     <PreBuildEvent>
-      <Command>$(SolutionDir)bin\createReflectionGenerateArgs.bat "$(SolutionDir)" "$(ProjectPath)" "$(ProjectDir)main.cpp" "$(Configuration)" "$(Platform)" "NOX_DEBUG" "NOX_X64" "$(MSBuildBinPath)" "nox"</Command>
+      <Command>$(SolutionDir)bin\createReflectionGenerateArgs.bat "$(SolutionDir)" "$(SolutionPath)" "$(ProjectPath)" "$(ProjectDir)main.cpp" "$(Configuration)" "$(Platform)" "NOX_DEBUG" "NOX_X64" "$(MSBuildBinPath)" "nox" "reflection_generated"</Command>
     </PreBuildEvent>
+    <ClCompile />
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -111,6 +114,20 @@
       <SubType>
       </SubType>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="core\core.vcxproj">
+      <Project>{0d108199-d079-4739-83ad-ce83c4d53332}</Project>
+    </ProjectReference>
+    <ProjectReference Include="kernel\kernel.vcxproj">
+      <Project>{ce18e5d8-faa4-48b4-a1d2-dab85fc1acbb}</Project>
+    </ProjectReference>
+    <ProjectReference Include="reflection\reflection.vcxproj">
+      <Project>{45ab985e-3772-4261-95ec-c6de7d26edbb}</Project>
+    </ProjectReference>
+    <ProjectReference Include="reflection_generated\reflection_generated.vcxproj">
+      <Project>{3fa8ce37-1f60-456c-996c-140c5f8a65ed}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

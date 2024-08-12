@@ -243,6 +243,12 @@
     <ClInclude Include="math\math_definition.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="type_id.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel_reflection.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="basic_definition.cpp">
@@ -459,6 +465,18 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="math\math_definition.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="scope_exit.ixx">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="math\vector2d.ixx">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="type_id.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel_reflection.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

@@ -38,3 +38,5 @@
 //#include	"delegate.h"
 
 #include	"os/file_system.h"
+
+#include	"type_id.h"

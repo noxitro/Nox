@@ -9,10 +9,10 @@ namespace nox::reflection::detail
 	 * @tparam T
 	*/
 	template<class T>
-	struct FieldSignature;
+	struct VariableSignature;
 
 	template<class _ReturnType>
-	struct FieldSignature<_ReturnType(*)>
+	struct VariableSignature<_ReturnType(*)>
 	{
 		using ReturnType = _ReturnType;
 
@@ -23,7 +23,7 @@ namespace nox::reflection::detail
 	};
 
 	template<class _ReturnType, class _ClassType>
-	struct FieldSignature<_ReturnType(_ClassType::*)>
+	struct VariableSignature<_ReturnType(_ClassType::*)>
 	{
 		using ReturnType = _ReturnType;
 		using ClassType = _ClassType;
@@ -38,19 +38,19 @@ namespace nox::reflection::detail
 	{
 		/// @brief フィールド型
 		template<class T>
-		concept FieldSignatureType = std::is_class_v<FieldSignature<T>>;
+		concept FieldSignatureType = std::is_class_v<VariableSignature<T>>;
 	}
 
 	template<concepts::FieldSignatureType T>
-	using FieldReturnType = typename FieldSignature<T>::ReturnType;
+	using FieldReturnType = typename VariableSignature<T>::ReturnType;
 
 	/**
 	 * @brief メンバオブジェクトポインタのクラス型
 	*/
 	template<class T> requires(std::is_member_object_pointer_v<T>)
-	using FieldClassType = typename FieldSignature<T>::ClassType;
+	using FieldClassType = typename VariableSignature<T>::ClassType;
 
 	/// @brief メンバ変数か
 	template<concepts::FieldSignatureType T>
-	constexpr bool IsFieldMemberVariableValue = FieldSignature<T>::IsMemberVariable();
+	constexpr bool IsFieldMemberVariableValue = VariableSignature<T>::IsMemberVariable();
 }

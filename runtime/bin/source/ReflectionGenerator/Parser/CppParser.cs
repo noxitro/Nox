@@ -1,10 +1,9 @@
 ﻿using ClangSharp.Interop;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Numerics;
-using System.Text;
-
 namespace ReflectionGenerator.Parser
 {
     /// <summary>
@@ -13,12 +12,14 @@ namespace ReflectionGenerator.Parser
     public unsafe class CppParser
     {
         #region 公開定義
-        public class SetupParam
+        public struct SetupParam
         {
             /// <summary>
             /// 解析対象ファイルパス
             /// </summary>
             public required string SourceFilePath { get; init; }
+
+            public required string SolutionPath { get; init; }
 
             /// <summary>
             /// プロジェクトファイルパス
@@ -81,41 +82,54 @@ namespace ReflectionGenerator.Parser
         /// templateクラス名リスト
         /// 最後に、変換を行うため保持
         /// </summary>
-        private readonly Dictionary<string, Info.TemplatedClassInfo> _TemplatedClassNameList = new Dictionary<string, Info.TemplatedClassInfo>();
 
         /// <summary>
         /// テンプレートクラスを解析するかどうか
         /// </summary>
         private const bool _EnabledTemplateParse = false;
+
+        private readonly Dictionary<int, string> _TypeNameDict = new Dictionary<int, string>();
+
+        /// <summary>
+        /// 型名を取得する
+        /// キャッシュ対応
+        /// </summary>
+        /// <param name="cxType"></param>
+        /// <returns></returns>
+        private string GetTypeFullName(in ClangSharp.Interop.CXType cxType)
+        {
+            System.Diagnostics.Debug.Assert(cxType.kind != CXTypeKind.CXType_Invalid, "");
+
+            int hash = cxType.GetHashCode();
+            if (_TypeNameDict.TryGetValue(hash, out string? name) == false)
+            {
+                _TypeNameDict.Add(hash, name = cxType.CanonicalType.Spelling.CString);
+            }
+
+            return name;
+        }
+
+        /// <summary>
+        /// ラムダ式を持つ型か
+        /// </summary>
+        /// <returns></returns>
+        public bool HasLambdaType(in ClangSharp.Interop.CXType type)
+        {
+            string typeFullName = GetTypeFullName(type);
+            return typeFullName.Contains("(lambda at ") == true;
+        }
         #endregion
 
         #region 公開プロパティ
-        /// <summary>
-        /// Enum情報
-        /// </summary>
-        public Info.EnumInfoStack EnumInfoStack { get; } = new Info.EnumInfoStack();
-
-        /// <summary>
-        /// 型情報
-        /// </summary>
-        public Info.ClassInfoStack ClassInfoStack { get; } = new Info.ClassInfoStack();
-
-        /// <summary>
-        /// グローバル情報
-        /// </summary>
-        public Info.GlobalInfoContainer GlobalInfoContainer { get; } = new Info.GlobalInfoContainer();
-
         /// <summary>
         /// モジュール名リスト
         /// </summary>
         public List<string> ModuleNameList { get; } = new List<string>();
 
-        /// <summary>
-        /// key:    hash
-        /// 
-        /// </summary>
-        public Dictionary<long, Info.TypeInfo> TypeInfoDict { get; } = new Dictionary<long, Info.TypeInfo>();
-        public Dictionary<long, Info.VariableInfo> VariableInfoDict { get; } = new Dictionary<long, Info.VariableInfo>();
+        public Info.DeclHolder? RootDeclHolder { get; private set; } = null;
+        private Dictionary<long, Info.IBaseInfo> TypeInfoDict { get; } = new Dictionary<long, Info.IBaseInfo>();
+
+        private readonly Dictionary<string, Info.DeclHolder> _DeclHolderDict = new Dictionary<string, Info.DeclHolder>();
         #endregion
 
         #region 公開メソッド
@@ -129,16 +143,30 @@ namespace ReflectionGenerator.Parser
         /// <param name="platform"></param>
         /// <param name="sourceFilePath"></param>
         /// <returns></returns>
-        private bool parseBuildOptions(out List<string> outClangCommandLineList, string msbuildBinPath, string projectFilePath, string configuration, string platform, string sourceFilePath)
+        private static bool parseBuildOptions(out List<string> outClangCommandLineList, string msbuildBinPath, string solutionPath, string configuration, string platform, string sourceFilePath)
         {
             outClangCommandLineList = new List<string>();
+
+            if (System.IO.File.Exists(sourceFilePath) == false)
+            {
+                return false;
+            }
+
+             if (System.IO.File.Exists(solutionPath) == false)
+            {
+                Trace.ErrorLine(null, $"ソリューションファイルが存在しません:{solutionPath}");
+                return false;
+            }
+
+       //     string outputFileBuild = "D:\\github\\Nox\\runtime\\bin\\source\\ReflectionGenerator";
 
             string outputFilePath = System.IO.Path.GetFullPath($"{System.IO.Path.GetTempPath()}/tmpMSBuild.log");
             
             string msbuildPath = System.IO.Path.GetFullPath($"{msbuildBinPath}/MSBuild.exe");
-            string args = $"/p:Configuration={configuration};Platform={platform} {projectFilePath} /property:GenerateFullPaths=true /v:n /t:clean /t:ClCompile /p:SelectedFiles=\"{sourceFilePath}\"";
+            string args = 
+                $"/p:Configuration={configuration};Platform={platform} {solutionPath} /property:GenerateFullPaths=true /v:n /t:clean /t:ClCompile /p:SelectedFiles=\"{sourceFilePath}\" /p:PreprocessToFile=true /p:PreprocessOutput={outputFilePath}";
 
-            if(System.IO.File.Exists(projectFilePath.Replace("\"", "")) == false)
+            if(System.IO.File.Exists(solutionPath.Replace("\"", "")) == false)
             {
                 return false;
             }
@@ -149,29 +177,40 @@ namespace ReflectionGenerator.Parser
             }
 
             System.Diagnostics.Process process = new System.Diagnostics.Process();
-            var startInfo = process.StartInfo;
-            startInfo.FileName = msbuildPath;
-            startInfo.Arguments = args;
-            startInfo.Verb = "RunAs";
-            startInfo.UseShellExecute = false;
-            startInfo.RedirectStandardOutput = true;
-            startInfo.RedirectStandardError = true;
+            {
+                System.Diagnostics.ProcessStartInfo startInfo = process.StartInfo;
+                startInfo.FileName = msbuildPath;
+                startInfo.Arguments = args;
+                startInfo.Verb = "RunAs";
+                startInfo.UseShellExecute = false;
+                startInfo.RedirectStandardOutput = true;
+                startInfo.StandardOutputEncoding = System.Text.Encoding.UTF8;
+                startInfo.CreateNoWindow = true;
+                startInfo.UseShellExecute = false;
+
+                startInfo.RedirectStandardError = true;
+            }
 
             System.Diagnostics.Stopwatch stopwatchProcess = new System.Diagnostics.Stopwatch();
             stopwatchProcess.Start();
             process.Start();
-            if (process.WaitForExit(5000) == false)
+            process.OutputDataReceived += new System.Diagnostics.DataReceivedEventHandler((sender, e) => {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    Console.WriteLine(e.Data);
+                }
+            });
+
+            if (process.WaitForExit(1000) == false)
             {
-                return false;
+               
+
+       //         return false;
             }
             stopwatchProcess.Stop();
-            Trace.InfoLine(this, $"MSBuildにかかった時間:{stopwatchProcess.ElapsedMilliseconds.ToString()}msec");
+            Trace.InfoLine(null, $"MSBuildにかかった時間:{stopwatchProcess.ElapsedMilliseconds.ToString()}msec");
 
-
-            if (process.ExitCode != 0)
-            {
-                return false;
-            }
+        //    string allStr = process.StandardOutput.ReadToEnd();
 
             //  CL.exeに渡している引数情報を取得する
             string clArgs = string.Empty;
@@ -183,14 +222,26 @@ namespace ReflectionGenerator.Parser
                     break;
                 }
 
-                int index = lineStr.IndexOf("CL.exe");
+                int index = lineStr.IndexOf("ClCompile:");
                 if (index < 0)
                 {
                     continue;
                 }
 
-                clArgs = lineStr.Substring(index + "CL.exe".Length);
+                //  CL.exeの引数情報を取得
+                clArgs = process.StandardOutput.ReadLine() ?? string.Empty;
+                //                clArgs = lineStr.Substring(index + "CL.exe".Length);
+
+                break;
             }
+
+            string _ = process.StandardOutput.ReadToEnd();
+
+            if (process.ExitCode != 0)
+            {
+                return false;
+            }
+
             //       var regex = new System.Text.RegularExpressions.Regex(@"[\""].+?[\""]|[^ ]+");
             //      var spilitClArgs = regex.Match(clArgs);
 
@@ -267,17 +318,49 @@ namespace ReflectionGenerator.Parser
         }
 
         /// <summary>
+        /// clangでパースするためのソースファイルを作成する
+        /// </summary>
+        /// <param name="solutionPath"></param>
+        /// <returns></returns>
+        public static string? CreateParseSourceFile(string solutionPath)
+        {
+            string parseSourceFilePath = System.IO.Path.GetFullPath($"{System.IO.Path.GetTempPath()}/tmpParseSource.cpp");
+
+            if(System.IO.File.Exists(parseSourceFilePath) == true)
+            {
+                System.IO.File.Delete(parseSourceFilePath);
+            }
+
+            //  ソリューションファイルからプロジェクトファイルパスリストを取得する
+            IReadOnlyList<string> projectFilePathList = ExtractVCXProjectFile.ExtractBuildOrderProjectPathList(solutionPath);
+
+            using (System.IO.StreamWriter streamWriter = new System.IO.StreamWriter(parseSourceFilePath))
+            {
+                foreach (string projectFilePath in projectFilePathList)
+                {
+                    IReadOnlyList<string> headerFiles = ExtractVCXProjectFile.ExtractHeaderFiles(projectFilePath);
+                    foreach (string headerFile in headerFiles)
+                    {
+                        streamWriter.WriteLine($"#include \"{headerFile}\"");
+                    }
+                }
+            }
+
+            return parseSourceFilePath;
+        }
+
+        /// <summary>
         /// 解析開始
         /// </summary>
         /// <param name="setupParam"></param>
         /// <returns></returns>
-        public bool Parse(SetupParam setupParam)
+        public bool Parse(in SetupParam setupParam)
         {
             //  MSBuildを通して展開したコマンドラインを取得
             if (parseBuildOptions(
                 out List<string> outCommandLineList,
                 msbuildBinPath: setupParam.MSBuildBinPath,
-                projectFilePath: setupParam.ProjectFilePath,
+                solutionPath: setupParam.ProjectFilePath,
                 configuration: setupParam.Configuration,
                 platform: setupParam.Platform,
                 sourceFilePath:
@@ -287,6 +370,14 @@ namespace ReflectionGenerator.Parser
             }
 
             {
+                //  パースするソースファイルを作成
+                string? parseSourceFilePath = CreateParseSourceFile(setupParam.SolutionPath);
+                if(parseSourceFilePath == null)
+                {
+                    Trace.Error(this, "パース用ソースファイルの作成に失敗しました");
+                    return false;
+                }
+
                 //  引数
                 List<string> parseCommandLineList = new List<string>();
 
@@ -296,6 +387,7 @@ namespace ReflectionGenerator.Parser
                 //            parseCommandLineList.Add(CppParseDefine.GetCppVersionStr(setupParam.CppVersion));
                 //  不明な属性を無視しない
                 parseCommandLineList.Add($"-D {Define.RUNTIME_REFLECTION_GENERATOR_DEFINE}");
+//                parseCommandLineList.Add($"-fmodule-file=my_module=my_module.pcm my_module.pcm -o my_module.out");
 
                 ClangSharp.Interop.CXIndex cxIndex = ClangSharp.Interop.CXIndex.Create(true, true);
                 ClangSharp.Interop.CXTranslationUnit transUnit;
@@ -307,7 +399,7 @@ namespace ReflectionGenerator.Parser
                     stopwatchClangCompile.Start();
                     cxErrorCode = ClangSharp.Interop.CXTranslationUnit.TryParse(
                      cxIndex,
-                     setupParam.SourceFilePath,
+                     parseSourceFilePath,
                      parseCommandLineList.ToArray(),
                      default,
                   //    ClangSharp.Interop.CXTranslationUnit_Flags.CXTranslationUnit_SkipFunctionBodies,
@@ -321,8 +413,39 @@ namespace ReflectionGenerator.Parser
 
                 if (cxErrorCode != ClangSharp.Interop.CXErrorCode.CXError_Success)
                 {
-                    Trace.ErrorLine(this, "failed parse code");
+                    Trace.ErrorLine(this, "failed parse");
                     return false;
+                }
+
+                //  ビルドエラーの解析
+                {
+                    bool isSuccess = true;
+                    for (uint i = 0; i < transUnit.NumDiagnostics; ++i)
+                    {
+                        ClangSharp.Interop.CXDiagnostic diagnostic = transUnit.GetDiagnostic(i);
+                        switch (diagnostic.Severity)
+                        {
+                            case CXDiagnosticSeverity.CXDiagnostic_Error:
+                            case CXDiagnosticSeverity.CXDiagnostic_Fatal:
+                                Trace.ErrorLine(this, diagnostic.Format(ClangSharp.Interop.CXDiagnosticDisplayOptions.CXDiagnostic_DisplaySourceLocation).CString);
+                                isSuccess = false;
+                                return false;
+                            case CXDiagnosticSeverity.CXDiagnostic_Warning:
+                                Trace.WarningLine(this, diagnostic.Format(ClangSharp.Interop.CXDiagnosticDisplayOptions.CXDiagnostic_DisplaySourceLocation).CString);
+                                break;
+
+                            case CXDiagnosticSeverity.CXDiagnostic_Note:
+                            case CXDiagnosticSeverity.CXDiagnostic_Ignored:
+                                Trace.InfoLine(this, diagnostic.Format(ClangSharp.Interop.CXDiagnosticDisplayOptions.CXDiagnostic_DisplaySourceLocation).CString);
+                                break;
+                        }
+                    }
+
+                    if(isSuccess == false)
+                    {
+                        Trace.ErrorLine(this, "clang compile結果にError, Faitalが発生しています ログを確認してください");
+                        return false;
+                    }
                 }
 
                 //  各種パラメータのセットアップ
@@ -333,55 +456,25 @@ namespace ReflectionGenerator.Parser
                 //  解析開始
                 //  Data rootParam = new Data() { Kind = Kind.Class, Parent = null };
                 //  transUnit.Cursor.VisitChildren(VisitChild, clientData: (CXClientData)System.Runtime.CompilerServices.Unsafe.AsPointer(ref rootParam));
-                transUnit.Cursor.VisitChildren(VisitChild, default);
+                ParseRoot(transUnit.Cursor);
+
                 transUnit.Dispose();
                 cxIndex.Dispose();
             }
 
-            //  tempaltedクラスを生成する
-           foreach (Info.TemplatedClassInfo temp in _TemplatedClassNameList.Values)
+            //  namespaceを結合
+
+            Util.BreakPoint();
+            //  列挙
+            foreach(var v in TypeInfoDict.Values)
             {
-                Info.ClassInfo? classInfo = ClassInfoStack.GetInfo(temp.DefinitionCursor);
-                if(classInfo == null)
+                string? name = v.ToString();
+                if (name == null)
                 {
                     continue;
                 }
 
-            }
-
-            //  後処理
-            System.Threading.Tasks.Parallel.ForEach(ClassInfoStack.InfoList,
-                (Info.ClassInfo classInfo) =>
-                {
-                    Info.ClassInfo[] baseClassInfo = new Info.ClassInfo[classInfo.BaseClassNameList.Count];
-                    for (int i = 0; i < classInfo.BaseClassNameList.Count; ++i)
-                    {
-                        baseClassInfo[i] = ClassInfoStack.GetInfo(classInfo.BaseClassNameList[i]);
-
-                        if (baseClassInfo[i].IsFake == true)
-                        {
-                            System.Threading.Interlocked.Exchange(ref baseClassInfo[i].Fake, 1);
-                        }
-                    }
-                    classInfo.BaseClassList = baseClassInfo;
-                }
-                );
-
-            //  
-            Trace.InfoLine(this, "クラス列挙開始");
-            foreach (var classInfo in ClassInfoStack.InfoList)
-            {
-                Trace.InfoLine(this, $"\n\tClass\n\tNamespace:{classInfo.Namespace}\n\tFullName:{classInfo.FullName}\n\tName:{classInfo.Name}");
-
-                foreach (var fieldInfo in classInfo.FieldInfoList)
-                {
-                    Trace.InfoLine(this, $"\n\tField:{fieldInfo.Name}\n\tNamespace:{fieldInfo.RuntimeType.Namespace}\n\tFullName:{fieldInfo.RuntimeType.FullName}\n\tName:{fieldInfo.RuntimeType.Name}");
-                }
-
-                foreach (var methodInfo in classInfo.MethodInfoList)
-                {
-                    Trace.InfoLine(this, $"\n\tMethod:{methodInfo.Name}\n\tNamespace:{methodInfo.ReturnRuntimeType.Namespace}\n\tFullName:{methodInfo.ReturnRuntimeType.FullName}\n\tName:{methodInfo.ReturnRuntimeType.Name}");
-                }
+                Trace.InfoLine(this, name);
             }
 
             return true;
@@ -389,576 +482,1207 @@ namespace ReflectionGenerator.Parser
         #endregion
 
         #region 共有関数
-        private List<Info.AttributeInfo> GetAttributeInfoList(ClangSharp.Interop.CXCursor cursor)
+
+        #endregion
+
+        #region 非公開メソッド
+        private Info.IHolder FindParseParent(ClangSharp.Interop.CXCursor cursor)
         {
-            List<Info.AttributeInfo> attrList = new List<Info.AttributeInfo>();
-            if (cursor.HasAttrs == false)
+            ClangSharp.Interop.CXCursor parent = cursor.SemanticParent;
+            while (parent.IsInjectedClassName)
             {
-                return attrList;
+                parent = parent.SemanticParent;
+            }
+            while(parent.Kind == CXCursorKind.CXCursor_LinkageSpec)
+            {
+                parent = parent.SemanticParent;
+            }
+            long hash = parent.Hash;
+
+            if (TypeInfoDict.TryGetValue(hash, out Info.IBaseInfo? parentBaseInfo) == true)
+            {
+                return (Info.IHolder)parentBaseInfo;
             }
 
+            ParseCursor(parent);
+            return (Info.IHolder)TypeInfoDict[hash];
+        }
+
+        private T FindParseParent<T>(ClangSharp.Interop.CXCursor cursor) where T : Info.IHolder
+            => (T)FindParseParent(cursor);
+
+        /// <summary>
+        /// 属性情報の取得
+        /// </summary>
+        /// <param name="cursor"></param>
+        /// <returns></returns>
+        private IReadOnlyList<Info.AttributeInfo> GetCustomAttributeList(ClangSharp.Interop.CXCursor cursor)
+        {
             int numAttr = cursor.NumAttrs;
+            if (numAttr <= 0)
+            {
+                return [];
+            }
+
+            System.Diagnostics.Debug.Assert(cursor.HasAttrs, "not has attrs");
+
+            bool hasEngineAnnotateAttribute = false;
+
+            Info.AttributeInfo[] attrList = new Info.AttributeInfo[numAttr];
             for (uint i = 0; i < numAttr; ++i)
             {
-                ClangSharp.Interop.CXCursor cursorAttr = cursor.GetAttr(i);
-                if (cursorAttr.IsReflectionAttribute() == false)
+                ClangSharp.Interop.CXCursor attrCursor = cursor.GetAttr(i);
+
+                if (attrCursor.Kind != CXCursorKind.CXCursor_UnexposedAttr)
                 {
-                    continue;
+           //         Trace.InfoLine(this, attrCursor.KindSpelling.CString);
                 }
 
-                string extractedStr = cursorAttr.ExtractReflectionAttributeStr();
-                string runtimeTypeName = extractedStr.Substring(0, extractedStr.IndexOf('('));
-                Info.AttributeInfo attrInfo = new Info.AttributeInfo()
+                switch(attrCursor.Kind)
                 {
-                    IsConstexpr = cursorAttr.IsConstexpr,
-                    AttributeClassInfo = ClassInfoStack.GetInfo(runtimeTypeName),
-                    ValueStr = extractedStr,
-                };
+                    case CXCursorKind.CXCursor_AnnotateAttr:
+                        //  エンジン外のclang::annoate属性
+                        if(attrCursor.Spelling.CString == Define.RUNTIME_REFLECTION_GENERATOR_DEFINE)
+                        {
+                            hasEngineAnnotateAttribute = true;
+                            attrList[i] = new Info.AttributeInfo()
+                            {
+                                AttrKind = attrCursor.AttrKind,
+                            };
+                            break;
+                        }
 
-                attrList.Add(attrInfo);
+                        if(hasEngineAnnotateAttribute == false)
+                        {
+                            break;
+                        }
+
+                        attrList[i] = new Info.EngineAnnotateAttribute()
+                        {
+                            AttrKind = attrCursor.AttrKind,
+                            Value = attrCursor.Spelling.CString,
+                            IsConstexpr = true
+                        };
+                        break;
+
+                    default:
+                        attrList[i] = new Info.AttributeInfo()
+                        {
+                            AttrKind = attrCursor.AttrKind,
+                        };
+                        break;
+                }
             }
 
             return attrList;
         }
-        #endregion
 
-        #region 非公開メソッド
-        private Dictionary<uint, ClangSharp.Interop.CXType> typeDict = new Dictionary<uint, CXType>();
-
-        private ClangSharp.Interop.CXChildVisitResult VisitChildImpl(ClangSharp.Interop.CXCursor cursor, ClangSharp.Interop.CXCursor parent, void* clientData)
+        private T TryCreateBaseInfo<T>(long hash, Func<T> action, Action<T>? post = null) where T : Info.IBaseInfo
         {
+            if (TypeInfoDict.TryGetValue(hash, out Info.IBaseInfo? baseInfo) == true)
+            {
+                return (T)baseInfo;
+            }
 
+            if(TypeInfoDict.ContainsKey(hash) == true)
+            {
+                System.Diagnostics.Debug.Assert(false);
+            }
 
-            return CXChildVisitResult.CXChildVisit_Continue;
+            T v = action();
+            TypeInfoDict.Add(hash, v);
+            post?.Invoke(v);
+            return v;
         }
 
-        private void ParseType(out Info.TypeInfo typeInfo, ClangSharp.Interop.CXCursor cursor)
+        private static ClangSharp.Interop.CXType GetTypeWithQualifiersRemoved(ClangSharp.Interop.CXType type)
         {
-            switch(cursor.Kind)
+            switch(type.TypeClass)
             {
-                case CXCursorKind.CXCursor_CallExpr:
-                    switch(cursor.StmtClass)
-                    {
-                        case CX_StmtClass.CX_StmtClass_CXXUnresolvedConstructExpr:
-                            ParseType(out typeInfo, cursor.Type);
-                            return;
-
-                        default:
-                            System.Diagnostics.Debug.Assert(false, "型解析に失敗");
-                            typeInfo = default;
-                            return;
-                    }
-
-                case CXCursorKind.CXCursor_ReturnStmt:
-                    {
-                        uint hashCode = cursor.Hash;
-                        if (TypeInfoDict.TryGetValue(hashCode, out Info.TypeInfo? tmpTypeInfo) == true)
-                        {
-                            typeInfo = tmpTypeInfo;
-                            return;
-                        }
-
-                        var children = cursor.GetChildren();
-                        int childrenCount = children.Count;
-
-                        Info.TypeInfo[] typeInfoChildren = childrenCount > 0 ? new Info.TypeInfo[childrenCount] : [];
-
-                        for (int i = 0; i < childrenCount; ++i)
-                        {
-                            ParseType(out typeInfoChildren[i], children[i]);
-                        }
-
-                        typeInfo = new Info.TypeInfo()
-                        {
-                            CXCursor = cursor,
-                            CXType = cursor.Type,
-                            FullName = cursor.Spelling.CString,
-                            Namespace = cursor.GetNamespace(),
-                            TokenChildren = typeInfoChildren
-                        };
-
-                        TypeInfoDict.Add(hashCode, typeInfo);
-                    }
+                case CX_TypeClass.CX_TypeClass_Decltype:
                     break;
+            }
 
-                case CXCursorKind.CXCursor_CompoundStmt:
+            switch(type.kind)
+            {
+                case CXTypeKind.CXType_Pointer:
+                case CXTypeKind.CXType_LValueReference:
+                case CXTypeKind.CXType_RValueReference:
+                    return GetTypeWithQualifiersRemoved(type.PointeeType);
+            }
+
+            return type;
+        }
+
+        #region Parse
+        private void ParseEnum(ClangSharp.Interop.CXCursor cursor)
+        {
+            Info.EnumInfo Create()
+            {
+                int numEnum = cursor.NumEnumerators;
+                Info.EnumInfo.EnumVariable[] enumVariableList = numEnum > 0 ? new Info.EnumInfo.EnumVariable[numEnum] : [];
+
+                for (uint i = 0; i < numEnum; ++i)
+                {
+                    ClangSharp.Interop.CXCursor enumCursor = cursor.GetEnumerator(i);
+
+                    Info.Integer64 integer64;
+                    if (enumCursor.IsUnsigned)
                     {
-                        uint hashCode = cursor.Hash;
-                        if (TypeInfoDict.TryGetValue(hashCode, out Info.TypeInfo? tmpTypeInfo) == true)
-                        {
-                            typeInfo = tmpTypeInfo;
-                            return;
-                        }
-
-                        var children = cursor.GetChildren();
-                        int childrenCount = children.Count;
-
-                        Info.TypeInfo[] typeInfoChildren = childrenCount > 0 ? new Info.TypeInfo[childrenCount] : [];
-
-                        for (int i = 0; i < childrenCount; ++i)
-                        {
-                            ParseType(out typeInfoChildren[i], children[i]);
-                        }
-
-                        typeInfo = new Info.TypeInfo()
-                        {
-                            CXCursor = cursor,
-                            CXType = cursor.Type,
-                            FullName = cursor.Spelling.CString,
-                            Namespace = cursor.GetNamespace(),
-                            TokenChildren = typeInfoChildren
-                        };
-
-                        TypeInfoDict.Add(hashCode, typeInfo);
+                        integer64 = new Info.Integer64() { UInt64 = enumCursor.EnumConstantDeclUnsignedValue };
                     }
-                   
-                    return;
-
-                case CXCursorKind.CXCursor_TemplateTemplateParameter:
+                    else
                     {
-                        uint hashCode = cursor.Hash;
-                        if (TypeInfoDict.TryGetValue(hashCode, out Info.TypeInfo? tmpTypeInfo) == true)
-                        {
-                            typeInfo = tmpTypeInfo;
-                            return;
-                        }
-
-                        typeInfo = new Info.TypeInfo()
-                        {
-                            CXType = cursor.Type,
-                            FullName = cursor.Spelling.CString,
-                            Namespace = cursor.GetNamespace(),
-                        };
-
-                        TypeInfoDict.Add(hashCode, typeInfo);
+                        integer64 = new Info.Integer64() { Int64 = enumCursor.EnumConstantDeclValue };
                     }
-                    return;
+                    enumVariableList[i] = new Info.EnumInfo.EnumVariable()
+                    {
+                        TypeKind = enumCursor.Type.kind,
+                        Integer64 = integer64,
+                        AttributeInfoList = GetCustomAttributeList(cursor),
+                        Name = enumCursor.Name.CString
+                    };
+                }
+
+                Info.EnumInfo enumInfo = new Info.EnumInfo()
+                {
+                    Name = cursor.Spelling.CString,
+                    AccessLevel = cursor.CXXAccessSpecifier.GetAccessLevel(),
+                    Namespace = cursor.GetNamespace(),
+                    FullName = cursor.GetFullName(),
+                    AttributeInfoList = GetCustomAttributeList(cursor),
+                    CXType = cursor.Type,
+                    VariableList = enumVariableList,
+                };
+
+                return enumInfo;
+            }
+
+            uint hash = cursor.Hash;
+            Info.EnumInfo enumInfo = TryCreateBaseInfo(hash, Create, default);
+
+            Info.IHolder parent = FindParseParent(cursor);
+            parent.EnumInfoList.Add(enumInfo);
+        }
+
+        private void ParseTypedef(ClangSharp.Interop.CXCursor cursor)
+        {
+            ClangSharp.Interop.CXType type = cursor.TypedefDeclUnderlyingType.CanonicalType;
+            ParseType(type);
+
+            ClangSharp.Interop.CXType typeWithQualifiersRemoved = GetTypeWithQualifiersRemoved(type).CanonicalType;
+            ParseType(typeWithQualifiersRemoved);
+
+            CXType cursorType = cursor.Type.CanonicalType;
+            System.Diagnostics.Debug.Assert(cursorType.kind != CXTypeKind.CXType_Invalid, "CXTypeの取得に失敗しました");
+
+            long hash;
+            switch(cursorType.TypeClass)
+            {
+                case CX_TypeClass.CX_TypeClass_Builtin:
+                case CX_TypeClass.CX_TypeClass_FunctionProto:
+                    hash = cursorType.GetHashCode();
+                    break;
 
                 default:
-                    System.Diagnostics.Debug.Assert(false, "型解析に失敗");
-                    typeInfo = default;
+                    hash = cursor.Hash;
                     break;
+            }
+
+            if (TypeInfoDict.TryGetValue(hash, out Info.IBaseInfo? baseInfo) == true)
+            {
+                Info.TypeInfo typeInfo = (Info.TypeInfo)baseInfo;
+                //  単純な別名
+                if (type == typeWithQualifiersRemoved)
+                {
+                    typeInfo.TypeAliasNameHashSet.TryAdd(cursor.GetFullName());
+                }
+                //  修飾子付きの型の別名
+                else
+                {
+                    if (typeInfo.TypeQualifiersInfoHashSet.TryGetValue(type.Spelling.CString, out HashSet<string>? nameHashSet) == false)
+                    {
+                        typeInfo.TypeQualifiersInfoHashSet.Add(type.Spelling.CString, nameHashSet = new HashSet<string>());
+                    }
+                    nameHashSet.Add(cursor.GetFullName());
+                }
             }
         }
 
-        private void ParseType(out Info.TypeInfo typeInfo, ClangSharp.Interop.CXType cxType, Info.TypeInfo? parentTypeInfo = null)
+        private void ParseTypedef2(ClangSharp.Interop.CXCursor cursor)
         {
-            switch (cxType.TypeClass)
+            ClangSharp.Interop.CXType type = cursor.TypedefDeclUnderlyingType.CanonicalType;
+            ParseType(type);
+            
+            ClangSharp.Interop.CXType typeWithQualifiersRemoved = GetTypeWithQualifiersRemoved(type).CanonicalType;
+            switch (typeWithQualifiersRemoved.TypeClass)
+            {
+                case CX_TypeClass.CX_TypeClass_SubstTemplateTypeParm:
+                    typeWithQualifiersRemoved = typeWithQualifiersRemoved.CanonicalType;
+                    break;
+            }
+            ParseType(typeWithQualifiersRemoved);
+            
+
+            Info.TypeInfo typeInfo;
+            switch(typeWithQualifiersRemoved.TypeClass)
             {
                 case CX_TypeClass.CX_TypeClass_Builtin:
+                case CX_TypeClass.CX_TypeClass_Decltype:
                     {
-                        int hashCode = cxType.GetHashCode();
-                        if (TypeInfoDict.TryGetValue(hashCode, out Info.TypeInfo? tmpTypeInfo) == true)
+                        if (TypeInfoDict.TryGetValue(typeWithQualifiersRemoved.GetHashCode(), out Info.IBaseInfo? baseInfo) == true)
                         {
-                            typeInfo = tmpTypeInfo;
+                            typeInfo = (Info.TypeInfo)baseInfo;
+
+                            //  単純な別名
+                            if (type == typeWithQualifiersRemoved)
+                            {
+                                typeInfo.TypeAliasNameHashSet.TryAdd(cursor.TypedefDeclUnderlyingType.CanonicalType.Spelling.CString);
+                            }
+                            //  修飾子付きの型の別名
+                            else
+                            {
+                                if (typeInfo.TypeQualifiersInfoHashSet.TryGetValue(type.Spelling.CString, out HashSet<string>? nameHashSet) == false)
+                                {
+                                    typeInfo.TypeQualifiersInfoHashSet.Add(type.Spelling.CString, nameHashSet = new HashSet<string>());
+                                }
+                                nameHashSet.Add(cursor.GetFullName());
+                            }
                         }
                         else
                         {
-                            typeInfo = new Info.TypeInfo()
-                            {
-                                CXType = cxType,
-                                FullName = cxType.GetCanonicalTypeFullName(),
-                                Namespace = cxType.GetNamespace(),
-                            };
-                            TypeInfoDict.Add(hashCode, typeInfo);
+                            System.Diagnostics.Debug.Assert(false, "");
                         }
+                    }
+                    break;
+
+           
+                default:
+                    switch(typeWithQualifiersRemoved.Declaration.Kind)
+                    {
+                        case CXCursorKind.CXCursor_TypeAliasTemplateDecl:
+                            {
+                                if (TypeInfoDict.TryGetValue(typeWithQualifiersRemoved.Declaration.Hash, out Info.IBaseInfo? baseInfo) == true)
+                                {
+                                    typeInfo = (Info.TypeInfo)baseInfo;
+                                    //  単純な別名
+                                    if (type == typeWithQualifiersRemoved)
+                                    {
+                                        typeInfo.TypeAliasNameHashSet.TryAdd(cursor.GetFullName());
+                                    }
+                                    //  修飾子付きの型の別名
+                                    else
+                                    {
+                                        if (typeInfo.TypeQualifiersInfoHashSet.TryGetValue(type.Spelling.CString, out HashSet<string>? nameHashSet) == false)
+                                        {
+                                            typeInfo.TypeQualifiersInfoHashSet.Add(type.Spelling.CString, nameHashSet = new HashSet<string>());
+                                        }
+                                        nameHashSet.Add(cursor.GetFullName());
+                                    }
+                                }
+                                else
+                                {
+                                    break;
+//                                    System.Diagnostics.Debug.Assert(false, "");
+                                }
+                            }
+                            break;
+
+                        default:
+                            {
+                                if (TypeInfoDict.TryGetValue(typeWithQualifiersRemoved.Declaration.Hash, out Info.IBaseInfo? baseInfo) == true)
+                                {
+                                    typeInfo = (Info.TypeInfo)baseInfo;
+                                    //  単純な別名
+                                    if (type == typeWithQualifiersRemoved)
+                                    {
+                                        typeInfo.TypeAliasNameHashSet.TryAdd(cursor.GetFullName());
+                                    }
+                                    //  修飾子付きの型の別名
+                                    else
+                                    {
+                                        if (typeInfo.TypeQualifiersInfoHashSet.TryGetValue(type.Spelling.CString, out HashSet<string>? nameHashSet) == false)
+                                        {
+                                            typeInfo.TypeQualifiersInfoHashSet.Add(type.Spelling.CString, nameHashSet = new HashSet<string>());
+                                        }
+                                        nameHashSet.Add(cursor.GetFullName());
+                                    }
+                                }
+                                else
+                                {
+                                    ParseCursor(typeWithQualifiersRemoved.Declaration);
+                                    System.Diagnostics.Debug.Assert(false, "");
+                                }
+                            }
+                            break;
+                    }
+                    break;
+            }
+
+        }
+
+        private void ParseTemplateTypedef(ClangSharp.Interop.CXCursor cursor)
+        {
+        }
+
+        private void ParseType(ClangSharp.Interop.CXType cxType)
+        {
+            switch(cxType.TypeClass)
+            {
+                case CX_TypeClass.CX_TypeClass_BlockPointer:
+                case CX_TypeClass.CX_TypeClass_Builtin:
+                    {
+                        int hash = cxType.GetHashCode();
+
+                        TryCreateBaseInfo(hash, () =>
+                        {
+                            return new Info.TypeInfo()
+                            {
+                                AccessLevel = AccessLevel.Public,
+                                CXType = cxType,
+                                FullName = cxType.Spelling.CString,
+                                Namespace = string.Empty,
+                                AttributeInfoList = []
+                            };
+
+                        }, null);
                     }
                     return;
 
                 case CX_TypeClass.CX_TypeClass_Decltype:
                     {
-                        int hashCode = cxType.GetHashCode();
-                        if (TypeInfoDict.TryGetValue(hashCode, out Info.TypeInfo? tmpTypeInfo) == true)
-                        {
-                            typeInfo = tmpTypeInfo;
-                        }
-                        else
-                        {
-                            ParseType(out typeInfo, cxType.UnderlyingExpr.Type);
-                       //     ParseType(out typeInfo, cxType.UnderlyingExpr.Type.Declaration.LambdaCallOperator.ResultType);
-                            TypeInfoDict.Add(hashCode, typeInfo);
-                        }
-                        
-                    }
-                    return;
+                        int hash = cxType.GetHashCode();
 
-                case CX_TypeClass.CX_TypeClass_TemplateTypeParm:
-                    {
-                        int hashCode = cxType.GetHashCode();
-                        if (TypeInfoDict.TryGetValue(hashCode, out Info.TypeInfo? tmpTypeInfo) == true)
+                        TryCreateBaseInfo(hash, () =>
                         {
-                            typeInfo = tmpTypeInfo;
-                        }
-                        else
-                        {
-                            typeInfo = new Info.TemplateTypeInfo()
+                            return new Info.TypeInfo()
                             {
+                                AccessLevel = AccessLevel.Public,
                                 CXType = cxType,
-                                FullName = cxType.GetCanonicalTypeFullName(),
-                                Namespace = cxType.GetNamespace(),
-                                TemplateDepth = (uint)cxType.Depth,
-                                TemplateListIndex = (uint)cxType.Index,
+                                FullName = cxType.Spelling.CString,
+                                Namespace = string.Empty,
+                                AttributeInfoList = []
                             };
-                            TypeInfoDict.Add(hashCode, typeInfo);
-                        }
+
+                        }, null);
                     }
                     return;
 
-                case CX_TypeClass.CX_TypeClass_TemplateSpecialization:
+                case CX_TypeClass.CX_TypeClass_FunctionNoProto:
+                case CX_TypeClass.CX_TypeClass_FunctionProto:
                     {
-                        ClangSharp.Interop.CXCursor cursor = cxType.Declaration;
-                        System.Diagnostics.Debug.Assert(cursor != ClangSharp.Interop.CXCursor.Null, "CursorがNullです");
-                        System.Diagnostics.Debug.Assert(cursor.NumTemplateParameterLists == 1, "NumTemplateParameterListsが1以外");
+                        int hash = cxType.GetHashCode();
 
-                        int hashCode = cxType.GetHashCode();
-                        if (TypeInfoDict.TryGetValue(hashCode, out Info.TypeInfo? tmpTypeInfo) == true)
+                        TryCreateBaseInfo(hash, () =>
                         {
-                            typeInfo = tmpTypeInfo;
-                            return;
-                        }
+                            return new Info.TypeInfo()
+                            {
+                                AccessLevel = AccessLevel.Public,
+                                CXType = cxType,
+                                FullName = cxType.Spelling.CString,
+                                Namespace = string.Empty,
+                                AttributeInfoList = []
+                            };
 
-                        //Info.TemplateArgInfo[] templateArgInfoList = new Info.TemplateArgInfo[cursor.GetNumTemplateParameters(0)];
-                        //for (uint i = 0; i < templateArgInfoList.Length; ++i)
-                        //{
-                        //    ClangSharp.Interop.CXCursor templateParamCursor = cursor.GetTemplateParameter(0, i);
-
-                        //    switch (templateParamCursor.Kind)
-                        //    {
-                        //        case CXCursorKind.CXCursor_TemplateTemplateParameter:
-                        //            templateArgInfoList[i] = new Info.TemplateArgInfo()
-                        //            {
-                        //                Kind = Info.TemplateArgInfo.TemplateArgKind.Type,
-                        //                ListIndex = (uint)cursor.Type.Index,
-                        //                Depth = (uint)cursor.Type.Depth,
-                        //                CXType = cursor.Type,
-                        //            };
-                        //            break;
-
-                        //        case CXCursorKind.CXCursor_TemplateTypeParameter:
-                        //            {
-                        //                Info.TypeInfo? defaultTypeInfo = null;
-
-                        //                //  デフォルトの型を解析
-                        //                if (templateParamCursor.HasDefaultArg)
-                        //                {
-                        //                    ParseType(out defaultTypeInfo, templateParamCursor.DefaultArgType);
-                        //                }
-
-                        //                templateArgInfoList[i] = new Info.TemplateArgTypeInfo()
-                        //                {
-                        //                    Kind = Info.TemplateArgInfo.TemplateArgKind.Type,
-                        //                    ListIndex = (uint)cursor.Type.Index,
-                        //                    Depth = (uint)cursor.Type.Depth,
-                        //                    CXType = cursor.Type,
-                        //                    DefaultArgTypeInfo = defaultTypeInfo
-                        //                };
-
-                        //            }                                    
-
-                        //            break;
-
-                        //        case CXCursorKind.CXCursor_NonTypeTemplateParameter:
-                        //            templateArgInfoList[i] = new Info.TemplateArgInfo()
-                        //            {
-                        //                Kind = Info.TemplateArgInfo.TemplateArgKind.Variable,
-                        //                ListIndex = (uint)cursor.Type.Index,
-                        //                Depth = (uint)cursor.Type.Depth,
-                        //                CXType = cursor.Type,
-                        //            };
-                        //            //                                ParseType(out typeInfo, cursor.DefaultArg);
-                        //            break;
-
-                        //        default:
-                        //            System.Diagnostics.Debug.Assert(false, "型解析に失敗");
-                        //            break;
-                        //    }
-                        //}
-
-                        typeInfo = new Info.TypeInfo()
-                        {
-                            CXType = cxType,
-                            FullName = cxType.GetCanonicalTypeFullName(),
-                            Namespace = cxType.GetNamespace(),
-                          //  TemplateArgumentInfoList = templateArgInfoList
-                        };
-
-                        TypeInfoDict.Add(hashCode, typeInfo);
-
-                    
+                        }, null);
                     }
+                    return;
+
+                case CX_TypeClass.CX_TypeClass_Enum:
+                    ParseCursor(cxType.Declaration);
+                    return;
+
+                case CX_TypeClass.CX_TypeClass_Auto:
+                    //  autoは解析できないのでスキップ
                     return;
             }
 
             switch (cxType.kind)
             {
-                case CXTypeKind.CXType_Record:
-                    System.Diagnostics.Debug.Assert(cxType.Declaration != ClangSharp.Interop.CXCursor.Null, "DeclarationがNullです");
-                    {
-                        ClangSharp.Interop.CXCursor lambdaCallOperator = cxType.Declaration.LambdaCallOperator;
-                        if (lambdaCallOperator != ClangSharp.Interop.CXCursor.Null)
-                        {
-                            if (lambdaCallOperator.ResultType.kind == CXTypeKind.CXType_Auto)
-                            {
-                                var cursorChildren = lambdaCallOperator.GetChildren();
-                                int cursorChildrenCount = cursorChildren.Count;
-                                Info.TypeInfo[] tokenChildren;
-                                if (cursorChildrenCount > 0)
-                                {
-                                    tokenChildren = new Info.TypeInfo[cursorChildrenCount];
-                                    for (int i = 0; i < cursorChildrenCount; ++i)
-                                    {
-                                        ParseType(out tokenChildren[i], cursorChildren[i]);
-                                    }
-                                }
-                                else
-                                {
-                                    tokenChildren = [];
-                                }
-                                typeInfo = new Info.TypeInfo() 
-                                { 
-                                    CXType = cxType, 
-                                    FullName = cxType.GetCanonicalTypeFullName(), 
-                                    Namespace = cxType.GetNamespace(),
-                                    TokenChildren = tokenChildren
-                                };
-                            }
-                            else
-                            {
-                                ParseType(out typeInfo, lambdaCallOperator.ResultType);
-                            }
-                            return;
-                        }
-                        else
-                        {
-                            System.Diagnostics.Debug.Assert(false, "型解析に失敗");
-                            typeInfo = default;
-                        }
-                    }
-                    return;
-
-                case CXTypeKind.CXType_FunctionProto:
-                    {
-                        int hashCode = cxType.GetHashCode();
-                        if (TypeInfoDict.TryGetValue(hashCode, out Info.TypeInfo? tmpTypeInfo) == true)
-                        {
-                            typeInfo = tmpTypeInfo;
-                        }
-                        else
-                        {
-                            typeInfo = new Info.TypeInfo()
-                            {
-                                CXType = cxType,
-                                FullName = cxType.GetCanonicalTypeFullName(),
-                                Namespace = cxType.GetNamespace(),
-                            };
-                            TypeInfoDict.Add(hashCode, typeInfo);
-                        }
-                    }
-                    return;
-
                 case CXTypeKind.CXType_Elaborated:
-                    ParseType(out typeInfo, cxType.CanonicalType, parentTypeInfo);
+                    ParseCursor(cxType.Declaration);
+                    return;
+
+                case CXTypeKind.CXType_Pointer:
+                case CXTypeKind.CXType_RValueReference:
+                case CXTypeKind.CXType_LValueReference:
+                    ParseType(cxType.PointeeType);
+                    return;
+
+
+                case CXTypeKind.CXType_Record:
+                    ParseCursor(cxType.Declaration);
+                    return;
+
+                case CXTypeKind.CXType_DependentSizedArray:
+                    ParseType(cxType.ElementType);
+                    return;
+
+                case CXTypeKind.CXType_ConstantArray:
+                    ParseType(cxType.ElementType);
+                    return;
+
+                case CXTypeKind.CXType_Unexposed:
                     return;
             }
 
-            System.Diagnostics.Debug.Assert(false, "型解析に失敗");
-            typeInfo = default;
+            System.Diagnostics.Debug.Assert(false, "");
         }
 
-        //private void ParseTemplateParam(out Info.TemplateArgInfo templateArgInfo, ClangSharp.Interop.CXCursor cursor)
+        //private static string GetTypeFullName(ClangSharp.Interop.CXType cxType)
         //{
-        //    switch(cursor.Kind)
-        //    {
-        //        case CXCursorKind.CXCursor_TemplateTypeParameter:
-        //            templateArgInfo = new Info.TemplateArgInfo()
-        //            {
-        //                Kind = Info.TemplateArgInfo.TemplateArgKind.Type,
-        //                ListIndex = (uint)cursor.Type.Index,
-        //                Depth = (uint)cursor.Type.Depth,
-        //                CXType = cursor.Type
-        //            };
+        //    string str = string.Empty;
 
-        //            //  デフォルトの型を解析
-        //            if (cursor.HasDefaultArg)
+        //    switch (cxType.TypeClass)
+        //    {
+        //        case CX_TypeClass.CX_TypeClass_Builtin:
+        //            return cxType.Spelling.CString;
+
+        //        case CX_TypeClass.CX_TypeClass_Record:
+        //            ClangSharp.Interop.CXCursor lambdaCallOperator = cxType.Declaration.LambdaCallOperator;
+        //            if (lambdaCallOperator.IsNull == false)
         //            {
-        //                ParseType(cursor.DefaultArgType.UnderlyingExpr.Type.Declaration, out Info.TypeInfo defaultTypeInfo);
+        //                return lambdaCallOperator.ReturnType.CanonicalType.Spelling.CString;
         //            }
 
-        //            break;
-
-        //        case CXCursorKind.CXCursor_NonTypeTemplateParameter:
-        //            ParseType(cursor.DefaultArg, out typeInfo);
-        //            break;
-
-        //        default:
-        //            System.Diagnostics.Debug.Assert(false, "型解析に失敗");
-        //            templateArgInfo = null;
-        //            break;
+        //            return GetTypeFullName(cxType.Declaration);
         //    }
+        //    return str;
         //}
 
-        private void ParseType(out Info.VariableInfo variableInfo, ClangSharp.Interop.CXCursor cursor)
+        private static ClangSharp.Interop.CXCursor GetTemplateDecl(ClangSharp.Interop.CXCursor cursor)
         {
-
-
-            switch(cursor.Kind)
+            switch (cursor.DeclKind)
             {
-                // case CXCursorKind.CXCursor_TypeAliasDecl:
-                //  //   ParseType(out typeInfo, cursor.TypedefDeclUnderlyingType, null);
-                ////     typeInfo.TypeAliasNameHashSet.TryAdd(cursor.Spelling.CString);
-                //     break;
+                case CX_DeclKind.CX_DeclKind_ClassTemplateSpecialization:
+                    return GetTemplateDecl(cursor.SpecializedCursorTemplate);
+            }
 
-                case CXCursorKind.CXCursor_FunctionDecl:
-                    {
-                        uint hash = cursor.Hash;
-                        ParseType(out Info.TypeInfo typeInfo, cursor.Type);
+            switch (cursor.Kind)
+            {
+                case CXCursorKind.CXCursor_ClassTemplate:
+                    return cursor;
+            }
 
-                        if (VariableInfoDict.TryGetValue(hash, out Info.VariableInfo? tmpVariableInfo) == true)
-                        {
-                            variableInfo = tmpVariableInfo;
-                        }
-                        else
-                        {
-                            int numArgument = cursor.NumArguments;
-                            Info.FunctionInfo.ArgumentInfo[] argumentInfoList = new Info.FunctionInfo.ArgumentInfo[numArgument];
-                            for(int i = 0; i < numArgument; ++i)
-                            {
-                                //  cursor.GetArgument
-                            }
-
-                            variableInfo = new Info.FunctionInfo()
-                            {
-                                TypeInfo = typeInfo,
-                                CXCursor = cursor,
-                                ArgumentList = argumentInfoList,
-                                Name = cursor.GetFunctionFullName()
-                            };
-
-                            VariableInfoDict.Add(hash, variableInfo);
-                        }
-                    }
-                    return;
-
-                case CXCursorKind.CXCursor_DeclRefExpr:
-                    ParseType(out variableInfo, cursor.Referenced);
-                    break;
-
-                case CXCursorKind.CXCursor_UnaryOperator:
-                    ParseType(out variableInfo, cursor.SubExpr);
-                    break;
-
-                case CXCursorKind.CXCursor_IntegerLiteral:
-                    {
-                        uint hash = cursor.Hash;
-                        ParseType(out Info.TypeInfo typeInfo, cursor.Type);
-
-                        if(VariableInfoDict.TryGetValue(hash, out Info.VariableInfo? tmpVariableInfo) == true)
-                        {
-                            variableInfo = tmpVariableInfo;
-                        }
-                        else
-                        {
-                            variableInfo = new Info.VariableInfo()
-                            {
-                                TypeInfo = typeInfo,
-                                IntValue = cursor.IntegerLiteralValue,
-                                CXCursor = cursor
-                            };
-
-                            VariableInfoDict.Add(hash, variableInfo);
-                        }
-                    }
-                    return;
-
-                case CXCursorKind.CXCursor_FirstExpr:
-                    {
-                        ParseType(out Info.TypeInfo typeInfo, cursor.Type);
-
-                        variableInfo = new Info.VariableInfo()
-                        {
-                            TypeInfo = typeInfo,
-                            IntValue = cursor.IntegerLiteralValue,
-                            CXCursor = cursor
-                        };
-                    }
-                    return;
-
-                case CXCursorKind.CXCursor_CallExpr:
-                    {
+            return ClangSharp.Interop.CXCursor.Null;
+        }
 
 
-                        System.Diagnostics.Debug.Assert(false, "型解析に失敗");
-                        variableInfo = default;
-                        //     ParseType(out typeInfo, cursor.Definition.Type, null);
-                    }
-                    return;
+        //private static string GetTypeFullNameLegacy(ClangSharp.Interop.CXCursor cursor)
+        //{
 
-                default:
-                    System.Diagnostics.Debug.Assert(false, "型解析に失敗");
-                    variableInfo = default;
-                    break;
+
+        //    string str = cursor.GetFullName();
+
+        //    int numTemplateArguments = cursor.NumTemplateArguments;
+        //    if (numTemplateArguments > 0)
+        //    {
+        //        //      ClangSharp.Interop.CXCursor templateDeclCursor = GetTemplateDecl(cursor);
+        //        //      System.Diagnostics.Debug.Assert(templateDeclCursor.IsNull == false, "");
+
+        //        str += "<";
+        //        for (uint templateArgumentIndex = 0; templateArgumentIndex < numTemplateArguments; ++templateArgumentIndex)
+        //        {
+
+        //            if (templateArgumentIndex > 0)
+        //            {
+        //                str += $", ";
+        //            }
+
+        //            ClangSharp.Interop.CX_TemplateArgument templateArgument = cursor.GetTemplateArgument(templateArgumentIndex);
+        //            switch (templateArgument.kind)
+        //            {
+        //                case CXTemplateArgumentKind.CXTemplateArgumentKind_Type:
+        //                    str += GetTypeFullName(templateArgument.AsType);
+        //                    break;
+
+        //                case CXTemplateArgumentKind.CXTemplateArgumentKind_Declaration:
+        //                    {
+        //                        ClangSharp.Interop.CXCursor templateArgumentDecl = templateArgument.AsDecl;
+
+        //                        string s = GetTypeFullName(templateArgumentDecl.Type);
+        //                        string firstDeclName;
+        //                        int numFields = templateArgumentDecl.Type.Declaration.NumFields;
+        //                        if (numFields > 0)
+        //                        {
+        //                            string declStr = templateArgumentDecl.Spelling.CString;
+        //                            {
+        //                                int startIndex = declStr.IndexOf('{');
+        //                                int endIndex = declStr.IndexOf('}');
+
+        //                                firstDeclName = declStr.Substring(startIndex + 1, endIndex - startIndex - 1);
+        //                            }
+
+        //                            {
+        //                                int startIndex = 0;
+        //                                for (uint fieldIndex = 0; fieldIndex < numFields; ++fieldIndex)
+        //                                {
+        //                                    ClangSharp.Interop.CXCursor fieldCursor = templateArgumentDecl.Type.Declaration.GetField(fieldIndex);
+        //                                    string fieldName = fieldCursor.GetFullName();
+
+        //                                    firstDeclName = firstDeclName.Insert(startIndex, $"static_cast<decltype({fieldName})>(");
+        //                                    startIndex = firstDeclName.IndexOf(',', startIndex);
+        //                                    if (startIndex >= 0)
+        //                                    {
+        //                                        firstDeclName = firstDeclName.Insert(startIndex, ")");
+        //                                        startIndex = firstDeclName.IndexOf(',', startIndex);
+        //                                        startIndex += ",".Length;
+        //                                    }
+        //                                    else
+        //                                    {
+        //                                        firstDeclName += ")";
+        //                                    }
+
+        //                                }
+        //                            }
+
+        //                            str += GetTypeFullName(templateArgument.AsDecl.Type.CanonicalType) + "{" + firstDeclName + "}";
+        //                        }
+
+
+        //                    }
+        //                    break;
+
+        //                case CXTemplateArgumentKind.CXTemplateArgumentKind_Integral:
+        //                    str += templateArgument.AsIntegral.ToString();
+        //                    break;
+
+        //                default:
+        //                    System.Diagnostics.Debug.Assert(false, "");
+        //                    break;
+        //            }
+
+        //        }
+
+        //        str += ">";
+        //    }
+
+        //    //  
+
+
+        //    return str;
+        //}
+
+        private static string GetCursorFullNameEx(ClangSharp.Interop.CXCursor cursor)
+        {
+            string fullName = cursor.Spelling.CString;
+            for (ClangSharp.Interop.CXCursor parentCursor = cursor.SemanticParent; parentCursor.IsNull == false; parentCursor = parentCursor.SemanticParent)
+            {
+                switch (parentCursor.Kind)
+                {
+                    case CXCursorKind.CXCursor_Namespace:
+                        return $"{parentCursor.Spelling.CString}::{fullName}";
+
+                    case CXCursorKind.CXCursor_TranslationUnit:
+                        continue;
+
+                    default:
+
+                        break;
+                }
+            }
+
+            return fullName;
+        }
+
+        private void ParseTemplateClass(ClangSharp.Interop.CXCursor cursor)
+        {
+            Info.TemplateClassUnionInfo CreateClassInfo()
+            {
+               
+                Info.TemplateClassUnionInfo newInfo = new Info.TemplateClassUnionInfo()
+                {
+                    AccessLevel = cursor.CXXAccessSpecifier.GetAccessLevel(),
+                    CXType = cursor.Type,
+                    FullName = cursor.GetFullName(),
+                    Namespace = cursor.GetNamespace(),
+                    AttributeInfoList = GetCustomAttributeList(cursor),
+                    SpecializationsList = [],
+                };
+
+                return newInfo;
+            }
+
+            void PostProcess(Info.TemplateClassUnionInfo info)
+            {
+                int numSpecialization = cursor.NumSpecializations;
+                string[] nameTable = numSpecialization > 0 ? new string[numSpecialization] : [];
+                for (uint i = 0; i < numSpecialization; ++i)
+                {
+                    CXCursor specializationCursor = cursor.GetSpecialization(i);
+                    //  int numArgus = clang.Cursor_getNumTemplateArguments(specializationCursor);
+
+                    ParseCursor(specializationCursor);
+                    string fullName = GetTypeFullName(specializationCursor.Type);
+
+                    nameTable[i] = fullName;
+                }
+
+
+                int numDecl = cursor.NumDecls;
+                for (uint i = 0; i < numDecl; ++i)
+                {
+                    CXCursor declCursor = cursor.GetDecl(i);
+                    ParseCursor(declCursor);
+                }
+            }
+
+            uint hash = cursor.Hash;
+//            int hash = cursor.Type.CanonicalType.GetHashCode();
+            Info.TemplateClassUnionInfo typeInfo = TryCreateBaseInfo(hash, CreateClassInfo, PostProcess);
+
+            Info.IHolder parent = FindParseParent(cursor);
+            parent.TypeInfoList.Add(typeInfo);
+
+            if (parent.ToString() == "gggg::Class002<int, float ,double>")
+            {
+                Util.BreakPoint();
             }
         }
 
-        private ClangSharp.Interop.CXChildVisitResult VisitChild(ClangSharp.Interop.CXCursor cursor, ClangSharp.Interop.CXCursor parent, void* clientData)
+        private void ParseClass(ClangSharp.Interop.CXCursor cursor)
         {
-            switch(cursor.Kind)
+            if(cursor.Spelling.CString.Contains("Application"))
+            {
+                Util.BreakPoint();
+            }
+
+            //  ラムダ式の場合はスキップ
+            if (cursor.LambdaCallOperator != ClangSharp.Interop.CXCursor.Null)
+            {
+                return;
+            }
+
+            //  関数内定義の型はスキップ
+            if (cursor.ParentFunctionOrMethod.IsNull == false)
+            {
+                return;
+            }
+
+            //  テンプレート引数にラムダ式を含む場合はスキップ
+            if (HasLambdaType(cursor.Type.CanonicalType) == true)
+            {
+                Trace.WarningLine(this, $"ラムダ式を含むテンプレート引数はスキップします {GetTypeFullName(cursor.Type)}");
+                return;
+            }
+
+            System.Diagnostics.Debug.Assert(cursor.Type.CanonicalType.kind != CXTypeKind.CXType_Invalid);
+
+            if (cursor.IsTemplated == true)
+            {
+                //System.Diagnostics.Debug.Assert(false, "");
+                return;
+            }
+
+            if(cursor.Spelling.CString.Contains("CppTest"))
+            {
+                Util.BreakPoint();
+            }
+
+            if(cursor.IsDefinition == false)
+            {
+                return;
+            }
+
+            Info.ClassUnionInfo CreateClassInfo()
+            {
+
+                Info.ClassUnionInfo newInfo = new Info.ClassUnionInfo()
+                {
+                    AccessLevel = cursor.CXXAccessSpecifier.GetAccessLevel(),
+                    CXType = cursor.Type,
+                    FullName = GetTypeFullName(cursor.Type),
+                    Namespace = cursor.GetNamespace(),
+                    AttributeInfoList = GetCustomAttributeList(cursor),
+                };
+
+                if (newInfo.FullName.Contains("nox::"))
+                {
+                    Trace.InfoLine(this, newInfo.FullName);
+                }
+                return newInfo;
+            }
+
+            void PostProcess(Info.ClassUnionInfo info)
+            {
+                int numDecl = cursor.NumDecls;
+                for (uint i = 0; i < numDecl; ++i)
+                {
+                    CXCursor declCursor = cursor.GetDecl(i);
+                    ParseCursor(declCursor);
+                }
+            }
+
+            uint hash = cursor.Hash;
+//            int hash = cursor.Type.CanonicalType.GetHashCode();
+            Info.ClassUnionInfo typeInfo = TryCreateBaseInfo(hash, CreateClassInfo, PostProcess);
+
+            Info.IHolder parent = FindParseParent(cursor);
+            parent.TypeInfoList.Add(typeInfo);
+            return;
+        }
+
+        private void ParseVariable(ClangSharp.Interop.CXCursor cursor)
+        {
+            System.Diagnostics.Debug.Assert(cursor.Type.CanonicalType.kind != CXTypeKind.CXType_Invalid);
+            Info.VariableInfo Create()
+            {
+                Info.VariableInfo variableInfo = new Info.VariableInfo()
+                {
+                    Name = cursor.Spelling.CString,
+                    FullName = cursor.GetFullName()
+                };
+
+                return variableInfo;
+            }
+
+            void PostProcess(Info.VariableInfo info)
+            {
+                ParseType(cursor.Type.CanonicalType);
+
+                if(cursor.InitExpr.IsNull == false)
+                {
+                    ParseCursor(cursor.InitExpr.Definition);
+                }
+            }
+
+            uint hash = cursor.Hash;
+            //int hash = cursor.Type.CanonicalType.GetHashCode();
+            Info.VariableInfo variableInfo = TryCreateBaseInfo(hash, Create, PostProcess);
+
+            Info.IHolder parent = FindParseParent(cursor);
+            parent.VariableInfoList.Add(variableInfo);
+        }
+
+        private void ParseTemplateVariable(ClangSharp.Interop.CXCursor cursor)
+        {
+            Info.VariableInfo Create()
+            {
+                int numSpecialization = cursor.NumSpecializations;
+                string[] specializationsNameTable = numSpecialization > 0 ? new string[numSpecialization] : [];
+                for (uint i = 0; i < numSpecialization; ++i)
+                {
+                    CXCursor specializationCursor = cursor.GetSpecialization(i);
+                    ParseCursor(specializationCursor);
+                    string fullName = GetTypeFullName(specializationCursor.Type);
+
+                    specializationsNameTable[i] = fullName;
+                }
+
+                Info.TemplateVariableInfo variableInfo = new Info.TemplateVariableInfo()
+                {
+                    Name = cursor.Spelling.CString,
+                    FullName = cursor.GetFullName(),
+                    SpecializationsList = specializationsNameTable,
+                };
+
+                return variableInfo;
+            }
+
+            void PostProcess(Info.VariableInfo info)
+            {
+                //ParseType(cursor.Type);
+            }
+
+            uint hash = cursor.Hash;
+            //int hash = cursor.Type.CanonicalType.GetHashCode();
+            Info.VariableInfo variableInfo = TryCreateBaseInfo(hash, Create, PostProcess);
+
+            Info.IHolder parent = FindParseParent(cursor);
+            parent.VariableInfoList.Add(variableInfo);
+        }
+
+        private void ParseTemplateSpecializationVariable(ClangSharp.Interop.CXCursor cursor)
+        {
+            System.Diagnostics.Debug.Assert(cursor.SpecializedCursorTemplate.IsNull == false, "特殊化元の変数が見つかりません");
+
+            ParseCursor(cursor.SpecializedCursorTemplate.CanonicalCursor);
+
+            Info.TemplateVariableInfo specializedVariableInfo = (Info.TemplateVariableInfo)TypeInfoDict[cursor.SpecializedCursorTemplate.CanonicalCursor.Hash];
+
+            //TODO: 変数テンプレートには未対応
+            List<string> specializationsList = (List<string>)specializedVariableInfo.SpecializationsList;
+            var result = ParseSpecializationCursor(cursor);
+            if(result.hasLambda == true)
+            {
+                return;
+            }
+            specializationsList.Add(result.fullName);
+        }
+
+        private void ParseFunction(ClangSharp.Interop.CXCursor cursor)
+        {
+            if(cursor.Spelling.CString.Contains("StaticAssertNoxDeclareReflection"))
+            {
+                Util.BreakPoint();
+            }
+
+            System.Diagnostics.Debug.Assert(cursor.Type.CanonicalType.kind != CXTypeKind.CXType_Invalid);
+
+            var specializationInfo = ParseSpecializationCursor(cursor);
+            if(specializationInfo.hasLambda == true)
+            {
+                return;
+            }
+
+            Info.FunctionInfo Create()
+            {
+             //   ParseType(cursor.Type.CanonicalType);
+
+                int numArguments = cursor.NumArguments;
+                uint numDefaultArguments = 0;
+
+                for (uint i = 0; i < numArguments; ++i)
+                {
+                    CXCursor argCursor = cursor.GetArgument(i);
+                    if (argCursor.HasDefaultArg == true)
+                    {
+                        ++numDefaultArguments;
+                    }
+
+               //     ParseType(argCursor.Type.CanonicalType);
+                }
+
+            //    ParseType(cursor.ResultType.CanonicalType);
+
+                return new Info.FunctionInfo()
+                {
+                    Name = cursor.Spelling.CString,
+                    FullName = specializationInfo.fullName,
+                    NumArguments = numArguments > 0 ? (uint)numArguments : 0,
+                    NumDefaultArguments = numDefaultArguments,
+                    AttributeInfoList = GetCustomAttributeList(cursor),
+                    IsConsteval = cursor.IsConstexpr,
+                    IsConstexpr = cursor.IsConstexpr,
+                    IsInline = cursor.IsFunctionInlined,
+                    IsPureVirtual = cursor.CXXMethod_IsPureVirtual,
+                    IsVirtual = cursor.CXXMethod_IsVirtual,
+                };
+            }
+
+            void PostProcess(Info.FunctionInfo functionInfo)
+            {
+                ParseType(cursor.Type.CanonicalType);
+
+                int numArguments = cursor.NumArguments;
+
+                for (uint i = 0; i < numArguments; ++i)
+                {
+                    CXCursor argCursor = cursor.GetArgument(i);
+                    ParseType(argCursor.Type.CanonicalType);
+                }
+
+                ParseType(cursor.ResultType.CanonicalType);
+            }
+
+            uint hash = cursor.Hash;
+            //int hash = cursor.Type.CanonicalType.GetHashCode();
+            Info.FunctionInfo typeInfo = TryCreateBaseInfo(hash, Create, PostProcess);
+
+            Info.IHolder parent = FindParseParent(cursor);
+            parent.FunctionInfoList.Add(typeInfo);
+        }
+
+        private (string fullName, bool hasLambda) ParseSpecializationCursor(CXCursor cursor)
+        {
+            (string fullName, bool hasLambda) result;
+            result.fullName = cursor.GetFullName();
+            result.hasLambda = false;
+
+            switch(cursor.TemplateSpecializationKind)
+            {
+                case CX_TemplateSpecializationKind.CX_TSK_ImplicitInstantiation:
+                    break;
+                default:
+                    return result;
+            }
+
+            int numTemplateArgument = cursor.SpecializedCursorTemplate.NumTemplateArguments;
+
+            if(numTemplateArgument <= 0)
+            {
+                return result;
+            }
+
+            result.fullName += "<";
+            for(uint i = 0; i < numTemplateArgument; ++i)
+            {
+                if(i > 0)
+                {
+                    result.fullName += ",";
+                }
+
+                ClangSharp.Interop.CX_TemplateArgument templateArgument = cursor.GetTemplateArgument(i);
+                switch(templateArgument.kind)
+                {
+                    case CXTemplateArgumentKind.CXTemplateArgumentKind_Type:
+                        if (HasLambdaType(templateArgument.AsType.CanonicalType) == true)
+                        {
+                            result.hasLambda = true;
+                        }
+                        result.fullName += templateArgument.AsType.CanonicalType.Spelling.CString;
+                        break;
+
+                    case CXTemplateArgumentKind.CXTemplateArgumentKind_Integral:
+                        result.fullName += templateArgument.AsIntegral.ToString();
+                        break;
+
+                    case CXTemplateArgumentKind.CXTemplateArgumentKind_Declaration:
+                        const string begin = "<template param ";
+                        const string end = ">";
+                        ClangSharp.Interop.CXCursor templateArgumentCursor = templateArgument.AsDecl;
+                        ClangSharp.Interop.CXType canonicalType = GetTypeWithQualifiersRemoved(templateArgumentCursor.Type.CanonicalType);
+                        if(HasLambdaType(canonicalType) == true)
+                        {
+                            result.hasLambda = true;
+                        }
+                        string tmp = templateArgumentCursor.Spelling.CString;
+                        int beginIndex = tmp.IndexOf(begin);
+                        int endIndex = tmp.LastIndexOf(end);
+
+                        string removeTmpStr = tmp.Substring(beginIndex + begin.Length, endIndex - (beginIndex + begin.Length));
+
+                        string indexTypeNameBegin = removeTmpStr.Substring(removeTmpStr.IndexOf('{'));
+
+                        result.fullName += canonicalType.Spelling.CString + indexTypeNameBegin;
+                        break;
+
+                    default:
+                        continue;
+//                        System.Diagnostics.Debug.Assert(false);
+ //                       break;
+                }
+            }
+
+            result.fullName += ">";
+            return result;    
+        }
+
+        private void ParseTemplateFunction(ClangSharp.Interop.CXCursor cursor)
+        {
+            System.Diagnostics.Debug.Assert(cursor.Type.CanonicalType.kind != CXTypeKind.CXType_Invalid);
+
+            Info.TemplateFunctionInfo Create()
+            {
+                int numSpecialization = cursor.NumSpecializations;
+                List<string> specializationsNameList = new List<string>();
+                for (uint i = 0; i < numSpecialization; ++i)
+                {
+                    CXCursor specializationCursor = cursor.GetSpecialization(i);
+                //    ParseCursor(specializationCursor);
+                    var result = ParseSpecializationCursor(specializationCursor);
+                    if(result.hasLambda == true)
+                    {
+                        continue;
+                    }
+                    specializationsNameList.Add(result.fullName);
+                }
+
+                int numArguments = cursor.NumArguments;
+                uint numDefaultArguments = 0;
+
+                for (uint i = 0; i < numArguments; ++i)
+                {
+                    CXCursor argCursor = cursor.GetArgument(i);
+                    if (argCursor.HasDefaultArg == true)
+                    {
+                        ++numDefaultArguments;
+                    }
+
+                //    ParseType(argCursor.Type);
+                }
+
+                return new Info.TemplateFunctionInfo()
+                {
+                    Name = cursor.Spelling.CString,
+                    FullName = cursor.GetFullName(),
+                    NumArguments = numArguments > 0 ? (uint)numArguments : 0,
+                    NumDefaultArguments = numDefaultArguments,
+                    AttributeInfoList = GetCustomAttributeList(cursor),
+                    IsConsteval = cursor.IsConstexpr,
+                    IsConstexpr = cursor.IsConstexpr,
+                    IsInline = cursor.IsFunctionInlined,
+                    IsPureVirtual = cursor.CXXMethod_IsPureVirtual,
+                    IsVirtual = cursor.CXXMethod_IsVirtual,
+                    SpecializationsList = [],
+                };
+            }
+
+            void PostProcess(Info.TemplateFunctionInfo functionInfo)
+            {
+                int numSpecialization = cursor.NumSpecializations;
+                List<string> specializationsNameList = new List<string>();
+                for (uint i = 0; i < numSpecialization; ++i)
+                {
+                    CXCursor specializationCursor = cursor.GetSpecialization(i);
+                    ParseCursor(specializationCursor);
+                }
+
+                int numArguments = cursor.NumArguments;
+
+                for (uint i = 0; i < numArguments; ++i)
+                {
+                    CXCursor argCursor = cursor.GetArgument(i);
+                    ParseType(argCursor.Type);
+                }
+            }
+
+            uint hash = cursor.Hash;
+            //int hash = cursor.Type.CanonicalType.GetHashCode();
+            Info.FunctionInfo typeInfo = TryCreateBaseInfo(hash, Create, PostProcess);
+
+            Info.IHolder parent = FindParseParent(cursor);
+            parent.FunctionInfoList.Add(typeInfo);
+        }
+
+
+        private void ParseCursor(ClangSharp.Interop.CXCursor cursor)
+        {
+            if(cursor.Spelling.CString.Contains("Application") == true)
+            {
+                Util.BreakPoint();
+            }
+
+            switch (cursor.Kind)
             {
                 case CXCursorKind.CXCursor_Namespace:
-                    cursor.VisitChildren(VisitChild, default);
-                    break;
-
-                case CXCursorKind.CXCursor_VarDecl:
-                    ParseType(out Info.VariableInfo variableInfo, cursor);
-                    break;
-
-                case CXCursorKind.CXCursor_CXXMethod:
+                    ParseNamespace(cursor);
                     break;
 
                 case CXCursorKind.CXCursor_ClassDecl:
+                case CXCursorKind.CXCursor_StructDecl:
+                    ParseClass(cursor);
                     break;
 
-                case CXCursorKind.CXCursor_TypeAliasDecl:
-                    {
-                        ParseType(out Info.TypeInfo typeInfo, cursor.TypedefDeclUnderlyingType);
-                    }
-                    break;
-
+                case CXCursorKind.CXCursor_ClassTemplatePartialSpecialization:
                 case CXCursorKind.CXCursor_ClassTemplate:
-                    {
-                        break;
-           
-                    }
-                case CXCursorKind.CXCursor_TypeAliasTemplateDecl:
-                    for (ClangSharp.Interop.CXType type = cursor.TemplatedDecl.TypedefDeclUnderlyingType; type.kind != CXTypeKind.CXType_Invalid;)
-                    {
-                        switch (type.TypeClass)
-                        {
-                            case CX_TypeClass.CX_TypeClass_LValueReference:
-                            case CX_TypeClass.CX_TypeClass_Pointer:
-                                type = type.PointeeType;
-                                continue;
-
-                            case CX_TypeClass.CX_TypeClass_Elaborated:
-                                typeDict.TryAdd(type.CanonicalType.Declaration.Hash, type.CanonicalType);
-
-                                break;
-                        }
-                        break;
-                    }
-                    
-
+                    ParseTemplateClass(cursor.CanonicalCursor);
                     break;
+
+                case CXCursorKind.CXCursor_VarDecl:
+                case CXCursorKind.CXCursor_FieldDecl:
+                    ParseVariable(cursor);
+                    break;
+
+                case CXCursorKind.CXCursor_FirstDecl:
+                    //  テンプレート変数の特殊化
+                    switch (cursor.DeclKind)
+                    {
+                        case CX_DeclKind.CX_DeclKind_VarTemplate:
+                       //     ParseTemplateVariable(cursor);
+                            break;
+
+                        case CX_DeclKind.CX_DeclKind_FirstVarTemplateSpecialization:
+                      //      ParseTemplateSpecializationVariable(cursor);
+                            break;
+                    }
+                    break;
+
+                case CXCursorKind.CXCursor_Constructor:
+                case CXCursorKind.CXCursor_Destructor:
+                    break;
+
+                case CXCursorKind.CXCursor_FunctionDecl:
+                case CXCursorKind.CXCursor_CXXMethod:
+                    ParseFunction(cursor);
+                    break;
+
+                case CXCursorKind.CXCursor_FunctionTemplate:
+                    ParseTemplateFunction(cursor);
+                    break;
+
+                case CXCursorKind.CXCursor_EnumDecl:
+                    ParseEnum(cursor);
+                    break;
+
+                case CXCursorKind.CXCursor_TypeAliasTemplateDecl:
+                    ParseTemplateTypedef(cursor.TemplatedDecl);
+                    break;
+
+                case CXCursorKind.CXCursor_TypedefDecl:
+                case CXCursorKind.CXCursor_TypeAliasDecl:
+                    ParseTypedef(cursor);
+                    break;
+
+                case CXCursorKind.CXCursor_CXXAccessSpecifier:
+                case CXCursorKind.CXCursor_UsingDirective:
+                    break;
+
+                
 
                 default:
-                    typeDict.TryAdd(cursor.Hash, cursor.Type);
 
                     break;
             }
-
-//            cursor.VisitChildren(VisitChild, default);
-            return CXChildVisitResult.CXChildVisit_Continue;
         }
+        private void ParseRoot(ClangSharp.Interop.CXCursor cursor)
+        {
+            uint hash = cursor.Hash;
+            RootDeclHolder = new Info.DeclHolder()
+            {
+                Namespace = string.Empty,
+            };
+            TypeInfoDict.Add(hash, RootDeclHolder);
+
+            int numDecl = cursor.NumDecls;
+            for (uint i = 0; i < numDecl; ++i)
+            {
+                CXCursor declCursor = cursor.GetDecl(i);
+                ParseCursor(declCursor);
+            }
+        }
+
+        private void ParseNamespace(ClangSharp.Interop.CXCursor cursor)
+        {
+            uint hash = cursor.Hash;
+
+            if(TypeInfoDict.ContainsKey(hash) == true)
+            {
+                return;
+            }
+
+            Info.DeclHolder declHolder;
+            {
+                if (TypeInfoDict.TryGetValue(hash, out Info.IBaseInfo? declHolderOld) == true)
+                {
+                    declHolder = (Info.DeclHolder)declHolderOld;
+                }
+                else
+                {
+                    declHolder = new Info.DeclHolder()
+                    {
+                        Namespace = cursor.GetNamespace()
+                    };
+                }
+            }
+
+            //{
+            //    if (_DeclHolderDict.TryGetValue(namespaceStr, out Info.DeclHolder? declHolderOld) == true)
+            //    {
+            //        declHolder = declHolderOld;
+            //    }
+            //    else
+            //    {
+            //        declHolder = new Info.DeclHolder()
+            //        {
+            //            Namespace = cursor.GetNamespace()
+            //        };
+            //        _DeclHolderDict.Add(namespaceStr, declHolder);
+            //    }
+            //}
+
+            TypeInfoDict.Add(hash, declHolder);
+
+            int numDecl = cursor.NumDecls;
+            for (uint i = 0; i < numDecl; ++i)
+            {
+                CXCursor declCursor = cursor.GetDecl(i);
+                ParseCursor(declCursor);
+            }
+
+            FindParseParent<Info.DeclHolder>(cursor).DeclHolderList.Add(declHolder);
+        }
+        #endregion
 
 #if false
         private enum Kind
@@ -1393,24 +2117,6 @@ namespace ReflectionGenerator.Parser
             return ClangSharp.Interop.CXChildVisitResult.CXChildVisit_Continue;
         }
 #endif
-        private string GetIndent()
-        {
-            string indentStr = string.Empty;
-
-            //  namespace
-            for (int i = 0; i < _NamespaceInfoStack.InfoStack.Count; ++i)
-            {
-                indentStr = string.Format(indentStr, "\t");
-            }
-
-            //  class
-            for (int i = 0; i < ClassInfoStack.InfoStack.Count; ++i)
-            {
-                indentStr = string.Format(indentStr, "\t");
-            }
-
-            return indentStr;
-        }
 
         /// <summary>
         /// namespaceのscopeを取得
@@ -1431,42 +2137,6 @@ namespace ReflectionGenerator.Parser
             return retNamespace;
         }
 
-        private string GetFullClassScope()
-        {
-            string retNamespace = string.Empty;
-            foreach (var info in ClassInfoStack.InfoStack.Reverse())
-            {
-                if (retNamespace != string.Empty)
-                {
-                    retNamespace += "::";
-                }
-                retNamespace += info.Name;
-            }
-
-            return retNamespace;
-        }
-
-        private string GetFullScope()
-        {
-            string retName = string.Empty;
-            string namespaceNames = GetFullNamespaceScope();
-            if (namespaceNames != string.Empty)
-            {
-                retName += namespaceNames;
-            }
-
-            string classNames = GetFullClassScope();
-            if (classNames != string.Empty)
-            {
-                if (retName != string.Empty)
-                {
-                    retName += "::";
-                }
-                retName += classNames;
-            }
-
-            return retName;
-        }
 
         /// <summary>
         /// モジュール情報を作成
@@ -1625,49 +2295,10 @@ namespace ReflectionGenerator.Parser
 
             return true;
         }
+#if false
         #region パース関係
-        private void ParseNamespace(ClangSharp.Interop.CXCursor cursor)
-        {
-            if (cursor.IsDefinition == false)
-            {
-                //  宣言のみはスルー
-                //return;
-            }
 
-            string name = ClangSharp.Interop.clang.getCursorSpelling(cursor).CString;
-
-            //  rootのnamespaceがparse対象か
-            if (_NamespaceInfoStack.EmptyStack == false)
-            {
-                if (_EnableRootNamespaceList?.Contains(name) == false)
-                {
-                    return;
-                }
-            }
-
-            if (_IgnoreNamespaceList.Contains(name) == true)
-            {
-                return;
-            }
-
-            Trace.InfoLine(this, string.Format("{0}namespace:{1}", GetIndent(), ClangSharp.Interop.clang.getCursorSpelling(cursor).CString));
-
-            _NamespaceInfoStack.Push(new Info.NamespaceInfo()
-            {
-                Name = ClangSharp.Interop.clang.getCursorSpelling(cursor).CString,
-                IsInline = ClangSharp.Interop.clang.Cursor_isInlineNamespace(cursor) >= 1
-            });
-
-
-            GlobalInfoContainer.Push(GetFullNamespaceScope());
-
-            cursor.VisitChildren(VisitChild, default);
-
-            _NamespaceInfoStack.Pop();
-            GlobalInfoContainer.Pop();
-        }
-
-        private Info.ClassInfo CreateClassInfo(ClangSharp.Interop.CXCursor cursor)
+        private Info.ClassInfoOld CreateClassInfo(ClangSharp.Interop.CXCursor cursor)
         {
             //  継承型
             string[] baseClassFullNameList = new string[int.Max(0, cursor.NumBases)];
@@ -1679,7 +2310,7 @@ namespace ReflectionGenerator.Parser
             }
 
             //  
-            Info.ClassInfo newClassInfo = new Info.ClassInfo()
+            Info.ClassInfoOld newClassInfo = new Info.ClassInfoOld()
             {
                 Namespace = cursor.GetNamespace(),
                 Module = CreateModule(cursor),
@@ -1774,7 +2405,7 @@ namespace ReflectionGenerator.Parser
                     return;
                 }
 
-                Info.ClassInfo newClassInfo = CreateClassInfo(cursor);
+                Info.ClassInfoOld newClassInfo = CreateClassInfo(cursor);
 
                 ClassInfoStack.Push(newClassInfo);
                 cursor.VisitChildren(VisitChild, default);
@@ -1891,7 +2522,7 @@ namespace ReflectionGenerator.Parser
                 && cursor.Type.CanonicalType.Declaration.Kind != ClangSharp.Interop.CXCursorKind.CXCursor_NoDeclFound
                 )
             {
-                Info.ClassInfo classInfo = CreateClassInfo(cursor.Type.Declaration);
+                Info.ClassInfoOld classInfo = CreateClassInfo(cursor.Type.Declaration);
                 ClassInfoStack.Add(classInfo);
             }
         }
@@ -1929,6 +2560,7 @@ namespace ReflectionGenerator.Parser
             EnumInfoStack.Push(enumInfo);
         }
         #endregion
+#endif
         #endregion
     }
 }

@@ -149,6 +149,17 @@
       </SubType>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\core\core.vcxproj">
+      <Project>{0d108199-d079-4739-83ad-ce83c4d53332}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\kernel\kernel.vcxproj">
+      <Project>{ce18e5d8-faa4-48b4-a1d2-dab85fc1acbb}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\reflection\reflection.vcxproj">
+      <Project>{45ab985e-3772-4261-95ec-c6de7d26edbb}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

@@ -18,7 +18,8 @@ void*	memory::Allocate(const size_t size, const AreaType area_type)
 
 void* memory::Allocate(const size_t size, size_t alignment, const AreaType area_type)
 {
-	return ::_aligned_malloc(size, alignment);
+	return nullptr;
+	//return ::_aligned_malloc(size, alignment);
 }
 
 void	memory::Deallocate(not_null<void*> ptr)

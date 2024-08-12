@@ -52,3 +52,8 @@
 /runtime/runtime.vcxproj.preprocess2
 /runtime/unity_711FJ45DMPQLZRQN.i
 /runtime/bin/source/ReflectionGenerator/output3.txt
+/runtime/reflection/build/intermediate/x64/Debug/reflection
+/runtime/reflection_generated/build/intermediate/x64/Debug/reflection_generated
+/runtime/core/build/intermediate/x64/Debug/core
+/runtime/kernel/build/intermediate/x64/Debug/kernel
+/runtime/bin/source/ReflectionGeneratorCpp/build/.vs/LLVM

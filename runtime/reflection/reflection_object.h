@@ -2,6 +2,7 @@
 ///	@brief	reflection_object
 #pragma once
 #include	"attribute.h"
+#include	"type.h"
 
 namespace nox::reflection
 {
@@ -19,23 +20,15 @@ namespace nox::reflection
 
 		};
 
-		/// @brief リフレクション用の前方宣言
-		/// @tparam T 型
+		/// @brief class,union型のリフレクション用の前方宣言
+		/// @tparam T 
 		template<class T>  requires(std::is_class_v<T> || std::is_enum_v<T> || std::is_union_v<T>)
 			struct ReflectionGeneratedHolder;
 
-		/**
-		 * @brief 別名定義用のリフレクション用の前方宣言
-		 * @tparam T 情報を持つ型
-		*/
-		template<class T, std::uint8_t Index>  requires(std::is_class_v<T> || std::is_enum_v<T> || std::is_union_v<T>)
-			struct ReflectionGeneratedTypedefHolder;
-
-		/**
-		 * @brief 名前空間に存在するリフレクション用の前方宣言
-		 * @tparam ID 名前空間文字列のハッシュ値
-		*/
-		template<std::uint32_t ID>
+		/// @brief 名前空間に存在するリフレクション用の前方宣言
+		/// @tparam ModuleId モジュール名のハッシュ値
+		/// @tparam Id 名前空間文字列のハッシュ値
+		template<std::uint32_t ModuleId, std::uint32_t Id>
 		struct ReflectionGeneratedGlobalHolder;
 	}
 
@@ -45,24 +38,31 @@ namespace nox::reflection
 #define	NOX_DECLARE_REFLECTION(ClassType) \
 		friend struct ::nox::reflection::gen::ReflectionTypeActivator<ClassType>;	\
 	private:\
-		NOX_ATTR_OBJECT(::nox::reflection::attr::IgnoreReflection())	\
+		NOX_ATTR_DECLARATION(::nox::reflection::attr::IgnoreReflection())	\
 		inline constexpr void StaticAssertNoxDeclareReflection()noexcept{ static_assert(std::is_same_v<ClassType, std::remove_cvref_t<decltype(*this)>>); }\
 		friend struct ::nox::reflection::gen::ReflectionGeneratedHolder<ClassType>
+//	end define
 
 	/// @brief		リフレクションオブジェクト定義
 	///	@param ClassType 	型
-	/// @details	リフレクション対象となり、型IDを取得する関数が定義されます
+	/// @details	リフレクション対象となり、型情報を取得する関数が定義されます
 #define NOX_DECLARE_REFLECTION_OBJECT(ClassType)\
+	private:\
+		NOX_ATTR_DECLARATION(::nox::reflection::attr::IgnoreReflection())	\
+		inline consteval void StaticAssertNoxDeclareReflectionObject()noexcept{ static_assert(std::is_base_of_v<::nox::reflection::ReflectionObject, ClassType>, "is not base of ReflectionObject"); }\
 	public:\
-		constexpr virtual std::uint32_t GetUniqueTypeID()const noexcept{return ::nox::util::GetUniqueTypeID<ClassType>();}\
+		inline constexpr const ::nox::reflection::Type& GetType()const noexcept override { return ::nox::reflection::Typeof<ClassType>(); }\
 		NOX_DECLARE_REFLECTION(ClassType)
-
+//	end define
 	
-
-	/// @brief 属性インターフェース
+	/// @brief リフレクションオブジェクト
 	class ReflectionObject
 	{
-		NOX_DECLARE_REFLECTION_OBJECT(ReflectionObject);
+		NOX_DECLARE_REFLECTION(ReflectionObject);
+	public:
+		/// @brief 型情報を取得
+		inline constexpr virtual const ::nox::reflection::Type& GetType()const noexcept = 0;
+
 	protected:
 		[[nodiscard]] inline constexpr ReflectionObject()noexcept = default;
 		inline constexpr virtual ~ReflectionObject()noexcept {}

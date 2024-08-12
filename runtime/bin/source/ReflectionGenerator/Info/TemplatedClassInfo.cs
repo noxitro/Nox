@@ -6,22 +6,14 @@ using System.Threading.Tasks;
 
 namespace ReflectionGenerator.Info
 {
-    public class TemplatedClassInfo : BaseInfo
+    public enum TemplateDeclKind
     {
-        public struct TemplateArgument
-        {
-            public required string FullName { get; init; }
-        }
+        Type,
+        Variable
+    }
 
-        public required string FullName { get; init; }
-
-        /// <summary>
-        /// テンプレートパラメータリストテーブル
-        /// </summary>
-   //     public required TemplateParam[][] TemplateParamListTable { get; init; }
-
-        public required TemplateArgument[] TemplateArgumentList { get; init; }
-
-        public required ClangSharp.Interop.CXCursor DefinitionCursor { get; init; }
+    public struct TemplateDeclInfo
+    {
+        public required TemplateDeclKind Kind { get; init; }
     }
 }

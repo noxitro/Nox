@@ -33,6 +33,10 @@
     <ClInclude Include="function.h" />
     <ClInclude Include="intrusive_ptr.h" />
     <ClInclude Include="kernel.h" />
+    <ClInclude Include="kernel_reflection.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="log_trace.h" />
     <ClInclude Include="math\color.h" />
     <ClInclude Include="math\math.h" />
@@ -108,6 +112,10 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="string_format.h" />
+    <ClInclude Include="type_id.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="type_traits\concepts.h" />
     <ClInclude Include="type_traits\field_signature.h" />
     <ClInclude Include="type_traits\function_signature.h" />
@@ -134,6 +142,10 @@
     <ClCompile Include="format_float.cpp" />
     <ClCompile Include="function.cpp" />
     <ClCompile Include="intrusive_ptr.cpp" />
+    <ClCompile Include="kernel_reflection.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="log_trace.cpp" />
     <ClCompile Include="math\color.cpp" />
     <ClCompile Include="math\math.cpp" />
@@ -155,6 +167,7 @@
     <ClCompile Include="math\quaternion.cpp" />
     <ClCompile Include="math\quaternion_util.cpp" />
     <ClCompile Include="math\vector2d.cpp" />
+    <ClCompile Include="math\vector2d.ixx" />
     <ClCompile Include="math\vector3d.cpp" />
     <ClCompile Include="math\vector4d.cpp" />
     <ClCompile Include="math\vector_util.cpp" />
@@ -195,6 +208,7 @@
     <ClCompile Include="preprocessor\repeat.cpp" />
     <ClCompile Include="preprocessor\util.cpp" />
     <ClCompile Include="preprocessor\va_length.cpp" />
+    <ClCompile Include="scope_exit.ixx" />
     <ClCompile Include="singleton.cpp" />
     <ClCompile Include="stack_trace.cpp">
       <SubType>
@@ -206,6 +220,10 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="string_format.cpp" />
+    <ClCompile Include="type_id.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="type_traits\concepts.cpp" />
     <ClCompile Include="type_traits\field_signature.cpp" />
     <ClCompile Include="type_traits\function_signature.cpp" />
@@ -270,6 +288,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <ClCompile />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile />
@@ -279,6 +298,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <ClCompile />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'">
     <ClCompile />
@@ -288,6 +308,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <ClCompile />
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -22,7 +22,7 @@ namespace nox::reflection
 		struct GlobalData
 		{
 			UnorderedMap<std::uint32_t, const class ClassInfo*> class_info_ptr_map;
-			UnorderedMap<std::uint32_t, const class FieldInfo*> field_info_ptr_map;
+			UnorderedMap<std::uint32_t, const class VariableInfo*> field_info_ptr_map;
 			UnorderedMap<std::uint32_t, const class FunctionInfo*> function_info_ptr_map;
 			UnorderedMap<std::uint32_t, const class EnumInfo*> enum_info_ptr_map;
 		};
@@ -53,8 +53,8 @@ namespace nox::reflection
 		void Register(const class EnumInfo& data);
 		void Unregister(const class EnumInfo& data);
 
-		void Register(const class FieldInfo& data);
-		void Unregister(const class FieldInfo& data);
+		void Register(const class VariableInfo& data);
+		void Unregister(const class VariableInfo& data);
 
 		void Register(const class FunctionInfo& data);
 		void Unregister(const class FunctionInfo& data);

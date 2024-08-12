@@ -1,0 +1,88 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace ReflectionGenerator.Info
+{
+    public class Holder
+    {
+        public List<Info.VariableInfo> VariableInfoList { get; } = new List<Info.VariableInfo>();
+    }
+
+    /// <summary>
+    /// 型情報
+    /// </summary>
+    public class TypeInfo : BaseInfo
+    {
+        /// <summary>
+        /// 修飾子付与情報
+        /// </summary>
+        public struct TypeQualifiersName
+        {
+            public required string Name { get; init; }
+            public HashSet<string> TypeAliasNameHashSet { get; } = new HashSet<string>();
+
+            public TypeQualifiersName()
+            {
+
+            }
+        }
+
+        #region 公開プロパティ
+        /// <summary>
+        /// 完全型名
+        /// </summary>
+        public required string FullName { get; init; }
+
+        public string Name { get; init; } = string.Empty;
+
+        public required string Namespace { get; init; }
+
+        public TypeInfo? ParentTypeInfo { get; set; } = null;
+
+        /// <summary>
+        /// 別名リスト
+        /// </summary>
+        public HashSet<string> TypeAliasNameHashSet { get; } = new HashSet<string>();
+
+        /// <summary>
+        /// 修飾子が付いた型名をKeyにした、別名ハッシュリスト
+        /// </summary>
+        public Dictionary<string, HashSet<string>> TypeQualifiersInfoHashSet { get; } = new Dictionary<string, HashSet<string>>();
+
+        public bool IsTemplate { get; set; } = false;
+
+        public virtual bool IsTemplateArgumentType { get; } = false;
+
+        public required ClangSharp.Interop.CXType CXType
+        {
+            init { }
+        }
+
+        public required AccessLevel AccessLevel { get; init; }
+
+        public required IReadOnlyList<AttributeInfo> AttributeInfoList { get; init; }
+
+        public override string ToString() => FullName;
+        #endregion
+    }
+
+    /// <summary>
+    /// クラス union情報
+    /// </summary>
+    public class ClassUnionInfo : TypeInfo, IHolder
+    {
+        public List<EnumInfo> EnumInfoList { get; } = new List<EnumInfo>();
+        public List<ClassUnionInfo> TypeInfoList { get; } = new List<ClassUnionInfo>();
+        public List<VariableInfo> VariableInfoList { get; } = new List<VariableInfo>();
+        public List<FunctionInfo> FunctionInfoList { get; } = new List<FunctionInfo>();
+    }
+
+    public class TemplateClassUnionInfo : ClassUnionInfo
+    {
+        //  
+        public required IReadOnlyList<string> SpecializationsList { get; init; } 
+    }
+}

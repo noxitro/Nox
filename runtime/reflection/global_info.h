@@ -10,7 +10,7 @@ namespace nox::reflection
 	//public:
 	//	inline constexpr GlobalInfo(
 	//		ReflectionStringView _namespace,
-	//		const class FieldInfo* const* field_ptr_table,
+	//		const class VariableInfo* const* field_ptr_table,
 	//		std::uint8_t field_length,
 	//		const class FunctionInfo* const* method_ptr_table,
 	//		std::uint8_t method_length,
@@ -33,7 +33,7 @@ namespace nox::reflection
 	//	ReflectionStringView namespace_;
 
 	//	/// @brief 変数情報ポインタテーブル
-	//	const class FieldInfo* const* field_ptr_table_;
+	//	const class VariableInfo* const* field_ptr_table_;
 
 	//	/// @brief 関数情報ポインタテーブル
 	//	const class FunctionInfo* const* function_ptr_table_;
