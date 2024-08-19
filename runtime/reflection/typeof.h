@@ -8,23 +8,5 @@
 
 namespace nox::reflection
 {
-	template<concepts::ClassUnion T>
-	inline const class ClassInfo* TypeofClass()
-	{
-		return Reflection::Instance().FindClassInfo<T>();
-	}
-
-	inline const class ClassInfo* TypeofClass(const ReflectionObject& object)
-	{
-		return nullptr;
-	//	return Reflection::Instance().FindClassInfo(object.GetType());
-	}
-
-	template<concepts::Enum T>
-	inline const class EnumInfo* TypeofEnum()
-	{
-		return Reflection::Instance().FindEnumInfo<T>();
-	}
-
 
 }

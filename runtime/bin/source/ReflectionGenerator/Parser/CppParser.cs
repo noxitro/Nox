@@ -73,16 +73,6 @@ namespace ReflectionGenerator.Parser
         /// </summary>
         private string _ProjectRootDirectory = string.Empty;
 
-        ///// <summary>
-        ///// templateクラス、関数の解析を有効にするか
-        ///// </summary>
-        //private bool _EnableTemplate = true;
-
-        /// <summary>
-        /// templateクラス名リスト
-        /// 最後に、変換を行うため保持
-        /// </summary>
-
         /// <summary>
         /// テンプレートクラスを解析するかどうか
         /// </summary>
@@ -127,9 +117,15 @@ namespace ReflectionGenerator.Parser
         public List<string> ModuleNameList { get; } = new List<string>();
 
         public Info.DeclHolder? RootDeclHolder { get; private set; } = null;
+
         private Dictionary<long, Info.IBaseInfo> TypeInfoDict { get; } = new Dictionary<long, Info.IBaseInfo>();
 
-        private readonly Dictionary<string, Info.DeclHolder> _DeclHolderDict = new Dictionary<string, Info.DeclHolder>();
+        /// <summary>
+        /// 型情報リスト
+        /// key:    モジュール名
+        /// value:  型情報リスト
+        /// </summary>
+        public Dictionary<string, List<Info.DeclHolder>> TypeInfoListWithModuleNameDict { get; } = new Dictionary<string, List<Info.DeclHolder>>();
         #endregion
 
         #region 公開メソッド
@@ -356,6 +352,8 @@ namespace ReflectionGenerator.Parser
         /// <returns></returns>
         public bool Parse(in SetupParam setupParam)
         {
+            _ProjectRootDirectory = System.IO.Path.GetDirectoryName(setupParam.ProjectFilePath) ?? string.Empty;
+
             //  MSBuildを通して展開したコマンドラインを取得
             if (parseBuildOptions(
                 out List<string> outCommandLineList,
@@ -465,17 +463,6 @@ namespace ReflectionGenerator.Parser
             //  namespaceを結合
 
             Util.BreakPoint();
-            //  列挙
-            foreach(var v in TypeInfoDict.Values)
-            {
-                string? name = v.ToString();
-                if (name == null)
-                {
-                    continue;
-                }
-
-                Trace.InfoLine(this, name);
-            }
 
             return true;
         }
@@ -577,11 +564,12 @@ namespace ReflectionGenerator.Parser
             return attrList;
         }
 
-        private T TryCreateBaseInfo<T>(long hash, Func<T> action, Action<T>? post = null) where T : Info.IBaseInfo
+        private void TryCreateBaseInfo<T>(long hash, Func<T> action, Action<T>? post = null) where T : Info.IBaseInfo
         {
             if (TypeInfoDict.TryGetValue(hash, out Info.IBaseInfo? baseInfo) == true)
             {
-                return (T)baseInfo;
+//                (T)baseInfo;
+                return;
             }
 
             if(TypeInfoDict.ContainsKey(hash) == true)
@@ -592,7 +580,7 @@ namespace ReflectionGenerator.Parser
             T v = action();
             TypeInfoDict.Add(hash, v);
             post?.Invoke(v);
-            return v;
+     //       return v;
         }
 
         private static ClangSharp.Interop.CXType GetTypeWithQualifiersRemoved(ClangSharp.Interop.CXType type)
@@ -653,16 +641,20 @@ namespace ReflectionGenerator.Parser
                     AttributeInfoList = GetCustomAttributeList(cursor),
                     CXType = cursor.Type,
                     VariableList = enumVariableList,
+                    Module = CreateModule(cursor)
                 };
 
                 return enumInfo;
             }
 
-            uint hash = cursor.Hash;
-            Info.EnumInfo enumInfo = TryCreateBaseInfo(hash, Create, default);
+            void PostProcess(Info.EnumInfo info)
+            {
+                Info.IHolder parent = FindParseParent(cursor);
+                parent.EnumInfoList.Add(info);
+            }
 
-            Info.IHolder parent = FindParseParent(cursor);
-            parent.EnumInfoList.Add(enumInfo);
+            uint hash = cursor.Hash;
+            TryCreateBaseInfo(hash, Create, PostProcess);
         }
 
         private void ParseTypedef(ClangSharp.Interop.CXCursor cursor)
@@ -842,7 +834,8 @@ namespace ReflectionGenerator.Parser
                                 CXType = cxType,
                                 FullName = cxType.Spelling.CString,
                                 Namespace = string.Empty,
-                                AttributeInfoList = []
+                                AttributeInfoList = [],
+                                Module = Info.Module.Invalid,
                             };
 
                         }, null);
@@ -861,7 +854,8 @@ namespace ReflectionGenerator.Parser
                                 CXType = cxType,
                                 FullName = cxType.Spelling.CString,
                                 Namespace = string.Empty,
-                                AttributeInfoList = []
+                                AttributeInfoList = [],
+                                Module = Info.Module.Invalid,
                             };
 
                         }, null);
@@ -881,7 +875,8 @@ namespace ReflectionGenerator.Parser
                                 CXType = cxType,
                                 FullName = cxType.Spelling.CString,
                                 Namespace = string.Empty,
-                                AttributeInfoList = []
+                                AttributeInfoList = [],
+                                Module = Info.Module.Invalid,
                             };
 
                         }, null);
@@ -1098,6 +1093,7 @@ namespace ReflectionGenerator.Parser
                     Namespace = cursor.GetNamespace(),
                     AttributeInfoList = GetCustomAttributeList(cursor),
                     SpecializationsList = [],
+                    Module = CreateModule(cursor),
                 };
 
                 return newInfo;
@@ -1125,19 +1121,14 @@ namespace ReflectionGenerator.Parser
                     CXCursor declCursor = cursor.GetDecl(i);
                     ParseCursor(declCursor);
                 }
+
+                Info.IHolder parent = FindParseParent(cursor);
+                parent.TypeInfoList.Add(info);
             }
 
             uint hash = cursor.Hash;
 //            int hash = cursor.Type.CanonicalType.GetHashCode();
-            Info.TemplateClassUnionInfo typeInfo = TryCreateBaseInfo(hash, CreateClassInfo, PostProcess);
-
-            Info.IHolder parent = FindParseParent(cursor);
-            parent.TypeInfoList.Add(typeInfo);
-
-            if (parent.ToString() == "gggg::Class002<int, float ,double>")
-            {
-                Util.BreakPoint();
-            }
+            TryCreateBaseInfo(hash, CreateClassInfo, PostProcess);
         }
 
         private void ParseClass(ClangSharp.Interop.CXCursor cursor)
@@ -1194,6 +1185,7 @@ namespace ReflectionGenerator.Parser
                     FullName = GetTypeFullName(cursor.Type),
                     Namespace = cursor.GetNamespace(),
                     AttributeInfoList = GetCustomAttributeList(cursor),
+                    Module = CreateModule(cursor),
                 };
 
                 if (newInfo.FullName.Contains("nox::"))
@@ -1211,14 +1203,14 @@ namespace ReflectionGenerator.Parser
                     CXCursor declCursor = cursor.GetDecl(i);
                     ParseCursor(declCursor);
                 }
+
+                Info.IHolder parent = FindParseParent(cursor);
+                parent.TypeInfoList.Add(info);
             }
 
             uint hash = cursor.Hash;
 //            int hash = cursor.Type.CanonicalType.GetHashCode();
-            Info.ClassUnionInfo typeInfo = TryCreateBaseInfo(hash, CreateClassInfo, PostProcess);
-
-            Info.IHolder parent = FindParseParent(cursor);
-            parent.TypeInfoList.Add(typeInfo);
+            TryCreateBaseInfo(hash, CreateClassInfo, PostProcess);
             return;
         }
 
@@ -1230,9 +1222,13 @@ namespace ReflectionGenerator.Parser
                 Info.VariableInfo variableInfo = new Info.VariableInfo()
                 {
                     Name = cursor.Spelling.CString,
-                    FullName = cursor.GetFullName()
+                    FullName = cursor.GetFullName(),
+                    Module = CreateModule(cursor),
+                    AccessLevel = cursor.CXXAccessSpecifier.GetAccessLevel(),
+                    AttributeInfoList = GetCustomAttributeList(cursor),
+                    Offset = cursor.OffsetOfField,
+                    BitWith = cursor.FieldDeclBitWidth,
                 };
-
                 return variableInfo;
             }
 
@@ -1244,14 +1240,16 @@ namespace ReflectionGenerator.Parser
                 {
                     ParseCursor(cursor.InitExpr.Definition);
                 }
+
+                Info.IHolder parent = FindParseParent(cursor);
+                parent.VariableInfoList.Add(info);
             }
 
             uint hash = cursor.Hash;
             //int hash = cursor.Type.CanonicalType.GetHashCode();
-            Info.VariableInfo variableInfo = TryCreateBaseInfo(hash, Create, PostProcess);
+            TryCreateBaseInfo(hash, Create, PostProcess);
 
-            Info.IHolder parent = FindParseParent(cursor);
-            parent.VariableInfoList.Add(variableInfo);
+       
         }
 
         private void ParseTemplateVariable(ClangSharp.Interop.CXCursor cursor)
@@ -1274,6 +1272,11 @@ namespace ReflectionGenerator.Parser
                     Name = cursor.Spelling.CString,
                     FullName = cursor.GetFullName(),
                     SpecializationsList = specializationsNameTable,
+                    Module = CreateModule(cursor),
+                    AccessLevel = cursor.CXXAccessSpecifier.GetAccessLevel(),
+                    AttributeInfoList = GetCustomAttributeList(cursor),
+                    BitWith = cursor.FieldDeclBitWidth,
+                    Offset = cursor.OffsetOfField,
                 };
 
                 return variableInfo;
@@ -1281,15 +1284,13 @@ namespace ReflectionGenerator.Parser
 
             void PostProcess(Info.VariableInfo info)
             {
-                //ParseType(cursor.Type);
+                Info.IHolder parent = FindParseParent(cursor);
+                parent.VariableInfoList.Add(info);
             }
 
             uint hash = cursor.Hash;
             //int hash = cursor.Type.CanonicalType.GetHashCode();
-            Info.VariableInfo variableInfo = TryCreateBaseInfo(hash, Create, PostProcess);
-
-            Info.IHolder parent = FindParseParent(cursor);
-            parent.VariableInfoList.Add(variableInfo);
+            TryCreateBaseInfo(hash, Create, PostProcess);
         }
 
         private void ParseTemplateSpecializationVariable(ClangSharp.Interop.CXCursor cursor)
@@ -1308,6 +1309,20 @@ namespace ReflectionGenerator.Parser
                 return;
             }
             specializationsList.Add(result.fullName);
+        }
+
+        private static string GetCanonicalFunctionTypeName(ClangSharp.Interop.CXCursor cursor)
+        {
+            if(cursor.IsGlobal == true)
+            {
+                return cursor.Type.GetCanonicalTypeFullName();
+            }
+
+            string str = cursor.Type.CanonicalType.Spelling.CString;
+            string resultTypeFullName = cursor.ResultType.CanonicalType.Spelling.CString;
+            int resultTypeIndex = str.IndexOf(resultTypeFullName);
+
+            return str.Insert(resultTypeIndex + resultTypeFullName.Length, $"({cursor.ThisType.PointeeType.GetCanonicalTypeFullName()}::*)");
         }
 
         private void ParseFunction(ClangSharp.Interop.CXCursor cursor)
@@ -1343,12 +1358,21 @@ namespace ReflectionGenerator.Parser
                //     ParseType(argCursor.Type.CanonicalType);
                 }
 
-            //    ParseType(cursor.ResultType.CanonicalType);
+                if(cursor.Type.CanonicalType.kind == CXTypeKind.CXType_MemberPointer)
+                {
+                    Util.BreakPoint();
+                }
+
+                if (specializationInfo.fullName.Contains("app::TestBehavior::StaticAssertNoxDeclareManagedObject"))
+                {
+                    Util.BreakPoint();
+                }
 
                 return new Info.FunctionInfo()
                 {
                     Name = cursor.Spelling.CString,
                     FullName = specializationInfo.fullName,
+                    FunctionTypeFullName = GetCanonicalFunctionTypeName(cursor),
                     NumArguments = numArguments > 0 ? (uint)numArguments : 0,
                     NumDefaultArguments = numDefaultArguments,
                     AttributeInfoList = GetCustomAttributeList(cursor),
@@ -1357,10 +1381,11 @@ namespace ReflectionGenerator.Parser
                     IsInline = cursor.IsFunctionInlined,
                     IsPureVirtual = cursor.CXXMethod_IsPureVirtual,
                     IsVirtual = cursor.CXXMethod_IsVirtual,
+                    Module = CreateModule(cursor),
                 };
             }
 
-            void PostProcess(Info.FunctionInfo functionInfo)
+            void PostProcess(Info.FunctionInfo info)
             {
                 ParseType(cursor.Type.CanonicalType);
 
@@ -1373,14 +1398,15 @@ namespace ReflectionGenerator.Parser
                 }
 
                 ParseType(cursor.ResultType.CanonicalType);
+
+                Info.IHolder parent = FindParseParent(cursor);
+                parent.FunctionInfoList.Add(info);
             }
 
             uint hash = cursor.Hash;
             //int hash = cursor.Type.CanonicalType.GetHashCode();
-            Info.FunctionInfo typeInfo = TryCreateBaseInfo(hash, Create, PostProcess);
+            TryCreateBaseInfo(hash, Create, PostProcess);
 
-            Info.IHolder parent = FindParseParent(cursor);
-            parent.FunctionInfoList.Add(typeInfo);
         }
 
         private (string fullName, bool hasLambda) ParseSpecializationCursor(CXCursor cursor)
@@ -1496,6 +1522,7 @@ namespace ReflectionGenerator.Parser
                 {
                     Name = cursor.Spelling.CString,
                     FullName = cursor.GetFullName(),
+                    FunctionTypeFullName = cursor.Type.CanonicalType.GetCanonicalTypeFullName(),
                     NumArguments = numArguments > 0 ? (uint)numArguments : 0,
                     NumDefaultArguments = numDefaultArguments,
                     AttributeInfoList = GetCustomAttributeList(cursor),
@@ -1505,10 +1532,11 @@ namespace ReflectionGenerator.Parser
                     IsPureVirtual = cursor.CXXMethod_IsPureVirtual,
                     IsVirtual = cursor.CXXMethod_IsVirtual,
                     SpecializationsList = [],
+                    Module = CreateModule(cursor),
                 };
             }
 
-            void PostProcess(Info.TemplateFunctionInfo functionInfo)
+            void PostProcess(Info.TemplateFunctionInfo info)
             {
                 int numSpecialization = cursor.NumSpecializations;
                 List<string> specializationsNameList = new List<string>();
@@ -1525,14 +1553,14 @@ namespace ReflectionGenerator.Parser
                     CXCursor argCursor = cursor.GetArgument(i);
                     ParseType(argCursor.Type);
                 }
+
+                Info.IHolder parent = FindParseParent(cursor);
+                parent.FunctionInfoList.Add(info);
             }
 
             uint hash = cursor.Hash;
             //int hash = cursor.Type.CanonicalType.GetHashCode();
-            Info.FunctionInfo typeInfo = TryCreateBaseInfo(hash, Create, PostProcess);
-
-            Info.IHolder parent = FindParseParent(cursor);
-            parent.FunctionInfoList.Add(typeInfo);
+            TryCreateBaseInfo(hash, Create, PostProcess);
         }
 
 
@@ -1618,69 +1646,66 @@ namespace ReflectionGenerator.Parser
         private void ParseRoot(ClangSharp.Interop.CXCursor cursor)
         {
             uint hash = cursor.Hash;
-            RootDeclHolder = new Info.DeclHolder()
+           
+            Info.DeclHolder Create()
             {
-                Namespace = string.Empty,
-            };
-            TypeInfoDict.Add(hash, RootDeclHolder);
-
-            int numDecl = cursor.NumDecls;
-            for (uint i = 0; i < numDecl; ++i)
-            {
-                CXCursor declCursor = cursor.GetDecl(i);
-                ParseCursor(declCursor);
+                return RootDeclHolder = new Info.DeclHolder()
+                {
+                    Namespace = string.Empty,
+                    Module = CreateModule(cursor),
+                };
             }
+
+            void PostProcess(Info.DeclHolder info)
+            {
+                int numDecl = cursor.NumDecls;
+                for (uint i = 0; i < numDecl; ++i)
+                {
+                    CXCursor declCursor = cursor.GetDecl(i);
+                    ParseCursor(declCursor);
+                }
+
+                //  module
+                if (TypeInfoListWithModuleNameDict.TryGetValue(info.Module.ModuleName, out List<Info.DeclHolder>? infoList) == false || infoList == null)
+                {
+                    TypeInfoListWithModuleNameDict.Add(info.Module.ModuleName, infoList = new List<Info.DeclHolder>());
+                }
+                infoList.Add(info);
+            }
+            TryCreateBaseInfo(hash, Create, PostProcess);
         }
 
         private void ParseNamespace(ClangSharp.Interop.CXCursor cursor)
         {
             uint hash = cursor.Hash;
-
-            if(TypeInfoDict.ContainsKey(hash) == true)
+            Info.DeclHolder Create()
             {
-                return;
-            }
-
-            Info.DeclHolder declHolder;
-            {
-                if (TypeInfoDict.TryGetValue(hash, out Info.IBaseInfo? declHolderOld) == true)
+                return new Info.DeclHolder()
                 {
-                    declHolder = (Info.DeclHolder)declHolderOld;
-                }
-                else
-                {
-                    declHolder = new Info.DeclHolder()
-                    {
-                        Namespace = cursor.GetNamespace()
-                    };
-                }
+                    Namespace = cursor.GetNamespace(),
+                    Module = CreateModule(cursor),
+                };
             }
 
-            //{
-            //    if (_DeclHolderDict.TryGetValue(namespaceStr, out Info.DeclHolder? declHolderOld) == true)
-            //    {
-            //        declHolder = declHolderOld;
-            //    }
-            //    else
-            //    {
-            //        declHolder = new Info.DeclHolder()
-            //        {
-            //            Namespace = cursor.GetNamespace()
-            //        };
-            //        _DeclHolderDict.Add(namespaceStr, declHolder);
-            //    }
-            //}
-
-            TypeInfoDict.Add(hash, declHolder);
-
-            int numDecl = cursor.NumDecls;
-            for (uint i = 0; i < numDecl; ++i)
+            void PostProcess(Info.DeclHolder info)
             {
-                CXCursor declCursor = cursor.GetDecl(i);
-                ParseCursor(declCursor);
+                int numDecl = cursor.NumDecls;
+                for (uint i = 0; i < numDecl; ++i)
+                {
+                    CXCursor declCursor = cursor.GetDecl(i);
+                    ParseCursor(declCursor);
+                }
+                FindParseParent<Info.DeclHolder>(cursor).DeclHolderList.Add(info);
+
+                //  module
+                if (TypeInfoListWithModuleNameDict.TryGetValue(info.Module.ModuleName, out List<Info.DeclHolder>? infoList) == false || infoList == null)
+                {
+                    TypeInfoListWithModuleNameDict.Add(info.Module.ModuleName, infoList = new List<Info.DeclHolder>());
+                }
+                infoList.Add(info);
             }
 
-            FindParseParent<Info.DeclHolder>(cursor).DeclHolderList.Add(declHolder);
+            TryCreateBaseInfo(hash, Create, PostProcess);
         }
         #endregion
 
@@ -2145,16 +2170,21 @@ namespace ReflectionGenerator.Parser
         /// <returns></returns>
         private Info.Module CreateModule(ClangSharp.Interop.CXCursor cursor)
         {
+            const string unknownStr = "unknown";
+
             //  ソリューションディレクトまで辿って、.vcxprojを探す
             //  なければ、unnamedとして扱う
             cursor.Location.GetFileLocation(out ClangSharp.Interop.CXFile outFile, out uint outLine, out uint outColumn, out uint outOffset);
+            if(outFile.Handle == 0)
+            {
+                return new Info.Module() { ModuleName = unknownStr };
+            }
+            string? path = System.IO.Path.GetDirectoryName(outFile.Name.CString);
 
-            string? path = System.IO.Path.GetFullPath(outFile.Name.CString);
-
-            string moduleName = "unknown";
+            string moduleName = unknownStr;
 
             //  ルートディレクトリ内か？
-            if (path.StartsWith(_ProjectRootDirectory) == true)
+            if (path == null || path.StartsWith(_ProjectRootDirectory) == false)
             {
                 return new Info.Module() { ModuleName = moduleName };
             }

@@ -44,7 +44,7 @@
 int WINAPI WinMain(_In_::HINSTANCE hInstance, _In_opt_::HINSTANCE /*hPrevInstance*/, _In_::LPSTR /*lpCmdLine*/, _In_ int nCmdShow)
 {
 	using namespace nox;
-	
+
 	nox::int32 arg_num;
 	const nox::char16*const* argv = reinterpret_cast<const nox::char16*const*>(::CommandLineToArgvW(::GetCommandLineW(), &arg_num));
 	nox::EntryPoint({ argv, static_cast<size_t>(arg_num) });

@@ -42,6 +42,9 @@
     <Midl>
       <WarningLevel>4</WarningLevel>
     </Midl>
+    <PreBuildEvent>
+      <Command>$(SolutionDir)bin\updateBuildTimeStampFile.bat $(ProjectName)</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup />
 </Project>

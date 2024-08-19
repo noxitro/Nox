@@ -8,207 +8,212 @@ namespace nox::reflection
 	class ReflectionObject;
 
 	/// @brief Enum値情報
-	class EnumVariableInfo
+	class EnumeratorInfo
 	{
 	public:
-		//inline constexpr EnumVariableInfo()noexcept :
+		//inline constexpr EnumeratorInfo()noexcept :
 		//	value_int8_(0),
 		//	name_(u8""),
 		//	attribute_ptr_table_(nullptr),
 		//	attribute_length_(0) {}
 
-		inline constexpr explicit EnumVariableInfo(
+		inline constexpr explicit EnumeratorInfo(
 			const std::int8_t value,
-			const ReflectionStringView variableName,
-			const class ReflectionObject* const* const attributePtrAry,
-			const std::uint8_t attributeLength
+			const ReflectionStringView name,
+			const ReflectionStringView fullname,
+			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::uint8_t attribute_length
 		)noexcept :
 			value_int8_(value),
-			name_(variableName),
-			attribute_ptr_table_(attributePtrAry),
-			attribute_length_(attributeLength) {}
+			name_(name),
+			fullname_(fullname),
+			attribute_list_(attribute_list),
+			attribute_length_(attribute_length) {}
 
-		inline constexpr explicit EnumVariableInfo(
+		inline constexpr explicit EnumeratorInfo(
 			const std::uint8_t value,
-			const ReflectionStringView variableName,
-			const class ReflectionObject* const* const attributePtrAry,
-			const std::uint8_t attributeLength
+			const ReflectionStringView name,
+			const ReflectionStringView fullname,
+			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::uint8_t attribute_length
 		)noexcept :
 			value_uint8_(value),
-			name_(variableName),
-			attribute_ptr_table_(attributePtrAry),
-			attribute_length_(attributeLength) {}
+			name_(name),
+			fullname_(fullname),
+			attribute_list_(attribute_list),
+			attribute_length_(attribute_length) {}
 
-		inline constexpr explicit EnumVariableInfo(
+		inline constexpr explicit EnumeratorInfo(
 			const std::int16_t value,
-			const ReflectionStringView variableName,
-			const class ReflectionObject* const* const attributePtrAry,
-			const std::uint8_t attributeLength
+			const ReflectionStringView name,
+			const ReflectionStringView fullname,
+			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::uint8_t attribute_length
 		)noexcept :
 			value_int16_(value),
-			name_(variableName),
-			attribute_ptr_table_(attributePtrAry),
-			attribute_length_(attributeLength) {}
+			name_(name),
+			fullname_(fullname),
+			attribute_list_(attribute_list),
+			attribute_length_(attribute_length) {}
 
-		inline constexpr explicit EnumVariableInfo(
+		inline constexpr explicit EnumeratorInfo(
 			const std::uint16_t value,
-			const ReflectionStringView variableName,
-			const class ReflectionObject* const* const attributePtrAry,
-			const std::uint8_t attributeLength
+			const ReflectionStringView name,
+			const ReflectionStringView fullname,
+			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::uint8_t attribute_length
 		)noexcept :
 			value_uint16_(value),
-			name_(variableName),
-			attribute_ptr_table_(attributePtrAry),
-			attribute_length_(attributeLength) {}
+			name_(name),
+			fullname_(fullname),
+			attribute_list_(attribute_list),
+			attribute_length_(attribute_length) {}
 
-		inline constexpr explicit EnumVariableInfo(
+		inline constexpr explicit EnumeratorInfo(
 			const std::int32_t value,
-			const ReflectionStringView variableName,
-			const class ReflectionObject* const* const attributePtrAry,
-			const std::uint8_t attributeLength
+			const ReflectionStringView name,
+			const ReflectionStringView fullname,
+			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::uint8_t attribute_length
 		)noexcept :
 			value_int32_(value),
-			name_(variableName),
-			attribute_ptr_table_(attributePtrAry),
-			attribute_length_(attributeLength) {}
+			name_(name),
+			fullname_(fullname),
+			attribute_list_(attribute_list),
+			attribute_length_(attribute_length) {}
 
-		inline constexpr explicit EnumVariableInfo(
+		inline constexpr explicit EnumeratorInfo(
 			const std::uint32_t value,
-			const ReflectionStringView variableName,
-			const class ReflectionObject* const* const attributePtrAry,
-			const std::uint8_t attributeLength
+			const ReflectionStringView name,
+			const ReflectionStringView fullname,
+			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::uint8_t attribute_length
 		)noexcept :
 			value_uint32_(value),
-			name_(variableName),
-			attribute_ptr_table_(attributePtrAry),
-			attribute_length_(attributeLength) {}
+			name_(name),
+			fullname_(fullname),
+			attribute_list_(attribute_list),
+			attribute_length_(attribute_length) {}
 
-		inline constexpr explicit EnumVariableInfo(
+		inline constexpr explicit EnumeratorInfo(
 			const std::int64_t value,
-			const ReflectionStringView variableName,
-			const class ReflectionObject* const* const attributePtrAry,
-			const std::uint8_t attributeLength
+			const ReflectionStringView name,
+			const ReflectionStringView fullname,
+			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::uint8_t attribute_length
 		)noexcept :
 			value_int64_(value),
-			name_(variableName),
-			attribute_ptr_table_(attributePtrAry),
-			attribute_length_(attributeLength) {}
+			name_(name),
+			fullname_(fullname),
+			attribute_list_(attribute_list),
+			attribute_length_(attribute_length) {}
 
-		inline constexpr explicit EnumVariableInfo(
+		inline constexpr explicit EnumeratorInfo(
 			const std::uint64_t value,
-			const ReflectionStringView variableName,
-			const class ReflectionObject* const* const attributePtrAry,
-			const std::uint8_t attributeLength
+			const ReflectionStringView name,
+			const ReflectionStringView fullname,
+			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::uint8_t attribute_length
 		)noexcept :
 			value_uint64_(value),
-			name_(variableName),
-			attribute_ptr_table_(attributePtrAry),
-			attribute_length_(attributeLength) {}
+			name_(name),
+			fullname_(fullname),
+			attribute_list_(attribute_list),
+			attribute_length_(attribute_length) {}
 
-		inline constexpr explicit EnumVariableInfo(
+		inline constexpr explicit EnumeratorInfo(
 			const char8_t value,
-			const ReflectionStringView variableName,
-			const class ReflectionObject* const* const attributePtrAry,
-			const std::uint8_t attributeLength
+			const ReflectionStringView name,
+			const ReflectionStringView fullname,
+			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::uint8_t attribute_length
 		)noexcept :
 			value_char8_(value),
-			name_(variableName),
-			attribute_ptr_table_(attributePtrAry),
-			attribute_length_(attributeLength) {}
+			name_(name),
+			fullname_(fullname),
+			attribute_list_(attribute_list),
+			attribute_length_(attribute_length) {}
 
-		inline constexpr explicit EnumVariableInfo(
+		inline constexpr explicit EnumeratorInfo(
 			const char16_t value,
-			const ReflectionStringView variableName,
-			const class ReflectionObject* const* const attributePtrAry,
-			const std::uint8_t attributeLength
+			const ReflectionStringView name,
+			const ReflectionStringView fullname,
+			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::uint8_t attribute_length
 		)noexcept :
 			value_char16_(value),
-			name_(variableName),
-			attribute_ptr_table_(attributePtrAry),
-			attribute_length_(attributeLength) {}
+			name_(name),
+			fullname_(fullname),
+			attribute_list_(attribute_list),
+			attribute_length_(attribute_length) {}
 
-		inline constexpr explicit EnumVariableInfo(
+		inline constexpr explicit EnumeratorInfo(
 			const char32_t value,
-			const ReflectionStringView variableName,
-			const class ReflectionObject* const* const attributePtrAry,
-			const std::uint8_t attributeLength
+			const ReflectionStringView name,
+			const ReflectionStringView fullname,
+			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::uint8_t attribute_length
 		)noexcept :
 			value_char32_(value),
-			name_(variableName),
-			attribute_ptr_table_(attributePtrAry),
-			attribute_length_(attributeLength) {}
+			name_(name),
+			fullname_(fullname),
+			attribute_list_(attribute_list),
+			attribute_length_(attribute_length) {}
 
-		inline constexpr explicit EnumVariableInfo(
+		inline constexpr explicit EnumeratorInfo(
 			const wchar_t value,
-			const ReflectionStringView variableName,
-			const class ReflectionObject* const* const attributePtrAry,
-			const std::uint8_t attributeLength
+			const ReflectionStringView name,
+			const ReflectionStringView fullname,
+			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::uint8_t attribute_length
 		)noexcept :
 			value_wchar16_(value),
-			name_(variableName),
-			attribute_ptr_table_(attributePtrAry),
-			attribute_length_(attributeLength) {}
+			name_(name),
+			fullname_(fullname),
+			attribute_list_(attribute_list),
+			attribute_length_(attribute_length) {}
 
-		inline constexpr explicit EnumVariableInfo(
+		inline constexpr explicit EnumeratorInfo(
 			const char value,
-			const ReflectionStringView variableName,
-			const class ReflectionObject* const* const attributePtrAry,
-			const std::uint8_t attributeLength
+			const ReflectionStringView name,
+			const ReflectionStringView fullname,
+			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::uint8_t attribute_length
 		)noexcept :
 			value_char_(value),
-			name_(variableName),
-			attribute_ptr_table_(attributePtrAry),
-			attribute_length_(attributeLength) {}
+			name_(name),
+			fullname_(fullname),
+			attribute_list_(attribute_list),
+			attribute_length_(attribute_length) {}
 
-		/*inline constexpr explicit EnumVariableInfo(
-			const unsigned char value,
-			const ReflectionStringView variableName,
-			const Attribute* const* const attributePtrAry,
-			const std::uint8_t attributeLength
-		)noexcept :
-			mValueUChar(value),
-			name_(variableName),
-			attribute_ptr_table_(attributePtrAry),
-			attribute_length_(attributeLength) {}
-
-		inline constexpr explicit EnumVariableInfo(
-			const signed char value,
-			const ReflectionStringView variableName,
-			const Attribute* const* const attributePtrAry,
-			const std::uint8_t attributeLength
-		)noexcept :
-			mValueSChar(value),
-			name_(variableName),
-			attribute_ptr_table_(attributePtrAry),
-			attribute_length_(attributeLength) {}*/
-
-		inline constexpr explicit EnumVariableInfo(
+		inline constexpr explicit EnumeratorInfo(
 			const bool value,
-			const ReflectionStringView variableName,
-			const class ReflectionObject* const* const attributePtrAry,
-			const std::uint8_t attributeLength
+			const ReflectionStringView name,
+			const ReflectionStringView fullname,
+			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::uint8_t attribute_length
 		)noexcept :
 			value_bool_(value),
-			name_(variableName),
-			attribute_ptr_table_(attributePtrAry),
-			attribute_length_(attributeLength) {}
+			name_(name),
+			fullname_(fullname),
+			attribute_list_(attribute_list),
+			attribute_length_(attribute_length) {}
 
-		/**
-		 * @brief enum値の名前を取得
-		 * @return 名前
-		*/
-		[[nodiscard]] inline constexpr ReflectionStringView GetVariableName()const noexcept { return name_; }
-		/**
-		 * @brief 整数型を指定して値を取得
-		 * @return 整数値
-		*/
+		/// @brief 名前を取得
+		/// @return 
+		[[nodiscard]] inline constexpr ReflectionStringView GetName()const noexcept { return name_; }
+
+		/// @brief フルネームを取得
+		/// @return 
+		[[nodiscard]] inline constexpr ReflectionStringView GetFullName()const noexcept { return fullname_; }
+		
+		/// @brief 整数型を指定して値を取得
 		template<std::integral T>
 		[[nodiscard]] inline constexpr T GetValue()const noexcept { return GetValueImpl<T>(); }
 
-		/**
-		 * @brief enumの型を指定して値を取得
-		 * @return enum値
-		*/
+		/// @brief enumの型を指定して値を取得
+		/// @tparam T Enum型
+		/// @return 値
 		template<concepts::Enum T>
 		[[nodiscard]] inline constexpr T GetValue()const noexcept { return static_cast<T>(GetValueImpl<std::underlying_type_t<T>>()); }
 
@@ -256,17 +261,15 @@ namespace nox::reflection
 			wchar_t value_wchar16_;
 			bool value_bool_;
 		};
-
-		/**
-		 * @brief 名前
-		*/
-		ReflectionStringView name_;
-
-		/// @brief 属性テーブル
-		const class ReflectionObject* const* attribute_ptr_table_;
-
 		/// @brief 属性テーブルの長さ
 		std::uint8_t attribute_length_;
+
+		/// @brief 属性テーブル
+		const std::reference_wrapper<const class ReflectionObject>* attribute_list_;
+
+		/// @brief 名前
+		ReflectionStringView name_;
+		ReflectionStringView fullname_;
 	};
 
 	/// @brief Enum情報
@@ -279,85 +282,106 @@ namespace nox::reflection
 			ReflectionStringView name,
 			ReflectionStringView fullname,
 			ReflectionStringView _namespace,
-			const ReflectionObject* const* attribute_ptr_table,
+			const nox::reflection::AccessLevel access_level,
+			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
 			std::uint8_t attribute_length,
-			const EnumVariableInfo* const* variable_ptr_table,
+			const std::reference_wrapper<const EnumeratorInfo>* variable_list,
 			std::uint8_t variable_length,
-			const Type& type
+			const nox::reflection::Type& type
 		)noexcept :
 			name_(name),
 			fullname_(fullname),
 			namespace_(_namespace),
-			attribute_ptr_table_(attribute_ptr_table),
+			access_level_(access_level),
+			attribute_list_(attribute_list),
 			attribute_length_(attribute_length),
-			variable_ptr_table_(variable_ptr_table),
+			variable_list_(variable_list),
 			variable_length_(variable_length),
 			type_(type)
 		{}
 
-		inline	constexpr	const Type& GetType()const noexcept { return type_; }
-		inline	constexpr	std::uint32_t	GetTypeID()const noexcept { return type_.GetTypeID(); }
+		inline	constexpr	const nox::reflection::Type& GetType()const noexcept { return type_; }
 
+		inline	constexpr	ReflectionStringView	GetName()const noexcept { return name_; }
+		inline	constexpr	ReflectionStringView	GetFullName()const noexcept { return fullname_; }
 		inline	constexpr	ReflectionStringView	GetNamespace()const noexcept { return namespace_; }
 
-	private:
+		inline	constexpr	std::uint8_t	GetAttributeLength()const noexcept { return attribute_length_; }
+		inline	constexpr	std::span<const std::reference_wrapper<const class ReflectionObject>> GetAttributeList()const noexcept { return std::span(attribute_list_, attribute_length_); }
 
+		inline	constexpr	std::span<const std::reference_wrapper<const EnumeratorInfo>> GetVariableList()const noexcept { return std::span(variable_list_, variable_length_); }
+		inline	constexpr	std::uint8_t	GetVariableLength()const noexcept { return variable_length_; }
+
+		template<std::integral T>
+		inline	constexpr	std::optional<std::span<T>> GetValueList(std::span<T> buffer)const noexcept
+		{
+			if (type_ != nox::reflection::Typeof<T>())
+			{
+				return std::nullopt;
+			}
+
+			if (buffer.size() < variable_length_)
+			{
+				return std::nullopt;
+			}
+
+			return nox::reflection::EnumInfo::GetValueListImpl<T>(buffer);
+		}
+
+		template<std::integral T>
+		inline	constexpr	std::optional<nox::Vector<T>> GetValueList()const noexcept
+		{
+			if (type_ != nox::reflection::Typeof<T>())
+			{
+				return std::nullopt;
+			}
+
+			nox::Vector<T> buffer(variable_length_);
+			if (!nox::reflection::EnumInfo::GetValueListImpl<T>(std::span(buffer)))
+			{
+				return std::nullopt;
+			}
+
+			return buffer;
+		}
+
+	private:
+		template<std::integral T>
+		inline	constexpr	std::optional<std::span<T>> GetValueListImpl(std::span<T> buffer)const noexcept
+		{
+			for (std::uint8_t i = 0; i < variable_length_; ++i)
+			{
+				buffer[i] = variable_list_[i].get().GetValue<T>();
+			}
+			return buffer;
+		}
+
+	private:
+		/// @brief 属性テーブルの長さ
+		const std::uint8_t attribute_length_;
+
+		/// @brief Enum値情報テーブルの長さ
+		const std::uint8_t	variable_length_;
+
+		/// @brief アクセスレベル
+		const AccessLevel access_level_;
+
+		/// @brief 属性テーブル
+		const std::reference_wrapper<const class ReflectionObject>* attribute_list_;
+
+		/// @brief Enum値情報テーブル
+		const std::reference_wrapper<const EnumeratorInfo>* variable_list_;
+
+		/// @brief 型情報
+		const nox::reflection::Type& type_;
+
+		/// @brief 名前
 		ReflectionStringView	name_;
 
 		/// @brief 型名
 		ReflectionStringView	fullname_;
 
-
+		/// @brief 名前空間
 		ReflectionStringView namespace_;
-
-
-		/// @brief 属性テーブル
-		const class ReflectionObject* const* attribute_ptr_table_;
-
-		/// @brief 属性テーブルの長さ
-		std::uint8_t attribute_length_;
-
-		/// @brief Enum値情報テーブル
-		const EnumVariableInfo* const* variable_ptr_table_;
-
-		/// @brief Enum値情報テーブルの長さ
-		std::uint8_t	variable_length_;
-
-		/// @brief 型情報
-		const Type& type_;
 	};
-
-	namespace detail
-	{
-		/// @brief Enum値情報を作成
-		/// @tparam T 
-		/// @param fullname_ 
-		/// @param attribute_ptr_table 
-		/// @param attribute_length 
-		/// @param variable_ptr_table 
-		/// @param variable_length 
-		/// @return 
-		template<class T> requires(std::is_enum_v<T>)
-		inline constexpr EnumInfo CreateEnumInfo(
-			ReflectionStringView name,
-			ReflectionStringView fullname,
-			ReflectionStringView _namespace,
-			const ReflectionObject* const* attribute_ptr_table,
-			std::uint8_t attribute_length,
-			const EnumVariableInfo* const* variable_ptr_table,
-			std::uint8_t variable_length
-		)noexcept
-		{
-			return EnumInfo(
-				name,
-				fullname,
-				_namespace,
-				attribute_ptr_table,
-				attribute_length,
-				variable_ptr_table,
-				variable_length,
-				Typeof<T>()
-			);
-		}
-	}
 }

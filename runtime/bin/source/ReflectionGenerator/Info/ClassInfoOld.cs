@@ -28,7 +28,7 @@ namespace ReflectionGenerator.Info
     /// <summary>
     /// クラス情報
     /// </summary>
-    public class ClassInfoOld : BaseInfo
+    public class ClassInfoOld 
     {
         public enum AttributeFlag : uint
         {
@@ -198,15 +198,7 @@ namespace ReflectionGenerator.Info
         /// </summary>
         public required IReadOnlyList<AttributeInfo> AttributeInfoList { get; init; } 
 
-        /// <summary>
-        /// 関数リスト
-        /// </summary>
-        public List<MethodInfo> MethodInfoList { get; } = new List<MethodInfo>();
-
-        /// <summary>
-        /// 変数リスト
-        /// </summary>
-        public List<FieldInfo> FieldInfoList { get; } = new List<FieldInfo>();
+ 
         #endregion
     }
 

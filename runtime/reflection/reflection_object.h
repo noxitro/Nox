@@ -63,7 +63,7 @@ namespace nox::reflection
 		/// @brief 型情報を取得
 		inline constexpr virtual const ::nox::reflection::Type& GetType()const noexcept = 0;
 
-	protected:
+	//protected:
 		[[nodiscard]] inline constexpr ReflectionObject()noexcept = default;
 		inline constexpr virtual ~ReflectionObject()noexcept {}
 	private: 

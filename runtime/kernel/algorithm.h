@@ -160,6 +160,25 @@ namespace nox::util
 		}
 	}
 
+	template<class T>
+	inline constexpr decltype(auto) At(T&& container, size_t length, size_t index)noexcept(false)
+	{
+		NOX_ASSERT(index < length, nox::dev::RuntimeAssertErrorType::OutOfRange, U"index over");
+		return container[index];
+	}
+
+	/// @brief 要素アクセス
+	/// @tparam T 
+	/// @param container 
+	/// @param index 
+	/// @return 
+	template<class T> requires(std::is_invocable_v<decltype(&T::size), T>)
+	inline constexpr decltype(auto) At(T&& container, size_t index)noexcept(false)
+	{
+		return At(std::forward<T>(container), std::size(container), index);
+	}
+
+
 	/// @brief 要素数の範囲外チェック
 	/// @tparam T 型
 	/// @param container コンテナ
@@ -197,7 +216,7 @@ namespace nox::util
 		return static_cast<T>(ret);
 	}
 
-	template<concepts::ClassUnion T>
+	template<concepts::UserDefinedCompoundType T>
 	[[nodiscard]] inline constexpr T BitOr(const T& a, const T& b)noexcept { return std::bit_or<T>()(a, b); }
 
 	template<concepts::Enum T>
@@ -207,7 +226,7 @@ namespace nox::util
 	[[nodiscard]] inline constexpr T BitOr(const T a, const T b)noexcept { return std::bit_or<T>()(a, b); }
 
 
-	template<concepts::ClassUnion T>
+	template<concepts::UserDefinedCompoundType T>
 	inline	constexpr	bool IsBitAnd(const T& a, const T& b)noexcept { return std::bit_and<T>()(a, b); }
 
 	template<concepts::Enum T>
@@ -216,7 +235,7 @@ namespace nox::util
 	template<concepts::Arithmetic T>
 	inline	constexpr	bool IsBitAnd(const T a, const T b)noexcept { return std::bit_and<T>()(a, b); }
 
-	template<concepts::ClassUnion T>
+	template<concepts::UserDefinedCompoundType T>
 	inline	constexpr	T BitAnd(const T& a, const T& b)noexcept { return a & b; }
 
 	template<concepts::Enum T>
@@ -225,7 +244,7 @@ namespace nox::util
 	template<concepts::Arithmetic T>
 	inline	constexpr	T BitAnd(const T a, const T b)noexcept { return a & b; }
 
-	template<concepts::ClassUnion T>
+	template<concepts::UserDefinedCompoundType T>
 	[[nodiscard]] inline constexpr T BitXor(const T& a, const T& b)noexcept { return std::bit_xor<T>()(a, b); }
 
 	template<concepts::Arithmetic T>

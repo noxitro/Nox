@@ -6,21 +6,41 @@ using System.Threading.Tasks;
 
 namespace ReflectionGenerator.Info
 {
+    public enum TypeInfoKind : byte
+    {
+        Enum,
+        Class,
+        Union,
+        Type,
+        Variable,
+        Function,
+        GlobalDecl,
+    }
+
     /// <summary>
     /// モジュール情報
     /// </summary>
-    public class Module
+    public struct Module : IEquatable<Module>
     {
         /// <summary>
         /// モジュール名(プロジェクト名)
-        /// Core-> "Core"
-        /// Module/Render -> "Module_Render"
+        /// core-> "core"
+        /// module/render -> "module_render"
         /// </summary>
-        public required string ModuleName { get; init; } 
+        public readonly required string ModuleName { get; init; } 
+
+        readonly bool IEquatable<Module>.Equals(ReflectionGenerator.Info.Module other)
+        {
+            return ModuleName == other.ModuleName;
+        }
+
+        public static readonly Module Invalid = new Module { ModuleName = "Invalid" };
     }
 
     public interface IBaseInfo
     {
+        public Module Module { get; }
+        public TypeInfoKind TypeInfoKind { get; }
     }
 
     /// <summary>
@@ -28,6 +48,10 @@ namespace ReflectionGenerator.Info
     /// </summary>
     public abstract class BaseInfo : IBaseInfo
     {
-        public Module Module { get; init; } = new Module() { ModuleName = "Core" };
+        public required Module Module { get; init; }
+
+        public abstract TypeInfoKind TypeInfoKind { get; }
+
+        public bool IsReflection { get; init; }
     }
 }

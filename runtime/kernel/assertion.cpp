@@ -16,7 +16,7 @@
 #include	"string_format.h"
 
 using namespace nox;
-using namespace nox::debug;
+using namespace nox::dev;
 
 namespace
 {
@@ -33,7 +33,7 @@ namespace
 		return table.at(util::ToUnderlying(type));
 	}
 }
-void	debug::detail::Assert(RuntimeAssertErrorType errorType, std::u32string_view message, const std::source_location& source_location)noexcept(false)
+void	dev::detail::Assert(RuntimeAssertErrorType errorType, std::u32string_view message, const std::source_location& source_location)noexcept(false)
 {
 	//	
 	std::array<char16, 1024> native_message = { 0 };

@@ -11,8 +11,14 @@ namespace ReflectionGenerator.Info
     /// </summary>
     public class FunctionInfo : Info.BaseInfo
     {
+        public override TypeInfoKind TypeInfoKind => TypeInfoKind.Function;
         public required string Name { get; init; }
         public required string FullName { get; init; }
+
+        /// <summary>
+        /// 型名
+        /// </summary>
+        public required string FunctionTypeFullName { get; init; }
 
         public required uint NumArguments { get; init; }
 

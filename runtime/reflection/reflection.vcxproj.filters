@@ -36,7 +36,7 @@
     <ClInclude Include="detail\function_signature.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="class_info.h">
+    <ClInclude Include="user_defined_compound_type_info.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="reflection.h">
@@ -51,13 +51,7 @@
     <ClInclude Include="reflection_object.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="global_info.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="enum_info.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="field_info.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="typeof.h">
@@ -67,6 +61,12 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="reflection_system.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="type_info.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="variable_info.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
@@ -92,7 +92,7 @@
     <ClCompile Include="detail\function_signature.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="class_info.cpp">
+    <ClCompile Include="user_defined_compound_type_info.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="manager.cpp">
@@ -104,13 +104,7 @@
     <ClCompile Include="reflection_object.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="global_info.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="enum_info.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="field_info.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="typeof.cpp">
@@ -120,6 +114,12 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="reflection_system.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="type_info.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="variable_info.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

@@ -34,7 +34,7 @@ namespace nox::stack_walker
 
 		inline constexpr ~Stack() = default;
 
-		inline	void	SetAddress(const std::size_t address)noexcept { address_ = address_; }
+		inline	void	SetAddress(const std::size_t address)noexcept { address_ = address; }
 		inline	void	SetResolved(bool isResolver)noexcept { is_resolver_ = isResolver; }
 		void	SetModuleName(StringView name);
 		void	SetFileName(StringView name);
@@ -121,7 +121,7 @@ namespace nox::stack_walker
 			[[nodiscard]] inline	constexpr uint8 GetCollectLength()const noexcept { return collect_length_; }
 
 			[[nodiscard]] inline	const Stack& GetStack(const uint8 index)const {
-				NOX_ASSERT(index < collect_length_, nox::debug::RuntimeAssertErrorType::OutOfRange, U"コールスタックの取得に失敗　範囲外アクセス");
+				NOX_ASSERT(index < collect_length_, nox::dev::RuntimeAssertErrorType::OutOfRange, U"コールスタックの取得に失敗　範囲外アクセス");
 				return stack_table_[index];
 			}
 

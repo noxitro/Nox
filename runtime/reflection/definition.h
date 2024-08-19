@@ -295,10 +295,14 @@ namespace nox::reflection
 	{
 		None = 0,
 
-		/**
-		 * @brief メンバー
-		*/
+		/// @brief メンバー
 		Member = 1 << 0,
+
+		/// @brief 定数
+		Constexpr = 1 << 1,
+
+		/// @brief 初期化定数
+		ConstInit = 1 << 2,
 	};
 
 	/// @brief 修飾子識別

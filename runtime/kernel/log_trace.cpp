@@ -18,9 +18,9 @@ using namespace nox;
 
 namespace
 {
-	inline constexpr StringView GetLogCategoryName(nox::debug::LogCategory log_category)noexcept
+	inline constexpr StringView GetLogCategoryName(nox::dev::LogCategory log_category)noexcept
 	{
-		constexpr std::array<StringView, nox::util::ToUnderlying(nox::debug::LogCategory::_Max)> table =
+		constexpr std::array<StringView, nox::util::ToUnderlying(nox::dev::LogCategory::_Max)> table =
 		{
 			U"Info",
 			U"Warning",
@@ -31,7 +31,7 @@ namespace
 	}
 }
 
-void nox::debug::detail::TraceDirect(LogCategory log_category, const StringView category, const StringView message, bool isNewLine, const std::source_location& source_location)
+void nox::dev::detail::TraceDirect(LogCategory log_category, const StringView category, const StringView message, bool isNewLine, const std::source_location& source_location)
 {
 	std::array<char16, 2048> buffer = { 0 };
 	//source_location;

@@ -5,7 +5,7 @@
 #include	<span>
 #include	<typeinfo>
 #include	"utility.h"
-
+#include	"attribute.h"
 namespace nox::reflection
 {
 	//	前方宣言
@@ -54,7 +54,7 @@ namespace nox::reflection
 		inline constexpr const Type& GetRemoveAllModifiersType()noexcept;
 
 		template<nox::concepts::FunctionSignatureType T>
-		inline constexpr std::array<nox::not_null<const nox::reflection::Type*>, nox::FunctionArgsLength<T>> GetArgumentTypeList()noexcept;
+		inline constexpr std::array<std::reference_wrapper<const nox::reflection::Type>, nox::FunctionArgsLength<T>> GetArgumentTypeList()noexcept;
 
 		template<class T>
 		inline constexpr const Type& GetOwnerType()noexcept;
@@ -266,7 +266,7 @@ namespace nox::reflection
 		{
 			if (index < argument_length_)
 			{
-				return *GetArgumentTypeList()[index];
+				return GetArgumentTypeList()[index];
 			}
 			return GetInvalidType();
 		}
@@ -274,12 +274,12 @@ namespace nox::reflection
 		[[nodiscard]] inline constexpr bool IsValid()const noexcept { return id_ != 0; }
 
 		//	リフレクション実装から取得する
-		[[nodiscard]] inline const class ClassInfo* GetClassTypeInfo()const noexcept;
-		[[nodiscard]] inline const class ClassInfo* GetEnumTypeInfo()const noexcept;
-		[[nodiscard]] inline const class ClassInfo* GetTypeInfo()const noexcept;
+		[[nodiscard]] inline const class UserDefinedCompoundTypeInfo* GetClassTypeInfo()const noexcept;
+		[[nodiscard]] inline const class UserDefinedCompoundTypeInfo* GetEnumTypeInfo()const noexcept;
+		[[nodiscard]] inline const class UserDefinedCompoundTypeInfo* GetTypeInfo()const noexcept;
 #pragma region virtual
 		/// @brief 関数の引数型情報リストを取得
-		[[nodiscard]] inline constexpr virtual std::span<const nox::not_null<const Type*>> GetArgumentTypeList()const noexcept { return {}; }
+		[[nodiscard]] inline constexpr virtual std::span<const std::reference_wrapper<const nox::reflection::Type>> GetArgumentTypeList()const noexcept { return {}; }
 
 		/// @brief new演算子でオブジェクトを生成
 		/// @details	修飾子が付与された型の場合、修飾子を除いた型で生成する
@@ -531,11 +531,11 @@ namespace nox::reflection
 				argument_type_table_(nox::reflection::detail::GetArgumentTypeList<T>())
 			{}
 		public:
-			inline constexpr std::span<const nox::not_null<const Type*>> GetArgumentTypeList()const noexcept override {
+			inline constexpr std::span<const std::reference_wrapper<const nox::reflection::Type>> GetArgumentTypeList()const noexcept override {
 				return std::span(argument_type_table_.data(), argument_type_table_.size());
 			}
 		private:
-			const std::array<nox::not_null<const Type*>, nox::FunctionArgsLength<T>> argument_type_table_;
+			const std::array<std::reference_wrapper<const nox::reflection::Type>, nox::FunctionArgsLength<T>> argument_type_table_;
 		};
 	}
 
@@ -771,14 +771,14 @@ namespace nox::reflection
 	namespace nox::reflection::detail
 	{
 		template<class TupleType, std::uint32_t... Indices>
-		inline constexpr std::array<nox::not_null<const nox::reflection::Type*>, sizeof...(Indices)> GetArgumentTypeListImpl(std::integer_sequence<std::uint32_t, Indices...>)noexcept
+		inline constexpr std::array<std::reference_wrapper<const nox::reflection::Type>, sizeof...(Indices)> GetArgumentTypeListImpl(std::integer_sequence<std::uint32_t, Indices...>)noexcept
 		{
-			return { (&nox::reflection::detail::ReflectionTypeHolder<std::tuple_element_t<Indices, TupleType>>::value)... };
+			return { (nox::reflection::detail::ReflectionTypeHolder<std::tuple_element_t<Indices, TupleType>>::value)... };
 		}
 	}
 
 	template<nox::concepts::FunctionSignatureType T>
-	inline constexpr std::array<nox::not_null<const nox::reflection::Type*>, nox::FunctionArgsLength<T>> nox::reflection::detail::GetArgumentTypeList()noexcept
+	inline constexpr std::array<std::reference_wrapper<const nox::reflection::Type>, nox::FunctionArgsLength<T>> nox::reflection::detail::GetArgumentTypeList()noexcept
 	{
 		return nox::reflection::detail::GetArgumentTypeListImpl<nox::FunctionArgsType<T>>(std::make_integer_sequence<std::uint32_t, FunctionArgsLength<T>>{});
 	}

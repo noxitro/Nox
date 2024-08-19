@@ -69,7 +69,7 @@ namespace nox::reflection::detail
 		concept Arithmetic = std::is_arithmetic_v<T>;
 
 		template<class T>
-		concept ClassUnion = std::is_class_v<T> || std::is_union_v<T>;
+		concept UserDefinedCompoundType = std::is_class_v<T> || std::is_union_v<T>;
 	}
 
 	namespace util
@@ -84,7 +84,7 @@ namespace nox::reflection::detail
 #endif
 		}
 
-		template<concepts::ClassUnion T>
+		template<concepts::UserDefinedCompoundType T>
 		[[nodiscard]] inline constexpr T BitOr(const T& a, const T& b)noexcept { return std::bit_or<T>()(a, b); }
 
 		template<concepts::Enum T>
@@ -93,7 +93,7 @@ namespace nox::reflection::detail
 		template<concepts::Arithmetic T>
 		[[nodiscard]] inline constexpr T BitOr(const T a, const T b)noexcept { return std::bit_or<T>()(a, b); }
 
-		template<concepts::ClassUnion T>
+		template<concepts::UserDefinedCompoundType T>
 		[[nodiscard]] inline	constexpr	bool IsBitAnd(const T& a, const T& b)noexcept { return std::bit_and<T>()(a, b); }
 
 		template<concepts::Enum T>

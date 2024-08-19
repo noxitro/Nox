@@ -25,6 +25,14 @@ namespace ReflectionGenerator
         [Conditional("DEBUG")]
         public static void BreakPoint() { }
 
+
+        private static int getNumMaxThreads()
+        {
+            System.Threading.ThreadPool.GetMaxThreads(out int maxThreads, out int completionPortThreads);
+            return maxThreads;
+        }
+
+        public static readonly int MAX_THREAD_ID = getNumMaxThreads();
         #endregion
     }
 }

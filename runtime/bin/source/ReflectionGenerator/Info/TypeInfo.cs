@@ -31,6 +31,8 @@ namespace ReflectionGenerator.Info
         }
 
         #region 公開プロパティ
+        public override TypeInfoKind TypeInfoKind => TypeInfoKind.Type;
+
         /// <summary>
         /// 完全型名
         /// </summary>
@@ -40,7 +42,6 @@ namespace ReflectionGenerator.Info
 
         public required string Namespace { get; init; }
 
-        public TypeInfo? ParentTypeInfo { get; set; } = null;
 
         /// <summary>
         /// 別名リスト
@@ -78,6 +79,10 @@ namespace ReflectionGenerator.Info
         public List<ClassUnionInfo> TypeInfoList { get; } = new List<ClassUnionInfo>();
         public List<VariableInfo> VariableInfoList { get; } = new List<VariableInfo>();
         public List<FunctionInfo> FunctionInfoList { get; } = new List<FunctionInfo>();
+
+        public TypeInfo? ParentTypeInfo { get; set; } = null;
+
+        public bool IsPrivateReflection { get; init; } 
     }
 
     public class TemplateClassUnionInfo : ClassUnionInfo

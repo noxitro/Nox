@@ -39,11 +39,11 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="field_info.h">
+    <ClInclude Include="type_info.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="global_info.h">
+    <ClInclude Include="variable_info.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -75,7 +75,7 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="class_info.h">
+    <ClInclude Include="user_defined_compound_type_info.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -113,11 +113,11 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="field_info.cpp">
+    <ClCompile Include="type_info.cpp">
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="global_info.cpp">
+    <ClCompile Include="variable_info.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -148,7 +148,7 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="class_info.cpp">
+    <ClCompile Include="user_defined_compound_type_info.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -176,7 +176,7 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>ClangCL</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">

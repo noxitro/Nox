@@ -7,7 +7,7 @@
 #include	"nox_string_view.h"
 
 
-namespace nox::debug
+namespace nox::dev
 {
 	/// @brief ログタイプ
 	enum class LogCategory : uint8
@@ -25,17 +25,17 @@ namespace nox::debug
 
 	inline	void	LogTrace(LogCategory log_category, const StringView category, const StringView message, const std::source_location source_location = std::source_location::current())
 	{
-		nox::debug::detail::TraceDirect(log_category, category, message, true, source_location);
+		nox::dev::detail::TraceDirect(log_category, category, message, true, source_location);
 	}
 
 	inline	void	LogTrace(LogCategory log_category, const StringView message, const std::source_location source_location = std::source_location::current())
 	{
-		nox::debug::LogTrace(log_category, U"unknown", message, source_location);
+		nox::dev::LogTrace(log_category, U"unknown", message, source_location);
 	}
 }
 
 #if NOX_DEBUG
-#define	NOX_INFO_LINE(...) ::nox::debug::LogTrace(::nox::debug::LogCategory::Info, __VA_ARGS__)
+#define	NOX_INFO_LINE(...) ::nox::dev::LogTrace(::nox::dev::LogCategory::Info, __VA_ARGS__)
 
 #else
 #define	NOX_INFO_LINE(...)

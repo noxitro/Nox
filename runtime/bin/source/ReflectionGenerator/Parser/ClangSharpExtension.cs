@@ -549,6 +549,7 @@ namespace ReflectionGenerator.Parser
                         case CXCursorKind.CXCursor_DeclStmt:
                         case CXCursorKind.CXCursor_StringLiteral:
                         case CXCursorKind.CXCursor_CStyleCastExpr:
+                        case CXCursorKind.CXCursor_CXXThisExpr:
                             return true;
                     }
                     break;

@@ -258,7 +258,7 @@ namespace ReflectionGenerator
 		{
             Parser.CppParser parser = new Parser.CppParser();
 
-			parser.Parse(
+			if (parser.Parse(
 				new Parser.CppParser.SetupParam() 
 				{
 					SourceFilePath = argsData.SourceFilePath,
@@ -270,12 +270,69 @@ namespace ReflectionGenerator
 					IgnoreNamespaceList = argsData.IgnoreNamespaceList,
 					EnableRootNamespaceList = argsData.EnableNamespaceList
                 }
-				);
+				) == false)
+			{
+				Trace.Error(null, "解析に失敗しました。");
+				return ErrorCode.Error;
+			}
+
+			if(parser.RootDeclHolder == null)
+			{
+				return ErrorCode.Error;
+			}
+
+			//	ビルドタイムスタンプファイルを解析
+			List<string> targetModuleNameList = new List<string>();
+            {
+				string engineBuildTimeStampFileDirectory = $"{System.IO.Path.GetTempPath()}\nox_build_time_stamp";
+
+                if (System.IO.Directory.Exists(engineBuildTimeStampFileDirectory) == false)
+				{
+					return ErrorCode.Error;
+				}
+
+				string reflectionGenTimeStampDirectory = $"{System.IO.Path.GetTempPath()}\nox_build_time_stamp";
+
+                if (System.IO.Directory.Exists(reflectionGenTimeStampDirectory) == false)
+				{
+                    System.IO.Directory.CreateDirectory(reflectionGenTimeStampDirectory);
+                }
+
+				foreach(string engineTimeStampFileName in System.IO.Directory.GetFiles(engineBuildTimeStampFileDirectory))
+				{
+					string fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(engineTimeStampFileName);
+
+                    string reflectionGenTimeStampFilePath = $"{reflectionGenTimeStampDirectory}\\{engineTimeStampFileName}";
+					if(System.IO.File.Exists(reflectionGenTimeStampFilePath) == true)
+                    {
+                        //	タイムスタンプを比較
+                        string engineTimeStamp = System.IO.File.ReadAllText(engineTimeStampFileName);
+						System.DateTime engineTimeStampDataTime = System.DateTime.Parse(engineTimeStamp);
+
+                        string reflectionGenTimeStamp = System.IO.File.ReadAllText(reflectionGenTimeStampFilePath);
+                        System.DateTime reflectionGenTimeStampDataTime = System.DateTime.Parse(reflectionGenTimeStamp);
+
+                        if (engineTimeStampDataTime > reflectionGenTimeStampDataTime)
+						{
+                            targetModuleNameList.Add(fileNameWithoutExtension);
+                        }
+                    }
+                    else
+					{
+                        System.IO.File.Create(reflectionGenTimeStampFilePath);
+						targetModuleNameList.Add(fileNameWithoutExtension);
+                    }
+                    
+					//	タイムスタンプを更新
+                    System.IO.File.WriteAllText(reflectionGenTimeStampFilePath, System.DateTime.Now.ToString());
+                }
+            }
 
 			//	コード出力
 			Generator.Generator generator = new Generator.Generator()
 			{
-				Parser = parser,
+                TargetModuleNameList = targetModuleNameList,
+                TypeInfoListWithModuleNameDict = parser.TypeInfoListWithModuleNameDict,
 				BuildSpec = argsData.Configuration,
 				BuildSpecDefine = argsData.BuildSpecDefine,
 				OutputDirectory = argsData.OutputDirectory,
@@ -283,6 +340,9 @@ namespace ReflectionGenerator
 				PlatformDefine = argsData.PlatformDefine,
 
 			};
+
+			generator.Generate();
+
 //			generator.Setup(parser, argsData.OutputDirectory, argsData.BuildSpec, argsData.Platform, argsData.BuildSpecDefine, argsData.PlatformDefine);
 //			generator.Generate();
 

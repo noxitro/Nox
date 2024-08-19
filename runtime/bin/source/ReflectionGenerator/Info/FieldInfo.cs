@@ -9,8 +9,10 @@ namespace ReflectionGenerator.Info
     /// <summary>
     /// 変数情報
     /// </summary>
-    public class FieldInfo : BaseInfo
+    public class FieldInfo
     {
+     
+
         /// <summary>
         /// 変数名
         /// </summary>

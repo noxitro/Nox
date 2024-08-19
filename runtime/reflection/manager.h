@@ -2,53 +2,52 @@
 ///	@brief	manager
 #pragma once
 #include	"definition.h"
+#include	"type.h"
 
 namespace nox::reflection
 {
-	class Reflection : public ISingleton<Reflection>
+	class Reflection : public nox::ISingleton<Reflection>
 	{
-		friend class ISingleton<Reflection>;
+		friend class nox::ISingleton<Reflection>;
 	private:
 		/// @brief クラスデータ
 		struct ClassData
 		{
-			const class ClassInfo* class_info_ptr = nullptr;
+			const class UserDefinedCompoundTypeInfo* class_info_ptr = nullptr;
 			ClassData* next_ptr = nullptr;
 			const ClassData* prev_ptr = nullptr;
 			ClassData* child_ptr = nullptr;
 		};
 
+		
+
 		/// @brief 名前空間に所属する情報
 		struct GlobalData
 		{
-			UnorderedMap<std::uint32_t, const class ClassInfo*> class_info_ptr_map;
-			UnorderedMap<std::uint32_t, const class VariableInfo*> field_info_ptr_map;
-			UnorderedMap<std::uint32_t, const class FunctionInfo*> function_info_ptr_map;
-			UnorderedMap<std::uint32_t, const class EnumInfo*> enum_info_ptr_map;
+			nox::UnorderedMap<std::uint32_t, const class UserDefinedCompoundTypeInfo*> class_info_ptr_map;
+			nox::UnorderedMap<std::uint32_t, const class VariableInfo*> field_info_ptr_map;
+			nox::UnorderedMap<std::uint32_t, const class FunctionInfo*> function_info_ptr_map;
+			nox::UnorderedMap<std::uint32_t, const class EnumInfo*> enum_info_ptr_map;
 		};
+
+	/*	struct ModuleData
+		{
+			nox::UnorderedMap<std::uint32_t, GlobalData>
+		};*/
 	public:
 		
-		const class ClassInfo* FindClassInfo(std::uint32_t typeID)const noexcept;
-		const class ClassInfo* FindClassInfoFromNameHash(std::uint32_t namehash)const noexcept;
-		const class ClassInfo* FindClassInfoFromName(ReflectionStringView fullName)const noexcept { return FindClassInfoFromNameHash(util::Crc32(fullName)); }
+		const class UserDefinedCompoundTypeInfo* FindUserDefinedCompoundTypeInfo(const nox::reflection::Type& type)const noexcept;
+		const class UserDefinedCompoundTypeInfo* FindUserDefinedCompoundTypeInfoFromNameHash(std::uint32_t namehash)const noexcept;
+		const class UserDefinedCompoundTypeInfo* FindUserDefinedCompoundTypeInfoFromNameHashFromName(ReflectionStringView fullName)const noexcept { return FindUserDefinedCompoundTypeInfoFromNameHash(nox::util::Crc32(fullName)); }
 
-		template<concepts::ClassUnion T>
-		inline const class ClassInfo* FindClassInfo()const noexcept {
-			return FindClassInfo(util::GetUniqueTypeID<T>());
-		}
-
-		const class EnumInfo* FindEnumInfo(std::uint32_t typeID)const noexcept;
-		const class EnumInfo* FindEnumInfoFromNameHash(std::uint32_t namehash)const noexcept;
-		const class EnumInfo* FindEnumInfoFromName(ReflectionStringView fullName)const noexcept { return FindEnumInfoFromNameHash(util::Crc32(fullName)); }
-
-		template<concepts::Enum T>
-		inline const class EnumInfo* FindEnumInfo()const noexcept {
-			return FindEnumInfo(util::GetUniqueTypeID<T>());
+		template<nox::concepts::UserDefinedCompoundType T>
+		inline const class UserDefinedCompoundTypeInfo* FindUserDefinedCompoundTypeInfo()const noexcept {
+			return FindUserDefinedCompoundTypeInfo(nox::reflection::Typeof<T>());
 		}
 
 #pragma region 登録関数
-		void Register(const class ClassInfo& data);
-		void Unregister(const class ClassInfo& data);
+		void Register(const class UserDefinedCompoundTypeInfo& data);
+		void Unregister(const class UserDefinedCompoundTypeInfo& data);
 
 		void Register(const class EnumInfo& data);
 		void Unregister(const class EnumInfo& data);
