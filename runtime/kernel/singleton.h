@@ -34,7 +34,7 @@ namespace nox
 			instance_ = nullptr;
 		}
 		static	inline	bool	HasInstance()noexcept { return instance_ != nullptr; }
-		static	inline	T& Instance()noexcept { return util::Deref(instance_); }
+		static	inline	decltype(auto) Instance()noexcept { return util::Deref(instance_); }
 
 	private:
 		static inline T* instance_ = nullptr;

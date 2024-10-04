@@ -1,8 +1,4 @@
 ﻿
-
-using ClangSharp;
-using System.Runtime.InteropServices.Marshalling;
-
 namespace ReflectionGenerator
 {
 	/// <summary>
@@ -54,12 +50,17 @@ namespace ReflectionGenerator
 
 			public string Configuration { get; set; } = string.Empty;
 			public string Platform { get; set; } = string.Empty;
-			public string BuildSpecDefine { get; set; } = string.Empty;
+			public string ConfigurationDefine { get; set; } = string.Empty;
 			public string PlatformDefine { get; set; } = string.Empty;
 
 			public string MSBuildBinPath { get; set; } = string.Empty;
 			public string ProjectFilePath { get; set; } = string.Empty;
             public string SolutionFilePath { get; set; } = string.Empty;
+
+			/// <summary>
+			/// ビルド中間ディレクトリ
+			/// </summary>
+			public string IntermediateDir { get; set; } = string.Empty;
 
             public List<string> IgnoreNamespaceList { get; set; } = new List<string>();
 
@@ -124,7 +125,13 @@ namespace ReflectionGenerator
 
             EnableNamespaceList,
 
-			_Max
+            /// <summary>
+            /// ビルド中間ディレクトリ
+            /// </summary>
+            IntermediateDir,
+
+
+            _Max
 		}
 
 		/// <summary>
@@ -209,7 +216,7 @@ namespace ReflectionGenerator
                         break;
 
 					case MainArgs.ConfigurationDefine:
-						mainArgsData.BuildSpecDefine = replaceArg;
+						mainArgsData.ConfigurationDefine = replaceArg;
 
                         break;
 
@@ -245,6 +252,10 @@ namespace ReflectionGenerator
 
                         break;
 
+					case MainArgs.IntermediateDir:
+						mainArgsData.IntermediateDir = replaceArg;
+                        break;
+
 					default:
 						System.Diagnostics.Debug.Assert(false);
 						break;
@@ -276,22 +287,27 @@ namespace ReflectionGenerator
 				return ErrorCode.Error;
 			}
 
-			if(parser.RootDeclHolder == null)
+            if (parser.RootDeclHolder == null)
 			{
 				return ErrorCode.Error;
 			}
 
-			//	ビルドタイムスタンプファイルを解析
-			List<string> targetModuleNameList = new List<string>();
+			List<Generator.Generator.ARTIFACT_INFO> moduleInfoList = new List<Generator.Generator.ARTIFACT_INFO>();
+
+            //	ビルドタイムスタンプファイルを解析
+      //      List<string> allModuleNameList = new List<string>();
+	//		List<string> targetModuleNameList = new List<string>();
             {
-				string engineBuildTimeStampFileDirectory = $"{System.IO.Path.GetTempPath()}\nox_build_time_stamp";
+                //	エンジン側のプロジェクトのビルドタイムスタンプファイルのディレクトリを取得
+                string engineBuildTimeStampFileDirectory = $"{argsData.IntermediateDir}\\nox_build_time_stamp";
 
                 if (System.IO.Directory.Exists(engineBuildTimeStampFileDirectory) == false)
 				{
 					return ErrorCode.Error;
 				}
 
-				string reflectionGenTimeStampDirectory = $"{System.IO.Path.GetTempPath()}\nox_build_time_stamp";
+                //	   リフレクション生成のタイムスタンプファイルのディレクトリを取得
+                string reflectionGenTimeStampDirectory = $"{argsData.IntermediateDir}\\nox_parse_build_time_stamp";
 
                 if (System.IO.Directory.Exists(reflectionGenTimeStampDirectory) == false)
 				{
@@ -300,41 +316,72 @@ namespace ReflectionGenerator
 
 				foreach(string engineTimeStampFileName in System.IO.Directory.GetFiles(engineBuildTimeStampFileDirectory))
 				{
-					string fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(engineTimeStampFileName);
+					bool build = false;
 
-                    string reflectionGenTimeStampFilePath = $"{reflectionGenTimeStampDirectory}\\{engineTimeStampFileName}";
+					
+//                    allModuleNameList.Add(engineTimeStampFileName);
+
+                    string fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(engineTimeStampFileName);
+
+                    //	リフレクション生成のタイムスタンプファイルのパス
+                    string reflectionGenTimeStampFilePath = $"{reflectionGenTimeStampDirectory}\\{System.IO.Path.GetFileName(engineTimeStampFileName)}";
 					if(System.IO.File.Exists(reflectionGenTimeStampFilePath) == true)
                     {
+                        //	ファイル内のテキストは、
+                        //	1:	エンジン側のビルドタイムスタンプ
+						//	2:	リビルドフラグ
+
                         //	タイムスタンプを比較
                         string engineTimeStamp = System.IO.File.ReadAllText(engineTimeStampFileName);
 						System.DateTime engineTimeStampDataTime = System.DateTime.Parse(engineTimeStamp);
 
                         string reflectionGenTimeStamp = System.IO.File.ReadAllText(reflectionGenTimeStampFilePath);
-                        System.DateTime reflectionGenTimeStampDataTime = System.DateTime.Parse(reflectionGenTimeStamp);
-
-                        if (engineTimeStampDataTime > reflectionGenTimeStampDataTime)
+						if (System.DateTime.TryParse(reflectionGenTimeStamp, out System.DateTime reflectionGenTimeStampDataTime) == true)
 						{
-                            targetModuleNameList.Add(fileNameWithoutExtension);
-                        }
+							if (engineTimeStampDataTime > reflectionGenTimeStampDataTime)
+							{
+								build = true;
+								//                          targetModuleNameList.Add(fileNameWithoutExtension);
+							}
+						}
+						else
+						{
+							//	
+							Trace.Warning(null, "リフレクション生成のタイムスタンプファイルのフォーマットが不正です。");
+						}
                     }
                     else
 					{
-                        System.IO.File.Create(reflectionGenTimeStampFilePath);
-						targetModuleNameList.Add(fileNameWithoutExtension);
+                        build = true;
+//                        targetModuleNameList.Add(fileNameWithoutExtension);
                     }
-                    
+
+                    moduleInfoList.Add(new Generator.Generator.ARTIFACT_INFO()
+                    {
+                        Build = build,
+                        ReBuild = false,
+                        ArtifactName = fileNameWithoutExtension,
+                    }
+					);
+
 					//	タイムスタンプを更新
-                    System.IO.File.WriteAllText(reflectionGenTimeStampFilePath, System.DateTime.Now.ToString());
+					using(System.IO.StreamWriter streamWriter = new System.IO.StreamWriter(reflectionGenTimeStampFilePath, false, System.Text.Encoding.UTF8))
+					{
+                        streamWriter.WriteLine(System.DateTime.Now.ToString());
+                    }
                 }
             }
 
 			//	コード出力
 			Generator.Generator generator = new Generator.Generator()
 			{
-                TargetModuleNameList = targetModuleNameList,
-                TypeInfoListWithModuleNameDict = parser.TypeInfoListWithModuleNameDict,
-				BuildSpec = argsData.Configuration,
-				BuildSpecDefine = argsData.BuildSpecDefine,
+				OutputProjectDirectory = argsData.ProjectFilePath,
+                ModuleInfoList = moduleInfoList,
+//                TargetModuleNameList = targetModuleNameList,
+				//AllModuleNameList = allModuleNameList,
+                TypeInfoListWithArtifactNameDict = parser.TypeInfoListWithModuleNameDict,
+				Configuration = argsData.Configuration,
+				ConfigurationDefine = argsData.ConfigurationDefine,
 				OutputDirectory = argsData.OutputDirectory,
 				Platform = argsData.Platform,
 				PlatformDefine = argsData.PlatformDefine,

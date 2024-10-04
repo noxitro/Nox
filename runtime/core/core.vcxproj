@@ -35,6 +35,14 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="core_entry.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="dev\remote_entity.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="entry_point.h">
       <SubType>
       </SubType>
@@ -63,6 +71,22 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="module_entry.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="module_entry_category.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="test\test.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="test\test_reflection.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="transform.h">
       <SubType>
       </SubType>
@@ -82,6 +106,14 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="component.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="core_entry.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="dev\remote_entity.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -116,6 +148,22 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Master|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="module_entry.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="module_entry_category.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="test\test.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="test\test_reflection.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="transform.cpp">
       <SubType>
       </SubType>
@@ -142,7 +190,7 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>ClangCL</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">

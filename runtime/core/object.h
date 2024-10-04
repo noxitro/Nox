@@ -11,6 +11,8 @@ namespace nox
 	class Object : public nox::reflection::ReflectionObject
 	{
 		NOX_DECLARE_OBJECT_ROOT(Object);
+	public:
+		~Object()override {}
 	private:
 
 	};

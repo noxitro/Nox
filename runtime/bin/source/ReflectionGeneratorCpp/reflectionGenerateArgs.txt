@@ -1,0 +1,20 @@
+-SolutionDir
+"D:\github\Nox\runtime\bin\source\ReflectionGeneratorCpp\"
+-ProjectPath
+"D:\github\Nox\runtime\bin\source\ReflectionGeneratorCpp\Sample\Sample.vcxproj"
+-SourceFilePath
+"D:\github\Nox\runtime\bin\source\ReflectionGeneratorCpp\Sample\main.cpp"
+-Configuration
+"Debug"
+-Platform
+"x64"
+-ConfigurationDefine
+"DebugDefine"
+-PlatformDefine
+"x64Define"
+-MSBuildBinPath
+"C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\amd64"
+-EnableNamespaceList
+""
+-OutputDir
+"D:\github\Nox\runtime\bin\source\ReflectionGeneratorCpp\Sample\"

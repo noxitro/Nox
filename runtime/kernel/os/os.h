@@ -5,14 +5,12 @@
 #pragma once
 #include	"../advanced_type.h"
 
+#include	"nox_string.h"
+#include	"nox_string_view.h"
 
 
 namespace nox
 {
-	class String;
-
-	
-	
 	namespace os
 	{
 		struct ProcessMemoryInfo
@@ -50,6 +48,9 @@ namespace nox
 		}
 
 		U16String	GetDirectoryUTF8();
+
+		nox::String	GetDirectory();
+		nox::StringView	GetDirectory(std::span<nox::char32> dest_buffer);
 
 		ProcessMemoryInfo GetCurrentProcessMemoryInfo();
 	}

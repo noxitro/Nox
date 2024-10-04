@@ -13,22 +13,21 @@
 #include    "os/windows.h"
 #endif // NOX_WINDOWS
 
-using namespace nox;
 static_assert(sizeof(nox::wchar16) == sizeof(nox::char16), "wchar16 and char16 are not the same size");
 
 namespace
 {
     struct OffsetPoint
     {
-        int32 offset;
-        char32 codePoint;
+        nox::int32 offset;
+        nox::char32 codePoint;
     };
 
     inline constexpr OffsetPoint kInvalidPoint = { .offset = -1, .codePoint = 0 };
 
-    inline constexpr bool IsHighSurrogate(const char16 c)noexcept { return (c >= 0xD800) && (c < 0xDC00); }
+    inline constexpr bool IsHighSurrogate(const nox::char16 c)noexcept { return (c >= 0xD800) && (c < 0xDC00); }
 
-    inline constexpr bool IsLowSurrogate(const char16 c)noexcept { return (c >= 0xDC00) && (c < 0xE000); }
+    inline constexpr bool IsLowSurrogate(const nox::char16 c)noexcept { return (c >= 0xDC00) && (c < 0xE000); }
 
     inline constexpr OffsetPoint DecodeCheckUTF8(const std::u8string_view s)noexcept
     {
@@ -36,7 +35,7 @@ namespace
 
         uint32_t b0, b1, b2, b3;
 
-        b0 = static_cast<uint8>(s[0]);
+        b0 = static_cast<nox::uint8>(s[0]);
 
         if (b0 < 0x80)
         {
@@ -61,7 +60,7 @@ namespace
                 return kInvalidPoint;
             }
 
-            const char32 pt = (b0 & 0x1F) << 6 | (b1 & 0x3F);
+            const nox::char32 pt = (b0 & 0x1F) << 6 | (b1 & 0x3F);
 
             if (pt < 0x80)
             {
@@ -88,7 +87,7 @@ namespace
                 return kInvalidPoint;
             }
 
-            const char32 pt = (b0 & 0x0F) << 12 | (b1 & 0x3F) << 6 | (b2 & 0x3F);
+            const nox::char32 pt = (b0 & 0x0F) << 12 | (b1 & 0x3F) << 6 | (b2 & 0x3F);
 
             if (pt < 0x800)
             {
@@ -120,7 +119,7 @@ namespace
                 return kInvalidPoint;
             }
 
-            const char32 pt = (b0 & 0x0F) << 18 | (b1 & 0x3F) << 12 | (b2 & 0x3F) << 6 | (b3 & 0x3F);
+            const nox::char32 pt = (b0 & 0x0F) << 18 | (b1 & 0x3F) << 12 | (b2 & 0x3F) << 6 | (b3 & 0x3F);
 
             if (pt < 0x10000 || pt >= 0x110000)
             {
@@ -147,7 +146,7 @@ namespace
         if (IsHighSurrogate(s[0]) && s.size() >= 2 && IsLowSurrogate(s[1]))
         {
             // High surrogate followed by low surrogate
-            const char32 pt = (((s[0] - 0xD800) << 10) | (s[1] - 0xDC00)) + 0x10000;
+            const nox::char32 pt = (((s[0] - 0xD800) << 10) | (s[1] - 0xDC00)) + 0x10000;
 
             return OffsetPoint{ 2, pt };
         }
@@ -191,7 +190,7 @@ namespace
     }
 
 
-    inline nox::NString ToNString(const wchar16* str, const size_t length, const uint32 code_page)
+    inline nox::NString ToNString(const nox::wchar16* str, const size_t length, const nox::uint32 code_page)
     {
         if (length <= 0)
         {
@@ -199,14 +198,14 @@ namespace
         }
 
 #if NOX_WINDOWS
-        const int32 requiredSize = ::WideCharToMultiByte(code_page, 0,
-            str, static_cast<int32>(length),
+        const nox::int32 requiredSize = ::WideCharToMultiByte(code_page, 0,
+            str, static_cast<nox::int32>(length),
             nullptr, 0, nullptr, nullptr);
 
         nox::NString result(requiredSize, '\0');
 
         ::WideCharToMultiByte(code_page, 0,
-           str, static_cast<int32>(length),
+           str, static_cast<nox::int32>(length),
             &result[0], requiredSize, nullptr, nullptr);
 
         return result;
@@ -218,7 +217,7 @@ namespace
 
 //    inline NString ToNString(const std::u32)
 
-    inline constexpr size_t GetUTF16Length(const char32 str)noexcept
+    inline constexpr size_t GetUTF16Length(const nox::char32 str)noexcept
     {
         if (str < 0x10000) // 0x00 - 0xFFFF
         {
@@ -238,8 +237,8 @@ namespace
     {
         size_t result = 0;
 
-        const char32* pSrc = str.data();
-        const char32* const pSrcEnd = pSrc + str.size();
+        const nox::char32* pSrc = str.data();
+        const nox::char32* const pSrcEnd = pSrc + str.size();
 
         while (pSrc != pSrcEnd)
         {
@@ -249,27 +248,27 @@ namespace
         return result;
     }
 
-    template<class CharType = char16> requires(std::is_same_v<CharType, char16> || std::is_same_v<CharType, wchar16>)
-    inline CharType EncodeUTF16(const char32 code_point)
+    template<class CharType = nox::char16> requires(std::is_same_v<CharType, nox::char16> || std::is_same_v<CharType, nox::wchar16>)
+    inline void EncodeUTF16(CharType*& out, const nox::char32 code_point)
     {
         if (code_point < 0x10000)
         {
-            return static_cast<CharType>(code_point);
+            *(out++) = static_cast<CharType>(code_point);
         }
         else if (code_point < 0x110000)
         {
             //TODO: 不正なビット列をはじく
-            return static_cast<CharType>(((code_point - 0x10000) >> 10) + 0xD800);
-            return static_cast<CharType>((code_point & 0x3FF) + 0xDC00);
+            *(out++) = static_cast<CharType>(((code_point - 0x10000) >> 10) + 0xD800);
+            *(out++) = static_cast<CharType>((code_point & 0x3FF) + 0xDC00);
         }
         else
         {
             // REPLACEMENT CHARACTER (0xFFFD)
-            return static_cast<CharType>(0xFFFD);
+            *(out++) = static_cast<CharType>(0xFFFD);
         }
     }
 
-    inline constexpr size_t GetUTF8Length(const char32 code_point)noexcept
+    inline constexpr size_t GetUTF8Length(const nox::char32 code_point)noexcept
     {
         if (code_point < 0x80) // 0x00 - 0x7F
         {
@@ -296,39 +295,51 @@ namespace
         }
     }
 
-    inline constexpr void EncodeUTF8(char8*& s, const char32 code_point)noexcept
+    inline constexpr size_t GetUTF8Length(const std::u32string_view str)noexcept
+    {
+        size_t result = 0;
+
+        for (const nox::char32 c : str)
+        {
+            result += GetUTF8Length(c);
+        }
+
+        return result;
+    }
+
+    inline constexpr void EncodeUTF8(nox::char8*& s, const nox::char32 code_point)noexcept
     {
         if (code_point < 0x80) // 0x00 - 0x7F
         {
-            *(s)++ = static_cast<char8>(code_point);
+            *(s)++ = static_cast<nox::char8>(code_point);
         }
         else if (code_point < 0x800) // 0x80 - 0x07FF
         {
             //TODO: 不正なコードポイントをはじく
-            *(s)++ = (0xC0 | static_cast<char8>(code_point >> 6));
-            *(s)++ = (0x80 | static_cast<char8>(code_point & 0x3F));
+            *(s)++ = (0xC0 | static_cast<nox::char8>(code_point >> 6));
+            *(s)++ = (0x80 | static_cast<nox::char8>(code_point & 0x3F));
         }
         else if (code_point < 0x10000) // 0x0800 - 0xFFFF
         {
             //TODO: 不正なコードポイントをはじく
-            *(s)++ = (0xE0 | static_cast<char8>(code_point >> 12));
-            *(s)++ = (0x80 | static_cast<char8>((code_point >> 6) & 0x3F));
-            *(s)++ = (0x80 | static_cast<char8>(code_point & 0x3F));
+            *(s)++ = (0xE0 | static_cast<nox::char8>(code_point >> 12));
+            *(s)++ = (0x80 | static_cast<nox::char8>((code_point >> 6) & 0x3F));
+            *(s)++ = (0x80 | static_cast<nox::char8>(code_point & 0x3F));
         }
         else if (code_point < 0x110000) // 0x010000 - 0x10FFFF
         {
             //TODO: 不正なコードポイントをはじく
-            *(s)++ = (0xF0 | static_cast<char8>(code_point >> 18));
-            *(s)++ = (0x80 | static_cast<char8>((code_point >> 12) & 0x3F));
-            *(s)++ = (0x80 | static_cast<char8>((code_point >> 6) & 0x3F));
-            *(s)++ = (0x80 | static_cast<char8>(code_point & 0x3F));
+            *(s)++ = (0xF0 | static_cast<nox::char8>(code_point >> 18));
+            *(s)++ = (0x80 | static_cast<nox::char8>((code_point >> 12) & 0x3F));
+            *(s)++ = (0x80 | static_cast<nox::char8>((code_point >> 6) & 0x3F));
+            *(s)++ = (0x80 | static_cast<nox::char8>(code_point & 0x3F));
         }
         else // Invalid code point
         {
             // REPLACEMENT CHARACTER (0xEF 0xBF 0xBD)
-            *(s)++ = static_cast<char8>(uint8(0xEF));
-            *(s)++ = static_cast<char8>(uint8(0xBF));
-            *(s)++ = static_cast<char8>(uint8(0xBD));
+            *(s)++ = static_cast<nox::char8>(nox::uint8(0xEF));
+            *(s)++ = static_cast<nox::char8>(nox::uint8(0xBF));
+            *(s)++ = static_cast<nox::char8>(nox::uint8(0xBD));
         }
     }
 
@@ -336,15 +347,15 @@ namespace
     {
         size_t length = 0;
 
-        const char8* pSrc = str_view.data();
-        const char8* const pSrcEnd = pSrc + str_view.size();
+        const nox::char8* pSrc = str_view.data();
+        const nox::char8* const pSrcEnd = pSrc + str_view.size();
 
         std::mbstate_t state{};
 
         while (pSrc != pSrcEnd)
         {
-            char32 out;
-            const int32 offset = std::mbrtoc32(&out, reinterpret_cast<const char*>(pSrc), MB_CUR_MAX, &state);
+            nox::char32 out;
+            const nox::int32 offset = std::mbrtoc32(&out, reinterpret_cast<const char*>(pSrc), MB_CUR_MAX, &state);
             length += GetUTF16Length(out);
 
             pSrc += offset;
@@ -357,8 +368,8 @@ namespace
     {
         size_t length = 0;
 
-        const char8* pSrc = str_view.data();
-        const char8* const pSrcEnd = pSrc + str_view.size();
+        const nox::char8* pSrc = str_view.data();
+        const nox::char8* const pSrcEnd = pSrc + str_view.size();
 
         while (pSrc != pSrcEnd)
         {
@@ -375,8 +386,8 @@ namespace
 
     inline constexpr size_t GetUTF32Length(const std::u16string_view str_view)noexcept
     {
-        const char16* pSrc = str_view.data();
-        const char16* const pSrcEnd = pSrc + str_view.size();
+        const nox::char16* pSrc = str_view.data();
+        const nox::char16* const pSrcEnd = pSrc + str_view.size();
 
         size_t length = 0;
 
@@ -436,6 +447,27 @@ nox::WString	nox::unicode::ConvertWString(std::u32string_view str_view)
 #pragma endregion
 
 #pragma region char8
+namespace
+{
+    inline bool ConvertU8StringImpl(const std::u32string_view str_view, const size_t str_view_utf8_length, std::span<nox::char8> dest_buffer)
+    {
+        NOX_ASSERT(dest_buffer.size() >= str_view_utf8_length, U"buffer size over");
+
+        //decltype(auto) it = str_view.begin();
+
+        decltype(auto) it = str_view.begin();
+        decltype(auto) end = str_view.end();
+
+		auto dest_ptr = dest_buffer.data();
+
+        while (it != end)
+        {
+            ::EncodeUTF8(dest_ptr, *it++);
+        }
+
+        return true;
+    }
+}
 
 nox::U8String	nox::unicode::ConvertU8String(std::string_view str_view)
 {
@@ -451,53 +483,75 @@ nox::U8String	nox::unicode::ConvertU8String(std::u16string_view str_view)
 
 nox::U8String	nox::unicode::ConvertU8String(std::u32string_view str_view)
 {
-    NOX_ASSERT(false, U"");
+    const size_t length = GetUTF8Length(str_view);
+    nox::U8String result(length, '0');
+
+    ConvertU8StringImpl(str_view, length, result);
+    return result;
+}
+
+std::u8string_view	nox::unicode::ConvertU8String(std::string_view str_view, std::span<nox::char8> dest_buffer)
+{
     return {};
+}
+
+std::u8string_view	nox::unicode::ConvertU8String(std::u16string_view str_view, std::span<nox::char8> dest_buffer)
+{
+    return {};
+}
+
+std::u8string_view	nox::unicode::ConvertU8String(std::u32string_view str_view, std::span<nox::char8> dest_buffer)
+{
+	const size_t length = GetUTF8Length(str_view);
+    ConvertU8StringImpl(str_view, length, dest_buffer);
+    return { dest_buffer .data(), length };
 }
 #pragma endregion
 
 #pragma region char16
 namespace
 {
-    inline bool ConvertU16StringImpl(const std::u8string_view str_view, const size_t str_view_utf16_length, std::span<char16> dest_buffer)
+    inline bool ConvertU16StringImpl(const std::u8string_view str_view, const size_t str_view_utf16_length, std::span<nox::char16> dest_buffer)
     {
         NOX_ASSERT(dest_buffer.size() >= str_view_utf16_length, U"buffer size over");
 
         decltype(auto) it = str_view.begin();
         
-        for (int32 i = 0; it != str_view.end(); ++i)
+        nox::char16* dest_ptr = dest_buffer.data();
+        for (nox::int32 i = 0; it != str_view.end(); ++i)
         {
             const OffsetPoint offset_point = DecodeUTF8(&*it);
-            dest_buffer[i] = EncodeUTF16(offset_point.codePoint);
+            EncodeUTF16< nox::char16>(dest_ptr, offset_point.codePoint);
             std::advance(it, offset_point.offset);
         }
 
         return true;
     }
 
-    template<concepts::Char DestCharType, concepts::Char SourceCharType>
-    inline bool ConvertStringImpl(DestCharType(*encode_func)(SourceCharType), const std::basic_string_view<SourceCharType> str_view, const size_t str_view_length, std::span<DestCharType> dest_buffer)
+    template<nox::concepts::Char DestCharType, nox::concepts::Char SourceCharType>
+    inline bool ConvertStringImpl(void(*encode_func)(DestCharType*&, SourceCharType), const std::basic_string_view<SourceCharType> str_view, const size_t str_view_length, std::span<DestCharType> dest_buffer)
     {
         NOX_ASSERT(dest_buffer.size() >= str_view_length, U"buffer size over");
 
-        DestCharType* dest_ptr = &*dest_buffer.begin();
+        DestCharType* dest_ptr = dest_buffer.data();
 
         for (SourceCharType s : str_view)
         {
-            *dest_ptr++ = encode_func(s);
+            encode_func(dest_ptr, s);
         }
+
 
         return true;
     }
 }
 
-std::span<char16>	nox::unicode::ConvertU16String(const std::u8string_view str_view, std::span<char16> dest_buffer)
+std::span<nox::char16>	nox::unicode::ConvertU16String(const std::u8string_view str_view, std::span<char16> dest_buffer)
 {
     ConvertU16StringImpl(str_view, GetUTF16Length(str_view), dest_buffer);
     return dest_buffer;
 }
 
-std::span<char16>	nox::unicode::ConvertU16String(const std::u32string_view str_view, std::span<char16> dest_buffer)
+std::span<nox::char16>	nox::unicode::ConvertU16String(const std::u32string_view str_view, std::span<char16> dest_buffer)
 {
     ConvertStringImpl(EncodeUTF16<char16>, str_view, GetUTF16Length(str_view), dest_buffer);
     return dest_buffer;
@@ -528,11 +582,11 @@ nox::U16String	nox::unicode::ConvertU16String(std::u32string_view str_view)
 namespace
 {
 
-    inline bool ConvertU32String(const std::u8string_view str_view, const size_t str_view_utf32_length, std::span<char32> dest_buffer)
+    inline bool ConvertU32String(const std::u8string_view str_view, const size_t str_view_utf32_length, std::span<nox::char32> dest_buffer)
     {
         NOX_ASSERT(dest_buffer.size() >= str_view_utf32_length, U"buffer size over");
 
-        char32* pDst = &*dest_buffer.begin();
+        nox::char32* pDst = &*dest_buffer.begin();
 
         auto it = str_view.begin();
         while(it != str_view.end())
@@ -546,11 +600,11 @@ namespace
         return true;
     }
 
-    inline bool	ConvertU32String(const std::u16string_view str_view, const size_t str_view_utf32_length, std::span<char32> dest_buffer)
+    inline bool	ConvertU32String(const std::u16string_view str_view, const size_t str_view_utf32_length, std::span<nox::char32> dest_buffer)
     {
         NOX_ASSERT(dest_buffer.size() >= str_view_utf32_length, U"buffer size over");
 
-        char32* pDst = &*dest_buffer.begin();
+        nox::char32* pDst = &*dest_buffer.begin();
 
         auto it = str_view.begin();
         while (it != str_view.end())
@@ -565,13 +619,13 @@ namespace
     }
 }
 
-std::span<char32>	nox::unicode::ConvertU32String(const std::u8string_view str_view, std::span<char32> dest_buffer)
+std::span<nox::char32>	nox::unicode::ConvertU32String(const std::u8string_view str_view, std::span<char32> dest_buffer)
 {
     ::ConvertU32String(str_view, GetUTF32Length(str_view), dest_buffer);
     return dest_buffer;
 }
 
-std::span<char32>	nox::unicode::ConvertU32String(const std::u16string_view str_view, std::span<char32> dest_buffer)
+std::span<nox::char32>	nox::unicode::ConvertU32String(const std::u16string_view str_view, std::span<char32> dest_buffer)
 {
     ::ConvertU32String(str_view, GetUTF32Length(str_view), dest_buffer);
     return dest_buffer;

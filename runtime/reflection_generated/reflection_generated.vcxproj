@@ -24,7 +24,7 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>ClangCL</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
@@ -68,6 +68,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <ClCompile />
+    <PreBuildEvent>
+      <Command>$(SolutionDir)bin\createReflectionGenerateArgs.bat "$(SolutionDir)" "$(SolutionPath)" "$(ProjectPath)" "$(ProjectDir)reflect.cpp" "$(Configuration)" "$(Platform)" "NOX_DEBUG" "NOX_X64" "$(MSBuildBinPath)" "nox" "$(ProjectDir)" "$(SolutionDir)build\intermediate"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile />
@@ -78,6 +81,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <ClCompile />
+    <PreBuildEvent>
+      <Command>$(SolutionDir)bin\createReflectionGenerateArgs.bat "$(SolutionDir)" "$(SolutionPath)" "$(ProjectPath)" "$(ProjectDir)reflect.cpp" "$(Configuration)" "$(Platform)" "NOX_DEBUG" "NOX_X64" "$(MSBuildBinPath)" "nox" "$(ProjectDir)" "$(SolutionDir)build\intermediate"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'">
     <ClCompile />
@@ -88,6 +94,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <ClCompile />
+    <PreBuildEvent>
+      <Command>$(SolutionDir)bin\createReflectionGenerateArgs.bat "$(SolutionDir)" "$(SolutionPath)" "$(ProjectPath)" "$(ProjectDir)reflect.cpp" "$(Configuration)" "$(Platform)" "NOX_DEBUG" "NOX_X64" "$(MSBuildBinPath)" "nox" "$(ProjectDir)" "$(SolutionDir)build\intermediate"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="definition.cpp">
@@ -98,9 +107,22 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="gen\Debug\X64\gen_debug_x64.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="reflect.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="register.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <SubType>
       </SubType>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -112,7 +134,19 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="gen\Debug\X64\gen_debug_x64.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="reflect.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="reflection_generated.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="register.h">
       <SubType>
       </SubType>
     </ClInclude>

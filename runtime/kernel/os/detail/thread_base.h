@@ -111,7 +111,7 @@ namespace nox::os
 		inline constexpr explicit ThreadBase(const ThreadBase&)noexcept = delete;
 		inline constexpr explicit ThreadBase(const ThreadBase&&)noexcept = delete;
 
-		static void	SetThreadName(std::u16string_view name)noexcept;
+		static void	SetThreadName(std::u16string_view name);
 		static inline std::u16string_view	GetThreadName()noexcept { return thread_name_.data(); }
 		inline	constexpr	ThreadState GetThreadState()const noexcept { return thread_state_; }
 		inline	constexpr	void SetThreadPriority(ThreadPriority priority)noexcept { thread_priority_ = priority; }
@@ -128,17 +128,17 @@ namespace nox::os
 		/**
 		 * @brief スレッドID
 		*/
-		static inline thread_local int8 current_thread_id_ = -1;
+		static constinit inline thread_local int8 current_thread_id_ = -1;
 
 		/**
 		 * @brief 管理スレッド数
 		*/
-		static inline int8 thread_counter_ = 0;
+		static constinit inline int8 thread_counter_ = 0;
 
 		/**
 		 * @brief スレッド名
 		*/
-		static inline thread_local std::array<char16, 256> thread_name_;
+		static inline constinit thread_local std::array<char16, 256> thread_name_ = { 0 };
 
 		/**
 		 * @brief スレッドID

@@ -22,6 +22,10 @@
     <ClInclude Include="assertion.h" />
     <ClInclude Include="basic_definition.h" />
     <ClInclude Include="basic_type.h" />
+    <ClInclude Include="debug_break.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="convert_string.h" />
     <ClInclude Include="crc32.h" />
     <ClInclude Include="delegate.h" />
@@ -79,13 +83,24 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="os\atomic.h" />
+    <ClInclude Include="os\clipboard.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="os\detail\atomic_win64.h" />
+    <ClInclude Include="os\detail\clipboard_base.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="os\detail\clipboard_win64.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="os\detail\fie_win64.h" />
     <ClInclude Include="os\detail\mutex_base.h" />
     <ClInclude Include="os\detail\mutex_win64.h" />
     <ClInclude Include="os\detail\thread_base.h" />
     <ClInclude Include="os\detail\thread_win64.h" />
-    <ClInclude Include="os\detail\win64.h" />
     <ClInclude Include="os\detail\window_win64.h" />
     <ClInclude Include="os\file_system.h" />
     <ClInclude Include="os\mutex.h" />
@@ -132,6 +147,10 @@
     <ClCompile Include="assertion.cpp" />
     <ClCompile Include="basic_definition.cpp" />
     <ClCompile Include="basic_type.cpp" />
+    <ClCompile Include="debug_break.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="convert_string.cpp" />
     <ClCompile Include="crc32.cpp" />
     <ClCompile Include="delegate.cpp" />
@@ -142,6 +161,10 @@
     <ClCompile Include="format_float.cpp" />
     <ClCompile Include="function.cpp" />
     <ClCompile Include="intrusive_ptr.cpp" />
+    <ClCompile Include="kernel.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="kernel_reflection.cpp">
       <SubType>
       </SubType>
@@ -189,12 +212,19 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="os\detail\atomic_win64.cpp" />
+    <ClCompile Include="os\detail\clipboard_base.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="os\detail\clipboard_win64.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="os\detail\fie_win64.cpp" />
     <ClCompile Include="os\detail\mutex_base.cpp" />
     <ClCompile Include="os\detail\mutex_win64.cpp" />
     <ClCompile Include="os\detail\thread_base.cpp" />
     <ClCompile Include="os\detail\thread_win64.cpp" />
-    <ClCompile Include="os\detail\win64.cpp" />
     <ClCompile Include="os\detail\window_win64.cpp" />
     <ClCompile Include="os\file_system.cpp" />
     <ClCompile Include="os\network.cpp" />
@@ -208,13 +238,14 @@
     <ClCompile Include="preprocessor\repeat.cpp" />
     <ClCompile Include="preprocessor\util.cpp" />
     <ClCompile Include="preprocessor\va_length.cpp" />
-    <ClCompile Include="scope_exit.ixx" />
     <ClCompile Include="singleton.cpp" />
     <ClCompile Include="stack_trace.cpp">
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="stdafx.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="nox_string.cpp">
       <SubType>
       </SubType>
@@ -245,7 +276,7 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>ClangCL</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">

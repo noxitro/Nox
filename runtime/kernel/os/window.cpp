@@ -12,20 +12,18 @@
 static_assert(false);
 #endif // NOX_WIN64
 
-using namespace nox;
-
-os::Window::Window()noexcept
+nox::os::Window::Window()noexcept
 {
 
 }
 
-os::Window::~Window()
+nox::os::Window::~Window()
 {
 
 }
 
 
-os::Window* os::Window::Create()
+nox::os::Window* nox::os::Window::Create()
 {
 #if NOX_WIN64
 	return nullptr;

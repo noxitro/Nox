@@ -21,6 +21,7 @@
 #include	"os/atomic.h"
 #include	"os/mutex.h"
 #include	"os/thread.h"
+#include	"os/clipboard.h"
 
 #include	"function.h"
 #include	"log_trace.h"
@@ -40,3 +41,4 @@
 #include	"os/file_system.h"
 
 #include	"type_id.h"
+#include	"debug_break.h"

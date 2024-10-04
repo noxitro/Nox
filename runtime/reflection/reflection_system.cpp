@@ -7,14 +7,13 @@
 
 #include	"manager.h"
 
-using namespace nox;
-
-void reflection::Initialize()
+void nox::reflection::Initialize()
 {
 	reflection::Reflection::CreateInstance();
 }
 
-void reflection::Finalize()
+void nox::reflection::Finalize()
 {
+	reflection::Reflection::Instance().Finalize();
 	reflection::Reflection::DeleteInstance();
 }

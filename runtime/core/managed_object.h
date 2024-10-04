@@ -17,11 +17,11 @@ namespace nox
 		void	ReleaseRef();
 
 		ManagedObject();
-		~ManagedObject();
+		~ManagedObject()override;
 
 	private:
 		/// @brief 参照カウンタ
-		int32 ref_count_;
+		volatile int32 ref_count_;
 	};
 
 	template<>

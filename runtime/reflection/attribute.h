@@ -203,7 +203,9 @@ namespace nox::reflection
 		/// @details	システム属性
 		class ExpressedReflection : public IAttribute
 		{
+
 		};
+
 	}
 
 	template<>

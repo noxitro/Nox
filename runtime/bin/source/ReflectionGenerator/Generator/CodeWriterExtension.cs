@@ -13,25 +13,50 @@ namespace ReflectionGenerator.Generator
     public static class CodeWriterExtension_Generator
     {
         //  タイトル
-        public static void WriteTitle(this CodeWriter codeWriter)
+        public static void WriteLineSource(this CodeWriter codeWriter)
         {
-            codeWriter.WriteLine("//   do not edit");
-            codeWriter.WriteLine("//   written from TypeGen");
+            codeWriter.WriteLine("//\tdo not edit");
+            codeWriter.WriteLine("//\twritten from TypeGen");
         }
 
         /// <summary>
         /// ヘッダ用のタイトル
         /// </summary>
-        public static void WriteHeader(this CodeWriter codeWriter)
+        public static void WriteLineHeader(this CodeWriter codeWriter)
         {
             codeWriter.WriteLine("#pragma once");
-            codeWriter.WriteLine("//   do not edit");
-            codeWriter.WriteLine("//   written from TypeGen");
+            codeWriter.WriteLine("//\tdo not edit");
+            codeWriter.WriteLine("//\twritten from TypeGen");
+        }
+
+        public static void WriteLinePPIf(this CodeWriter codeWriter, string s)
+        {
+            codeWriter.WriteLine($"#if\t{s}");
+        }
+
+        public static void WriteLinePPEndIf(this CodeWriter codeWriter, string s)
+        {
+            codeWriter.WriteLine($"#endif\t//\t{s}");
+        }
+
+        public static void WriteLinePragmaOnce(this CodeWriter codeWriter)
+        {
+            codeWriter.WriteLine("#pragma once");
+        }
+
+        public static void WriteLineCopyRight(this CodeWriter codeWriter)
+        {
+            codeWriter.WriteLine("//\tCopyright (C) 2024 NOX ENGINE");
         }
 
         public static void WriteIncludeStdafx(this CodeWriter codeWriter)
         {
             codeWriter.WriteLine("#include\t\"stdafx.h\"");
+        }
+
+        public static void WriteLineInclude(this CodeWriter codeWriter, string includePath)
+        {
+            codeWriter.WriteLine($"#include\t\"{includePath}\"");
         }
 
         public static void WriteNamespace(this CodeWriter codeWriter, string namespaceName)

@@ -13,15 +13,14 @@ namespace nox::reflection
 
 	/// @brief ユーザー定義の複合型情報
 	/// @details クラス、構造体、共用体が該当します
-	/// UserDefinedCompoundTypeInfo
 	class UserDefinedCompoundTypeInfo
 	{
 	public:
-		inline constexpr explicit UserDefinedCompoundTypeInfo(
+		inline consteval explicit UserDefinedCompoundTypeInfo(
 			const nox::reflection::Type& type,
 			ReflectionStringView name,
 			ReflectionStringView fullname,
-			ReflectionStringView namespace_,
+			ReflectionStringView _namespace,
 			const nox::reflection::Type& external_class_type,
 			const std::reference_wrapper<const nox::reflection::Type>* base_type_list,
 			const std::uint8_t base_type_length,
@@ -39,7 +38,7 @@ namespace nox::reflection
 			type_(type),
 			name_(name),
 			fullname_(fullname),
-			namespace_(namespace_),
+			namespace_(_namespace),
 			external_class_type_(external_class_type),
 			base_type_list_(base_type_list),
 			base_type_length_(base_type_length),
@@ -64,9 +63,10 @@ namespace nox::reflection
 		[[nodiscard]] inline	constexpr	ReflectionStringView GetFullName()const noexcept { return fullname_; }
 		[[nodiscard]] inline	constexpr	ReflectionStringView GetNamespace()const noexcept { return namespace_; }
 
-
 		[[nodiscard]] inline	constexpr	const nox::reflection::Type& GetType()const noexcept { return type_; }
 		[[nodiscard]] inline	constexpr	const nox::reflection::Type& GetExternalType()const noexcept { return external_class_type_; }
+		[[nodiscard]] inline	const nox::reflection::UserDefinedCompoundTypeInfo& GetExternalUserDefinedCompoundTypeInfo()const noexcept { return nox::util::Deref(external_class_type_.GetUserDefinedCompoundTypeInfo()); }
+
 
 		[[nodiscard]] inline	constexpr	std::uint8_t	GetAttributeListLength()const noexcept { return attribute_length_; }
 		[[nodiscard]] inline	constexpr	const std::span<const std::reference_wrapper<const reflection::ReflectionObject>> GetAttributeList()const noexcept { return std::span(attribute_list_, attribute_length_); }
@@ -197,7 +197,7 @@ namespace nox::reflection
 			{}
 		};
 
-		constexpr UserDefinedCompoundTypeInfoInvalid InvalidUserDefinedCompoundTypeInfo{};
+//		constexpr UserDefinedCompoundTypeInfoInvalid InvalidUserDefinedCompoundTypeInfo{};
 
 	/*	template<class T> requires(std::is_class_v<T> || std::is_union_v<T>)
 		inline constexpr nox::reflection::UserDefinedCompoundTypeInfo CreateUserDefinedCompoundTypeInfo(

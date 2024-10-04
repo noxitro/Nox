@@ -43,6 +43,9 @@ namespace nox::reflection
 		/// @brief 
 		Void,
 
+		/// @brief nullptr_t
+		NullPtr,
+
 		/// @brief 
 		Bool,
 
@@ -169,8 +172,8 @@ namespace nox::reflection
 		Global,
 	};
 
-	/// @brief タイプ属性
-	enum class TypeAttributeFlag : std::uint16_t
+	/// @brief 型修飾子
+	enum class TypeQualifierFlag : std::uint16_t
 	{
 		None = 0,
 
@@ -193,20 +196,20 @@ namespace nox::reflection
 		Polymorphic = 1 << 5
 	};
 
-	/// @brief 型修飾子
-	enum class TypeQualifierFlag : std::uint8_t
-	{
-		None = 0,
+	///// @brief 型修飾子
+	//enum class TypeQualifierFlag : std::uint8_t
+	//{
+	//	None = 0,
 
-		/// @brief const 修飾子
-		Const = 1 << 0,
+	//	/// @brief const 修飾子
+	//	Const = 1 << 0,
 
-		/// @brief volatile 修飾子
-		Volatile = 1 << 1,
+	//	/// @brief volatile 修飾子
+	//	Volatile = 1 << 1,
 
-		/// @brief 参照　修飾子
-		Reference = 1 << 2
-	};
+	//	/// @brief 参照　修飾子
+	//	Reference = 1 << 2
+	//};
 
 	/// @brief アクセスレベル
 	enum class AccessLevel : std::uint8_t
@@ -295,14 +298,14 @@ namespace nox::reflection
 	{
 		None = 0,
 
-		/// @brief メンバー
-		Member = 1 << 0,
+		/// @brief 静的
+		Static = 1 << 0,
 
 		/// @brief 定数
 		Constexpr = 1 << 1,
 
 		/// @brief 初期化定数
-		ConstInit = 1 << 2,
+		Constinit = 1 << 2,
 	};
 
 	/// @brief 修飾子識別
@@ -311,5 +314,20 @@ namespace nox::reflection
 		None = 0,
 		Const = 1 << 0,
 		Noexcept = 1 << 2
+	};
+
+	enum class BindingFlag : std::uint16_t
+	{
+		Default,
+		Public,
+		Private,
+		Static,
+	};
+
+	/// @brief 標準属性の定義
+	enum class AttrKind : std::uint8_t
+	{
+		/// @brief 不明
+		Invalid,
 	};
 }

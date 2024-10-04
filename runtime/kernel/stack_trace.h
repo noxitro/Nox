@@ -121,7 +121,7 @@ namespace nox::stack_walker
 			[[nodiscard]] inline	constexpr uint8 GetCollectLength()const noexcept { return collect_length_; }
 
 			[[nodiscard]] inline	const Stack& GetStack(const uint8 index)const {
-				NOX_ASSERT(index < collect_length_, nox::dev::RuntimeAssertErrorType::OutOfRange, U"コールスタックの取得に失敗　範囲外アクセス");
+				NOX_ASSERT(index < collect_length_, nox::assertion::RuntimeAssertErrorType::OutOfRange, U"コールスタックの取得に失敗　範囲外アクセス");
 				return stack_table_[index];
 			}
 

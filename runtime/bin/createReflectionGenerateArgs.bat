@@ -21,6 +21,8 @@ shift
 set EnableNamespaceList=%9
 shift
 set OutputDir=%9
+shift
+set IntermediateDir=%9
 
 rem 引数のログ出力
 echo SolutionDir:%SolutionDir%
@@ -34,6 +36,7 @@ echo PlatformDefine:%PlatformDefine%
 echo MSBuildBinPath:%MSBuildBinPath%
 echo EnableNamespaceList:%EnableNamespaceList%
 echo OutputDir:%OutputDir%
+echo IntermediateDir:%IntermediateDir%
 
 rem 出力先決定
 set textFilePath=%SolutionDir:"=%build\reflectionGenerateArgs.txt"
@@ -70,6 +73,9 @@ echo %EnableNamespaceList%>>%textFilePath%
 
 echo -OutputDir>>%textFilePath%
 echo %OutputDir%>>%textFilePath%
+
+echo -IntermediateDir>>%textFilePath%
+echo %IntermediateDir%>>%textFilePath%
 
 echo run end
 exit 0

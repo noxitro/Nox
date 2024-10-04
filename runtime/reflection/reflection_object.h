@@ -39,7 +39,9 @@ namespace nox::reflection
 		friend struct ::nox::reflection::gen::ReflectionTypeActivator<ClassType>;	\
 	private:\
 		NOX_ATTR_DECLARATION(::nox::reflection::attr::IgnoreReflection())	\
-		inline constexpr void StaticAssertNoxDeclareReflection()noexcept{ static_assert(std::is_same_v<ClassType, std::remove_cvref_t<decltype(*this)>>); }\
+		inline constexpr void StaticAssertNoxDeclareReflection()noexcept{ \
+			static_assert(std::is_same_v<ClassType, std::remove_cvref_t<decltype(*this)>>); \
+		}\
 		friend struct ::nox::reflection::gen::ReflectionGeneratedHolder<ClassType>
 //	end define
 
@@ -66,6 +68,17 @@ namespace nox::reflection
 	//protected:
 		[[nodiscard]] inline constexpr ReflectionObject()noexcept = default;
 		inline constexpr virtual ~ReflectionObject()noexcept {}
+
+	protected:
+		/// @brief		関数がオーバーライドされているか
+		bool	IsOverride(nox::uint64 function_id)const noexcept;
+
+		template<nox::concepts::EveryFunctionType T>
+		inline bool IsOverride()const noexcept
+		{
+			return ReflectionObject::IsOverride(nox::util::GetFunctionPointerID<T>());
+		}
+
 	private: 
 		inline constexpr ReflectionObject(const ReflectionObject&)noexcept = delete;
 		inline constexpr ReflectionObject(ReflectionObject&&)noexcept = delete;

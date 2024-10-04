@@ -5,25 +5,23 @@
 #include	"stdafx.h"
 #include	"managed_object.h"
 
-using namespace nox;
-
-ManagedObject::ManagedObject():ref_count_(1)
+nox::ManagedObject::ManagedObject():ref_count_(1)
 {
 
 }
 
-ManagedObject::~ManagedObject()
+nox::ManagedObject::~ManagedObject()
 {
 
 }
 
-void	ManagedObject::AddRef()
+void	nox::ManagedObject::AddRef()
 {
-	os::atomic::Increment(ref_count_);
+	nox::os::atomic::Increment(ref_count_);
 }
 
-void	ManagedObject::ReleaseRef()
+void	nox::ManagedObject::ReleaseRef()
 {
-	os::atomic::Decrement(ref_count_);
+	nox::os::atomic::Decrement(ref_count_);
 }
 

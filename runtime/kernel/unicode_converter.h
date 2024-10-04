@@ -25,6 +25,14 @@ namespace nox::unicode
 	}
 	nox::U8String	ConvertU8String(std::u32string_view str_view);
 
+	std::u8string_view	ConvertU8String(std::string_view str_view, std::span<nox::char8> dest_buffer);
+	std::u8string_view	ConvertU8String(std::u16string_view str_view, std::span<nox::char8> dest_buffer);
+	inline std::u8string_view	ConvertU8String(std::wstring_view str_view, std::span<nox::char8> dest_buffer)
+	{
+		return ConvertU8String({ reinterpret_cast<const char16*>(str_view.data()), str_view.size() }, dest_buffer);
+	}
+	std::u8string_view	ConvertU8String(std::u32string_view str_view, std::span<nox::char8> dest_buffer);
+
 #pragma region char16
 
 	std::span<char16>	ConvertU16String(const std::u8string_view str_view, std::span<char16> dest_buffer);

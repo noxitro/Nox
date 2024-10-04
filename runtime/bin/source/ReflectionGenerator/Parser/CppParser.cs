@@ -1,9 +1,9 @@
 ﻿using ClangSharp.Interop;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Numerics;
+
 namespace ReflectionGenerator.Parser
 {
     /// <summary>
@@ -60,13 +60,13 @@ namespace ReflectionGenerator.Parser
         /// <summary>
         /// 無視するroot namespace list
         /// </summary>
-        private IReadOnlyList<string> _IgnoreNamespaceList = new string[0];
+        private IReadOnlyList<string> _IgnoreNamespaceList = [];
 
 
         /// <summary>
         /// 解析対象のroot namespace list
         /// </summary>
-        private IReadOnlyList<string> _EnableRootNamespaceList = new string[0];
+        private IReadOnlyList<string> _EnableRootNamespaceList = [];
 
         /// <summary>
         /// 
@@ -145,6 +145,7 @@ namespace ReflectionGenerator.Parser
 
             if (System.IO.File.Exists(sourceFilePath) == false)
             {
+                Trace.ErrorLine(null, $"解析対象のソースファイルが存在しません:{sourceFilePath}");
                 return false;
             }
 
@@ -153,7 +154,7 @@ namespace ReflectionGenerator.Parser
                 Trace.ErrorLine(null, $"ソリューションファイルが存在しません:{solutionPath}");
                 return false;
             }
-
+             
        //     string outputFileBuild = "D:\\github\\Nox\\runtime\\bin\\source\\ReflectionGenerator";
 
             string outputFilePath = System.IO.Path.GetFullPath($"{System.IO.Path.GetTempPath()}/tmpMSBuild.log");
@@ -835,7 +836,7 @@ namespace ReflectionGenerator.Parser
                                 FullName = cxType.Spelling.CString,
                                 Namespace = string.Empty,
                                 AttributeInfoList = [],
-                                Module = Info.Module.Invalid,
+                                Module = Info.ArtifactData.Invalid,
                             };
 
                         }, null);
@@ -855,7 +856,7 @@ namespace ReflectionGenerator.Parser
                                 FullName = cxType.Spelling.CString,
                                 Namespace = string.Empty,
                                 AttributeInfoList = [],
-                                Module = Info.Module.Invalid,
+                                Module = Info.ArtifactData.Invalid,
                             };
 
                         }, null);
@@ -876,7 +877,7 @@ namespace ReflectionGenerator.Parser
                                 FullName = cxType.Spelling.CString,
                                 Namespace = string.Empty,
                                 AttributeInfoList = [],
-                                Module = Info.Module.Invalid,
+                                Module = Info.ArtifactData.Invalid,
                             };
 
                         }, null);
@@ -1175,10 +1176,10 @@ namespace ReflectionGenerator.Parser
                 return;
             }
 
-            Info.ClassUnionInfo CreateClassInfo()
+            Info.UserDefinedCompoundTypeInfo CreateClassInfo()
             {
 
-                Info.ClassUnionInfo newInfo = new Info.ClassUnionInfo()
+                Info.UserDefinedCompoundTypeInfo newInfo = new Info.UserDefinedCompoundTypeInfo()
                 {
                     AccessLevel = cursor.CXXAccessSpecifier.GetAccessLevel(),
                     CXType = cursor.Type,
@@ -1188,14 +1189,10 @@ namespace ReflectionGenerator.Parser
                     Module = CreateModule(cursor),
                 };
 
-                if (newInfo.FullName.Contains("nox::"))
-                {
-                    Trace.InfoLine(this, newInfo.FullName);
-                }
                 return newInfo;
             }
 
-            void PostProcess(Info.ClassUnionInfo info)
+            void PostProcess(Info.UserDefinedCompoundTypeInfo info)
             {
                 int numDecl = cursor.NumDecls;
                 for (uint i = 0; i < numDecl; ++i)
@@ -1214,6 +1211,41 @@ namespace ReflectionGenerator.Parser
             return;
         }
 
+        private void ParseFriend(ClangSharp.Interop.CXCursor cursor)
+        {
+            string fullName = cursor.Type.GetCanonicalTypeFullName();
+            string fullName1 = cursor.FriendDecl.Type.GetCanonicalTypeFullName();
+            string fullName2 = cursor.Spelling.CString;
+            string fullName3 = cursor.FriendDecl.Spelling.CString;
+
+            if (fullName != string.Empty)
+            {
+                Trace.InfoLine(this, fullName);
+            }
+
+            if (fullName1 != string.Empty)
+            {
+                Trace.InfoLine(this, fullName1);
+            }
+
+            if (fullName2 != string.Empty)
+            {
+                Trace.InfoLine(this, fullName2);
+            }
+
+            if (fullName3 != string.Empty)
+            {
+                Trace.InfoLine(this, fullName3);
+            }
+
+
+            if (fullName.Contains("nox::reflection::ReflectionGeneratedHolder") == true)
+            {
+                Info.UserDefinedCompoundTypeInfo parent = FindParseParent<Info.UserDefinedCompoundTypeInfo>(cursor);
+                parent.IsPrivateReflection = true;
+            }
+        }
+
         private void ParseVariable(ClangSharp.Interop.CXCursor cursor)
         {
             System.Diagnostics.Debug.Assert(cursor.Type.CanonicalType.kind != CXTypeKind.CXType_Invalid);
@@ -1221,13 +1253,17 @@ namespace ReflectionGenerator.Parser
             {
                 Info.VariableInfo variableInfo = new Info.VariableInfo()
                 {
+                    TypeData = cursor.Type.GetTypeData(),
                     Name = cursor.Spelling.CString,
                     FullName = cursor.GetFullName(),
+                    Namespace = cursor.GetNamespace(),
                     Module = CreateModule(cursor),
                     AccessLevel = cursor.CXXAccessSpecifier.GetAccessLevel(),
                     AttributeInfoList = GetCustomAttributeList(cursor),
                     Offset = cursor.OffsetOfField,
                     BitWith = cursor.FieldDeclBitWidth,
+                    IsConstexpr = cursor.IsConstexpr,
+                    IsStatic = cursor.IsStatic,
                 };
                 return variableInfo;
             }
@@ -1269,14 +1305,18 @@ namespace ReflectionGenerator.Parser
 
                 Info.TemplateVariableInfo variableInfo = new Info.TemplateVariableInfo()
                 {
+                    TypeData = cursor.Type.GetTypeData(),
                     Name = cursor.Spelling.CString,
                     FullName = cursor.GetFullName(),
+                    Namespace = cursor.GetNamespace(),
                     SpecializationsList = specializationsNameTable,
                     Module = CreateModule(cursor),
                     AccessLevel = cursor.CXXAccessSpecifier.GetAccessLevel(),
                     AttributeInfoList = GetCustomAttributeList(cursor),
                     BitWith = cursor.FieldDeclBitWidth,
                     Offset = cursor.OffsetOfField,
+                    IsConstexpr = cursor.IsConstexpr,
+                    IsStatic = cursor.IsStatic,
                 };
 
                 return variableInfo;
@@ -1372,6 +1412,7 @@ namespace ReflectionGenerator.Parser
                 {
                     Name = cursor.Spelling.CString,
                     FullName = specializationInfo.fullName,
+                    Namespace = specializationInfo.fullName,
                     FunctionTypeFullName = GetCanonicalFunctionTypeName(cursor),
                     NumArguments = numArguments > 0 ? (uint)numArguments : 0,
                     NumDefaultArguments = numDefaultArguments,
@@ -1522,6 +1563,7 @@ namespace ReflectionGenerator.Parser
                 {
                     Name = cursor.Spelling.CString,
                     FullName = cursor.GetFullName(),
+                    Namespace = cursor.GetNamespace(),
                     FunctionTypeFullName = cursor.Type.CanonicalType.GetCanonicalTypeFullName(),
                     NumArguments = numArguments > 0 ? (uint)numArguments : 0,
                     NumDefaultArguments = numDefaultArguments,
@@ -1580,6 +1622,10 @@ namespace ReflectionGenerator.Parser
                 case CXCursorKind.CXCursor_ClassDecl:
                 case CXCursorKind.CXCursor_StructDecl:
                     ParseClass(cursor);
+                    break;
+
+                case CXCursorKind.CXCursor_FriendDecl:
+                    ParseFriend(cursor);
                     break;
 
                 case CXCursorKind.CXCursor_ClassTemplatePartialSpecialization:
@@ -1652,6 +1698,7 @@ namespace ReflectionGenerator.Parser
                 return RootDeclHolder = new Info.DeclHolder()
                 {
                     Namespace = string.Empty,
+                    AttributeInfoList = [],
                     Module = CreateModule(cursor),
                 };
             }
@@ -1683,6 +1730,7 @@ namespace ReflectionGenerator.Parser
                 return new Info.DeclHolder()
                 {
                     Namespace = cursor.GetNamespace(),
+                    AttributeInfoList = GetCustomAttributeList(cursor),
                     Module = CreateModule(cursor),
                 };
             }
@@ -2168,7 +2216,7 @@ namespace ReflectionGenerator.Parser
         /// </summary>
         /// <param name="cursor"></param>
         /// <returns></returns>
-        private Info.Module CreateModule(ClangSharp.Interop.CXCursor cursor)
+        private Info.ArtifactData CreateModule(ClangSharp.Interop.CXCursor cursor)
         {
             const string unknownStr = "unknown";
 
@@ -2177,7 +2225,7 @@ namespace ReflectionGenerator.Parser
             cursor.Location.GetFileLocation(out ClangSharp.Interop.CXFile outFile, out uint outLine, out uint outColumn, out uint outOffset);
             if(outFile.Handle == 0)
             {
-                return new Info.Module() { ModuleName = unknownStr };
+                return new Info.ArtifactData() { ModuleName = unknownStr };
             }
             string? path = System.IO.Path.GetDirectoryName(outFile.Name.CString);
 
@@ -2186,7 +2234,7 @@ namespace ReflectionGenerator.Parser
             //  ルートディレクトリ内か？
             if (path == null || path.StartsWith(_ProjectRootDirectory) == false)
             {
-                return new Info.Module() { ModuleName = moduleName };
+                return new Info.ArtifactData() { ModuleName = moduleName };
             }
 
             while (path != null)
@@ -2211,7 +2259,7 @@ namespace ReflectionGenerator.Parser
                 path = Path.GetDirectoryName(path);
             }
 
-            Info.Module module = new Info.Module() { ModuleName = moduleName };
+            Info.ArtifactData module = new Info.ArtifactData() { ModuleName = moduleName };
 
             //  作成したモジュールを追加
             if (ModuleNameList.Contains(moduleName) == false)

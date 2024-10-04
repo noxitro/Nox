@@ -10,7 +10,7 @@ namespace ReflectionGenerator.Info
     public interface IHolder
     {
         public List<EnumInfo> EnumInfoList { get; } 
-        public List<ClassUnionInfo> TypeInfoList { get; } 
+        public List<UserDefinedCompoundTypeInfo> TypeInfoList { get; } 
         public List<VariableInfo> VariableInfoList { get; } 
         public List<FunctionInfo> FunctionInfoList { get; }
     }
@@ -22,7 +22,7 @@ namespace ReflectionGenerator.Info
 
         public List<DeclHolder> DeclHolderList { get; } = new List<DeclHolder>();
         public List<EnumInfo> EnumInfoList { get; } = new List<EnumInfo>();
-        public List<ClassUnionInfo> TypeInfoList { get; } = new List<ClassUnionInfo>();
+        public List<UserDefinedCompoundTypeInfo> TypeInfoList { get; } = new List<UserDefinedCompoundTypeInfo>();
         public List<VariableInfo> VariableInfoList { get; } = new List<VariableInfo>();
         public List<FunctionInfo> FunctionInfoList { get; } = new List<FunctionInfo>();
 

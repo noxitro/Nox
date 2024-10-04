@@ -6,8 +6,6 @@
 #include	"window_win64.h"
 
 #include	<filesystem>
-using namespace nox;
-using namespace nox::os;
 
 namespace
 {
@@ -17,29 +15,29 @@ namespace
 	}
 }
 
-os::detail::WindowWin64::WindowWin64()noexcept:
+nox::os::detail::WindowWin64::WindowWin64()noexcept:
 	window_handle_(nullptr),
 	instance_handle_(nullptr)
 {
 
 }
 
-os::detail::WindowWin64::~WindowWin64()
+nox::os::detail::WindowWin64::~WindowWin64()
 {
 
 }
 
-void	os::detail::WindowWin64::SetPos(const UInt2& pos)
+void	nox::os::detail::WindowWin64::SetPos(const UInt2& pos)
 {
 
 }
 
-UInt2 os::detail::WindowWin64::GetPos()const noexcept
+nox::UInt2 nox::os::detail::WindowWin64::GetPos()const noexcept
 {
 	return UInt2();
 }
 
-void	os::detail::WindowWin64::Init()
+void	nox::os::detail::WindowWin64::Init()
 {
 	instance_handle_ = ::GetModuleHandleW(nullptr);
 

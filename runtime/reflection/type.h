@@ -70,7 +70,7 @@ namespace nox::reflection
 			const std::uint32_t _id,					//	0
 			const nox::TypeId& _typeid,					//	1
 			const TypeKind _kind,						//	2		
-			const TypeAttributeFlag _attribute_flags,	//	3
+			const TypeQualifierFlag _attribute_flags,	//	3
 			const std::uint32_t _size,					//	4
 			const std::uint32_t _alignment,				//	5
 			const std::uint16_t array_rank,				//	6
@@ -118,7 +118,7 @@ namespace nox::reflection
 	public:
 
 		
-		/// @brief 変換可能かどうか
+		/// @brief toへ変換可能かどうか
 		inline constexpr bool	IsConvertible(const Type& to)const noexcept
 		{
 			if (*this == to)
@@ -145,8 +145,7 @@ namespace nox::reflection
 			//	参照型の場合、参照を取り除いた型でチェックする
 			if (IsReference() == true)
 			{
-				const Type& pointeeType = GetPointeeType();
-				if (pointeeType == to || pointeeType.GetRemoveConstType() == to)
+				if (pointee_type_ == to || pointee_type_ == to.GetRemoveConstType())
 				{
 					return true;
 				}
@@ -155,10 +154,19 @@ namespace nox::reflection
 				if (to.IsReference() == true)
 				{
 					const Type& toPointeeType = to.GetPointeeType();
-					if (pointeeType == toPointeeType || pointeeType.GetRemoveConstType() == toPointeeType)
+					if (pointee_type_ == toPointeeType || pointee_type_ == toPointeeType.GetRemoveConstType())
 					{
 						return true;
 					}
+				}
+			}
+			//	ポインタ型の場合
+			else
+			if (IsPointer() == true && to.IsPointer() == true)
+			{
+				if (pointee_type_ == to.pointee_type_.GetRemoveConstType())
+				{
+					return true;
 				}
 			}
 
@@ -186,7 +194,7 @@ namespace nox::reflection
 		[[nodiscard]] inline	constexpr TypeKind	GetTypeKind()const noexcept { return kind_; }
 
 		/// @brief タイプ属性を取得
-		[[nodiscard]] inline	constexpr TypeAttributeFlag GetTypeAttributeFlags()const noexcept { return attribute_flags_; }
+		[[nodiscard]] inline	constexpr TypeQualifierFlag GetTypeAttributeFlags()const noexcept { return attribute_flags_; }
 
 		/// @brief 配列の次元数を取得
 		[[nodiscard]] inline constexpr std::uint16_t GetArrayRank()const noexcept { return array_rank_; }
@@ -197,7 +205,7 @@ namespace nox::reflection
 		/// @brief タイプ属性を保持しているかチェック
 		/// @param flag タイプ属性
 		/// @return 保持しているかどうか
-		[[nodiscard]] inline	constexpr bool	IsTypeAttributeFlag(const TypeAttributeFlag flag)const noexcept { return util::IsBitAnd(attribute_flags_, flag); }
+		[[nodiscard]] inline	constexpr bool	IsTypeAttributeFlag(const TypeQualifierFlag flag)const noexcept { return util::IsBitAnd(attribute_flags_, flag); }
 
 		[[nodiscard]] inline constexpr const Type& GetPointeeType()const noexcept { return pointee_type_; }
 		/// @brief 配列型から次元を除去した型を取得
@@ -261,8 +269,8 @@ namespace nox::reflection
 		/// @brief 関数の戻り値の型を取得
 		[[nodiscard]] inline constexpr const Type& GetResultType()const noexcept { return result_type_; }
 
-		inline constexpr std::uint8_t GetArgumentLength()const noexcept { return argument_length_; }
-		inline constexpr const Type& GetArgumentType(const std::uint32_t index)const noexcept 
+		[[nodiscard]] inline constexpr std::uint8_t GetArgumentLength()const noexcept { return argument_length_; }
+		[[nodiscard]] inline constexpr const Type& GetArgumentType(const std::uint32_t index)const noexcept
 		{
 			if (index < argument_length_)
 			{
@@ -274,9 +282,8 @@ namespace nox::reflection
 		[[nodiscard]] inline constexpr bool IsValid()const noexcept { return id_ != 0; }
 
 		//	リフレクション実装から取得する
-		[[nodiscard]] inline const class UserDefinedCompoundTypeInfo* GetClassTypeInfo()const noexcept;
-		[[nodiscard]] inline const class UserDefinedCompoundTypeInfo* GetEnumTypeInfo()const noexcept;
-		[[nodiscard]] inline const class UserDefinedCompoundTypeInfo* GetTypeInfo()const noexcept;
+		[[nodiscard]] const class UserDefinedCompoundTypeInfo* GetUserDefinedCompoundTypeInfo()const noexcept;
+		[[nodiscard]] const class EnumInfo* GetEnumInfo()const noexcept;
 #pragma region virtual
 		/// @brief 関数の引数型情報リストを取得
 		[[nodiscard]] inline constexpr virtual std::span<const std::reference_wrapper<const nox::reflection::Type>> GetArgumentTypeList()const noexcept { return {}; }
@@ -321,7 +328,8 @@ namespace nox::reflection
 #pragma endregion
 
 #pragma region Qualifier
-		[[nodiscard]]	inline	constexpr	bool	IsConstQualified()const noexcept { return nox::util::IsBitAnd(attribute_flags_, TypeAttributeFlag::Const); }
+		[[nodiscard]]	inline	constexpr	bool	IsConstQualified()const noexcept { return nox::util::IsBitAnd(attribute_flags_, TypeQualifierFlag::Const); }
+		[[nodiscard]] inline	constexpr	bool	IsPointer()const noexcept { return kind_ == TypeKind::Pointer; }
 		[[nodiscard]]	inline	constexpr	bool	IsReference()const noexcept { return IsLValueReference() || IsRValueReference(); }
 		[[nodiscard]] inline	constexpr	bool	IsLValueReference()const noexcept { return kind_ == TypeKind::LvalueReference; }
 		[[nodiscard]] inline	constexpr	bool	IsRValueReference()const noexcept { return kind_ == TypeKind::RvalueReference; }
@@ -352,7 +360,7 @@ namespace nox::reflection
 		const TypeKind kind_;
 
 		/// @brief 型属性
-		const TypeAttributeFlag attribute_flags_;
+		const TypeQualifierFlag attribute_flags_;
 
 		/// @brief 配列の次元数
 		const std::uint16_t array_rank_;
@@ -361,6 +369,7 @@ namespace nox::reflection
 		const std::uint32_t id_;
 
 		const std::uint32_t array_extent_;
+
 		/// @brief 型のサイズ
 		const std::uint32_t size_;
 
@@ -403,7 +412,7 @@ namespace nox::reflection
 					0,
 					nox::GetInvalidTypeId(),
 					TypeKind::Invalid,
-					TypeAttributeFlag::None,
+					TypeQualifierFlag::None,
 					0,
 					0,
 					0,
@@ -618,6 +627,10 @@ namespace nox::reflection
 		if constexpr (std::is_pointer_v<T>)
 		{
 			return nox::reflection::detail::ReflectionTypeHolder<std::remove_pointer_t<T>>::value;
+		}
+		else if constexpr (std::is_reference_v<T>)
+		{
+			return nox::reflection::detail::ReflectionTypeHolder<std::remove_reference_t<T>>::value;
 		}
 		else
 		{

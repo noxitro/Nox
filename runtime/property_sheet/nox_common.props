@@ -34,6 +34,7 @@
       <BuildStlModules>false</BuildStlModules>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <TreatSpecificWarningsAsErrors>5030;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <Link />
     <Lib>
@@ -43,7 +44,7 @@
       <WarningLevel>4</WarningLevel>
     </Midl>
     <PreBuildEvent>
-      <Command>$(SolutionDir)bin\updateBuildTimeStampFile.bat $(ProjectName)</Command>
+      <Command>$(SolutionDir)bin\updateBuildTimeStampFile.bat $(ProjectName) $(SolutionDir)build\intermediate</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup />

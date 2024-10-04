@@ -13,21 +13,19 @@
 
 
 #include	<iostream>
-using namespace nox;
-
 
 namespace
 {
-	inline constexpr StringView GetLogCategoryName(nox::dev::LogCategory log_category)noexcept
+	inline constexpr nox::StringView GetLogCategoryName(nox::dev::LogCategory log_category)noexcept
 	{
-		constexpr std::array<StringView, nox::util::ToUnderlying(nox::dev::LogCategory::_Max)> table =
+		constexpr std::array<nox::StringView, nox::util::ToUnderlying(nox::dev::LogCategory::_Max)> table =
 		{
 			U"Info",
 			U"Warning",
 			U"Error",
 		};
 
-		return table.at(util::ToUnderlying(log_category));
+		return table.at(nox::util::ToUnderlying(log_category));
 	}
 }
 

@@ -4,11 +4,27 @@
 ///	@brief	gen
 #pragma once
 
-namespace nox::reflection
+namespace nox::reflection::gen
 {
-	/// @brief 初期化
-	void	InitializeGen();
+#if NOX_DEBUG
+#if NOX_WIN64
+	void	RegisterDebugX64();
+	void	UnregisterDebugX64();
+#endif // NOX_WIN64
+#endif // NOX_DEBUG
 
-	/// @brief 破棄
-	void	FinalizeGen();
+
+#if NOX_RELEASE
+#if NOX_WIN64
+	void	RegisterReleaseX64();
+	void	UnregisterReleaseX64();
+#endif // NOX_WIN64
+#endif // NOX_RELEASE
+
+#if NOX_MASTER
+#if NOX_WIN64
+	void	RegisterMasterX64();
+	void	UnregisterMasterX64();
+#endif // NOX_WIN64
+#endif // NOX_MASTER
 }

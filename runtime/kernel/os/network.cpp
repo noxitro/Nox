@@ -8,14 +8,13 @@
 #include    "windows.h"
 #include    "../assertion.h"
 #include    "../string_format.h"
-using namespace nox;
 
 namespace
 {
     
 }
 
-void	os::network::Initialize()
+void	nox::os::network::Initialize()
 {
 #if NOX_WIN64
 

@@ -2,11 +2,10 @@
 ///	@brief	enum_info
 #pragma once
 #include	"type.h"
+#include	"reflection_object.h"
 
 namespace nox::reflection
 {
-	class ReflectionObject;
-
 	/// @brief Enum値情報
 	class EnumeratorInfo
 	{
@@ -21,7 +20,7 @@ namespace nox::reflection
 			const std::int8_t value,
 			const ReflectionStringView name,
 			const ReflectionStringView fullname,
-			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::reference_wrapper<const ReflectionObject>* attribute_list,
 			const std::uint8_t attribute_length
 		)noexcept :
 			value_int8_(value),
@@ -34,7 +33,7 @@ namespace nox::reflection
 			const std::uint8_t value,
 			const ReflectionStringView name,
 			const ReflectionStringView fullname,
-			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::reference_wrapper<const ReflectionObject>* attribute_list,
 			const std::uint8_t attribute_length
 		)noexcept :
 			value_uint8_(value),
@@ -47,7 +46,7 @@ namespace nox::reflection
 			const std::int16_t value,
 			const ReflectionStringView name,
 			const ReflectionStringView fullname,
-			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::reference_wrapper<const ReflectionObject>* attribute_list,
 			const std::uint8_t attribute_length
 		)noexcept :
 			value_int16_(value),
@@ -60,7 +59,7 @@ namespace nox::reflection
 			const std::uint16_t value,
 			const ReflectionStringView name,
 			const ReflectionStringView fullname,
-			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::reference_wrapper<const ReflectionObject>* attribute_list,
 			const std::uint8_t attribute_length
 		)noexcept :
 			value_uint16_(value),
@@ -73,7 +72,7 @@ namespace nox::reflection
 			const std::int32_t value,
 			const ReflectionStringView name,
 			const ReflectionStringView fullname,
-			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::reference_wrapper<const ReflectionObject>* attribute_list,
 			const std::uint8_t attribute_length
 		)noexcept :
 			value_int32_(value),
@@ -86,7 +85,7 @@ namespace nox::reflection
 			const std::uint32_t value,
 			const ReflectionStringView name,
 			const ReflectionStringView fullname,
-			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::reference_wrapper<const ReflectionObject>* attribute_list,
 			const std::uint8_t attribute_length
 		)noexcept :
 			value_uint32_(value),
@@ -99,7 +98,7 @@ namespace nox::reflection
 			const std::int64_t value,
 			const ReflectionStringView name,
 			const ReflectionStringView fullname,
-			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::reference_wrapper<const ReflectionObject>* attribute_list,
 			const std::uint8_t attribute_length
 		)noexcept :
 			value_int64_(value),
@@ -112,7 +111,7 @@ namespace nox::reflection
 			const std::uint64_t value,
 			const ReflectionStringView name,
 			const ReflectionStringView fullname,
-			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::reference_wrapper<const ReflectionObject>* attribute_list,
 			const std::uint8_t attribute_length
 		)noexcept :
 			value_uint64_(value),
@@ -125,7 +124,7 @@ namespace nox::reflection
 			const char8_t value,
 			const ReflectionStringView name,
 			const ReflectionStringView fullname,
-			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::reference_wrapper<const ReflectionObject>* attribute_list,
 			const std::uint8_t attribute_length
 		)noexcept :
 			value_char8_(value),
@@ -138,7 +137,7 @@ namespace nox::reflection
 			const char16_t value,
 			const ReflectionStringView name,
 			const ReflectionStringView fullname,
-			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::reference_wrapper<const ReflectionObject>* attribute_list,
 			const std::uint8_t attribute_length
 		)noexcept :
 			value_char16_(value),
@@ -151,7 +150,7 @@ namespace nox::reflection
 			const char32_t value,
 			const ReflectionStringView name,
 			const ReflectionStringView fullname,
-			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::reference_wrapper<const ReflectionObject>* attribute_list,
 			const std::uint8_t attribute_length
 		)noexcept :
 			value_char32_(value),
@@ -164,7 +163,7 @@ namespace nox::reflection
 			const wchar_t value,
 			const ReflectionStringView name,
 			const ReflectionStringView fullname,
-			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::reference_wrapper<const ReflectionObject>* attribute_list,
 			const std::uint8_t attribute_length
 		)noexcept :
 			value_wchar16_(value),
@@ -177,7 +176,7 @@ namespace nox::reflection
 			const char value,
 			const ReflectionStringView name,
 			const ReflectionStringView fullname,
-			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::reference_wrapper<const ReflectionObject>* attribute_list,
 			const std::uint8_t attribute_length
 		)noexcept :
 			value_char_(value),
@@ -190,7 +189,7 @@ namespace nox::reflection
 			const bool value,
 			const ReflectionStringView name,
 			const ReflectionStringView fullname,
-			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::reference_wrapper<const ReflectionObject>* attribute_list,
 			const std::uint8_t attribute_length
 		)noexcept :
 			value_bool_(value),
@@ -209,35 +208,20 @@ namespace nox::reflection
 		
 		/// @brief 整数型を指定して値を取得
 		template<std::integral T>
-		[[nodiscard]] inline constexpr T GetValue()const noexcept { return GetValueImpl<T>(); }
+		[[nodiscard]] inline constexpr T GetValue()const noexcept { return nox::reflection::EnumeratorInfo::GetValueImpl<T>(); }
 
 		/// @brief enumの型を指定して値を取得
 		/// @tparam T Enum型
 		/// @return 値
 		template<concepts::Enum T>
-		[[nodiscard]] inline constexpr T GetValue()const noexcept { return static_cast<T>(GetValueImpl<std::underlying_type_t<T>>()); }
+		[[nodiscard]] inline constexpr T GetValue()const noexcept { return static_cast<T>(nox::reflection::EnumeratorInfo::GetValueImpl<std::underlying_type_t<T>>()); }
 
 	private:
 		template<std::integral T>
 		inline constexpr T GetValueImpl()const noexcept;
 
-		template<>	inline	constexpr std::int8_t GetValueImpl<std::int8_t>()const noexcept { return value_int8_; }
-		template<>	inline	constexpr std::uint8_t GetValueImpl<std::uint8_t>()const noexcept { return value_uint8_; }
-		template<>	inline	constexpr std::int16_t GetValueImpl<std::int16_t>()const noexcept { return value_int16_; }
-		template<>	inline	constexpr std::uint16_t GetValueImpl<std::uint16_t>()const noexcept { return value_uint16_; }
-		template<>	inline	constexpr std::int32_t GetValueImpl<std::int32_t>()const noexcept { return value_int32_; }
-		template<>	inline	constexpr std::uint32_t GetValueImpl<std::uint32_t>()const noexcept { return value_uint32_; }
-		template<>	inline	constexpr std::int64_t GetValueImpl<std::int64_t>()const noexcept { return value_int64_; }
-		template<>	inline	constexpr std::uint64_t GetValueImpl<std::uint64_t>()const noexcept { return value_uint64_; }
-		template<>	inline	constexpr char GetValueImpl<char>()const noexcept { return value_char_;; }
-		//template<>	inline	constexpr unsigned char GetValueImpl<unsigned char>()const noexcept { return mValueUChar; }
-		//template<>	inline	constexpr signed char GetValueImpl<signed char>()const noexcept { return mValueSChar; }
-		template<>	inline	constexpr char8_t GetValueImpl<char8_t>()const noexcept { return value_char8_; }
-		template<>	inline	constexpr char16_t GetValueImpl<char16_t>()const noexcept { return value_char16_; }
-		template<>	inline	constexpr char32_t GetValueImpl<char32_t>()const noexcept { return value_char32_; }
-		template<>	inline	constexpr wchar_t GetValueImpl<wchar_t>()const noexcept { return value_wchar16_; }
-		template<>	inline	constexpr bool GetValueImpl<bool>()const noexcept { return value_bool_; }
-
+		
+		
 	private:
 		//	enumが使える値の型
 		union
@@ -265,12 +249,28 @@ namespace nox::reflection
 		std::uint8_t attribute_length_;
 
 		/// @brief 属性テーブル
-		const std::reference_wrapper<const class ReflectionObject>* attribute_list_;
+		const std::reference_wrapper<const ReflectionObject>*const attribute_list_;
 
 		/// @brief 名前
 		ReflectionStringView name_;
 		ReflectionStringView fullname_;
 	};
+
+	template<>	inline	constexpr std::int8_t nox::reflection::EnumeratorInfo::GetValueImpl<std::int8_t>()const noexcept { return value_int8_; }
+	template<>	inline	constexpr std::uint8_t nox::reflection::EnumeratorInfo::GetValueImpl<std::uint8_t>()const noexcept { return value_uint8_; }
+	template<>	inline	constexpr std::int16_t nox::reflection::EnumeratorInfo::GetValueImpl<std::int16_t>()const noexcept { return value_int16_; }
+	template<>	inline	constexpr std::uint16_t nox::reflection::EnumeratorInfo::GetValueImpl<std::uint16_t>()const noexcept { return value_uint16_; }
+	template<>	inline	constexpr std::int32_t nox::reflection::EnumeratorInfo::GetValueImpl<std::int32_t>()const noexcept { return value_int32_; }
+	template<>	inline	constexpr std::uint32_t nox::reflection::EnumeratorInfo::GetValueImpl<std::uint32_t>()const noexcept { return value_uint32_; }
+	template<>	inline	constexpr std::int64_t nox::reflection::EnumeratorInfo::GetValueImpl<std::int64_t>()const noexcept { return value_int64_; }
+	template<>	inline	constexpr std::uint64_t nox::reflection::EnumeratorInfo::GetValueImpl<std::uint64_t>()const noexcept { return value_uint64_; }
+	template<>	inline	constexpr char nox::reflection::EnumeratorInfo::GetValueImpl<char>()const noexcept { return value_char_; }
+	template<>	inline	constexpr char8_t nox::reflection::EnumeratorInfo::GetValueImpl<char8_t>()const noexcept { return value_char8_; }
+	template<>	inline	constexpr char16_t nox::reflection::EnumeratorInfo::GetValueImpl<char16_t>()const noexcept { return value_char16_; }
+	template<>	inline	constexpr char32_t nox::reflection::EnumeratorInfo::GetValueImpl<char32_t>()const noexcept { return value_char32_; }
+	template<>	inline	constexpr wchar_t nox::reflection::EnumeratorInfo::GetValueImpl<wchar_t>()const noexcept { return value_wchar16_; }
+	template<>	inline	constexpr bool nox::reflection::EnumeratorInfo::GetValueImpl<bool>()const noexcept { return value_bool_; }
+
 
 	/// @brief Enum情報
 	class EnumInfo
@@ -278,16 +278,16 @@ namespace nox::reflection
 		inline constexpr explicit EnumInfo(const EnumInfo&)noexcept = delete;
 		inline constexpr explicit EnumInfo(const EnumInfo&&)noexcept = delete;
 	public:
-		inline constexpr explicit EnumInfo(
+		inline consteval explicit EnumInfo(
+			const nox::reflection::Type& type,
 			ReflectionStringView name,
 			ReflectionStringView fullname,
 			ReflectionStringView _namespace,
 			const nox::reflection::AccessLevel access_level,
-			const std::reference_wrapper<const class ReflectionObject>* attribute_list,
+			const std::reference_wrapper<const ReflectionObject>*const attribute_list,
 			std::uint8_t attribute_length,
-			const std::reference_wrapper<const EnumeratorInfo>* variable_list,
-			std::uint8_t variable_length,
-			const nox::reflection::Type& type
+			const std::reference_wrapper<const EnumeratorInfo>*const variable_list,
+			std::uint8_t variable_length
 		)noexcept :
 			name_(name),
 			fullname_(fullname),
@@ -307,7 +307,7 @@ namespace nox::reflection
 		inline	constexpr	ReflectionStringView	GetNamespace()const noexcept { return namespace_; }
 
 		inline	constexpr	std::uint8_t	GetAttributeLength()const noexcept { return attribute_length_; }
-		inline	constexpr	std::span<const std::reference_wrapper<const class ReflectionObject>> GetAttributeList()const noexcept { return std::span(attribute_list_, attribute_length_); }
+		inline	constexpr	std::span<const std::reference_wrapper<const ReflectionObject>> GetAttributeList()const noexcept { return std::span(attribute_list_, attribute_length_); }
 
 		inline	constexpr	std::span<const std::reference_wrapper<const EnumeratorInfo>> GetVariableList()const noexcept { return std::span(variable_list_, variable_length_); }
 		inline	constexpr	std::uint8_t	GetVariableLength()const noexcept { return variable_length_; }
@@ -337,7 +337,7 @@ namespace nox::reflection
 			}
 
 			nox::Vector<T> buffer(variable_length_);
-			if (!nox::reflection::EnumInfo::GetValueListImpl<T>(std::span(buffer)))
+			if (!nox::reflection::EnumInfo::GetValueListImpl<T>(std::span(buffer.data(), buffer.size())))
 			{
 				return std::nullopt;
 			}
@@ -367,21 +367,21 @@ namespace nox::reflection
 		const AccessLevel access_level_;
 
 		/// @brief 属性テーブル
-		const std::reference_wrapper<const class ReflectionObject>* attribute_list_;
+		const std::reference_wrapper<const ReflectionObject>*const attribute_list_;
 
 		/// @brief Enum値情報テーブル
-		const std::reference_wrapper<const EnumeratorInfo>* variable_list_;
+		const std::reference_wrapper<const EnumeratorInfo>*const variable_list_;
 
 		/// @brief 型情報
 		const nox::reflection::Type& type_;
 
 		/// @brief 名前
-		ReflectionStringView	name_;
+		const	ReflectionStringView	name_;
 
 		/// @brief 型名
-		ReflectionStringView	fullname_;
+		const	ReflectionStringView	fullname_;
 
 		/// @brief 名前空間
-		ReflectionStringView namespace_;
+		const ReflectionStringView namespace_;
 	};
 }

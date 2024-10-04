@@ -13,10 +13,6 @@
 #include	"windows.h"
 #endif // NOX_WINDOWS
 
-
-using namespace nox;
-using namespace nox::os;
-
 nox::String	nox::os::file_system::GetCurrentPath()
 {
 #if NOX_WINDOWS

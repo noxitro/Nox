@@ -29,7 +29,6 @@ namespace nox
 
 			//	オペレータ
 			[[nodiscard]] constexpr bool operator == (const Vector2D& _v) const noexcept { return x == _v.x && y == _v.y; }
-			[[nodiscard]] constexpr	bool operator != (const Vector2D& _v) const noexcept { return x != _v.x || y != _v.y; }
 
 			constexpr Vector2D& operator = (const Vector2D& _v)noexcept { x = _v.x; y = _v.y; return *this; }
 			constexpr Vector2D& operator += (const Vector2D& _v)noexcept { x += _v.x; y += _v.y;  return *this; }
@@ -45,8 +44,8 @@ namespace nox
 			constexpr Vector2D operator * (_ValueType _v) const noexcept { return Vector2D(x * _v, y * _v); }
 			constexpr Vector2D operator / (_ValueType _v) const noexcept { return Vector2D(x / _v, y / _v); }
 
-			inline	_ValueType operator[](const _ValueType index)const noexcept { return reinterpret_cast<const _ValueType*>(this)[index]; }
-			inline	_ValueType& operator[](const _ValueType index) noexcept { return reinterpret_cast<_ValueType*>(this)[index]; }
+			//inline	_ValueType operator[](const _ValueType index)const noexcept { return reinterpret_cast<const _ValueType*>(this)[index]; }
+		//	inline	_ValueType& operator[](const _ValueType index) noexcept { return reinterpret_cast<_ValueType*>(this)[index]; }
 		};
 	}
 

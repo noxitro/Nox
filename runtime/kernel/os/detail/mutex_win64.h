@@ -3,7 +3,7 @@
 #pragma once
 #include	"../windows.h"
 #include	"mutex_base.h"
-
+#if NOX_WIN64
 namespace nox::os::detail
 {
 	class MutexWin64 final: public MutexBase
@@ -45,3 +45,4 @@ namespace nox::os::detail
 		::CRITICAL_SECTION criticalSection_;
 	};
 }
+#endif // NOX_WIN64

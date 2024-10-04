@@ -11,9 +11,15 @@ namespace ReflectionGenerator.Info
     /// </summary>
     public class VariableInfo : BaseInfo
     {
+        /// <summary>
+        /// 変数の型
+        /// </summary>
+        public required TypeData TypeData { get; init; }
+
         public override TypeInfoKind TypeInfoKind => TypeInfoKind.Variable;
         public required string Name { get; init; }
         public required string FullName { get; init; }
+        public required string Namespace { get; init; }
 
         /// <summary>
         /// オフセット
@@ -25,12 +31,16 @@ namespace ReflectionGenerator.Info
         /// </summary>
         public required int BitWith { get; init; }
 
+        public required bool IsConstexpr { get; init; }
+        public required bool IsStatic { get; init; }
+
         public override string ToString() => FullName;
 
         public virtual bool IsTemplate { get; } = false;
 
-        public required IReadOnlyList<AttributeInfo> AttributeInfoList { get; init; }
+       
         public required AccessLevel AccessLevel { get; init; }
+
     }
 
     public class TemplateVariableInfo : VariableInfo

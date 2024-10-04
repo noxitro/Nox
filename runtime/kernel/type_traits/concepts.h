@@ -23,6 +23,9 @@ namespace nox::concepts
 	template<class T>
 	concept MemberObjectPointer = std::is_member_object_pointer_v<T>;
 
+	template<class T>
+	concept Class = std::is_class_v<T>;
+
 	/// @brief class or union
 	template<class T>
 	concept UserDefinedCompoundType = std::is_class_v<T> || std::is_union_v<T>;

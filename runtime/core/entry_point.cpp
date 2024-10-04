@@ -6,14 +6,13 @@
 #include	"entry_point.h"
 
 #include	"application.h"
-using namespace nox;
 
-int32 nox::EntryPoint(const std::span<const char16* const> args)
+nox::int32 nox::EntryPoint(const std::span<const char16* const> args)
 {
 	
 	//	メモリリークチェック
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-	//_CrtSetBreakAlloc(160);
+//	_CrtSetBreakAlloc(182);
 	
 	reflection::Initialize();
 

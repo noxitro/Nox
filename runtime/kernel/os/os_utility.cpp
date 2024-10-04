@@ -16,22 +16,19 @@
 #endif // NOX_WINDOWS
 
 
-using namespace nox;
-
-os::SystemInfo	os::GetSystemInfo()
+nox::os::SystemInfo	nox::os::GetSystemInfo()
 {
 #if NOX_WINDOWS
 
 #endif // NOX_WINDOWS
-
-
+	
 	return SystemInfo{
 		.hardwareNum = 0
 	};
 }
 
 
-uint8 os::GetHardwareConcurrency()
+nox::uint8 nox::os::GetHardwareConcurrency()
 {
 #if NOX_WINDOWS
 
@@ -43,7 +40,7 @@ uint8 os::GetHardwareConcurrency()
 #endif // NOX_WINDOWS
 }
 
-void* os::detail::GetProcAddressImpl(void* const moduleHandle, const char* const procNamePtr)
+void* nox::os::detail::GetProcAddressImpl(void* const moduleHandle, const char* const procNamePtr)
 {
 	::FARPROC const proc = ::GetProcAddress(
 		static_cast<::HMODULE>(moduleHandle), procNamePtr);
@@ -54,7 +51,7 @@ void* os::detail::GetProcAddressImpl(void* const moduleHandle, const char* const
 }
 
 
-void* os::LoadDLL(std::u16string_view path, void* handlePtr, const uint32 flags)
+void* nox::os::LoadDLL(std::u16string_view path, void* handlePtr, const uint32 flags)
 {
 	const ::HMODULE moduleHandlePtr = ::LoadLibraryExW(util::CharCast<wchar16>(path.data()), handlePtr, static_cast<::DWORD>(flags));
 
@@ -63,7 +60,7 @@ void* os::LoadDLL(std::u16string_view path, void* handlePtr, const uint32 flags)
 	return moduleHandlePtr;
 }
 
-bool os::UnloadDLL(nox::not_null<void*> moduleHandlePtr)
+bool nox::os::UnloadDLL(nox::not_null<void*> moduleHandlePtr)
 {
 	return ::FreeLibrary(static_cast<::HMODULE>(moduleHandlePtr.get()));
 }

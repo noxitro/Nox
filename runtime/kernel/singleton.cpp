@@ -9,8 +9,6 @@
 #include	"convert_string.h"
 #include	"string_format.h"
 
-using namespace nox;
-
 void	nox::detail::CheckSingletonCreateInstance(void* instance_ptr, std::string_view type_name)noexcept(false)
 {
 	NOX_ASSERT(instance_ptr == nullptr, util::Format(U"インスタンスを生成済みです:{0}", type_name.data()));

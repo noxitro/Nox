@@ -66,12 +66,15 @@ namespace nox::reflection
 	 * @return タイプ識別
 	*/
 	template<class T>
-		//requires(std::is_pointer_v<T> == false && std::is_reference_v<T> == false)
 	[[nodiscard]] constexpr TypeKind	GetTypeKind()noexcept
 	{
 		if constexpr (std::is_same_v<T, void> == true)
 		{
 			return TypeKind::Void;
+		}
+		else if constexpr (std::is_null_pointer_v<T> == true)
+		{
+			return TypeKind::NullPtr;
 		}
 		else if constexpr (std::is_same_v<T, bool> == true)
 		{
@@ -166,10 +169,6 @@ namespace nox::reflection
 		{
 			return TypeKind::Lambda;
 		}
-		else if constexpr (nox::IsCaptureLambdaV<T> == true)
-		{
-			return TypeKind::CaptureLambda;
-		}
 		else if constexpr (std::is_array_v<T> == true)
 		{
 			return TypeKind::Array;
@@ -192,9 +191,15 @@ namespace nox::reflection
 		}
 		else
 		{
-			//NOX_ASSERT(false, u"不明な型");
+			NOX_ASSERT(false, nox::util::Format(U"不明な型:{0}", nox::util::GetTypeName<T>()));
 			return TypeKind::Invalid;
 		}
+	}
+
+	template<class T> requires(std::is_const_v<T> || std::is_volatile_v<T>)
+	[[nodiscard]] constexpr TypeKind	GetTypeKind()noexcept
+	{
+		return nox::reflection::GetTypeKind<std::remove_cv_t<T>>();
 	}
 
 	/**
@@ -203,32 +208,32 @@ namespace nox::reflection
 	 * @return
 	*/
 	template<class T>
-	[[nodiscard]] inline constexpr TypeAttributeFlag GetTypeAttributeFlags()noexcept
+	[[nodiscard]] inline constexpr TypeQualifierFlag GetTypeAttributeFlags()noexcept
 	{
-		TypeAttributeFlag typeAttributeFlags = TypeAttributeFlag::None;
+		TypeQualifierFlag typeAttributeFlags = TypeQualifierFlag::None;
 		if constexpr (std::is_const_v<T> == true)
 		{
-			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeAttributeFlag::Const);
+			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeQualifierFlag::Const);
 		}
 		if constexpr (std::is_volatile_v<T> == true)
 		{
-			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeAttributeFlag::Volatile);
+			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeQualifierFlag::Volatile);
 		}
 		if constexpr (std::is_final_v<T> == true)
 		{
-			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeAttributeFlag::Final);
+			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeQualifierFlag::Final);
 		}
 		if constexpr (std::is_abstract_v<T> == true)
 		{
-			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeAttributeFlag::Abstract);
+			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeQualifierFlag::Abstract);
 		}
 		if constexpr (std::is_unsigned_v<T> == true)
 		{
-			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeAttributeFlag::Unsigned);
+			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeQualifierFlag::Unsigned);
 		}
 		if constexpr (std::is_polymorphic_v<T> == true)
 		{
-			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeAttributeFlag::Polymorphic);
+			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeQualifierFlag::Polymorphic);
 		}
 
 		return typeAttributeFlags;
@@ -240,34 +245,34 @@ namespace nox::reflection
 	{
 		FunctionAttributeFlag retFlags = FunctionAttributeFlag::None;
 
-		if constexpr (IsFunctionConstValue<T> == true)
+		if constexpr (nox::IsFunctionConstValue<T> == true)
 		{
-			retFlags = util::BitOr(retFlags, FunctionAttributeFlag::Const);
+			retFlags = nox::util::BitOr(retFlags, FunctionAttributeFlag::Const);
 		}
 
 		if constexpr (std::is_member_function_pointer_v<T> == false)
 		{
-			retFlags = util::BitOr(retFlags, FunctionAttributeFlag::Static);
+			retFlags = nox::util::BitOr(retFlags, FunctionAttributeFlag::Static);
 		}
 
-		if constexpr (IsFunctionVolatileValue<T> == true)
+		if constexpr (nox::IsFunctionVolatileValue<T> == true)
 		{
-			retFlags = util::BitOr(retFlags, FunctionAttributeFlag::Volatile);
+			retFlags = nox::util::BitOr(retFlags, FunctionAttributeFlag::Volatile);
 		}
 
-		if constexpr (IsFunctionLvalueValue<T> == true)
+		if constexpr (nox::IsFunctionLvalueValue<T> == true)
 		{
-			retFlags = util::BitOr(retFlags, FunctionAttributeFlag::LvalueRef);
+			retFlags = nox::util::BitOr(retFlags, FunctionAttributeFlag::LvalueRef);
 		}
 
-		if constexpr (IsFunctionRvalueValue<T> == true)
+		if constexpr (nox::IsFunctionRvalueValue<T> == true)
 		{
-			retFlags = util::BitOr(retFlags, FunctionAttributeFlag::RvalueRef);
+			retFlags = nox::util::BitOr(retFlags, FunctionAttributeFlag::RvalueRef);
 		}
 
-		if constexpr (IsFunctionNoexceptValue<T> == true)
+		if constexpr (nox::IsFunctionNoexceptValue<T> == true)
 		{
-			retFlags = util::BitOr(retFlags, FunctionAttributeFlag::Noexcept);
+			retFlags = nox::util::BitOr(retFlags, FunctionAttributeFlag::Noexcept);
 		}
 
 		return retFlags;
@@ -283,9 +288,9 @@ namespace nox::reflection
 		FieldAttributeFlag retFlags = FieldAttributeFlag::None;
 
 		//	メンバーか
-		if constexpr (IsFieldMemberVariableValue<T> == true)
+		if constexpr (nox::IsFieldMemberVariableValue<T> == true)
 		{
-			retFlags = util::BitOr(retFlags, FieldAttributeFlag::Member);
+			retFlags = nox::util::BitOr(retFlags, FieldAttributeFlag::Static);
 		}
 
 		return retFlags;

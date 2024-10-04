@@ -41,7 +41,7 @@ namespace nox::os::atomic
 	template<std::integral T> requires(sizeof(T) == sizeof(__int64))
 		inline T Decrement(volatile T& value)
 	{
-		return InterlockedDecrementt64(static_cast<volatile __int64*>(&value));
+		return InterlockedDecrement64(static_cast<volatile __int64*>(&value));
 	}
 }
 #endif // NOX_WIN64

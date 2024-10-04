@@ -5,5 +5,3 @@
 
 #include	"function_info.h"
 #include	"variable_info.h"
-using namespace nox;
-using namespace nox::reflection;

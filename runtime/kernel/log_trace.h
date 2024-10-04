@@ -36,7 +36,8 @@ namespace nox::dev
 
 #if NOX_DEBUG
 #define	NOX_INFO_LINE(...) ::nox::dev::LogTrace(::nox::dev::LogCategory::Info, __VA_ARGS__)
-
+#define NOX_WARNING_LINE(...) ::nox::dev::LogTrace(::nox::dev::LogCategory::Warning, __VA_ARGS__)
+#define NOX_ERROR_LINE(...) ::nox::dev::LogTrace(::nox::dev::LogCategory::Error, __VA_ARGS__)
 #else
 #define	NOX_INFO_LINE(...)
 

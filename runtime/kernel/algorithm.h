@@ -10,6 +10,14 @@
 
 #include	"assertion.h"
 
+namespace nox::concepts::detail
+{
+	template <typename T>
+	concept Deletable = requires(T ptr) {
+		{ delete ptr };
+	};
+}
+
 /// @brief ユーティリティ
 namespace nox::util
 {
@@ -49,6 +57,19 @@ namespace nox::util
 		{
 			return &*result;
 		}
+		
+	}
+
+	template<class MapContainer, class ReturnType>
+	inline decltype(auto) Find(MapContainer&& container, typename MapContainer::key_type&& key, const ReturnType(*process)(typename MapContainer::value_type&&))
+	{
+		auto it = container.find(key);
+		if (it == container.end())
+		{
+			return nullptr;
+		}
+
+		return process(it->second);
 	}
 
 	/// @brief 範囲の中から、指定された条件を満たす最初の要素を検索する
@@ -145,7 +166,47 @@ namespace nox::util
 		}
 	}
 #pragma endregion
+	/// @brief 関数ポインタのアドレスをint64で取得する
+	/// @tparam T 
+	/// @param v 
+	/// @return 
+	template<nox::concepts::MemberFunctionPointer T>
+	inline nox::uint64 GetFunctionPointerID(const T v)
+	{
+		const void* const& p = reinterpret_cast<const void* const&>(v);
+		return reinterpret_cast<nox::uint64>(p);
+	}
 
+	/// @brief 関数ポインタのアドレスをint64で取得する
+	/// @tparam T 
+	/// @param v 
+	/// @return 
+	template<typename T> requires(std::is_function_v<T> || nox::concepts::GlobalFunctionPointer<T>)
+	inline nox::uint64 GetFunctionPointerID(const T v)
+	{
+		return reinterpret_cast<nox::uint64>(v);
+	}
+
+	/// @brief	
+	/// @tparam T 
+	/// @param v 
+	/// @return 
+	template<nox::concepts::MemberObjectPointer T>
+	inline nox::uint64 GetObjectPointerID(const T v)
+	{
+		const void* const& p = reinterpret_cast<const void* const&>(v);
+		return reinterpret_cast<nox::uint64>(p);
+	}
+
+	/// @brief 
+	/// @tparam T 
+	/// @param v 
+	/// @return 
+	template<nox::concepts::Pointer T>
+	inline nox::uint64 GetObjectPointerID(const T v)
+	{
+		return reinterpret_cast<nox::uint64>(v);
+	}
 
 	template<class T>
 	inline constexpr bool IsNullPointer(T&& v)noexcept
@@ -163,7 +224,7 @@ namespace nox::util
 	template<class T>
 	inline constexpr decltype(auto) At(T&& container, size_t length, size_t index)noexcept(false)
 	{
-		NOX_ASSERT(index < length, nox::dev::RuntimeAssertErrorType::OutOfRange, U"index over");
+		NOX_ASSERT(index < length, nox::assertion::RuntimeAssertErrorType::OutOfRange, U"index over");
 		return container[index];
 	}
 
@@ -255,11 +316,12 @@ namespace nox::util
 #pragma endregion
 
 	
+
 	/// @brief delete呼び出し後nullptrを格納する
 	/// @tparam T ポインタの型
 	/// @param ptr delete対象のポインタ
-	template<concepts::Pointer T> 
-	inline constexpr void SafeDelete(T& ptr)
+	template<nox::concepts::detail::Deletable T>
+	inline constexpr void SafeDelete(T&& ptr)
 	{
 		if (ptr != nullptr)
 		{

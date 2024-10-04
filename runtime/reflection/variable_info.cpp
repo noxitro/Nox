@@ -6,9 +6,6 @@
 #include	"user_defined_compound_type_info.h"
 #include	"manager.h"
 
-using namespace nox;
-using namespace nox::reflection;
-
 const nox::reflection::UserDefinedCompoundTypeInfo* nox::reflection::VariableInfo::GetContainingUserDefinedCompoundTypeInfo()const noexcept
 {
 	if (containing_type_ == nox::reflection::InvalidType)
@@ -16,5 +13,5 @@ const nox::reflection::UserDefinedCompoundTypeInfo* nox::reflection::VariableInf
 		return nullptr;
 	}
 
-	return Reflection::Instance().FindUserDefinedCompoundTypeInfo(containing_type_);
+	return nox::reflection::Reflection::Instance().FindClassInfo(containing_type_);
 }

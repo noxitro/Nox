@@ -5,7 +5,7 @@
 #pragma once
 #include	"thread_base.h"
 
-#include	"win64.h"
+#include	"os/windows.h"
 
 namespace nox::os::detail
 {

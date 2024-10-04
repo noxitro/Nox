@@ -44,13 +44,15 @@ namespace nox
 
 
 			//!<@brief	Vector2D<_ValueType>へのキャスト
-			[[nodiscard]]	inline Vector2D<_ValueType>& CastVector2D()noexcept { return *reinterpret_cast<Vector2D<_ValueType>*>(this); }
+			[[nodiscard]]	inline Vector2D<_ValueType>& CastXY()noexcept { return *reinterpret_cast<Vector2D<_ValueType>*>(this); }
+
 			//!<@brief	Vector2D<_ValueType>へのキャストconstVer
-			[[nodiscard]]	inline const Vector2D<_ValueType>& CastVector2D()const noexcept { return *reinterpret_cast<const Vector2D<_ValueType>*>(this); }
-			//!<@brief	Vector2D<_ValueType>への変換
-			[[nodiscard]]	constexpr Vector2D<_ValueType> ToVector2D()const noexcept { return Vector2D<_ValueType>(x, y); }
+			[[nodiscard]]	inline const Vector2D<_ValueType>& CastXY()const noexcept { return *reinterpret_cast<const Vector2D<_ValueType>*>(this); }
+
 			//!<@brief	XZを取得
 			[[nodiscard]]	constexpr Vector2D<_ValueType> GetXZ()const noexcept { return Vector2D<_ValueType>(x, z); }
+			/// @brief YZを取得
+			[[nodiscard]]	constexpr Vector2D<_ValueType> GetYZ()const noexcept { return Vector2D<_ValueType>(y, z); }
 
 			//!<@brief	配列へのキャスト
 			[[nodiscard]]		constexpr inline	std::array<_ValueType*, 3> CastArray() { return std::array<_ValueType*, 3>{&x, & y, & z}; }
@@ -63,7 +65,6 @@ namespace nox
 			//	operator
 			//------------------------------------------------------
 			[[nodiscard]]	constexpr inline bool operator == (const Vector3D& _v) const noexcept { return x == _v.x && y == _v.y && z == _v.z; }
-			[[nodiscard]]	constexpr	inline bool operator != (const Vector3D& _v) const noexcept { return x != _v.x || y != _v.y || z != _v.z; }
 
 			constexpr inline Vector3D& operator = (const Vector3D& _v)noexcept { x = _v.x; y = _v.y; z = _v.z; return *this; }
 			constexpr inline Vector3D& operator += (const Vector3D& _v)noexcept { x += _v.x; y += _v.y; z += _v.z; return *this; }

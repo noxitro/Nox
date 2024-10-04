@@ -81,11 +81,30 @@ namespace ReflectionGenerator.Parser
                 case CX_CXXAccessSpecifier.CX_CXXProtected: return AccessLevel.Protected;
                 case CX_CXXAccessSpecifier.CX_CXXPrivate: return AccessLevel.Private;
                 case CX_CXXAccessSpecifier.CX_CXXInvalidAccessSpecifier:
-                    return AccessLevel.Public;
+                    return AccessLevel.Private;
             }
             Trace.ErrorLine(null, string.Format("不明なCX_CXXAccessSpecifierです :{0}", accessSpecifier.ToString()));
             return AccessLevel.Public;
         }
+
+        public static string GetRuntimeFqn(this AccessLevel accessLevel)
+        {
+            switch (accessLevel)
+            {
+                case AccessLevel.Public:
+                    return "nox::reflection::AccessLevel::Public";
+
+                case AccessLevel.Protected:
+                    return "nox::reflection::AccessLevel::Protected";
+
+                case AccessLevel.Private:
+                default:
+                    return "nox::reflection::AccessLevel::Private";
+            }
+
+            
+        }
+
         public static string GetBaseTypeName(this CXType cursor)
         {
             switch (cursor.kind)
@@ -198,7 +217,12 @@ namespace ReflectionGenerator.Parser
             return strList;
         }
 
-        public static string GetFullName(this ClangSharp.Interop.CXCursor cursor)
+        public static Info.TypeData GetTypeData(this in ClangSharp.Interop.CXType type)
+        {
+            return new Info.TypeData() { RawValue = type };
+        }
+
+        public static string GetFullName(this in ClangSharp.Interop.CXCursor cursor)
         {
             ClangSharp.Interop.CXCursor parentCursor = cursor.SemanticParent;
 
@@ -260,7 +284,7 @@ namespace ReflectionGenerator.Parser
             //return str;
         }
 
-        public static string GetNamespace(this ClangSharp.Interop.CXCursor cursor)
+        public static string GetNamespace(this in ClangSharp.Interop.CXCursor cursor)
         {
             string str = string.Empty;
 

@@ -450,6 +450,9 @@ namespace nox
 		inline constexpr IDelegate()noexcept :
 			callable_ptr_(nullptr) {}
 
+		inline constexpr IDelegate(const IDelegate& other)noexcept = delete;
+		inline constexpr IDelegate(IDelegate& other)noexcept = delete;
+
 	protected:
 		ICallable* callable_ptr_;
 	};
@@ -484,25 +487,57 @@ namespace nox
 		inline constexpr Delegate()noexcept :
 			buffer_{ 0 } {}
 
-		inline constexpr Delegate(const Delegate& other)noexcept :
-			buffer_(other.buffer_)
+		inline constexpr Delegate(const Delegate& rhs)noexcept :
+			buffer_(rhs.buffer_)
 		{
-			if (other.callable_ptr_ != nullptr)
+			if (rhs.callable_ptr_ != nullptr)
 			{
-				this->callable_ptr_ = other.callable_ptr_->Clone(*buffer_.data());
+				this->callable_ptr_ = rhs.callable_ptr_->Clone(*buffer_.data());
 			}
 		}
 
-		template<class T>
-		inline constexpr Delegate(Delegate<T>&& other)noexcept:
-			buffer_(other.buffer_)
+		inline constexpr Delegate(Delegate&& rhs)noexcept :
+			buffer_(rhs.buffer_)
 		{
-			if (other.callable_ptr_ != nullptr)
+			if (rhs.callable_ptr_ != nullptr)
 			{
-				this->callable_ptr_ = other.callable_ptr_->Clone(*buffer_.data());
-				other.callable_ptr_ = nullptr;
+				this->callable_ptr_ = rhs.callable_ptr_->Clone(*buffer_.data());
+				rhs.callable_ptr_ = nullptr;
 			}
-			other.buffer_ = { 0 };
+			rhs.buffer_ = { 0 };
+		}
+
+		template<class T>
+		inline constexpr Delegate(Delegate<T>&& rhs)noexcept:
+			buffer_(rhs.buffer_)
+		{
+			if (rhs.callable_ptr_ != nullptr)
+			{
+				this->callable_ptr_ = rhs.callable_ptr_->Clone(*buffer_.data());
+				rhs.callable_ptr_ = nullptr;
+			}
+			rhs.buffer_ = { 0 };
+		}
+
+		inline constexpr Delegate& operator=(const Delegate& rhs)
+		{
+			buffer_ = rhs.buffer_;
+			if (rhs.callable_ptr_ != nullptr)
+			{
+				this->callable_ptr_ = rhs.callable_ptr_->Clone(*buffer_.data());
+			}
+			return *this;
+		}
+
+		inline constexpr Delegate& operator=(Delegate&& rhs)
+		{
+			buffer_ = rhs.buffer_;
+			if (rhs.callable_ptr_ != nullptr)
+			{
+				this->callable_ptr_ = rhs.callable_ptr_->Clone(*buffer_.data());
+				rhs.callable_ptr_ = nullptr;
+			}
+			rhs.buffer_ = { 0 };
 		}
 
 		inline constexpr bool operator==(const Delegate& rhs)const noexcept

@@ -15,27 +15,29 @@
 #include	"stack_trace.h"
 #include	"string_format.h"
 
-using namespace nox;
-using namespace nox::dev;
-
 namespace
 {
-	os::Mutex kMutex;
+	nox::os::Mutex kMutex;
 
-	inline constexpr std::u16string_view GetRuntimeAssertErrorTypeName(const RuntimeAssertErrorType type)
+	inline constexpr std::u16string_view GetRuntimeAssertErrorTypeName(const nox::assertion::RuntimeAssertErrorType type)
 	{
-		constexpr std::array< std::u16string_view, util::ToUnderlying(RuntimeAssertErrorType::_MAX)> table =
+		constexpr std::array< std::u16string_view, nox::util::ToUnderlying(nox::assertion::RuntimeAssertErrorType::_MAX)> table =
 		{
 			u"",
 			u"NullAccess"
 		};
 
-		return table.at(util::ToUnderlying(type));
+		return table.at(nox::util::ToUnderlying(type));
 	}
+
+	inline constexpr bool is_high_surrogate(const nox::char16 c) { return (c >= 0xD800) && (c < 0xDC00); }
+
+	inline constexpr bool is_low_surrogate(const nox::char16 c) { return (c >= 0xDC00) && (c < 0xE000); }
+
 }
-void	dev::detail::Assert(RuntimeAssertErrorType errorType, std::u32string_view message, const std::source_location& source_location)noexcept(false)
+
+void	nox::assertion::detail::Assert(nox::assertion::RuntimeAssertErrorType errorType, std::u32string_view message, const std::source_location& source_location)noexcept(false)
 {
-	//	
 	std::array<char16, 1024> native_message = { 0 };
 	unicode::ConvertU16String(message, native_message);
 
@@ -43,11 +45,11 @@ void	dev::detail::Assert(RuntimeAssertErrorType errorType, std::u32string_view m
 	unicode::ConvertU16String(source_location.file_name(), file_name);
 
 	std::array<char16, 2048> assert_message = { 0 };
-	util::Format(assert_message, u"{0}\n{1}\nLine:{2}, Column:{3}", native_message.data(), file_name.data(), source_location.line(), source_location.column());
+	nox::util::Format(assert_message, u"{0}\n{1}\nLine:{2}, Column:{3}", native_message.data(), file_name.data(), source_location.line(), source_location.column());
 
 	NOX_LOCAL_SCOPE(os::ScopedLock, kMutex);
 
-	::_wassert(util::CharCast<wchar16>(assert_message.data()), util::CharCast<wchar16>(file_name.data()), source_location.line());
+	::_wassert(nox::util::CharCast<wchar16>(assert_message.data()), nox::util::CharCast<wchar16>(file_name.data()), source_location.line());
 
 //	std::array<wchar16, 1028> conv_message = {L'\0'};
 //	nox::unicode::ConvertWString(message.data(), conv_message);

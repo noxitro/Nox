@@ -11,6 +11,11 @@ namespace ReflectionGenerator.Info
         public List<Info.VariableInfo> VariableInfoList { get; } = new List<Info.VariableInfo>();
     }
 
+    public struct TypeData
+    {
+        public required ClangSharp.Interop.CXType RawValue { get; init; }
+    }
+
     /// <summary>
     /// 型情報
     /// </summary>
@@ -63,9 +68,6 @@ namespace ReflectionGenerator.Info
         }
 
         public required AccessLevel AccessLevel { get; init; }
-
-        public required IReadOnlyList<AttributeInfo> AttributeInfoList { get; init; }
-
         public override string ToString() => FullName;
         #endregion
     }
@@ -73,19 +75,22 @@ namespace ReflectionGenerator.Info
     /// <summary>
     /// クラス union情報
     /// </summary>
-    public class ClassUnionInfo : TypeInfo, IHolder
+    public class UserDefinedCompoundTypeInfo : TypeInfo, IHolder
     {
         public List<EnumInfo> EnumInfoList { get; } = new List<EnumInfo>();
-        public List<ClassUnionInfo> TypeInfoList { get; } = new List<ClassUnionInfo>();
+        public List<UserDefinedCompoundTypeInfo> TypeInfoList { get; } = new List<UserDefinedCompoundTypeInfo>();
         public List<VariableInfo> VariableInfoList { get; } = new List<VariableInfo>();
         public List<FunctionInfo> FunctionInfoList { get; } = new List<FunctionInfo>();
 
         public TypeInfo? ParentTypeInfo { get; set; } = null;
 
-        public bool IsPrivateReflection { get; init; } 
+        /// <summary>
+        /// Privateメンバもリフレクション対象
+        /// </summary>
+        public bool IsPrivateReflection { get; set; } = false;
     }
 
-    public class TemplateClassUnionInfo : ClassUnionInfo
+    public class TemplateClassUnionInfo : UserDefinedCompoundTypeInfo
     {
         //  
         public required IReadOnlyList<string> SpecializationsList { get; init; } 

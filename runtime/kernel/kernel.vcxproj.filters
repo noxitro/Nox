@@ -123,9 +123,6 @@
     <ClInclude Include="os\detail\thread_win64.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="os\detail\win64.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="os\detail\window_win64.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -249,6 +246,18 @@
     <ClInclude Include="kernel_reflection.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="debug_break.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="os\detail\clipboard_win64.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="os\detail\clipboard_base.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="os\clipboard.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="basic_definition.cpp">
@@ -354,9 +363,6 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="os\detail\thread_win64.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="os\detail\win64.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="os\detail\window_win64.cpp">
@@ -467,9 +473,6 @@
     <ClCompile Include="math\math_definition.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="scope_exit.ixx">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="math\vector2d.ixx">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -477,6 +480,18 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="kernel_reflection.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="debug_break.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="os\detail\clipboard_win64.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="os\detail\clipboard_base.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

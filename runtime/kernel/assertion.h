@@ -9,7 +9,7 @@
 
 namespace nox
 {
-	namespace dev
+	namespace assertion
 	{
 		enum class RuntimeAssertErrorType : uint8
 		{
@@ -28,12 +28,12 @@ namespace nox
 
 		inline	void	Assert(RuntimeAssertErrorType errorType, std::u32string_view message, const std::source_location location = std::source_location::current())noexcept(false)
 		{
-			dev::detail::Assert(errorType, message, location);
+			assertion::detail::Assert(errorType, message, location);
 		}
 
 		inline	void	Assert(std::u32string_view message, const std::source_location location = std::source_location::current())noexcept(false)
 		{
-			dev::detail::Assert(RuntimeAssertErrorType::Default, message, location);
+			assertion::detail::Assert(RuntimeAssertErrorType::Default, message, location);
 		}
 	}
 }
@@ -41,7 +41,7 @@ namespace nox
 #if NOX_DEBUG || NOX_RELEASE
 #define	NOX_ASSERT(expression, ...) \
 	static_assert(std::is_same_v<decltype(expression), bool>, "expression is not bool"); \
-	(void)((!!(expression)) || (::nox::dev::Assert(__VA_ARGS__), 0)); \
+	(void)((!!(expression)) || (::nox::assertion::Assert(__VA_ARGS__), 0)); \
 	__analysis_assume(expression)
 #else
 #define	NOX_ASSERT(...) 

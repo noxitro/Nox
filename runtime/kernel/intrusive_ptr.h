@@ -6,14 +6,14 @@
 namespace nox
 {
 	template<class T>
-	inline void IntrusivePtrAddReference(T&) = delete;
+	inline void IntrusivePtrAddReference(T&) ;
 
 //	/// @brief 関数を登録した時に呼ばれる
 //	inline constexpr void IntrusivePtrAddReference(auto)noexcept;
 
 	/// @brief 関数を登録解除した時に呼ばれる
 	template<class T>
-	inline constexpr void IntrusivePtrReleaseReference(T&) = delete;
+	inline constexpr void IntrusivePtrReleaseReference(T&) ;
 
 	/// @brief		侵入型スマートポインタ
 	/// @details	リソースカウンタアクセサ、解放メソッドは各自用意
@@ -24,9 +24,16 @@ namespace nox
 		inline constexpr IntrusivePtr()noexcept :
 			instance_(nullptr) {}
 
-		inline explicit IntrusivePtr(T& instance)noexcept :
-			instance_(&instance)
+		inline explicit IntrusivePtr(T*& instance)noexcept :
+			instance_(instance)
 		{
+			IntrusivePtrAddReference(*instance_);
+		}
+
+		template<std::derived_from<T> U>
+		inline constexpr IntrusivePtr(const IntrusivePtr<U>& rhs)noexcept
+		{
+			instance_ = rhs.Get();
 			IntrusivePtrAddReference(*instance_);
 		}
 

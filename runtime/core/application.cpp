@@ -5,244 +5,120 @@
 //import std;
 #include	"stdafx.h"
 #include	"application.h"
-#include	"../kernel/multicast_delegate.h"
-
+#include	"module_entry.h"
 //import nox.math;
 
-using namespace nox;
+//	test
+#include	"core_entry.h"
 
 namespace
 {
-	inline	void HookException(uint32 code, ::_EXCEPTION_POINTERS* const exception_ptr)
-	{
-
-	}
-}
-
-void	Application::Initialize()
-{
-}
-
-namespace
-{
-}
-
-struct RuObj
-{
-//	RuObj(int v) {}
-
-//	void Func() {}
-	//[[__attribute__((alloc_align([]()constexpr qnoexcept {return 0; }())))]]
-	
-	int value = 12;
-
-	void func(int a) {}
-
-	enum class E
+	inline	void HookException(nox::uint32 code, ::_EXCEPTION_POINTERS* const exception_ptr)
 	{
 		
-		A,
-	};
-};
-
-namespace
-{
-//	constexpr nox::reflection::FunctionArgumentInfo arg00(u"v", nox::reflection::TypeKind::Int32);
-}
-
-class RefArray
-{
-
-};
-
-struct CopyDeleteObjectBase
-{
-	//virtual ~CopyDeleteObjectBase()noexcept = 0;
-};
-
-struct CopyDeleteObject : CopyDeleteObjectBase
-{
-public:
-	Vec3 data;
-	static CopyDeleteObject create(Vec3 v) {
-		return CopyDeleteObject(v);
-	}
-	//inline constexpr ~CopyDeleteObject()noexcept override{}
-private:
-	CopyDeleteObject(Vec3 v):data(v) {}
-
-protected:
-	[[nodiscard]] inline constexpr CopyDeleteObject()noexcept = default;
-	
-private:
-	inline constexpr CopyDeleteObject(const CopyDeleteObject&)noexcept = delete;
-	inline constexpr CopyDeleteObject(CopyDeleteObject&&)noexcept = delete;
-
-	inline constexpr void operator =(const CopyDeleteObject&)noexcept = delete;
-	inline constexpr void operator =(CopyDeleteObject&&)noexcept = delete;
-};
-
-struct Rest
-{
-	inline auto getSpan(){
-		return vtable;
-	}
-
-	std::span<std::reference_wrapper<CopyDeleteObjectBase>> vtable;
-
-	inline Rest(std::span<std::reference_wrapper<CopyDeleteObjectBase>> s) :vtable(s) {}
-};
-
-template<class T>
-struct Span
-{
-	T* ptr;
-	std::size_t size;
-};
-
-template <typename T>
-struct is_anonymous {
-	static constexpr bool value = nox::util::GetTypeName<T>().find("unnamed") != std::string_view::npos;
-};
-
-namespace
-{
-	inline constexpr const nox::reflection::UserDefinedCompoundTypeInfo& GetBase();
-
-	constexpr auto baseCompundDataTypeInfoBase = nox::reflection::UserDefinedCompoundTypeInfo(
-		nox::reflection::InvalidType,
-		U"abc",
-		U"abc",
-		U"abc",
-		nox::reflection::InvalidType,
-		nullptr,
-		0,
-		nullptr,
-		0,
-		nullptr,
-		0,
-		nullptr,
-		0,
-		nullptr,
-		0,
-		nullptr,
-		0
-	);
-
-	constexpr auto baseCompundDataTypeInfoChild = nox::reflection::UserDefinedCompoundTypeInfo(
-		nox::reflection::InvalidType,
-		U"abc",
-		U"abc",
-		U"abc",
-		nox::reflection::InvalidType,
-		nullptr,
-		0,
-		nullptr,
-		0,
-		nullptr,
-		0,
-		nullptr,
-		0,
-		nullptr,
-		0,
-		nullptr,
-		0
-	);
-
-	inline constexpr const nox::reflection::UserDefinedCompoundTypeInfo& GetBase()
-	{
-		return baseCompundDataTypeInfoChild;
 	}
 }
 
-void popup(std::optional<int*>& intr)
+void	nox::Application::Init()
 {
+	//	モジュールエントリクラス群を収集
+	//	auto class_info = nox::reflection::Reflection::Instance().FindClassInfo<nox::ModuleEntry>();
+	nox::ModuleEntry* const core_entry = static_cast<nox::ModuleEntry*>(nox::reflection::Typeof<nox::CoreEntry>().CreateObject());
+	if (core_entry != nullptr)
 	{
-		int rvaluess = 333312;
-		intr = &rvaluess;
+		core_entry->Entry();
+
+		module_entry_list_.emplace_back(*core_entry);
 	}
+
+	//	モジュールエントリの準備
+
+
 }
 
-void	Application::Run()
+void	nox::Application::Run()
 {
+	this->Init();
 
-	std::optional<int*> intr;
-	popup(intr);
-	auto vyuse = intr.value();
-	if (intr != std::nullopt)
+	decltype(auto) list = module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Init)];
+
+	for (auto&& entry_info : list)
 	{
+		(*entry_info.entry.*entry_info.func)();
+		entry_info.Invoke();
 	}
 
-	auto opt = baseCompundDataTypeInfoChild.GetEnumInfo(0).GetValueList<int>();
-	//	compound data types
-	struct
-	{
+	//nox::os::Thread game_thread;
+	//game_thread.SetThreadName(u"Game");
+	//game_thread.Dispatch([this]() {
 
-	}dataStruct;
-	struct
-	{
+	//	while (true)
+	//	{
+	//		try
+	//		{
+	//			this->Update();
+	//		}
+	//		catch (const std::exception&)
+	//		{
+	//			//	
+	//			break;
+	//		}
+	//	}
+	//	});
 
-	}dataStruct2;
-	using unnamedClass = decltype(dataStruct);
-	using unnamedClass2 = decltype(dataStruct2);
-	constexpr auto nameUnsaneee = is_anonymous<unnamedClass>::value;
-	constexpr auto nameUnsaneee2 = util::GetTypeName<unnamedClass2>();
+	//game_thread.Wait();
 
-	{
-		nox::reflection::ReflectionObject* obj = nullptr;
-		CopyDeleteObject* obj2 = nullptr;
-	//	auto sp2 = std::span(obj, 2);
-	}
-	auto data0 = CopyDeleteObject::create(Vec3::One());
-	auto data1 = CopyDeleteObject::create(Vec3::AxisX());
-	const std::array< CopyDeleteObjectBase, 2> dataArray{ CopyDeleteObject::create(Vec3::One()), CopyDeleteObject::create(Vec3::AxisX()) };
-	const std::array ary99 = { std::reference_wrapper<const CopyDeleteObjectBase>(data0), std::reference_wrapper<const CopyDeleteObjectBase>(data1) };
-	auto sto = std::span(ary99);
-
-	decltype(auto) r00 = std::reference_wrapper<const CopyDeleteObjectBase>(data0);
-	const CopyDeleteObjectBase& r0928 = r00;
-
-	//std::span< sesese2 = sesese;
-
-	//Rest rest(sesese);
-
-	//auto span = rest.getSpan();
-	//decltype(auto) sp0 = span[0];
-
-	os::Thread game_thread;
-	game_thread.SetThreadName(u"Game");
-	game_thread.Dispatch([this]() {
-
-		while (true)
-		{
-			try
-			{
-				this->Update();
-				break;
-			}
-			catch (const std::exception&)
-			{
-				//	
-			}
-		}
-		});
-
-	game_thread.Wait();
+	Exit();
 }
 
-void	Application::Finalize()
+void	nox::Application::InvokeModuleEntry(const UpdateCategory category)
 {
+
 }
 
-inline	void	Application::Update()
+void	nox::Application::Update()
 {
-	try
-	{
-		NOX_ASSERT(false, U"🐘さんだね");
 
-	}
-	catch (const std::exception&)
-	{
+}
 
+void	nox::Application::Exit()
+{
+	for (nox::ModuleEntry& entry : module_entry_list_)
+	{
+		nox::util::SafeDelete(&entry);
 	}
+
+	module_entry_list_.clear();
+	module_entry_list_.shrink_to_fit();
+}
+
+constexpr nox::Application::UpdateCategory	nox::Application::ToUpdateCategory(nox::ModuleEntryCategory category)noexcept
+{
+	if (category < nox::ModuleEntryCategory::_Setup)
+	{
+		return UpdateCategory::Init;
+	}
+	if (category < nox::ModuleEntryCategory::_Start)
+	{
+		return UpdateCategory::Setup;
+	}
+	if (category < nox::ModuleEntryCategory::_Update)
+	{
+		return UpdateCategory::Start;
+	}
+	if (category < nox::ModuleEntryCategory::_Terminal)
+	{
+		return UpdateCategory::Update;
+	}
+	if (category < nox::ModuleEntryCategory::_Finalize)
+	{
+		return UpdateCategory::Terminal;
+	}
+	return UpdateCategory::Finalize;
+}
+
+void	nox::Application::RegisterModuleEntry(void(nox::ModuleEntry::*const func)(), nox::ModuleEntry& entry, const nox::ModuleEntryCategory type)
+{
+	nox::Vector<ModuleEntryInfo>& vector = module_entry_info_list_table_[nox::util::ToUnderlying(ToUpdateCategory(type))];
+	vector.emplace_back(ModuleEntryInfo{ type, func, entry  });
 }

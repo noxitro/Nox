@@ -13,15 +13,15 @@ namespace nox::reflection
 	public:
 #pragma region 変数アクセスの型定義
 
-		using SetterMemberFunc = void(*)(nox::not_null<void*> instance_ptr, const void* const valuePtr);
-		using GetterMemberFunc = void(*)(not_null<void*> outPtr, not_null<const void*> instance_ptr);
-		using SetterArrayMemberFunc = bool(*)(not_null<void*> instance_ptr, const void* const valuePtr, const std::uint32_t index);
-		using GetterArrayMemberFunc = bool(*)(not_null<void*> outPtr, not_null<const void*> instance_ptr, const std::uint32_t index);
+		using SetterMemberFunc = void(*)(nox::not_null<void*> instance, nox::not_null<void*> value);
+		using GetterMemberFunc = void(*)(not_null<void*> out, not_null<const void*> instance);
+		using SetterArrayMemberFunc = bool(*)(not_null<void*> instance, const void* const valuePtr, const std::uint32_t index);
+		using GetterArrayMemberFunc = bool(*)(not_null<void*> out, not_null<const void*> instance, const std::uint32_t index);
 
 		using SetterGlobalFunc = void(*)(const void* const value);
-		using GetterGlobalFunc = void(*)(not_null<void*> outPtr);
+		using GetterGlobalFunc = void(*)(not_null<void*> out);
 		using SetterArrayGlobalFunc = bool(*)(const void* const value, const std::uint32_t index);
-		using GetterArrayGlobalFunc = bool(*)(not_null<void*> outPtr, const std::uint32_t index);
+		using GetterArrayGlobalFunc = bool(*)(not_null<void*> out, const std::uint32_t index);
 #pragma endregion
 	public:
 		/// @brief メンバフィールド用のコンストラクタ
@@ -161,10 +161,12 @@ namespace nox::reflection
 		inline constexpr	bool	IsFieldAttributeFlag(const FieldAttributeFlag flag)const noexcept { return util::IsBitAnd(field_attribute_flgas_, flag); }
 
 		/// @brief メンバ変数か
-		inline	constexpr	bool	IsMember()const noexcept { return IsFieldAttributeFlag(FieldAttributeFlag::Member); }
+		inline	constexpr	bool	IsStatic()const noexcept { return IsFieldAttributeFlag(FieldAttributeFlag::Static); }
 
 		/// @brief 読み取り専用
 		inline	constexpr	bool	IsReadOnly()const noexcept { return type_.IsConstQualified(); }
+
+		virtual std::uint64_t GetID()const noexcept = 0;
 #pragma endregion
 
 #pragma region 変数の取得
@@ -231,7 +233,7 @@ namespace nox::reflection
 		/// @return 
 		inline	constexpr	bool	CheckMemberAccess(const Type& return_type, const Type& owner_class_type)const noexcept
 		{
-			if (IsMember() == false)
+			if (IsStatic() == true)
 			{
 				return false;
 			}
@@ -251,7 +253,7 @@ namespace nox::reflection
 
 		inline constexpr	bool	CHeckAccess(const Type& return_type)const noexcept
 		{
-			if (IsMember() == true)
+			if (IsStatic() == false)
 			{
 				return false;
 			}
@@ -396,6 +398,215 @@ namespace nox::reflection
 
 	namespace detail
 	{
+		template<class T> requires(std::is_pointer_v<T> || std::is_member_object_pointer_v<T>)
+		class VariableInfoImpl final: public VariableInfo
+		{
+		public:
+			inline constexpr VariableInfoImpl(
+				const T& object_pointer,
+				const ReflectionStringView name,
+				const ReflectionStringView fullname,
+				const ReflectionStringView _namespace,
+				nox::reflection::AccessLevel access_level,
+				const std::uint32_t bit_width,
+				const std::uint32_t field_offset,
+				const std::reference_wrapper<const class nox::reflection::ReflectionObject>* attribute_list,
+				const std::uint8_t	attribute_list_length,
+				const nox::reflection::FieldAttributeFlag field_attribute_flgas,
+				const nox::reflection::Type& type,
+				const nox::reflection::Type& owner_class_type,
+				const SetterMemberFunc setter_member_func = nullptr,
+				const GetterMemberFunc getter_member_func = nullptr,
+				const GetterMemberFunc getter_address_member_func = nullptr,
+				const SetterArrayMemberFunc setter_array_member_func = nullptr,
+				const GetterArrayMemberFunc getter_array_member_func = nullptr,
+				const GetterArrayMemberFunc getter_array_address_member_func = nullptr
+			)noexcept:
+				VariableInfo(
+					name,
+					fullname,
+					_namespace,
+					access_level,
+					bit_width,
+					field_offset,
+					attribute_list,
+					attribute_list_length,
+					field_attribute_flgas,
+					type,
+					owner_class_type,
+					setter_member_func,
+					getter_member_func,
+					getter_address_member_func,
+					setter_array_member_func,
+					getter_array_member_func,
+					getter_array_address_member_func
+				),
+				object_pointer_(object_pointer)
+			{}
+
+			inline constexpr VariableInfoImpl(
+				const T& object_pointer,
+				ReflectionStringView name,
+				ReflectionStringView fullname,
+				ReflectionStringView _namespace,
+				nox::reflection::AccessLevel access_level,
+				const std::uint32_t bit_width,
+				const std::uint32_t field_offset,
+				const std::reference_wrapper<const class nox::reflection::ReflectionObject>* attribute_list,
+				std::uint8_t	attribute_list_length,
+				nox::reflection::FieldAttributeFlag field_attribute_flgas,
+				const nox::reflection::Type& type,
+				const nox::reflection::Type& owner_class_type,
+				const SetterGlobalFunc setter_global_func = nullptr,
+				const GetterGlobalFunc getter_global_func = nullptr,
+				const GetterGlobalFunc getter_address_global_func = nullptr,
+				const SetterArrayGlobalFunc setter_array_global_func = nullptr,
+				const GetterArrayGlobalFunc getter_array_global_func = nullptr,
+				const GetterArrayGlobalFunc getter_array_address_global_func = nullptr
+			)noexcept:
+				VariableInfo(
+					name,
+					fullname,
+					_namespace,
+					access_level,
+					bit_width,
+					field_offset,
+					attribute_list,
+					attribute_list_length,
+					field_attribute_flgas,
+					type,
+					owner_class_type,
+					setter_global_func,
+					getter_global_func,
+					getter_address_global_func,
+					setter_array_global_func,
+					getter_array_global_func,
+					getter_array_address_global_func
+				),
+				object_pointer_(object_pointer)
+			{}
+
+			inline std::uint64_t GetID()const noexcept override
+			{
+				if constexpr (std::is_member_object_pointer_v<T> == true)
+				{
+					const void* const& p = reinterpret_cast<const void* const&>(object_pointer_);
+					return reinterpret_cast<std::uint64_t>(p);
+				}
+				else
+				{
+					return reinterpret_cast<std::uint64_t>(object_pointer_);
+				}
+			}
+
+		private:
+			const T& object_pointer_;
+		};
+
+		template<class T>
+		inline constexpr nox::reflection::detail::VariableInfoImpl<T> CreateVariableInfo(
+			const T& object_pointer,
+			ReflectionStringView name,
+			ReflectionStringView fullname,
+			ReflectionStringView _namespace,
+			nox::reflection::AccessLevel access_level,
+			const std::uint32_t bit_width,
+			const std::uint32_t field_offset,
+			const std::reference_wrapper<const class nox::reflection::ReflectionObject>* attribute_list,
+			std::uint8_t	attribute_list_length,
+			bool is_constexpr,
+			bool is_constinit,
+			const VariableInfo::SetterMemberFunc setter_member_func = nullptr,
+			const VariableInfo::GetterMemberFunc getter_member_func = nullptr,
+			const VariableInfo::GetterMemberFunc getter_address_member_func = nullptr,
+			const VariableInfo::SetterArrayMemberFunc setter_array_member_func = nullptr,
+			const VariableInfo::GetterArrayMemberFunc getter_array_member_func = nullptr,
+			const VariableInfo::GetterArrayMemberFunc getter_array_address_member_func = nullptr)noexcept
+		{
+			nox::reflection::FieldAttributeFlag field_attribute_flgas = nox::reflection::GetFieldAttributeFlags<T>();
+			if (is_constexpr == true)
+			{
+				field_attribute_flgas |= nox::reflection::FieldAttributeFlag::Constexpr;
+			}
+			if (is_constinit == true)
+			{
+				field_attribute_flgas |= nox::reflection::FieldAttributeFlag::Constinit;
+			}
+
+			return nox::reflection::detail::VariableInfoImpl<T>(
+				object_pointer,
+				name,
+				fullname,
+				_namespace,
+				access_level,
+				bit_width,
+				field_offset,
+				attribute_list,
+				attribute_list_length,
+				field_attribute_flgas,
+				nox::reflection::Typeof<nox::FieldReturnType<T>>(),
+				nox::reflection::Typeof<nox::FieldClassType<T>>(),
+				setter_member_func,
+				getter_member_func,
+				getter_address_member_func,
+				setter_array_member_func,
+				getter_array_member_func,
+				getter_array_address_member_func
+			);
+		}
+
+		template<class T>
+		inline constexpr nox::reflection::detail::VariableInfoImpl<T> CreateVariableInfo(
+			const T& object_pointer,
+			ReflectionStringView name,
+			ReflectionStringView fullname,
+			ReflectionStringView _namespace,
+			nox::reflection::AccessLevel access_level,
+			const std::uint32_t bit_width,
+			const std::uint32_t field_offset,
+			const std::reference_wrapper<const class nox::reflection::ReflectionObject>* attribute_list,
+			std::uint8_t	attribute_list_length,
+			bool is_constexpr,
+			bool is_constinit,
+			const VariableInfo::SetterGlobalFunc setter_global_func = nullptr,
+			const VariableInfo::GetterGlobalFunc getter_global_func = nullptr,
+			const VariableInfo::GetterGlobalFunc getter_address_global_func = nullptr,
+			const VariableInfo::SetterArrayGlobalFunc setter_array_global_func = nullptr,
+			const VariableInfo::GetterArrayGlobalFunc getter_array_global_func = nullptr,
+			const VariableInfo::GetterArrayGlobalFunc getter_array_address_global_func = nullptr)noexcept
+		{
+			nox::reflection::FieldAttributeFlag field_attribute_flgas = nox::reflection::GetFieldAttributeFlags<T>();
+			if (is_constexpr == true)
+			{
+				field_attribute_flgas |= nox::reflection::FieldAttributeFlag::Constexpr;
+			}
+			if (is_constinit == true)
+			{
+				field_attribute_flgas |= nox::reflection::FieldAttributeFlag::Constinit;
+			}
+
+			return nox::reflection::detail::VariableInfoImpl<T>(
+				object_pointer,
+				name,
+				fullname,
+				_namespace,
+				access_level,
+				bit_width,
+				field_offset,
+				attribute_list,
+				attribute_list_length,
+				field_attribute_flgas,
+				nox::reflection::Typeof<nox::FieldReturnType<T>>(),
+				nox::reflection::InvalidType,
+				setter_global_func,
+				getter_global_func,
+				getter_address_global_func,
+				setter_array_global_func,
+				getter_array_global_func,
+				getter_array_address_global_func
+			);
+		}
+
 		///// @brief メンバフィールドのフィールド情報を作成
 		///// @tparam _OwnerType 
 		///// @param name 

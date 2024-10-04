@@ -12,3 +12,4 @@
 #include	"attribute.h"
 
 #include	"reflection_system.h"
+#include	"attribute_decl.h"

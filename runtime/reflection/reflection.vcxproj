@@ -19,6 +19,10 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="attribute_decl.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="definition.h">
       <SubType>
       </SubType>
@@ -90,6 +94,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="attribute.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="attribute_decl.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -176,7 +184,7 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>ClangCL</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">

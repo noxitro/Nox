@@ -14,6 +14,7 @@ namespace ReflectionGenerator.Info
         public override TypeInfoKind TypeInfoKind => TypeInfoKind.Function;
         public required string Name { get; init; }
         public required string FullName { get; init; }
+        public required string Namespace { get; init; }
 
         /// <summary>
         /// 型名
@@ -31,8 +32,6 @@ namespace ReflectionGenerator.Info
         public required bool IsVirtual { get; init; }
         public required bool IsPureVirtual { get; init; }
         public required bool IsConsteval { get; init; }
-
-        public required IReadOnlyList<AttributeInfo> AttributeInfoList { get; init; }
 
         public virtual bool IsTemplated { get; } = false;
     }

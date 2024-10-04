@@ -4,15 +4,4 @@
 ///	@brief	gen
 #include	"stdafx.h"
 #include	"gen.h"
-
-using namespace nox;
-
-void	nox::reflection::InitializeGen()
-{
-
-}
-
-void	nox::reflection::FinalizeGen()
-{
-
-}
+ 

@@ -14,29 +14,25 @@
 #include	"../../algorithm.h"
 #include	"../../convert_string.h"
 
-using namespace nox;
-using namespace nox::os;
-using namespace nox::os::detail;
-
 namespace
 {
 	/**
 	 * @brief ネイティブハンドルテーブル
 	*/
-	static inline constinit std::array<::HANDLE, MAX_THREAD_ID> gNativeHandleTable = { nullptr };
+	static inline constinit std::array<::HANDLE, nox::os::MAX_THREAD_ID> gNativeHandleTable = { nullptr };
 
 	/**
 	 * @brief スレッド管理ID割り当て用
 	*/
-	static inline MutexWin64 mMutex;
+	static inline nox::os::detail::MutexWin64 mMutex;
 }
 
-ThreadWin64::~ThreadWin64()noexcept
+nox::os::detail::ThreadWin64::~ThreadWin64()noexcept
 {
 	Wait();
 }
 
-void	ThreadWin64::Dispatch(const Delegate<void()>& func)
+void	nox::os::detail::ThreadWin64::Dispatch(const Delegate<void()>& func)
 {
 	//	関数をセット
 	thread_func_ = func;
@@ -87,7 +83,7 @@ void	ThreadWin64::Dispatch(const Delegate<void()>& func)
 }
 
 
-void	ThreadWin64::Wait()
+void	nox::os::detail::ThreadWin64::Wait()
 {
 	if (native_thread_handle_ == nullptr)
 	{
@@ -101,7 +97,7 @@ void	ThreadWin64::Wait()
 	thread_state_ = ThreadState::Wait;
 }
 
-ThreadInfo ThreadWin64::GetThreadInfo()
+nox::os::ThreadInfo nox::os::detail::ThreadWin64::GetThreadInfo()
 {
 	::NT_TIB* const tib = reinterpret_cast<::NT_TIB*>(::NtCurrentTeb());
 	if (tib == nullptr)
@@ -115,7 +111,7 @@ ThreadInfo ThreadWin64::GetThreadInfo()
 	};
 }
 
-void	ThreadWin64::AssignThreadId()
+void	nox::os::detail::ThreadWin64::AssignThreadId()
 {
 	//	割り当て済みか
 	if (current_thread_id_ >= 0)
@@ -177,7 +173,7 @@ void	ThreadWin64::AssignThreadId()
 	++thread_counter_;
 }
 
-inline uint32 CALLBACK ThreadWin64::ThreadProc(void* argPtr)
+inline nox::uint32 CALLBACK nox::os::detail::ThreadWin64::ThreadProc(void* argPtr)
 {
 	ThreadWin64* const thisPtr = static_cast<ThreadWin64*>(argPtr);
 	if (thisPtr == nullptr)
