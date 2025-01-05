@@ -8,8 +8,6 @@
 #include	"basic_definition.h"
 #include	"memory/memory_util.h"
 
-#include	<memory>
-#include	<functional>
 
 //namespace nox
 //{
@@ -43,7 +41,7 @@
 //
 //		template <concepts::MemberFunctionPointer _F, std::derived_from<FunctionClassType<_F>> _InstanceType>
 //			requires(
-//			std::is_same_v<FunctionArgsType<F>, FunctionArgsType<_FuncType>> == true
+//			std::is_same_v<FunctionArgsTupleType<F>, FunctionArgsTupleType<_FuncType>> == true
 //			)
 //		inline constexpr Function(_F&& f, _InstanceType&& instance)noexcept :
 //			buffer_{ 0 },
@@ -80,7 +78,7 @@
 //		template <typename F, class _InstanceType>
 //			requires(
 //			(sizeof(Callable<F>) <= (BufferSize + sizeof(void*)) ) == true &&
-//			std::is_same_v<FunctionArgsType<F>, FunctionArgsType<_FuncType>> == true &&
+//			std::is_same_v<FunctionArgsTupleType<F>, FunctionArgsTupleType<_FuncType>> == true &&
 //			std::is_base_of_v<FunctionClassType<F>, _InstanceType>
 //			)
 //			inline void Bind(F&& f, _InstanceType&& instance)
@@ -90,10 +88,10 @@
 //				Unbind();
 //			}
 //
-//			const auto lambda = [f, &instance](const FunctionArgsType<F>& args)
+//			const auto lambda = [f, &instance](const FunctionArgsTupleType<F>& args)
 //				noexcept(IsFunctionNoexceptValue<F>)
 //				{
-//					if constexpr (std::is_void_v<FunctionReturnType<F>> == true)
+//					if constexpr (std::is_void_v<FunctionResultType<F>> == true)
 //					{
 //						std::apply(std::forward(f), std::tuple_cat(std::make_tuple(std::forward(instance)), args));
 //					}
@@ -115,7 +113,7 @@
 //		(sizeof(Callable<F>) <= (BufferSize + sizeof(void*))) == true &&
 //		std::is_function_v<F> &&
 //		nox::IsGlobalFunctionPointerValue<F> &&
-//		std::is_same_v<FunctionArgsType<F>, FunctionArgsType<_FuncType>> == true
+//		std::is_same_v<FunctionArgsTupleType<F>, FunctionArgsTupleType<_FuncType>> == true
 //			)
 //			inline void Bind(F&& f)
 //		{
@@ -124,10 +122,10 @@
 //				Unbind();
 //			}
 //
-//			const auto lambda = [f](const FunctionArgsType<F>& args)
+//			const auto lambda = [f](const FunctionArgsTupleType<F>& args)
 //				noexcept(IsFunctionNoexceptValue<F>)
 //				{
-//					if constexpr (std::is_void_v<FunctionReturnType<F>> == true)
+//					if constexpr (std::is_void_v<FunctionResultType<F>> == true)
 //					{
 //						std::apply(std::forward(f), args);
 //					}
@@ -146,7 +144,7 @@
 //		template <typename F>
 //			requires(
 //		//	(sizeof(Callable<F>) <= (BufferSize + sizeof(void*))) == true &&
-//			std::is_same_v<FunctionArgsType<F>, FunctionArgsType<_FuncType>> == true &&
+//			std::is_same_v<FunctionArgsTupleType<F>, FunctionArgsTupleType<_FuncType>> == true &&
 //			nox::IsLambdaValue<F>
 //			)
 //			inline void Bind(F&& f)
@@ -156,10 +154,10 @@
 //				Unbind();
 //			}
 //		
-//			const auto lambda = [f](const FunctionArgsType<F>& args)
+//			const auto lambda = [f](const FunctionArgsTupleType<F>& args)
 //				noexcept(IsFunctionNoexceptValue<F>)
 //				{
-//					if constexpr (std::is_void_v<FunctionReturnType<F>> == true)
+//					if constexpr (std::is_void_v<FunctionResultType<F>> == true)
 //					{
 //					//	std::apply(std::forward<F>(f), args);
 //					}
@@ -191,10 +189,10 @@
 //		/// @tparam ...Args 
 //		/// @param ...args 
 //		/// @return 
-//		template<class... Args> requires(std::is_same_v<std::tuple<Args...>, FunctionArgsType<_FuncType>>)
-//			inline	nox::FunctionReturnType<_FuncType> Invoke(Args&&... args)
+//		template<class... Args> requires(std::is_same_v<std::tuple<Args...>, FunctionArgsTupleType<_FuncType>>)
+//			inline	nox::FunctionResultType<_FuncType> Invoke(Args&&... args)
 //		{
-//			if constexpr (std::is_void_v< FunctionReturnType<_FuncType>> == true)
+//			if constexpr (std::is_void_v< FunctionResultType<_FuncType>> == true)
 //			{
 //				(*callable_ptr_)(std::make_tuple(std::forward<Args>(args)...));
 //			}
@@ -273,12 +271,12 @@
 //			virtual ~ICallable() = default;
 //
 //			/// @brief 関数実行
-//			virtual FunctionReturnType<_FuncType> Invoke(const FunctionArgsType<_FuncType>&) const = 0;
+//			virtual FunctionResultType<_FuncType> Invoke(const FunctionArgsTupleType<_FuncType>&) const = 0;
 //
 //			virtual void Clone(not_null<uint8_t*> buffer_, ICallable*& callablePtr) const = 0;
 //		};
 //
-//		template <typename T> //requires(std::is_invocable_v<T, const FunctionArgsType<std::decay_t<_FuncType>>&>)
+//		template <typename T> //requires(std::is_invocable_v<T, const FunctionArgsTupleType<std::decay_t<_FuncType>>&>)
 //			struct Callable : public ICallable
 //		{
 //			/// @brief 関数実行オブジェクト
@@ -290,9 +288,9 @@
 //			{}
 //
 //			/// @brief 関数実行
-//			inline FunctionReturnType<_FuncType> Invoke(const FunctionArgsType<std::decay_t<_FuncType>>& args) const override
+//			inline FunctionResultType<_FuncType> Invoke(const FunctionArgsTupleType<std::decay_t<_FuncType>>& args) const override
 //			{
-//				if constexpr (std::is_void_v< FunctionReturnType<_FuncType>> == true)
+//				if constexpr (std::is_void_v< FunctionResultType<_FuncType>> == true)
 //				{
 //				//	std::invoke(functor, args);
 //				}

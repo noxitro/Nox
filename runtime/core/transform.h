@@ -8,29 +8,34 @@
 
 namespace nox
 {
-	class Transform : public Component
+	class Transform : public nox::Component
 	{
+		NOX_DECLARE_MANAGED_OBJECT(Transform, nox::Component);
 	public:
 		inline	Transform()noexcept :
-			local_position_(vector::Vec3Zero) ,
-			local_scale_(vector::Vec3Zero) 
+			position_(nox::Vec3::Zero()) ,
+			scale_(nox::Vec3::Zero()),
+			rotation_(nox::Quat::Identity())
 		{}
 
+		inline	constexpr	const nox::Vec3& GetLocalPosition()const noexcept { return position_; }
+		inline	constexpr	const nox::Vec3& GetLocalScale()const noexcept { return scale_; }
+		inline	constexpr	const nox::Quat& GetLocalRotation()const noexcept { return rotation_; }
 	private:
 		/**
 		 * @brief ローカル座標(親からみた座標
 		*/
-		Vec3 local_position_;
+		Vec3 position_;
 
 		/**
 		 * @brief ローカルスケール
 		*/
-		Vec3 local_scale_;
+		Vec3 scale_;
 
-		///**
-		// * @brief ローカルローテーション
-		//*/
-		//Quat local_rotation_;
+		/**
+		 * @brief ローカルローテーション
+		*/
+		Quat rotation_;
 
 		///**
 		// * @brief ワールド行列

@@ -22,6 +22,10 @@
     <ClInclude Include="assertion.h" />
     <ClInclude Include="basic_definition.h" />
     <ClInclude Include="basic_type.h" />
+    <ClInclude Include="iterator.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="debug_break.h">
       <SubType>
       </SubType>
@@ -111,6 +115,10 @@
     <ClInclude Include="os\thread.h" />
     <ClInclude Include="os\window.h" />
     <ClInclude Include="os\windows.h" />
+    <ClInclude Include="parallel_execute_checker.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="preprocessor\cat.h" />
     <ClInclude Include="preprocessor\inc.h" />
     <ClInclude Include="preprocessor\repeat.h" />
@@ -127,15 +135,31 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="string_format.h" />
+    <ClInclude Include="reflection_type.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="reflection_type_definition.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="type_id.h">
       <SubType>
       </SubType>
     </ClInclude>
     <ClInclude Include="type_traits\concepts.h" />
-    <ClInclude Include="type_traits\field_signature.h" />
+    <ClInclude Include="type_traits\object_pointer_signature.h" />
+    <ClInclude Include="type_traits\function_object_signature.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="type_traits\function_signature.h" />
     <ClInclude Include="type_traits\type_name.h" />
     <ClInclude Include="type_traits\type_traits.h" />
+    <ClInclude Include="reflection_type_utility.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="unicode.h" />
     <ClInclude Include="unicode_converter.h" />
   </ItemGroup>
@@ -147,6 +171,10 @@
     <ClCompile Include="assertion.cpp" />
     <ClCompile Include="basic_definition.cpp" />
     <ClCompile Include="basic_type.cpp" />
+    <ClCompile Include="iterator.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="debug_break.cpp">
       <SubType>
       </SubType>
@@ -233,6 +261,10 @@
     <ClCompile Include="os\os_utility.cpp" />
     <ClCompile Include="os\window.cpp" />
     <ClCompile Include="os\windows.cpp" />
+    <ClCompile Include="parallel_execute_checker.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="preprocessor\cat.cpp" />
     <ClCompile Include="preprocessor\inc.cpp" />
     <ClCompile Include="preprocessor\repeat.cpp" />
@@ -251,15 +283,31 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="string_format.cpp" />
+    <ClCompile Include="reflection_type.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="reflection_type_definition.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="type_id.cpp">
       <SubType>
       </SubType>
     </ClCompile>
     <ClCompile Include="type_traits\concepts.cpp" />
-    <ClCompile Include="type_traits\field_signature.cpp" />
+    <ClCompile Include="type_traits\object_pointer_signature.cpp" />
+    <ClCompile Include="type_traits\function_object_signature.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="type_traits\function_signature.cpp" />
     <ClCompile Include="type_traits\type_name.cpp" />
     <ClCompile Include="type_traits\type_traits.cpp" />
+    <ClCompile Include="reflection_type_utility.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="unicode.cpp" />
     <ClCompile Include="unicode_converter.cpp" />
   </ItemGroup>
@@ -288,6 +336,7 @@
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <EnableUnitySupport>false</EnableUnitySupport>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">

@@ -3,7 +3,7 @@
 #include	"stdafx.h"
 #include	"reflection_object.h"
 
-bool	nox::reflection::ReflectionObject::IsOverride(nox::uint64 function_id)const noexcept
-{
-	return false;
-}
+//bool	nox::reflection::ReflectionObject::IsOverride(nox::uint64 function_id)const noexcept
+//{
+//	return false;
+//}

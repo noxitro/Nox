@@ -4,7 +4,7 @@
 ///	@brief	multicast_delegate
 #pragma once
 #include	"delegate.h"
-
+#if false
 namespace nox
 {
 	template<class _FuncType>
@@ -126,3 +126,4 @@ namespace nox
 		nox::Vector<DelegateType> delegate_list_;
 	};
 }
+#endif

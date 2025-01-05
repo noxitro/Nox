@@ -17,7 +17,6 @@ namespace nox
 		NOX_ATTR_TYPE(::nox::attr::dev::Description(U"Application"), nox::attr::dev::DisplayName(U"アプリケーション"))
 		Application : public Object, public ISingleton<Application>
 	{
-		friend class ISingleton<Application>;
 		NOX_DECLARE_OBJECT(Application, Object);
 	private:
 		enum class UpdateCategory : uint8
@@ -34,10 +33,11 @@ namespace nox
 		struct ModuleEntryInfo
 		{
 			const nox::ModuleEntryCategory priority;
-			void(nox::ModuleEntry::* func)();
-			nox::ModuleEntry* entry;
+			void(*func)(nox::ModuleEntry&);
+			nox::ModuleEntry& entry;
+			
 
-			inline constexpr ModuleEntryInfo(
+			/*inline constexpr ModuleEntryInfo(
 				nox::ModuleEntryCategory _priority, 
 				void(nox::ModuleEntry::*_func)(), 
 				nox::ModuleEntry& _entry)noexcept
@@ -54,17 +54,17 @@ namespace nox
 				ModuleEntryInfo(rhs)
 			{
 
-			}
+			}*/
 
-			inline	void	Invoke() { (*entry.*func)(); }
 		};
 
 	public:
-		inline Application() {}
+		Application()noexcept;
+		~Application()override;
 
 		void	Run();
 
-		void	RegisterModuleEntry(void(nox::ModuleEntry::*const func)(), nox::ModuleEntry& entry,const nox::ModuleEntryCategory type);
+		void	RegisterModuleEntry(void(*func)(nox::ModuleEntry&), nox::ModuleEntry& entry,const nox::ModuleEntryCategory type);
 	private:
 		inline	void	Init();
 		inline	void	Update();
@@ -75,5 +75,8 @@ namespace nox
 		std::array<nox::Vector<ModuleEntryInfo>, nox::util::ToUnderlying(UpdateCategory::_Max)> module_entry_info_list_table_;
 
 		nox::Vector<std::reference_wrapper<nox::ModuleEntry>> module_entry_list_;
+
+		/// @brief モジュールエントリ重複チェック用ビットセット
+		std::bitset<nox::util::ToUnderlying(nox::ModuleEntryCategory::_Max)> module_entry_bitset_;
 	};
 }

@@ -17,35 +17,58 @@ namespace
 	{
 		
 	}
+
+}
+
+nox::Application::Application()noexcept :
+	module_entry_bitset_{}
+{
+
+}
+
+nox::Application::~Application()
+{
+
 }
 
 void	nox::Application::Init()
 {
 	//	モジュールエントリクラス群を収集
 	//	auto class_info = nox::reflection::Reflection::Instance().FindClassInfo<nox::ModuleEntry>();
-	nox::ModuleEntry* const core_entry = static_cast<nox::ModuleEntry*>(nox::reflection::Typeof<nox::CoreEntry>().CreateObject());
+	nox::CoreEntry* const core_entry = static_cast<nox::CoreEntry*>(nox::reflection::Typeof<nox::CoreEntry>().CreateObject());
 	if (core_entry != nullptr)
 	{
-		core_entry->Entry();
-
 		module_entry_list_.emplace_back(*core_entry);
 	}
-
-	//	モジュールエントリの準備
-
-
 }
 
 void	nox::Application::Run()
 {
 	this->Init();
 
-	decltype(auto) list = module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Init)];
-
-	for (auto&& entry_info : list)
+	for (const ModuleEntryInfo& entry_info : module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Init)])
 	{
-		(*entry_info.entry.*entry_info.func)();
-		entry_info.Invoke();
+		entry_info.func(entry_info.entry);
+	}
+
+	for (const ModuleEntryInfo& entry_info : module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Start)])
+	{
+		entry_info.func(entry_info.entry);
+	}
+
+	for (const ModuleEntryInfo& entry_info : module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Update)])
+	{
+		entry_info.func(entry_info.entry);
+	}
+
+	for (const ModuleEntryInfo& entry_info : module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Terminal)])
+	{
+		entry_info.func(entry_info.entry);
+	}
+
+	for (const ModuleEntryInfo& entry_info : module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Finalize)])
+	{
+		entry_info.func(entry_info.entry);
 	}
 
 	//nox::os::Thread game_thread;
@@ -117,8 +140,13 @@ constexpr nox::Application::UpdateCategory	nox::Application::ToUpdateCategory(no
 	return UpdateCategory::Finalize;
 }
 
-void	nox::Application::RegisterModuleEntry(void(nox::ModuleEntry::*const func)(), nox::ModuleEntry& entry, const nox::ModuleEntryCategory type)
+void	nox::Application::RegisterModuleEntry(void(*func)(nox::ModuleEntry&), nox::ModuleEntry& entry, const nox::ModuleEntryCategory type)
 {
 	nox::Vector<ModuleEntryInfo>& vector = module_entry_info_list_table_[nox::util::ToUnderlying(ToUpdateCategory(type))];
-	vector.emplace_back(ModuleEntryInfo{ type, func, entry  });
+	vector.emplace_back(ModuleEntryInfo{ .priority = type, .func = func, .entry = entry});
+
+	//	重複チェック
+
+	NOX_ASSERT(module_entry_bitset_.test(nox::util::ToUnderlying(type)) == false, nox::util::Format(U"重複エントリ:{0}", (int)type));
+	module_entry_bitset_.set(nox::util::ToUnderlying(type));
 }

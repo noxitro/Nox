@@ -27,6 +27,8 @@ namespace
 
 		return table.at(nox::util::ToUnderlying(log_category));
 	}
+
+//	constinit std::array<nox::char32, 64> log_buffer_table 
 }
 
 void nox::dev::detail::TraceDirect(LogCategory log_category, const StringView category, const StringView message, bool isNewLine, const std::source_location& source_location)

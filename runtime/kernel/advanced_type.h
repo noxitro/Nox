@@ -18,6 +18,7 @@
 #include	<unordered_map>
 #include	<utility>
 #include	<vector>
+#include	<ranges>
 
 #include	"memory/stl_allocate_adapter.h"
 

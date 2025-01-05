@@ -7,7 +7,6 @@
 
 #include	"../basic_definition.h"
 #include	"../basic_type.h"
-//#include	"../crc32.h"
 #include	"../crc32.h"
 #include	"type_traits.h"
 #include	"../preprocessor/cat.h"
@@ -92,10 +91,10 @@ namespace nox::util
 	inline constexpr uint32 GetUniqueTypeID()noexcept
 	{
 #if defined(__clang__)
-		return util::crc32(__PRETTY_FUNCTION__);
+		return util::Crc32(std::string_view(__PRETTY_FUNCTION__));
 #else
 		//	crc32で余分な計算をしないように__FUNCSIG__ではなく型名を渡す
-		return util::crc32(GetTypeName<T>());
+		return util::Crc32(GetTypeName<T>());
 #endif // defined(__clang__)
 	}
 

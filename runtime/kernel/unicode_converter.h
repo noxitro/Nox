@@ -35,19 +35,19 @@ namespace nox::unicode
 
 #pragma region char16
 
-	std::span<char16>	ConvertU16String(const std::u8string_view str_view, std::span<char16> dest_buffer);
-	inline std::span<char16>	ConvertU16String(const std::string_view str_view, std::span<char16> dest_buffer)
+	std::u16string_view	ConvertU16String(const std::u8string_view str_view, std::span<char16> dest_buffer);
+	inline std::u16string_view	ConvertU16String(const std::string_view str_view, std::span<char16> dest_buffer)
 	{
 		return ConvertU16String({ reinterpret_cast<const char8*>(str_view.data()), str_view.size() }, dest_buffer);
 	}
 
-	inline std::span<char16>	ConvertU16String(const std::wstring_view str_view, std::span<char16> dest_buffer)
+	inline std::u16string_view	ConvertU16String(const std::wstring_view str_view, std::span<char16> dest_buffer)
 	{
 		memory::WideCopy(util::CharCast<wchar16>(dest_buffer.data()), dest_buffer.size(), str_view.data(), str_view.size());
-		return dest_buffer;
+		return std::u16string_view(dest_buffer);
 	}
 
-	std::span<char16>	ConvertU16String(const std::u32string_view str_view, std::span<char16> dest_buffer);
+	std::u16string_view	ConvertU16String(const std::u32string_view str_view, std::span<char16> dest_buffer);
 
 	nox::U16String	ConvertU16String(std::u8string_view str_view);
 	inline nox::U16String	ConvertU16String(std::string_view str_view)
@@ -99,13 +99,13 @@ namespace nox::unicode
 
 #pragma region char32
 	
-	std::span<char32>	ConvertU32String(const std::u8string_view str_view, std::span<char32> dest_buffer);
-	inline std::span<char32>	ConvertU32String(const std::string_view str_view, std::span<char32> dest_buffer)
+	std::u32string_view	ConvertU32String(const std::u8string_view str_view, std::span<char32> dest_buffer);
+	inline std::u32string_view	ConvertU32String(const std::string_view str_view, std::span<char32> dest_buffer)
 	{
 		return ConvertU32String({ reinterpret_cast<const char8*>(str_view.data()), str_view.size() }, dest_buffer);
 	}
-	std::span<char32>	ConvertU32String(const std::u16string_view str_view, std::span<char32> dest_buffer);
-	inline std::span<char32>	ConvertU32String(const std::wstring_view str_view, std::span<char32> dest_buffer)
+	std::u32string_view	ConvertU32String(const std::u16string_view str_view, std::span<char32> dest_buffer);
+	inline std::u32string_view	ConvertU32String(const std::wstring_view str_view, std::span<char32> dest_buffer)
 	{
 		return ConvertU32String({ reinterpret_cast<const char16*>(str_view.data()), str_view.size() }, dest_buffer);
 	}

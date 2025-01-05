@@ -4,14 +4,14 @@
 #include	"variable_info.h"
 
 #include	"user_defined_compound_type_info.h"
-#include	"manager.h"
+#include	"database.h"
 
 const nox::reflection::UserDefinedCompoundTypeInfo* nox::reflection::VariableInfo::GetContainingUserDefinedCompoundTypeInfo()const noexcept
 {
-	if (containing_type_ == nox::reflection::InvalidType)
+	if (containing_type_ == nox::reflection::GetInvalidType())
 	{
 		return nullptr;
 	}
 
-	return nox::reflection::Reflection::Instance().FindClassInfo(containing_type_);
+	return nox::reflection::FindClassInfo(containing_type_);
 }

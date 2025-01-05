@@ -11,10 +11,10 @@ namespace nox::reflection::detail
 	template<class T>
 	struct VariableSignature;
 
-	template<class _ReturnType>
-	struct VariableSignature<_ReturnType(*)>
+	template<class _ResultType>
+	struct VariableSignature<_ResultType(*)>
 	{
-		using ReturnType = _ReturnType;
+		using ReturnType = _ResultType;
 
 		/**
 		 * @brief メンバ変数か
@@ -22,10 +22,10 @@ namespace nox::reflection::detail
 		static constexpr bool IsMemberVariable()noexcept { return false; }
 	};
 
-	template<class _ReturnType, class _ClassType>
-	struct VariableSignature<_ReturnType(_ClassType::*)>
+	template<class _ResultType, class _ClassType>
+	struct VariableSignature<_ResultType(_ClassType::*)>
 	{
-		using ReturnType = _ReturnType;
+		using ReturnType = _ResultType;
 		using ClassType = _ClassType;
 
 		/**
@@ -42,13 +42,13 @@ namespace nox::reflection::detail
 	}
 
 	template<concepts::FieldSignatureType T>
-	using FieldReturnType = typename VariableSignature<T>::ReturnType;
+	using VariablePointeeType = typename VariableSignature<T>::ReturnType;
 
 	/**
 	 * @brief メンバオブジェクトポインタのクラス型
 	*/
 	template<class T> requires(std::is_member_object_pointer_v<T>)
-	using FieldClassType = typename VariableSignature<T>::ClassType;
+	using VariableOwnerType = typename VariableSignature<T>::ClassType;
 
 	/// @brief メンバ変数か
 	template<concepts::FieldSignatureType T>

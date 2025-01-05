@@ -36,21 +36,18 @@ namespace
 
 }
 
-void	nox::assertion::detail::Assert(nox::assertion::RuntimeAssertErrorType errorType, std::u32string_view message, const std::source_location& source_location)noexcept(false)
+void	nox::assertion::detail::Assert(nox::assertion::RuntimeAssertErrorType errorType, std::u32string_view message, const std::wstring_view file_name, const std::source_location& source_location)noexcept(false)
 {
 	std::array<char16, 1024> native_message = { 0 };
 	unicode::ConvertU16String(message, native_message);
-
-	std::array<char16, 256> file_name = { 0 };
-	unicode::ConvertU16String(source_location.file_name(), file_name);
 
 	std::array<char16, 2048> assert_message = { 0 };
 	nox::util::Format(assert_message, u"{0}\n{1}\nLine:{2}, Column:{3}", native_message.data(), file_name.data(), source_location.line(), source_location.column());
 
 	NOX_LOCAL_SCOPE(os::ScopedLock, kMutex);
-
-	::_wassert(nox::util::CharCast<wchar16>(assert_message.data()), nox::util::CharCast<wchar16>(file_name.data()), source_location.line());
-
+#if! NDEBUG
+	::_wassert(nox::util::CharCast<wchar16>(assert_message.data()), file_name.data(), source_location.line());
+#endif
 //	std::array<wchar16, 1028> conv_message = {L'\0'};
 //	nox::unicode::ConvertWString(message.data(), conv_message);
 //	AssertImpl(errorType, conv_message.data(), source_location);

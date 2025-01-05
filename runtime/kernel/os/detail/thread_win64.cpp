@@ -31,7 +31,7 @@ nox::os::detail::ThreadWin64::~ThreadWin64()noexcept
 {
 	Wait();
 }
-
+#if false
 void	nox::os::detail::ThreadWin64::Dispatch(const Delegate<void()>& func)
 {
 	//	関数をセット
@@ -81,7 +81,7 @@ void	nox::os::detail::ThreadWin64::Dispatch(const Delegate<void()>& func)
 
 	thread_state_ = ThreadState::Work;
 }
-
+#endif
 
 void	nox::os::detail::ThreadWin64::Wait()
 {
@@ -180,7 +180,7 @@ inline nox::uint32 CALLBACK nox::os::detail::ThreadWin64::ThreadProc(void* argPt
 	{
 		return 0;
 	}
-
+#if false
 	if (thisPtr->thread_func_.IsEmpty() == false)
 	{
 		//	通常関数実行
@@ -193,7 +193,7 @@ inline nox::uint32 CALLBACK nox::os::detail::ThreadWin64::ThreadProc(void* argPt
 	{
 	//	terminateFunc.Invoke();
 	}
-
+#endif
 	return 0;
 }
 

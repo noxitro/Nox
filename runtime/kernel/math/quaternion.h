@@ -21,6 +21,8 @@ namespace nox
 			[[nodiscard]]	inline	constexpr explicit	Quaternion(const _ValueType(&ary)[4])noexcept :
 				x(ary[0]), y(ary[1]), z(ary[2]), w(ary[3]) {}
 
+			static inline constexpr Quaternion Identity()noexcept { return Quaternion(0, 0, 0, 1); }
+
 			//------------------------------------------------------
 			//	operator
 			//------------------------------------------------------

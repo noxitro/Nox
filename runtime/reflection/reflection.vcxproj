@@ -23,19 +23,11 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="database.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="definition.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="detail\details.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="detail\field_signature.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="detail\function_signature.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -43,15 +35,7 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="type_info.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
     <ClInclude Include="variable_info.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="manager.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -67,10 +51,6 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="reflection_system.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
     <ClInclude Include="stdafx.h">
       <SubType>
       </SubType>
@@ -80,10 +60,6 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="user_defined_compound_type_info.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="typeof.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -101,19 +77,11 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="database.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="definition.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="detail\details.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="detail\field_signature.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="detail\function_signature.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -121,15 +89,7 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="type_info.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
     <ClCompile Include="variable_info.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="manager.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -138,10 +98,6 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="reflection_object.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="reflection_system.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -157,10 +113,6 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="user_defined_compound_type_info.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="typeof.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -196,6 +148,7 @@
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <EnableUnitySupport>false</EnableUnitySupport>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">

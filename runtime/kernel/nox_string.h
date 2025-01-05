@@ -8,6 +8,9 @@
 #include	"unicode_converter.h"
 namespace nox
 {
+	//	前方宣言
+	class StringView;
+
 	namespace detail
 	{
 		template<class _StringType>
@@ -50,6 +53,8 @@ namespace nox
 
 		inline constexpr String(nox::BasicString<value_type>&& other)noexcept :
 			string_(std::move(other)) {}
+
+		String(class nox::StringView other)noexcept;
 
 		inline constexpr explicit String(const string_type& other) :
 			string_(other) {}
@@ -146,6 +151,9 @@ namespace nox
 			Append(s);
 			return *this;
 		}
+
+		[[nodiscard]] inline constexpr operator nox::U32String& () noexcept { return string_; }
+		[[nodiscard]] inline constexpr operator const nox::U32String& ()const noexcept { return string_; }
 #pragma endregion
 
 

@@ -4,9 +4,9 @@
 
 #include	"algorithm.h"
 
-#include	"type_traits/field_signature.h"
+#include	"type_traits/object_pointer_signature.h"
 #include	"type_traits/function_signature.h"
-
+#include	"type_traits/function_object_signature.h"
 #include	"type_traits/type_name.h"
 
 #include	"string_format.h"
@@ -42,3 +42,8 @@
 
 #include	"type_id.h"
 #include	"debug_break.h"
+
+#include	"preprocessor/util.h"
+
+#include	"iterator.h"
+#include	"reflection_type.h"

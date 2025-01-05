@@ -7,7 +7,7 @@
 
 #include	"application.h"
 
-void nox::ModuleEntry::Register(void(ModuleEntry::* func)(), const nox::ModuleEntryCategory type)
+void nox::ModuleEntry::RegisterImpl(void(*func)(nox::ModuleEntry&), const nox::ModuleEntryCategory type)
 {
 	Application::Instance().RegisterModuleEntry(func, *this, type);
 }

@@ -5,7 +5,7 @@
 #pragma once
 
 #if NOX_DEVELOP
-#include	"object.h"
+#include	"../object.h"
 
 namespace nox::dev
 {

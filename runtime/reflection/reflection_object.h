@@ -70,14 +70,14 @@ namespace nox::reflection
 		inline constexpr virtual ~ReflectionObject()noexcept {}
 
 	protected:
-		/// @brief		関数がオーバーライドされているか
+	/*	/// @brief		関数がオーバーライドされているか
 		bool	IsOverride(nox::uint64 function_id)const noexcept;
 
-		template<nox::concepts::EveryFunctionType T>
+
 		inline bool IsOverride()const noexcept
 		{
-			return ReflectionObject::IsOverride(nox::util::GetFunctionPointerID<T>());
-		}
+			return ReflectionObject::IsOverride(nox::GetFunctionPointerID<T>());
+		}*/
 
 	private: 
 		inline constexpr ReflectionObject(const ReflectionObject&)noexcept = delete;

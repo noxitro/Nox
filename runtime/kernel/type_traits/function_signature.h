@@ -3,619 +3,675 @@
 #pragma once
 
 #include	"type_traits.h"
-#include	<tuple>
-
+#pragma warning(push)
+#pragma warning(disable:4624)
 namespace nox
 {
 	/// @brief 非公開
 	namespace detail
 	{
-		/**
-		 * @brief	シグネチャ取得ベース
-		 * @details	戻り値型、引数型の情報から情報を設定する
-		 * @tparam _FuncType 関数の型
-		 * @tparam _ReturnType 戻り値の型
-		 * @tparam ..._Args 引数群の型
-		*/
-		template<class _FuncType, class _ReturnType, class... _Args>
+		template<class _Result, class... Args>
 		struct FunctionSignatureBase
 		{
-			/**
-			 * @brief 関数の型
-			*/
-			using FuncType = _FuncType;
+			using ResultType = _Result;
 
-			/**
-			 * @brief 戻り値の型
-			*/
-			using RetType = _ReturnType;
+			using ArgsTupleType = std::tuple<Args...>;
 
-			/**
-			 * @brief 引数群の型(tuple型)
-			*/
-			using ArgsType = std::tuple<_Args...>;
+			using RawFunctionType = ResultType(Args...);
 
-			/**
-			 * @brief
-			*/
-			template<template<class> class Factor>
-			using ArgsTypeEx = std::tuple<Factor<_Args>...>;
+			using RawFunctionPointerType = ResultType(*)(Args...);
 
-			/**
-			 * @brief 生の関数型(修飾子、クラス情報を削除した状態)
-			*/
-			using RawFuncType = std::decay_t<_ReturnType(_Args...)>;
+			template<class T>
+			using RawMemberFunctionPointerType = ResultType(*)(T, Args...);
 
-			/**
-			 * @brief インデックス指定の型
-			*/
-			template <size_t index>
-			using ArgType = std::tuple_element_t<index, std::tuple<_Args...>>;
-
-			/**
-			 * @brief 引数の数を取得
-			*/
-			static	constexpr size_t ArgsLength()noexcept { return sizeof...(_Args); }
-
-			/// @brief 呼び出し可能か
-			template<class _F>
-			static inline constexpr bool IsInvocable()noexcept { return std::is_invocable_v<_F, _Args...>; }
-
-			/// @brief 戻り値の有無
-			static inline consteval bool IsNoReturn()noexcept { return std::is_same_v<void, _ReturnType>; }
-		private:
-
+			inline constexpr FunctionSignatureBase()noexcept = delete;
+			inline constexpr ~FunctionSignatureBase()noexcept = delete;
 		};
 
-		/**
-		 * @brief グローバル関数用シグネチャ取得ベース
-		 * @tparam _FuncType 関数の型
-		 * @tparam _ReturnType 戻り値の型
-		 * @tparam ..._Args 引数の型
-		*/
-		template<class _FuncType, class _ReturnType, class... _Args>
-		struct GetSignatureGlobalFunc : public FunctionSignatureBase<_FuncType, _ReturnType, _Args...>
+		template<class Result, class... Args>
+		struct FunctionSignatureFunction : FunctionSignatureBase<Result, Args...>
 		{
-			[[nodiscard]]	static	consteval	bool	IsMemberFunc()noexcept { return false; }
+			static constexpr bool is_function = true;
+			static constexpr bool is_function_pointer = false;
+			static constexpr bool is_member_function_pointer = false;
 		};
 
-		/**
-		 * @brief メンバ関数用シグネチャ取得ベース
-		 * @tparam _FuncType 関数の型
-		 * @tparam _ClassType クラスの型
-		 * @tparam _ReturnType 戻り値の型
-		 * @tparam ..._Args 引数の型
-		*/
-		template<class _FuncType, class _ClassType, class _ReturnType, class... _Args>
-		struct GetSignatureMemberFunc : public FunctionSignatureBase<_FuncType, _ReturnType, _Args...>
+		template<class Result, class... Args>
+		struct FunctionSignatureFunctionPointer : FunctionSignatureBase<Result, Args...>
 		{
-			/**
-			 * @brief クラス型
-			*/
+			static constexpr bool is_function = false;
+			static constexpr bool is_function_pointer = true;
+			static constexpr bool is_member_function_pointer = false;
+
+			static constexpr bool is_const = false;
+			static constexpr bool is_volatile = false;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = false;
+		};
+
+		template<class _ClassType, class Result, class... Args>
+		struct FunctionSignatureMemberFunctionPointer : FunctionSignatureBase<Result, Args...>
+		{
 			using ClassType = _ClassType;
-
-			/**
-			 * @brief メンバ関数かどうか
-			*/
-			[[nodiscard]]	static	consteval	bool	IsMemberFunc()noexcept { return true; }
+			static constexpr bool is_function = false;
+			static constexpr bool is_function_pointer = false;
+			static constexpr bool is_member_function_pointer = true;
 		};
+
+		template<class T>
+		struct FunctionSignature;
+
+		template<class T>
+		using FunctionSignatureAdapter = FunctionSignature<std::remove_cvref_t<T>>;
+#pragma region 関数型
+		template<class Result, class... Args>
+		struct FunctionSignature<Result(Args...)> : nox::detail::FunctionSignatureFunction<Result, Args...>
+		{
+			static constexpr bool is_const = false;
+			static constexpr bool is_volatile = false;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = false;
+
+			using ToFuncionType = Result(Args...);
+			using ToFunctionPointerType = Result(*)(Args...);
+			template<class U>
+			using ToMemberFunctionPointerType = Result(U::*)(Args...);
+		};
+
+		template<class Result, class... Args>
+		struct FunctionSignature<Result(Args...) const> : nox::detail::FunctionSignatureFunction<Result, Args...>
+		{
+			static constexpr bool is_const = true;
+			static constexpr bool is_volatile = false;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = false;
+
+			using ToFuncionType = Result(Args...) const;
+			using ToFunctionPointerType = Result(*)(Args...);
+			template<class U>
+			using ToMemberFunctionPointerType = Result(U::*)(Args...) const;
+		};
+
+		template<class Result, class... Args>
+		struct FunctionSignature<Result(Args...) volatile> : nox::detail::FunctionSignatureFunction<Result, Args...>
+		{
+			static constexpr bool is_const = false;
+			static constexpr bool is_volatile = true;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = false;
+
+			using ToFuncionType = Result(Args...) volatile;
+			using ToFunctionPointerType = Result(*)(Args...);
+			template<class U>
+			using ToMemberFunctionPointerType = Result(U::*)(Args...) volatile;
+		};
+
+		template<class Result, class... Args>
+		struct FunctionSignature<Result(Args...) noexcept> : nox::detail::FunctionSignatureFunction<Result, Args...>
+		{
+			static constexpr bool is_const = false;
+			static constexpr bool is_volatile = false;
+			static constexpr bool is_noexcept = true;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = false;
+
+			using ToFuncionType = Result(Args...) noexcept;
+			using ToFunctionPointerType = Result(*)(Args...) noexcept;
+			template<class U>
+			using ToMemberFunctionPointerType = Result(U::*)(Args...) noexcept;
+		};
+		
+		template<class Result, class... Args>
+		struct FunctionSignature<Result(Args...)const noexcept> : nox::detail::FunctionSignatureFunction<Result, Args...>
+		{
+			static constexpr bool is_const = true;
+			static constexpr bool is_volatile = false;
+			static constexpr bool is_noexcept = true;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = false;
+
+			using ToFuncionType = Result(Args...) const noexcept;
+			using ToFunctionPointerType = Result(*)(Args...) noexcept;
+			template<class U>
+			using ToMemberFunctionPointerType = Result(U::*)(Args...) const noexcept;
+		};
+
+		template<class Result, class... Args>
+		struct FunctionSignature<Result(Args...)volatile noexcept> : nox::detail::FunctionSignatureFunction<Result, Args...>
+		{
+			static constexpr bool is_const = false;
+			static constexpr bool is_volatile = true;
+			static constexpr bool is_noexcept = true;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = false;
+
+			using ToFuncionType = Result(Args...) volatile noexcept;
+			using ToFunctionPointerType = Result(*)(Args...) noexcept;
+			template<class U>
+			using ToMemberFunctionPointerType = Result(U::*)(Args...) volatile noexcept;
+		};
+		
+		template<class Result, class... Args>
+		struct FunctionSignature<Result(Args...)const volatile> : nox::detail::FunctionSignatureFunction<Result, Args...>
+		{
+			static constexpr bool is_const = true;
+			static constexpr bool is_volatile = true;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = false;
+
+			using ToFuncionType = Result(Args...)const volatile;
+			using ToFunctionPointerType = Result(*)(Args...) ;
+			template<class U>
+			using ToMemberFunctionPointerType = Result(U::*)(Args...) const volatile;
+		};
+		
+		template<class Result, class... Args>
+		struct FunctionSignature<Result(Args...)const volatile noexcept> : nox::detail::FunctionSignatureFunction<Result, Args...>
+		{
+			static constexpr bool is_const = true;
+			static constexpr bool is_volatile = true;
+			static constexpr bool is_noexcept = true;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = false;
+
+			using ToFuncionType = Result(Args...) const volatile noexcept;
+			using ToFunctionPointerType = Result(*)(Args...) noexcept;
+			template<class U>
+			using ToMemberFunctionPointerType = Result(U::*)(Args...) const volatile noexcept;
+		};
+		
+		template<class Result, class... Args>
+		struct FunctionSignature<Result(Args...)const& noexcept> : nox::detail::FunctionSignatureFunction<Result, Args...>
+		{
+			static constexpr bool is_const = true;
+			static constexpr bool is_volatile = false;
+			static constexpr bool is_noexcept = true;
+			static constexpr bool is_lvalue_reference = true;
+			static constexpr bool is_rvalue_reference = false;
+
+			using ToFuncionType = Result(Args...) const& noexcept;
+			using ToFunctionPointerType = Result(*)(Args...) noexcept;
+			template<class U>
+			using ToMemberFunctionPointerType = Result(U::*)(Args...) const& noexcept;
+		};
+		
+		template<class Result, class... Args>
+		struct FunctionSignature<Result(Args...)const volatile&> : nox::detail::FunctionSignatureFunction<Result, Args...>
+		{
+			static constexpr bool is_const = true;
+			static constexpr bool is_volatile = true;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = true;
+			static constexpr bool is_rvalue_reference = false;
+
+			using ToFuncionType = Result(Args...)const volatile&;
+			using ToFunctionPointerType = Result(*)(Args...) ;
+			template<class U>
+			using ToMemberFunctionPointerType = Result(U::*)(Args...) const volatile&;
+		};
+
+		template<class Result, class... Args>
+		struct FunctionSignature<Result(Args...)&> : nox::detail::FunctionSignatureFunction<Result, Args...>
+		{
+			static constexpr bool is_const = false;
+			static constexpr bool is_volatile = false;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = true;
+			static constexpr bool is_rvalue_reference = false;
+
+			using ToFuncionType = Result(Args...)&;
+			using ToFunctionPointerType = Result(*)(Args...);
+			template<class U>
+			using ToMemberFunctionPointerType = Result(U::*)(Args...)&;
+		};
+
+		template<class Result, class... Args>
+		struct FunctionSignature<Result(Args...)&&> : nox::detail::FunctionSignatureFunction<Result, Args...>
+		{
+			static constexpr bool is_const = false;
+			static constexpr bool is_volatile = false;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = true;
+
+			using ToFuncionType = Result(Args...)&&;
+			using ToFunctionPointerType = Result(*)(Args...);
+			template<class U>
+			using ToMemberFunctionPointerType = Result(U::*)(Args...)&&;
+		};
+
+		template<class Result, class... Args>
+		struct FunctionSignature<Result(Args...) const&> : nox::detail::FunctionSignatureFunction<Result, Args...>
+		{
+			static constexpr bool is_const = true;
+			static constexpr bool is_volatile = false;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = true;
+			static constexpr bool is_rvalue_reference = false;
+
+			using ToFuncionType = Result(Args...) const&;
+			using ToFunctionPointerType = Result(*)(Args...);
+			template<class U>
+			using ToMemberFunctionPointerType = Result(U::*)(Args...) const&;
+		};
+
+		template<class Result, class... Args>
+		struct FunctionSignature<Result(Args...) volatile&> : nox::detail::FunctionSignatureFunction<Result, Args...>
+		{
+			static constexpr bool is_const = false;
+			static constexpr bool is_volatile = true;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = true;
+			static constexpr bool is_rvalue_reference = false;
+
+			using ToFuncionType = Result(Args...) volatile&;
+			using ToFunctionPointerType = Result(*)(Args...);
+			template<class U>
+			using ToMemberFunctionPointerType = Result(U::*)(Args...) volatile&;
+		};
+
+		template<class Result, class... Args>
+		struct FunctionSignature<Result(Args...) & noexcept> : nox::detail::FunctionSignatureFunction<Result, Args...>
+		{
+			static constexpr bool is_const = false;
+			static constexpr bool is_volatile = false;
+			static constexpr bool is_noexcept = true;
+			static constexpr bool is_lvalue_reference = true;
+			static constexpr bool is_rvalue_reference = false;
+
+			using ToFuncionType = Result(Args...) & noexcept;
+			using ToFunctionPointerType = Result(*)(Args...) noexcept;
+			template<class U>
+			using ToMemberFunctionPointerType = Result(U::*)(Args...) & noexcept;
+		};
+		
+		template<class Result, class... Args>
+		struct FunctionSignature<Result(Args...) volatile& noexcept> : nox::detail::FunctionSignatureFunction<Result, Args...>
+		{
+			static constexpr bool is_const = false;
+			static constexpr bool is_volatile = true;
+			static constexpr bool is_noexcept = true;
+			static constexpr bool is_lvalue_reference = true;
+			static constexpr bool is_rvalue_reference = false;
+
+			using ToFuncionType = Result(Args...) volatile& noexcept;
+			using ToFunctionPointerType = Result(*)(Args...) noexcept;
+			template<class U>
+			using ToMemberFunctionPointerType = Result(U::*)(Args...) volatile& noexcept;
+		};
+
+		template<class Result, class... Args>
+		struct FunctionSignature<Result(Args...) const&&> : nox::detail::FunctionSignatureFunction<Result, Args...>
+		{
+			static constexpr bool is_const = true;
+			static constexpr bool is_volatile = false;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = true;
+
+			using ToFuncionType = Result(Args...) const&&;
+			using ToFunctionPointerType = Result(*)(Args...);
+			template<class U>
+			using ToMemberFunctionPointerType = Result(U::*)(Args...) const&&;
+		};
+
+		template<class Result, class... Args>
+		struct FunctionSignature<Result(Args...) volatile&&> : nox::detail::FunctionSignatureFunction<Result, Args...>
+		{
+			static constexpr bool is_const = false;
+			static constexpr bool is_volatile = true;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = true;
+
+			using ToFuncionType = Result(Args...) volatile&&;
+			using ToFunctionPointerType = Result(*)(Args...);
+			template<class U>
+			using ToMemberFunctionPointerType = Result(U::*)(Args...) volatile&&;
+		};
+
+		template<class Result, class... Args>
+		struct FunctionSignature<Result(Args...) const&& noexcept> : nox::detail::FunctionSignatureFunction<Result, Args...>
+		{
+			static constexpr bool is_const = true;
+			static constexpr bool is_volatile = false;
+			static constexpr bool is_noexcept = true;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = true;
+
+			using ToFuncionType = Result(Args...) const&& noexcept;
+			using ToFunctionPointerType = Result(*)(Args...) noexcept;
+			template<class U>
+			using ToMemberFunctionPointerType = Result(U::*)(Args...) const&& noexcept;
+		};
+
+		template<class Result, class... Args>
+		struct FunctionSignature<Result(Args...) volatile&& noexcept> : nox::detail::FunctionSignatureFunction<Result, Args...>
+		{
+			static constexpr bool is_const = false;
+			static constexpr bool is_volatile = true;
+			static constexpr bool is_noexcept = true;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = true;
+
+			using ToFuncionType = Result(Args...) volatile&& noexcept;
+			using ToFunctionPointerType = Result(*)(Args...) noexcept;
+			template<class U>
+			using ToMemberFunctionPointerType = Result(U::*)(Args...) volatile&& noexcept;
+		};
+		
+		template<class Result, class... Args>
+		struct FunctionSignature<Result(Args...) const volatile&&> : nox::detail::FunctionSignatureFunction<Result, Args...>
+		{
+			static constexpr bool is_const = true;
+			static constexpr bool is_volatile = true;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = true;
+
+			using ToFuncionType = Result(Args...) volatile&& noexcept;
+			using ToFunctionPointerType = Result(*)(Args...) noexcept;
+			template<class U>
+			using ToMemberFunctionPointerType = Result(U::*)(Args...) volatile&& noexcept;
+		};
+#pragma endregion
+
+#pragma region 関数ポインタ型
+
+		template<class Result, class... Args>
+		struct FunctionSignature<Result(*)(Args...)> : nox::detail::FunctionSignatureFunctionPointer<Result, Args...>
+		{
+			static constexpr bool is_noexcept = false;
+		};
+
+		template<class Result, class... Args>
+		struct FunctionSignature<Result(*)(Args...)noexcept> : nox::detail::FunctionSignatureFunctionPointer<Result, Args...>
+		{
+			static constexpr bool is_noexcept = true;
+		};
+#pragma endregion
+
+#pragma region メンバ関数ポインタ型
+
+		template<class ClassType, class Result, class... Args>
+		struct FunctionSignature<Result(ClassType::*)(Args...)> : nox::detail::FunctionSignatureMemberFunctionPointer<ClassType, Result, Args...>
+		{
+			static constexpr bool is_const = false;
+			static constexpr bool is_volatile = false;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = false;
+		};
+
+		template<class ClassType, class Result, class... Args>
+		struct FunctionSignature<Result(ClassType::*)(Args...) const> : nox::detail::FunctionSignatureMemberFunctionPointer<ClassType, Result, Args...>
+		{
+			static constexpr bool is_const = true;
+			static constexpr bool is_volatile = false;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = false;
+		};
+
+		template<class ClassType, class Result, class... Args>
+		struct FunctionSignature<Result(ClassType::*)(Args...) volatile> : nox::detail::FunctionSignatureMemberFunctionPointer<ClassType, Result, Args...>
+		{
+			static constexpr bool is_const = false;
+			static constexpr bool is_volatile = true;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = false;
+		};
+
+		template<class ClassType, class Result, class... Args>
+		struct FunctionSignature<Result(ClassType::*)(Args...) noexcept> : nox::detail::FunctionSignatureMemberFunctionPointer<ClassType, Result, Args...>
+		{
+			static constexpr bool is_const = false;
+			static constexpr bool is_volatile = false;
+			static constexpr bool is_noexcept = true;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = false;
+		};
+
+		template<class ClassType, class Result, class... Args>
+		struct FunctionSignature<Result(ClassType::*)(Args...) const noexcept> : nox::detail::FunctionSignatureMemberFunctionPointer<ClassType, Result, Args...>
+		{
+			static constexpr bool is_const = true;
+			static constexpr bool is_volatile = false;
+			static constexpr bool is_noexcept = true;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = false;
+		};
+		
+		template<class ClassType, class Result, class... Args>
+		struct FunctionSignature<Result(ClassType::*)(Args...) const volatile> : nox::detail::FunctionSignatureMemberFunctionPointer<ClassType, Result, Args...>
+		{
+			static constexpr bool is_const = true;
+			static constexpr bool is_volatile = true;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = false;
+		};
+		
+		template<class ClassType, class Result, class... Args>
+		struct FunctionSignature<Result(ClassType::*)(Args...) volatile noexcept> : nox::detail::FunctionSignatureMemberFunctionPointer<ClassType, Result, Args...>
+		{
+			static constexpr bool is_const = false;
+			static constexpr bool is_volatile = true;
+			static constexpr bool is_noexcept = true;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = false;
+		};
+
+		template<class ClassType, class Result, class... Args>
+		struct FunctionSignature<Result(ClassType::*)(Args...) const volatile noexcept> : nox::detail::FunctionSignatureMemberFunctionPointer<ClassType, Result, Args...>
+		{
+			static constexpr bool is_const = true;
+			static constexpr bool is_volatile = true;
+			static constexpr bool is_noexcept = true;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = false;
+		};
+
+		template<class ClassType, class Result, class... Args>
+		struct FunctionSignature<Result(ClassType::*)(Args...)&> : nox::detail::FunctionSignatureMemberFunctionPointer<ClassType, Result, Args...>
+		{
+			static constexpr bool is_const = false;
+			static constexpr bool is_volatile = false;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = true;
+			static constexpr bool is_rvalue_reference = false;
+		};
+
+		template<class ClassType, class Result, class... Args>
+		struct FunctionSignature<Result(ClassType::*)(Args...)&&> : nox::detail::FunctionSignatureMemberFunctionPointer<ClassType, Result, Args...>
+		{
+			static constexpr bool is_const = false;
+			static constexpr bool is_volatile = false;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = true;
+		};
+
+		template<class ClassType, class Result, class... Args>
+		struct FunctionSignature<Result(ClassType::*)(Args...) const&> : nox::detail::FunctionSignatureMemberFunctionPointer<ClassType, Result, Args...>
+		{
+			static constexpr bool is_const = true;
+			static constexpr bool is_volatile = false;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = true;
+			static constexpr bool is_rvalue_reference = false;
+		};
+
+		template<class ClassType, class Result, class... Args>
+		struct FunctionSignature<Result(ClassType::*)(Args...) volatile&> : nox::detail::FunctionSignatureMemberFunctionPointer<ClassType, Result, Args...>
+		{
+			static constexpr bool is_const = false;
+			static constexpr bool is_volatile = true;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = true;
+			static constexpr bool is_rvalue_reference = false;
+		};
+
+		template<class ClassType, class Result, class... Args>
+		struct FunctionSignature<Result(ClassType::*)(Args...) & noexcept> : nox::detail::FunctionSignatureMemberFunctionPointer<ClassType, Result, Args...>
+		{
+			static constexpr bool is_const = false;
+			static constexpr bool is_volatile = false;
+			static constexpr bool is_noexcept = true;
+			static constexpr bool is_lvalue_reference = true;
+			static constexpr bool is_rvalue_reference = false;
+		};
+
+		template<class ClassType, class Result, class... Args>
+		struct FunctionSignature<Result(ClassType::*)(Args...)const & noexcept> : nox::detail::FunctionSignatureMemberFunctionPointer<ClassType, Result, Args...>
+		{
+			static constexpr bool is_const = true;
+			static constexpr bool is_volatile = false;
+			static constexpr bool is_noexcept = true;
+			static constexpr bool is_lvalue_reference = true;
+			static constexpr bool is_rvalue_reference = false;
+		};
+		
+		template<class ClassType, class Result, class... Args>
+		struct FunctionSignature<Result(ClassType::*)(Args...)const volatile&> : nox::detail::FunctionSignatureMemberFunctionPointer<ClassType, Result, Args...>
+		{
+			static constexpr bool is_const = true;
+			static constexpr bool is_volatile = true;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = true;
+			static constexpr bool is_rvalue_reference = false;
+		};	
+		
+		template<class ClassType, class Result, class... Args>
+		struct FunctionSignature<Result(ClassType::*)(Args...)volatile& noexcept> : nox::detail::FunctionSignatureMemberFunctionPointer<ClassType, Result, Args...>
+		{
+			static constexpr bool is_const = false;
+			static constexpr bool is_volatile = true;
+			static constexpr bool is_noexcept = true;
+			static constexpr bool is_lvalue_reference = true;
+			static constexpr bool is_rvalue_reference = false;
+		};	
+		
+		template<class ClassType, class Result, class... Args>
+		struct FunctionSignature<Result(ClassType::*)(Args...)const volatile& noexcept> : nox::detail::FunctionSignatureMemberFunctionPointer<ClassType, Result, Args...>
+		{
+			static constexpr bool is_const = true;
+			static constexpr bool is_volatile = true;
+			static constexpr bool is_noexcept = true;
+			static constexpr bool is_lvalue_reference = true;
+			static constexpr bool is_rvalue_reference = false;
+		};
+
+		template<class ClassType, class Result, class... Args>
+		struct FunctionSignature<Result(ClassType::*)(Args...) const&&> : nox::detail::FunctionSignatureMemberFunctionPointer<ClassType, Result, Args...>
+		{
+			static constexpr bool is_const = true;
+			static constexpr bool is_volatile = false;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = true;
+		};
+
+		template<class ClassType, class Result, class... Args>
+		struct FunctionSignature<Result(ClassType::*)(Args...) volatile&&> : nox::detail::FunctionSignatureMemberFunctionPointer<ClassType, Result, Args...>
+		{
+			static constexpr bool is_const = false;
+			static constexpr bool is_volatile = true;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = true;
+		};
+		
+		template<class ClassType, class Result, class... Args>
+		struct FunctionSignature<Result(ClassType::*)(Args...) const volatile&&> : nox::detail::FunctionSignatureMemberFunctionPointer<ClassType, Result, Args...>
+		{
+			static constexpr bool is_const = true;
+			static constexpr bool is_volatile = true;
+			static constexpr bool is_noexcept = false;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = true;
+		};
+
+		template<class ClassType, class Result, class... Args>
+		struct FunctionSignature<Result(ClassType::*)(Args...) const&& noexcept> : nox::detail::FunctionSignatureMemberFunctionPointer<ClassType, Result, Args...>
+		{
+			static constexpr bool is_const = true;
+			static constexpr bool is_volatile = false;
+			static constexpr bool is_noexcept = true;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = true;
+		};
+
+		template<class ClassType, class Result, class... Args>
+		struct FunctionSignature<Result(ClassType::*)(Args...) volatile&& noexcept> : nox::detail::FunctionSignatureMemberFunctionPointer<ClassType, Result, Args...>
+		{
+			static constexpr bool is_const = false;
+			static constexpr bool is_volatile = true;
+			static constexpr bool is_noexcept = true;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = true;
+		};
+		
+		template<class ClassType, class Result, class... Args>
+		struct FunctionSignature<Result(ClassType::*)(Args...)const volatile&& noexcept> : nox::detail::FunctionSignatureMemberFunctionPointer<ClassType, Result, Args...>
+		{
+			static constexpr bool is_const = true;
+			static constexpr bool is_volatile = true;
+			static constexpr bool is_noexcept = true;
+			static constexpr bool is_lvalue_reference = false;
+			static constexpr bool is_rvalue_reference = true;
+		};
+
+
+#pragma endregion
+
+		
 	}
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得
-	*
-	**********************************************************************/
-	template<typename T>
-	struct FunctionSignature;
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(グローバル関数)
-	*
-	**********************************************************************/
-	template<class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(_ArgsType...)> :
-		public detail::GetSignatureGlobalFunc<_ReturnType(_ArgsType...), _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return false; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(グローバル関数)
-	*
-	**********************************************************************/
-	template<class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(*)(_ArgsType...)> :
-		public detail::GetSignatureGlobalFunc<_ReturnType(*)(_ArgsType...), _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return false; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(noexceptグローバル関数)
-	*
-	**********************************************************************/
-	template<class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(_ArgsType...)noexcept> :
-		public detail::GetSignatureGlobalFunc<_ReturnType(_ArgsType...)noexcept, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return true; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(noexceptグローバル関数)
-	*
-	**********************************************************************/
-	template<class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(*)(_ArgsType...)noexcept> :
-		public detail::GetSignatureGlobalFunc<_ReturnType(*)(_ArgsType...)noexcept, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return true; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(メンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...)> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...), ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return false; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(constメンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...)const> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...)const, ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return false; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(volatile メンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...)volatile> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...)volatile, ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return false; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(const volatile メンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...)const volatile> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...)const volatile, ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return false; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(左辺参照 メンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...)&> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...)&, ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return false; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(左辺参照 const メンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...)const&> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...)const&, ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return false; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(左辺参照 volatile メンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...)volatile&> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...)volatile&, ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return false; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(左辺参照 const volatile メンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...)const volatile&> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...)const volatile&, ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return false; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(右辺参照 メンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...)&&> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...)&&, ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return false; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(右辺参照 const メンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...)const&&> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...)const&&, ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return false; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(右辺参照 const メンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...)volatile&&> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...)volatile&&, ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef() noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return false; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(右辺参照 const volatile メンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...)const volatile&&> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...)const volatile&, ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return false; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(noexceptメンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...)noexcept> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...)noexcept, ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return true; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(const noexcept メンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...)const noexcept> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...)const noexcept, ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return true; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(volatile noexcept メンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...)volatile noexcept> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...)volatile noexcept, ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return true; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(const volatile noexcept メンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...)const volatile noexcept> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...)const volatile noexcept, ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return true; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(左辺参照 noexcept メンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...) & noexcept> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...) & noexcept, ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return true; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(左辺参照 const noexcept メンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...)const& noexcept> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...)const& noexcept, ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return true; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(左辺参照 volatile noexcept メンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...)volatile& noexcept> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...)volatile& noexcept, ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return true; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(左辺参照 const volatile noexcept メンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...)const volatile& noexcept> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...)const volatile& noexcept, ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return true; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(右辺参照 noexcept メンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...) && noexcept> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...) && noexcept, ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return true; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(右辺参照 const noexcept メンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...)const&& noexcept> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...)const&& noexcept, ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return true; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(右辺参照 const noexcept メンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...)volatile&& noexcept> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...)volatile&& noexcept, ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef() noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return true; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(右辺参照 const volatile noexcept メンバ関数)
-	*
-	**********************************************************************/
-	template<class ClassType, class _ReturnType, class... _ArgsType>
-	struct FunctionSignature<_ReturnType(ClassType::*)(_ArgsType...)const volatile&& noexcept> :
-		public detail::GetSignatureMemberFunc<_ReturnType(ClassType::*)(_ArgsType...)const volatile&& noexcept, ClassType, _ReturnType, _ArgsType...>
-	{
-		[[nodiscard]]	static	consteval	bool	IsConst()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsVolatile()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsLvalueRef()noexcept { return false; }
-		[[nodiscard]]	static	consteval	bool	IsRvalueRef()noexcept { return true; }
-		[[nodiscard]]	static	consteval	bool	IsNoexcept()noexcept { return true; }
-	};
-
-	/*!********************************************************************
-	*
-	*	@brief	シグネチャ取得(ラムダ式)
-	*
-	**********************************************************************/
-	template<class _Lambda> requires(IsLambdaValue< _Lambda>)
-		struct FunctionSignature<_Lambda> : public FunctionSignature<LambdaToFunctionType<_Lambda>>
-	{
-
-	};
 
 	namespace concepts
 	{
-		/**
-		 * @brief 解釈可能な関数型か
-		*/
+		/// @brief 解釈可能な関数型か
 		template<class T>
-		concept FunctionSignatureType = sizeof(FunctionSignature<T>) >= 0;
+		concept FunctionSignatureType = sizeof(nox::detail::FunctionSignatureAdapter<T>) >= 0;
 	}
 
-	/**
-	 * @brief 関数の戻り値の型
-	*/
+	/// @brief 関数の戻り値の型
 	template<concepts::FunctionSignatureType T>
-	using FunctionReturnType = typename FunctionSignature<T>::RetType;;
+	using FunctionResultType = typename nox::detail::FunctionSignatureAdapter<T>::ResultType;
 
-	/**
-	 * @brief 修飾子情報を全て外した関数型
-	*/
+	/// @brief 修飾子情報を全て外した関数型
 	template<concepts::FunctionSignatureType T>
-	using FunctionRawType = typename FunctionSignature<T>::RawFuncType;
+	using FunctionRawType = typename nox::detail::FunctionSignatureAdapter<T>::FunctionType;
 
-	/**
-	 * @brief メンバ関数のクラス型
-	*/
+	/// @brief メンバ関数を持つクラスの型
 	template<class T> requires(std::is_member_function_pointer_v<T>)
-	using FunctionClassType = typename FunctionSignature<T>::ClassType;
+	using FunctionClassType = typename nox::detail::FunctionSignatureAdapter<T>::ClassType;
 
-	/**
-	 * @brief 引数の型tuple
-	*/
+	/// @brief 引数の型tuple
 	template<concepts::FunctionSignatureType T>
-	using FunctionArgsType = typename FunctionSignature<T>::ArgsType;
+	using FunctionArgsTupleType = typename nox::detail::FunctionSignatureAdapter<T>::ArgsTupleType;
 
 	template<concepts::FunctionSignatureType T>
-	constexpr size_t FunctionArgsLength = std::tuple_size_v<FunctionArgsType<T>>;
+	constexpr size_t FunctionArgsLength = std::tuple_size_v<FunctionArgsTupleType<T>>;
 
 	template<concepts::FunctionSignatureType T>
-	constexpr bool IsFunctionNoexceptValue = FunctionSignature<T>::IsNoexcept();
+	constexpr bool IsFunctionNoexceptValue = nox::detail::FunctionSignatureAdapter<T>::is_noexcept;
 
 	template<concepts::FunctionSignatureType T>
-	constexpr bool IsFunctionConstValue = FunctionSignature<T>::IsConst();
+	constexpr bool IsFunctionConstValue = nox::detail::FunctionSignatureAdapter<T>::is_const;
 
 	template<concepts::FunctionSignatureType T>
-	constexpr bool IsFunctionLvalueValue = FunctionSignature<T>::IsLvalueRef();
+	constexpr bool IsFunctionLValueReference = nox::detail::FunctionSignatureAdapter<T>::is_lvalue_reference;
 	
 	template<concepts::FunctionSignatureType T>
-	constexpr bool IsFunctionRvalueValue = FunctionSignature<T>::IsRvalueRef();
+	constexpr bool IsFunctionRValueReference = nox::detail::FunctionSignatureAdapter<T>::is_rvalue_reference;
 
 	template<concepts::FunctionSignatureType T>
-	constexpr bool IsFunctionVolatileValue = FunctionSignature<T>::IsVolatile();
+	constexpr bool IsFunctionVolatileValue = nox::detail::FunctionSignatureAdapter<T>::is_volatile;
 }
+#pragma warning(pop)

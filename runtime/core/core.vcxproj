@@ -79,11 +79,35 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="garbage_collector.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="scene.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="test\delegate_test.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="test\test.h">
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="test\test_behavior.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="test\test_reflection.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="test\type_id_test.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="test\utility.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -156,11 +180,35 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="garbage_collector.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="scene.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="test\delegate_test.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="test\type_id_test.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="test\test.cpp">
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="test\test_behavior.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="test\test_reflection.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="test\utility.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -202,6 +250,7 @@
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <EnableUnitySupport>false</EnableUnitySupport>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">

@@ -15,9 +15,9 @@ namespace nox
 		CoreEntry();
 		~CoreEntry()override;
 
-		void Entry()override;
-
 	private:
 		void	Init();
+		void	Finalize();
+		void	GCUpdate();
 	};
 }

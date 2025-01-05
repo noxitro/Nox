@@ -50,14 +50,14 @@ namespace nox::reflection::detail
 	/// @brief  関数ポインタ型か
 	/// @tparam T 型
 	template<class T>
-	constexpr bool IsFunctionPointerV = detail::IsFunctionPointer<T>::value;
+	constexpr bool IsFunctionPointerValue = detail::IsFunctionPointer<T>::value;
 
 	/**
 	 * @brief あらゆる関数型
 	*/
 	template<class T>
 	constexpr bool IsEveryFunctionV =
-		IsFunctionPointerV<T> ||
+		IsFunctionPointerValue<T> ||
 		std::is_function_v<T>;
 
 	namespace concepts
@@ -138,16 +138,16 @@ namespace nox::reflection::detail
 		struct IsGlobalFunctionPointer : std::false_type {};
 
 		/// @brief グローバル関数ポインタ型か
-		/// @tparam _ReturnType 戻り値の型
+		/// @tparam _ResultType 戻り値の型
 		/// @tparam ...Args 引数の型
-		template<class _ReturnType, class... Args>
-		struct IsGlobalFunctionPointer<_ReturnType(*)(Args...)> : std::true_type {};
+		template<class _ResultType, class... Args>
+		struct IsGlobalFunctionPointer<_ResultType(*)(Args...)> : std::true_type {};
 
 		/// @brief グローバル関数ポインタ型か(noexcept版)
-		/// @tparam _ReturnType  戻り値の型
+		/// @tparam _ResultType  戻り値の型
 		/// @tparam ...Args 引数の型
-		template<class _ReturnType, class... Args>
-		struct IsGlobalFunctionPointer<_ReturnType(*)(Args...)noexcept> : std::true_type {};
+		template<class _ResultType, class... Args>
+		struct IsGlobalFunctionPointer<_ResultType(*)(Args...)noexcept> : std::true_type {};
 
 		template<typename T, bool B = std::is_enum_v<T>>
 		struct IsScopedEnum : std::false_type {};
@@ -286,35 +286,4 @@ namespace nox::reflection::detail
 		template<class T>
 		concept EveryFunctionType = IsEveryFunctionV<T>;
 	}
-
-	template<class T>
-	struct LambdaToFunction;
-
-	template<class T> requires(sizeof(detail::LambdaToFunctionImpl<decltype(&T::operator())>) >= 0)
-		struct LambdaToFunction<T> : detail::LambdaToFunctionImpl<decltype(&T::operator())>
-	{};
-
-	template<concepts::EveryFunctionType T>
-	struct LambdaToFunction<T>
-	{
-		using type = T;
-	};
-
-	template<class T>
-	using LambdaToFunctionType = typename LambdaToFunction<T>::type;
-
-	/**
- * @brief キャプチャラムダ
-*/
-	template<class T>
-	struct IsCaptureLambda : std::true_type {};
-
-	template<class T>requires(!IsEveryFunctionV<T>&& std::is_invocable_v<T> && sizeof(decltype(+T())) >= 0)
-		struct IsCaptureLambda<T> : std::false_type {};
-
-	template<class T>requires(IsEveryFunctionV<T>)
-		struct IsCaptureLambda<T> : std::false_type {};
-
-	template<class T>
-	constexpr bool IsCaptureLambdaV = IsCaptureLambda<T>::value;
 }

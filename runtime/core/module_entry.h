@@ -16,17 +16,23 @@ namespace nox
 		inline constexpr ModuleEntry()noexcept = default;
 		virtual ~ModuleEntry() = default;
 
-		/// @brief 登録
-		virtual void Entry() = 0;
-
 	protected:
-		template<std::derived_from<nox::ModuleEntry> T>
-		inline	void	Register(void(T::* func)(), const nox::ModuleEntryCategory type)
+		/// @brief 関数の登録
+		/// @tparam member_function_addr 
+		/// @param category 
+		template<auto member_function_addr> requires(std::is_member_function_pointer_v<decltype(member_function_addr)>)
+		inline	void	Register(const nox::ModuleEntryCategory category)
 		{
-			Register(static_cast<void(nox::ModuleEntry::*)()>(func), type);
+			RegisterImpl(+[](nox::ModuleEntry& entry)
+				{
+				using T = nox::FunctionClassType<decltype(member_function_addr)>;
+				T& entry_impl = static_cast<T&>(entry);
+				(entry_impl.*member_function_addr)();
+
+				}, category);
 		}
 	
 	private:
-		void	Register(void(ModuleEntry::* func)(), const nox::ModuleEntryCategory type);
+		void	RegisterImpl(void(*func)(nox::ModuleEntry&), const nox::ModuleEntryCategory type);
 	};
 }

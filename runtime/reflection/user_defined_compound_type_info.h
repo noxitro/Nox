@@ -103,6 +103,10 @@ namespace nox::reflection
 		[[nodiscard]] inline	constexpr	std::span<const std::reference_wrapper<const nox::reflection::EnumInfo>> GetEnumInfoList()const noexcept { return std::span(enum_list_, enum_length_); }
 		[[nodiscard]] inline constexpr const nox::reflection::EnumInfo& GetEnumInfo(std::uint8_t index)const noexcept { return nox::util::At(enum_list_, enum_length_, index); }
 
+		/// @brief 継承関係を調べる
+		/// @param derived 
+		/// @return 
+		[[nodiscard]] bool	IsBaseOf(const nox::reflection::UserDefinedCompoundTypeInfo& derived)const noexcept;
 #pragma endregion
 
 	private:
@@ -175,11 +179,11 @@ namespace nox::reflection
 		public:
 			inline constexpr UserDefinedCompoundTypeInfoInvalid()noexcept :
 				nox::reflection::UserDefinedCompoundTypeInfo(
-					nox::reflection::InvalidType,
+					nox::reflection::GetInvalidType(),
 					U"",
 					U"",
 					U"",
-					nox::reflection::InvalidType,
+					nox::reflection::GetInvalidType(),
 
 					nullptr,
 					0,

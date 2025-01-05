@@ -5,22 +5,35 @@
 #include	"stdafx.h"
 #include	"core_entry.h"
 
+#include	"garbage_collector.h"
 #include	"test/test.h"
 
 nox::CoreEntry::CoreEntry()
 {
+	Register<&nox::CoreEntry::Init>(ModuleEntryCategory::CoreInit);
+	Register<&nox::CoreEntry::GCUpdate>(ModuleEntryCategory::GCUpdate);
+	Register<&nox::CoreEntry::Finalize>(ModuleEntryCategory::CoreFinalize);
 }
 
 nox::CoreEntry::~CoreEntry()
 {
 }
 
-void	nox::CoreEntry::Entry()
-{
-	Register(&nox::CoreEntry::Init, ModuleEntryCategory::CoreInit);
-}
-
 void	nox::CoreEntry::Init()
 {
+	nox::GarbageCollector::CreateInstance();
 	nox::test::Test();
+}
+
+
+void	nox::CoreEntry::Finalize()
+{
+	nox::GarbageCollector::Instance().FrameGC();
+	nox::GarbageCollector::DeleteInstance();
+
+}
+
+void	nox::CoreEntry::GCUpdate()
+{
+	nox::GarbageCollector::Instance().FrameGC();
 }

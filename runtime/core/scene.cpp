@@ -1,7 +1,6 @@
 ﻿//	Copyright (C) 2024 NOX ENGINE All Rights Rserved.
 
-///	@file	type_info.cpp
-///	@brief	type_info
+///	@file	scene.cpp
+///	@brief	scene
 #include	"stdafx.h"
-#include	"type_info.h"
-
+#include	"scene.h"

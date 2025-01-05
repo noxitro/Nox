@@ -5,12 +5,27 @@
 #include	"stdafx.h"
 #include	"test_reflection.h"
 
+#include	"game_object.h"
+#include	"test_behavior.h"
+
 namespace nox
 {
 	/// @brief 配列からポインタへの型変換
 	/// @tparam T 
 	template<class T>
 	using ArrayToPointerType = std::add_pointer_t<std::remove_extent_t<T>>;
+
+	template<class T> requires(!std::is_same_v < T, std::decay_t<T>>)
+		inline constexpr std::decay_t<T> ToDecay(T&& value)noexcept
+	{
+		return std::forward<T>(value);
+	}
+
+	template<class T> requires(std::is_same_v<T, std::decay_t<T>>)
+		inline constexpr decltype(auto) ToDecay(T&& value)noexcept
+	{
+		return value;
+	}
 }
 
 namespace
@@ -18,21 +33,21 @@ namespace
 	class TestClass
 	{
 	public:
-		constexpr TestClass()
+		TestClass()
 		{
 
 		}
 
-		int value0 = 0;
-		const int value1 = 0;
-		int* value2 = 0;
-		const int* value3 = 0;
-		int value4[3]{};
-		const int value5[3]{};
+		int value0 = 10;
+		const int value1 = 120;
+		int* value2 = nullptr;
+		const int* value3 = nullptr;
+		int value4[3]{5, 6, 7};
+		const int value5[3]{88, 99, 22};
 		int& value6 = value9;
-	//	int&& value7 = std::forward<int&&>(value9);
+		int&& value7 = (int&&)(value9);
 	//	volatile int value8 = 0;
-		static inline int value9 = 0;
+		static inline int value9 = 770;
 		int(*value10)(int) = nullptr;
 		int(TestClass::*value11)(int) = nullptr;
 		int(TestClass::*value12)()const = nullptr;
@@ -40,7 +55,6 @@ namespace
 		int(TestClass::*value14)()&&= nullptr;
 
 	};
-
 
 	void getValue0Impl(nox::not_null<void*> out, nox::not_null<const void*> instance)
 	{
@@ -102,8 +116,8 @@ namespace
 	inline void getVariableImpl(VariablePointer variable_pointer, nox::not_null<void*> out, nox::not_null<const void*> instance)
 	{
 		using T0 = std::decay_t<VariablePointer>;
-		decltype(auto) vvvv = static_cast<const nox::FieldClassType<VariablePointer>*>(instance.get())->*variable_pointer;
-//		*static_cast<T0*>(out.get()) = std::decay_t<T0>(static_cast<const nox::FieldClassType<VariablePointer>*>(instance.get())->*variable_pointer);
+		decltype(auto) vvvv = static_cast<const nox::MemberObjectPointerClassType<VariablePointer>*>(instance.get())->*variable_pointer;
+//		*static_cast<T0*>(out.get()) = std::decay_t<T0>(static_cast<const nox::MemberObjectPointerClassType<VariablePointer>*>(instance.get())->*variable_pointer);
 	}
 
 	template<class VariablePointer, class T, class U> requires(std::is_const_v<T> == false)
@@ -112,46 +126,22 @@ namespace
 		::getVariableImpl(variable_pointer, &out, &instance);
 	}
 
-	template<class T>
-	inline constexpr decltype(auto) GetDecay(T&& v)noexcept
+	template<class VariablePointer>
+	inline void getVariableAddrImpl(VariablePointer variable_pointer, nox::not_null<void*> out, nox::not_null<const void*> instance)
 	{
-		return static_cast<std::decay_t<T>>(v);
+		using T0 = std::decay_t<VariablePointer>;
+		*static_cast<T0**>(out.get()) = &static_cast<TestClass*>(const_cast<void*>(instance.get()))->value0;
+
 	}
 
-	void getAddr(nox::not_null<void*> out, nox::not_null<void*> instance)
+	void getAddr(nox::not_null<void*> out, nox::not_null<const void*> instance)
 	{
-	/*	using T0 = std::decay_t<decltype(TestClass::value0)>;
-		*static_cast<const T0**>(out.get()) = &static_cast<TestClass*>(instance.get())->value0;
 
-		using T1 = std::decay_t<decltype(TestClass::value1)>;
-		*static_cast<const T1**>(out.get()) = &static_cast<TestClass*>(instance.get())->value1;
-
-		using T2 = std::decay_t<decltype(TestClass::value2)>;
-		*static_cast<const T2**>(out.get()) = &static_cast<TestClass*>(instance.get())->value2;
-
-		using T3 = std::decay_t<decltype(TestClass::value3)>;
-		*static_cast<const T3**>(out.get()) = &static_cast<TestClass*>(instance.get())->value3;
-
-		using T4 = std::decay_t<decltype(TestClass::value4)>;
-		using t = decltype(TestClass::value4);
-		*static_cast<T4**>(out.get()) = reinterpret_cast<T4*>(&static_cast<TestClass*>(instance.get())->value4);
-	
-		using T5 = std::decay_t<decltype(TestClass::value5)>;
-		*static_cast<const T5**>(out.get()) = reinterpret_cast<T5*>(&static_cast<TestClass*>(instance.get())->value5);
-
-		using T6 = std::decay_t<decltype(TestClass::value6)>;
-		*static_cast<T6**>(out.get()) = &static_cast<TestClass*>(instance.get())->value6;
-
-		using T7 = std::decay_t<decltype(TestClass::value7)>;
-		*static_cast<const T7**>(out.get()) = &static_cast<TestClass*>(instance.get())->value7;
-
-		using T8 = std::decay_t<decltype(TestClass::value8)>;
-		*static_cast<T8**>(out.get()) = &static_cast<TestClass*>(instance.get())->value8;*/
 	}
 
 	inline void TestGet()
 	{
-		constexpr TestClass ce_test_class = TestClass();
+		//constexpr TestClass ce_test_class = TestClass();
 		const TestClass c_test_class;
 		TestClass test_class;
 
@@ -160,8 +150,8 @@ namespace
 		int value0 = 0;
 		getVariable(&TestClass::value0, value0, test_class);
 		getVariable(&TestClass::value0, value0, c_test_class);
-
-	/*	int value1 = 0;
+		
+		int value1 = 0;
 		getVariable(&TestClass::value1, value1, test_class);
 		getVariable(&TestClass::value1, value1, c_test_class);
 
@@ -179,13 +169,377 @@ namespace
 
 		int value5[3]{};
 		getVariable(&TestClass::value5, value5, test_class);
-		getVariable(&TestClass::value5, value5, c_test_class);*/
+		getVariable(&TestClass::value5, value5, c_test_class);
+
+		int value6 = 0;
+		[](int& out, const TestClass& instance) {
+			out = instance.value6;
+			}(value6, test_class);
 	}
+
+	inline void TestGetAddr()
+	{
+		const TestClass c_test_class;
+		TestClass test_class;
+
+		std::pair<nox::not_null<const void*>, const nox::reflection::Type&> pair0 =
+			std::make_pair(static_cast<const void*>(&test_class), nox::reflection::Typeof<int>());
+		std::pair<nox::not_null<const void*>, const nox::reflection::Type&> table[] = { pair0 };
+
+		const void* instance = &test_class;
+		const void* instance_c = &c_test_class;
+
+		void* const instance_ptr = const_cast<void*>(instance);
+		void* const instance_c_ptr = const_cast<void*>(instance_c);
+
+		std::decay_t<decltype(TestClass::value0)>* out0 = nullptr;
+		void* const out_ptr0 = &out0;
+		using T0 = std::decay_t<decltype(TestClass::value0)>;
+		*static_cast<const T0**>(out_ptr0) = &static_cast<TestClass*>(instance_ptr)->TestClass::value0;
+
+		std::decay_t<decltype(TestClass::value1)>* out1 = nullptr;
+		void*const out_ptr1 = &out1;
+		using T1 = std::decay_t<decltype(TestClass::value1)>;
+		*static_cast<const T1**>(out_ptr1) = &static_cast<TestClass*>(instance_ptr)->value1;
+
+		std::decay_t<decltype(TestClass::value4)*> out4 = nullptr;
+		void* const out_ptr4 = &out4;
+		using T4 = std::decay_t<decltype(TestClass::value4)>;
+		//*static_cast<T4**>(out_ptr4) = &static_cast<const TestClass*>(instance_ptr)->value4;
+
+		std::decay_t<decltype(TestClass::value6)>* out6 = nullptr;
+		void* const out_ptr6 = &out6;
+		using T6 = std::decay_t<decltype(TestClass::value6)>;
+		*static_cast<T6**>(out_ptr6) = &static_cast<TestClass*>(instance_ptr)->value6;
+
+		std::decay_t<decltype(TestClass::value7)>* out7 = nullptr;
+		void* const out_ptr7 = &out7;
+		using T7 = std::decay_t<decltype(TestClass::value7)>;
+		*static_cast<const T7**>(out_ptr7) = &static_cast<TestClass*>(instance_ptr)->value7;
+
+		constexpr auto nn = nox::util::BitOr(
+			 nox::reflection::VariableAttributeFlag::None,
+			nox::reflection::VariableAttributeFlag::None
+		);
+
+		constexpr auto nnse = nox::util::BitNot(nox::reflection::VariableAttributeFlag::Constexpr);
+
+		nox::DebugBreak();
+		/*	using T2 = std::decay_t<decltype(TestClass::value2)>;
+		*static_cast<const T2**>(out.get()) = &static_cast<TestClass*>(instance_ptr)->value2;
+
+		using T3 = std::decay_t<decltype(TestClass::value3)>;
+		*static_cast<const T3**>(out.get()) = &static_cast<TestClass*>(instance_ptr)->value3;
+
+		using T4 = std::decay_t<decltype(TestClass::value4)>;
+		*static_cast<T4**>(out.get()) = reinterpret_cast<T4*>(&static_cast<TestClass*>(instance_ptr)->value4);
+
+		using T5 = std::decay_t<decltype(TestClass::value5)>;
+		*static_cast<const T5**>(out.get()) = reinterpret_cast<const T5*>(&static_cast<TestClass*>(instance_ptr)->value5);
+
+		*/
+	}
+}
+
+class ClassBaseA
+{
+public:
+	virtual void Func1() {}
+
+};
+
+class ClassBaseB
+{
+public:
+	virtual void Func1() {}
+	virtual void Func2() {}
+
+};
+
+class ClassChild1 : public ClassBaseA
+{
+public:
+	void Func1()override {}
+};
+
+class ClassChild2 : public virtual ClassBaseA, public virtual ClassBaseB
+{
+public:
+	void Func1()override {}
+	void Func2()override {}
+};
+
+#include	<iostream>
+
+namespace
+{
+	class Obj
+	{
+	public:
+
+		Obj(int _v):value(_v)
+		{
+			NOX_INFO_LINE(U"Default Constructor");
+		}
+
+		Obj(const Obj& obj)
+		{
+			NOX_INFO_LINE(U"Copy Constructor");
+		}
+
+		Obj(Obj&& obj)noexcept
+		{
+			NOX_INFO_LINE(U"Move Constructor");
+		}
+
+		virtual ~Obj()
+		{
+			NOX_INFO_LINE(U"Destructor");
+		}
+
+		int value = 0;
+	};
+
+	class ObjHolderBase {};
+
+	template<class T>
+	class ObjHolder : public ObjHolderBase
+	{
+	public:
+		template<class U>
+		ObjHolder(U&& obj) :obj(std::forward<U>(obj)) {}
+
+		T&& obj;
+	};
+}
+
+namespace nox2
+{
+
+
+	//template<class, class...>
+	//struct IsFunctionObject : std::false_type {};
+
+	///// @brief 関数オブジェクト
+	//template<class T, class... Args> requires(std::is_void_v<decltype(std::declval<T>().T::operator()(std::declval<Args>()...))>)
+	//struct IsFunctionObject<T, Args...> : std::true_type {};
+
+	
+	//template<class T, class... Args>
+	//struct IsFunctionObject
+	//{
+	//private:
+	//	static constexpr std::false_type test(...) = delete;
+	//	static constexpr std::true_type test(std::void_t<decltype(std::declval<T>().T::operator()(std::declval<Args>()...))>*) = delete;
+
+	//public:
+	//	static constexpr bool value = sizeof(IsFunctionObject<T, Args...>::test(nullptr));
+	//};
+	//
+}
+
+namespace concepts2
+{
+	/// @brief 関数オブジェクトか
+	template<class T, class... Args>
+	concept FunctionObject = requires(T&& t)
+	{
+		t.T::operator()(std::declval<Args>()...);
+		
+		std::is_same_v<nox::FunctionArgsTupleType<decltype(static_cast<decltype(t.T::operator()(std::declval<Args>()...))(T::*)(Args...)>(&T::operator())) >, std::tuple<Args...>>;
+	};
+
+	template<class T, class... Args>
+	using TTT = decltype(std::declval<T>().T::operator()(std::declval<Args>()...));
+}
+
+class FO
+{
+public:
+	int operator()()const
+	{
+		return 0;
+	}
+
+	int operator()(int)const
+	{
+		return 0;
+	}
+};
+#include	"type_id_test.h"
+#include	"delegate_test.h"
+namespace
+{
+	class LocalClass 
+	{
+	public:
+		explicit LocalClass(const nox::int32 v) :v(v)
+		{
+			NOX_INFO_LINE(U"LocalClass Constructor");
+		}
+
+		~LocalClass()
+		{
+			NOX_INFO_LINE(U"LocalClass Destructor");
+		}
+
+		LocalClass(const LocalClass& obj)
+		{
+			NOX_INFO_LINE(U"LocalClass Copy Constructor");
+		}
+
+		LocalClass(LocalClass&& obj)noexcept
+		{
+			NOX_INFO_LINE(U"LocalClass Move Constructor");
+		}
+
+		nox::int32 Func()const { return v; }
+
+		nox::int32 v = 0;
+	};
+}
+
+namespace nox
+{
+	template<class T, class U>
+	inline constexpr decltype(auto) MakePairEmplace(T&& t, U&& u)noexcept
+	{
+		return std::make_pair(std::forward<T>(t), std::forward<U>(u));
+	}
+
+	class NoxObject
+	{
+	public:
+		NoxObject() {}
+
+		NoxObject(int* int_ptr) {}
+
+		inline NoxObject(const NoxObject& other)noexcept 
+		{
+			NoxObject* copy = new NoxObject(other.int_ptr);
+		}
+
+		int* int_ptr = nullptr;
+	};
+}
+
+#include <iostream>
+inline void MultiCastTest()
+{
+	nox::MulticastDelegate<int(int)> delegate;
+	//delegate.Resize(4);
+
+	struct Local
+	{
+		int Func(int a)const noexcept { return a + 1; }
+	};
+
+	auto l = [](int a) {return a + 1; };
+	delegate += +[](int a) {return a + 1; };
+	delegate -= +[](int a) {return a + 1; };
+
+	Local local;
+	delegate += std::make_pair(nox::Nontype<&Local::Func>, &local);
+	delegate -= std::make_pair(nox::Nontype<&Local::Func>, &local);
+
+	delegate += [](int a) {return a + 2; };
+
+	delegate += [](int a) {return a + 3; };
+
+	std::cout << delegate(1) << std::endl;
+
+	auto n = delegate(1);
 }
 
 void nox::test::TestReflection()
 {
-	TestGet();
+
+//	nox::util::RemoveEraseIf(v, +[](const nox::Delegate<int()>& a) {return false; });
+	MultiCastTest();
+
+	nox::Delegate<int()> delegate = []() {return 10; };
+	auto n = delegate();
+
+
+
+	constexpr int vv = 0;
+//	constexpr Desc d = Desc{.v = std::ref(vv)};
+
+	/*{
+		class LC
+		{
+		public:
+			LC(int v) :value(v) {}
+			LC(const LC& other) :value(other.value) 
+			{
+				NOX_INFO_LINE(U"LC Copy Constructor");
+			}
+			LC(LC&& other) :value(other.value) 
+			{
+				other.value = 0;
+				NOX_INFO_LINE(U"LC Move Constructor");
+			}
+
+			~LC()
+			{
+				NOX_INFO_LINE(U"LC Destructor");
+			}
+
+			int Func(int a)const noexcept { return a + value; }
+			inline int operator()(int v)const { return this->value + v; }
+
+		private:
+			int value = 0;
+		};
+
+		class LC2
+		{
+		public:
+			LC2(int& v) :value_(v) {}
+
+			LC2(const LC2& other) :value_(other.value_)
+			{
+			}
+
+			int& value_;
+		};
+
+		int v = 123;
+		const LC2 lc2(v);
+		const LC2& lc2Ref = lc2;
+		LC2* lc3 = nullptr;
+		char buffer[sizeof(LC2)]{ 0 };
+		lc3 = std::construct_at(reinterpret_cast<LC2*>(buffer), lc2Ref.value_);
+
+		delegate = std::make_pair(nox::Nontype<&LC::Func>, LC(123));
+
+		constexpr bool eaa = std::is_same<void(LC2::*)()&, void(LC2::*)()>::value;
+
+	}*/
+
+//	auto n = delegate(2);
+	
+
+//	auto local_class_unique_ptr = std::make_unique<LocalClass>(123);
+//	std::shared_ptr<LocalClass> local_class_shared_ptr(local_class_unique_ptr.get());
+//
+//	LocalClass local_class(8);
+//	const LocalClass local_class_const = LocalClass(123);
+//
+//	std::is_invocable<decltype(&LocalClass::Func), const std::shared_ptr<LocalClass>>::value;
+////	using t = nox::util::ToAddressType<LocalClass>;
+////	nox::InvokeResultTypeWithTupleLike<decltype(&LocalClass::Func), nox::TupleCatType<t, std::tuple<>>>;
+//
+//	decltype(auto) p = std::make_pair(nox::Nontype<&LocalClass::Func>, local_class);
+//	using t2 = typename decltype(p)::second_type;
+//
+//	nox::Delegate<int(), 32> delegate2 = nullptr;
+//	nox::util::TryToAddress(local_class);
+//	delegate2 = std::make_pair(nox::Nontype<&LocalClass::Func>, std::ref(local_class));
+//	auto n3 = delegate2;
+//	auto n = delegate2();
+
+
 }
 
 #if false
@@ -329,11 +683,11 @@ namespace
 	constexpr const std::reference_wrapper<const nox::reflection::EnumInfo> enumInfoList[] = { enumInfo };
 
 	inline constexpr volatile const nox::reflection::UserDefinedCompoundTypeInfo baseCompundDataTypeInfoBase = nox::reflection::UserDefinedCompoundTypeInfo(
-		nox::reflection::InvalidType,
+		nox::reflection::GetInvalidType(),
 		U"abc",
 		U"abc",
 		U"abc",
-		nox::reflection::InvalidType,
+		nox::reflection::GetInvalidType(),
 		nullptr,
 		0,
 		nullptr,
@@ -349,11 +703,11 @@ namespace
 	);
 
 	constexpr auto baseCompundDataTypeInfoChild = nox::reflection::UserDefinedCompoundTypeInfo(
-		nox::reflection::InvalidType,
+		nox::reflection::GetInvalidType(),
 		U"abc",
 		U"abc",
 		U"abc",
-		nox::reflection::InvalidType,
+		nox::reflection::GetInvalidType(),
 		nullptr,
 		0,
 		nullptr,
@@ -545,8 +899,8 @@ constexpr auto variable_info = nox::reflection::detail::VariableInfoImpl<decltyp
 	nullptr,
 	0,
 	nox::reflection::FieldAttributeFlag::None,
-	nox::reflection::InvalidType,
-	nox::reflection::InvalidType,
+	nox::reflection::GetInvalidType(),
+	nox::reflection::GetInvalidType(),
 	+[](nox::not_null<void*> instance_ptr, nox::not_null<void*> value) {},
 	+[](not_null<void*> outPtr, not_null<const void*> instance_ptr) {},
 	+[](not_null<void*> outPtr, not_null<const void*> instance_ptr) {},

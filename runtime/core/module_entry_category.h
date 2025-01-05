@@ -23,10 +23,16 @@ namespace nox
 		//	update
 		_Update,
 
+		GCUpdate,
+
 		//	terminal
 		_Terminal,
 
 		//	finalize
 		_Finalize,
+		CoreFinalize,
+
+		/// @brief 最大値
+		_Max
 	};
 }

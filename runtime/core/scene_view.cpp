@@ -5,3 +5,14 @@
 #include	"stdafx.h"
 #include	"scene_view.h"
 
+#include	"scene.h"
+nox::SceneView::SceneView()noexcept:
+	scene_(nullptr)
+{
+
+}
+
+nox::SceneView::~SceneView()
+{
+
+}

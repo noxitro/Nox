@@ -5,8 +5,8 @@
 #pragma once
 #include	"../advanced_type.h"
 
-#include	"nox_string.h"
-#include	"nox_string_view.h"
+#include	"../nox_string.h"
+#include	"../nox_string_view.h"
 
 
 namespace nox

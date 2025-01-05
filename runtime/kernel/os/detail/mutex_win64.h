@@ -6,7 +6,7 @@
 #if NOX_WIN64
 namespace nox::os::detail
 {
-	class MutexWin64 final: public MutexBase
+	class MutexWin64 final: public nox::os::detail::MutexBase
 	{
 	public:
 		inline	MutexWin64() :

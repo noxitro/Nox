@@ -166,47 +166,50 @@ namespace nox::util
 		}
 	}
 #pragma endregion
-	/// @brief 関数ポインタのアドレスをint64で取得する
-	/// @tparam T 
-	/// @param v 
-	/// @return 
-	template<nox::concepts::MemberFunctionPointer T>
-	inline nox::uint64 GetFunctionPointerID(const T v)
-	{
-		const void* const& p = reinterpret_cast<const void* const&>(v);
-		return reinterpret_cast<nox::uint64>(p);
-	}
 
-	/// @brief 関数ポインタのアドレスをint64で取得する
-	/// @tparam T 
-	/// @param v 
-	/// @return 
-	template<typename T> requires(std::is_function_v<T> || nox::concepts::GlobalFunctionPointer<T>)
-	inline nox::uint64 GetFunctionPointerID(const T v)
-	{
-		return reinterpret_cast<nox::uint64>(v);
-	}
-
-	/// @brief	
-	/// @tparam T 
-	/// @param v 
-	/// @return 
-	template<nox::concepts::MemberObjectPointer T>
-	inline nox::uint64 GetObjectPointerID(const T v)
-	{
-		const void* const& p = reinterpret_cast<const void* const&>(v);
-		return reinterpret_cast<nox::uint64>(p);
-	}
-
-	/// @brief 
-	/// @tparam T 
-	/// @param v 
-	/// @return 
-	template<nox::concepts::Pointer T>
-	inline nox::uint64 GetObjectPointerID(const T v)
-	{
-		return reinterpret_cast<nox::uint64>(v);
-	}
+//#if false
+//	/// @brief 関数ポインタのアドレスをint64で取得する
+//	/// @tparam T 
+//	/// @param v 
+//	/// @return 
+//	template<nox::concepts::MemberFunctionPointer T>
+//	inline nox::uint64 GetFunctionPointerID(const T v)
+//	{
+//		const void* const& p = reinterpret_cast<const void* const&>(v);
+//		return reinterpret_cast<nox::uint64>(p);
+//	}
+//
+//	/// @brief 関数ポインタのアドレスをint64で取得する
+//	/// @tparam T 
+//	/// @param v 
+//	/// @return 
+//	template<typename T> requires(std::is_function_v<T> || nox::concepts::GlobalFunctionPointer<T>)
+//	inline nox::uint64 GetFunctionPointerID(const T v)
+//	{
+//		return reinterpret_cast<nox::uint64>(v);
+//	}
+//
+//	/// @brief	
+//	/// @tparam T 
+//	/// @param v 
+//	/// @return 
+//	template<nox::concepts::MemberObjectPointer T>
+//	inline nox::uint64 GetObjectPointerID(const T v)
+//	{
+//		const void* const& p = reinterpret_cast<const void* const&>(v);
+//		return reinterpret_cast<nox::uint64>(p);
+//	}
+//
+//	/// @brief 
+//	/// @tparam T 
+//	/// @param v 
+//	/// @return 
+//	template<nox::concepts::Pointer T>
+//	inline nox::uint64 GetObjectPointerID(const T v)
+//	{
+//		return reinterpret_cast<nox::uint64>(v);
+//	}
+//#endif
 
 	template<class T>
 	inline constexpr bool IsNullPointer(T&& v)noexcept
@@ -255,7 +258,7 @@ namespace nox::util
 	/// @tparam T 列挙型
 	/// @param value 列挙型の値
 	/// @return 基底型の値
-	template<typename T>
+	template<concepts::Enum T>
 	[[nodiscard]] inline	constexpr	std::underlying_type_t<T> ToUnderlying(const T value)noexcept
 	{
 #if defined(__clang__)
@@ -269,7 +272,7 @@ namespace nox::util
 	template<concepts::Enum T>
 	inline	constexpr T BitOr(const std::initializer_list<T> lst)noexcept
 	{
-		std::underlying_type_t<T> ret = static_cast<std::underlying_type_t<T>>(0.0); //ValueTraits<std::underlying_type_t<T>>::VALUE0();
+		std::underlying_type_t<T> ret = static_cast<std::underlying_type_t<T>>(0); //ValueTraits<std::underlying_type_t<T>>::VALUE0();
 		for (typename std::initializer_list<T>::iterator it = lst.begin(); it != lst.end(); ++it)
 		{
 			ret |= util::ToUnderlying(*it);
@@ -277,42 +280,89 @@ namespace nox::util
 		return static_cast<T>(ret);
 	}
 
-	template<concepts::UserDefinedCompoundType T>
+	template<concepts::ClassOrUnion T>
 	[[nodiscard]] inline constexpr T BitOr(const T& a, const T& b)noexcept { return std::bit_or<T>()(a, b); }
 
 	template<concepts::Enum T>
 	[[nodiscard]] inline constexpr T BitOr(const T a, const T b)noexcept { return static_cast<T>(std::bit_or<std::underlying_type_t<T>>()(ToUnderlying(a), ToUnderlying(b))); }
 
-	template<concepts::Arithmetic T>
+	template<std::integral T>
 	[[nodiscard]] inline constexpr T BitOr(const T a, const T b)noexcept { return std::bit_or<T>()(a, b); }
 
+	template<nox::concepts::Enum T, nox::concepts::Enum... Rest>
+		requires(sizeof...(Rest) > 1 && std::is_same_v<T, std::tuple_element_t<0, std::tuple<Rest...>>>)
+	[[nodiscard]] inline constexpr T BitOr(const T e, const Rest... rest)noexcept
+	{
+		return nox::util::BitOr(e, nox::util::BitOr(rest...));
+	}
 
-	template<concepts::UserDefinedCompoundType T>
-	inline	constexpr	bool IsBitAnd(const T& a, const T& b)noexcept { return std::bit_and<T>()(a, b); }
+	template<std::integral T, std::integral... Rest>
+		requires(sizeof...(Rest) > 1 && std::is_same_v<T, std::tuple_element_t<0, std::tuple<Rest...>>>)
+	[[nodiscard]] inline constexpr T BitOr(const T e, const Rest... rest)noexcept
+	{
+		return nox::util::BitOr(e, nox::util::BitOr(rest...));
+	}
+
+	template<concepts::ClassOrUnion T>
+	[[nodiscard]] inline	constexpr	bool IsBitAnd(const T& a, const T& b)noexcept { return std::bit_and<T>()(a, b); }
 
 	template<concepts::Enum T>
-	inline	constexpr	bool IsBitAnd(const T a, const T b)noexcept { return std::bit_and<std::underlying_type_t<T>>()(ToUnderlying(a), ToUnderlying(b)); }
+	[[nodiscard]] inline	constexpr	bool IsBitAnd(const T a, const T b)noexcept { return std::bit_and<std::underlying_type_t<T>>()(ToUnderlying(a), ToUnderlying(b)); }
 
-	template<concepts::Arithmetic T>
-	inline	constexpr	bool IsBitAnd(const T a, const T b)noexcept { return std::bit_and<T>()(a, b); }
+	template<std::integral T>
+	[[nodiscard]] inline	constexpr	bool IsBitAnd(const T a, const T b)noexcept { return std::bit_and<T>()(a, b); }
 
-	template<concepts::UserDefinedCompoundType T>
-	inline	constexpr	T BitAnd(const T& a, const T& b)noexcept { return a & b; }
+	template<concepts::ClassOrUnion T>
+	[[nodiscard]] inline	constexpr	T BitAnd(const T& a, const T& b)noexcept { return a & b; }
 
 	template<concepts::Enum T>
-	inline	constexpr	T BitAnd(const T a, const T b)noexcept { return static_cast<T>(ToUnderlying(a) & ToUnderlying(b)); }
+	[[nodiscard]] inline	constexpr	T BitAnd(const T a, const T b)noexcept { return static_cast<T>(ToUnderlying(a) & ToUnderlying(b)); }
 
-	template<concepts::Arithmetic T>
-	inline	constexpr	T BitAnd(const T a, const T b)noexcept { return a & b; }
+	template<std::integral T>
+	[[nodiscard]] inline	constexpr	T BitAnd(const T a, const T b)noexcept { return a & b; }
 
-	template<concepts::UserDefinedCompoundType T>
+	template<nox::concepts::Enum T, nox::concepts::Enum... Rest>
+		requires(sizeof...(Rest) > 1 && std::is_same_v<T, std::tuple_element_t<0, std::tuple<Rest...>>>)
+	[[nodiscard]] inline constexpr T BitAnd(const T e, const Rest... rest)noexcept
+	{
+		return nox::util::BitAnd(e, nox::util::BitAnd(rest...));
+	}
+
+	template<std::integral T, std::integral... Rest>
+		requires(sizeof...(Rest) > 1 && std::is_same_v<T, std::tuple_element_t<0, std::tuple<Rest...>>>)
+	[[nodiscard]] inline constexpr T BitAnd(const T e, const Rest... rest)noexcept
+	{
+		return nox::util::BitAnd(e, nox::util::BitAnd(rest...));
+	}
+
+	template<concepts::ClassOrUnion T>
 	[[nodiscard]] inline constexpr T BitXor(const T& a, const T& b)noexcept { return std::bit_xor<T>()(a, b); }
 
-	template<concepts::Arithmetic T>
+	template<std::integral T>
 	[[nodiscard]] inline constexpr T BitXor(const T a, const T b)noexcept { return std::bit_xor<T>()(a, b); }
 
 	template<concepts::Enum T>
 	[[nodiscard]] inline constexpr T BitXor(const T a, const T b)noexcept { return static_cast<T>(BitXor(ToUnderlying(a), ToUnderlying(b))); }
+
+	template<nox::concepts::Enum T, nox::concepts::Enum... Rest>
+		requires(sizeof...(Rest) > 1 && std::is_same_v<T, std::tuple_element_t<0, std::tuple<Rest...>>>)
+	[[nodiscard]] inline constexpr T BitXor(const T e, const Rest... rest)noexcept
+	{
+		return nox::util::BitXor(e, nox::util::BitXor(rest...));
+	}
+
+	template<std::integral T, std::integral... Rest>
+		requires(sizeof...(Rest) > 1 && std::is_same_v<T, std::tuple_element_t<0, std::tuple<Rest...>>>)
+	[[nodiscard]] inline constexpr T BitXor(const T e, const Rest... rest)noexcept
+	{
+		return nox::util::BitXor(e, nox::util::BitXor(rest...));
+	}
+
+	template<std::integral T>
+	[[nodiscard]] inline constexpr T BitNot(const T v)noexcept { return std::bit_not<T>()(v); }
+	
+	template<concepts::Enum T>
+	[[nodiscard]] inline constexpr T BitNot(const T v)noexcept { return static_cast<T>(BitNot<std::underlying_type_t<T>>(ToUnderlying(v))); }
 #pragma endregion
 
 	
@@ -328,5 +378,26 @@ namespace nox::util
 			delete ptr;
 			ptr = nullptr;
 		}
+	}
+
+	/// @brief 
+	/// @param ptr 
+	/// @return 
+	inline constexpr std::span<void(*)()> GetVTable(nox::not_null<const void*> ptr)
+	{
+		void (**vt)() = *(void (***)())ptr.get();
+		nox::int32 counter = 0;
+		while (vt[counter] != nullptr)
+		{
+			++counter;
+		}
+
+		return std::span(vt, counter);
+	}
+
+	template<nox::concepts::Class T>
+	inline constexpr std::span<void(*)()> GetVTable(const T& ptr)
+	{
+		return nox::util::GetVTable(&ptr);
 	}
 }

@@ -545,16 +545,16 @@ namespace
     }
 }
 
-std::span<nox::char16>	nox::unicode::ConvertU16String(const std::u8string_view str_view, std::span<char16> dest_buffer)
+std::u16string_view	nox::unicode::ConvertU16String(const std::u8string_view str_view, std::span<char16> dest_buffer)
 {
     ConvertU16StringImpl(str_view, GetUTF16Length(str_view), dest_buffer);
-    return dest_buffer;
+    return std::u16string_view(dest_buffer);
 }
 
-std::span<nox::char16>	nox::unicode::ConvertU16String(const std::u32string_view str_view, std::span<char16> dest_buffer)
+std::u16string_view	nox::unicode::ConvertU16String(const std::u32string_view str_view, std::span<char16> dest_buffer)
 {
     ConvertStringImpl(EncodeUTF16<char16>, str_view, GetUTF16Length(str_view), dest_buffer);
-    return dest_buffer;
+    return std::u16string_view(dest_buffer);
 }
 
 nox::U16String	nox::unicode::ConvertU16String(std::u8string_view str_view)
@@ -619,16 +619,16 @@ namespace
     }
 }
 
-std::span<nox::char32>	nox::unicode::ConvertU32String(const std::u8string_view str_view, std::span<char32> dest_buffer)
+std::u32string_view	nox::unicode::ConvertU32String(const std::u8string_view str_view, std::span<char32> dest_buffer)
 {
     ::ConvertU32String(str_view, GetUTF32Length(str_view), dest_buffer);
-    return dest_buffer;
+    return std::u32string_view(dest_buffer);
 }
 
-std::span<nox::char32>	nox::unicode::ConvertU32String(const std::u16string_view str_view, std::span<char32> dest_buffer)
+std::u32string_view	nox::unicode::ConvertU32String(const std::u16string_view str_view, std::span<char32> dest_buffer)
 {
     ::ConvertU32String(str_view, GetUTF32Length(str_view), dest_buffer);
-    return dest_buffer;
+    return std::u32string_view(dest_buffer);
 }
 
 nox::U32String	nox::unicode::ConvertU32String(std::u8string_view str_view)

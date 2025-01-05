@@ -9,6 +9,7 @@
 #include	"unicode_converter.h"
 
 #pragma warning(push, 0)
+#pragma warning(disable, 26498)
 //#pragma warning(disable:4365)
 //#pragma warning(disable:4514)
 //#pragma warning(disable:4582)

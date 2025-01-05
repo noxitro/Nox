@@ -30,7 +30,7 @@ namespace nox::stack_walker
 		}
 
 		inline consteval Stack(const Stack&)noexcept = delete;
-		inline consteval Stack(const Stack&&)noexcept = delete;
+		inline consteval Stack(Stack&&)noexcept = delete;
 
 		inline constexpr ~Stack() = default;
 

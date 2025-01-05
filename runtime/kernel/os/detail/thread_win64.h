@@ -5,7 +5,7 @@
 #pragma once
 #include	"thread_base.h"
 
-#include	"os/windows.h"
+#include	"../windows.h"
 
 namespace nox::os::detail
 {
@@ -42,7 +42,7 @@ namespace nox::os::detail
 		 * @param func
 		 * @param ...args
 		*/
-		void Dispatch(const Delegate<void()>& func);
+	//	void Dispatch(const Delegate<void()>& func);
 
 		/**
 		 * @brief 停止

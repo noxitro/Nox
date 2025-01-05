@@ -2,14 +2,15 @@
 ///	@brief	type
 #include	"stdafx.h"
 #include	"type.h"
-#include	"manager.h"
+
+#include	"database.h"
 
 const class nox::reflection::UserDefinedCompoundTypeInfo* nox::reflection::Type::GetUserDefinedCompoundTypeInfo()const noexcept
 {
-	return nox::reflection::Reflection::Instance().FindClassInfo(*this);
+	return nox::reflection::FindClassInfo(*this);
 }
 
 const class nox::reflection::EnumInfo* nox::reflection::Type::GetEnumInfo()const noexcept
 {
-	return nox::reflection::Reflection::Instance().FindEnumInfo(*this);
+	return nox::reflection::FindEnumInfo(*this);
 }

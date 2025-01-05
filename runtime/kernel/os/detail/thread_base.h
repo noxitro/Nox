@@ -161,12 +161,12 @@ namespace nox::os
 		/**
 		 * @brief スレッド実行関数
 		*/
-		Delegate<void()> thread_func_;
+	//	Delegate<void()> thread_func_;
 
 		/**
 		 * @brief スレッド終了時の関数テーブル
 		*/
-		static inline constinit std::array<Delegate<void()>, MAX_THREAD_ID> terminate_func_table_;
+	//	static inline constinit std::array<Delegate<void()>, MAX_THREAD_ID> terminate_func_table_;
 	};
 
 

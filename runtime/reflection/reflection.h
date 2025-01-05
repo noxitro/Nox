@@ -2,7 +2,6 @@
 ///	@brief	reflection
 #pragma once
 
-#include	"manager.h"
 #include	"reflection_object.h"
 
 #include	"variable_info.h"
@@ -11,5 +10,5 @@
 #include	"enum_info.h"
 #include	"attribute.h"
 
-#include	"reflection_system.h"
 #include	"attribute_decl.h"
+#include	"database.h"

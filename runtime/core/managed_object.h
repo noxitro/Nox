@@ -16,22 +16,24 @@ namespace nox
 		void	AddRef();
 		void	ReleaseRef();
 
-		ManagedObject();
+		ManagedObject()noexcept;
 		~ManagedObject()override;
 
+		/// @brief 参照カウンタ取得
+		[[nodiscard]] inline	nox::int32	GetRefCount()const noexcept{ return ref_count_; }
 	private:
 		/// @brief 参照カウンタ
-		volatile int32 ref_count_;
+		volatile nox::int32 ref_count_;
 	};
 
-	template<>
-	inline void IntrusivePtrAddReference< ManagedObject>(ManagedObject&v) 
+//	template<>
+	inline void IntrusivePtrAddReference(ManagedObject&v) 
 	{
 		v.AddRef();
 	}
 
-	template<>
-	inline void IntrusivePtrReleaseReference< ManagedObject>(ManagedObject&v) 
+//	template<>
+	inline void IntrusivePtrReleaseReference(ManagedObject&v) 
 	{
 		v.ReleaseRef();
 	}

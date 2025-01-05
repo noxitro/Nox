@@ -6,7 +6,11 @@
 #include	"memory/memory_util.h"
 #include	"type_traits/function_signature.h"
 #include	"type_traits/type_name.h"
+#include	"reflection_type.h"
 
+
+
+#if false
 namespace nox
 {
 	/// @brief 関数を登録した時に呼ばれる
@@ -93,9 +97,6 @@ namespace nox
 
 			/// @brief 関数オブジェクト
 			FunctionObject,
-
-			/// @brief ラムダ式
-			Lambda
 		};
 
 	protected:
@@ -105,7 +106,7 @@ namespace nox
 		{
 		public:
 			virtual ~ICallable() {}
-			virtual constexpr FunctionReturnType<_FuncType> Invoke(const FunctionArgsType<_FuncType>&)const = 0;
+			virtual constexpr FunctionResultType<_FuncType> Invoke(const FunctionArgsTupleType<_FuncType>&)const = 0;
 			inline constexpr bool Equal(const ICallable& rhs)const noexcept
 			{
 				if (GetTypeID() != rhs.GetTypeID())
@@ -121,10 +122,9 @@ namespace nox
 				return DoEqual(rhs);
 			}
 
-			virtual constexpr uint32 GetFunctorTypeID()const noexcept = 0;
-			virtual constexpr uint32 GetTypeID()const noexcept = 0;
-			virtual constexpr Category GetCategory()const noexcept = 0;
-			virtual constexpr ICallable* Clone(uint8& buffer) const noexcept= 0;
+			inline	virtual constexpr const nox::TypeId& GetTypeID()const noexcept = 0;
+			inline	virtual constexpr Category GetCategory()const noexcept = 0;
+			inline	virtual constexpr ICallable* Clone(uint8& buffer) const noexcept= 0;
 		protected:
 			virtual constexpr bool DoEqual(const ICallable& rhs)const noexcept = 0;
 		};
@@ -134,13 +134,12 @@ namespace nox
 		class CallableBase : public ICallable
 		{
 		public:
-			inline constexpr uint32 GetFunctorTypeID()const noexcept { return util::GetUniqueTypeID<T>(); }
 			inline constexpr Category GetCategory()const noexcept override final { return category; }
 		};
 
 
 
-		/// @brief 通常関数
+		/// @brief 静的関数
 		template<class T>
 		class CallableDefault final : public CallableBase<T, Category::Default>
 		{
@@ -148,14 +147,15 @@ namespace nox
 			inline constexpr explicit CallableDefault(T&& f)noexcept :
 				functor_(std::forward<T>(f)) {}
 
-			inline constexpr uint32 GetTypeID()const noexcept override final { 
+			inline constexpr const nox::TypeId& GetTypeID()const noexcept override final {
 				auto name = util::GetTypeName<T>();
-				return nox::util::GetUniqueTypeID<std::decay_t<std::remove_pointer_t<decltype(this)>>>();
+
+				return nox::GetTypeId<std::decay_t<std::remove_pointer_t<decltype(this)>>>();
 			}
 
-			inline constexpr FunctionReturnType<_FuncType> Invoke(const FunctionArgsType<_FuncType>& args)const override
+			inline constexpr FunctionResultType<_FuncType> Invoke(const FunctionArgsTupleType<_FuncType>& args)const override
 			{
-				if constexpr (std::is_void_v< FunctionReturnType<_FuncType>> == true)
+				if constexpr (std::is_void_v< FunctionResultType<_FuncType>> == true)
 				{
 					std::apply(functor_, args);
 				}
@@ -167,11 +167,6 @@ namespace nox
 
 			inline constexpr bool DoEqual(const ICallable& rhs)const noexcept override
 			{
-				if (this->GetTypeID() != rhs.GetTypeID())
-				{
-					return false;
-				}
-
 				return functor_ == static_cast<const CallableDefault<T>*>(&rhs)->functor_;
 			}
 
@@ -180,9 +175,11 @@ namespace nox
 				return std::construct_at(static_cast<CallableDefault<T>*>(static_cast<void*>(&buffer)), std::forward<T>(this->functor_));
 			}
 		private:
-			T&& functor_;
+			/// @brief 関数
+			T functor_;
 		};
 
+		/// @brief 関数オブジェクト
 		template<class T>
 		class CallableFunctionObject final: public CallableBase<T, Category::FunctionObject>
 		{
@@ -190,13 +187,14 @@ namespace nox
 			inline constexpr explicit CallableFunctionObject(T&& f)noexcept :
 				functor_(std::forward<T>(f)) {}
 
-			inline uint32 GetTypeID()const noexcept override final { 
-				return nox::util::GetUniqueTypeID<std::decay_t<std::remove_pointer_t<decltype(this)>>>(); 
+			inline const nox::reflection::Type& GetTypeID()const noexcept override final { 
+//				return nox::util::GetUniqueTypeID<std::decay_t<std::remove_pointer_t<decltype(this)>>>(); 
+				return nox::GetTypeId<std::decay_t<std::remove_pointer_t<decltype(this)>>>(); 
 			}
 
-			inline constexpr FunctionReturnType<_FuncType> Invoke(const FunctionArgsType<_FuncType>& args)const override
+			inline constexpr FunctionResultType<_FuncType> Invoke(const FunctionArgsTupleType<_FuncType>& args)const override
 			{
-				if constexpr (std::is_void_v< FunctionReturnType<_FuncType>> == true)
+				if constexpr (std::is_void_v< FunctionResultType<_FuncType>> == true)
 				{
 					std::apply(functor_, args);
 				}
@@ -208,12 +206,7 @@ namespace nox
 
 			inline constexpr bool DoEqual(const ICallable& rhs)const noexcept override
 			{
-				if (this->GetTypeID() != rhs.GetTypeID())
-				{
-					return false;
-				}
-
-				return &functor_ == &static_cast<const CallableFunctionObject<T>*>(&rhs)->functor_;
+				return functor_ == static_cast<const CallableFunctionObject<T>*>(&rhs)->functor_;
 			}
 
 			inline constexpr ICallable* Clone(uint8& buffer)const noexcept override
@@ -221,7 +214,8 @@ namespace nox
 				return std::construct_at(static_cast<CallableFunctionObject<T>*>(static_cast<void*>(&buffer)), std::forward<T>(this->functor_));
 			}
 		private:
-			T&& functor_;
+			/// @brief		関数オブジェクト
+			T functor_;
 		};
 
 		/// @brief 等価比較用オブジェクト
@@ -237,7 +231,11 @@ namespace nox
 			{
 			}
 
-			inline constexpr uint32 GetTypeID()const noexcept override final { return nox::util::GetUniqueTypeID<CallableMemberFunctionEqualObject<T, InstanceType>>(); }
+			inline constexpr const nox::TypeId& GetTypeID()const noexcept override final 
+			{
+			//	return nox::util::GetUniqueTypeID<CallableMemberFunctionEqualObject<T, InstanceType>>(); 
+				return nox::GetTypeId<CallableMemberFunctionEqualObject<T, InstanceType>>(); 
+			}
 
 			inline constexpr ICallable* Clone(uint8&)const noexcept override
 			{
@@ -245,9 +243,9 @@ namespace nox
 				return nullptr;
 			}
 			
-			inline constexpr FunctionReturnType<_FuncType> Invoke(const FunctionArgsType<_FuncType>& args)const override
+			inline constexpr FunctionResultType<_FuncType> Invoke(const FunctionArgsTupleType<_FuncType>& args)const override
 			{
-				if constexpr (std::is_void_v< FunctionReturnType<_FuncType>> == true)
+				if constexpr (std::is_void_v< FunctionResultType<_FuncType>> == true)
 				{
 					if constexpr (nox::detail::IsCallable_IDelegateGetInstance<InstanceType>::value == true)
 					{
@@ -290,7 +288,8 @@ namespace nox
 
 		protected:
 			InstanceType&& instance_;
-			T&& functor_;
+			/// @brief メンバ関数
+			T functor_;
 		};
 
 		///@brief	メンバ関数用
@@ -336,11 +335,11 @@ namespace nox
 		template<class... Args> requires(
 			std::is_invocable_v<_FuncType, Args...>
 			)
-			inline constexpr FunctionReturnType<_FuncType> Invoke(Args&&... args)const
+			inline constexpr FunctionResultType<_FuncType> Invoke(Args&&... args)const
 		{
 			NOX_ASSERT(this->callable_ptr_ != nullptr, U"");
 
-			if constexpr (std::is_void_v< FunctionReturnType<_FuncType>> == true)
+			if constexpr (std::is_void_v< FunctionResultType<_FuncType>> == true)
 			{
 				this->callable_ptr_->Invoke(std::make_tuple(std::forward<Args>(args)...));
 			}
@@ -607,6 +606,10 @@ namespace nox
 				Unbind();
 			}
 
+			constexpr const nox::TypeId& t0 = nox::GetTypeId<T>();
+			constexpr const nox::TypeId& t1 = nox::GetTypeId<std::decay_t<T>>();
+			bool eq = t0 == t1;
+
 //			Delegate::callable_ptr_ = std::construct_at(static_cast<Delegate::template CallableDefault<T>*>(static_cast<void*>(buffer_.data())), std::forward<T>(func));
 			Delegate::callable_ptr_ = std::construct_at(static_cast<CallableDefaultType<T>*>(static_cast<void*>(buffer_.data())), std::forward<T>(func));
 		}
@@ -685,7 +688,8 @@ namespace nox
 		}
 	private:
 		/// @brief メモリ割り当て用バッファ
-		std::array<uint8, _BufferSize + sizeof(void*)>	buffer_;
+		std::array<uint8, kRealBufferSize>	buffer_;
 	};
 
 }
+#endif

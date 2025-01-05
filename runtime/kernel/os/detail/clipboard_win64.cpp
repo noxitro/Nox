@@ -17,7 +17,7 @@ namespace
 	class ScopeExit
 	{
 	public:
-		inline constexpr explicit ScopeExit(void(*&func)())noexcept:
+		inline constexpr explicit ScopeExit(void(*const func)())noexcept:
 			func_(func)
 		{
 
@@ -29,7 +29,7 @@ namespace
 		}
 
 	private:
-		void(*func_)();
+		void(*const func_)();
 	};
 }
 

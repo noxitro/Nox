@@ -71,9 +71,20 @@ namespace nox
 			inline	constexpr StringView(const value_type* s) noexcept:
 				view_(s){}
 
+			template <class _Range>
+				requires (!std::same_as<std::remove_cvref_t<_Range>, StringView>
+			&& std::ranges::contiguous_range<_Range>
+				&& std::ranges::sized_range<_Range>
+				&& std::same_as<std::ranges::range_value_t<_Range>, value_type>
+				&& !std::is_convertible_v<_Range, const value_type*>
+				&& !requires(std::remove_cvref_t<_Range>& _Rng) {
+				_Rng.operator _STD basic_string_view<value_type, traits_type>();
+			})
+				inline constexpr explicit StringView(_Range&& _Rng) noexcept
+					: view_{ std::forward<_Range>(_Rng) } {}
 
 #pragma region 関数
-		inline	std::span<char16>	ToU16String(std::span<char16> dest_buffer)const
+		inline	std::u16string_view	ToU16String(std::span<char16> dest_buffer)const
 		{
 			return unicode::ConvertU16String(view_, dest_buffer);
 		}

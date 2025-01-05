@@ -13,7 +13,7 @@ namespace nox::util
 	/// @param ptr 
 	/// @return 
 	template<class T> requires(std::is_pointer_v<T>)
-		inline constexpr std::remove_pointer_t<T>& Deref(const T& ptr)
+		inline constexpr std::remove_pointer_t<T>& Deref(const T& ptr)noexcept
 	{
 		NOX_ASSERT(ptr != nullptr, util::Format(U"{0}はnullptrです", util::GetTypeName<T>()));
 		return *ptr;

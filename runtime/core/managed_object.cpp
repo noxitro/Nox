@@ -5,9 +5,16 @@
 #include	"stdafx.h"
 #include	"managed_object.h"
 
-nox::ManagedObject::ManagedObject():ref_count_(1)
-{
+#include	"garbage_collector.h"
 
+namespace
+{
+	
+}
+
+nox::ManagedObject::ManagedObject()noexcept:ref_count_(0)
+{
+	
 }
 
 nox::ManagedObject::~ManagedObject()
@@ -22,6 +29,18 @@ void	nox::ManagedObject::AddRef()
 
 void	nox::ManagedObject::ReleaseRef()
 {
-	nox::os::atomic::Decrement(ref_count_);
+	const auto ref_count = nox::os::atomic::Decrement(ref_count_);
+	NOX_ASSERT(ref_count >= -2, U"");
+
+	switch (ref_count)
+	{
+	case -1:
+		nox::GarbageCollector::Instance().Register(*this);
+		break;
+
+	case -2:
+		delete this;
+		break;
+	}
 }
 
