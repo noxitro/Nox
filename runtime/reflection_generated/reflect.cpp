@@ -1,7 +1,7 @@
 ﻿//	Copyright (C) 2024 NOX ENGINE All Rights Rserved.
 
 ///	@file	reflect.cpp
-///	@brief	reflect
+///	@brief	リフレクション解析対象のファイル
 #include	"stdafx.h"
 #include	"reflect.h"
 

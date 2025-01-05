@@ -35,7 +35,7 @@ namespace
 	public:
 		TestClass()
 		{
-
+			
 		}
 
 		int value0 = 10;

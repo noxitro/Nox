@@ -3,3 +3,8 @@
 ///	@file	definition.h
 ///	@brief	definition
 #pragma once
+
+namespace nox::reflection
+{
+
+}

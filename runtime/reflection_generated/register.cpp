@@ -9,8 +9,6 @@
 
 void	nox::reflection::InitializeGen()
 {
-	auto reflection = nox::reflection::Reflection::Instance();
-
 #if NOX_DEBUG
 #if NOX_WIN64
 //	nox::reflection::gen::RegisterDebugX64();

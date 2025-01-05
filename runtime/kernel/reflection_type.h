@@ -555,7 +555,7 @@ namespace nox::reflection
 
 			static inline constexpr void DestroyAt(void* storage)
 			{
-				if constexpr (std::is_destructible_v<T> == true)
+				if constexpr (std::is_destructible_v<std::remove_cvref_t<T>> == true)
 				{
 					std::destroy_at(static_cast<std::remove_cvref_t<T>*>(storage));
 				}

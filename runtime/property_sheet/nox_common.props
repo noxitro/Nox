@@ -31,10 +31,11 @@
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <EnableModules>false</EnableModules>
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
-      <BuildStlModules>false</BuildStlModules>
+      <BuildStlModules>true</BuildStlModules>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <TreatSpecificWarningsAsErrors>5030;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
     </ClCompile>
     <Link />
     <Lib>

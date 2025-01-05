@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Project>
+  <!-- vcxproj と同じディレクトリにあるMyCustomTask.dll のタスクを使用 -->
+  <UsingTask
+    TaskName="Nox.CustomTask.Task"
+    AssemblyFile="../bin/CustomTask.dll" />
+
+	<!--変数定義-->
+	<!--Debug構成-->
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+		<ConfigurationDefine>NOX_DEBUG</ConfigurationDefine>
+	</PropertyGroup>
+
+	<!--Release構成-->
+	<PropertyGroup Condition="'$(Configuration)' == 'Release'">
+		<ConfigurationDefine>NOX_RELEASE</ConfigurationDefine>
+	</PropertyGroup>
+	
+	<!--Master構成-->
+	<PropertyGroup Condition="'$(Configuration)' == 'Master'">
+		<ConfigurationDefine>NOX_MASTER</ConfigurationDefine>
+	</PropertyGroup>
+	
+	<!--x64構成-->
+	<PropertyGroup Condition="'$(Platform)' == 'x64'">
+		<PlatformDefine>NOX_X64</PlatformDefine>
+	</PropertyGroup>
+
+	<!--変数定義end-->
+	
+  <!-- 独自ターゲット -->
+  <Target
+    Name="ReflectionGeneratorPreProcess"
+    BeforeTargets="ClCompile">
+    <!-- カスタムタスクを呼び出す -->
+	  <Nox.CustomTask.Task
+		  SourceFiles="@(ClCompile)"
+		  IncludePaths="$(IncludePath);%(ClCompile.AdditionalIncludeDirectories)"
+		  PreprocessorMacro="%(ClCompile.PreprocessorDefinitions)"
+		  AdditionalOptions="%(ClCompile.AdditionalOptions)"
+		  SolutionDir="$(SolutionDir)"
+		  SolutionPath="$(SolutionPath)"
+		  ProjectDir="$(ProjectDir)"
+		  ProjectPath="$(ProjectPath)"
+		  
+		  OutputGenerateDir="$(ProjectDir)gen"
+		 
+		  Configuration="$(Configuration)"
+		  ConfigurationDefine="$(ConfigurationDefine)"
+		  Platform="$(Platform)"
+		  PlatformDefine="$(PlatformDefine)"
+		  IntermediateOutputPath="$(IntermediateOutputPath)"
+		  MSBuildBinPath="$(MSBuildBinPath)"
+		  Optimization="%(ClCompile.Optimization)"
+		  ReflectionTargetSourceFile="$(ProjectDir)reflect.cpp"
+		  />
+	  </Target>
+</Project>
