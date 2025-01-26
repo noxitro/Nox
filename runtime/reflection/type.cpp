@@ -5,7 +5,7 @@
 
 #include	"database.h"
 
-const class nox::reflection::UserDefinedCompoundTypeInfo* nox::reflection::Type::GetUserDefinedCompoundTypeInfo()const noexcept
+const class nox::reflection::ClassInfo* nox::reflection::Type::GetUserDefinedCompoundTypeInfo()const noexcept
 {
 	return nox::reflection::FindClassInfo(*this);
 }

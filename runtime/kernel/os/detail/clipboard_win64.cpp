@@ -37,19 +37,19 @@ bool nox::os::clipboard::Clear()
 {
 	if (::OpenClipboard(nullptr) == FALSE)
 	{
-		NOX_ERROR_LINE(U"OpenClipboard failed.");
+		NOX_ERROR_LINE_OLD(U"OpenClipboard failed.");
 		return false;
 	}
 
 	if (::EmptyClipboard() == FALSE)
 	{
-		NOX_ERROR_LINE(U"EmptyClipboard failed.");
+		NOX_ERROR_LINE_OLD(U"EmptyClipboard failed.");
 		return false;
 	}
 
 	if (::CloseClipboard() == FALSE)
 	{
-		NOX_ERROR_LINE(U"CloseClipboard failed.");
+		NOX_ERROR_LINE_OLD(U"CloseClipboard failed.");
 		return false;
 	}
 	return true;
@@ -71,17 +71,17 @@ bool nox::os::clipboard::SetText(const std::u8string_view text)
 
 	if (::EmptyClipboard() == FALSE)
 	{
-		NOX_ERROR_LINE(U"EmptyClipboard failed.");
+		NOX_ERROR_LINE_OLD(U"EmptyClipboard failed.");
 		return false;
 	}
 
 	::HGLOBAL handle_mem = ::GlobalAlloc(GMEM_MOVEABLE, text.size() + 1);
 	if (handle_mem == nullptr)
 	{
-		NOX_ERROR_LINE(U"GlobalAlloc failed.");
+		NOX_ERROR_LINE_OLD(U"GlobalAlloc failed.");
 		if (::CloseClipboard() == FALSE)
 		{
-			NOX_ERROR_LINE(U"CloseClipboard failed.");
+			NOX_ERROR_LINE_OLD(U"CloseClipboard failed.");
 			return false;
 		}
 		return false;
@@ -92,12 +92,12 @@ bool nox::os::clipboard::SetText(const std::u8string_view text)
 	const ::errno_t error = ::memcpy_s(str_ptr, (text.size() + 1) , text.data(), text.size() );
 	if (error != 0)
 	{
-		NOX_ERROR_LINE(U"memcpy_s failed.");
+		NOX_ERROR_LINE_OLD(U"memcpy_s failed.");
 		::GlobalUnlock(handle_mem);
 		::GlobalFree(handle_mem);
 		if (::CloseClipboard() == FALSE)
 		{
-			NOX_ERROR_LINE(U"CloseClipboard failed.");
+			NOX_ERROR_LINE_OLD(U"CloseClipboard failed.");
 			return false;
 		}
 		return false;
@@ -108,7 +108,7 @@ bool nox::os::clipboard::SetText(const std::u8string_view text)
 	::GlobalFree(handle_mem);
 	if (::CloseClipboard() == FALSE)
 	{
-		NOX_ERROR_LINE(U"CloseClipboard failed.");
+		NOX_ERROR_LINE_OLD(U"CloseClipboard failed.");
 		return false;
 	}
 	return true;
@@ -123,7 +123,7 @@ std::optional<nox::StringView> nox::os::clipboard::GetText(std::span<nox::char32
 {
 	if (::OpenClipboard(nullptr) == FALSE)
 	{
-		NOX_ERROR_LINE(U"OpenClipboard failed.");
+		NOX_ERROR_LINE_OLD(U"OpenClipboard failed.");
 		return std::nullopt;
 	}
 
@@ -134,19 +134,19 @@ bool nox::os::detail::ClipboardWin64::Clear()
 {
 	if (::OpenClipboard(nullptr) == FALSE)
 	{
-		NOX_ERROR_LINE(U"OpenClipboard failed.");
+		NOX_ERROR_LINE_OLD(U"OpenClipboard failed.");
 		return false;
 	}
 
 	if (::EmptyClipboard() == FALSE)
 	{
-		NOX_ERROR_LINE(U"EmptyClipboard failed.");
+		NOX_ERROR_LINE_OLD(U"EmptyClipboard failed.");
 		return false;
 	}
 
 	if (::CloseClipboard() == FALSE)
 	{
-		NOX_ERROR_LINE(U"CloseClipboard failed.");
+		NOX_ERROR_LINE_OLD(U"CloseClipboard failed.");
 		return false;
 	}
 	return true;
@@ -161,14 +161,14 @@ bool nox::os::detail::ClipboardWin64::SetText(const nox::StringView text)
 
 	if (::EmptyClipboard() == FALSE)
 	{
-		NOX_ERROR_LINE(U"EmptyClipboard failed.");
+		NOX_ERROR_LINE_OLD(U"EmptyClipboard failed.");
 		return false;
 	}
 
 	::HGLOBAL handle_mem = ::GlobalAlloc(GMEM_MOVEABLE, (text.size() + 1) * sizeof(nox::StringView::value_type));
 	if (handle_mem == nullptr)
 	{
-		NOX_ERROR_LINE(U"GlobalAlloc failed.");
+		NOX_ERROR_LINE_OLD(U"GlobalAlloc failed.");
 		::CloseClipboard();
 		return false;
 	}

@@ -1,4 +1,4 @@
-﻿//	Copyright (C) 2024 NOX ENGINE All Rights Rserved.
+﻿//	Copyright (C) 2024 NOX ENGINE All Rights Reserved.
 
 ///	@file	math_algorithm.h
 ///	@brief	math_algorithm
@@ -46,7 +46,8 @@ namespace nox::math
 	/// @param source 補間する値
 	/// @return 補間された値
 	template<concepts::Arithmetic T>
-	[[nodiscard]] inline	constexpr T	InverseLerp(T a, T b, T source)noexcept
+	[[nodiscard]]
+	inline	constexpr T	InverseLerp(T a, T b, T source)noexcept
 	{
 		return (source - b) / (a - b);
 	}
@@ -55,6 +56,12 @@ namespace nox::math
 	/// @param degree 度数法の値
 	/// @return 弧度法の値
 	template<std::floating_point T>
-	[[nodiscard]] inline	constexpr	T DegreeToRadian(const T degree)noexcept { return degree * math::PI<T> / static_cast<T>(180.0); }
+	[[nodiscard]]
+	inline	constexpr	T DegreeToRadian(const T degree)noexcept { return degree * nox::math::PI<T> / static_cast<T>(180.0); }
 
+	/// @brief 弧度法の値から度数法の値へ変換する
+	/// @param radian 弧度法の値
+	template<std::floating_point T>
+	[[nodiscard]]
+	inline	constexpr	T RadianToDegree(const T radian)noexcept { return radian * static_cast<T>(180.0) / nox::math::PI<T>; }
 }

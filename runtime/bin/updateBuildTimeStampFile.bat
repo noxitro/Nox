@@ -1,31 +1,31 @@
-chcp 65001
+rem chcp 65001
 
 echo run %0
 echo off
 setlocal
 
-rem ã“ã®ãƒ•ã‚¡ã‚¤ãƒ«ã¯ã€æŒ‡å®šãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆã®ãƒ“ãƒ«ãƒ‰ã‚¹ã‚¿ãƒ³ãƒ—ãƒ•ã‚¡ã‚¤ãƒ«ã‚’ä½œæˆã—ã¾ã™
-rem 
+rem ‚±‚Ìƒtƒ@ƒCƒ‹‚ÍAw’èƒvƒƒWƒFƒNƒg‚Ìƒrƒ‹ƒhƒXƒ^ƒ“ƒvƒtƒ@ƒCƒ‹‚ğì¬‚µ‚Ü‚·
+echo ƒrƒ‹ƒhƒ^ƒCƒ€ƒXƒ^ƒ“ƒv‚ğì¬‚µ‚Ü‚·
 
-rem å¼•æ•°ã®è§£æ
+rem ˆø”‚Ì‰ğÍ
 
-rem ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«(ãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆå)
+rem ƒ‚ƒWƒ…[ƒ‹(ƒvƒƒWƒFƒNƒg–¼)
 set ModuleName=%1
+echo ProjectName=%ModuleName%
 
-rem ä¸­é–“å‡ºåŠ›ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒª
+rem ’†ŠÔo—ÍƒfƒBƒŒƒNƒgƒŠ
 set IntermediateDir=%2
 
-rem å¼•æ•°ã®è§£æend
+rem ˆø”‚Ì‰ğÍend
 
-rem å¼•æ•°ã®ãƒ­ã‚°å‡ºåŠ›
-echo ModuleName=%ModuleName%
-
-rem ãƒ“ãƒ«ãƒ‰ã‚¿ã‚¤ãƒ ã‚¹ã‚¿ãƒ³ãƒ—æƒ…å ±ç”¨ã®ãƒ•ã‚©ãƒ«ãƒ€ã‚’ä½œæˆã™ã‚‹
+rem ƒrƒ‹ƒhƒ^ƒCƒ€ƒXƒ^ƒ“ƒvî•ñ—p‚ÌƒtƒHƒ‹ƒ_‚ğì¬‚·‚é
 set TempBuildTimeStampDir=%IntermediateDir%\nox_build_time_stamp
 echo TempBuildTimeStampDir=%TempBuildTimeStampDir%
 mkdir %TempBuildTimeStampDir%
 
-rem æ—¥æ™‚ã‚’æ›¸ãè¾¼ã‚€
+rem “ú‚ğ‘‚«‚Ş
 set BuildTimeStampFilePath=%TempBuildTimeStampDir%\%ModuleName%.tmp
 echo BuildTimeStampFilePath=%BuildTimeStampFilePath%
 echo %DATE% %TIME%>%BuildTimeStampFilePath%
+
+echo ƒrƒ‹ƒhƒ^ƒCƒ€ƒXƒ^ƒ“ƒvì¬Š®—¹

@@ -218,7 +218,7 @@ bool	nox::stack_walker::detail::WalkerBase::Resolve()
 
 void	nox::stack_walker::detail::WalkerBase::Trace()const
 {
-	NOX_INFO_LINE(U"===CallStackTrace開始===");
+	NOX_INFO_LINE(log_tag::Kernel, U"===CallStackTrace開始===");
 
 	for (uint8 i = 0; i < stack_length_; ++i)
 	{
@@ -230,11 +230,11 @@ void	nox::stack_walker::detail::WalkerBase::Trace()const
 		}
 
 		//	[Symbol名]([ライン])
-		NOX_INFO_LINE(util::Format(U"{0} ({1})", stack.GetSymbolName().data(), stack.GetLine()));
+		NOX_INFO_LINE(log_tag::Kernel, util::Format(U"{0} ({1})", stack.GetSymbolName().data(), stack.GetLine()));
 
 	}
 
-	NOX_INFO_LINE(U"===CallStackTrace終了===");
+	NOX_INFO_LINE(log_tag::Kernel, U"===CallStackTrace終了===");
 }
 
 nox::String	nox::stack_walker::detail::WalkerBase::GetStackTraceString()const

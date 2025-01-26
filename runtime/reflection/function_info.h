@@ -24,7 +24,7 @@ namespace nox::reflection
 			const bool hasDefaultValue = false
 		)noexcept :
 			name_(name),
-			type_(type),
+			underlying_type_(type),
 			attribute_list_(attribute_list),
 			attribute_list_length_(attribute_list_length),
 			has_default_value_(hasDefaultValue)
@@ -38,7 +38,7 @@ namespace nox::reflection
 		[[nodiscard]] inline	constexpr const ReflectionStringView GetName()const noexcept { return name_; }
 
 		/// @brief タイプ情報を取得
-		[[nodiscard]] inline	constexpr const Type& GetType()const noexcept { return type_; }
+		[[nodiscard]] inline	constexpr const Type& GetUnderlyingType()const noexcept { return underlying_type_; }
 
 		/// @brief デフォルト値を持っているか
 		[[nodiscard]] inline	constexpr bool HasDefaultValue()const noexcept { return has_default_value_; }
@@ -58,7 +58,7 @@ namespace nox::reflection
 		const std::reference_wrapper<const ReflectionObject>* attribute_list_;
 		
 		/// @brief タイプ情報
-		const reflection::Type& type_;
+		const reflection::Type& underlying_type_;
 	
 		/// @brief 引数名
 		const ReflectionStringView name_;
@@ -88,7 +88,7 @@ namespace nox::reflection
 				const void*const _constDataPtr,
 				TagConst&&
 			)noexcept :
-				type_(type),
+				underlying_type_(type),
 				const_data_ptr(_constDataPtr),
 				is_const_(true)
 			{}
@@ -98,13 +98,13 @@ namespace nox::reflection
 					void*const _dataPtr,
 					TagNonConst&&
 				)noexcept :
-				type_(type),
+				underlying_type_(type),
 				data_ptr(_dataPtr),
 				is_const_(false)
 			{}
 
 			inline	constexpr	InvokeArgument(const reflection::Type& type)noexcept :
-				type_(type),
+				underlying_type_(type),
 				const_data_ptr(nullptr),
 				is_const_(true)
 			{}
@@ -123,7 +123,7 @@ namespace nox::reflection
 			};
 
 			/// @brief 引数の型
-			const reflection::Type& type_;
+			const reflection::Type& underlying_type_;
 			
 			inline	constexpr	bool	IsConst()const noexcept { return is_const_; }
 
@@ -277,14 +277,14 @@ namespace nox::reflection
 			//	戻り値
 			if (IsNoReturn() == false)
 			{
-				NOX_ASSERT(argument_list[argument_start_index].type_.IsConvertible(result_type_) == false, U"戻り値の型チェックに失敗しました");
+				NOX_ASSERT(argument_list[argument_start_index].underlying_type_.IsConvertible(result_type_) == false, U"戻り値の型チェックに失敗しました");
 
 				++argument_start_index;
 			}
 
 			if (IsStatic() == false)
 			{
-				NOX_ASSERT(argument_list[argument_start_index].type_.IsConvertible(containing_type_) == false, U"インスタンスの型チェックに失敗しました");
+				NOX_ASSERT(argument_list[argument_start_index].underlying_type_.IsConvertible(containing_type_) == false, U"インスタンスの型チェックに失敗しました");
 
 				++argument_start_index;
 			}
@@ -293,7 +293,7 @@ namespace nox::reflection
 			for (std::uint8_t i = argument_start_index; i < static_cast<std::uint8_t>(argument_list.size()); ++i)
 			{
 				//	型チェック
-				if (argument_list[i].type_.IsConvertible(this->GetFunctionParam(i - argument_start_index).GetType()) == false)
+				if (argument_list[i].underlying_type_.IsConvertible(this->GetFunctionParam(i - argument_start_index).GetUnderlyingType()) == false)
 				{
 					NOX_ASSERT(false, nox::util::Format(U"型チェックに失敗しました i:{0}", static_cast<std::uint32_t>(i)));
 				}

@@ -1,7 +1,7 @@
 ﻿//	Copyright (C) 2024 NOX ENGINE All Rights Rserved.
 
 ///	@file	parallel_execute_checker.h
-///	@brief	parallel_execute_checker
+///	@brief	並列チェッカー
 #pragma once
 #include	"os/atomic.h"
 #include	"log_trace.h"
@@ -25,7 +25,7 @@ namespace nox::util
 		{
 			if (nox::os::atomic::Increment(ref_counter_) > 1)
 			{
-				NOX_ERROR_LINE(U"ParallelExecuteCheck failed.");
+				NOX_ERROR_LINE(nox::log_tag::Kernel, U"ParallelExecuteCheck failed.");
 			}
 		}
 

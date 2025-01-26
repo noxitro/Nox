@@ -13,10 +13,12 @@
 #include	"app/app.h"
 
 //	third party
+
+//  fmtライブラリ
 #if NOX_DEBUG
-#pragma comment(lib, "./build/third_party/x64/Debug/fmtd.lib")
+#pragma comment(lib, "./bin/x64/Debug/fmtd.lib")
 #else
-#pragma comment(lib, "./build/third_party/x64/Release/fmt.lib")
+#pragma comment(lib, "./bin/x64/Release/fmt.lib")
 #endif
 
 #if NOX_WIN64

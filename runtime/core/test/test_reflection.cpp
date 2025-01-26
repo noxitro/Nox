@@ -28,6 +28,7 @@ namespace nox
 	}
 }
 
+
 namespace
 {
 	class TestClass
@@ -279,22 +280,22 @@ namespace
 
 		Obj(int _v):value(_v)
 		{
-			NOX_INFO_LINE(U"Default Constructor");
+			NOX_INFO_LINE_OLD(U"Default Constructor");
 		}
 
 		Obj(const Obj& obj)
 		{
-			NOX_INFO_LINE(U"Copy Constructor");
+			NOX_INFO_LINE_OLD(U"Copy Constructor");
 		}
 
 		Obj(Obj&& obj)noexcept
 		{
-			NOX_INFO_LINE(U"Move Constructor");
+			NOX_INFO_LINE_OLD(U"Move Constructor");
 		}
 
 		virtual ~Obj()
 		{
-			NOX_INFO_LINE(U"Destructor");
+			NOX_INFO_LINE_OLD(U"Destructor");
 		}
 
 		int value = 0;
@@ -375,22 +376,22 @@ namespace
 	public:
 		explicit LocalClass(const nox::int32 v) :v(v)
 		{
-			NOX_INFO_LINE(U"LocalClass Constructor");
+			NOX_INFO_LINE_OLD(U"LocalClass Constructor");
 		}
 
 		~LocalClass()
 		{
-			NOX_INFO_LINE(U"LocalClass Destructor");
+			NOX_INFO_LINE_OLD(U"LocalClass Destructor");
 		}
 
 		LocalClass(const LocalClass& obj)
 		{
-			NOX_INFO_LINE(U"LocalClass Copy Constructor");
+			NOX_INFO_LINE_OLD(U"LocalClass Copy Constructor");
 		}
 
 		LocalClass(LocalClass&& obj)noexcept
 		{
-			NOX_INFO_LINE(U"LocalClass Move Constructor");
+			NOX_INFO_LINE_OLD(U"LocalClass Move Constructor");
 		}
 
 		nox::int32 Func()const { return v; }
@@ -426,6 +427,7 @@ namespace nox
 #include <iostream>
 inline void MultiCastTest()
 {
+
 	nox::MulticastDelegate<int(int)> delegate;
 	//delegate.Resize(4);
 
@@ -472,17 +474,17 @@ void nox::test::TestReflection()
 			LC(int v) :value(v) {}
 			LC(const LC& other) :value(other.value) 
 			{
-				NOX_INFO_LINE(U"LC Copy Constructor");
+				NOX_INFO_LINE_OLD(U"LC Copy Constructor");
 			}
 			LC(LC&& other) :value(other.value) 
 			{
 				other.value = 0;
-				NOX_INFO_LINE(U"LC Move Constructor");
+				NOX_INFO_LINE_OLD(U"LC Move Constructor");
 			}
 
 			~LC()
 			{
-				NOX_INFO_LINE(U"LC Destructor");
+				NOX_INFO_LINE_OLD(U"LC Destructor");
 			}
 
 			int Func(int a)const noexcept { return a + value; }
@@ -654,7 +656,7 @@ inline void SetCastValue(T&& ptr, U&& value)
 #pragma optimize( "", off )
 namespace
 {
-	inline constexpr const nox::reflection::UserDefinedCompoundTypeInfo& GetBase();
+	inline constexpr const nox::reflection::ClassInfo& GetBase();
 
 	constexpr const auto enumeratorInfo = nox::reflection::EnumeratorInfo(
 		210,
@@ -682,7 +684,7 @@ namespace
 
 	constexpr const std::reference_wrapper<const nox::reflection::EnumInfo> enumInfoList[] = { enumInfo };
 
-	inline constexpr volatile const nox::reflection::UserDefinedCompoundTypeInfo baseCompundDataTypeInfoBase = nox::reflection::UserDefinedCompoundTypeInfo(
+	inline constexpr volatile const nox::reflection::ClassInfo baseCompundDataTypeInfoBase = nox::reflection::ClassInfo(
 		nox::reflection::GetInvalidType(),
 		U"abc",
 		U"abc",
@@ -702,7 +704,7 @@ namespace
 		0
 	);
 
-	constexpr auto baseCompundDataTypeInfoChild = nox::reflection::UserDefinedCompoundTypeInfo(
+	constexpr auto baseCompundDataTypeInfoChild = nox::reflection::ClassInfo(
 		nox::reflection::GetInvalidType(),
 		U"abc",
 		U"abc",
@@ -722,7 +724,7 @@ namespace
 		0
 	);
 
-	inline constexpr const nox::reflection::UserDefinedCompoundTypeInfo& GetBase()
+	inline constexpr const nox::reflection::ClassInfo& GetBase()
 	{
 		return baseCompundDataTypeInfoChild;
 	}

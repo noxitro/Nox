@@ -19,36 +19,23 @@ namespace nox
 		[[nodiscard]]	inline constexpr Color(const Color& _v)noexcept :
 			r(_v.r), g(_v.g), b(_v.b), a(_v.a) {}
 
-		[[nodiscard]]	inline constexpr explicit Color(float _r, float _g, float _b, float _a)noexcept :
-			r(static_cast<uint8>(_r * 255.0f)),
-			g(static_cast<uint8>(_g * 255.0f)),
-			b(static_cast<uint8>(_b * 255.0f)),
-			a(static_cast<uint8>(_a * 255.0f)) {}
-
-		[[nodiscard]]	inline constexpr explicit Color(nox::double_t _r, nox::double_t _g, nox::double_t _b, nox::double_t _a)noexcept :
-			r(static_cast<uint8>(_r * 255.0)),
-			g(static_cast<uint8>(_g * 255.0)),
-			b(static_cast<uint8>(_b * 255.0)),
-			a(static_cast<uint8>(_a * 255.0)) {}
+		template<std::floating_point T>
+		[[nodiscard]]	inline constexpr explicit Color(T _r, T _g, T _b, T _a)noexcept :
+			r(static_cast<uint8>(_r * static_cast<T>(255.0))),
+			g(static_cast<uint8>(_g * static_cast<T>(255.0))),
+			b(static_cast<uint8>(_b * static_cast<T>(255.0))),
+			a(static_cast<uint8>(_a * static_cast<T>(255.0))) {}
 
 		[[nodiscard]] inline constexpr explicit Color(uint8 _r, uint8 _g, uint8 _b, uint8 _a)noexcept :
 			r(_r), g(_g), b(_b), a(_a) {}
 
-		[[nodiscard]]	inline constexpr explicit Color(const uint8(&_ary)[4])noexcept :
-			r(_ary[0]), g(_ary[1]), b(_ary[2]), a(_ary[3]) {}
-
 		[[nodiscard]] inline constexpr explicit Color(const std::array<uint8, 4U>& _ary) :
 			r(_ary[0]), g(_ary[1]), b(_ary[2]), a(_ary[3]) {}
 
-		//	[[nodiscard]]	inline constexpr Color ToColor()const noexcept { return Color(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f); }
-
-			//------------------------------------------------------
-			//	operator
-			//------------------------------------------------------
 		[[nodiscard]]	inline constexpr bool operator == (const Color& _v) const noexcept { return r == _v.r && g == _v.g && b == _v.b && a == _v.a; }
-		[[nodiscard]]	inline constexpr bool operator != (const Color& _v) const noexcept { return r != _v.r || g != _v.g || b != _v.b || a != _v.a; }
 
-		inline constexpr Color& operator = (const Color& _v)noexcept {
+		inline constexpr Color& operator = (const Color& _v)noexcept 
+		{
 			r = _v.r;
 			g = _v.g;
 			b = _v.b;

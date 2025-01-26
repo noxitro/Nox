@@ -113,7 +113,7 @@ void nox::GameObject::Destroy(nox::GameObject& gameObject)
 
 nox::Component* nox::GameObject::GetComponent(const nox::reflection::Type& type)noexcept
 {
-	const nox::reflection::UserDefinedCompoundTypeInfo* const class_info = type.GetUserDefinedCompoundTypeInfo();
+	const nox::reflection::ClassInfo* const class_info = type.GetUserDefinedCompoundTypeInfo();
 	if (class_info == nullptr)
 	{
 		return nullptr;
@@ -121,7 +121,7 @@ nox::Component* nox::GameObject::GetComponent(const nox::reflection::Type& type)
 
 	for (Component* component = transform_; component != nullptr; component = component->GetComponentChain())
 	{
-		if (component->GetType().GetUserDefinedCompoundTypeInfo()->IsBaseOf(*class_info) == true)
+		if (component->GetUnderlyingType().GetUserDefinedCompoundTypeInfo()->IsBaseOf(*class_info) == true)
 		{
 			return component;
 		}
@@ -133,7 +133,7 @@ nox::Component* nox::GameObject::GetSameComponent(const nox::reflection::Type& t
 {
 	for (Component* component = transform_; component != nullptr; component = component->GetComponentChain())
 	{
-		if (component->GetType() == type)
+		if (component->GetUnderlyingType() == type)
 		{
 			return component;
 		}

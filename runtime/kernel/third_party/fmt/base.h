@@ -1606,7 +1606,7 @@ FMT_CONSTEXPR auto make_arg(T& val) -> value<Context> {
 template <typename Context, typename T>
 FMT_CONSTEXPR auto make_arg(T& val) -> basic_format_arg<Context> {
   auto arg = basic_format_arg<Context>();
-  arg.type_ = mapped_type_constant<T, Context>::value;
+  arg.underlying_type_ = mapped_type_constant<T, Context>::value;
   arg.value_ = make_arg<true, Context>(val);
   return arg;
 }
@@ -1682,7 +1682,7 @@ FMT_BEGIN_EXPORT
 template <typename Context> class basic_format_arg {
  private:
   detail::value<Context> value_;
-  detail::type type_;
+  detail::type underlying_type_;
 
   template <typename ContextType, typename T>
   friend FMT_CONSTEXPR auto detail::make_arg(T& value)
@@ -1713,17 +1713,17 @@ template <typename Context> class basic_format_arg {
     detail::custom_value<Context> custom_;
   };
 
-  constexpr basic_format_arg() : type_(detail::type::none_type) {}
+  constexpr basic_format_arg() : underlying_type_(detail::type::none_type) {}
 
   constexpr explicit operator bool() const noexcept {
-    return type_ != detail::type::none_type;
+    return underlying_type_ != detail::type::none_type;
   }
 
-  auto type() const -> detail::type { return type_; }
+  auto type() const -> detail::type { return underlying_type_; }
 
-  auto is_integral() const -> bool { return detail::is_integral_type(type_); }
+  auto is_integral() const -> bool { return detail::is_integral_type(underlying_type_); }
   auto is_arithmetic() const -> bool {
-    return detail::is_arithmetic_type(type_);
+    return detail::is_arithmetic_type(underlying_type_);
   }
 
   /**
@@ -1735,7 +1735,7 @@ template <typename Context> class basic_format_arg {
   */
   template <typename Visitor>
   FMT_CONSTEXPR auto visit(Visitor&& vis) -> decltype(vis(0)) {
-    switch (type_) {
+    switch (underlying_type_) {
     case detail::type::none_type:
       break;
     case detail::type::int_type:
@@ -1776,7 +1776,7 @@ template <typename Context> class basic_format_arg {
   auto format_custom(const char_type* parse_begin,
                      typename Context::parse_context_type& parse_ctx,
                      Context& ctx) -> bool {
-    if (type_ != detail::type::custom_type) return false;
+    if (underlying_type_ != detail::type::custom_type) return false;
     parse_ctx.advance_to(parse_begin);
     value_.custom.format(value_.custom.value, parse_ctx, ctx);
     return true;
@@ -1881,8 +1881,8 @@ template <typename Context> class basic_format_args {
       return arg;
     }
     if (id >= detail::max_packed_args) return arg;
-    arg.type_ = type(id);
-    if (arg.type_ == detail::type::none_type) return arg;
+    arg.underlying_type_ = type(id);
+    if (arg.underlying_type_ == detail::type::none_type) return arg;
     arg.value_ = values_[id];
     return arg;
   }

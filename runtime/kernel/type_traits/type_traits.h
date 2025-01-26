@@ -19,6 +19,8 @@ namespace nox
 	template<auto Value>
 	constexpr nox::NontypeTag<Value> Nontype{};
 
+
+
 #pragma region ContainerElementType
 	namespace detail
 	{

@@ -13,10 +13,10 @@ namespace nox::reflection
 
 	/// @brief ユーザー定義の複合型情報
 	/// @details クラス、構造体、共用体が該当します
-	class UserDefinedCompoundTypeInfo
+	class ClassInfo
 	{
 	public:
-		inline consteval explicit UserDefinedCompoundTypeInfo(
+		inline consteval explicit ClassInfo(
 			const nox::reflection::Type& type,
 			ReflectionStringView name,
 			ReflectionStringView fullname,
@@ -32,10 +32,10 @@ namespace nox::reflection
 			const std::uint8_t function_length,
 			const std::reference_wrapper<const nox::reflection::EnumInfo>* enum_list,
 			const std::uint8_t enum_length,
-			const std::reference_wrapper<const nox::reflection::UserDefinedCompoundTypeInfo>* internal_type_list,
+			const std::reference_wrapper<const nox::reflection::ClassInfo>* internal_type_list,
 			const std::uint8_t internal_class_length
 		)noexcept:
-			type_(type),
+			underlying_type_(type),
 			name_(name),
 			fullname_(fullname),
 			namespace_(_namespace),
@@ -57,15 +57,15 @@ namespace nox::reflection
 		}
 
 #pragma region アクセサ
-		[[nodiscard]] inline	constexpr	bool	IsValid()const noexcept { return type_.IsValid(); }
+		[[nodiscard]] inline	constexpr	bool	IsValid()const noexcept { return underlying_type_.IsValid(); }
 
 		[[nodiscard]] inline	constexpr	ReflectionStringView GetName()const noexcept { return name_; }
 		[[nodiscard]] inline	constexpr	ReflectionStringView GetFullName()const noexcept { return fullname_; }
 		[[nodiscard]] inline	constexpr	ReflectionStringView GetNamespace()const noexcept { return namespace_; }
 
-		[[nodiscard]] inline	constexpr	const nox::reflection::Type& GetType()const noexcept { return type_; }
+		[[nodiscard]] inline	constexpr	const nox::reflection::Type& GetUnderlyingType()const noexcept { return underlying_type_; }
 		[[nodiscard]] inline	constexpr	const nox::reflection::Type& GetExternalType()const noexcept { return external_class_type_; }
-		[[nodiscard]] inline	const nox::reflection::UserDefinedCompoundTypeInfo& GetExternalUserDefinedCompoundTypeInfo()const noexcept { return nox::util::Deref(external_class_type_.GetUserDefinedCompoundTypeInfo()); }
+		[[nodiscard]] inline	const nox::reflection::ClassInfo& GetExternalUserDefinedCompoundTypeInfo()const noexcept { return nox::util::Deref(external_class_type_.GetUserDefinedCompoundTypeInfo()); }
 
 
 		[[nodiscard]] inline	constexpr	std::uint8_t	GetAttributeListLength()const noexcept { return attribute_length_; }
@@ -81,7 +81,7 @@ namespace nox::reflection
 		{
 			for (std::int32_t i = 0; i < attribute_length_; ++i)
 			{
-				if (attribute_list_[i].get().GetType() == nox::reflection::Typeof<T>())
+				if (attribute_list_[i].get().GetUnderlyingType() == nox::reflection::Typeof<T>())
 				{
 					return static_cast<const T*>(&attribute_list_[i].get());
 				}
@@ -98,7 +98,7 @@ namespace nox::reflection
 		[[nodiscard]] inline constexpr std::uint8_t GetFunctionLength()const noexcept { return function_length_; }
 		[[nodiscard]] inline constexpr const std::span<const std::reference_wrapper<const nox::reflection::FunctionInfo>> GetFunctionList()const noexcept { return std::span(function_list_, function_length_); }
 		[[nodiscard]] inline constexpr std::uint8_t GetInternalClassLength()const noexcept { return internal_class_length_; }
-		[[nodiscard]] inline constexpr const std::span<const std::reference_wrapper<const nox::reflection::UserDefinedCompoundTypeInfo>> GetInternalClassList()const noexcept { return std::span(internal_type_list_, internal_class_length_); }
+		[[nodiscard]] inline constexpr const std::span<const std::reference_wrapper<const nox::reflection::ClassInfo>> GetInternalClassList()const noexcept { return std::span(internal_type_list_, internal_class_length_); }
 		[[nodiscard]] inline constexpr std::uint8_t GetEnumLength()const noexcept { return enum_length_; }
 		[[nodiscard]] inline	constexpr	std::span<const std::reference_wrapper<const nox::reflection::EnumInfo>> GetEnumInfoList()const noexcept { return std::span(enum_list_, enum_length_); }
 		[[nodiscard]] inline constexpr const nox::reflection::EnumInfo& GetEnumInfo(std::uint8_t index)const noexcept { return nox::util::At(enum_list_, enum_length_, index); }
@@ -106,19 +106,19 @@ namespace nox::reflection
 		/// @brief 継承関係を調べる
 		/// @param derived 
 		/// @return 
-		[[nodiscard]] bool	IsBaseOf(const nox::reflection::UserDefinedCompoundTypeInfo& derived)const noexcept;
+		[[nodiscard]] bool	IsBaseOf(const nox::reflection::ClassInfo& derived)const noexcept;
 #pragma endregion
 
 	private:
-		/*inline constexpr UserDefinedCompoundTypeInfo(const UserDefinedCompoundTypeInfo&)noexcept = delete;
-		inline constexpr UserDefinedCompoundTypeInfo(const UserDefinedCompoundTypeInfo&&)noexcept = delete;
-		inline constexpr void operator =(const UserDefinedCompoundTypeInfo&)noexcept = delete;
-		inline constexpr void operator =(const UserDefinedCompoundTypeInfo&&)noexcept = delete;
+		/*inline constexpr ClassInfo(const ClassInfo&)noexcept = delete;
+		inline constexpr ClassInfo(const ClassInfo&&)noexcept = delete;
+		inline constexpr void operator =(const ClassInfo&)noexcept = delete;
+		inline constexpr void operator =(const ClassInfo&&)noexcept = delete;
 
-		inline constexpr void operator ==(const UserDefinedCompoundTypeInfo&)noexcept = delete;
-		inline constexpr void operator ==(const UserDefinedCompoundTypeInfo&&)noexcept = delete;
-		inline constexpr void operator !=(const UserDefinedCompoundTypeInfo&)noexcept = delete;
-		inline constexpr void operator !=(const UserDefinedCompoundTypeInfo&&)noexcept = delete;*/
+		inline constexpr void operator ==(const ClassInfo&)noexcept = delete;
+		inline constexpr void operator ==(const ClassInfo&&)noexcept = delete;
+		inline constexpr void operator !=(const ClassInfo&)noexcept = delete;
+		inline constexpr void operator !=(const ClassInfo&&)noexcept = delete;*/
 	private:
 		/// @brief 継承型テーブルの長さ
 		std::uint8_t base_type_length_;
@@ -139,7 +139,7 @@ namespace nox::reflection
 		std::uint8_t enum_length_;
 
 		/// @brief 自身のタイプ
-		const Type& type_;
+		const Type& underlying_type_;
 
 		/// @brief 自身が所属するクラス
 		const nox::reflection::Type&	external_class_type_;
@@ -157,7 +157,7 @@ namespace nox::reflection
 		const std::reference_wrapper<const class nox::reflection::FunctionInfo>* function_list_;
 
 		/// @brief 内部複合型テーブル
-		const std::reference_wrapper<const nox::reflection::UserDefinedCompoundTypeInfo>* internal_type_list_;
+		const std::reference_wrapper<const nox::reflection::ClassInfo>* internal_type_list_;
 
 		/// @brief 内部列挙体テーブル
 		const std::reference_wrapper<const class nox::reflection::EnumInfo>* enum_list_;
@@ -174,11 +174,11 @@ namespace nox::reflection
 
 	namespace detail
 	{
-		class UserDefinedCompoundTypeInfoInvalid : public nox::reflection::UserDefinedCompoundTypeInfo
+		class UserDefinedCompoundTypeInfoInvalid : public nox::reflection::ClassInfo
 		{
 		public:
 			inline constexpr UserDefinedCompoundTypeInfoInvalid()noexcept :
-				nox::reflection::UserDefinedCompoundTypeInfo(
+				nox::reflection::ClassInfo(
 					nox::reflection::GetInvalidType(),
 					U"",
 					U"",
@@ -204,12 +204,12 @@ namespace nox::reflection
 //		constexpr UserDefinedCompoundTypeInfoInvalid InvalidUserDefinedCompoundTypeInfo{};
 
 	/*	template<class T> requires(std::is_class_v<T> || std::is_union_v<T>)
-		inline constexpr nox::reflection::UserDefinedCompoundTypeInfo CreateUserDefinedCompoundTypeInfo(
+		inline constexpr nox::reflection::ClassInfo CreateUserDefinedCompoundTypeInfo(
 			nox::reflection::ReflectionStringView name,
 			nox::reflection::ReflectionStringView fullname,
 			nox::reflection::ReflectionStringView _namespace,
-			const nox::reflection::UserDefinedCompoundTypeInfo& external_class_type,
-			const std::reference_wrapper<const nox::reflection::UserDefinedCompoundTypeInfo>* base_type_list,
+			const nox::reflection::ClassInfo& external_class_type,
+			const std::reference_wrapper<const nox::reflection::ClassInfo>* base_type_list,
 			std::uint8_t base_type_length,
 			const std::reference_wrapper<const nox::reflection::ReflectionObject>* attribute_list,
 			std::uint8_t attribute_length,
@@ -217,7 +217,7 @@ namespace nox::reflection
 			std::uint8_t variable_length,
 			const std::reference_wrapper<const nox::reflection::FunctionInfo>* function_list,
 			std::uint8_t function_length,
-			const std::reference_wrapper<const nox::reflection::UserDefinedCompoundTypeInfo>* internal_type_list,
+			const std::reference_wrapper<const nox::reflection::ClassInfo>* internal_type_list,
 			std::uint8_t internal_type_length,
 			const std::reference_wrapper<const nox::reflection::EnumInfo>* enum_list,
 			std::uint8_t enum_length
@@ -225,7 +225,7 @@ namespace nox::reflection
 
 		)noexcept
 		{
-			return nox::reflection::UserDefinedCompoundTypeInfo(
+			return nox::reflection::ClassInfo(
 				nox::reflection::Typeof<T>(),
 				name,
 				fullname,

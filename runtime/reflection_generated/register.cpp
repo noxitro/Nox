@@ -11,7 +11,7 @@ void	nox::reflection::InitializeGen()
 {
 #if NOX_DEBUG
 #if NOX_WIN64
-//	nox::reflection::gen::RegisterDebugX64();
+//	nox::reflection::gen::Register_X64_Debug();
 #endif // NOX_WIN64
 #endif // NOX_DEBUG
 

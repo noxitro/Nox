@@ -15,12 +15,12 @@ namespace
 	/// @brief クラスデータ
 	struct ClassNode
 	{
-		std::reference_wrapper<const nox::reflection::UserDefinedCompoundTypeInfo> class_info;
+		std::reference_wrapper<const nox::reflection::ClassInfo> class_info;
 		ClassNode* next_ptr;
 		const ClassNode* prev_ptr;
 		ClassNode* child_ptr;
 
-		inline constexpr ClassNode(const nox::reflection::UserDefinedCompoundTypeInfo& _class_info)noexcept :
+		inline constexpr ClassNode(const nox::reflection::ClassInfo& _class_info)noexcept :
 			class_info(_class_info),
 			next_ptr(nullptr),
 			prev_ptr(nullptr),
@@ -61,7 +61,7 @@ namespace
 		{
 			//	型IDをキーとした検索用
 			nox::UnorderedMap<std::uint32_t, ClassNode> class_node_map;
-			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::UserDefinedCompoundTypeInfo>> union_map;
+			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::ClassInfo>> union_map;
 			nox::UnorderedMap<const nox::ObjectPointerId*, std::reference_wrapper<const nox::reflection::VariableInfo>> variable_map;
 			nox::UnorderedMap<const nox::FunctionPointerId*, std::reference_wrapper<const nox::reflection::FunctionInfo>> function_map;
 			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::EnumInfo>> enum_map;
@@ -71,7 +71,7 @@ namespace
 		struct
 		{
 			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const ClassNode>> class_node_map;
-			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::UserDefinedCompoundTypeInfo>> union_map;
+			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::ClassInfo>> union_map;
 			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::VariableInfo>> variable_map;
 			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::FunctionInfo>> function_map;
 			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::EnumInfo>> enum_map;
@@ -153,7 +153,7 @@ void nox::reflection::Finalize()
 	all_type_id_map_ = {};
 }
 
-const nox::reflection::UserDefinedCompoundTypeInfo* nox::reflection::FindClassInfo(const nox::reflection::Type& type)noexcept
+const nox::reflection::ClassInfo* nox::reflection::FindClassInfo(const nox::reflection::Type& type)noexcept
 {
 	const auto id = type.GetTypeID();
 
@@ -169,7 +169,7 @@ const nox::reflection::UserDefinedCompoundTypeInfo* nox::reflection::FindClassIn
 	return nullptr;
 }
 
-const nox::reflection::UserDefinedCompoundTypeInfo* nox::reflection::FindClassInfo(std::uint32_t namehash)noexcept
+const nox::reflection::ClassInfo* nox::reflection::FindClassInfo(std::uint32_t namehash)noexcept
 {
 	for (const Artifact& artifact : artifact_map_ | std::views::values)
 	{
@@ -268,9 +268,9 @@ const nox::reflection::VariableInfo* nox::reflection::FindVariableInfoWithNameHa
 	return nullptr;
 }
 
-bool nox::reflection::IsBaseOf(const nox::reflection::UserDefinedCompoundTypeInfo& base, const nox::reflection::UserDefinedCompoundTypeInfo& derived)
+bool nox::reflection::IsBaseOf(const nox::reflection::ClassInfo& base, const nox::reflection::ClassInfo& derived)
 {
-	const nox::reflection::Type& base_type = base.GetType();
+	const nox::reflection::Type& base_type = base.GetUnderlyingType();
 
 	//TODO:	遅い
 	for (const nox::reflection::Type& tmp_base_type : derived.GetBaseTypeList())
@@ -289,16 +289,16 @@ bool nox::reflection::IsBaseOf(const nox::reflection::UserDefinedCompoundTypeInf
 	return false;
 }
 
-void	nox::reflection::Register(const std::uint32_t artifact_name_hash, const nox::reflection::UserDefinedCompoundTypeInfo& data)
+void	nox::reflection::Register(const std::uint32_t artifact_name_hash, const nox::reflection::ClassInfo& data)
 {
-	const auto id = data.GetType().GetTypeID();
+	const auto id = data.GetUnderlyingType().GetTypeID();
 
 	Artifact& artifact = GetCreateArtifact(artifact_name_hash);
 	++artifact.counter_;
 
-	if (data.GetType().IsUnion() == true)
+	if (data.GetUnderlyingType().IsUnion() == true)
 	{
-		artifact.chunk_with_type_id.union_map.emplace(data.GetType().GetTypeID(), data);
+		artifact.chunk_with_type_id.union_map.emplace(data.GetUnderlyingType().GetTypeID(), data);
 		artifact.chunk_with_name_hash.union_map.emplace(nox::util::Crc32(data.GetFullName()), data);
 	}
 	else
@@ -330,26 +330,26 @@ void	nox::reflection::Register(const std::uint32_t artifact_name_hash, const nox
 	}
 }
 
-void nox::reflection::Unregister(const std::uint32_t artifact_name_hash, const nox::reflection::UserDefinedCompoundTypeInfo& data)
+void nox::reflection::Unregister(const std::uint32_t artifact_name_hash, const nox::reflection::ClassInfo& data)
 {
 }
 
 //
-//void Reflection::Register(const UserDefinedCompoundTypeInfo& data)
+//void Reflection::Register(const ClassInfo& data)
 //{
-//	NOX_ASSERT(class_data_map_.contains(data.GetType().GetTypeID()) == true, U"");
+//	NOX_ASSERT(class_data_map_.contains(data.GetUnderlyingType().GetTypeID()) == true, U"");
 //
-//	class_data_map_.emplace(data.GetType().GetTypeID(), ClassData{.class_info_ptr = &data});
+//	class_data_map_.emplace(data.GetUnderlyingType().GetTypeID(), ClassData{.class_info_ptr = &data});
 //
 //	//	親子関係の構築
 //	//	親より先に子が登録された場合の保険処理
-//	ClassData& newClassData = class_data_map_.at(data.GetType().GetTypeID());
+//	ClassData& newClassData = class_data_map_.at(data.GetUnderlyingType().GetTypeID());
 //	auto baseTypeList = data.GetBaseTypeList();
-//	for (const UserDefinedCompoundTypeInfo& baseType : baseTypeList)
+//	for (const ClassInfo& baseType : baseTypeList)
 //	{
-//		if (class_data_map_.contains(baseType.GetType().GetTypeID()) == false)
+//		if (class_data_map_.contains(baseType.GetUnderlyingType().GetTypeID()) == false)
 //		{
-//			class_data_map_.emplace(baseType.GetType().GetTypeID(), ClassData());
+//			class_data_map_.emplace(baseType.GetUnderlyingType().GetTypeID(), ClassData());
 //		}
 //	}
 //
@@ -384,7 +384,7 @@ void nox::reflection::Unregister(const std::uint32_t artifact_name_hash, const n
 //	globalData.class_info_ptr_map.emplace(data.GetTypeID(), &data);
 //}
 //
-//void Reflection::Unregister(const class UserDefinedCompoundTypeInfo& data)
+//void Reflection::Unregister(const class ClassInfo& data)
 //{
 //	if (class_data_map_.erase(data.GetTypeID()) == 0)
 //	{
@@ -394,7 +394,7 @@ void nox::reflection::Unregister(const std::uint32_t artifact_name_hash, const n
 
 void nox::reflection::Register(const std::uint32_t artifact_name_hash, const nox::reflection::EnumInfo& data)
 {
-	const auto id = data.GetType().GetTypeID();
+	const auto id = data.GetUnderlyingType().GetTypeID();
 
 	Artifact& artifact = GetCreateArtifact(artifact_name_hash);
 	++artifact.counter_;

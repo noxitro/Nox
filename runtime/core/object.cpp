@@ -14,7 +14,7 @@ nox::String	nox::Object::ToString()const
 
 nox::StringView	nox::Object::ToString(std::span<nox::char32> dest_buffer)const
 {
-	const nox::reflection::Type& type = GetType();
+	const nox::reflection::Type& type = GetUnderlyingType();
 	auto class_info = nox::reflection::FindClassInfo(type);
 
 	//	クラス情報が見つからない場合はコンパイル時の型名を返す

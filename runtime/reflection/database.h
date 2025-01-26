@@ -8,7 +8,7 @@
 namespace nox::reflection
 {
 	//	前方宣言
-	class UserDefinedCompoundTypeInfo;
+	class ClassInfo;
 	class EnumInfo;
 	class VariableInfo;
 	class FunctionInfo;
@@ -21,12 +21,12 @@ namespace nox::reflection
 	
 #pragma region 検索
 	//	クラスの取得
-	const nox::reflection::UserDefinedCompoundTypeInfo* FindClassInfo(const nox::reflection::Type& type)noexcept;
-	const nox::reflection::UserDefinedCompoundTypeInfo* FindClassInfo(std::uint32_t namehash)noexcept;
-	inline const nox::reflection::UserDefinedCompoundTypeInfo* FindClassInfo(std::u32string_view fullName)noexcept { return nox::reflection::FindClassInfo(nox::util::Crc32(fullName)); }
+	const nox::reflection::ClassInfo* FindClassInfo(const nox::reflection::Type& type)noexcept;
+	const nox::reflection::ClassInfo* FindClassInfo(std::uint32_t namehash)noexcept;
+	inline const nox::reflection::ClassInfo* FindClassInfo(std::u32string_view fullName)noexcept { return nox::reflection::FindClassInfo(nox::util::Crc32(fullName)); }
 
 	template<nox::concepts::ClassOrUnion T>
-	inline const nox::reflection::UserDefinedCompoundTypeInfo* FindClassInfo()noexcept {
+	inline const nox::reflection::ClassInfo* FindClassInfo()noexcept {
 		return FindClassInfo(nox::reflection::Typeof<T>());
 	}
 
@@ -77,7 +77,7 @@ namespace nox::reflection
 #pragma endregion
 
 #pragma region Utility
-	bool IsBaseOf(const nox::reflection::UserDefinedCompoundTypeInfo& base, const nox::reflection::UserDefinedCompoundTypeInfo& derived);
+	bool IsBaseOf(const nox::reflection::ClassInfo& base, const nox::reflection::ClassInfo& derived);
 
 	inline bool IsBaseOf(const nox::reflection::Type& baseType, const nox::reflection::Type& derivedType)
 	{
@@ -86,8 +86,8 @@ namespace nox::reflection
 			return false;
 		}
 
-		const nox::reflection::UserDefinedCompoundTypeInfo* const base = nox::reflection::FindClassInfo(baseType);
-		const nox::reflection::UserDefinedCompoundTypeInfo* const derived = nox::reflection::FindClassInfo(derivedType);
+		const nox::reflection::ClassInfo* const base = nox::reflection::FindClassInfo(baseType);
+		const nox::reflection::ClassInfo* const derived = nox::reflection::FindClassInfo(derivedType);
 
 		if (base == nullptr || derived == nullptr)
 		{
@@ -101,8 +101,8 @@ namespace nox::reflection
 #pragma endregion
 
 #pragma region 登録処理
-	void Register(const std::uint32_t artifact_name_hash, const nox::reflection::UserDefinedCompoundTypeInfo& data);
-	void Unregister(const std::uint32_t artifact_name_hash, const nox::reflection::UserDefinedCompoundTypeInfo& data);
+	void Register(const std::uint32_t artifact_name_hash, const nox::reflection::ClassInfo& data);
+	void Unregister(const std::uint32_t artifact_name_hash, const nox::reflection::ClassInfo& data);
 
 	void Register(const std::uint32_t artifact_name_hash, const nox::reflection::EnumInfo& data);
 	void Unregister(const std::uint32_t artifact_name_hash, const nox::reflection::EnumInfo& data);

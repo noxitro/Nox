@@ -10,7 +10,7 @@ rem ReflectionGeneraterで使用する情報を出力するためのbatファイ
 rem 引数の解析
 set SolutionDir=%1
 set SolutionPath=%2
-set ProjectPath=%3
+set OutputProjectDir=%3
 set SourceFilePath=%4
 set Configuration=%5
 set Platform=%6
@@ -27,7 +27,7 @@ set IntermediateDir=%9
 rem 引数のログ出力
 echo SolutionDir:%SolutionDir%
 echo SolutionPath:%SolutionPath%
-echo ProjectPath:%ProjectPath%
+echo OutputProjectDir:%OutputProjectDir%
 echo SourceFilePath:%SourceFilePath%
 echo Configuration:%Configuration%
 echo Platform:%Platform%
@@ -47,8 +47,8 @@ rem 出力処理
 echo -SolutionPath>%textFilePath%
 echo %SolutionPath%>>%textFilePath%
 
-echo -ProjectPath>>%textFilePath%
-echo %ProjectPath%>>%textFilePath%
+echo -OutputProjectDir>>%textFilePath%
+echo %OutputProjectDir%>>%textFilePath%
 
 echo -SourceFilePath>>%textFilePath%
 echo %SourceFilePath%>>%textFilePath%

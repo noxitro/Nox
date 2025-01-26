@@ -69,9 +69,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <ClCompile />
-    <PreBuildEvent>
-      <Command>REM $(SolutionDir)bin\createReflectionGenerateArgs.bat "$(SolutionDir)" "$(SolutionPath)" "$(ProjectPath)" "$(ProjectDir)reflect.cpp" "$(Configuration)" "$(Platform)" "NOX_DEBUG" "NOX_X64" "$(MSBuildBinPath)" "nox" "$(ProjectDir)" "$(SolutionDir)build\intermediate"</Command>
-    </PreBuildEvent>
+    <PreBuildEvent />
     <CustomBuildStep>
       <Command>
       </Command>
@@ -86,9 +84,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <ClCompile />
-    <PreBuildEvent>
-      <Command>REM $(SolutionDir)bin\createReflectionGenerateArgs.bat "$(SolutionDir)" "$(SolutionPath)" "$(ProjectPath)" "$(ProjectDir)reflect.cpp" "$(Configuration)" "$(Platform)" "NOX_DEBUG" "NOX_X64" "$(MSBuildBinPath)" "nox" "$(ProjectDir)" "$(SolutionDir)build\intermediate"</Command>
-    </PreBuildEvent>
+    <PreBuildEvent />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'">
     <ClCompile />
@@ -99,9 +95,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <ClCompile />
-    <PreBuildEvent>
-      <Command>REM $(SolutionDir)bin\createReflectionGenerateArgs.bat "$(SolutionDir)" "$(SolutionPath)" "$(ProjectPath)" "$(ProjectDir)reflect.cpp" "$(Configuration)" "$(Platform)" "NOX_DEBUG" "NOX_X64" "$(MSBuildBinPath)" "nox" "$(ProjectDir)" "$(SolutionDir)build\intermediate"</Command>
-    </PreBuildEvent>
+    <PreBuildEvent />
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="definition.cpp">
@@ -109,10 +103,6 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="gen.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="gen\Debug\X64\gen_debug_x64.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -136,10 +126,6 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="gen.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="gen\Debug\X64\gen_debug_x64.h">
       <SubType>
       </SubType>
     </ClInclude>

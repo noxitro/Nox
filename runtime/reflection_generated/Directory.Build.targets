@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Project>
-  <!-- vcxproj と同じディレクトリにあるMyCustomTask.dll のタスクを使用 -->
+	<!-- vcxproj と同じディレクトリにあるMyCustomTask.dll のタスクを使用 -->
   <UsingTask
     TaskName="Nox.CustomTask.Task"
     AssemblyFile="../bin/CustomTask.dll" />
@@ -23,7 +23,12 @@
 	
 	<!--x64構成-->
 	<PropertyGroup Condition="'$(Platform)' == 'x64'">
-		<PlatformDefine>NOX_X64</PlatformDefine>
+		<PlatformDefine>NOX_WIN64</PlatformDefine>
+	</PropertyGroup>
+
+	<!-- C++バージョンの定義 -->
+	<PropertyGroup>
+		<CppVersion>-std=c++2b</CppVersion>
 	</PropertyGroup>
 
 	<!--変数定義end-->
@@ -35,7 +40,7 @@
     <!-- カスタムタスクを呼び出す -->
 	  <Nox.CustomTask.Task
 		  SourceFiles="@(ClCompile)"
-		  IncludePaths="$(IncludePath);%(ClCompile.AdditionalIncludeDirectories)"
+		  AdditionalIncludeDirectories="$(IncludePath);%(ClCompile.AdditionalIncludeDirectories)"
 		  PreprocessorMacro="%(ClCompile.PreprocessorDefinitions)"
 		  AdditionalOptions="%(ClCompile.AdditionalOptions)"
 		  SolutionDir="$(SolutionDir)"
@@ -50,9 +55,12 @@
 		  Platform="$(Platform)"
 		  PlatformDefine="$(PlatformDefine)"
 		  IntermediateOutputPath="$(IntermediateOutputPath)"
+		  OutDir="$(OutDir)"
 		  MSBuildBinPath="$(MSBuildBinPath)"
 		  Optimization="%(ClCompile.Optimization)"
 		  ReflectionTargetSourceFile="$(ProjectDir)reflect.cpp"
+		  CppVersion="$(CppVersion)"
+		  UseRtti="%(ClCompile.RuntimeTypeInfo)"
 		  />
 	  </Target>
 </Project>

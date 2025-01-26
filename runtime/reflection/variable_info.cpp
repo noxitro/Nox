@@ -6,7 +6,7 @@
 #include	"user_defined_compound_type_info.h"
 #include	"database.h"
 
-const nox::reflection::UserDefinedCompoundTypeInfo* nox::reflection::VariableInfo::GetContainingUserDefinedCompoundTypeInfo()const noexcept
+const nox::reflection::ClassInfo* nox::reflection::VariableInfo::GetContainingUserDefinedCompoundTypeInfo()const noexcept
 {
 	if (containing_type_ == nox::reflection::GetInvalidType())
 	{

@@ -22,6 +22,10 @@
     <ClInclude Include="assertion.h" />
     <ClInclude Include="basic_definition.h" />
     <ClInclude Include="basic_type.h" />
+    <ClInclude Include="easing.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="iterator.h">
       <SubType>
       </SubType>
@@ -171,6 +175,10 @@
     <ClCompile Include="assertion.cpp" />
     <ClCompile Include="basic_definition.cpp" />
     <ClCompile Include="basic_type.cpp" />
+    <ClCompile Include="easing.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="iterator.cpp">
       <SubType>
       </SubType>

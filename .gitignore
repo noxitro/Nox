@@ -63,3 +63,8 @@
 /runtime/bin/source/ReflectionGeneratorCpp/Sample/SampleCpp/x64/Debug
 /runtime/bin/source/ReflectionGeneratorCpp/Sample/x64
 /runtime/reflection_generated/build/x64/Debug
+/runtime/bin/source/CustomTask/.vs
+/runtime/bin/source/CustomTask/bin/x64
+/runtime/bin/source/CustomTask_DotNet8/.vs
+/runtime/bin/source/CustomTask_DotNet8/bin
+/runtime/bin/source/CustomTask_DotNet8/obj

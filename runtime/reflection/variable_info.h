@@ -6,7 +6,7 @@
 
 namespace nox::reflection
 {
-	class UserDefinedCompoundTypeInfo;
+	class ClassInfo;
 	//	前方宣言
 
 	/// @brief フィールド情報
@@ -79,7 +79,7 @@ namespace nox::reflection
 			attribute_list_length_(attribute_list_length),
 			object_id_(object_id),
 			field_attribute_flgas_(field_attribute_flgas),
-			type_(type),
+			underlying_type_(type),
 			containing_type_(owner_class_type),
 			setter_member_func_(setter_member_func),
 			getter_member_func_(getter_member_func),
@@ -137,7 +137,7 @@ namespace nox::reflection
 			attribute_list_length_(attribute_list_length),
 			object_id_(object_id),
 			field_attribute_flgas_(field_attribute_flgas),
-			type_(type),
+			underlying_type_(type),
 			containing_type_(owner_class_type),
 			setter_global_func_(setter_global_func),
 			getter_global_func_(getter_global_func),
@@ -159,9 +159,9 @@ namespace nox::reflection
 		inline	constexpr	ReflectionStringView	GetNamespace()const noexcept { return namespace_; }
 
 		/// @brief 所属するクラス情報を取得する
-		const class nox::reflection::UserDefinedCompoundTypeInfo* GetContainingUserDefinedCompoundTypeInfo()const noexcept;
+		const class nox::reflection::ClassInfo* GetContainingUserDefinedCompoundTypeInfo()const noexcept;
 
-		inline	constexpr	const nox::reflection::Type& GetType()const noexcept { return type_; }
+		inline	constexpr	const nox::reflection::Type& GetUnderlyingType()const noexcept { return underlying_type_; }
 		inline	constexpr	nox::reflection::AccessLevel	GetAccessLevel()const noexcept { return access_level_; }
 
 		inline	constexpr	const nox::ObjectPointerId& GetObjectPointerId()const noexcept { return object_id_; }
@@ -177,7 +177,7 @@ namespace nox::reflection
 		inline	constexpr	bool	IsStatic()const noexcept { return IsFieldAttributeFlag(VariableAttributeFlag::Static); }
 
 		/// @brief 読み取り専用
-		inline	constexpr	bool	IsReadOnly()const noexcept { return type_.IsConstQualified(); }
+		inline	constexpr	bool	IsReadOnly()const noexcept { return underlying_type_.IsConstQualified(); }
 #pragma endregion
 
 #pragma region 変数の取得
@@ -248,7 +248,7 @@ namespace nox::reflection
 			}
 
 			constexpr const nox::reflection::Type& out_value_type = nox::reflection::Typeof<_ResultType>();
-			if (type_.IsConvertible(out_value_type) == false)
+			if (underlying_type_.IsConvertible(out_value_type) == false)
 			{
 				return false;
 			}
@@ -271,7 +271,7 @@ namespace nox::reflection
 				return false;
 			}
 
-			if (type_.IsConvertible(return_type) == false)
+			if (underlying_type_.IsConvertible(return_type) == false)
 			{
 				return false;
 			}
@@ -291,7 +291,7 @@ namespace nox::reflection
 				return false;
 			}
 
-			if (type_.IsConvertible(return_type) == false)
+			if (underlying_type_.IsConvertible(return_type) == false)
 			{
 				return false;
 			}
@@ -377,7 +377,7 @@ namespace nox::reflection
 		const std::reference_wrapper<const class nox::reflection::ReflectionObject>* attribute_list_;
 
 		/// @brief 自身のタイプ情報
-		const nox::reflection::Type& type_;
+		const nox::reflection::Type& underlying_type_;
 
 		/// @brief 保持クラスのタイプ情報
 		const nox::reflection::Type& containing_type_;

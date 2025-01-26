@@ -298,7 +298,7 @@ namespace nox::reflection
 		[[nodiscard]] inline constexpr bool IsValid()const noexcept { return id_ != 0; }
 
 		//	リフレクション実装から取得する
-		[[nodiscard]] const class UserDefinedCompoundTypeInfo* GetUserDefinedCompoundTypeInfo()const noexcept;
+		[[nodiscard]] const class ClassInfo* GetUserDefinedCompoundTypeInfo()const noexcept;
 		[[nodiscard]] const class EnumInfo* GetEnumInfo()const noexcept;
 
 		/// @brief 関数の引数型情報リストを取得
@@ -426,7 +426,7 @@ namespace nox::reflection
 	/// @brief nox::reflection::Typeの比較演算子
 	/// @details	c++23以降でクラス内定義が可能になるため、c++20での定義
 	[[nodiscard]]
-	inline constexpr  bool nox::reflection::operator==(const nox::reflection::Type& a, const nox::reflection::Type& b)noexcept { return &a == &b; }
+    inline constexpr bool operator==(const nox::reflection::Type& a, const nox::reflection::Type& b)noexcept { return &a == &b; }
 
 	namespace detail
 	{
@@ -613,7 +613,7 @@ namespace nox::reflection
 	}
 	
 #pragma region 関数群
-	inline constexpr const nox::reflection::Type& nox::reflection::GetInvalidType()noexcept
+	inline constexpr const nox::reflection::Type& GetInvalidType()noexcept
 	{
 		return nox::reflection::detail::kInvalidType;
 	}
