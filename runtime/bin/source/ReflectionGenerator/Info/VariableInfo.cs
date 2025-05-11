@@ -16,8 +16,6 @@ namespace ReflectionGenerator.Info
         /// </summary>
         public required TypeData TypeData { get; init; }
 
-        public required Info.ClassInfo? VariableTypeInfo { get; init; }
-
         public override TypeInfoKind TypeInfoKind => TypeInfoKind.Variable;
         public required string Name { get; init; }
         public required string FullName { get; init; }
@@ -39,9 +37,11 @@ namespace ReflectionGenerator.Info
         public override string ToString() => FullName;
 
         public virtual bool IsTemplate { get; } = false;
+
        
         public required AccessLevel AccessLevel { get; init; }
-      }
+
+    }
 
     public class TemplateVariableInfo : VariableInfo
     {

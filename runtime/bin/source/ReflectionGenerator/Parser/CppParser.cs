@@ -12,27 +12,19 @@ namespace ReflectionGenerator.Parser
     public unsafe class CppParser
     {
         #region 公開定義
-       
-        /// <summary>
-        /// 制御
-        /// </summary>
-        public readonly struct SetupDesc
+        public struct SetupParam
         {
             /// <summary>
             /// 解析対象ファイルパス
             /// </summary>
             public required string SourceFilePath { get; init; }
 
-            /// <summary>
-            /// 
-            /// </summary>
             public required string SolutionPath { get; init; }
 
             /// <summary>
-            /// 
+            /// プロジェクトファイルパス
             /// </summary>
             public required string ProjectFilePath { get; init; }
-
 
             /// <summary>
             /// プラットフォーム名
@@ -50,48 +42,16 @@ namespace ReflectionGenerator.Parser
             public required string MSBuildBinPath { get; init; }
 
             /// <summary>
-            /// c++バージョン
-            /// clang用の定義で入っている(-std=c++2bなど)
+            /// 解析対象外のroot namespaceリスト
             /// </summary>
-            public required string CppVersion { get; init; }
-
-            /// <summary>
-            /// 最適化オプション
-            /// </summary>
-            public required string Optimization { get; init; }
-
-			/// <summary>
-			/// プリプロセッサマクロ定義群
-			/// ;区切りで入っている
-			/// </summary>
-			public required string PreprocessorMacro { get; init; }
-
-			/// <summary>
-			/// 解析対象外のroot namespaceリスト
-			/// </summary>
-			public required IReadOnlyList<string> IgnoreNamespaceList { get; init; }
+            public required IReadOnlyList<string> IgnoreNamespaceList { get; init; }
 
             /// <summary>
             /// 解析対象のnamespace
             /// nullの場合、全てが対象
             /// </summary>
             public required IReadOnlyList<string> EnableRootNamespaceList { get; init; }
-
-			/// <summary>
-			/// 追加インクルードディレクトリ
-			/// </summary>
-			public required string AdditionalIncludeDirectories { get; init; }
-
-            /// <summary>
-            /// 追加オプション
-            /// </summary>
-            public required string AdditionalOptions { get; init; }
-
-			/// <summary>
-			/// 実行時型情報を使用するか
-			/// </summary>
-			public required bool UseRtti { get; init; }
-		}
+        }
         #endregion
 
         #region 非公開フィールド
@@ -148,18 +108,15 @@ namespace ReflectionGenerator.Parser
             string typeFullName = GetTypeFullName(type);
             return typeFullName.Contains("(lambda at ") == true;
         }
+        #endregion
 
-        private ClangSharp.Interop.CXIndex _RootCXIndex = default;
-		private ClangSharp.Interop.CXTranslationUnit _RootTransUnit = default;
-		#endregion
+        #region 公開プロパティ
+        /// <summary>
+        /// モジュール名リスト
+        /// </summary>
+        public List<string> ModuleNameList { get; } = new List<string>();
 
-		#region 公開プロパティ
-		/// <summary>
-		/// モジュール名リスト
-		/// </summary>
-		public List<string> ModuleNameList { get; } = new List<string>();
-
-        public Info.NamespaceDeclInfo? RootDeclHolder { get; private set; } = null;
+        public Info.DeclHolder? RootDeclHolder { get; private set; } = null;
 
         private Dictionary<long, Info.IBaseInfo> TypeInfoDict { get; } = new Dictionary<long, Info.IBaseInfo>();
 
@@ -168,22 +125,21 @@ namespace ReflectionGenerator.Parser
         /// key:    モジュール名
         /// value:  型情報リスト
         /// </summary>
-        public Dictionary<string, List<Info.NamespaceDeclInfo>> TypeInfoListWithModuleNameDict { get; } = new Dictionary<string, List<Info.NamespaceDeclInfo>>();
-		#endregion
+        public Dictionary<string, List<Info.DeclHolder>> TypeInfoListWithModuleNameDict { get; } = new Dictionary<string, List<Info.DeclHolder>>();
+        #endregion
 
-		#region 公開メソッド
-	
-		/// <summary>
-		/// MSBuildを通して、コンパイルオプションを取得する
-		/// </summary>
-		/// <param name="outClangCommandLineList"></param>
-		/// <param name="msbuildBinPath"></param>
-		/// <param name="projectFilePath"></param>
-		/// <param name="configuration"></param>
-		/// <param name="platform"></param>
-		/// <param name="sourceFilePath"></param>
-		/// <returns></returns>
-		private static bool parseBuildOptions(out List<string> outClangCommandLineList, string msbuildBinPath, string solutionPath, string projectPath, string configuration, string platform, string sourceFilePath)
+        #region 公開メソッド
+        /// <summary>
+        /// MSBuildを通して、コンパイルオプションを取得する
+        /// </summary>
+        /// <param name="outClangCommandLineList"></param>
+        /// <param name="msbuildBinPath"></param>
+        /// <param name="projectFilePath"></param>
+        /// <param name="configuration"></param>
+        /// <param name="platform"></param>
+        /// <param name="sourceFilePath"></param>
+        /// <returns></returns>
+        private static bool parseBuildOptions(out List<string> outClangCommandLineList, string msbuildBinPath, string solutionPath, string configuration, string platform, string sourceFilePath)
         {
             outClangCommandLineList = new List<string>();
 
@@ -204,15 +160,10 @@ namespace ReflectionGenerator.Parser
             string outputFilePath = System.IO.Path.GetFullPath($"{System.IO.Path.GetTempPath()}/tmpMSBuild.log");
             
             string msbuildPath = System.IO.Path.GetFullPath($"{msbuildBinPath}/MSBuild.exe");
-			string args = 
-			$"/p:Configuration={configuration};Platform={platform} {solutionPath} /property:GenerateFullPaths=true /v:n /t:clean /t:ClCompile /p:SelectedFiles=\"{sourceFilePath}\" /p:PreprocessToFile=true /p:PreprocessOutput={outputFilePath}";
+            string args = 
+                $"/p:Configuration={configuration};Platform={platform} {solutionPath} /property:GenerateFullPaths=true /v:n /t:clean /t:ClCompile /p:SelectedFiles=\"{sourceFilePath}\" /p:PreprocessToFile=true /p:PreprocessOutput={outputFilePath}";
 
-			//string args = 
-			//$"/p:Configuration={configuration};Platform={platform} {solutionPath} /property:GenerateFullPaths=true /v:n /t:clean /p:SelectedFiles=\"{sourceFilePath}\" /p:PreprocessToFile=true /p:PreprocessOutput={outputFilePath} /verbosity:diag";
-
-			// vcvarsall.bat を実行して環境変数を設定
-
-			if (System.IO.File.Exists(solutionPath.Replace("\"", "")) == false)
+            if(System.IO.File.Exists(solutionPath.Replace("\"", "")) == false)
             {
                 return false;
             }
@@ -222,10 +173,9 @@ namespace ReflectionGenerator.Parser
                 return false;
             }
 
-            using System.Diagnostics.Process process = new System.Diagnostics.Process();
-
+            System.Diagnostics.Process process = new System.Diagnostics.Process();
             {
-                System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo();
+                System.Diagnostics.ProcessStartInfo startInfo = process.StartInfo;
                 startInfo.FileName = msbuildPath;
                 startInfo.Arguments = args;
                 startInfo.Verb = "RunAs";
@@ -236,86 +186,58 @@ namespace ReflectionGenerator.Parser
                 startInfo.UseShellExecute = false;
 
                 startInfo.RedirectStandardError = true;
+            }
 
-
-				process.StartInfo = startInfo;
-
-			}
-
-			System.Text.StringBuilder stdout = new System.Text.StringBuilder();
-			System.Text.StringBuilder stderr = new System.Text.StringBuilder();
-
-			System.Diagnostics.Stopwatch stopwatchProcess = new System.Diagnostics.Stopwatch();
+            System.Diagnostics.Stopwatch stopwatchProcess = new System.Diagnostics.Stopwatch();
             stopwatchProcess.Start();
             process.Start();
+            process.OutputDataReceived += new System.Diagnostics.DataReceivedEventHandler((sender, e) => {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    Console.WriteLine(e.Data);
+                }
+            });
 
-			process.OutputDataReceived += (sender, e) => { if (e.Data != null) { stdout.AppendLine(e.Data); } }; // 標準出力に書き込まれた文字列を取り出す
-			process.ErrorDataReceived += (sender, e) => { if (e.Data != null) { stderr.AppendLine(e.Data); } }; // 標準エラー出力に書き込まれた文字列を取り出す
-
-
-			//process.OutputDataReceived += new System.Diagnostics.DataReceivedEventHandler((sender, e) => {
-			//    if (!string.IsNullOrEmpty(e.Data))
-			//    {
-			//        Console.WriteLine(e.Data);
-			//    }
-			//});
-			process.BeginOutputReadLine();
-            //	process.BeginErrorReadLine();
-
-
-            process.WaitForExit();
+            if (process.WaitForExit(1000) == false)
             {
-           //    return false;
+               
+
+       //         return false;
             }
             stopwatchProcess.Stop();
             Trace.InfoLine(null, $"MSBuildにかかった時間:{stopwatchProcess.ElapsedMilliseconds.ToString()}msec");
 
-			if (process.ExitCode != 0)
-			{
-				Trace.ErrorLine(null, $"MSBuildエラー ExitCode:{process.ExitCode}\n{stderr.ToString()}");
-				return false;
-			}
-			//    string allStr = process.StandardOutput.ReadToEnd();
+        //    string allStr = process.StandardOutput.ReadToEnd();
 
-			//  CL.exeに渡している引数情報を取得する
-			string clArgs = string.Empty;
+            //  CL.exeに渡している引数情報を取得する
+            string clArgs = string.Empty;
+            while (!process.StandardOutput.EndOfStream)
             {
-                string rawStr = stdout.ToString();
-
-				ReadOnlySpan<string> lines = rawStr.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-
-                foreach (string line in lines)
+                string? lineStr = process.StandardOutput.ReadLine();
+                if(lineStr == null)
                 {
-                    int index = line.IndexOf("ClCompile:");
-                    if (index < 0)
-                    {
-                        return false;
-                    }
-
-                    clArgs = line.Substring(index + "ClCompile:".Length);
+                    break;
                 }
-			}
-				//foreach(var s in stdout.get)
-				//{
-				//    string? lineStr = process.StandardOutput.ReadLine();
-				//    if(lineStr == null)
-				//    {
-				//        break;
-				//    }
 
-				//    int index = lineStr.IndexOf("ClCompile:");
-				//    if (index < 0)
-				//    {
-				//        continue;
-				//    }
+                int index = lineStr.IndexOf("ClCompile:");
+                if (index < 0)
+                {
+                    continue;
+                }
 
-				//    //  CL.exeの引数情報を取得
-				//    clArgs = process.StandardOutput.ReadLine() ?? string.Empty;
-				//    //                clArgs = lineStr.Substring(index + "CL.exe".Length);
+                //  CL.exeの引数情報を取得
+                clArgs = process.StandardOutput.ReadLine() ?? string.Empty;
+                //                clArgs = lineStr.Substring(index + "CL.exe".Length);
 
-				//    break;
-				//}
+                break;
+            }
 
+            string _ = process.StandardOutput.ReadToEnd();
+
+            if (process.ExitCode != 0)
+            {
+                return false;
+            }
 
             //       var regex = new System.Text.RegularExpressions.Regex(@"[\""].+?[\""]|[^ ]+");
             //      var spilitClArgs = regex.Match(clArgs);
@@ -429,9 +351,22 @@ namespace ReflectionGenerator.Parser
         /// </summary>
         /// <param name="setupParam"></param>
         /// <returns></returns>
-        public bool Parse(in SetupDesc setupParam)
+        public bool Parse(in SetupParam setupParam)
         {
-            _ProjectRootDirectory = System.IO.Path.GetDirectoryName(setupParam.SolutionPath) ?? string.Empty;
+            _ProjectRootDirectory = System.IO.Path.GetDirectoryName(setupParam.ProjectFilePath) ?? string.Empty;
+
+            //  MSBuildを通して展開したコマンドラインを取得
+            if (parseBuildOptions(
+                out List<string> outCommandLineList,
+                msbuildBinPath: setupParam.MSBuildBinPath,
+                solutionPath: setupParam.ProjectFilePath,
+                configuration: setupParam.Configuration,
+                platform: setupParam.Platform,
+                sourceFilePath:
+                setupParam.SourceFilePath) == false)
+            {
+                return false;
+            }
 
             {
                 //  パースするソースファイルを作成
@@ -445,53 +380,16 @@ namespace ReflectionGenerator.Parser
                 //  引数
                 List<string> parseCommandLineList = new List<string>();
 
-				//  解析時にのみ有効にするマクロ
-				parseCommandLineList.Add($"-D {Define.RUNTIME_REFLECTION_GENERATOR_DEFINE}");
+                //  MSBuildを通して展開したコマンドラインをセット
+                parseCommandLineList.AddRange(outCommandLineList);
 
-                //  カスタムタスクで解析した情報をセット
-				parseCommandLineList.Add(setupParam.CppVersion);
+                //            parseCommandLineList.Add(CppParseDefine.GetCppVersionStr(setupParam.CppVersion));
+                //  不明な属性を無視しない
+                parseCommandLineList.Add($"-D {Define.RUNTIME_REFLECTION_GENERATOR_DEFINE}");
+//                parseCommandLineList.Add($"-fmodule-file=my_module=my_module.pcm my_module.pcm -o my_module.out");
 
-				//  ビルド構成 プラットフォーム
-
-				//  最適化オプション
-				//  msvcの定義からclangの定義に変換
-                string optimizationOption = setupParam.Optimization switch
-				{
-					"Disabled" => "-O0",
-					"MinSpace" => "-O1",
-					"MaxSpeed" => "-O2",
-					"Full" => "-O3",
-					_ => string.Empty,
-				};
-
-				if (optimizationOption != string.Empty)
-				{
-					parseCommandLineList.Add(optimizationOption);
-				}
-                else
-                {
-					Trace.ErrorLine(null, $"不明な最適化オプションです:{setupParam.Optimization}");
-				}
-
-				//  define
-				ReadOnlySpan<string> macros = setupParam.PreprocessorMacro.Split(';', StringSplitOptions.RemoveEmptyEntries);
-				foreach (string macro in macros)
-				{
-					parseCommandLineList.Add($"-D {macro}");
-				}
-
-				//  追加インクルードディレクトリ
-				ReadOnlySpan<string> additionalIncludeDirectories = setupParam.AdditionalIncludeDirectories.Split(';', StringSplitOptions.RemoveEmptyEntries);
-				foreach (string additionalIncludeDirectory in additionalIncludeDirectories)
-				{
-					parseCommandLineList.Add($"-I {additionalIncludeDirectory}");
-				}
-
-				//  end
-
-
-				//  不明な属性を無視しない
-				_RootCXIndex = ClangSharp.Interop.CXIndex.Create(true, true);
+                ClangSharp.Interop.CXIndex cxIndex = ClangSharp.Interop.CXIndex.Create(true, true);
+                ClangSharp.Interop.CXTranslationUnit transUnit;
                 ClangSharp.Interop.CXErrorCode cxErrorCode;
                 //  コンパイル
                 //   for (int i = 0; i < 100; ++i)
@@ -499,20 +397,19 @@ namespace ReflectionGenerator.Parser
                     System.Diagnostics.Stopwatch stopwatchClangCompile = new System.Diagnostics.Stopwatch();
                     stopwatchClangCompile.Start();
                     cxErrorCode = ClangSharp.Interop.CXTranslationUnit.TryParse(
-					 _RootCXIndex,
+                     cxIndex,
                      parseSourceFilePath,
                      parseCommandLineList.ToArray(),
                      default,
-					// 関数の中身を解析しないことで、高速化を試みる
-					ClangSharp.Interop.CXTranslationUnit_Flags.CXTranslationUnit_SkipFunctionBodies,
-                  //  ClangSharp.Interop.CXTranslationUnit_Flags.CXTranslationUnit_None,
-                     out _RootTransUnit
+                  //    ClangSharp.Interop.CXTranslationUnit_Flags.CXTranslationUnit_SkipFunctionBodies,
+                    ClangSharp.Interop.CXTranslationUnit_Flags.CXTranslationUnit_None,
+                     out transUnit
                      );
 
                     stopwatchClangCompile.Stop();
                     Trace.InfoLine(this, $"Clang Compile:{stopwatchClangCompile.ElapsedMilliseconds.ToString()}msec");
                 }
-                
+
                 if (cxErrorCode != ClangSharp.Interop.CXErrorCode.CXError_Success)
                 {
                     Trace.ErrorLine(this, "failed parse");
@@ -522,9 +419,9 @@ namespace ReflectionGenerator.Parser
                 //  ビルドエラーの解析
                 {
                     bool isSuccess = true;
-                    for (uint i = 0; i < _RootTransUnit.NumDiagnostics; ++i)
+                    for (uint i = 0; i < transUnit.NumDiagnostics; ++i)
                     {
-                        ClangSharp.Interop.CXDiagnostic diagnostic = _RootTransUnit.GetDiagnostic(i);
+                        ClangSharp.Interop.CXDiagnostic diagnostic = transUnit.GetDiagnostic(i);
                         switch (diagnostic.Severity)
                         {
                             case CXDiagnosticSeverity.CXDiagnostic_Error:
@@ -558,7 +455,10 @@ namespace ReflectionGenerator.Parser
                 //  解析開始
                 //  Data rootParam = new Data() { Kind = Kind.Class, Parent = null };
                 //  transUnit.Cursor.VisitChildren(VisitChild, clientData: (CXClientData)System.Runtime.CompilerServices.Unsafe.AsPointer(ref rootParam));
-                ParseRoot(_RootTransUnit.Cursor);
+                ParseRoot(transUnit.Cursor);
+
+                transUnit.Dispose();
+                cxIndex.Dispose();
             }
 
             //  namespaceを結合
@@ -567,21 +467,6 @@ namespace ReflectionGenerator.Parser
 
             return true;
         }
-
-        public void Dispose()
-        {
-            if (_RootTransUnit != default)
-            {
-                _RootTransUnit.Dispose();
-                _RootTransUnit = default;
-			}
-
-			if (_RootCXIndex != default)
-            {
-                _RootCXIndex.Dispose();
-                _RootCXIndex = default;
-			}
-		}
         #endregion
 
         #region 共有関数
@@ -1239,7 +1124,7 @@ namespace ReflectionGenerator.Parser
                 }
 
                 Info.IHolder parent = FindParseParent(cursor);
-                parent.ClassInfoList.Add(info);
+                parent.TypeInfoList.Add(info);
             }
 
             uint hash = cursor.Hash;
@@ -1249,7 +1134,7 @@ namespace ReflectionGenerator.Parser
 
         private void ParseClass(ClangSharp.Interop.CXCursor cursor)
         {
-            if(cursor.Spelling.CString.Contains("StringView"))
+            if(cursor.Spelling.CString.Contains("Application"))
             {
                 Util.BreakPoint();
             }
@@ -1291,10 +1176,10 @@ namespace ReflectionGenerator.Parser
                 return;
             }
 
-            Info.ClassInfo CreateClassInfo()
+            Info.UserDefinedCompoundTypeInfo CreateClassInfo()
             {
 
-                Info.ClassInfo newInfo = new Info.ClassInfo()
+                Info.UserDefinedCompoundTypeInfo newInfo = new Info.UserDefinedCompoundTypeInfo()
                 {
                     AccessLevel = cursor.CXXAccessSpecifier.GetAccessLevel(),
                     CXType = cursor.Type,
@@ -1307,7 +1192,7 @@ namespace ReflectionGenerator.Parser
                 return newInfo;
             }
 
-            void PostProcess(Info.ClassInfo info)
+            void PostProcess(Info.UserDefinedCompoundTypeInfo info)
             {
                 int numDecl = cursor.NumDecls;
                 for (uint i = 0; i < numDecl; ++i)
@@ -1317,7 +1202,7 @@ namespace ReflectionGenerator.Parser
                 }
 
                 Info.IHolder parent = FindParseParent(cursor);
-                parent.ClassInfoList.Add(info);
+                parent.TypeInfoList.Add(info);
             }
 
             uint hash = cursor.Hash;
@@ -1356,7 +1241,7 @@ namespace ReflectionGenerator.Parser
 
             if (fullName.Contains("nox::reflection::ReflectionGeneratedHolder") == true)
             {
-                Info.ClassInfo parent = FindParseParent<Info.ClassInfo>(cursor);
+                Info.UserDefinedCompoundTypeInfo parent = FindParseParent<Info.UserDefinedCompoundTypeInfo>(cursor);
                 parent.IsPrivateReflection = true;
             }
         }
@@ -1366,14 +1251,8 @@ namespace ReflectionGenerator.Parser
             System.Diagnostics.Debug.Assert(cursor.Type.CanonicalType.kind != CXTypeKind.CXType_Invalid);
             Info.VariableInfo Create()
             {
-                //  ここで変数の型を解析
-                ParseType(cursor.Type.CanonicalType);
-
-                TypeInfoDict.TryGetValue(cursor.Type.CanonicalType.Declaration.Hash, out Info.IBaseInfo? outTypeInfo);
-
                 Info.VariableInfo variableInfo = new Info.VariableInfo()
                 {
-                    VariableTypeInfo = outTypeInfo as Info.ClassInfo,
                     TypeData = cursor.Type.GetTypeData(),
                     Name = cursor.Spelling.CString,
                     FullName = cursor.GetFullName(),
@@ -1391,7 +1270,7 @@ namespace ReflectionGenerator.Parser
 
             void PostProcess(Info.VariableInfo info)
             {
-              //  ParseType(cursor.Type.CanonicalType);
+                ParseType(cursor.Type.CanonicalType);
 
                 if(cursor.InitExpr.IsNull == false)
                 {
@@ -1438,7 +1317,6 @@ namespace ReflectionGenerator.Parser
                     Offset = cursor.OffsetOfField,
                     IsConstexpr = cursor.IsConstexpr,
                     IsStatic = cursor.IsStatic,
-                    VariableTypeInfo = null,
                 };
 
                 return variableInfo;
@@ -1504,9 +1382,7 @@ namespace ReflectionGenerator.Parser
 
             Info.FunctionInfo Create()
             {
-                //   ParseType(cursor.Type.CanonicalType);
-
-
+             //   ParseType(cursor.Type.CanonicalType);
 
                 int numArguments = cursor.NumArguments;
                 uint numDefaultArguments = 0;
@@ -1522,6 +1398,16 @@ namespace ReflectionGenerator.Parser
                //     ParseType(argCursor.Type.CanonicalType);
                 }
 
+                if(cursor.Type.CanonicalType.kind == CXTypeKind.CXType_MemberPointer)
+                {
+                    Util.BreakPoint();
+                }
+
+                if (specializationInfo.fullName.Contains("app::TestBehavior::StaticAssertNoxDeclareManagedObject"))
+                {
+                    Util.BreakPoint();
+                }
+
                 return new Info.FunctionInfo()
                 {
                     Name = cursor.Spelling.CString,
@@ -1531,12 +1417,11 @@ namespace ReflectionGenerator.Parser
                     NumArguments = numArguments > 0 ? (uint)numArguments : 0,
                     NumDefaultArguments = numDefaultArguments,
                     AttributeInfoList = GetCustomAttributeList(cursor),
-                    IsConsteval = false,
+                    IsConsteval = cursor.IsConstexpr,
                     IsConstexpr = cursor.IsConstexpr,
                     IsInline = cursor.IsFunctionInlined,
                     IsPureVirtual = cursor.CXXMethod_IsPureVirtual,
                     IsVirtual = cursor.CXXMethod_IsVirtual,
-                    OperatorKind = cursor.OverloadedOperatorKind,
                     Module = CreateModule(cursor),
                 };
             }
@@ -1689,7 +1574,6 @@ namespace ReflectionGenerator.Parser
                     IsPureVirtual = cursor.CXXMethod_IsPureVirtual,
                     IsVirtual = cursor.CXXMethod_IsVirtual,
                     SpecializationsList = [],
-                    OperatorKind = cursor.OverloadedOperatorKind,
                     Module = CreateModule(cursor),
                 };
             }
@@ -1809,9 +1693,9 @@ namespace ReflectionGenerator.Parser
         {
             uint hash = cursor.Hash;
            
-            Info.NamespaceDeclInfo Create()
+            Info.DeclHolder Create()
             {
-                return RootDeclHolder = new Info.NamespaceDeclInfo()
+                return RootDeclHolder = new Info.DeclHolder()
                 {
                     Namespace = string.Empty,
                     AttributeInfoList = [],
@@ -1819,7 +1703,7 @@ namespace ReflectionGenerator.Parser
                 };
             }
 
-            void PostProcess(Info.NamespaceDeclInfo info)
+            void PostProcess(Info.DeclHolder info)
             {
                 int numDecl = cursor.NumDecls;
                 for (uint i = 0; i < numDecl; ++i)
@@ -1829,9 +1713,9 @@ namespace ReflectionGenerator.Parser
                 }
 
                 //  module
-                if (TypeInfoListWithModuleNameDict.TryGetValue(info.Module.ModuleName, out List<Info.NamespaceDeclInfo>? infoList) == false || infoList == null)
+                if (TypeInfoListWithModuleNameDict.TryGetValue(info.Module.ModuleName, out List<Info.DeclHolder>? infoList) == false || infoList == null)
                 {
-                    TypeInfoListWithModuleNameDict.Add(info.Module.ModuleName, infoList = new List<Info.NamespaceDeclInfo>());
+                    TypeInfoListWithModuleNameDict.Add(info.Module.ModuleName, infoList = new List<Info.DeclHolder>());
                 }
                 infoList.Add(info);
             }
@@ -1841,9 +1725,9 @@ namespace ReflectionGenerator.Parser
         private void ParseNamespace(ClangSharp.Interop.CXCursor cursor)
         {
             uint hash = cursor.Hash;
-            Info.NamespaceDeclInfo Create()
+            Info.DeclHolder Create()
             {
-                return new Info.NamespaceDeclInfo()
+                return new Info.DeclHolder()
                 {
                     Namespace = cursor.GetNamespace(),
                     AttributeInfoList = GetCustomAttributeList(cursor),
@@ -1851,7 +1735,7 @@ namespace ReflectionGenerator.Parser
                 };
             }
 
-            void PostProcess(Info.NamespaceDeclInfo info)
+            void PostProcess(Info.DeclHolder info)
             {
                 int numDecl = cursor.NumDecls;
                 for (uint i = 0; i < numDecl; ++i)
@@ -1859,12 +1743,12 @@ namespace ReflectionGenerator.Parser
                     CXCursor declCursor = cursor.GetDecl(i);
                     ParseCursor(declCursor);
                 }
-                FindParseParent<Info.NamespaceDeclInfo>(cursor).DeclHolderList.Add(info);
+                FindParseParent<Info.DeclHolder>(cursor).DeclHolderList.Add(info);
 
                 //  module
-                if (TypeInfoListWithModuleNameDict.TryGetValue(info.Module.ModuleName, out List<Info.NamespaceDeclInfo>? infoList) == false || infoList == null)
+                if (TypeInfoListWithModuleNameDict.TryGetValue(info.Module.ModuleName, out List<Info.DeclHolder>? infoList) == false || infoList == null)
                 {
-                    TypeInfoListWithModuleNameDict.Add(info.Module.ModuleName, infoList = new List<Info.NamespaceDeclInfo>());
+                    TypeInfoListWithModuleNameDict.Add(info.Module.ModuleName, infoList = new List<Info.DeclHolder>());
                 }
                 infoList.Add(info);
             }
@@ -2334,18 +2218,18 @@ namespace ReflectionGenerator.Parser
         /// <returns></returns>
         private Info.ArtifactData CreateModule(ClangSharp.Interop.CXCursor cursor)
         {
-            
+            const string unknownStr = "unknown";
 
             //  ソリューションディレクトまで辿って、.vcxprojを探す
             //  なければ、unnamedとして扱う
             cursor.Location.GetFileLocation(out ClangSharp.Interop.CXFile outFile, out uint outLine, out uint outColumn, out uint outOffset);
             if(outFile.Handle == 0)
             {
-                return new Info.ArtifactData() { ModuleName = Define.UNKNOWN_MODULE_NAME };
+                return new Info.ArtifactData() { ModuleName = unknownStr };
             }
             string? path = System.IO.Path.GetDirectoryName(outFile.Name.CString);
 
-            string moduleName = Define.UNKNOWN_MODULE_NAME;
+            string moduleName = unknownStr;
 
             //  ルートディレクトリ内か？
             if (path == null || path.StartsWith(_ProjectRootDirectory) == false)

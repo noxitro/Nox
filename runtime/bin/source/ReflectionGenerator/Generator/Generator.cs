@@ -38,8 +38,8 @@ namespace ReflectionGenerator.Generator
         }
 
         #endregion
-        const string ClassInfoStr = "ClassInfo";
-        const string GlobalDeclStr = "GlobalDecl";
+        const string UserDefinedCompoundTypeInfoStr = "UserDefinedCompoundTypeInfo";
+        const string GlobalStr = "Global";
         const int NUM_DIGIT_INDEX = 2;
 
         private const string NOX_REFLECTION_GEN_NAMESPACE_STR = "nox::reflection::gen";
@@ -60,7 +60,7 @@ namespace ReflectionGenerator.Generator
         /// <summary>
         /// Key: モジュール名 Value: モジュールごとの型情報リスト
         /// </summary>
-        public required Dictionary<string, List<Info.NamespaceDeclInfo>> TypeInfoListWithArtifactNameDict { get; init; }
+        public required Dictionary<string, List<Info.DeclHolder>> TypeInfoListWithArtifactNameDict { get; init; }
 
         /// <summary>
         /// 1ファイルに定義する数
@@ -97,19 +97,19 @@ namespace ReflectionGenerator.Generator
         /// </summary>
         public required string PlatformDefine { private get; init; }
 
-        public required ARTIFACT_INFO[] ModuleInfoList { get; init; }
+        public required IReadOnlyList<ARTIFACT_INFO> ModuleInfoList { get; init; }
         #endregion
 
         #region 非公開プロパティ
         #endregion
 
         #region 公開メソッド
-        public unsafe bool Generate()
+        public bool Generate()
         {
-			string baseGenHeaderFilePath = $"{OutputDirectory}/gen.h";
+            string baseGenHeaderFilePath = $"{OutputDirectory}/gen.h";
 
             //  出力先ディレクトリを決定
-            _BaseDirectory = Path.GetFullPath($"{OutputDirectory}/{Platform}/{Configuration}/");
+            _BaseDirectory = Path.GetFullPath($"{OutputDirectory}/gen/{Configuration}/{Platform}/");
 
             if (Directory.Exists(_BaseDirectory) == false)
             {
@@ -119,7 +119,7 @@ namespace ReflectionGenerator.Generator
 
             //  モジュールごとのディレクトリを作成
             //  ~/gen/BuildSpec/Platform/ModuleName
-            string[] moduleDirectoryList = new string[ModuleInfoList.Length];
+            string[] moduleDirectoryList = new string[ModuleInfoList.Count];
 
             for (int i = 0; i < moduleDirectoryList.Length; ++i)
             {
@@ -130,14 +130,14 @@ namespace ReflectionGenerator.Generator
                 }
             }
 
-			//  モジュールごとのヘッダファイルを生成
-			//  ~/gen/BuildSpec/Platform/gen_BuildSpec_Platform_ModuleName.h
-			for (int moduleListIndex = 0; moduleListIndex < ModuleInfoList.Length; ++moduleListIndex)
+            //  モジュールごとのヘッダファイルを生成
+            //  ~/gen/BuildSpec/Platform/gen_BuildSpec_Platform_ModuleName.h
+            for (int moduleListIndex = 0; moduleListIndex < ModuleInfoList.Count; ++moduleListIndex)
             {
-                ref readonly ARTIFACT_INFO moduleInfo = ref ModuleInfoList[moduleListIndex];
+                ARTIFACT_INFO moduleInfo = ModuleInfoList[moduleListIndex];
                 string artifactName = moduleInfo.ArtifactName;
 
-                string genHeaderFilePath = System.IO.Path.GetFullPath($"{moduleDirectoryList[moduleListIndex]}/gen_{Platform}_{Configuration}_{artifactName}.h");
+                string genHeaderFilePath = System.IO.Path.GetFullPath($"{moduleDirectoryList[moduleListIndex]}/gen_{Configuration}_{Platform}_{artifactName}.h");
 
                 //  ファイルが存在する場合、かつ再ビルドフラグが立っていない場合はスキップ
                 if (File.Exists(genHeaderFilePath) == true && moduleInfo.Build == false)
@@ -153,18 +153,18 @@ namespace ReflectionGenerator.Generator
                     codeWriter.WriteLinePPIf(ConfigurationDefine);
                     codeWriter.WriteLinePPIf(PlatformDefine);
 
-                    codeWriter.WriteNamespace(NOX_REFLECTION_GEN_NAMESPACE_STR);
+                    codeWriter.WriteNamespace("nox::reflection::gen");
                     codeWriter.PushScope(CodeWriter.ScopeType.Define);
 
                     for (int i = 0; i < DivisionInfoCount; ++i)
                     {
                         string indexStr = i.ToString().PadLeft(NUM_DIGIT_INDEX, '0');
 
-                        codeWriter.WriteLine($"void\tRegister_{Platform}_{Configuration}_{artifactName}_{ClassInfoStr}_{indexStr}();");
-                        codeWriter.WriteLine($"void\tUnregister_{Platform}_{Configuration}_{artifactName}_{ClassInfoStr}_{indexStr}();");
+                        codeWriter.WriteLine($"void\tRegister_{Configuration}_{Platform}_{artifactName}_{UserDefinedCompoundTypeInfoStr}_{indexStr}();");
+                        codeWriter.WriteLine($"void\tUnregister_{Configuration}_{Platform}_{artifactName}_{UserDefinedCompoundTypeInfoStr}_{indexStr}();");
 
-                        codeWriter.WriteLine($"void\tRegister_{Platform}_{Configuration}_{artifactName}_{GlobalDeclStr}_{indexStr}();");
-                        codeWriter.WriteLine($"void\tUnregister_{Platform}_{Configuration}_{artifactName}_{GlobalDeclStr}_{indexStr}();");
+                        codeWriter.WriteLine($"void\tRegister_{Configuration}_{Platform}_{artifactName}_{GlobalStr}_{indexStr}();");
+                        codeWriter.WriteLine($"void\tUnregister_{Configuration}_{Platform}_{artifactName}_{GlobalStr}_{indexStr}();");
                     }
 
                     codeWriter.PopScope();
@@ -178,73 +178,42 @@ namespace ReflectionGenerator.Generator
             //  ~/gen/BuildSpec/Platform/gen_BuildSpec_Platform_ModuleName_{index}.cpp
             foreach(var pair in TypeInfoListWithArtifactNameDict)
             {
-				this.Generate(pair.Key, pair.Value);
+                this.Generate(pair.Key, pair.Value);
             }
 
             //  統括ソースファイルを生成
             {
-                string unitySourceFilePath = System.IO.Path.GetFullPath($"{_BaseDirectory}/gen_{Platform}_{Configuration}.cpp");
+                string unitySourceFilePath = System.IO.Path.GetFullPath($"{_BaseDirectory}/gen_{Configuration}_{Platform}.cpp");
                 using (CodeWriter codeWriter = new CodeWriter(unitySourceFilePath))
                 {
+                    codeWriter.WriteLineCopyRight();
                     codeWriter.WriteLineSource();
                     codeWriter.WriteNewLine();
 
-					codeWriter.WriteIncludeStdafx();
-                    codeWriter.WriteLineInclude($"gen.h");
+                    codeWriter.WriteIncludeStdafx();
+                    codeWriter.WriteLineInclude($"{OutputProjectDirectory}/gen.h");
 
                     codeWriter.WriteNewLine();
+
 
                     codeWriter.WriteLinePPIf(ConfigurationDefine);
                     codeWriter.WriteLinePPIf(PlatformDefine);
 
-                    //  各ヘッダファイルをインクルード
-                    for (int i = 0; i < ModuleInfoList.Length; ++i)
+                    codeWriter.WriteNamespace("nox::reflection::gen");
+                    codeWriter.PushScope(CodeWriter.ScopeType.Define);
+
+                    codeWriter.WriteLine($"void Register{Configuration}{Platform}");
+                    codeWriter.PushScope(CodeWriter.ScopeType.Define);
+                    for(int i = 0; i < ModuleInfoList.Count; ++i)
                     {
-                        ref readonly ARTIFACT_INFO moduleInfo = ref ModuleInfoList[i];
-                        codeWriter.WriteLineInclude($"{moduleInfo.ArtifactName}/gen_{Platform}_{Configuration}_{moduleInfo.ArtifactName}.h");
+                        ARTIFACT_INFO moduleInfo = ModuleInfoList[i];
+                        codeWriter.WriteLine($"//\t{moduleInfo.ArtifactName}");
+                        codeWriter.WriteLine($"");
                     }
+                    codeWriter.PopScope();
 
-						{
-						// 登録
-						codeWriter.WriteLine($"void ::{NOX_REFLECTION_GEN_NAMESPACE_STR}::Register_{Platform}_{Configuration}()");
-                        {
-                            codeWriter.PushScope(CodeWriter.ScopeType.Define);
-                            for (int i = 0; i < ModuleInfoList.Length; ++i)
-                            {
-                                ref readonly ARTIFACT_INFO moduleInfo = ref ModuleInfoList[i];
-                                codeWriter.WriteLineRegion(moduleInfo.ArtifactName);
-                                for (int divideIndex = 0; divideIndex < DivisionInfoCount; ++divideIndex)
-                                {
-                                    string indexStr = divideIndex.ToString().PadLeft(NUM_DIGIT_INDEX, '0');
 
-                                    codeWriter.WriteLine($"::{NOX_REFLECTION_GEN_NAMESPACE_STR}::Register_{Platform}_{Configuration}_{moduleInfo.ArtifactName}_{ClassInfoStr}_{indexStr}();");
-                                    codeWriter.WriteLine($"::{NOX_REFLECTION_GEN_NAMESPACE_STR}::Register_{Platform}_{Configuration}_{moduleInfo.ArtifactName}_{GlobalDeclStr}_{indexStr}();");
-                                }
-                                codeWriter.WriteLineEndRegion(moduleInfo.ArtifactName);
-                            }
-                            codeWriter.PopScope();
-                        }
-
-                        // 登録解除
-                        codeWriter.WriteLine($"void ::{NOX_REFLECTION_GEN_NAMESPACE_STR}::Unregister_{Platform}_{Configuration}()");
-                        {
-                            codeWriter.PushScope(CodeWriter.ScopeType.Define);
-                            for (int i = 0; i < ModuleInfoList.Length; ++i)
-                            {
-                                ref readonly ARTIFACT_INFO moduleInfo = ref ModuleInfoList[i];
-                                codeWriter.WriteLineRegion(moduleInfo.ArtifactName);
-                                for (int divideIndex = 0; divideIndex < DivisionInfoCount; ++divideIndex)
-                                {
-                                    string indexStr = divideIndex.ToString().PadLeft(NUM_DIGIT_INDEX, '0');
-
-                                    codeWriter.WriteLine($"::{NOX_REFLECTION_GEN_NAMESPACE_STR}::Unegister_{Platform}_{Configuration}_{moduleInfo.ArtifactName}_{ClassInfoStr}_{indexStr}();");
-                                    codeWriter.WriteLine($"::{NOX_REFLECTION_GEN_NAMESPACE_STR}::Unegister_{Platform}_{Configuration}_{moduleInfo.ArtifactName}_{GlobalDeclStr}_{indexStr}();");
-                                }
-                                codeWriter.WriteLineEndRegion(moduleInfo.ArtifactName);
-                            }
-                            codeWriter.PopScope();
-                        }
-                    }
+                    codeWriter.PopScope();
 
                     codeWriter.WriteLinePPEndIf(PlatformDefine);
                     codeWriter.WriteLinePPEndIf(ConfigurationDefine);
@@ -327,7 +296,7 @@ namespace ReflectionGenerator.Generator
         }
 #endregion
 
-		private struct DeclData
+        private struct DeclData
         {
             public DeclData() { }
 
@@ -341,7 +310,11 @@ namespace ReflectionGenerator.Generator
         }
 
         #region 非公開メソッド
-        private void Generate(string artifactName, IReadOnlyList<Info.NamespaceDeclInfo> infoList)
+        private void Generate2(string artifactName, IReadOnlyList<Info.DeclHolder> infoList)
+        {
+        }
+
+        private void Generate(string artifactName, IReadOnlyList<Info.DeclHolder> infoList)
         {
             int maxThreadID = Util.MAX_THREAD_ID;
             maxThreadID = 1;
@@ -354,13 +327,14 @@ namespace ReflectionGenerator.Generator
                 globalDeclBufferListTable[i] = new List<DeclData>();
             }
             
-            void process(Info.NamespaceDeclInfo decl, int threadIndex)
+            void process(Info.DeclHolder decl, int threadIndex)
             {
                 {
                     GenerateDeclInfo(decl, ref globalDeclBufferListTable[threadIndex]);
-                    foreach (Info.ClassInfo classUnionInfo in decl.ClassInfoList)
+
+                    foreach (Info.UserDefinedCompoundTypeInfo classUnionInfo in decl.TypeInfoList)
                     {
-                    //    GenerateClassUnion(classUnionInfo, ref classBufferListTable[threadIndex]);
+                        GenerateClassUnion(classUnionInfo, ref classBufferListTable[threadIndex]);
                     }
                 }
             }
@@ -387,42 +361,41 @@ namespace ReflectionGenerator.Generator
             const int NumMaxFile = 10;
             for(int i = 0; i < NumMaxFile ; ++i)
             {
-				//MEMO 追加のインクルードディレクトリにプロジェクトディレクトリを指定している必要がある
-				string baseHeaderFilePath = $"gen_{Platform}_{Configuration}_{artifactName}.h";
-
-				{
-                    string path = System.IO.Path.GetFullPath($"{_BaseDirectory}/{artifactName}/{artifactName}_{ClassInfoStr}_{i}.cpp");
-                    GenerateFile(path, baseHeaderFilePath, i, artifactName, ClassInfoStr, globalDeclBufferList);
-                }
-
-                {
-					string path = System.IO.Path.GetFullPath($"{_BaseDirectory}/{artifactName}/{artifactName}_{GlobalDeclStr}_{i}.cpp");
-					GenerateFile(path, baseHeaderFilePath, i, artifactName, GlobalDeclStr, classBufferList);
-                }
-
-			}
+                string path = System.IO.Path.GetFullPath($"{_BaseDirectory}/{artifactName}_{i}.cpp");
+                GenerateFile(path, i, GlobalStr, globalDeclBufferList);
+                GenerateFile(path, i, UserDefinedCompoundTypeInfoStr, classBufferList);
+            }
         }
 
-        private void GenerateFile(string path, string baseHeaderFilePath, int index, string artifactName, string genKindStr, IReadOnlyList<DeclData> declList)
+        private void GenerateFile(string path, int index, string genKindStr, IReadOnlyList<DeclData> declList)
         {
+            string baseHeaderFilePath = $"{OutputDirectory}/{Configuration}/{Platform}.h";
+
             string indexStr = index.ToString().PadLeft(NUM_DIGIT_INDEX, '0');
 
-            using CodeWriter codeWriter = new CodeWriter(path);
-
-            codeWriter.WriteLineSource();
-            codeWriter.WriteNewLine();
-            codeWriter.WriteIncludeStdafx();
-            codeWriter.WriteLine($"#include\t\"{baseHeaderFilePath}\"");
-            codeWriter.WriteNewLine();
-
-            //  プリプロセッサ
-            codeWriter.WriteLinePPIf(ConfigurationDefine);
-            codeWriter.WriteLinePPIf(PlatformDefine);
-            codeWriter.WriteNewLine();
-            
-            //  定義
-            codeWriter.WriteLine($"namespace {NOX_REFLECTION_GEN_NAMESPACE_STR}");
+            using (CodeWriter codeWriter = new CodeWriter(path))
             {
+                //  copy right
+                codeWriter.WriteLineCopyRight();
+                codeWriter.WriteNewLine();
+
+                //  プリプロセッサ
+                codeWriter.WriteLinePPIf(ConfigurationDefine);
+                codeWriter.WriteLinePPIf(PlatformDefine);
+                codeWriter.WriteNewLine();
+
+                //  header
+                codeWriter.WriteLineHeader();
+                codeWriter.WriteNewLine();
+
+                //  プリプロセッサ
+
+                //  include
+                codeWriter.WriteLine($"#include\t{baseHeaderFilePath}");
+                codeWriter.WriteNewLine();
+
+                //  定義
+                codeWriter.WriteLine("namespace nox::reflection::gen");
                 codeWriter.PushScope(CodeWriter.ScopeType.Define);
 
                 foreach (DeclData declData in declList)
@@ -432,41 +405,44 @@ namespace ReflectionGenerator.Generator
                 }
 
                 codeWriter.PopScope();
-            }
 
-            //  登録処理
-            codeWriter.WriteLine($"void\t{NOX_REFLECTION_GEN_NAMESPACE_STR}::Register_{Platform}_{Configuration}_{artifactName}_{genKindStr}_{indexStr}()");
-            codeWriter.PushScope(CodeWriter.ScopeType.Define);
+                //  登録処理
+                codeWriter.WriteLine($"void\t{NOX_REFLECTION_GEN_NAMESPACE_STR}::Register{Configuration}{Platform}_{genKindStr}{indexStr}()");
+                codeWriter.PushScope(CodeWriter.ScopeType.Define);
 
-            foreach (DeclData declData in declList)
-            {
-                foreach (string registerName in declData.RegisterNameList)
+                codeWriter.WriteLine("nox::reflection::Reflection& manager = nox::reflection::Reflection::Instance();");
+                foreach (DeclData declData in declList)
                 {
-                    codeWriter.WriteLine($"nox::reflection::Register({registerName});");
+                    foreach(string registerName in declData.RegisterNameList)
+                    {
+                        codeWriter.WriteLine($"manager.Register({registerName});");
+                    }
                 }
-            }
 
-            codeWriter.PopScope();
+                codeWriter.PopScope();
 
 
-            //  登録解除処理
-            codeWriter.WriteLine($"void\t{NOX_REFLECTION_GEN_NAMESPACE_STR}::Unregister_{Platform}_{Configuration}_{artifactName}_{genKindStr}_{indexStr}()");
-            codeWriter.PushScope(CodeWriter.ScopeType.Define);
-            foreach (DeclData declData in declList)
-            {
-                foreach (string registerName in declData.RegisterNameList)
+                //  登録解除処理
+                codeWriter.WriteLine($"void\t{NOX_REFLECTION_GEN_NAMESPACE_STR}::Unregister{Configuration}{Platform}_{genKindStr}{indexStr}()");
+                codeWriter.PushScope(CodeWriter.ScopeType.Define);
+                codeWriter.WriteLine("nox::reflection::Reflection& manager = nox::reflection::Reflection::Instance();");
+                foreach (DeclData declData in declList)
                 {
-                    codeWriter.WriteLine($"nox::reflection::Unregister({registerName});");
+                    foreach (string registerName in declData.RegisterNameList)
+                    {
+                        codeWriter.WriteLine($"manager.Unregister({registerName});");
+                    }
                 }
+
+                codeWriter.PopScope();
+
+
+                codeWriter.WriteLinePPEndIf(PlatformDefine);
+                codeWriter.WriteLinePPEndIf(ConfigurationDefine);
             }
-
-            codeWriter.PopScope();
-
-            codeWriter.WriteLinePPEndIf(PlatformDefine);
-            codeWriter.WriteLinePPEndIf(ConfigurationDefine);
         }
 
-        private void GenerateDeclInfo(Info.NamespaceDeclInfo info, ref List<DeclData> bufferList)
+        private void GenerateDeclInfo(Info.DeclHolder info, ref List<DeclData> bufferList)
         {
             foreach (Info.VariableInfo functionInfo in info.VariableInfoList)
             {
@@ -475,7 +451,7 @@ namespace ReflectionGenerator.Generator
                     continue;
                 }
 
-                string buffer = GenerateVariableInfo(functionInfo, null);
+                string buffer = GenerateVariableInfo(functionInfo);
                 bufferList.Add(new DeclData() { DeclBuffer = buffer, RegisterNameList = { GetVariableInfoDeclName(functionInfo) } });
             }
 
@@ -490,26 +466,17 @@ namespace ReflectionGenerator.Generator
             }
         }
 
-        private void GenerateClassUnion(string name, Info.ClassInfo info, ref List<DeclData> bufferList)
+        private void GenerateClassUnion(Info.UserDefinedCompoundTypeInfo info, ref List<DeclData> bufferList)
         {
-
-
             //  リフレクション対象か？
             if (info.IsReflection == false)
             {
                 return;
             }
 
-            for (int i = 0; i < info.VariableInfoList.Count; ++i)
+            for(int i = 0; i < info.VariableInfoList.Count; ++i)
             {
-                //    GenerateVariableInfo(info.VariableInfoList[i], i);
-            }
-
-            {
-                for (int i = 0; i < info.EnumInfoList.Count; ++i)
-                {
-
-                }
+            //    GenerateVariableInfo(info.VariableInfoList[i], i);
             }
         }
 
@@ -550,7 +517,7 @@ namespace ReflectionGenerator.Generator
                 ++index;
             }
 
-            buffer += $"static constexpr const std::reference_wrapper<const nox::reflection::ReflectionObject> {GetAttributeTableDeclName(hash)}[{attributeInfoList.Count.ToString()}] = {{";
+            buffer += $"static constexpr const std::reference_wrapper<const nox::reflection::ReflectionObject> {GetAttributeTableDeclName(hash)}[{totalCount}] = {{";
             for(int i = 0; i < attributeInfoList.Count; ++i)
             {
                 if(i == attributeInfoList.Count - 1)
@@ -572,13 +539,12 @@ namespace ReflectionGenerator.Generator
             }
         }
 
-        #region 定義生成群
         /// <summary>
         /// 変数情報を生成
         /// </summary>
         /// <param name="variableInfo"></param>
         /// <returns></returns>
-        private string GenerateVariableInfo(Info.VariableInfo variableInfo, Info.ClassInfo? parentUserDefinedCompoundTypeInfo)
+        private string GenerateVariableInfo(Info.VariableInfo variableInfo)
         {
             string buffer = string.Empty;
 
@@ -598,27 +564,8 @@ namespace ReflectionGenerator.Generator
 
             buffer += "\n\n";
 
-            //  参照型の場合、オブジェクトポインタを取得できないため
-            if (variableInfo.TypeData.RawValue.CXXRefQualifier != ClangSharp.Interop.CXRefQualifierKind.CXRefQualifier_None)
-            {
-                buffer += $"static constexpr auto {GetVariableInfoDeclName(variableInfo)} = nox::reflection::detail::CreateVariableInfo";
-            }
-            else
-            {
-                buffer += $"static constexpr auto {GetVariableInfoDeclName(variableInfo)} = nox::reflection::detail::CreateVariableInfo<decltype(&{variableInfo.FullName})>";
-            }
-            
+            buffer += $"static constexpr auto {GetVariableInfoDeclName(variableInfo)} = nox::reflection::detail::CreateVariableInfo<decltype(&{variableInfo.FullName})>";
             buffer += "(\n";
-
-            if (variableInfo.TypeData.RawValue.CXXRefQualifier != ClangSharp.Interop.CXRefQualifierKind.CXRefQualifier_None)
-            {
-                buffer += $"nox::reflection::Typeof<decltype({variableInfo.FullName})>(),\n";
-                if (variableInfo.IsStatic == false)
-                {
-                    System.Diagnostics.Debug.Assert(parentUserDefinedCompoundTypeInfo != null);
-                    buffer += $"nox::reflection::Typeof<decltype({parentUserDefinedCompoundTypeInfo.FullName})>(),\n";
-                }
-            }
 
             buffer += $"&{variableInfo.FullName},\n";
 
@@ -639,45 +586,7 @@ namespace ReflectionGenerator.Generator
                 buffer += $"{variableInfo.AttributeInfoList},\n";
             }
 
-
             buffer += $"{variableInfo.AttributeInfoList.Count.ToString()},\n";
-
-            //  変数属性
-            {
-                List<string> variableAttributeFlagsStrList = [];
-                if (variableInfo.IsConstexpr == true)
-                {
-                    variableAttributeFlagsStrList.Add("nox::reflection::VariableAttributeFlags::Constexpr");
-                }
-                if (variableInfo.IsStatic == true)
-                {
-                    variableAttributeFlagsStrList.Add("nox::reflection::VariableAttributeFlags::Static");
-                }
-
-                if (variableAttributeFlagsStrList.Count > 0)
-                {
-                    buffer += "nox::util::BitOr(\n";
-                    int lastIndex = variableAttributeFlagsStrList.Count - 1;
-
-                    for (int i = 0; i < variableAttributeFlagsStrList.Count; ++i)
-                    {
-                        buffer += variableAttributeFlagsStrList[i];
-                        if (i != lastIndex)
-                        {
-                            buffer += ",\n";
-                        }
-                        else
-                        {
-                            buffer += "\n";
-                        }
-                    }
-                    buffer += "),\n";
-                }
-                else
-                {
-                    buffer += "nox::reflection::VariableAttributeFlags::None,\n";
-                }
-            }
 
             buffer += $"{variableInfo.IsConstexpr.ToString()},\n";
             buffer += $"false,\n";
@@ -689,51 +598,7 @@ namespace ReflectionGenerator.Generator
             //  非メンバ
             if (variableInfo.IsStatic == true)
             {
-                //  setter
-                if (variableInfo.TypeData.RawValue.IsConstQualified == true)
-                {
-                    buffer += $"nullptr,\n";
-                }
-                else
-                {
-                    buffer += "+[](nox::not_null<void*> instance, nox::not_null<const void*> value){";
-                    buffer += $"{variableInfo.Name} = *static_cast<{variableTypeStr}*>(value.get());";
-                    buffer += "},\n";
-                }
 
-                //  getter
-
-                //  参照型の場合
-                    buffer += "+[](nox::not_null<void*> out, nox::not_null<const void*> instance){";
-                    buffer += $"*static_cast<variableRemoveConstType*>(out.get()) = {variableInfo.Name}";
-                buffer += "},\n";
-               
-
-                //  getter address
-                //  配列の場合は
-                if (variableInfo.TypeData.RawValue.IsArray() == true)
-                {
-                    buffer += "nullptr,\n";
-                }
-                else
-                {
-                    buffer += "+[](nox::not_null<void*> out, nox::not_null<void*> instance){";
-                    if (variableInfo.TypeData.RawValue.IsConstQualified == true)
-                    {
-                        buffer += $"*static_cast<std::decay_t<decltype({variableInfo.FullName})>**>(out.get()) = &{variableInfo.FullName}";
-                    }
-                    else
-                    {
-                        buffer += $"*static_cast<std::decay_t<decltype({variableInfo.FullName})>**>(out.get()) = &{variableInfo.FullName}";
-                    }
-                    buffer += "},\n";
-                }
-
-                //  setter subscripts
-                buffer += "nullptr,\n";
-
-                //  getter subscripts
-                buffer += "nullptr,\n";
             }
             //  メンバ
             else
@@ -748,13 +613,13 @@ namespace ReflectionGenerator.Generator
                 }
                 else
                 {
-                    buffer += "+[](nox::not_null<void*> instance, nox::not_null<const void*> value){";
-                    buffer += $"static_cast<{instanceType}*>(const_cast<void*>(instance.get()))->{variableInfo.Name} = *static_cast<{variableTypeStr}*>(value.get());";
+                    buffer += "+[](nox::not_null<void*> instance, nox::not_null<void*> value){";
+                    buffer += $"static_cast<{instanceType}*>(instance.get())->{variableInfo.Name} = *static_cast<{variableTypeStr}*>(value.get());";
                     buffer += "},\n";
                 }
 
                 //  getter
-                buffer += "+[](nox::not_null<void*> out, nox::not_null<const void*> instance){";
+                buffer += "+[](nox::not_null<void*> out, nox::not_null<void*> instance){";
                 buffer += $"*static_cast<variableRemoveConstType*>(out.get()) = static_cast<const {instanceType}*>(instance.get())->{variableInfo.Name}";
                 buffer += "},\n";
 
@@ -762,19 +627,15 @@ namespace ReflectionGenerator.Generator
                 buffer += "+[](nox::not_null<void*> out, nox::not_null<void*> instance){";
                 if (variableInfo.TypeData.RawValue.IsConstQualified == true)
                 {
-                    buffer += $"*static_cast<std::decay_t<decltype({variableInfo.FullName})>**>(out.get()) = &static_cast<const {instanceType}*>(instance.get())->{variableInfo.FullName}";
+                    buffer += $"*static_cast<{instanceType}**>(out.get()) = &static_cast<const {instanceType}*>(instance.get())->{variableInfo.Name}";
                 }
                 else
                 {
-                    buffer += $"*static_cast<std::decay_t<decltype({variableInfo.FullName})>**>(out.get()) = &static_cast<{instanceType}*>(instance.get())->{variableInfo.FullName}";
+                    buffer += $"*static_cast<{instanceType}**>(out.get()) = &static_cast<{instanceType}*>(instance.get())->{variableInfo.Name}";
                 }
                 buffer += "},\n";
 
-                //  setter subscripts
-                buffer += "nullptr,\n";
-
-                //  getter subscripts
-                buffer += "nullptr,\n";
+                //  setter array
 
             }
 
@@ -782,27 +643,6 @@ namespace ReflectionGenerator.Generator
 
             return buffer;
         }
-
-        private string GenerateEnumeratorInfo( IReadOnlyList<Info.EnumInfo.EnumVariable> enumeratorInfoList)
-        {
-			string buffer = string.Empty;
-
-            for(int i = 0; i < enumeratorInfoList.Count; i++)
-            {
-                buffer += "";
-			}
-
-			return buffer;
-		}
-
-        private string GenerateEnumInfo(string name, Info.EnumInfo enumInfo)
-        {
-            string buffer = string.Empty;
-
-			return buffer;
-        }
-		#endregion
-
-		#endregion
-	}
+        #endregion
+    }
 }

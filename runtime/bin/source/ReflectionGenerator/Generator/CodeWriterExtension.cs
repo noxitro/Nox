@@ -15,9 +15,8 @@ namespace ReflectionGenerator.Generator
         //  タイトル
         public static void WriteLineSource(this CodeWriter codeWriter)
         {
-            WriteLineCopyRight(codeWriter);
-			codeWriter.WriteLine("//\tdo not edit");
-            codeWriter.WriteLine("//\twritten from ReflectionGenerator");
+            codeWriter.WriteLine("//\tdo not edit");
+            codeWriter.WriteLine("//\twritten from TypeGen");
         }
 
         /// <summary>
@@ -27,7 +26,7 @@ namespace ReflectionGenerator.Generator
         {
             codeWriter.WriteLine("#pragma once");
             codeWriter.WriteLine("//\tdo not edit");
-            codeWriter.WriteLine("//\twritten from ReflectionGenerator");
+            codeWriter.WriteLine("//\twritten from TypeGen");
         }
 
         public static void WriteLinePPIf(this CodeWriter codeWriter, string s)
@@ -47,7 +46,7 @@ namespace ReflectionGenerator.Generator
 
         public static void WriteLineCopyRight(this CodeWriter codeWriter)
         {
-            codeWriter.WriteLine("//\tCopyright (C) 2024 NOX ENGINE All Rights Rserved.");
+            codeWriter.WriteLine("//\tCopyright (C) 2024 NOX ENGINE");
         }
 
         public static void WriteIncludeStdafx(this CodeWriter codeWriter)
@@ -85,28 +84,13 @@ namespace ReflectionGenerator.Generator
             codeWriter.WriteLine("struct TypeInfoRefTypedefHolder<{0}, {1}> : TypeInfoRefHolderBase", name, typedefId.ToString(), recordName);
         }
 
-        public static void WriteLineRegion(this CodeWriter codeWriter, string name)
-        {
-			codeWriter.WriteLine($"#pragma region {name}");
-		}
-
-		public static void WriteLineEndRegion(this CodeWriter codeWriter)
-		{
-			codeWriter.WriteLine("#pragma endregion");
-		}
-
-		public static void WriteLineEndRegion(this CodeWriter codeWriter, string comment)
-		{
-			codeWriter.WriteLine($"#pragma endregion //\t{comment}");
-		}
-
-		/// <summary>
-		/// 属性リストの記述
-		/// </summary>
-		/// <param name="codeWriter"></param>
-		/// <param name="name"></param>
-		/// <param name="attrList"></param>
-		public static void WriteLineAttributes(this CodeWriter codeWriter, string name, IReadOnlyList<Info.AttributeInfo> attrList)
+        /// <summary>
+        /// 属性リストの記述
+        /// </summary>
+        /// <param name="codeWriter"></param>
+        /// <param name="name"></param>
+        /// <param name="attrList"></param>
+        public static void WriteLineAttributes(this CodeWriter codeWriter, string name, IReadOnlyList<Info.AttributeInfo> attrList)
         {
             if (attrList.Count <= 0)
             {

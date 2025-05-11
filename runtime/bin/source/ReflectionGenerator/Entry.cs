@@ -1,12 +1,10 @@
 ﻿
-using System.Data;
-
 namespace ReflectionGenerator
 {
 	/// <summary>
 	/// エントリーポイント
 	/// </summary>
-	internal static class Entry
+	public static class Entry
 	{
 		#region 列挙体定義
 		private enum ErrorCode : int
@@ -56,14 +54,8 @@ namespace ReflectionGenerator
 			public string PlatformDefine { get; set; } = string.Empty;
 
 			public string MSBuildBinPath { get; set; } = string.Empty;
-
-			/// <summary>
-			/// 出力先ディレクトリ
-			/// </summary>
-			public string OutputProjectDir { get; set; } = string.Empty;
-
-
-			public string SolutionFilePath { get; set; } = string.Empty;
+			public string ProjectFilePath { get; set; } = string.Empty;
+            public string SolutionFilePath { get; set; } = string.Empty;
 
 			/// <summary>
 			/// ビルド中間ディレクトリ
@@ -126,10 +118,8 @@ namespace ReflectionGenerator
 			/// </summary>
 			ProjectName,
 
-			/// <summary>
-			/// 出力先ディレクトリ
-			/// </summary>
-			OutputProjectDir,
+
+			ProjectPath,
 
 			MSBuildBinPath,
 
@@ -144,184 +134,208 @@ namespace ReflectionGenerator
             _Max
 		}
 
-		internal static int Main(string[] args)
+		/// <summary>
+		/// エントリーポイント
+		/// </summary>
+		/// <param name="args"></param>
+		/// <returns></returns>
+		private static int Main(string[] args)
 		{
-			//	新制御
-#if true
-			return MainProcess2();
-#else
-			//	旧制御
-			return MainProcess(args);
+#if true   //	Test            
+			string reflectionGenerateArgsFilePath = string.Empty;
+            string test = "runtime";
+		
+			//	sample
+			if (test == "sample")
+			{
+				reflectionGenerateArgsFilePath = $"D:\\github\\Nox\\runtime\\bin\\source\\ReflectionGenerator\\reflectionGenerateArgs.txt";
+				
+			}
+			else if (test == "runtime")
+			{
+                reflectionGenerateArgsFilePath = $"D:\\github\\Nox\\runtime\\build\\reflectionGenerateArgs.txt";
+            }
+
+            reflectionGenerateArgsFilePath = System.IO.Path.GetFullPath(reflectionGenerateArgsFilePath);
+
+            if (System.IO.File.Exists(reflectionGenerateArgsFilePath) == true)
+            {
+                args = System.IO.File.ReadAllLines(reflectionGenerateArgsFilePath);
+            }
 #endif
 
-		}
-
-		static string GetP()
-		{
-			string tempPath = System.IO.Path.GetTempPath();
-
-			string path = System.IO.Path.GetFullPath(tempPath + "/NoxReflectionPreData.bin");
-
-			return path;
-		}
-
-		static string GetP2()
-		{
-			string tempPath = System.IO.Path.GetTempPath();
-
-			string path = System.IO.Path.GetFullPath(tempPath + "/NoxReflectionPreData2.bin");
-
-			return path;
-		}
-
-		private static void Test()
-		{
-			Nox.CustomTask.Data data = new ();
-			data.CppVersion = "cpp17";
-
-			string path2 = GetP2();
-			string path = GetP();
-
-			WriteToFile(path2, data);
-
-
-			Nox.CustomTask.Data data2 = new();
-			byte[] buffer = System.IO.File.ReadAllBytes(path);
-			byte[] buffer2 = System.IO.File.ReadAllBytes(path2);
-
-			unsafe
-			{
-				fixed (byte* p = buffer)
+            Dictionary<string, MainArgs> mainArgTypeDict = new Dictionary<string, MainArgs>();
+            {
+                MainArgs[] mainArgValueList = Enum.GetValues<MainArgs>();
+				string[] mainArgNameList = Enum.GetNames<MainArgs>();
+				for (int i = 0; i < mainArgNameList.Length; ++i)
 				{
-					System.Runtime.InteropServices.Marshal.PtrToStructure((IntPtr)p, data2);
-				}
-			}
-		}
-
-		private static void WriteToFile<T>(string filePath, T data)
-		{
-			int size = System.Runtime.InteropServices.Marshal.SizeOf(data);
-			byte[] buffer = new byte[size];
-
-			unsafe
-			{
-				fixed (byte* p = buffer)
-				{
-					System.Runtime.InteropServices.Marshal.StructureToPtr(data, (IntPtr)p, false);
+					mainArgTypeDict.Add(mainArgNameList[i], mainArgValueList[i]);
 				}
 			}
 
-			using (var fileStream = new System.IO.FileStream(filePath, System.IO.FileMode.Create, System.IO.FileAccess.Write))
+			//	引数の解析
+			MainArgsData mainArgsData = new MainArgsData();
+			MainArgs targetMainArgType = MainArgs.Invalid;
+            for (int i = 0; i < args.Length; ++i)
 			{
-				fileStream.Write(buffer, 0, buffer.Length);
-			}
+
+				string arg = args[i];
+
+				if (arg.Length <= 0 || arg[0] != '-' || mainArgTypeDict.TryGetValue(arg[1..], out MainArgs outMainArgType) == false)
+				{
+
+				}
+				else
+				{
+					
+					switch(outMainArgType)
+					{
+						default:
+                            targetMainArgType = outMainArgType;
+
+                            continue;
+					}
+                }
+
+				string replaceArg = arg.Replace("\"", "");
+
+                switch (targetMainArgType)
+				{
+					case MainArgs.Invalid:
+						break;
+
+					case MainArgs.SourceFilePath:
+						mainArgsData.SourceFilePath = replaceArg;
+
+                        break;
+
+					case MainArgs.Configuration:
+                        mainArgsData.Configuration = replaceArg;
+
+                        break;
+
+					case MainArgs.ConfigurationDefine:
+						mainArgsData.ConfigurationDefine = replaceArg;
+
+                        break;
+
+					case MainArgs.SolutionPath:
+						mainArgsData.SolutionFilePath = replaceArg;
+                        break;
+
+					case MainArgs.OutputDir:
+						mainArgsData.OutputDirectory = replaceArg;
+                        break;
+					
+					case MainArgs.Platform:
+						mainArgsData.Platform = replaceArg;
+                        break;
+                    case MainArgs.PlatformDefine:
+                        mainArgsData.PlatformDefine = replaceArg;
+                        break;
+
+					case MainArgs.ProjectName:
+                        break;
+
+
+					case MainArgs.MSBuildBinPath:
+						mainArgsData.MSBuildBinPath = replaceArg;
+						break;
+
+					case MainArgs.ProjectPath:
+						mainArgsData.ProjectFilePath = replaceArg;
+						break;
+
+					case MainArgs.EnableNamespaceList:
+                        mainArgsData.EnableNamespaceList = replaceArg.Split(',').ToList();
+
+                        break;
+
+					case MainArgs.IntermediateDir:
+						mainArgsData.IntermediateDir = replaceArg;
+                        break;
+
+					default:
+						System.Diagnostics.Debug.Assert(false);
+						break;
+                }
+            }
+
+            return (int)MainProcess(mainArgsData);
 		}
 
-		private static int MainProcess2()
+		private static ErrorCode MainProcess(MainArgsData argsData)
 		{
-			Nox.CustomTask.Data data;
-			try
-			{
-				data = Nox.CustomTask.Util.GetData();
-			}
-			catch (System.Exception e)
-			{
-				System.Diagnostics.Debug.Assert(false, "カスタムタスクで収集したバイナリデータの読み込みに失敗しました");
-				return 1;
-			}
+            Parser.CppParser parser = new Parser.CppParser();
 
-			Parser.CppParser parser = new Parser.CppParser();
-			if(parser.Parse(new Parser.CppParser.SetupDesc()
-			{ 
-				Configuration = data.Configuration,
-				Platform = data.Platform,
-				SourceFilePath = data.ReflectionTargetSourceFile,
-				SolutionPath = data.SolutionPath,
-				MSBuildBinPath = data.MSBuildBinPath,
-				CppVersion = data.CppVersion,
-				Optimization = data.Optimization,
-				PreprocessorMacro = data.PreprocessorMacro,
-				IgnoreNamespaceList = [],
-				EnableRootNamespaceList = [],
-				AdditionalIncludeDirectories = data.AdditionalIncludeDirectories,
-				ProjectFilePath = data.ProjectPath,
-				AdditionalOptions = data.AdditionalOptions,
-				UseRtti = data.UseRtti,
-
-			}) == false)
+			if (parser.Parse(
+				new Parser.CppParser.SetupParam() 
+				{
+					SourceFilePath = argsData.SourceFilePath,
+					SolutionPath = argsData.SolutionFilePath,
+					ProjectFilePath = argsData.ProjectFilePath,
+					MSBuildBinPath = argsData.MSBuildBinPath,
+					Configuration = argsData.Configuration,
+					Platform = argsData.Platform,
+					IgnoreNamespaceList = argsData.IgnoreNamespaceList,
+					EnableRootNamespaceList = argsData.EnableNamespaceList
+                }
+				) == false)
 			{
 				Trace.Error(null, "解析に失敗しました。");
-				return 1;
+				return ErrorCode.Error;
 			}
 
-			if (parser.RootDeclHolder == null)
+            if (parser.RootDeclHolder == null)
 			{
-				return 1;
+				return ErrorCode.Error;
 			}
 
 			List<Generator.Generator.ARTIFACT_INFO> moduleInfoList = new List<Generator.Generator.ARTIFACT_INFO>();
-			if (parser.TypeInfoListWithModuleNameDict.ContainsKey(Define.UNKNOWN_MODULE_NAME))
-			{
-				moduleInfoList.Add(new Generator.Generator.ARTIFACT_INFO()
-				{
-					Build = true,
-					ReBuild = false,
-					ArtifactName = Define.UNKNOWN_MODULE_NAME,
-				});
-			}
 
-			//	ビルドタイムスタンプファイルを解析
-			//      List<string> allModuleNameList = new List<string>();
-			//		List<string> targetModuleNameList = new List<string>();
-			{
-				//	エンジン側のプロジェクトのビルドタイムスタンプファイルのディレクトリを取得
-				System.IO.DirectoryInfo? OutputDicretoryInfo = System.IO.Directory.GetParent(data.OutDir);
-				if (OutputDicretoryInfo == null)
+            //	ビルドタイムスタンプファイルを解析
+      //      List<string> allModuleNameList = new List<string>();
+	//		List<string> targetModuleNameList = new List<string>();
+            {
+                //	エンジン側のプロジェクトのビルドタイムスタンプファイルのディレクトリを取得
+                string engineBuildTimeStampFileDirectory = $"{argsData.IntermediateDir}\\nox_build_time_stamp";
+
+                if (System.IO.Directory.Exists(engineBuildTimeStampFileDirectory) == false)
 				{
-					Trace.ErrorLine(null, $"出力ディレクトリが見つかりません:{data.OutDir}");
-					return 1;
+					return ErrorCode.Error;
 				}
 
-				string engineBuildTimeStampFileDirectory = $"{OutputDicretoryInfo.FullName}\\nox_build_time_stamp";
-				engineBuildTimeStampFileDirectory = System.IO.Path.GetFullPath(engineBuildTimeStampFileDirectory);
+                //	   リフレクション生成のタイムスタンプファイルのディレクトリを取得
+                string reflectionGenTimeStampDirectory = $"{argsData.IntermediateDir}\\nox_parse_build_time_stamp";
 
-				if (System.IO.Directory.Exists(engineBuildTimeStampFileDirectory) == false)
+                if (System.IO.Directory.Exists(reflectionGenTimeStampDirectory) == false)
 				{
-					Trace.ErrorLine(null, $"ビルドタイムスタンプファイルのディレクトリが見つかりません:{engineBuildTimeStampFileDirectory}");
-					return 1;
-				}
+                    System.IO.Directory.CreateDirectory(reflectionGenTimeStampDirectory);
+                }
 
-				//	   リフレクション生成のタイムスタンプファイルのディレクトリを取得
-				string reflectionGenTimeStampDirectory = $"{OutputDicretoryInfo.FullName}\\nox_parse_build_time_stamp";
-				reflectionGenTimeStampDirectory = System.IO.Path.GetFullPath(reflectionGenTimeStampDirectory);
-
-				if (System.IO.Directory.Exists(reflectionGenTimeStampDirectory) == false)
-				{
-					System.IO.Directory.CreateDirectory(reflectionGenTimeStampDirectory);
-				}
-
-				foreach (string engineTimeStampFileName in System.IO.Directory.GetFiles(engineBuildTimeStampFileDirectory))
+				foreach(string engineTimeStampFileName in System.IO.Directory.GetFiles(engineBuildTimeStampFileDirectory))
 				{
 					bool build = false;
 
+					
+//                    allModuleNameList.Add(engineTimeStampFileName);
 
-					//                    allModuleNameList.Add(engineTimeStampFileName);
+                    string fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(engineTimeStampFileName);
 
-					string fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(engineTimeStampFileName);
-
-					//	リフレクション生成のタイムスタンプファイルのパス
-					string reflectionGenTimeStampFilePath = $"{reflectionGenTimeStampDirectory}\\{System.IO.Path.GetFileName(engineTimeStampFileName)}";
-					if (System.IO.File.Exists(reflectionGenTimeStampFilePath) == true)
-					{
-						//	ファイル内のテキストは、
-						//	1:	エンジン側のビルドタイムスタンプ
+                    //	リフレクション生成のタイムスタンプファイルのパス
+                    string reflectionGenTimeStampFilePath = $"{reflectionGenTimeStampDirectory}\\{System.IO.Path.GetFileName(engineTimeStampFileName)}";
+					if(System.IO.File.Exists(reflectionGenTimeStampFilePath) == true)
+                    {
+                        //	ファイル内のテキストは、
+                        //	1:	エンジン側のビルドタイムスタンプ
 						//	2:	リビルドフラグ
 
-						//	タイムスタンプを比較
-						string engineTimeStamp = System.IO.File.ReadAllText(engineTimeStampFileName);
+                        //	タイムスタンプを比較
+                        string engineTimeStamp = System.IO.File.ReadAllText(engineTimeStampFileName);
 						System.DateTime engineTimeStampDataTime = System.DateTime.Parse(engineTimeStamp);
 
-						string reflectionGenTimeStamp = System.IO.File.ReadAllText(reflectionGenTimeStampFilePath);
+                        string reflectionGenTimeStamp = System.IO.File.ReadAllText(reflectionGenTimeStampFilePath);
 						if (System.DateTime.TryParse(reflectionGenTimeStamp, out System.DateTime reflectionGenTimeStampDataTime) == true)
 						{
 							if (engineTimeStampDataTime > reflectionGenTimeStampDataTime)
@@ -335,55 +349,56 @@ namespace ReflectionGenerator
 							//	
 							Trace.Warning(null, "リフレクション生成のタイムスタンプファイルのフォーマットが不正です。");
 						}
-					}
-					else
+                    }
+                    else
 					{
-						build = true;
-						//                        targetModuleNameList.Add(fileNameWithoutExtension);
-					}
+                        build = true;
+//                        targetModuleNameList.Add(fileNameWithoutExtension);
+                    }
 
-					moduleInfoList.Add(new Generator.Generator.ARTIFACT_INFO()
-					{
-						Build = build,
-						ReBuild = false,
-						ArtifactName = fileNameWithoutExtension,
-					}
+                    moduleInfoList.Add(new Generator.Generator.ARTIFACT_INFO()
+                    {
+                        Build = build,
+                        ReBuild = false,
+                        ArtifactName = fileNameWithoutExtension,
+                    }
 					);
 
 					//	タイムスタンプを更新
-					using (System.IO.StreamWriter streamWriter = new System.IO.StreamWriter(reflectionGenTimeStampFilePath, false, System.Text.Encoding.UTF8))
+					using(System.IO.StreamWriter streamWriter = new System.IO.StreamWriter(reflectionGenTimeStampFilePath, false, System.Text.Encoding.UTF8))
 					{
-						streamWriter.WriteLine(System.DateTime.Now.ToString());
-					}
-				}
-			}
+                        streamWriter.WriteLine(System.DateTime.Now.ToString());
+                    }
+                }
+            }
 
 			//	コード出力
 			Generator.Generator generator = new Generator.Generator()
 			{
-				OutputProjectDirectory = data.ProjectDir,
-				ModuleInfoList = moduleInfoList.ToArray(),
-				//                TargetModuleNameList = targetModuleNameList,
+				OutputProjectDirectory = argsData.ProjectFilePath,
+                ModuleInfoList = moduleInfoList,
+//                TargetModuleNameList = targetModuleNameList,
 				//AllModuleNameList = allModuleNameList,
-				TypeInfoListWithArtifactNameDict = parser.TypeInfoListWithModuleNameDict,
-				Configuration = data.Configuration,
-				ConfigurationDefine = data.ConfigurationDefine,
-				OutputDirectory = data.OutputGenerateDir,
-				Platform = data.Platform,
-				PlatformDefine = data.PlatformDefine,
+                TypeInfoListWithArtifactNameDict = parser.TypeInfoListWithModuleNameDict,
+				Configuration = argsData.Configuration,
+				ConfigurationDefine = argsData.ConfigurationDefine,
+				OutputDirectory = argsData.OutputDirectory,
+				Platform = argsData.Platform,
+				PlatformDefine = argsData.PlatformDefine,
 
 			};
 
 			generator.Generate();
 
-			//			generator.Setup(parser, argsData.OutputDirectory, argsData.BuildSpec, argsData.Platform, argsData.BuildSpecDefine, argsData.PlatformDefine);
-			//			generator.Generate();
+//			generator.Setup(parser, argsData.OutputDirectory, argsData.BuildSpec, argsData.Platform, argsData.BuildSpecDefine, argsData.PlatformDefine);
+//			generator.Generate();
 
-			Console.ReadLine();
+            Console.ReadLine();
 
-			return 0;
+
+			return ErrorCode.Success;
 		}
-
+		
 		#endregion
 	}
 }
