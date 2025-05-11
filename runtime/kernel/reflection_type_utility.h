@@ -204,6 +204,7 @@ namespace nox::reflection
 		return nox::reflection::GetTypeKind<std::remove_cv_t<T>>();
 	}
 
+
 	/**
 	 * @brief
 	 * @tparam T
@@ -212,72 +213,31 @@ namespace nox::reflection
 	template<class T>
 	[[nodiscard]] inline constexpr TypeQualifierFlag GetTypeAttributeFlags()noexcept
 	{
-		TypeQualifierFlag typeAttributeFlags = TypeQualifierFlag::None;
-		if constexpr (std::is_const_v<T> == true)
-		{
-			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeQualifierFlag::Const);
-		}
-		if constexpr (std::is_volatile_v<T> == true)
-		{
-			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeQualifierFlag::Volatile);
-		}
-		if constexpr (std::is_final_v<T> == true)
-		{
-			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeQualifierFlag::Final);
-		}
-		if constexpr (std::is_abstract_v<T> == true)
-		{
-			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeQualifierFlag::Abstract);
-		}
-		if constexpr (std::is_unsigned_v<T> == true)
-		{
-			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeQualifierFlag::Unsigned);
-		}
-		if constexpr (std::is_polymorphic_v<T> == true)
-		{
-			typeAttributeFlags = util::BitOr(typeAttributeFlags, TypeQualifierFlag::Polymorphic);
-		}
+		TypeQualifierFlag type_attr_flags = TypeQualifierFlag::None;
 
-		return typeAttributeFlags;
+		type_attr_flags = nox::util::BitOrConditional<std::is_const_v<T>, TypeQualifierFlag::Const>(type_attr_flags);
+		type_attr_flags = nox::util::BitOrConditional<std::is_volatile_v<T>, TypeQualifierFlag::Volatile>(type_attr_flags);
+		type_attr_flags = nox::util::BitOrConditional<std::is_final_v<T>, TypeQualifierFlag::Final>(type_attr_flags);
+		type_attr_flags = nox::util::BitOrConditional<std::is_abstract_v<T>, TypeQualifierFlag::Abstract>(type_attr_flags);
+		type_attr_flags = nox::util::BitOrConditional<std::is_unsigned_v<T>, TypeQualifierFlag::Unsigned>(type_attr_flags);
+		type_attr_flags = nox::util::BitOrConditional<std::is_polymorphic_v<T>, TypeQualifierFlag::Polymorphic>(type_attr_flags);
+
+		return type_attr_flags;
 	}
 
 
 	template<class T> //requires(std::is_member_function_pointer_v<T> || std::is_function_v<T>)
 	[[nodiscard]] inline constexpr FunctionAttributeFlag GetFunctionAttributeFlags()noexcept
 	{
-		FunctionAttributeFlag retFlags = FunctionAttributeFlag::None;
+		FunctionAttributeFlag attr_flags = FunctionAttributeFlag::None;
+		attr_flags = nox::util::BitOrConditional<nox::IsFunctionConstValue<T>, FunctionAttributeFlag::Const>(attr_flags);
+		attr_flags = nox::util::BitOrConditional<std::is_member_function_pointer_v<T>, FunctionAttributeFlag::Static>(attr_flags);
+		attr_flags = nox::util::BitOrConditional<nox::IsFunctionVolatileValue<T>, FunctionAttributeFlag::Volatile>(attr_flags);
+		attr_flags = nox::util::BitOrConditional<nox::IsFunctionLValueReference<T>, FunctionAttributeFlag::LvalueRef>(attr_flags);
+		attr_flags = nox::util::BitOrConditional<nox::IsFunctionRValueReference<T>, FunctionAttributeFlag::RvalueRef>(attr_flags);
+		attr_flags = nox::util::BitOrConditional<nox::IsFunctionNoexceptValue<T>, FunctionAttributeFlag::Noexcept>(attr_flags);
 
-		if constexpr (nox::IsFunctionConstValue<T> == true)
-		{
-			retFlags = nox::util::BitOr(retFlags, FunctionAttributeFlag::Const);
-		}
-
-		if constexpr (std::is_member_function_pointer_v<T> == false)
-		{
-			retFlags = nox::util::BitOr(retFlags, FunctionAttributeFlag::Static);
-		}
-
-		if constexpr (nox::IsFunctionVolatileValue<T> == true)
-		{
-			retFlags = nox::util::BitOr(retFlags, FunctionAttributeFlag::Volatile);
-		}
-
-		if constexpr (nox::IsFunctionLValueReference<T> == true)
-		{
-			retFlags = nox::util::BitOr(retFlags, FunctionAttributeFlag::LvalueRef);
-		}
-
-		if constexpr (nox::IsFunctionRValueReference<T> == true)
-		{
-			retFlags = nox::util::BitOr(retFlags, FunctionAttributeFlag::RvalueRef);
-		}
-
-		if constexpr (nox::IsFunctionNoexceptValue<T> == true)
-		{
-			retFlags = nox::util::BitOr(retFlags, FunctionAttributeFlag::Noexcept);
-		}
-
-		return retFlags;
+		return attr_flags;
 	}
 
 	/**

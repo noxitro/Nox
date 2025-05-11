@@ -144,6 +144,14 @@ namespace nox::util
 			return util::detail::GetArrayExtentImpl<T>(array_rank_index);
 		}
 	}
+
+	/*template<class T, size_t _Size>
+	inline constexpr std::array<std::decay_t<T>, _Size> MakeArray(T(&source)[_Size]) noexcept
+	{
+		std::array<std::decay_t<T>, _Size> ary{};
+		std::ranges::copy_n(source, _Size, ary.begin());
+		return ary;
+	}*/
 #pragma endregion
 	
 #pragma region 文字列操作
@@ -258,7 +266,7 @@ namespace nox::util
 	/// @tparam T 列挙型
 	/// @param value 列挙型の値
 	/// @return 基底型の値
-	template<concepts::Enum T>
+	template<nox::concepts::Enum T>
 	[[nodiscard]] inline	constexpr	std::underlying_type_t<T> ToUnderlying(const T value)noexcept
 	{
 #if defined(__clang__)
@@ -267,6 +275,7 @@ namespace nox::util
 		return std::to_underlying(value);
 #endif
 	}
+
 
 #pragma region bit操作
 	template<concepts::Enum T>
@@ -303,11 +312,17 @@ namespace nox::util
 		return nox::util::BitOr(e, nox::util::BitOr(rest...));
 	}
 
+	template<bool conditional, auto flag, class FlagType = decltype(flag)>
+	inline constexpr FlagType BitOrConditional(FlagType value)noexcept
+	{
+		return nox::util::BitOr(value, flag);
+	}
+
 	template<concepts::ClassOrUnion T>
 	[[nodiscard]] inline	constexpr	bool IsBitAnd(const T& a, const T& b)noexcept { return std::bit_and<T>()(a, b); }
 
 	template<concepts::Enum T>
-	[[nodiscard]] inline	constexpr	bool IsBitAnd(const T a, const T b)noexcept { return std::bit_and<std::underlying_type_t<T>>()(ToUnderlying(a), ToUnderlying(b)); }
+	[[nodiscard]] inline	constexpr	bool IsBitAnd(const T a, const T b)noexcept { return std::bit_and<std::underlying_type_t<T>>()(nox::util::ToUnderlying(a), nox::util::ToUnderlying(b)); }
 
 	template<std::integral T>
 	[[nodiscard]] inline	constexpr	bool IsBitAnd(const T a, const T b)noexcept { return std::bit_and<T>()(a, b); }
@@ -316,7 +331,7 @@ namespace nox::util
 	[[nodiscard]] inline	constexpr	T BitAnd(const T& a, const T& b)noexcept { return a & b; }
 
 	template<concepts::Enum T>
-	[[nodiscard]] inline	constexpr	T BitAnd(const T a, const T b)noexcept { return static_cast<T>(ToUnderlying(a) & ToUnderlying(b)); }
+	[[nodiscard]] inline	constexpr	T BitAnd(const T a, const T b)noexcept { return static_cast<T>(nox::util::ToUnderlying(a) & ToUnderlying(b)); }
 
 	template<std::integral T>
 	[[nodiscard]] inline	constexpr	T BitAnd(const T a, const T b)noexcept { return a & b; }

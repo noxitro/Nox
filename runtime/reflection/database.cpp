@@ -5,7 +5,7 @@
 #include	"stdafx.h"
 #include	"database.h"
 
-#include	"user_defined_compound_type_info.h"
+#include	"class_info.h"
 #include	"enum_info.h"
 #include	"variable_info.h"
 #include	"function_info.h"
@@ -56,15 +56,14 @@ namespace
 	{
 		std::int32_t counter_;
 
-		//	型IDをキーとした検索用
+		//	型情報をキーとした検索用
 		struct
 		{
-			//	型IDをキーとした検索用
-			nox::UnorderedMap<std::uint32_t, ClassNode> class_node_map;
-			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::ClassInfo>> union_map;
+			nox::UnorderedMap<const nox::reflection::Type*, ClassNode> class_node_map;
+			nox::UnorderedMap<const nox::reflection::Type*, std::reference_wrapper<const nox::reflection::ClassInfo>> union_map;
 			nox::UnorderedMap<const nox::ObjectPointerId*, std::reference_wrapper<const nox::reflection::VariableInfo>> variable_map;
 			nox::UnorderedMap<const nox::FunctionPointerId*, std::reference_wrapper<const nox::reflection::FunctionInfo>> function_map;
-			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::EnumInfo>> enum_map;
+			nox::UnorderedMap<const nox::reflection::Type*, std::reference_wrapper<const nox::reflection::EnumInfo>> enum_map;
 		}chunk_with_type_id;
 
 		//	名前のハッシュをキーとした検索用
@@ -110,7 +109,7 @@ namespace
 	nox::UnorderedMap<std::uint32_t, Artifact> artifact_map_;
 
 	/// @brief 全ての型情報を格納するマップ
-	nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::Type>> all_type_id_map_;
+	nox::UnorderedMap<std::uint64_t, std::reference_wrapper<const nox::reflection::Type>> all_type_id_map_;
 
 	inline	Artifact& GetCreateArtifact(std::uint32_t name_hash)
 	{
@@ -155,11 +154,9 @@ void nox::reflection::Finalize()
 
 const nox::reflection::ClassInfo* nox::reflection::FindClassInfo(const nox::reflection::Type& type)noexcept
 {
-	const auto id = type.GetTypeID();
-
 	for (const Artifact& artifact : artifact_map_ | std::views::values)
 	{
-		const auto it = artifact.chunk_with_type_id.class_node_map.find(id);
+		const auto it = artifact.chunk_with_type_id.class_node_map.find(&type);
 		if (it != artifact.chunk_with_type_id.class_node_map.end())
 		{
 			return &it->second.class_info.get();
@@ -184,11 +181,9 @@ const nox::reflection::ClassInfo* nox::reflection::FindClassInfo(std::uint32_t n
 
 const nox::reflection::EnumInfo* nox::reflection::FindEnumInfo(const nox::reflection::Type& type)noexcept
 {
-	const auto id = type.GetTypeID();
-
 	for (const Artifact& artifact : artifact_map_ | std::views::values)
 	{
-		const auto it = artifact.chunk_with_type_id.enum_map.find(id);
+		const auto it = artifact.chunk_with_type_id.enum_map.find(&type);
 		if (it != artifact.chunk_with_type_id.enum_map.end())
 		{
 			return &it->second.get();
@@ -199,15 +194,13 @@ const nox::reflection::EnumInfo* nox::reflection::FindEnumInfo(const nox::reflec
 
 const nox::reflection::EnumInfo* nox::reflection::FindEnumInfo(const std::uint32_t artiifact_name_hash, const nox::reflection::Type& type)noexcept
 {
-	const auto id = type.GetTypeID();
-
 	const auto artifact_it = artifact_map_.find(artiifact_name_hash);
 	if (artifact_it == artifact_map_.end())
 	{
 		return nullptr;
 	}
 
-	const auto enum_it = artifact_it->second.chunk_with_type_id.enum_map.find(id);
+	const auto enum_it = artifact_it->second.chunk_with_type_id.enum_map.find(&type);
 	if (enum_it == artifact_it->second.chunk_with_type_id.enum_map.end())
 	{
 		return nullptr;
@@ -291,25 +284,25 @@ bool nox::reflection::IsBaseOf(const nox::reflection::ClassInfo& base, const nox
 
 void	nox::reflection::Register(const std::uint32_t artifact_name_hash, const nox::reflection::ClassInfo& data)
 {
-	const auto id = data.GetUnderlyingType().GetTypeID();
+	const nox::reflection::Type& type = data.GetUnderlyingType();
 
 	Artifact& artifact = GetCreateArtifact(artifact_name_hash);
 	++artifact.counter_;
 
 	if (data.GetUnderlyingType().IsUnion() == true)
 	{
-		artifact.chunk_with_type_id.union_map.emplace(data.GetUnderlyingType().GetTypeID(), data);
+		artifact.chunk_with_type_id.union_map.emplace(&type, data);
 		artifact.chunk_with_name_hash.union_map.emplace(nox::util::Crc32(data.GetFullName()), data);
 	}
 	else
 	{
-		ClassNode& new_class_node = artifact.chunk_with_type_id.class_node_map.emplace(id, ClassNode(data)).first->second;
+		ClassNode& new_class_node = artifact.chunk_with_type_id.class_node_map.emplace(&type, ClassNode(data)).first->second;
 		artifact.chunk_with_name_hash.class_node_map.emplace(nox::util::Crc32(data.GetFullName()), new_class_node);
 
 
 		for (const nox::reflection::Type& baseType : data.GetBaseTypeList())
 		{
-			ClassNode& parent_class_node = artifact.chunk_with_type_id.class_node_map.at(baseType.GetTypeID());
+			ClassNode& parent_class_node = artifact.chunk_with_type_id.class_node_map.at(&baseType);
 			if (parent_class_node.child_ptr == nullptr)
 			{
 				parent_class_node.child_ptr = &new_class_node;
@@ -394,12 +387,12 @@ void nox::reflection::Unregister(const std::uint32_t artifact_name_hash, const n
 
 void nox::reflection::Register(const std::uint32_t artifact_name_hash, const nox::reflection::EnumInfo& data)
 {
-	const auto id = data.GetUnderlyingType().GetTypeID();
+	const nox::reflection::Type& type = data.GetUnderlyingType();
 
 	Artifact& artifact = GetCreateArtifact(artifact_name_hash);
 	++artifact.counter_;
 
-	artifact.chunk_with_type_id.enum_map.emplace(id, data);
+	artifact.chunk_with_type_id.enum_map.emplace(&type, data);
 	artifact.chunk_with_name_hash.enum_map.emplace(nox::util::Crc32(data.GetFullName()), data);
 }
 

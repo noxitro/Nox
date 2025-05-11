@@ -10,3 +10,24 @@
 #else
 static_assert(false);
 #endif // NOX_WIN64
+
+namespace nox::os
+{
+	template<class T>
+	struct Atomic
+	{
+		inline T Increment()
+		{
+			return nox::os::atomic::Increment(value_);
+		}
+
+		inline T Decrement()
+		{
+			return nox::os::atomic::Decrement(value_);
+		}
+
+
+	private:
+		T value_;
+	};
+}

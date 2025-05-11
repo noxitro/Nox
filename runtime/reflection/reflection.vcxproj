@@ -59,7 +59,7 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="user_defined_compound_type_info.h">
+    <ClInclude Include="class_info.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -89,11 +89,8 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="function_info.cpp" />
     <ClCompile Include="variable_info.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="function_info.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -112,7 +109,7 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="user_defined_compound_type_info.cpp">
+    <ClCompile Include="class_info.cpp">
       <SubType>
       </SubType>
     </ClCompile>

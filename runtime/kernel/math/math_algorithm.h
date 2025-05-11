@@ -23,7 +23,7 @@ namespace nox::math
 	[[nodiscard]] inline	constexpr  T	Max(T a, T b)noexcept { return ((a) > (b)) ? (a) : (b); }
 
 	template<concepts::Arithmetic T>
-	[[nodiscard]]	inline	constexpr	bool	Min(T a, T b)noexcept { return ((a) < (b)) ? (a) : (b); }
+	[[nodiscard]]	inline	constexpr	T	Min(T a, T b)noexcept { return ((a) < (b)) ? (a) : (b); }
 
 	template<concepts::Arithmetic T>
 	[[nodiscard]] inline	constexpr T	Clamp(const T source, const T min, const T max)noexcept
@@ -31,6 +31,18 @@ namespace nox::math
 		if (min > source) return min;
 		if (max < source) return max;
 		return source;
+	}
+
+	/// @brief 0.0 ～ 1.0の間に収める
+	/// @tparam T 浮動小数点型
+	/// @param value 値
+	/// @return 0.0 ～ 1.0の間に収められた値
+	template<std::floating_point T>
+	[[nodiscard]] inline	constexpr T Saturate(const T value)noexcept
+	{
+		if (value < static_cast<T>(0.0)) return static_cast<T>(0.0);
+		if (value > static_cast<T>(1.0)) return static_cast<T>(1.0);
+		return value;
 	}
 
 	template<concepts::Arithmetic T>

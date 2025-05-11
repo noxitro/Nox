@@ -33,4 +33,28 @@ namespace nox::util
 		}
 		return r ^ 0xFFFFFFFFUL;
 	}
+
+	template<typename T>
+	inline constexpr uint64 Crc64(const std::basic_string_view<T> str) noexcept
+	{
+		constexpr uint64 CRC64POLY = 0xC96C5795D7870F42ULL; // CRC64-ECMA polynomial
+
+		uint64 r = 0xFFFFFFFFFFFFFFFFULL;
+		for (int32 i = 0; i < static_cast<int32>(str.length()); i++)
+		{
+			r ^= static_cast<uint64>(str.at(i));
+			for (int32 j = 0; j < std::numeric_limits<T>::digits; j++)
+			{
+				if (r & 1)
+				{
+					r = (r >> 1) ^ CRC64POLY;
+				}
+				else
+				{
+					r >>= 1;
+				}
+			}
+		}
+		return r ^ 0xFFFFFFFFFFFFFFFFULL;
+	}
 }

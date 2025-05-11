@@ -26,9 +26,45 @@ namespace nox::reflection
 
 	namespace detail
 	{
+		/// @brief		型情報構築情報
+		/// @details	コンストラクタのパラメータが多すぎるため、構築情報を分離
+		struct TypeDesc
+		{
+			std::uint64_t id;
+			TypeKind kind;
+			TypeQualifierFlag attribute_flags;
+			std::uint32_t size;
+			std::uint32_t alignment;
+			std::uint16_t array_rank;
+			std::uint32_t array_extent;
+			std::string_view name;
+			void* (* const create_object)();
+			void* (* const create_object_placement)(void*);
+			void (* const destroy_at)(void*);
+			
+			bool (*is_convertible_functor)(const nox::reflection::Type&, const nox::reflection::Type&)noexcept;
+		
+			std::uint8_t argument_length;
+			std::span<const std::reference_wrapper<const nox::reflection::Type>>(* const get_argument_type_list)(const Type& self)noexcept;
+			const Type& remove_pointer_type;
+			const Type& result_type;
+			const Type& remove_element_type;
+			const Type& remove_all_element_type;
+			const Type& underlying_type;
+			const Type& add_const_type;
+			const Type& remove_const_type;
+			const Type& add_volatile_type;
+			const Type& remove_volatile_type;
+			const Type& remove_reference_type;
+			const Type& add_lvalue_reference_type;
+			const Type& add_rvalue_reference_type;
+			const Type& remove_all_modifiers_type;
+			const Type& owner_type;
+		};
+
 		/// @brief ポインタ、参照が指す型を取得
 		template<class T>
-		inline constexpr const Type& GetPointeeType()noexcept;
+		inline constexpr const Type& GetRemovePointerType()noexcept;
 		/// @brief 関数の戻り値の型を取得
 		template<class T>
 		inline constexpr const Type& GetResultType()noexcept;
@@ -53,6 +89,9 @@ namespace nox::reflection
 		/// @brief volatile を取り除いた型を取得
 		template<class T>
 		inline constexpr const Type& GetRemoveVolatileType()noexcept;
+		/// @brief 参照を取り除いた型を取得
+		template<class T>
+		inline constexpr const Type& GetRemoveReferenceType()noexcept;
 		/// @brief 左辺参照型を取得
 		template<class T>
 		inline constexpr const Type& GetAddLValueReferenceType()noexcept;
@@ -76,117 +115,43 @@ namespace nox::reflection
 	protected:
 		
 
-		[[nodiscard]] inline constexpr explicit Type(
-			const std::uint32_t _id,					//	0
-			const TypeKind _kind,						//	2		
-			const TypeQualifierFlag _attribute_flags,	//	3
-			const std::uint32_t _size,					//	4
-			const std::uint32_t _alignment,				//	5
-			const std::uint16_t array_rank,				//	6
-			const std::uint32_t array_extent,			//	7
-			const std::string_view name,				//	8
-
-			void* (* const create_object)(),		//	9
-			void* (* const create_object_placement)(void*),	//	10
-			void (* const destroy_at)(void*),		//	11
-			const std::uint8_t argument_length,
-			std::span<const std::reference_wrapper<const nox::reflection::Type>>(*const get_argument_type_list)(const Type& self)noexcept,	//	11
-			const Type& pointee_type,					//	9	
-			const Type& result_type,					//	10
-			const Type& remove_element_type,			//	11
-			const Type& remove_all_element_type,		//	12
-			const Type& underlying_type,				//	13
-			const Type& add_const_type,					//	14
-			const Type& remove_const_type,				//	15
-			const Type& add_volatile_type,				//	16
-			const Type& remove_volatile_type,			//	17
-			const Type& add_lvalue_reference_type,		//	18
-			const Type& add_rvalue_reference_type,		//	19
-			const Type& remove_all_modifiers_type,		//	20
-			const Type& owner_type						//	21
-		)noexcept :
-			id_(_id),
-			kind_(_kind),
-			attribute_flags_(_attribute_flags),
-			size_(_size),
-			alignment_(_alignment),
-			array_rank_(array_rank),
-			array_extent_(array_extent),
-			name_(name),
-			create_object_(create_object),
-			create_object_placement_(create_object_placement),
-			destroy_at_(destroy_at),
-			argument_length_(argument_length),
-			get_argument_type_list_(get_argument_type_list),
-			pointee_type_(pointee_type),
-			result_type_(result_type),
-			remove_element_type_(remove_element_type),
-			remove_all_element_type_(remove_all_element_type),
-			underlying_type_(underlying_type),
-			add_const_type_(add_const_type),
-			remove_const_type_(remove_const_type),
-			add_volatile_type_(add_volatile_type),
-			remove_volatile_type_(remove_volatile_type),
-			add_lvalue_reference_type_(add_lvalue_reference_type),
-			add_rvalue_reference_type_(add_rvalue_reference_type),
-			remove_all_modifiers_type_(remove_all_modifiers_type),
-			owner_type_(owner_type)
+		[[nodiscard]] inline constexpr explicit Type(const nox::reflection::detail::TypeDesc& desc)noexcept:
+			id_(desc.id),
+			kind_(desc.kind),
+			attribute_flags_(desc.attribute_flags),
+			size_(desc.size),
+			alignment_(desc.alignment),
+			array_rank_(desc.array_rank),
+			array_extent_(desc.array_extent),
+			name_(desc.name),
+			create_object_(desc.create_object),
+			create_object_placement_(desc.create_object_placement),
+			destroy_at_(desc.destroy_at),
+			is_convertible_functor_(desc.is_convertible_functor),
+			argument_length_(desc.argument_length),
+			get_argument_type_list_(desc.get_argument_type_list),
+			remove_pointer_type_(desc.remove_pointer_type),
+			result_type_(desc.result_type),
+			remove_element_type_(desc.remove_element_type),
+			remove_all_element_type_(desc.remove_all_element_type),
+			underlying_type_(desc.underlying_type),
+			add_const_type_(desc.add_const_type),
+			remove_const_type_(desc.remove_const_type),
+			add_volatile_type_(desc.add_volatile_type),
+			remove_volatile_type_(desc.remove_volatile_type),
+			remove_reference_type_(desc.remove_reference_type),
+			add_lvalue_reference_type_(desc.add_lvalue_reference_type),
+			add_rvalue_reference_type_(desc.add_rvalue_reference_type),
+			remove_all_modifiers_type_(desc.remove_all_modifiers_type),
+			owner_type_(desc.owner_type)
 		{
 		}
+
 	public:
 		/// @brief toへ変換可能かどうか
 		inline constexpr bool	IsConvertible(const Type& to)const noexcept
 		{
-			if (*this == to)
-			{
-				return true;
-			}
-
-			//	修飾子を取り除いた型が一致するか
-			if (GetRemoveConstType() == to)
-			{
-				return true;
-			}
-
-			//	変換先が参照型の場合
-			if (to.IsReference() == true)
-			{
-				const Type& toPointeeType = to.GetPointeeType();
-				if (*this == toPointeeType || GetRemoveConstType() == toPointeeType)
-				{
-					return true;
-				}
-			}
-
-			//	参照型の場合、参照を取り除いた型でチェックする
-			if (IsReference() == true)
-			{
-				if (pointee_type_ == to || pointee_type_ == to.GetRemoveConstType())
-				{
-					return true;
-				}
-
-				//	変換先が参照型の場合
-				if (to.IsReference() == true)
-				{
-					const Type& toPointeeType = to.GetPointeeType();
-					if (pointee_type_ == toPointeeType || pointee_type_ == toPointeeType.GetRemoveConstType())
-					{
-						return true;
-					}
-				}
-			}
-			//	ポインタ型の場合
-			else
-				if (IsPointer() == true && to.IsPointer() == true)
-				{
-					if (pointee_type_ == to.pointee_type_.GetRemoveConstType())
-					{
-						return true;
-					}
-				}
-
-			return false;
+			return this->is_convertible_functor_(*this, to);
 		}
 
 		/// @brief 変換可能かどうか
@@ -223,7 +188,23 @@ namespace nox::reflection
 		/// @return 保持しているかどうか
 		[[nodiscard]] inline	constexpr bool	IsTypeAttributeFlag(const TypeQualifierFlag flag)const noexcept { return util::IsBitAnd(attribute_flags_, flag); }
 
-		[[nodiscard]] inline constexpr const Type& GetPointeeType()const noexcept { return pointee_type_; }
+		/// @brief ポインタ型を取り除いた型を取得
+		[[nodiscard]] inline constexpr const Type& GetRemovePointerType()const noexcept { return remove_pointer_type_; }
+
+		/// @brief ポインタ、参照型を取り除いた型を取得
+		[[nodiscard]] inline constexpr const Type& GetPointeeType()const noexcept 
+		{ 
+			if (IsPointer())
+			{
+				return remove_pointer_type_;
+			}
+			else if (IsReference())
+			{
+				return remove_reference_type_;
+			}
+			return GetInvalidType();
+		}
+
 		/// @brief 配列型から次元を除去した型を取得
 		[[nodiscard]] inline constexpr const Type& GetRemoveExtentType()const noexcept { return remove_element_type_; }
 
@@ -244,6 +225,9 @@ namespace nox::reflection
 
 		/// @brief volatile を取り除いた型を取得
 		[[nodiscard]] inline constexpr const Type& GetRemoveVolatileType()const noexcept { return remove_volatile_type_; }
+
+		/// @brief  参照型を取り除いた型を取得
+		[[nodiscard]] inline constexpr const Type& GetRemoveReferenceType()const noexcept { return remove_reference_type_; }
 
 		/// @brief 左辺参照型を取得
 		[[nodiscard]] inline constexpr const Type& GetAddLValueReferenceType()const noexcept { return add_lvalue_reference_type_; }
@@ -326,8 +310,6 @@ namespace nox::reflection
 			}
 		}
 
-
-
 #pragma endregion
 
 #pragma region 型の特性
@@ -360,7 +342,7 @@ namespace nox::reflection
 
 	protected:
 		/// @brief 無駄に増やさないためのダミー
-		static inline constexpr std::span<const std::reference_wrapper<const nox::reflection::Type>> GetArgumentTypeListInvalid(const Type& self)noexcept
+		static inline constexpr std::span<const std::reference_wrapper<const nox::reflection::Type>> GetArgumentTypeListInvalid([[maybe_unused]] const Type& self)noexcept
 		{
 			return {};
 		}
@@ -379,7 +361,7 @@ namespace nox::reflection
 		const std::uint16_t array_rank_;
 
 		/// @brief 型ID
-		const std::uint32_t id_;
+		const std::uint64_t id_;
 
 		const std::uint32_t array_extent_;
 
@@ -402,21 +384,39 @@ namespace nox::reflection
 		/// @brief	インスタンス破棄
 		void (* const destroy_at_)(void* storage);
 
-		/// @brief 関数型の引数の型情報リスト
+		/// @brief 関数型の引数の型情報リスト取得関数
 		std::span<const std::reference_wrapper<const nox::reflection::Type>>(*const get_argument_type_list_)(const Type&)noexcept;
 
-		const Type& pointee_type_;
+		/// @brief 暗黙変換可能な型リスト取得する関数
+		bool (*is_convertible_functor_)(const nox::reflection::Type&, const nox::reflection::Type&);
+
+		/// @brief add_pointer_t
+		const Type& remove_pointer_type_;
+		/// @brief 関数の戻り値の型
 		const Type& result_type_;
+		/// @brief 配列型から次元を除去した型
 		const Type& remove_element_type_;
+		/// @brief 配列型から全ての次元を除去した型
 		const Type& remove_all_element_type_;
+		/// @brief 基底型 enumの場合など
 		const Type& underlying_type_;
+		/// @brief add_const_t
 		const Type& add_const_type_;
+		/// @brief remove_const_t
 		const Type& remove_const_type_;
+		/// @brief add_volatile_t
 		const Type& add_volatile_type_;
+		/// @brief remove_volatile_t
 		const Type& remove_volatile_type_;
+		/// @brief remove_reference_t
+		const Type& remove_reference_type_;
+		/// @brief add_lvalue_reference_t
 		const Type& add_lvalue_reference_type_;
+		/// @brief add_rvalue_reference_t
 		const Type& add_rvalue_reference_type_;
+		/// @brief remove_all_modifiers_t
 		const Type& remove_all_modifiers_type_;
+		/// @brief 関数のクラスの型
 		const Type& owner_type_;
 
 		//const Type* const* const argument_type_table_;
@@ -436,33 +436,36 @@ namespace nox::reflection
 		public:
 			inline constexpr CompileTimeInvalidType()noexcept :
 				Type(
-					0,
-					TypeKind::Invalid,
-					TypeQualifierFlag::None,
-					0,
-					0,
-					0,
-					0,
-					"",
-					+[]()constexpr->void* {return nullptr; },
-					+[](void*)constexpr->void* {return nullptr; },
-					+[](void*)constexpr->void { },
-					0,
-					&Type::GetArgumentTypeListInvalid,
-					*this,
-					*this,
-					*this,
-					*this,
-					*this,
-					*this,
-					*this,
-					*this,
-					*this,
-					*this,
-					*this,
-					*this,
-					*this
-				)
+					nox::reflection::detail::TypeDesc{
+						.id = 0,
+						.kind = TypeKind::Invalid,
+						.attribute_flags = TypeQualifierFlag::None,
+						.size = 0,
+						.alignment = 0,
+						.array_rank = 0,
+						.array_extent = 0,
+						.name = "",
+						.create_object = +[]()constexpr->void* {return nullptr; },
+						.create_object_placement = +[](void*)constexpr->void* {return nullptr; },
+						.destroy_at = +[](void*)constexpr->void {},
+						.is_convertible_functor = +[](const nox::reflection::Type&, const nox::reflection::Type&)constexpr noexcept->bool {return false; },
+						.argument_length = 0,
+						.get_argument_type_list = &Type::GetArgumentTypeListInvalid,
+						.remove_pointer_type = *this,
+						.result_type = *this,
+						.remove_element_type = *this,
+						.remove_all_element_type = *this,
+						.underlying_type = *this,
+						.add_const_type = *this,
+						.remove_const_type = *this,
+						.add_volatile_type = *this,
+						.remove_volatile_type = *this,
+						.remove_reference_type = *this,
+						.add_lvalue_reference_type = *this,
+						.add_rvalue_reference_type = *this,
+						.remove_all_modifiers_type = *this,
+						.owner_type = *this
+					})
 			{
 			}
 		};
@@ -499,33 +502,36 @@ namespace nox::reflection
 				std::span<const std::reference_wrapper<const nox::reflection::Type>>(* const get_argument_type_list)(const nox::reflection::Type& self)noexcept = &Type::GetArgumentTypeListInvalid
 			)noexcept :
 				Type(
-					nox::util::GetUniqueTypeID<T>(),						//	0
-					nox::reflection::GetTypeKind<T>(),						//	2	
-					nox::reflection::GetTypeAttributeFlags<T>(),			//	3
-					SafeSizeof(),											//	4
-					SafeAlignmentOf(),										//	5
-					std::rank_v<T>,											//	6
-					std::extent_v<T>,										//	7
-					nox::util::GetTypeName<T>(),							//	8
-					&CreateObject,
-					&CreateObjectPlacement,
-					&DestroyAt,
-					argument_length,
-					get_argument_type_list,
-					nox::reflection::detail::GetPointeeType<T>(),			//	9
-					nox::reflection::detail::GetResultType<T>(),			//	10
-					nox::reflection::detail::GetRemoveExtentType<T>(),		//	11
-					nox::reflection::detail::GetRemoveAllExtentType<T>(),	//	12
-					nox::reflection::detail::GetUnderlyingType<T>(),		//	13
-					nox::reflection::detail::GetAddConstType<T>(),			//	14
-					nox::reflection::detail::GetRemoveConstType<T>(),		//	15
-					nox::reflection::detail::GetAddVolatileType<T>(),		//	16
-					nox::reflection::detail::GetRemoveVolatileType<T>(),	//	17
-					nox::reflection::detail::GetAddLValueReferenceType<T>(),	//	18
-					nox::reflection::detail::GetAddRValueReferenceType<T>(),	//	19
-					nox::reflection::detail::GetRemoveAllModifiersType<T>(),	//	20
-					nox::reflection::detail::GetOwnerType<T>()			//	21
-				)
+					nox::reflection::detail::TypeDesc{
+						.id = nox::util::GetUniqueTypeID<T>(),
+						.kind = nox::reflection::GetTypeKind<T>(),
+						.attribute_flags = nox::reflection::GetTypeAttributeFlags<T>(),
+						.size = SafeSizeof(),
+						.alignment = SafeAlignmentOf(),
+						.array_rank = std::rank_v<T>,
+						.array_extent = std::extent_v<T>,
+						.name = nox::util::GetTypeName<T>(),
+						.create_object = &CreateObject,
+						.create_object_placement = &CreateObjectPlacement,
+						.destroy_at = &DestroyAt,
+						.is_convertible_functor = &IsConvertibleImpl,
+						.argument_length = argument_length,
+						.get_argument_type_list = get_argument_type_list,
+						.remove_pointer_type = nox::reflection::detail::GetRemovePointerType<T>(),
+						.result_type = nox::reflection::detail::GetResultType<T>(),
+						.remove_element_type = nox::reflection::detail::GetRemoveExtentType<T>(),
+						.remove_all_element_type = nox::reflection::detail::GetRemoveAllExtentType<T>(),
+						.underlying_type = nox::reflection::detail::GetUnderlyingType<T>(),
+						.add_const_type = nox::reflection::detail::GetAddConstType<T>(),
+						.remove_const_type = nox::reflection::detail::GetRemoveConstType<T>(),
+						.add_volatile_type = nox::reflection::detail::GetAddVolatileType<T>(),
+						.remove_volatile_type = nox::reflection::detail::GetRemoveVolatileType<T>(),
+						.remove_reference_type = nox::reflection::detail::GetRemoveReferenceType<T>(),
+						.add_lvalue_reference_type = nox::reflection::detail::GetAddLValueReferenceType<T>(),
+						.add_rvalue_reference_type = nox::reflection::detail::GetAddRValueReferenceType<T>(),
+						.remove_all_modifiers_type = nox::reflection::detail::GetRemoveAllModifiersType<T>(),
+						.owner_type = nox::reflection::detail::GetOwnerType<T>()
+					})
 			{
 			}
 		private:
@@ -560,6 +566,114 @@ namespace nox::reflection
 					std::destroy_at(static_cast<std::remove_cvref_t<T>*>(storage));
 				}
 			}
+
+#pragma warning(push)
+#pragma warning(disable:4127)
+			static inline constexpr bool IsConvertibleImpl(const nox::reflection::Type& self, const nox::reflection::Type& other)noexcept
+			{
+				if (self == other)
+				{
+					return true;
+				}
+
+				if (
+					std::is_convertible_v<T, std::add_const_t<T>> &&
+					self.GetAddConstType() == other
+					)
+				{
+					return true;
+				}
+
+				if (
+					std::is_convertible_v<T, std::add_volatile_t<T>> &&
+					self.GetAddVolatileType() == other
+					)
+				{
+					return true;
+				}
+
+				if (
+					std::is_convertible_v<T, std::add_lvalue_reference_t<T>> &&
+					self.GetAddLValueReferenceType() == other
+					)
+				{
+					return true;
+				}
+
+				if (
+					std::is_convertible_v<T, std::add_rvalue_reference_t<T>> &&
+					self.GetAddRValueReferenceType() == other
+					)
+				{
+					return true;
+				}
+
+				if (
+					std::is_convertible_v<T, std::remove_const_t<T>> &&
+					self.GetRemoveConstType() == other
+					)
+				{
+					return true;
+				}
+
+				if (
+					std::is_convertible_v<T, std::remove_reference_t<T>> &&
+					self.GetRemoveReferenceType() == other
+					)
+				{
+					return true;
+				}
+
+				if (
+					std::is_convertible_v<T, std::remove_volatile_t<T>> &&
+					self.GetRemoveVolatileType() == other
+					)
+				{
+					return true;
+				}
+
+				if (
+					std::is_convertible_v<T, std::add_lvalue_reference_t<std::add_const_t<T>>> &&
+					self.GetAddConstType().GetAddLValueReferenceType() == other
+					)
+				{
+					return true;
+				}
+
+				if (
+					std::is_convertible_v < T, std::remove_const_t<std::remove_reference_t<T>>> &&
+					self.GetRemoveReferenceType().GetRemoveConstType() == other)
+				{
+					return true;
+				}
+
+				if (
+					std::is_convertible_v<T, std::add_rvalue_reference_t<std::add_const_t<T>>> &&
+					self.GetAddConstType().GetAddRValueReferenceType() == other
+					)
+				{
+					return true;
+				}
+
+				if (
+					std::is_convertible_v<T, std::add_volatile_t<std::add_const_t<T>>> &&
+					self.GetAddConstType().GetAddVolatileType() == other
+					)
+				{
+					return true;
+				}
+
+				if (
+					std::is_convertible_v<T, std::remove_const_t<std::remove_volatile_t<T>>> &&
+					self.GetRemoveVolatileType().GetRemoveConstType() == other
+					)
+				{
+					return true;
+				}
+
+				return false;
+			}
+#pragma warning(pop)
 		};
 
 		template<nox::concepts::FunctionSignatureType T>
@@ -633,19 +747,15 @@ namespace nox::reflection
 template<class T>
 inline constexpr bool	nox::reflection::Type::IsConvertible()const noexcept
 {
-	return nox::reflection::Type::IsConvertible(nox::reflection::Typeof<T>());
+	return nox::reflection::Type::IsConvertible(*this, nox::reflection::Typeof<T>());
 }
 
 template<class T>
-inline constexpr const nox::reflection::Type& nox::reflection::detail::GetPointeeType()noexcept
+inline constexpr const nox::reflection::Type& nox::reflection::detail::GetRemovePointerType()noexcept
 {
 	if constexpr (std::is_pointer_v<T>)
 	{
 		return nox::reflection::detail::ReflectionTypeHolder<std::remove_pointer_t<T>>::value;
-	}
-	else if constexpr (std::is_reference_v<T>)
-	{
-		return nox::reflection::detail::ReflectionTypeHolder<std::remove_reference_t<T>>::value;
 	}
 	else
 	{
@@ -750,6 +860,19 @@ inline constexpr const nox::reflection::Type& nox::reflection::detail::GetRemove
 	if constexpr (std::is_volatile_v<T> == true)
 	{
 		return nox::reflection::detail::ReflectionTypeHolder<std::remove_volatile_t<T>>::value;
+	}
+	else
+	{
+		return nox::reflection::GetInvalidType();
+	}
+}
+
+template<class T>
+inline constexpr const nox::reflection::Type& nox::reflection::detail::GetRemoveReferenceType()noexcept
+{
+	if constexpr (std::is_reference_v<T> == true)
+	{
+		return nox::reflection::detail::ReflectionTypeHolder<std::remove_reference_t<T>>::value;
 	}
 	else
 	{

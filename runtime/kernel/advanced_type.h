@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include	"basic_type.h"
 #include	<array>
 #include	<bitset>
 #include	<concepts>
@@ -16,10 +15,12 @@
 #include	<string>
 #include	<string_view>
 #include	<unordered_map>
+#include	<unordered_set>
 #include	<utility>
 #include	<vector>
 #include	<ranges>
 
+#include	"basic_type.h"
 #include	"memory/stl_allocate_adapter.h"
 
 /// @brief NITRO ENGINEのnamespace
@@ -41,6 +42,9 @@ namespace nox
 
 	template<class Key, class Value, class Hasher = std::hash<Key>, class Keyeq = std::equal_to<Key>>
 	using UnorderedMap = std::unordered_map<Key, Value, Hasher, Keyeq, nox::memory::StlAllocateAdapter<std::pair<const Key, Value>>>;
+
+	template<class Key, class Hasher = std::hash<Key>, class Keyeq = std::equal_to<Key>>
+	using HashSet = std::unordered_set<Key, Hasher, Keyeq, nox::memory::StlAllocateAdapter<Key>>;
 
 	template<class ValueType>
 	using BasicString = std::basic_string< ValueType, std::char_traits<ValueType>, memory::StlAllocateAdapter<ValueType>>;

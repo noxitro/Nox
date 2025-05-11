@@ -9,7 +9,7 @@
 #include	"os/os_utility.h"
 
 #include	"string_format.h"
-#include	"log_trace.h"
+#include	"log_id.h"
 #include	"math/math_algorithm.h"
 #if NOX_WINDOWS
 #pragma warning(push, 0)
@@ -21,7 +21,7 @@
 #pragma comment(lib, "Dbghelp.lib")
 #endif // NITRO_WIN64
 
-namespace
+namespace nox
 {
 	//	グローバル変数
 
@@ -41,17 +41,11 @@ namespace
 	/**
 	 * @brief
 	*/
-	nox::os::Mutex gResolveMutex;
+	nox::os::Mutex g_resolve_mutex;
 
-	//if (n >= 63)
-	//{
-	//	n = 62;
-	//}
-	//return (int)RtlCaptureStackBackTraceProc(0, n, buffer, nullptr);
 
 	//	関数
-
-	inline bool	ResolveStack(nox::stack_walker::Stack* const stackTbl, const nox::uint8 stackNum)
+	inline bool	ResolveStack(std::span<nox::stack_walker::StackFrame> stack_table)
 	{
 		::HANDLE const processHandle = ::GetCurrentProcess();
 		if (processHandle == nullptr)
@@ -63,7 +57,7 @@ namespace
 		constexpr size_t MaxNameSize = 255;
 
 		/* シンボル情報サイズを算出 */
-		constexpr size_t SymbolInfoSize = sizeof(::SYMBOL_INFOW) + ((MaxNameSize + 1) * sizeof(char));
+		constexpr size_t SymbolInfoSize = sizeof(::SYMBOL_INFOW) + ((MaxNameSize + 1) * sizeof(nox::wchar16));
 
 		//	シンボル情報のメモリ確保
 		std::array<nox::uint8, SymbolInfoSize> symbolBuffer;
@@ -79,18 +73,19 @@ namespace
 		//symbolInfo->SizeOfStruct = sizeof(::IMAGEHLP_SYMBOL64);
 		//symbolInfo->MaxNameLength = MAX_PATH;
 
-		//	::sys関係はスレッドセーフではないので、ロック
-		nox::os::ScopedLock scopedLock(gResolveMutex);
+		//	hbgHelpはスレッドセーフではないので、ロックする必要がある
+		//	https://learn.microsoft.com/ja-jp/windows/win32/api/dbghelp/nf-dbghelp-symfromaddr
+		NOX_LOCAL_SCOPE(nox::os::ScopedLock, g_resolve_mutex);
 
 		//	シンボルハンドラの初期化
 		::SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES | SYMOPT_UNDNAME);
 		::SymInitialize(processHandle, nullptr, TRUE);
 
-
 		//	情報を収集
-		for (nox::uint8 i = 0; i < stackNum; ++i)
+		const nox::uint8 stack_num = static_cast<nox::uint8>(stack_table.size());
+		for (nox::uint8 i = 0; i < stack_num; ++i)
 		{
-			nox::stack_walker::Stack& stack = stackTbl[i];
+			nox::stack_walker::StackFrame& stack = stack_table[i];
 
 			//	解決済みか
 			if (stack.IsResolved() == true)
@@ -116,11 +111,12 @@ namespace
 			}
 
 			{
-				std::array<nox::char32, MaxNameSize> u32_symbol_name;
-				nox::unicode::ConvertU32String(symbol->Name, u32_symbol_name);
+				std::array<nox::char16, MaxNameSize> u32_symbol_name;
+				nox::unicode::ConvertU16String(symbol->Name, u32_symbol_name);
 				stack.SetSymbolName(u32_symbol_name.data());
 
 			}
+
 
 			//	ラインを取得
 			::IMAGEHLP_LINEW64 line;
@@ -137,10 +133,9 @@ namespace
 			stack.SetLine(line.LineNumber);
 
 			{
-				std::array<nox::char32, 1024> u32_file_name;
-				nox::unicode::ConvertU32String(line.FileName, u32_file_name);
+				std::array<nox::char16, 1024> u32_file_name;
+				nox::unicode::ConvertU16String(line.FileName, u32_file_name);
 				stack.SetFileName(u32_file_name.data());
-
 			}
 
 			//	モジュール情報
@@ -153,8 +148,8 @@ namespace
 			}
 
 			{
-				std::array<nox::char32, 1024> u32_module_name;
-				nox::unicode::ConvertU32String(moduleInfo.ModuleName, u32_module_name);
+				std::array<nox::char16, 1024> u32_module_name;
+				nox::unicode::ConvertU16String(moduleInfo.ModuleName, u32_module_name);
 				stack.SetModuleName(u32_module_name.data());
 			}
 
@@ -166,19 +161,19 @@ namespace
 	}
 }
 
-void	nox::stack_walker::Stack::SetModuleName(nox::StringView name)
+void	nox::stack_walker::StackFrame::SetModuleName(std::u16string_view name)
 {
-	nox::util::StrCopy(name.operator std::u32string_view(), std::span(module_name_.data(), module_name_.size()));
+	nox::util::StrCopy(name, std::span(module_name_.data(), module_name_.size()));
 }
 
-void	nox::stack_walker::Stack::SetFileName(nox::StringView name)
+void	nox::stack_walker::StackFrame::SetFileName(std::u16string_view name)
 {
-	nox::util::StrCopy(name.operator std::u32string_view(), std::span(file_name_.data(), file_name_.size()));
+	nox::util::StrCopy(name, std::span(file_name_.data(), file_name_.size()));
 }
 
-void	nox::stack_walker::Stack::SetSymbolName(nox::StringView name)
+void	nox::stack_walker::StackFrame::SetSymbolName(std::u16string_view name)
 {
-	nox::util::StrCopy(name.operator std::u32string_view(), std::span(symbol_name_.data(), symbol_name_.size()));
+	nox::util::StrCopy(name, std::span(symbol_name_.data(), symbol_name_.size()));
 }
 
 bool	nox::stack_walker::detail::WalkerBase::Collect(const nox::uint8 startDepth)
@@ -207,7 +202,7 @@ bool	nox::stack_walker::detail::WalkerBase::Collect(const nox::uint8 startDepth)
 
 bool	nox::stack_walker::detail::WalkerBase::Resolve()
 {
-	if (::ResolveStack(stack_table_, stack_length_) == false)
+	if (nox::ResolveStack(std::span(this->stack_table_, this->stack_length_)) == false)
 	{
 		return false;
 	}
@@ -218,11 +213,11 @@ bool	nox::stack_walker::detail::WalkerBase::Resolve()
 
 void	nox::stack_walker::detail::WalkerBase::Trace()const
 {
-	NOX_INFO_LINE(log_tag::Kernel, U"===CallStackTrace開始===");
+	NOX_INFO_LINE(log_id::Kernel, U"===CallStackTrace開始===");
 
 	for (uint8 i = 0; i < stack_length_; ++i)
 	{
-		const Stack& stack = stack_table_[i];
+		const StackFrame& stack = stack_table_[i];
 		if (stack.IsResolved() == false)
 		{
 			//	失敗したスタックがあればそこで終了
@@ -230,11 +225,11 @@ void	nox::stack_walker::detail::WalkerBase::Trace()const
 		}
 
 		//	[Symbol名]([ライン])
-		NOX_INFO_LINE(log_tag::Kernel, util::Format(U"{0} ({1})", stack.GetSymbolName().data(), stack.GetLine()));
+		NOX_INFO_LINE(log_id::Kernel, U"{0} ({1})", stack.GetSymbolName().data(), stack.GetLine());
 
 	}
 
-	NOX_INFO_LINE(log_tag::Kernel, U"===CallStackTrace終了===");
+	NOX_INFO_LINE(log_id::Kernel, U"===CallStackTrace終了===");
 }
 
 nox::String	nox::stack_walker::detail::WalkerBase::GetStackTraceString()const
@@ -243,7 +238,7 @@ nox::String	nox::stack_walker::detail::WalkerBase::GetStackTraceString()const
 
 	for (uint8 i = 0; i < stack_length_; ++i)
 	{
-		const Stack& stack = stack_table_[i];
+		const StackFrame& stack = stack_table_[i];
 		if (stack.IsResolved() == false)
 		{
 			//	失敗したスタックがあればそこで終了
@@ -265,7 +260,7 @@ nox::String	nox::stack_walker::detail::WalkerBase::GetStackTraceString()const
 namespace
 {
 	template<nox::concepts::Char CharType>
-	inline	std::span<CharType>	GetStackTraceStringImpl(std::span<nox::stack_walker::Stack*const> stack_table, std::span< CharType> dest_buffer)
+	inline	std::span<CharType>	GetStackTraceStringImpl(std::span<nox::stack_walker::StackFrame*const> stack_table, std::span< CharType> dest_buffer)
 	{
 		return dest_buffer;
 	}
@@ -285,6 +280,7 @@ std::span<nox::char16>	nox::stack_walker::detail::WalkerBase::GetStackTraceU16St
 
 void	nox::stack_walker::Initialize()
 {
+	NOX_ASSERT(mHandlePtr == nullptr, U"初期化済み");
 	mHandlePtr = os::LoadDLL(u"kernel32.dll");
 	gRtiCaptureStackBackTrace = os::GetProcAddress<StackBackTraceFuncType>(mHandlePtr, "RtlCaptureStackBackTrace");
 
@@ -292,6 +288,21 @@ void	nox::stack_walker::Initialize()
 
 void	nox::stack_walker::Finalize()
 {
+	NOX_ASSERT(mHandlePtr != nullptr, U"破棄済み");
 	gRtiCaptureStackBackTrace = nullptr;
 	os::UnloadDLL(mHandlePtr);
+}
+
+void nox::stack_walker::Trace(std::span<const size_t> address_list)
+{
+	nox::stack_walker::Walker walker;
+	walker.SetCollectLength(address_list.size());
+
+	for (int32 i = 0; i < address_list.size(); ++i)
+	{
+		walker.GetStack(i).SetAddress(address_list[i]);
+	}
+
+	walker.Resolve();
+	walker.Trace();
 }

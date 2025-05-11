@@ -7,6 +7,8 @@
 #include	"type_traits/concepts.h"
 #include	"type_traits/type_traits.h"
 
+#include	"preprocessor/util.h"
+
 namespace nox
 {
 	namespace assertion
@@ -35,14 +37,29 @@ namespace nox
 		{
 			assertion::detail::Assert(RuntimeAssertErrorType::Default, message, file_name, location);
 		}
+
+		inline void Assert(bool expression, std::u32string_view message, const std::wstring_view file_name, const std::source_location location = std::source_location::current())noexcept(false)
+		{
+			if (!expression)
+			{
+				assertion::detail::Assert(RuntimeAssertErrorType::Default, message, file_name, location);
+			}
+		}
+
+		inline void Assert(bool expression, RuntimeAssertErrorType error_type, std::u32string_view message, const std::wstring_view file_name, const std::source_location location = std::source_location::current())noexcept(false)
+		{
+			if (!expression)
+			{
+				assertion::detail::Assert(error_type, message, file_name, location);
+			}
+		}
 	}
 }
 
 #if NOX_DEBUG || NOX_RELEASE
-#define	NOX_ASSERT(expression, ...) \
-	static_assert(std::is_same_v<decltype(expression), bool>, "expression is not bool"); \
-	(void)((!!(expression)) || (::nox::assertion::Assert(__VA_ARGS__, __FILEW__), 0)); \
-	__analysis_assume(expression)
+/// @brief アサート
+#define	NOX_ASSERT(...) \
+	::nox::assertion::Assert(__VA_ARGS__, __FILEW__)
 #else
 #define	NOX_ASSERT(...) 
 #endif // NOX_DEBUG || NOX_RELEASE

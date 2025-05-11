@@ -56,4 +56,15 @@ namespace nox::os
 		None,
 		Failed,
 	};
+
+	/// @brief メモリオーダーの種類
+	enum class MemoryOrder : uint8
+	{
+		Relaxed,
+		Consume,
+		Acquire,
+		Release,
+		AcquireRelease,
+		SequentiallyConsistent
+	};
 }

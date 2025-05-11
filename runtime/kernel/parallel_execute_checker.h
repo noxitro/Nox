@@ -4,7 +4,7 @@
 ///	@brief	並列チェッカー
 #pragma once
 #include	"os/atomic.h"
-#include	"log_trace.h"
+#include	"log_id.h"
 
 namespace nox::util
 {
@@ -25,7 +25,7 @@ namespace nox::util
 		{
 			if (nox::os::atomic::Increment(ref_counter_) > 1)
 			{
-				NOX_ERROR_LINE(nox::log_tag::Kernel, U"ParallelExecuteCheck failed.");
+				NOX_ERROR_LINE(nox::log_id::Kernel, U"ParallelExecuteCheck failed.");
 			}
 		}
 

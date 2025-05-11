@@ -1,5 +1,5 @@
-﻿///	@file	user_defined_compound_type_info.h
-///	@brief	user_defined_compound_type_info
+﻿///	@file	class_info.h
+///	@brief	クラス情報
 #pragma once
 #include	"type.h"
 #include	"reflection_object.h"
@@ -100,13 +100,24 @@ namespace nox::reflection
 		[[nodiscard]] inline constexpr std::uint8_t GetInternalClassLength()const noexcept { return internal_class_length_; }
 		[[nodiscard]] inline constexpr const std::span<const std::reference_wrapper<const nox::reflection::ClassInfo>> GetInternalClassList()const noexcept { return std::span(internal_type_list_, internal_class_length_); }
 		[[nodiscard]] inline constexpr std::uint8_t GetEnumLength()const noexcept { return enum_length_; }
-		[[nodiscard]] inline	constexpr	std::span<const std::reference_wrapper<const nox::reflection::EnumInfo>> GetEnumInfoList()const noexcept { return std::span(enum_list_, enum_length_); }
+		[[nodiscard]] inline constexpr	std::span<const std::reference_wrapper<const nox::reflection::EnumInfo>> GetEnumInfoList()const noexcept { return std::span(enum_list_, enum_length_); }
 		[[nodiscard]] inline constexpr const nox::reflection::EnumInfo& GetEnumInfo(std::uint8_t index)const noexcept { return nox::util::At(enum_list_, enum_length_, index); }
 
 		/// @brief 継承関係を調べる
 		/// @param derived 
 		/// @return 
 		[[nodiscard]] bool	IsBaseOf(const nox::reflection::ClassInfo& derived)const noexcept;
+
+		const nox::reflection::FunctionInfo* GetCopyConstructor()const noexcept;
+		const nox::reflection::FunctionInfo* GetMoveConstructor()const noexcept;
+
+		const nox::reflection::FunctionInfo* GetConstructor(std::span<const std::reference_wrapper<const nox::reflection::Type>> args)const noexcept;
+
+		template<class... Args>
+		inline const nox::reflection::FunctionInfo* GetConstructor()const noexcept
+		{
+			return GetConstructor(nox::reflection::Typeof<Args>()...);
+		}
 #pragma endregion
 
 	private:

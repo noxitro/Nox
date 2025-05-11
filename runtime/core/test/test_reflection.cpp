@@ -7,6 +7,7 @@
 
 #include	"game_object.h"
 #include	"test_behavior.h"
+#include	"../kernel/memory/new_delete.h"
 
 namespace nox
 {
@@ -368,7 +369,7 @@ public:
 	}
 };
 #include	"type_id_test.h"
-#include	"delegate_test.h"
+//#include	"delegate_test.h"
 namespace
 {
 	class LocalClass 
@@ -399,7 +400,6 @@ namespace
 		nox::int32 v = 0;
 	};
 }
-
 namespace nox
 {
 	template<class T, class U>
@@ -424,47 +424,9 @@ namespace nox
 	};
 }
 
-#include <iostream>
-inline void MultiCastTest()
-{
-
-	nox::MulticastDelegate<int(int)> delegate;
-	//delegate.Resize(4);
-
-	struct Local
-	{
-		int Func(int a)const noexcept { return a + 1; }
-	};
-
-	auto l = [](int a) {return a + 1; };
-	delegate += +[](int a) {return a + 1; };
-	delegate -= +[](int a) {return a + 1; };
-
-	Local local;
-	delegate += std::make_pair(nox::Nontype<&Local::Func>, &local);
-	delegate -= std::make_pair(nox::Nontype<&Local::Func>, &local);
-
-	delegate += [](int a) {return a + 2; };
-
-	delegate += [](int a) {return a + 3; };
-
-	std::cout << delegate(1) << std::endl;
-
-	auto n = delegate(1);
-}
-
 void nox::test::TestReflection()
 {
 
-//	nox::util::RemoveEraseIf(v, +[](const nox::Delegate<int()>& a) {return false; });
-	MultiCastTest();
-
-	nox::Delegate<int()> delegate = []() {return 10; };
-	auto n = delegate();
-
-
-
-	constexpr int vv = 0;
 //	constexpr Desc d = Desc{.v = std::ref(vv)};
 
 	/*{

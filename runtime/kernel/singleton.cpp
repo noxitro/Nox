@@ -12,7 +12,7 @@
 #include	"os/mutex.h"
 #include	"preprocessor/util.h"
 
-namespace
+namespace nox
 {
 	nox::os::Mutex singleton_mutex_;
 }

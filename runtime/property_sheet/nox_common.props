@@ -31,11 +31,12 @@
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <EnableModules>false</EnableModules>
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
-      <BuildStlModules>true</BuildStlModules>
+      <BuildStlModules>false</BuildStlModules>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <TreatSpecificWarningsAsErrors>5030;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+      <TranslateIncludes>false</TranslateIncludes>
     </ClCompile>
     <Link />
     <Lib>
@@ -45,7 +46,7 @@
       <WarningLevel>4</WarningLevel>
     </Midl>
     <PreBuildEvent>
-      <Command>$(SolutionDir)bin\updateBuildTimeStampFile.bat $(ProjectName) $(SolutionDir)build\intermediate</Command>
+      <Command>$(SolutionDir)bin\updateBuildTimeStampFile.bat $(ProjectName) $(Outdir)</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup />

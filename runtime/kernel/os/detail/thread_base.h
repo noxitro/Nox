@@ -50,8 +50,8 @@ namespace nox::os
 	*/
 	struct ThreadInfo
 	{
-		uint32* stackBase;
-		uint32* stackLimit;
+		nox::uint32* stackBase;
+		nox::uint32* stackLimit;
 	};
 
 	/**

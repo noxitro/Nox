@@ -3,7 +3,7 @@
 #include	"stdafx.h"
 #include	"variable_info.h"
 
-#include	"user_defined_compound_type_info.h"
+#include	"class_info.h"
 #include	"database.h"
 
 const nox::reflection::ClassInfo* nox::reflection::VariableInfo::GetContainingUserDefinedCompoundTypeInfo()const noexcept

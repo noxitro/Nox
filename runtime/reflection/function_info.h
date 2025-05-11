@@ -162,7 +162,6 @@ namespace nox::reflection
 			const Type& owner_class_type,
 			const reflection::Type& result_type,
 			const AccessLevel access_level,
-			const FunctionType	method_type,
 			const FunctionAttributeFlag method_attribute_flags
 			)noexcept :
 			name_(name),
@@ -176,8 +175,8 @@ namespace nox::reflection
 			function_param_list_(function_param_list),
 			function_param_list_length_(function_param_list_length),
 			access_level_(access_level),
-			function_attribute_flags_(method_attribute_flags),
-			method_type_(method_type) {}
+			function_attribute_flags_(method_attribute_flags)
+		{}
 
 	public:
 #pragma region アクセサ
@@ -194,6 +193,19 @@ namespace nox::reflection
 
 		[[nodiscard]] inline	constexpr	std::span<const std::reference_wrapper<const FunctionArgumentInfo>> GetFunctionParamList()const noexcept { return std::span(function_param_list_, function_param_list_length_); }
 		[[nodiscard]] inline	constexpr	std::uint8_t GetFunctionParamLength()const noexcept { return function_param_list_length_; }
+		[[nodiscard]] inline	constexpr	std::uint8_t GetNonDefaultParamLength()const noexcept
+		{
+			std::uint8_t count = 0;
+			for (std::uint8_t i = 0; i < function_param_list_length_; ++i)
+			{
+				if (function_param_list_[i].get().HasDefaultValue() == false)
+				{
+					++count;
+				}
+			}
+			return count;
+		}
+
 		[[nodiscard]] inline	constexpr	const FunctionArgumentInfo& GetFunctionParam(std::uint8_t index)const noexcept { return nox::util::At(function_param_list_, function_param_list_length_, index); }
 
 		[[nodiscard]] inline	constexpr	const nox::reflection::Type& GetOwnerType()const noexcept { return containing_type_; }
@@ -201,6 +213,18 @@ namespace nox::reflection
 
 		[[nodiscard]] inline	constexpr	bool	IsStatic()const noexcept { return nox::util::IsBitAnd(function_attribute_flags_, FunctionAttributeFlag::Static); }
 		[[nodiscard]] inline	constexpr	bool	IsNoReturn()const noexcept { return result_type_ == nox::reflection::GetInvalidType(); }
+
+		[[nodiscard]] inline constexpr bool IsConstructor()const noexcept {
+			return
+				IsDefaultConstructor() ||
+				IsCopyConstructor() ||
+				IsMoveConstructor();
+		}
+
+		[[nodiscard]] inline constexpr bool IsDefaultConstructor()const noexcept { return nox::util::IsBitAnd(function_attribute_flags_, FunctionAttributeFlag::DefaultConstructor); }
+		[[nodiscard]] inline constexpr bool IsCopyConstructor()const noexcept { return nox::util::IsBitAnd(function_attribute_flags_, FunctionAttributeFlag::CopyConstructor); }
+		[[nodiscard]] inline constexpr bool IsMoveConstructor()const noexcept { return nox::util::IsBitAnd(function_attribute_flags_, FunctionAttributeFlag::MoveConstructor); }
+
 #pragma endregion
 
 #pragma region 関数実行
@@ -212,8 +236,6 @@ namespace nox::reflection
 		template<class ResultType = void, class... Args>
 		inline	constexpr	ResultType	Invoke(Args&&... args)const
 		{
-			
-
 			//	戻り値なし
 			if constexpr (std::is_void_v<ResultType> == true)
 			{
@@ -303,7 +325,10 @@ namespace nox::reflection
 			std::invoke(func, FunctionInfo::ToInvokeParam<std::tuple_element_t<Indices, FunctionArgsTupleType<Func>>>(argument_list[Indices])...);
 		}
 	protected:
+		/// @brief 属性の数
 		std::uint8_t attribute_list_length_;
+
+		/// @brief 引数の数
 		std::uint8_t function_param_list_length_;
 
 		/// @brief 関数名
@@ -335,15 +360,11 @@ namespace nox::reflection
 
 		/// @brief 関数の属性
 		const	FunctionAttributeFlag	function_attribute_flags_;
-
-		/// @brief 関数の種類
-		const	FunctionType	method_type_;
-
 	};
 
 	namespace detail
 	{
-		template<class FunctionPointer, nox::concepts::GlobalFunctionPointer... _Functions>
+		template<nox::concepts::GlobalFunctionPointer... _Functions>
 		class FunctionInfoImpl : public FunctionInfo
 		{
 		public:
@@ -351,7 +372,6 @@ namespace nox::reflection
 			inline constexpr FunctionInfoImpl(FunctionInfoImpl&&)noexcept = delete;
 
 			inline	constexpr	explicit	FunctionInfoImpl(
-				const FunctionPointer& function_pointer,
 				ReflectionStringView	name,
 				ReflectionStringView fullname,
 				ReflectionStringView	_namespace,
@@ -363,7 +383,6 @@ namespace nox::reflection
 				const Type& owner_class_type,
 				const reflection::Type& result_type,
 				AccessLevel access_level,
-				FunctionType	method_type,
 				FunctionAttributeFlag method_attribute_flags,
 				_Functions... functions
 			)noexcept :
@@ -379,10 +398,8 @@ namespace nox::reflection
 					owner_class_type,
 					result_type,
 					access_level,
-					method_type,
 					method_attribute_flags
 				),
-				function_pointer_(function_pointer),
 				functions_(std::make_tuple(functions...))
 			{}
 
@@ -436,8 +453,6 @@ namespace nox::reflection
 			}
 
 		private:
-			const FunctionPointer& function_pointer_;
-
 			/// @brief 関数リスト
 			const std::tuple<_Functions...> functions_;
 		};
@@ -463,26 +478,16 @@ namespace nox::reflection
 			const nox::FunctionPointerId& function_id,
 			const std::reference_wrapper<const FunctionArgumentInfo>* function_param_list,
 			const std::uint8_t function_param_list_length,
-			bool is_constructor,
-			bool is_constexpr,
-			bool is_inline,
+			const FunctionAttributeFlag extraAttributeFlags,
 			_Functions... functions
 		)noexcept
 		{
 			//	c++で解決できないものは、ここで解決する
-			FunctionAttributeFlag method_attribute_flags = nox::reflection::GetFunctionAttributeFlags<RawFunction>();
-			if (is_constexpr == true)
-			{
-				method_attribute_flags = util::BitOr(method_attribute_flags, FunctionAttributeFlag::Constexpr);
-			}
-			if (is_inline == true)
-			{
-				method_attribute_flags = util::BitOr(method_attribute_flags, FunctionAttributeFlag::Inline);
-			}
-
+			const FunctionAttributeFlag method_attribute_flags = nox::reflection::GetFunctionAttributeFlags<RawFunction>() | extraAttributeFlags;
+		
 			if constexpr (std::is_member_function_pointer_v<RawFunction> == true)
 			{
-				return nox::reflection::detail::FunctionInfoImpl<RawFunction, _Functions...>(
+				return nox::reflection::detail::FunctionInfoImpl<_Functions...>(
 					function_pointer,
 					name,
 					fullname,
@@ -495,14 +500,13 @@ namespace nox::reflection
 					nox::reflection::Typeof<FunctionClassType<RawFunction>>(),
 					nox::reflection::Typeof<FunctionResultType<RawFunction>>(),
 					access_level,
-					is_constructor == true ? FunctionType::Constructor : FunctionType::Default,
 					method_attribute_flags,
 					functions...
 				);
 			}
 			else
 			{
-				return nox::reflection::detail::FunctionInfoImpl< RawFunction>(
+				return nox::reflection::detail::FunctionInfoImpl< _Functions...>(
 					function_pointer,
 					name,
 					fullname,
@@ -512,11 +516,9 @@ namespace nox::reflection
 					function_id,
 					function_param_list,
 					function_param_list_length,
-
 					nox::reflection::GetInvalidType(),
 					nox::reflection::Typeof<FunctionResultType<RawFunction>>(),
 					access_level,
-					is_constructor == true ? FunctionType::Constructor : FunctionType::Default,
 					method_attribute_flags,
 					functions...
 				);

@@ -47,3 +47,4 @@
 
 #include	"iterator.h"
 #include	"reflection_type.h"
+#include	"stack.h"

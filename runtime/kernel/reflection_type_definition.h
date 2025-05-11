@@ -196,7 +196,27 @@ namespace nox::reflection
 		Unsigned = 1 << 4,
 
 		/// @brief 多相的
-		Polymorphic = 1 << 5
+		Polymorphic = 1 << 5,
+
+		/// @brief 集成体
+		Aggregate = 1 << 6,
+
+		/// @brief 破壊可能
+		Destructible = 1 << 7,
+
+		/// @brief 代入可能
+		Assignable = 1 << 8,
+
+		/// @brief 交換可能
+		Swapable = 1 << 9,
+
+		Construtible = 1 << 10,
+
+		DefaultConstructible = 1 << 11,
+
+		CopyConstructible = 1 << 12,
+
+		MoveConstructible = 1 << 13,
 	};
 
 	///// @brief 型修飾子
@@ -217,24 +237,13 @@ namespace nox::reflection
 	/// @brief アクセスレベル
 	enum class AccessLevel : std::uint8_t
 	{
-		/**
-		 * @brief private
-		*/
 		Private,
-
-		/**
-		 * @brief protected
-		*/
 		Protected,
-
-		/**
-		 * @brief public
-		*/
 		Public
 	};
 
 	/// @brief 関数属性情報
-	enum class FunctionAttributeFlag : std::uint16_t
+	enum class FunctionAttributeFlag : std::uint32_t
 	{
 		/// @brief 無し
 		None = 0,
@@ -272,28 +281,20 @@ namespace nox::reflection
 		/// @brief constexpr
 		Constexpr = 1 << 10,
 
-		/// @brief Constructor
-		Constructor = 1 << 11,
+		/// @brief デフォルトコンストラクタ
+		DefaultConstructor = 1 << 11,
 
 		/// @brief コピーコンストラクタ
 		CopyConstructor = 1 << 12,
 
 		/// @brief ムーブコンストラクタ
 		MoveConstructor = 1 << 13,
-	};
 
-	/// @brief メソッドの種類
-	enum class FunctionType : std::uint8_t
-	{
-		/**
-		 * @brief 通常の関数
-		*/
-		Default,
+		/// @brief ムーブ代入演算子
+		MoveAssignment = 1 << 14,
 
-		/**
-		 * @brief コンストラクタ ( new operator )
-		*/
-		Constructor,
+		/// @brief コピー代入演算子
+		CopyAssignment = 1 << 15,
 	};
 
 	/// @brief フィールド属性情報
@@ -328,9 +329,15 @@ namespace nox::reflection
 	};
 
 	/// @brief 標準属性の定義
-	enum class AttrKind : std::uint8_t
+	enum class StandardAttrKind : std::uint8_t
 	{
 		/// @brief 不明
 		Invalid,
+
+		/// @brief [[nodiscard]]
+		NoDiscard,
+
+		/// @brief annotation
+		Annotate,
 	};
 }

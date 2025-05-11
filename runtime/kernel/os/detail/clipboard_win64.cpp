@@ -12,27 +12,6 @@
 #if NOX_WIN64
 #include	"../windows.h"
 
-namespace
-{
-	class ScopeExit
-	{
-	public:
-		inline constexpr explicit ScopeExit(void(*const func)())noexcept:
-			func_(func)
-		{
-
-		}
-
-		inline ~ScopeExit()
-		{
-			func_();
-		}
-
-	private:
-		void(*const func_)();
-	};
-}
-
 bool nox::os::clipboard::Clear()
 {
 	if (::OpenClipboard(nullptr) == FALSE)

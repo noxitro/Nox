@@ -1,13 +1,15 @@
 ﻿///	@file	log_trace.h
-///	@brief	log_trace
+///	@brief	ログ出力
 #pragma once
 
 #include	"advanced_type.h"
 #include	"convert_string.h"
 #include	"nox_string_view.h"
+#include	"string_format.h"
+
 
 /// @brief		ログID構造体の定義名前空間
-namespace nox::log_tag
+namespace nox::log_id
 {
 	/// @brief ログID
 	/// @details ログIDを定義する構造体を継承することで、ログIDを定義できます
@@ -15,14 +17,14 @@ namespace nox::log_tag
 	{
 	};
 
-	/// @brief kernel用
-	struct Kernel : LogId
+	/// @brief 無効なログID
+	struct Invalid : LogId
 	{
-		inline constexpr std::u32string_view operator()() const noexcept { return U"Kernel"; }
+		inline constexpr std::u32string_view operator()() const noexcept { return U"Invalid"; }
 	};
 }
 
-namespace nox::dev
+namespace nox::debug
 {
 	/// @brief ログタイプ
 	enum class LogCategory : uint8
@@ -36,12 +38,39 @@ namespace nox::dev
 	namespace detail
 	{
 		void	TraceDirect(LogCategory log_category, const StringView category, const StringView message, bool isNewLine, const std::source_location& source_location);
+
+		template<class... Args>
+		void	TraceDirectArgs(LogCategory log_category, const StringView category, bool isNewLine, const std::source_location& source_location, const StringView message, Args&&...args)
+		{
+			//	動的メモリ確保を行わないように確保済みのバッファを使用
+			std::array<nox::char32, 5096> buffer = { 0 };
+			nox::util::Format(buffer, message.data(), std::forward<Args>(args)...);
+
+			nox::debug::detail::TraceDirect(log_category, category, buffer.data(), isNewLine, source_location);
+		}
 	}
 
-	template<std::derived_from<log_tag::LogId> LogId>
+	template<std::derived_from<log_id::LogId> LogId> 
+		requires(std::is_same_v<std::u32string_view, decltype(LogId()())>)
 	inline	void	LogTrace(LogCategory log_category, const StringView message, const std::source_location source_location = std::source_location::current())
 	{
-		nox::dev::detail::TraceDirect(log_category, LogId()(), message, true, source_location);
+		nox::debug::detail::TraceDirect(log_category, LogId()(), message, true, source_location);
+	}
+
+	/// @brief		ログ出力
+	/// @details	フォーマット処理を動的メモリ確保を行わないように確保済みのバッファを使用する
+	/// @tparam ...Args 
+	/// @tparam LogId 
+	/// @param log_category 
+	/// @param source_location 
+	/// @param message 
+	/// @param ...args 
+	template<std::derived_from<log_id::LogId> LogId, class... Args>
+		requires(std::is_polymorphic_v<LogId> == false && std::is_same_v<std::u32string_view, decltype(LogId()())>)
+	inline	void	LogTraceArgs(LogCategory log_category, const std::source_location& source_location, const StringView message, Args&&... args)
+	{
+		constexpr std::u32string_view log_tag = LogId()();
+		nox::debug::detail::TraceDirectArgs(log_category, log_tag, true, source_location, message, std::forward<Args>(args)...);
 	}
 
 	/// @brief 削除予定
@@ -50,18 +79,20 @@ namespace nox::dev
 	/// @param source_location 
 	inline	void	LogTrace(LogCategory log_category, const StringView message, const std::source_location source_location = std::source_location::current())
 	{
-		nox::dev::LogTrace<log_tag::Kernel>(log_category, message, source_location);
+		nox::debug::LogTrace<log_id::Invalid>(log_category, message, source_location);
 	}
 }
 
 #if NOX_DEBUG
-#define	NOX_INFO_LINE_OLD(...) ::nox::dev::LogTrace(::nox::dev::LogCategory::Info, __VA_ARGS__)
-#define NOX_WARNING_LINE_OLD(...) ::nox::dev::LogTrace(::nox::dev::LogCategory::Warning, __VA_ARGS__)
-#define NOX_ERROR_LINE_OLD(...) ::nox::dev::LogTrace(::nox::dev::LogCategory::Error, __VA_ARGS__)
+#define	NOX_INFO_LINE_OLD(...) ::nox::debug::LogTrace(::nox::debug::LogCategory::Info, __VA_ARGS__)
+#define NOX_WARNING_LINE_OLD(...) ::nox::debug::LogTrace(::nox::debug::LogCategory::Warning, __VA_ARGS__)
+#define NOX_ERROR_LINE_OLD(...) ::nox::debug::LogTrace(::nox::debug::LogCategory::Error, __VA_ARGS__)
 
-#define NOX_INFO_LINE(LodId, message) ::nox::dev::LogTrace<LodId>(::nox::dev::LogCategory::Info, message)
-#define NOX_WARNING_LINE(LodId, message) ::nox::dev::LogTrace<LodId>(::nox::dev::LogCategory::Warning, message)
-#define NOX_ERROR_LINE(LodId, message) ::nox::dev::LogTrace<LodId>(::nox::dev::LogCategory::Error, message)
+/// @brief		ログ出力 レベル：Info
+/// @details	フォーマット処理を動的メモリ確保を行わないように確保済みのバッファを使用する
+#define NOX_INFO_LINE(LodId, ...) ::nox::debug::LogTraceArgs<LodId>(::nox::debug::LogCategory::Info, ::std::source_location::current(), __VA_ARGS__)
+#define NOX_WARNING_LINE(LodId, ...) ::nox::debug::LogTraceArgs<LodId>(::nox::debug::LogCategory::Warning, ::std::source_location::current(), __VA_ARGS__)
+#define NOX_ERROR_LINE(LodId, ...) ::nox::debug::LogTraceArgs<LodId>(::nox::debug::LogCategory::Error, ::std::source_location::current(), __VA_ARGS__)
 #else
 #define	NOX_INFO_LINE_OLD(...)
 #define NOX_WARNING_LINE_OLD(...)

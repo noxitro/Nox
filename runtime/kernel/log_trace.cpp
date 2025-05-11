@@ -6,6 +6,7 @@
 #include	"memory/stl_allocate_adapter.h"
 #include	"unicode_converter.h"
 #include	"string_format.h"
+#include	"os/thread.h"
 
 #if NOX_WINDOWS
 #include	"os/windows.h"
@@ -14,11 +15,11 @@
 
 #include	<iostream>
 
-namespace
+namespace nox
 {
-	inline constexpr nox::StringView GetLogCategoryName(nox::dev::LogCategory log_category)noexcept
+	inline constexpr nox::StringView GetLogCategoryName(nox::debug::LogCategory log_category)noexcept
 	{
-		constexpr std::array<nox::StringView, nox::util::ToUnderlying(nox::dev::LogCategory::_Max)> table =
+		constexpr std::array<nox::StringView, nox::util::ToUnderlying(nox::debug::LogCategory::_Max)> table =
 		{
 			U"Info",
 			U"Warning",
@@ -29,9 +30,17 @@ namespace
 	}
 
 //	constinit std::array<nox::char32, 64> log_buffer_table 
+
+	struct ThreadData
+	{
+		std::array<nox::char16, 5016> log_buffer_table = { 0 };
+	};
+
+	/// @brief スレッド分のログバッファ
+	constinit std::array<ThreadData, nox::os::MAX_THREAD_ID> thread_data_table = { 0 };
 }
 
-void nox::dev::detail::TraceDirect(LogCategory log_category, const StringView category, const StringView message, bool isNewLine, const std::source_location& source_location)
+void nox::debug::detail::TraceDirect(nox::debug::LogCategory log_category, const nox::StringView category, const StringView message, bool isNewLine, const std::source_location& source_location)
 {
 	std::array<char16, 2048> buffer = { 0 };
 	//source_location;

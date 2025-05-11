@@ -10,6 +10,7 @@
 
 #pragma warning(push, 0)
 #pragma warning(disable: 26498)
+#pragma warning(disable: 4702)
 //#pragma warning(disable:4365)
 //#pragma warning(disable:4514)
 //#pragma warning(disable:4582)
@@ -29,6 +30,8 @@ namespace nox::util
 {
 	namespace detail
 	{
+		template<class CharType>
+		size_t GetStringMaxSize();
 
 		template<class CharType> requires(IsCharTypeValue<CharType>)
 		struct FormatStringHolder
@@ -136,7 +139,7 @@ namespace nox::util
 		[[nodiscard]] inline nox::BasicString<Char> FmtToString(const fmt::basic_memory_buffer<Char, SIZE>& buf)
 		{
 			auto size = buf.size();
-			fmt::detail::assume(size < nox::BasicString<Char>().max_size());
+			fmt::detail::assume(size < nox::util::detail::GetStringMaxSize<Char>());
 			return nox::BasicString<Char>(buf.data(), size);
 		}
 
@@ -165,7 +168,7 @@ namespace nox::util
 			fmt::detail::vformat_to(buf, format_str, ::fmt::make_format_args<::fmt::buffered_context<CharType>>(args...));
 
 			const size_t bufSize = buf.size();
-			fmt::detail::assume(bufSize < nox::BasicString<CharType>().max_size());
+			fmt::detail::assume(bufSize < nox::util::detail::GetStringMaxSize<CharType>());
 
 			util::StrCopy({ buf.data(), bufSize }, dest_buffer);
 		}
@@ -196,7 +199,7 @@ namespace nox::util
 	/// @param dest_buffer 結果を格納する出力用バッファ
 	/// @param format_str フォーマット用文字列
 	/// @param ...args 引数群
-	template <class S, size_t ArgumentBufferSize = 128, class... Args>
+	template <class S, size_t ArgumentBufferSize = 256, class... Args>
 	inline void Format(std::span<nox::StringCharType<S>> dest_buffer, const S& format_str, Args&&... args)
 	{
 		//	引数変換のための作業用バッファ

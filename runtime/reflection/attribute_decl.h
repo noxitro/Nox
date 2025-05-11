@@ -13,11 +13,12 @@ namespace nox::reflection::attr
 	{
 		NOX_DECLARE_REFLECTION_OBJECT(nox::reflection::attr::StandardAttribute);
 	public:
-		inline constexpr explicit StandardAttribute(nox::reflection::AttrKind kind)noexcept:
+		inline constexpr explicit StandardAttribute(nox::reflection::StandardAttrKind kind)noexcept:
 			kind_(kind)
 		{}
 
+		inline constexpr nox::reflection::StandardAttrKind GetKind()const noexcept { return kind_; }
 	private:
-		nox::reflection::AttrKind kind_;
+		const nox::reflection::StandardAttrKind kind_;
 	};
 }

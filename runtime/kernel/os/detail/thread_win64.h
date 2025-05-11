@@ -24,7 +24,7 @@ namespace nox::os::detail
 		 * @brief スレッド管理IDを取得
 		 * @return
 		*/
-		static int8	GetThreadId() {
+		static inline nox::int8	GetThreadId() {
 			//	まだアサインされていない
 			if (current_thread_id_ < 0)
 			{

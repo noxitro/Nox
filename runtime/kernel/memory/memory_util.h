@@ -93,4 +93,6 @@ namespace nox::util
 	{
 		return std::to_address(std::forward<T>(v));
 	}
+
+	
 }
