@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+	<IsPackable>true</IsPackable>
+	  <Version>1.0.0</Version>
+	  <Title>ReflectionCustomTask</Title>
+	  <Authors>NOX ENGINE</Authors>
+	  <Description>Custom task for MSBuild</Description>
+	  <PackageTags>MyTags</PackageTags>
+	  <Copyright>Copyright ©NOX ENGINE 2024</Copyright>
+	  <PublishSingleFile>true</PublishSingleFile>
+	  <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+	  <OutputType>Library</OutputType>
+
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Build" Version="17.11.4" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.11.4" PrivateAssets="all" />
+	
+  </ItemGroup>
+
+</Project>

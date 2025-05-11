@@ -70,12 +70,14 @@ namespace ReflectionGenerator.Info
                         continue;
                     }
 
-                    EngineAnnotateAttribute engineAnnotateAttribute = (EngineAnnotateAttribute)attr;
+                    EngineAnnotateAttribute? engineAnnotateAttribute = attr as EngineAnnotateAttribute;
+                    if (engineAnnotateAttribute == null)
                     {
-                        if (engineAnnotateAttribute.Value == "nox::reflection::attr::IgnoreReflection")
-                        {
-                            return false;
-                        }
+                        continue;
+                    }
+                    if (engineAnnotateAttribute.Value == "nox::reflection::attr::IgnoreReflection")
+                    {
+                        return false;
                     }
                 }
 

@@ -1,0 +1,16 @@
+-SolutionDir
+"D:\github\Nox\runtime\bin\source\ReflectionGenerator\Sample\"
+-ProjectPath
+"D:\github\Nox\runtime\bin\source\ReflectionGenerator\Sample\Sample.vcxproj"
+-SourceFilePath
+"D:\github\Nox\runtime\bin\source\ReflectionGenerator\Sample\main.cpp"
+-Configuration
+"Debug"
+-Platform
+"x64"
+-ConfigurationDefine
+"DebugDefine"
+-PlatformDefine
+"x64Define"
+-MSBuildBinPath
+"C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\amd64"

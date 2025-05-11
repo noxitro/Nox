@@ -1,0 +1,328 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v9.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v9.0": {
+      "ReflectionGenerator/1.0.0": {
+        "dependencies": {
+          "ClangSharp": "18.1.0.2",
+          "ClangSharp.Interop": "18.1.0.2",
+          "MessagePack": "3.1.1",
+          "Microsoft.Build": "17.12.6",
+          "libClangSharp.runtime.win-x64": "18.1.3.1",
+          "libclang.runtime.win-x64": "18.1.3.2",
+          "CustomTask": "1.0.0.0"
+        },
+        "runtime": {
+          "ReflectionGenerator.dll": {}
+        }
+      },
+      "ClangSharp/18.1.0.2": {
+        "dependencies": {
+          "ClangSharp.Interop": "18.1.0.2"
+        },
+        "runtime": {
+          "lib/net8.0/ClangSharp.dll": {
+            "assemblyVersion": "18.1.0.2",
+            "fileVersion": "18.1.0.2"
+          }
+        }
+      },
+      "ClangSharp.Interop/18.1.0.2": {
+        "dependencies": {
+          "libclang": "18.1.3.2",
+          "libClangSharp": "18.1.3.1"
+        },
+        "runtime": {
+          "lib/net8.0/ClangSharp.Interop.dll": {
+            "assemblyVersion": "18.1.0.2",
+            "fileVersion": "18.1.0.2"
+          }
+        }
+      },
+      "libclang/18.1.3.2": {},
+      "libclang.runtime.win-x64/18.1.3.2": {
+        "runtimeTargets": {
+          "runtimes/win-x64/native/libclang.dll": {
+            "rid": "win-x64",
+            "assetType": "native",
+            "fileVersion": "18.1.3.0"
+          }
+        }
+      },
+      "libClangSharp/18.1.3.1": {},
+      "libClangSharp.runtime.win-x64/18.1.3.1": {
+        "runtimeTargets": {
+          "runtimes/win-x64/native/libClangSharp.dll": {
+            "rid": "win-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          }
+        }
+      },
+      "MessagePack/3.1.1": {
+        "dependencies": {
+          "MessagePack.Annotations": "3.1.1",
+          "MessagePackAnalyzer": "3.1.1",
+          "Microsoft.NET.StringTools": "17.12.6"
+        },
+        "runtime": {
+          "lib/net9.0/MessagePack.dll": {
+            "assemblyVersion": "3.1.1.0",
+            "fileVersion": "3.1.1.0"
+          }
+        }
+      },
+      "MessagePack.Annotations/3.1.1": {
+        "runtime": {
+          "lib/netstandard2.0/MessagePack.Annotations.dll": {
+            "assemblyVersion": "3.1.1.0",
+            "fileVersion": "3.1.1.0"
+          }
+        }
+      },
+      "MessagePackAnalyzer/3.1.1": {},
+      "Microsoft.Build/17.12.6": {
+        "dependencies": {
+          "Microsoft.Build.Framework": "17.12.6",
+          "Microsoft.NET.StringTools": "17.12.6",
+          "System.Collections.Immutable": "8.0.0",
+          "System.Configuration.ConfigurationManager": "8.0.0",
+          "System.Reflection.Metadata": "8.0.0",
+          "System.Reflection.MetadataLoadContext": "8.0.0"
+        },
+        "runtime": {
+          "lib/net9.0/Microsoft.Build.dll": {
+            "assemblyVersion": "15.1.0.0",
+            "fileVersion": "17.12.6.51805"
+          }
+        }
+      },
+      "Microsoft.Build.Framework/17.12.6": {
+        "runtime": {
+          "lib/net9.0/Microsoft.Build.Framework.dll": {
+            "assemblyVersion": "15.1.0.0",
+            "fileVersion": "17.12.6.51805"
+          }
+        }
+      },
+      "Microsoft.NET.StringTools/17.12.6": {
+        "runtime": {
+          "lib/net9.0/Microsoft.NET.StringTools.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "17.12.6.51805"
+          }
+        }
+      },
+      "System.Collections.Immutable/8.0.0": {},
+      "System.Configuration.ConfigurationManager/8.0.0": {
+        "dependencies": {
+          "System.Diagnostics.EventLog": "8.0.0",
+          "System.Security.Cryptography.ProtectedData": "8.0.0"
+        },
+        "runtime": {
+          "lib/net8.0/System.Configuration.ConfigurationManager.dll": {
+            "assemblyVersion": "8.0.0.0",
+            "fileVersion": "8.0.23.53103"
+          }
+        }
+      },
+      "System.Diagnostics.EventLog/8.0.0": {
+        "runtime": {
+          "lib/net8.0/System.Diagnostics.EventLog.dll": {
+            "assemblyVersion": "8.0.0.0",
+            "fileVersion": "8.0.23.53103"
+          }
+        },
+        "runtimeTargets": {
+          "runtimes/win/lib/net8.0/System.Diagnostics.EventLog.Messages.dll": {
+            "rid": "win",
+            "assetType": "runtime",
+            "assemblyVersion": "8.0.0.0",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/win/lib/net8.0/System.Diagnostics.EventLog.dll": {
+            "rid": "win",
+            "assetType": "runtime",
+            "assemblyVersion": "8.0.0.0",
+            "fileVersion": "8.0.23.53103"
+          }
+        }
+      },
+      "System.Reflection.Metadata/8.0.0": {
+        "dependencies": {
+          "System.Collections.Immutable": "8.0.0"
+        }
+      },
+      "System.Reflection.MetadataLoadContext/8.0.0": {
+        "dependencies": {
+          "System.Collections.Immutable": "8.0.0",
+          "System.Reflection.Metadata": "8.0.0"
+        },
+        "runtime": {
+          "lib/net8.0/System.Reflection.MetadataLoadContext.dll": {
+            "assemblyVersion": "8.0.0.0",
+            "fileVersion": "8.0.23.53103"
+          }
+        }
+      },
+      "System.Security.Cryptography.ProtectedData/8.0.0": {
+        "runtime": {
+          "lib/net8.0/System.Security.Cryptography.ProtectedData.dll": {
+            "assemblyVersion": "8.0.0.0",
+            "fileVersion": "8.0.23.53103"
+          }
+        }
+      },
+      "CustomTask/1.0.0.0": {
+        "runtime": {
+          "CustomTask.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "ReflectionGenerator/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "ClangSharp/18.1.0.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-I7r0CW81z4gM63xISeIg9x9EhQOGyJKH+eShy7V8kms0Q1AyUO+Qvo8mu4QPkvSUALJkT7nyFSwzwTJOD1MxAw==",
+      "path": "clangsharp/18.1.0.2",
+      "hashPath": "clangsharp.18.1.0.2.nupkg.sha512"
+    },
+    "ClangSharp.Interop/18.1.0.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-zMeDMEcxByVajw23ZiJsWyInkYBMvtzQvD1NLk1nW4TrvaOWko4U7ZGmypGLjYYrzM9GAX81D+GdpKhzIhmrCg==",
+      "path": "clangsharp.interop/18.1.0.2",
+      "hashPath": "clangsharp.interop.18.1.0.2.nupkg.sha512"
+    },
+    "libclang/18.1.3.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-ugV1RcbJ50D9QivPWoJ5qF14psjQQqiFmd9bTsUScfpcGUEJBE2qm8eIZzatEZOKUchW3wSHRXryBzTtapibwQ==",
+      "path": "libclang/18.1.3.2",
+      "hashPath": "libclang.18.1.3.2.nupkg.sha512"
+    },
+    "libclang.runtime.win-x64/18.1.3.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-L8bgxTUASasstvQdjpSdOQEjpLtXKpZFSmV4iRNtC3+hyCt87KvOR1v8F5V+sPasdihLkN3160KmtpcAdcUm1A==",
+      "path": "libclang.runtime.win-x64/18.1.3.2",
+      "hashPath": "libclang.runtime.win-x64.18.1.3.2.nupkg.sha512"
+    },
+    "libClangSharp/18.1.3.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-HjHcNOxPFYvWk2vgqbLjmRW63b6ZQw2UgwlOAAb4XGWnLmOLDipoV2nWTA3T0orE4dleWw7lemGKhZwtvmFKQw==",
+      "path": "libclangsharp/18.1.3.1",
+      "hashPath": "libclangsharp.18.1.3.1.nupkg.sha512"
+    },
+    "libClangSharp.runtime.win-x64/18.1.3.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-Uu9w/jthpuC7uDFKYmkdmU/LIVJAlht5a6QFLzkUxdET7Szo5h/sMezU2oRE7P2ufIyFnPl5KYyFV1z0jGAedQ==",
+      "path": "libclangsharp.runtime.win-x64/18.1.3.1",
+      "hashPath": "libclangsharp.runtime.win-x64.18.1.3.1.nupkg.sha512"
+    },
+    "MessagePack/3.1.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-nC7/arPbdsjcvDwLrdp2aJafk3Y8GbjoomvY1oFCJbODAmgURM9JVKrkIcaZSX1GOLtPSQH4/6rM/TNtSx+U4Q==",
+      "path": "messagepack/3.1.1",
+      "hashPath": "messagepack.3.1.1.nupkg.sha512"
+    },
+    "MessagePack.Annotations/3.1.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-z/qHzXoz+SAw8+MDZV6Woge1fWD27v+Ce+9a3AJU7FF7TmXpIvGmALsS0A83RdM0P1utLuJ8UJlhNmjpDJ4y4A==",
+      "path": "messagepack.annotations/3.1.1",
+      "hashPath": "messagepack.annotations.3.1.1.nupkg.sha512"
+    },
+    "MessagePackAnalyzer/3.1.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-gQeHB5RKo7C033FoUToZsvpabWuBR4ajiDoA0dXVTf7SdrA8sB0EGE04t37dDJ+8jIZ9/rCNYUmE67xKPgPThA==",
+      "path": "messagepackanalyzer/3.1.1",
+      "hashPath": "messagepackanalyzer.3.1.1.nupkg.sha512"
+    },
+    "Microsoft.Build/17.12.6": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-Gz8VteydDNLOhm0vov0dSeQb43ibQ4EnWoc2UtjUd7F3MNFo12o/3XLvVFoZ9b8UXBX6EzraL8XLCy93QTnnIA==",
+      "path": "microsoft.build/17.12.6",
+      "hashPath": "microsoft.build.17.12.6.nupkg.sha512"
+    },
+    "Microsoft.Build.Framework/17.12.6": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-jleteC0seumLGTmTVwob97lcwPj/dfgzL/V3g/VVcMZgo2Ic7jzdy8AYpByPDh8e3uRq0SjCl6HOFCjhy5GzRQ==",
+      "path": "microsoft.build.framework/17.12.6",
+      "hashPath": "microsoft.build.framework.17.12.6.nupkg.sha512"
+    },
+    "Microsoft.NET.StringTools/17.12.6": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-w8Ehofqte5bJoR+Fa3f6JwkwFEkGtXxqvQHGOVOSHDzgNVySvL5FSNhavbQSZ864el9c3rjdLPLAtBW8dq6fmg==",
+      "path": "microsoft.net.stringtools/17.12.6",
+      "hashPath": "microsoft.net.stringtools.17.12.6.nupkg.sha512"
+    },
+    "System.Collections.Immutable/8.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-AurL6Y5BA1WotzlEvVaIDpqzpIPvYnnldxru8oXJU2yFxFUy3+pNXjXd1ymO+RA0rq0+590Q8gaz2l3Sr7fmqg==",
+      "path": "system.collections.immutable/8.0.0",
+      "hashPath": "system.collections.immutable.8.0.0.nupkg.sha512"
+    },
+    "System.Configuration.ConfigurationManager/8.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-JlYi9XVvIREURRUlGMr1F6vOFLk7YSY4p1vHo4kX3tQ0AGrjqlRWHDi66ImHhy6qwXBG3BJ6Y1QlYQ+Qz6Xgww==",
+      "path": "system.configuration.configurationmanager/8.0.0",
+      "hashPath": "system.configuration.configurationmanager.8.0.0.nupkg.sha512"
+    },
+    "System.Diagnostics.EventLog/8.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-fdYxcRjQqTTacKId/2IECojlDSFvp7LP5N78+0z/xH7v/Tuw5ZAxu23Y6PTCRinqyu2ePx+Gn1098NC6jM6d+A==",
+      "path": "system.diagnostics.eventlog/8.0.0",
+      "hashPath": "system.diagnostics.eventlog.8.0.0.nupkg.sha512"
+    },
+    "System.Reflection.Metadata/8.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-ptvgrFh7PvWI8bcVqG5rsA/weWM09EnthFHR5SCnS6IN+P4mj6rE1lBDC4U8HL9/57htKAqy4KQ3bBj84cfYyQ==",
+      "path": "system.reflection.metadata/8.0.0",
+      "hashPath": "system.reflection.metadata.8.0.0.nupkg.sha512"
+    },
+    "System.Reflection.MetadataLoadContext/8.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-SZxrQ4sQYnIcdwiO3G/lHZopbPYQ2lW0ioT4JezgccWUrKaKbHLJbAGZaDfkYjWcta1pWssAo3MOXLsR0ie4tQ==",
+      "path": "system.reflection.metadataloadcontext/8.0.0",
+      "hashPath": "system.reflection.metadataloadcontext.8.0.0.nupkg.sha512"
+    },
+    "System.Security.Cryptography.ProtectedData/8.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-+TUFINV2q2ifyXauQXRwy4CiBhqvDEDZeVJU7qfxya4aRYOKzVBpN+4acx25VcPB9ywUN6C0n8drWl110PhZEg==",
+      "path": "system.security.cryptography.protecteddata/8.0.0",
+      "hashPath": "system.security.cryptography.protecteddata.8.0.0.nupkg.sha512"
+    },
+    "CustomTask/1.0.0.0": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
