@@ -75,10 +75,10 @@ namespace ReflectionGenerator.Info
     /// <summary>
     /// クラス union情報
     /// </summary>
-    public class ClassInfo : TypeInfo, IHolder
+    public class UserDefinedCompoundTypeInfo : TypeInfo, IHolder
     {
         public List<EnumInfo> EnumInfoList { get; } = new List<EnumInfo>();
-        public List<ClassInfo> ClassInfoList { get; } = new List<ClassInfo>();
+        public List<UserDefinedCompoundTypeInfo> TypeInfoList { get; } = new List<UserDefinedCompoundTypeInfo>();
         public List<VariableInfo> VariableInfoList { get; } = new List<VariableInfo>();
         public List<FunctionInfo> FunctionInfoList { get; } = new List<FunctionInfo>();
 
@@ -90,7 +90,7 @@ namespace ReflectionGenerator.Info
         public bool IsPrivateReflection { get; set; } = false;
     }
 
-    public class TemplateClassUnionInfo : ClassInfo
+    public class TemplateClassUnionInfo : UserDefinedCompoundTypeInfo
     {
         //  
         public required IReadOnlyList<string> SpecializationsList { get; init; } 

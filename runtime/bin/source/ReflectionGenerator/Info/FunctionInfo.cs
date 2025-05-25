@@ -34,8 +34,6 @@ namespace ReflectionGenerator.Info
         public required bool IsConsteval { get; init; }
 
         public virtual bool IsTemplated { get; } = false;
-
-        public required ClangSharp.Interop.CX_OverloadedOperatorKind OperatorKind { get; init; }
     }
 
     public class TemplateFunctionInfo : FunctionInfo

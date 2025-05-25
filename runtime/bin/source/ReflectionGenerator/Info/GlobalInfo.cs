@@ -10,19 +10,19 @@ namespace ReflectionGenerator.Info
     public interface IHolder
     {
         public List<EnumInfo> EnumInfoList { get; } 
-        public List<ClassInfo> ClassInfoList { get; } 
+        public List<UserDefinedCompoundTypeInfo> TypeInfoList { get; } 
         public List<VariableInfo> VariableInfoList { get; } 
         public List<FunctionInfo> FunctionInfoList { get; }
     }
 
-    public class NamespaceDeclInfo : Info.BaseInfo, IHolder
+    public class DeclHolder : Info.BaseInfo, IHolder
     {
         public override TypeInfoKind TypeInfoKind => TypeInfoKind.GlobalDecl;
         public required string Namespace { get; init; }
 
-        public List<NamespaceDeclInfo> DeclHolderList { get; } = new List<NamespaceDeclInfo>();
+        public List<DeclHolder> DeclHolderList { get; } = new List<DeclHolder>();
         public List<EnumInfo> EnumInfoList { get; } = new List<EnumInfo>();
-        public List<ClassInfo> ClassInfoList { get; } = new List<ClassInfo>();
+        public List<UserDefinedCompoundTypeInfo> TypeInfoList { get; } = new List<UserDefinedCompoundTypeInfo>();
         public List<VariableInfo> VariableInfoList { get; } = new List<VariableInfo>();
         public List<FunctionInfo> FunctionInfoList { get; } = new List<FunctionInfo>();
 

@@ -138,17 +138,11 @@ namespace ReflectionGenerator
         /// </summary>
         public const string RUNTIME_REFLECTION_GENERATOR_DEFINE = "NOX_REFLECTION_GENERATOR";
 
-        /// <summary>
-        /// 所属無しモジュール名
-        /// </summary>
-        public const string UNKNOWN_MODULE_NAME = "unknown";
-
-		//  namespace
-		public const string RUNTIME_ROOT_NAMESPACE_STR = "nox";
+        //  namespace
+        public const string RUNTIME_ROOT_NAMESPACE_STR = "nox";
         public const string RUNTIME_REFLECTION_NAMESPACE_STR = "reflection";
         public const string RUNTIME_REFLECTION_GEN_NAMESPACE_STR = "gen";
         public const string RUNTIME_REFLECTION_DETAIL_STR = "detail";
-
         #endregion
     }
 }
