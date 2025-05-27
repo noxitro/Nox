@@ -72,3 +72,7 @@
 /bin/source/CustomTask_DotNet8/bin
 /bin/source/CustomTask_DotNet8/obj
 /bin/source/MakeAllIncludeHeader/.vs
+/bin/source/ReflectionGenerator/bin
+/bin/source/ReflectionGenerator/.vs
+/bin/source/MakeAllIncludeHeader/obj
+/bin/source/MakeAllIncludeHeader/bin
