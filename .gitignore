@@ -76,3 +76,11 @@
 /bin/source/ReflectionGenerator/.vs
 /bin/source/MakeAllIncludeHeader/obj
 /bin/source/MakeAllIncludeHeader/bin
+/bin/source/ReflectionGeneratorCpp/x64/Debug
+/bin/source/ReflectionGeneratorCpp/.vs/ReflectionGeneratorCpp
+/bin/source/ReflectionGeneratorCpp/Reflecti.a6cde9f7/x64/Debug
+/bin/source/ReflectionGeneratorCpp/ifc
+/bin/source/test/x64/Debug
+/bin/source/test/test/x64/Debug
+/bin/source/test/.vs/test
+/bin/source/test/packages/CustomTask.1.0.0
