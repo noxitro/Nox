@@ -68,3 +68,7 @@
 /runtime/bin/source/CustomTask_DotNet8/.vs
 /runtime/bin/source/CustomTask_DotNet8/bin
 /runtime/bin/source/CustomTask_DotNet8/obj
+/bin/source/CustomTask_DotNet8/.vs
+/bin/source/CustomTask_DotNet8/bin
+/bin/source/CustomTask_DotNet8/obj
+/bin/source/MakeAllIncludeHeader/.vs
