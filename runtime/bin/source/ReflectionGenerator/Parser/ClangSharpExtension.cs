@@ -87,6 +87,23 @@ namespace ReflectionGenerator.Parser
             return AccessLevel.Public;
         }
 
+        /// <summary>
+        /// 配列型かどうか
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        public static bool IsArray(this in ClangSharp.Interop.CXType type)
+        {
+            switch(type.kind)
+            {
+                case CXTypeKind.CXType_ConstantArray:
+                case CXTypeKind.CXType_DependentSizedArray:
+                case CXTypeKind.CXType_IncompleteArray:
+                    return true;
+            }
+            return false;
+        }
+
         public static string GetRuntimeFqn(this AccessLevel accessLevel)
         {
             switch (accessLevel)
@@ -284,7 +301,7 @@ namespace ReflectionGenerator.Parser
             //return str;
         }
 
-        public static string GetNamespace(this in ClangSharp.Interop.CXCursor cursor)
+        public static string GetNamespace(this ClangSharp.Interop.CXCursor cursor)
         {
             string str = string.Empty;
 
@@ -517,7 +534,7 @@ namespace ReflectionGenerator.Parser
         /// <summary>
         /// 除外するプロパティ名リスト
         /// </summary>
-        private static bool IsIgnoreProperty(CXCursor cursor, string propertyName)
+        private static bool IsIgnoreProperty(in CXCursor cursor, string propertyName)
         {
             CXCursorKind cursorKind = cursor.Kind;
             CXTypeKind typeKind = cursor.Type.kind;
@@ -525,7 +542,7 @@ namespace ReflectionGenerator.Parser
 
             switch (propertyName)
             {
-                case "DefaultArgType":
+                case nameof(CXCursor.DefaultArgType):
                     switch(cursorKind)
                     {
                         case CXCursorKind.CXCursor_TemplateTypeParameter:
@@ -536,7 +553,7 @@ namespace ReflectionGenerator.Parser
                             return true;
                     }
                     break;
-                case "TlsKind":
+                case nameof(CXCursor.TlsKind):
                     switch(cursorKind)
                     {
                         case CXCursorKind.CXCursor_CompoundStmt:
@@ -578,7 +595,7 @@ namespace ReflectionGenerator.Parser
                     }
                     break;
 
-                case "LambdaStaticInvoker":
+                case nameof(CXCursor.LambdaStaticInvoker):
                     switch(cursorKind)
                     {
                         case CXCursorKind.CXCursor_ClassDecl:
@@ -586,7 +603,7 @@ namespace ReflectionGenerator.Parser
                     }
                     break;
 
-                case "Visibility":
+                case nameof(CXCursor.Visibility):
                     switch(cursorKind)
                     {
                         case CXCursorKind.CXCursor_LastExtraDecl:
@@ -594,7 +611,7 @@ namespace ReflectionGenerator.Parser
                     }
                     break;
 
-                case "DeclObjCTypeEncoding":
+                case nameof(CXCursor.DeclObjCTypeEncoding):
                     switch(cursorKind)
                     {
                         case CXCursorKind.CXCursor_ParmDecl:
@@ -607,7 +624,7 @@ namespace ReflectionGenerator.Parser
                     }
                     break;
 
-                case "IsGlobal":
+                case nameof(CXCursor.IsGlobal):
                     switch(cursorKind)
                     {
                         case CXCursorKind.CXCursor_NonTypeTemplateParameter:
@@ -621,18 +638,25 @@ namespace ReflectionGenerator.Parser
 
         private static bool IsIgnoreProperty(CXType cxType, string propertyName)
         {
+            switch (cxType.kind)
+            {
+                case CXTypeKind.CXType_Elaborated:
+                    switch (propertyName)
+                    {
+                        case nameof(CXType.AddrSpaceExpr):
+                            return true;
+                    }
+                    break;
+            }
+			return false;
+		}
 
 
-            return false;
-        }
-
-
-        public static List<(string Name, System.Type Type, object Value, string comment)> GetMemberInfoList(this object instance, bool checkCHildren = true)
+		public static List<(string Name, System.Type Type, object Value, string comment)> GetMemberInfoList(this object instance, bool checkCHildren = true)
         {
             CXCursor? cursor = instance as CXCursor?;
 
-            
-                List<(string Name, System.Type Type, object Value, string comment)> list = new List<(string Name, System.Type Type, object Value, string comment)>();
+			List<(string Name, System.Type Type, object Value, string comment)> list = new List<(string Name, System.Type Type, object Value, string comment)>();
 
             if (cursor != null)
             {
@@ -677,12 +701,17 @@ namespace ReflectionGenerator.Parser
                     }
                 }
 
-                try
+				try
                 {
                     switch (instance)
                     {
                         case ClangSharp.Interop.CXType cxType:
-                            Trace.Info(null, $"Kind:{cxType.kind.ToString()}, ");
+							if (IsIgnoreProperty(cxType, propertyInfo.Name) == true)
+							{
+								continue;
+							}
+
+							Trace.Info(null, $"Kind:{cxType.kind.ToString()}, ");
                             
                             break;
 

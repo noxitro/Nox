@@ -251,7 +251,11 @@ namespace ReflectionGenerator.Info
 
         public ClassInfoOld GetInfo(string fullName)
         {
-            System.Diagnostics.Debug.Assert(TryGetInfo(fullName, out ClassInfoOld? outClassInfo) && outClassInfo != null, $"{nameof(ClassInfoOld)}:{fullName}が見つかりませんでした");
+            if (TryGetInfo(fullName, out ClassInfoOld? outClassInfo) == false)
+            {
+                System.Diagnostics.Debug.Assert(false, $"{nameof(ClassInfoOld)}:{fullName}が見つかりませんでした");
+            }
+
             return outClassInfo;
         }
 
