@@ -84,3 +84,7 @@
 /bin/source/test/test/x64/Debug
 /bin/source/test/.vs/test
 /bin/source/test/packages/CustomTask.1.0.0
+/runtime/bin/source/CustomTask/bin/Release
+/runtime/bin/source/CustomTask/obj/Debug/netstandard2.0
+/runtime/bin/source/CustomTask/obj/Release/netstandard2.0
+/runtime/bin - コピー
