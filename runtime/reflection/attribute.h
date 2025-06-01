@@ -177,9 +177,6 @@ namespace nox::reflection
 	alignas([]()constexpr noexcept{return 0; static_assert(::nox::reflection::detail::CheckAttributes<decltype(std::make_tuple(__VA_ARGS__))>(), "failed attributes"); }())	\
 	NOX_ATTR(__VA_ARGS__)
 
-///@brief	Enumメンバに対しての属性付与
-#define	NOX_ATTR_ENUMERATOR(...) NOX_ATTR(__VA_ARGS__)
-
 ///@brief	変数や関数などの定義に対しての属性付与
 #define NOX_ATTR_DECLARATION(...)	\
 	static_assert(::nox::reflection::detail::CheckAttributes<decltype(std::make_tuple(__VA_ARGS__))>(), "failed attributes");	\
