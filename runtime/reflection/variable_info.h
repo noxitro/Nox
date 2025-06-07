@@ -439,7 +439,7 @@ namespace nox::reflection
 	namespace detail
 	{
 		/// @brief 変数情報
-		/// @tparam T 
+		/// @tparam T オブジェクトポインタ型
 		template<class T> requires(std::is_pointer_v<T> || std::is_member_object_pointer_v<T>)
 		class VariableInfoImpl final: public VariableInfo
 		{
@@ -628,7 +628,7 @@ namespace nox::reflection
 
 	
 		/// @brief		参照メンバ変数情報
-		inline constexpr nox::reflection::detail::VariableInfoRefImpl CreateVariableInfo(
+		inline constexpr nox::reflection::detail::VariableInfoRefImpl CreateVariableInfoMemberRef(
 			const nox::reflection::Type& pointeeType,
 			const nox::reflection::Type& ownerType,
 			ReflectionStringView name,
@@ -670,8 +670,27 @@ namespace nox::reflection
 			);
 		}
 
-		inline constexpr nox::reflection::detail::VariableInfoRefImpl CreateVariableInfo(
-			const nox::reflection::Type& pointeeType,
+		/// @brief	グローバル参照変数情報を構築
+		/// @param pointeeType 
+		/// @param name 
+		/// @param fullname 
+		/// @param _namespace 
+		/// @param access_level 
+		/// @param object_id 
+		/// @param bit_width 
+		/// @param field_offset 
+		/// @param attribute_list 
+		/// @param attribute_list_length 
+		/// @param additinal_flags 
+		/// @param setter_global_func 
+		/// @param getter_global_func 
+		/// @param getter_address_global_func 
+		/// @param setter_array_global_func 
+		/// @param getter_array_global_func 
+		/// @param getter_array_address_global_func 
+		/// @return 
+		inline constexpr nox::reflection::detail::VariableInfoRefImpl CreateVariableInfoGlobalRef(
+			const nox::reflection::Type& type,
 			const ReflectionStringView name,
 			const ReflectionStringView fullname,
 			const ReflectionStringView _namespace,
@@ -700,7 +719,7 @@ namespace nox::reflection
 				attribute_list,
 				attribute_list_length,
 				additinal_flags,
-				pointeeType,
+				type,
 				nox::reflection::GetInvalidType(),
 				setter_global_func,
 				getter_global_func,
@@ -730,14 +749,12 @@ namespace nox::reflection
 		/// @param getter_array_member_func 
 		/// @param getter_array_address_member_func 
 		/// @return 
-		template<class T>
-		inline constexpr nox::reflection::detail::VariableInfoImpl<T> CreateVariableInfo(
-			const T& object_pointer,
+		template<auto object_pointer>
+		inline constexpr nox::reflection::detail::VariableInfoImpl<decltype(object_pointer)> CreateVariableInfoMember(
 			ReflectionStringView name,
 			ReflectionStringView fullname,
 			ReflectionStringView _namespace,
 			nox::reflection::AccessLevel access_level,
-			const nox::ObjectPointerId& object_id,
 			const std::uint32_t bit_width,
 			const std::uint32_t field_offset,
 			const std::reference_wrapper<const class nox::reflection::ReflectionObject>* attribute_list,
@@ -750,23 +767,23 @@ namespace nox::reflection
 			const VariableInfo::GetterSubscriptOperatorMemberFunc getter_array_member_func = nullptr,
 			const VariableInfo::GetterSubscriptOperatorMemberFunc getter_array_address_member_func = nullptr)noexcept
 		{
-			constexpr nox::reflection::VariableAttributeFlag field_attribute_flgas =
-				nox::util::BitOr(nox::reflection::GetFieldAttributeFlags<T>(), additinal_flags);
+			const nox::reflection::VariableAttributeFlag field_attribute_flgas =
+				nox::util::BitOr(nox::reflection::GetFieldAttributeFlags<decltype(object_pointer)>(), additinal_flags);
 		
-			return nox::reflection::detail::VariableInfoImpl<T>(
+			return nox::reflection::detail::VariableInfoImpl<decltype(object_pointer)>(
 				object_pointer,
 				name,
 				fullname,
 				_namespace,
 				access_level,
-				object_id,
+				nox::GetObjectPointerId<object_pointer>(),
 				bit_width,
 				field_offset,
 				attribute_list,
 				attribute_list_length,
 				field_attribute_flgas,
-				nox::reflection::Typeof<nox::ObjectPointerResultType<T>>(),
-				nox::reflection::Typeof<nox::MemberObjectPointerClassType<T>>(),
+				nox::reflection::Typeof<nox::ObjectPointerResultType<decltype(object_pointer)>>(),
+				nox::reflection::Typeof<nox::MemberObjectPointerClassType<decltype(object_pointer)>>(),
 				setter_member_func,
 				getter_member_func,
 				getter_address_member_func,
@@ -795,14 +812,12 @@ namespace nox::reflection
 		/// @param getter_array_global_func 
 		/// @param getter_array_address_global_func 
 		/// @return 
-		template<class T>
-		inline constexpr nox::reflection::detail::VariableInfoImpl<T> CreateVariableInfo(
-			const T& object_pointer,
+		template<auto object_pointer>
+		inline constexpr nox::reflection::detail::VariableInfoImpl<decltype(object_pointer)> CreateVariableInfoGlobal(
 			const ReflectionStringView name,
 			const ReflectionStringView fullname,
 			const ReflectionStringView _namespace,
 			const nox::reflection::AccessLevel access_level,
-			const nox::ObjectPointerId& object_id,
 			const std::uint32_t bit_width,
 			const std::uint32_t field_offset,
 			const std::reference_wrapper<const class nox::reflection::ReflectionObject>* attribute_list,
@@ -815,22 +830,22 @@ namespace nox::reflection
 			const VariableInfo::GetterSubscriptOperatorGlobalFunc getter_array_global_func = nullptr,
 			const VariableInfo::GetterSubscriptOperatorGlobalFunc getter_array_address_global_func = nullptr)noexcept
 		{
-			constexpr nox::reflection::VariableAttributeFlag field_attribute_flgas =
-				nox::util::BitOr(nox::reflection::GetFieldAttributeFlags<T>(), additinal_flags);
+			const nox::reflection::VariableAttributeFlag field_attribute_flgas =
+				nox::util::BitOr(nox::reflection::GetFieldAttributeFlags<decltype(object_pointer)>(), additinal_flags);
 
-			return nox::reflection::detail::VariableInfoImpl<T>(
+			return nox::reflection::detail::VariableInfoImpl<decltype(object_pointer)>(
 				object_pointer,
 				name,
 				fullname,
 				_namespace,
 				access_level,
-				object_id,
+				nox::GetObjectPointerId<object_pointer>(),
 				bit_width,
 				field_offset,
 				attribute_list,
 				attribute_list_length,
 				field_attribute_flgas,
-				nox::reflection::Typeof<nox::ObjectPointerResultType<T>>(),
+				nox::reflection::Typeof<nox::ObjectPointerResultType<decltype(object_pointer)>>(),
 				nox::reflection::GetInvalidType(),
 				setter_global_func,
 				getter_global_func,
@@ -925,261 +940,3 @@ namespace nox::reflection
 	}
 }
 
-#pragma region マクロ関連
-#pragma region メンバ関数
-///	@brief	メンバ変数へのセット
-#define	NOX_FIELD_INFO_LAMBDA_SETTER(ClassName, FieldName) [](nox::not_null<void*> instance_ptr, const void* const value){\
-	static_cast<ClassName*>(instance_ptr.get())->FieldName = *static_cast<nox::AddConstPointerType<std::add_pointer_t<decltype(ClassName::FieldName)>>>(value);\
-	}
-
-///	@brief	メンバ変数の取得
-#define	NOX_FIELD_INFO_LAMBDA_GETTER(ClassName, FieldName) [](nox::not_null<void*> outValue, nox::not_null<const void*> instance_ptr) {\
-	*static_cast<nox::RemoveConstPointerReferenceType<std::add_pointer_t<decltype(ClassName::FieldName)>>>(outValue.get()) = static_cast<const ClassName*>(instance_ptr.get())->FieldName;\
-}
-
-///	@brief	メンバ変数アドレスの取得
-#define	NOX_FIELD_INFO_LAMBDA_GETTER_ADDRESS(ClassName, FieldName) [](nox::not_null<void*> outValue, nox::not_null<const void*> instance_ptr) {\
-	*static_cast<nox::RemoveConstPointerReferenceType<std::add_pointer_t<decltype(ClassName::FieldName)>>>(outValue.get()) = static_cast<const ClassName*>(instance_ptr.get())->FieldName;\
-}
-
-
-#define	NOX_FIELD_INFO_LAMBDA_SETTER_ARRAY(ClassName, FieldName) [](nox::not_null<void*> instance_ptr, const void* const value, const u32 index) {\
-	if (nox::util::IsValidIndex(static_cast<const ClassName*>(instance_ptr.get())->FieldName, index) == false) {\
-		return false;\
-	}\
-	static_cast<ClassName*>(instance_ptr.get())->FieldName[index] = *static_cast<nox::AddConstPointerType<std::add_pointer_t<nox::ContainerElementType<decltype(ClassName::FieldName)>>>>(value);\
-	return true;\
-	}
-
-#define	NOX_FIELD_INFO_LAMBDA_GETTER_ARRAY(ClassName, FieldName) [](nox::not_null<void*> outValue, nox::not_null<const void*> instance_ptr, const u32 index) {\
-	if (nox::util::IsValidIndex(static_cast<const ClassName*>(instance_ptr.get())->FieldName, index) == false) {\
-		return false;\
-	}\
-	*static_cast<RemoveConstPointerReferenceType<std::add_pointer_t<nox::ContainerElementType<decltype(ClassName::FieldName)>>>>(outValue.get()) = static_cast<const ClassName*>(instance_ptr.get())->FieldName[index];\
-	return true;\
-	}
-
-#define NOX_FIELD_INFO_LAMBDA_ADDRESS_GETTER(ClassName, FieldName) [](nox::not_null<void*> outValue, nox::not_null<const void*> instance_ptr) {\
-	*static_cast<std::add_pointer_t<nox::AddConstPointerType<std::add_pointer_t<decltype(ClassName::FieldName)>>>>(outValue.get()) = &static_cast<const ClassName*>(instance_ptr.get())->FieldName;\
-}
-
-
-	//	グローバル版
-#define	NOX_FIELD_INFO_LAMBDA_SETTER_GLOBAL(FieldName) []( const void* const value){\
-	FieldName = *static_cast<nox::AddConstPointerType<std::add_pointer_t<decltype(FieldName)>>>(value);\
-	}
-
-#define	NOX_FIELD_INFO_LAMBDA_GETTER_GLOBAL(FieldName) [](not_null<void*> outValue) {\
-	*static_cast<RemoveConstPointerReferenceType<std::add_pointer_t<decltype(FieldName)>>>(outValue.get()) = FieldName;\
-}
-
-#define	NOX_FIELD_INFO_LAMBDA_SETTER_ARRAY_GLOBAL(FieldName) [](const void* const value, const u32 index) {\
-	if (nox::util::IsValidIndex(FieldName, index) == false) {\
-		return false;\
-	}\
-	FieldName[index] = *static_cast<nox::AddConstPointerType<std::add_po1inter_t<nox::ContainerElementType<decltype(FieldName)>>>>(value);\
-	return true;\
-	}
-
-#define	NOX_FIELD_INFO_LAMBDA_GETTER_ARRAY_GLOBAL(FieldName) [](not_null<void*> outValue, const u32 index) {\
-	if (nox::util::IsValidIndex(FieldName, index) == false) {\
-		return false;\
-	}\
-	*static_cast<RemoveConstPointerReferenceType<std::add_pointer_t<nox::ContainerElementType<decltype(FieldName)>>>>(outValue.get()) = FieldName[index];\
-	return true;\
-	}
-#pragma endregion
-
-#pragma region ラムダ式作成用ラムダ
-//	メンバ
-#define	NOX_FIELD_INFO_CREATE_LAMBDA_SETTER(ClassName, FieldName) []()constexpr{\
-		using _T = decltype(ClassName::FieldName);\
-		if constexpr (std::is_array_v<_T> || std::is_const_v<_T> == true)\
-		{\
-			return nullptr;\
-		}\
-		else\
-		{\
-			if constexpr (std::is_class_v<_T> == false)\
-			{\
-				return NOX_FIELD_INFO_LAMBDA_SETTER(ClassName, FieldName); \
-			}\
-			else if constexpr (nox::IsInvokableDefaultOperatorValue<_T> == true)\
-			{\
-				return NOX_FIELD_INFO_LAMBDA_SETTER(ClassName, FieldName); \
-			}\
-			else\
-			{\
-				return nullptr; \
-			}\
-		}\
-		}()
-
-
-#define	NOX_FIELD_INFO_CREATE_LAMBDA_GETTER(ClassName, FieldName) []()constexpr{\
-		using _T = decltype(ClassName::FieldName);\
-		if constexpr (std::is_array_v<_T>)\
-		{\
-			return nullptr;\
-		}\
-		else\
-		{\
-			if constexpr (std::is_class_v<_T> == false)\
-			{\
-				return NOX_FIELD_INFO_LAMBDA_GETTER(ClassName, FieldName);\
-			}\
-			else if constexpr (nox::IsInvokableDefaultOperatorValue<_T> == true)\
-			{\
-				return NOX_FIELD_INFO_LAMBDA_GETTER(ClassName, FieldName);\
-			}\
-			else\
-			{\
-				return nullptr;\
-			}\
-		}\
-		}()
-
-#define	NOX_FIELD_INFO_CREATE_LAMBDA_SETTER_ARRAY(ClassName, FieldName) []()constexpr{\
-		using _T = decltype(ClassName::FieldName);\
-		if constexpr ((std::is_array_v<_T> == false && nox::IsSequenceContainerClassValue<_T> == false) || std::is_const_v<RemoveExtentArraySequenceContainerT<_T>> == true)\
-		{\
-			return nullptr;\
-		}\
-		else\
-		{\
-			if constexpr (std::is_class_v<_T> == false)\
-			{\
-				return NOX_FIELD_INFO_LAMBDA_SETTER_ARRAY(ClassName, FieldName); \
-			}\
-			else if constexpr (nox::HasIndexOperatorValue<_T> == true)\
-			{\
-				return NOX_FIELD_INFO_LAMBDA_SETTER_ARRAY(ClassName, FieldName); \
-			}\
-			else\
-			{\
-				return nullptr; \
-			}\
-		}\
-		}()
-
-#define	NOX_FIELD_INFO_CREATE_LAMBDA_GETTER_ARRAY(ClassName, FieldName) []()constexpr{\
-		using _T = decltype(ClassName::FieldName);\
-		if constexpr (std::is_array_v<_T> == false && nox::IsSequenceContainerClassValue<_T> == false)\
-		{\
-			return nullptr;\
-		}\
-		else\
-		{\
-			if constexpr (std::is_class_v<_T> == false)\
-			{\
-				return NOX_FIELD_INFO_LAMBDA_GETTER_ARRAY(ClassName, FieldName); \
-			}\
-			else if constexpr (nox::HasIndexOperatorValue<_T> == true)\
-			{\
-				return NOX_FIELD_INFO_LAMBDA_GETTER_ARRAY(ClassName, FieldName); \
-			}\
-			else\
-			{\
-				return nullptr; \
-			}\
-		}\
-		}()
-
-//	global
-#define	NOX_FIELD_INFO_CREATE_LAMBDA_SETTER_GLOBAL(FieldName) []()constexpr{\
-		using _T = decltype(FieldName);\
-		if constexpr (std::is_array_v<_T> || std::is_const_v<_T> == true)\
-		{\
-			return nullptr;\
-		}\
-		else\
-		{\
-			if constexpr (std::is_class_v<_T> == false)\
-			{\
-				return NOX_FIELD_INFO_LAMBDA_SETTER_GLOBAL(FieldName); \
-			}\
-			else if constexpr (nox::IsInvokableDefaultOperatorValue<_T> == true)\
-			{\
-				return NOX_FIELD_INFO_LAMBDA_SETTER_GLOBAL(FieldName); \
-			}\
-			else\
-			{\
-				return nullptr; \
-			}\
-		}\
-		}()
-
-
-#define	NOX_FIELD_INFO_CREATE_LAMBDA_GETTER_GLOBAL(FieldName) []()constexpr{\
-		using _T = decltype(FieldName);\
-		if constexpr (std::is_array_v<_T>)\
-		{\
-			return nullptr;\
-		}\
-		else\
-		{\
-			if constexpr (std::is_class_v<_T> == false)\
-			{\
-				return NOX_FIELD_INFO_LAMBDA_GETTER_GLOBAL(FieldName);\
-			}\
-			else if constexpr (nox::IsInvokableDefaultOperatorValue<_T> == true)\
-			{\
-				return NOX_FIELD_INFO_LAMBDA_GETTER_GLOBAL(FieldName);\
-			}\
-			else\
-			{\
-				return nullptr;\
-			}\
-		}\
-		}()
-
-#define	NOX_FIELD_INFO_CREATE_LAMBDA_SETTER_ARRAY_GLOBAL(FieldName) []()constexpr{\
-		using _T = decltype(FieldName);\
-		if constexpr ((std::is_array_v<_T> == false && nox::IsSequenceContainerClassValue<_T> == false) || std::is_const_v<RemoveExtentArraySequenceContainerT<_T>> == true)\
-		{\
-			return nullptr;\
-		}\
-		else\
-		{\
-			if constexpr (std::is_class_v<_T> == false)\
-			{\
-				return NOX_FIELD_INFO_LAMBDA_SETTER_ARRAY_GLOBAL(FieldName); \
-			}\
-			else if constexpr (nox::HasIndexOperatorValue<_T> == true)\
-			{\
-				return NOX_FIELD_INFO_LAMBDA_SETTER_ARRAY_GLOBAL(FieldName); \
-			}\
-			else\
-			{\
-				return nullptr; \
-			}\
-		}\
-		}()
-
-#define	NOX_FIELD_INFO_CREATE_LAMBDA_GETTER_ARRAY_GLOBAL(FieldName) []()constexpr{\
-		using _T = decltype(FieldName);\
-		if constexpr (std::is_array_v<_T> == false && nox::IsSequenceContainerClassValue<_T> == false)\
-		{\
-			return nullptr;\
-		}\
-		else\
-		{\
-			if constexpr (std::is_class_v<_T> == false)\
-			{\
-				return NOX_FIELD_INFO_LAMBDA_GETTER_ARRAY_GLOBAL(FieldName); \
-			}\
-			else if constexpr (nox::HasIndexOperatorValue<_T> == true)\
-			{\
-				return NOX_FIELD_INFO_LAMBDA_GETTER_ARRAY_GLOBAL(FieldName); \
-			}\
-			else\
-			{\
-				return nullptr; \
-			}\
-		}\
-		}()
-
-#pragma endregion
-
-
-#pragma endregion

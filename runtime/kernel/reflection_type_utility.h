@@ -134,6 +134,14 @@ namespace nox::reflection
 		{
 			return TypeKind::Uint32;
 		}
+		else if constexpr (std::is_same_v<T, std::int64_t> == true)
+		{
+			return TypeKind::Int64;
+		}
+		else if constexpr (std::is_same_v<T, std::uint64_t> == true)
+		{
+			return TypeKind::UInt64;
+		}
 		else if constexpr (std::is_same_v<T, std::float_t> == true)
 		{
 			return TypeKind::Float;
@@ -193,7 +201,8 @@ namespace nox::reflection
 		}
 		else
 		{
-			NOX_ASSERT(false, nox::util::Format(U"不明な型:{0}", nox::util::GetTypeName<T>()));
+			[]() {static_assert(false, "invalid type"); }();
+			//NOX_ASSERT(false, nox::util::Format(U"不明な型:{0}", nox::util::GetTypeName<T>()));
 			return TypeKind::Invalid;
 		}
 	}

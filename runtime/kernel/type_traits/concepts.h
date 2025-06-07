@@ -61,10 +61,21 @@ namespace nox::concepts
 		};
 	}
 
+	/// @brief 代入可能
+	template<class T, class U>
+	concept Assignable = requires(T && a, U && b)
+	{
+		{ a = b };
+	};
+}
 
+namespace nox
+{
 	template<class T>
 	constexpr bool IsInvokableDefaultOperatorValue = nox::concepts::detail::HasDefaultOperator<T>;
 
+	/// @brief 添え字アクセスが可能
+	/// @tparam T 
 	template<class T>
 	constexpr bool HasIndexOperatorValue = nox::concepts::detail::HasIndexOperator<T>;
 

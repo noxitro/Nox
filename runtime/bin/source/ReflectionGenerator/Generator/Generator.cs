@@ -413,7 +413,8 @@ namespace ReflectionGenerator.Generator
             codeWriter.WriteNewLine();
             codeWriter.WriteIncludeStdafx();
             codeWriter.WriteLine($"#include\t\"{baseHeaderFilePath}\"");
-            codeWriter.WriteNewLine();
+            codeWriter.WriteLine($"#include\t\"../../../support_functions.h\"");
+			codeWriter.WriteNewLine();
 
             //  プリプロセッサ
             codeWriter.WriteLinePPIf(ConfigurationDefine);
@@ -587,198 +588,271 @@ namespace ReflectionGenerator.Generator
             //  属性が存在するか
             bool enabledAttribute = variableInfo.AttributeInfoList.Count > 0;
 
-            if(enabledAttribute == true)
+            string attrBuffer;
+			if (enabledAttribute == true)
             {
-                string attrBuffer = GenerateAttributeInfo(variableInfo.AttributeInfoList, variableInfo.Hash);
+                attrBuffer = GenerateAttributeInfo(variableInfo.AttributeInfoList, variableInfo.Hash);
                 buffer += attrBuffer;
                 buffer += "\n";
             }
+            else
+            {
+                attrBuffer = "nullptr";
+			}
 
             string attr_decl_name = $"attr_decl_{variableInfo.Hash}";
 
             buffer += "\n\n";
 
-            //  参照型の場合、オブジェクトポインタを取得できないため
-            if (variableInfo.TypeData.RawValue.CXXRefQualifier != ClangSharp.Interop.CXRefQualifierKind.CXRefQualifier_None)
+            //  メンバ変数
+            if(variableInfo.IsStatic == false)
             {
-                buffer += $"static constexpr auto {GetVariableInfoDeclName(variableInfo)} = nox::reflection::detail::CreateVariableInfo";
-            }
-            else
+                if(variableInfo.TypeData.RawValue.CXXRefQualifier == ClangSharp.Interop.CXRefQualifierKind.CXRefQualifier_None)
+				{
+					buffer += $"static constexpr auto {GetVariableInfoDeclName(variableInfo)} = nox::reflection::detail::CreateVariableInfoMember<&{variableInfo.FullName}>";
+				}
+				else
+				{
+					buffer += $"static constexpr auto {GetVariableInfoDeclName(variableInfo)} = nox::reflection::detail::CreateVariableInfoMemberRef";
+				}
+			}
+			//  グローバル変数
+			else
             {
-                buffer += $"static constexpr auto {GetVariableInfoDeclName(variableInfo)} = nox::reflection::detail::CreateVariableInfo<decltype(&{variableInfo.FullName})>";
-            }
+				if (variableInfo.TypeData.RawValue.CXXRefQualifier == ClangSharp.Interop.CXRefQualifierKind.CXRefQualifier_None)
+				{
+					buffer += $"static constexpr auto {GetVariableInfoDeclName(variableInfo)} = nox::reflection::detail::CreateVariableInfoGlobal<&{variableInfo.FullName}>";
+				}
+				else
+				{
+					buffer += $"static constexpr auto {GetVariableInfoDeclName(variableInfo)} = nox::reflection::detail::CreateVariableInfoGlobalRef";
+				}
+			}
             
             buffer += "(\n";
 
-            if (variableInfo.TypeData.RawValue.CXXRefQualifier != ClangSharp.Interop.CXRefQualifierKind.CXRefQualifier_None)
+            //  非参照型の場合
+            if (variableInfo.TypeData.RawValue.CXXRefQualifier == ClangSharp.Interop.CXRefQualifierKind.CXRefQualifier_None)
             {
-                buffer += $"nox::reflection::Typeof<decltype({variableInfo.FullName})>(),\n";
-                if (variableInfo.IsStatic == false)
-                {
-                    System.Diagnostics.Debug.Assert(parentUserDefinedCompoundTypeInfo != null);
-                    buffer += $"nox::reflection::Typeof<decltype({parentUserDefinedCompoundTypeInfo.FullName})>(),\n";
-                }
-            }
-
-            buffer += $"&{variableInfo.FullName},\n";
-
-            buffer += $"{variableInfo.Name},\n";
-            buffer += $"{variableInfo.FullName},\n";
-            buffer += $"{variableInfo.Namespace},\n";
-
-            buffer += $"{variableInfo.AccessLevel.GetRuntimeFqn()},\n";
-            buffer += $"{variableInfo.BitWith},\n";
-            buffer += $"{variableInfo.Offset},\n";
-
-            if (enabledAttribute == true)
-            {
-                buffer += "nullptr,\n";
+				//  オブジェクトポインタ
+			//	buffer += $"\t&{variableInfo.FullName},\t//\t object_pointer\n";
             }
             else
             {
-                buffer += $"{variableInfo.AttributeInfoList},\n";
+				buffer += $"\tnox::reflection::Typeof<decltype({variableInfo.FullName})>(),\t//\ttype\n";
+				if (variableInfo.IsStatic == false)
+				{
+					System.Diagnostics.Debug.Assert(parentUserDefinedCompoundTypeInfo != null);
+					buffer += $"\tnox::reflection::Typeof<decltype({parentUserDefinedCompoundTypeInfo.FullName})>(),\t//\towner type\n";
+				}
+			}
+                
+            //  各種名前
+            buffer += $"\tU\"{variableInfo.Name}\",\t//\tname\n";
+            buffer += $"\tU\"{variableInfo.FullName}\",\t//\tfullname\n";
+            buffer += $"\tU\"{variableInfo.Namespace}\",\t//\tnamespace\n";
+
+            buffer += $"\t{variableInfo.AccessLevel.GetRuntimeFqn()},\t//\taccess level\n";
+            buffer += $"\t{variableInfo.BitWith.ToString()},\t//\tbit with\n";
+            buffer += $"\t{variableInfo.Offset.ToString()},\t//\toffset\n";
+
+            //  属性
+            if (enabledAttribute == true)
+            {
+                buffer += "\tnullptr,\t//\tattribute\n";
+            }
+            else
+            {
+				buffer += $"\t{attrBuffer},\t//\tattribute\n";
             }
 
 
-            buffer += $"{variableInfo.AttributeInfoList.Count.ToString()},\n";
+            buffer += $"\t{variableInfo.AttributeInfoList.Count.ToString()},\t//\tattribute length\n";
 
             //  変数属性
             {
                 List<string> variableAttributeFlagsStrList = [];
                 if (variableInfo.IsConstexpr == true)
                 {
-                    variableAttributeFlagsStrList.Add("nox::reflection::VariableAttributeFlags::Constexpr");
+                    variableAttributeFlagsStrList.Add("nox::reflection::VariableAttributeFlag::Constexpr");
                 }
                 if (variableInfo.IsStatic == true)
                 {
-                    variableAttributeFlagsStrList.Add("nox::reflection::VariableAttributeFlags::Static");
+                    variableAttributeFlagsStrList.Add("nox::reflection::VariableAttributeFlag::Static");
                 }
 
                 if (variableAttributeFlagsStrList.Count > 0)
                 {
-                    buffer += "nox::util::BitOr(\n";
-                    int lastIndex = variableAttributeFlagsStrList.Count - 1;
-
-                    for (int i = 0; i < variableAttributeFlagsStrList.Count; ++i)
+                    if (variableAttributeFlagsStrList.Count == 1)
                     {
-                        buffer += variableAttributeFlagsStrList[i];
-                        if (i != lastIndex)
-                        {
-                            buffer += ",\n";
-                        }
-                        else
-                        {
-                            buffer += "\n";
-                        }
+                        buffer += $"\t{variableAttributeFlagsStrList[0]},\t//\tvariable attribute flags\n";
                     }
-                    buffer += "),\n";
+                    else
+                    {
+                        buffer += "\tnox::util::BitOr(\n";
+                        int lastIndex = variableAttributeFlagsStrList.Count - 1;
+
+                        for (int i = 0; i < variableAttributeFlagsStrList.Count; ++i)
+                        {
+                            buffer += variableAttributeFlagsStrList[i];
+                            if (i != lastIndex)
+                            {
+                                buffer += ",\n";
+                            }
+                            else
+                            {
+                                buffer += "\n";
+                            }
+                        }
+                        buffer += "),\n";
+                    }
                 }
                 else
                 {
-                    buffer += "nox::reflection::VariableAttributeFlags::None,\n";
+                    buffer += "nox::reflection::VariableAttributeFlag::None,\t//\tvariable attribute flags\n";
                 }
             }
 
-            buffer += $"{variableInfo.IsConstexpr.ToString()},\n";
-            buffer += $"false,\n";
-
 
             string variableTypeStr = $"decltype({variableInfo.FullName})";
-            string variableRemoveConstType = $"std::remove_const_t<decltype({variableInfo.FullName})>";
+            string variableRemoveConstTypeStr = $"std::remove_const_t<decltype({variableInfo.FullName})>";
 
+            //  getter, setterの記述
+            //  reflection_generatedプロジェクトのsupport_functionsにあるマクロを使用する
+            if (variableInfo.IsStatic == false)
+            {
+                //  メンバ
+
+                //string instanceTypeStr = $"\tnox::MemberObjectPointerClassType<decltype({variableInfo.FullName})>";
+
+                // setter
+                buffer += $"\tNOX_VARIABLE_INFO_SETTER_MEMBER({variableInfo.FullName}),\t//\tsetter\n";
+                // getter
+                buffer += $"\tNOX_VARIABLE_INFO_GETTER_MEMBER({variableInfo.FullName}),\t//\tgetter\n";
+                // getter address
+                buffer += $"\tNOX_VARIABLE_INFO_GETTER_ADDRESS_MEMBER({variableInfo.FullName}),\t//\tgetter address\n";
+
+                // setter subscripts
+                buffer += $"\tNOX_VARIABLE_INFO_SETTER_SUBSCRIPT_MEMBER({variableInfo.FullName}),\t//\tsetter subscript\n";
+
+                // getter subscripts
+                buffer += $"\tNOX_VARIABLE_INFO_GETTER_SUBSCRIPT_MEMBER({variableInfo.FullName}),\t//\tgetter subscript\n";
+                // getter address subscripts
+                buffer += $"\tNOX_VARIABLE_INFO_GETTER_ADDRESS_SUBSCRIPT_MEMBER({variableInfo.FullName})\t//\tgetter address subscript\n";
+            }
+            else
+            {
+				//  グローバル
+
+				// setter
+				buffer += $"\tNOX_VARIABLE_INFO_SETTER_GLOBAL({variableInfo.FullName}),\t//\tsetter\n";
+				// getter
+				buffer += $"\tNOX_VARIABLE_INFO_GETTER_GLOBAL({variableInfo.FullName}),\t//\tgetter\n";
+				// getter address
+				buffer += $"\tNOX_VARIABLE_INFO_GETTER_ADDRESS_GLOBAL({variableInfo.FullName}),\t//\tgetter address\n";
+
+				// setter subscripts
+				buffer += $"\tNOX_VARIABLE_INFO_SETTER_SUBSCRIPT_GLOBAL({variableInfo.FullName}),\t//\tsetter subscript\n";
+
+				// getter subscripts
+				buffer += $"\tNOX_VARIABLE_INFO_GETTER_SUBSCRIPT_GLOBAL({variableInfo.FullName}),\t//\tgetter subscript\n";
+				// getter address subscripts
+				buffer += $"\tNOX_VARIABLE_INFO_GETTER_ADDRESS_SUBSCRIPT_GLOBAL({variableInfo.FullName})\t//\tgetter address subscript\n";
+			}
+#if false
             //  非メンバ
             if (variableInfo.IsStatic == true)
             {
-                //  setter
-                if (variableInfo.TypeData.RawValue.IsConstQualified == true)
+				//  setter
+				if (variableInfo.IsConstexpr == true || variableInfo.TypeData.RawValue.IsConstQualified == true)
                 {
-                    buffer += $"nullptr,\n";
+                    buffer += $"\tnullptr,\t//\tsetter\n";
                 }
                 else
                 {
-                    buffer += "+[](nox::not_null<void*> instance, nox::not_null<const void*> value){";
+                    buffer += "\t+[](nox::not_null<const void*> value){";
                     buffer += $"{variableInfo.Name} = *static_cast<{variableTypeStr}*>(value.get());";
-                    buffer += "},\n";
+                    buffer += "},\t//\tsetter\n";
                 }
 
                 //  getter
 
                 //  参照型の場合
-                    buffer += "+[](nox::not_null<void*> out, nox::not_null<const void*> instance){";
-                    buffer += $"*static_cast<variableRemoveConstType*>(out.get()) = {variableInfo.Name}";
-                buffer += "},\n";
+                buffer += "\t+[](nox::not_null<void*> out){";
+                buffer += $"*static_cast<{variableRemoveConstTypeStr}*>(out.get()) = {variableInfo.FullName};";
+                buffer += "},\t//\tgetter\n";
                
 
                 //  getter address
                 //  配列の場合は
                 if (variableInfo.TypeData.RawValue.IsArray() == true)
                 {
-                    buffer += "nullptr,\n";
+                    buffer += "\tnullptr,\t//\tgetter address\n";
                 }
                 else
                 {
-                    buffer += "+[](nox::not_null<void*> out, nox::not_null<void*> instance){";
+                    buffer += "\t+[](nox::not_null<void*> out){";
                     if (variableInfo.TypeData.RawValue.IsConstQualified == true)
                     {
-                        buffer += $"*static_cast<std::decay_t<decltype({variableInfo.FullName})>**>(out.get()) = &{variableInfo.FullName}";
+                        buffer += $"*static_cast<std::decay_t<decltype(&{variableInfo.FullName})>*>(out.get()) = &{variableInfo.FullName};";
                     }
                     else
                     {
-                        buffer += $"*static_cast<std::decay_t<decltype({variableInfo.FullName})>**>(out.get()) = &{variableInfo.FullName}";
+                        buffer += $"*static_cast<std::decay_t<decltype(&{variableInfo.FullName})>*>(out.get()) = &{variableInfo.FullName};";
                     }
-                    buffer += "},\n";
+                    buffer += "},\t//\tgetter address\n";
                 }
 
                 //  setter subscripts
-                buffer += "nullptr,\n";
+                buffer += "\tnullptr,\t//\tsetter subscripts\n";
 
                 //  getter subscripts
-                buffer += "nullptr,\n";
+                buffer += "\tnullptr\t//\tgetter subscripts\n";
             }
             //  メンバ
             else
             {
                 
-                string instanceType = $"nox::nox::FieldClassType<decltype({variableInfo.FullName})>";
+                string instanceType = $"\tnox::MemberObjectPointerClassType<decltype({variableInfo.FullName})>";
 
                 //  setter
                 if (variableInfo.TypeData.RawValue.IsConstQualified == true)
                 {
-                    buffer += $"nullptr,\n";
+                    buffer += $"\tnullptr,\t//\tsetter\n";
                 }
                 else
                 {
-                    buffer += "+[](nox::not_null<void*> instance, nox::not_null<const void*> value){";
+                    buffer += "\t+[](nox::not_null<void*> instance, nox::not_null<const void*> value){";
                     buffer += $"static_cast<{instanceType}*>(const_cast<void*>(instance.get()))->{variableInfo.Name} = *static_cast<{variableTypeStr}*>(value.get());";
-                    buffer += "},\n";
+                    buffer += "},\t//\tsetter\n";
                 }
 
                 //  getter
-                buffer += "+[](nox::not_null<void*> out, nox::not_null<const void*> instance){";
-                buffer += $"*static_cast<variableRemoveConstType*>(out.get()) = static_cast<const {instanceType}*>(instance.get())->{variableInfo.Name}";
-                buffer += "},\n";
+                buffer += "\t+[](nox::not_null<void*> out, nox::not_null<const void*> instance){";
+                buffer += $"*static_cast<{variableRemoveConstTypeStr}*>(out.get()) = static_cast<const {instanceType}*>(instance.get())->{variableInfo.Name}";
+                buffer += "},\t//\tgetter\n";
 
                 //  getter address
                 buffer += "+[](nox::not_null<void*> out, nox::not_null<void*> instance){";
                 if (variableInfo.TypeData.RawValue.IsConstQualified == true)
                 {
-                    buffer += $"*static_cast<std::decay_t<decltype({variableInfo.FullName})>**>(out.get()) = &static_cast<const {instanceType}*>(instance.get())->{variableInfo.FullName}";
+                    buffer += $"*static_cast<std::decay_t<decltype(&{variableInfo.FullName})>*>(out.get()) = &static_cast<const {instanceType}*>(instance.get())->{variableInfo.FullName}";
                 }
                 else
                 {
-                    buffer += $"*static_cast<std::decay_t<decltype({variableInfo.FullName})>**>(out.get()) = &static_cast<{instanceType}*>(instance.get())->{variableInfo.FullName}";
+                    buffer += $"*static_cast<std::decay_t<decltype(&{variableInfo.FullName})>*>(out.get()) = &static_cast<{instanceType}*>(instance.get())->{variableInfo.FullName}";
                 }
-                buffer += "},\n";
+                buffer += "},\t//\tgetter address\n";
 
                 //  setter subscripts
-                buffer += "nullptr,\n";
+                buffer += "nullptr,\t//\tsetter subscripts\n";
 
                 //  getter subscripts
-                buffer += "nullptr,\n";
+                buffer += "nullptr\t//\tgetter subscripts\n";
 
             }
-
-            buffer += ");";
+#endif
+			buffer += ");";
 
             return buffer;
         }
@@ -801,8 +875,8 @@ namespace ReflectionGenerator.Generator
 
 			return buffer;
         }
-		#endregion
+#endregion
 
-		#endregion
+#endregion
 	}
 }

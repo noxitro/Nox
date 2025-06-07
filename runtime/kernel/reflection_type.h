@@ -113,8 +113,6 @@ namespace nox::reflection
 	class Type
 	{
 	protected:
-		
-
 		[[nodiscard]] inline constexpr explicit Type(const nox::reflection::detail::TypeDesc& desc)noexcept:
 			id_(desc.id),
 			kind_(desc.kind),
@@ -146,6 +144,10 @@ namespace nox::reflection
 			owner_type_(desc.owner_type)
 		{
 		}
+
+		inline constexpr Type(const Type&)noexcept = delete;
+		inline constexpr Type(Type&&)noexcept = delete;
+		inline constexpr Type& operator=(const Type&)noexcept = delete;
 
 	public:
 		/// @brief toへ変換可能かどうか
@@ -539,7 +541,15 @@ namespace nox::reflection
 			{
 				if constexpr (std::is_constructible_v<T> == true)
 				{
-					return new std::remove_cvref_t<T>();
+					if constexpr (std::is_array_v<T> == true)
+					{
+						//TODO:	配列には未対応
+						return nullptr;
+					}
+					else 
+					{
+						return new std::remove_cvref_t<T>();
+					}
 				}
 				else
 				{
@@ -551,7 +561,14 @@ namespace nox::reflection
 			{
 				if constexpr (std::is_constructible_v<T> == true)
 				{
-					return static_cast<void*>(std::construct_at(static_cast<std::remove_cvref_t<T>*>(buffer)));
+					if constexpr (std::is_array_v<T> == true)
+					{
+						return nullptr; //TODO: 配列には未対応
+					}
+					else 
+					{
+						return static_cast<void*>(std::construct_at(static_cast<std::remove_cvref_t<T>*>(buffer)));
+					}
 				}
 				else
 				{

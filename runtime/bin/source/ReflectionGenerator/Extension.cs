@@ -14,7 +14,12 @@ namespace ReflectionGenerator
             return $"{nameof(AccessLevel)}::{accessLevel.ToString()}";
         }
 
-        public static string ToLowerString(this bool val) => val ? "true" : "false";
+		/// <summary>
+		/// c++用のbool文字列に変換
+		/// </summary>
+		/// <param name="val"></param>
+		/// <returns></returns>
+		public static string ToLowerString(this bool val) => val ? "true" : "false";
 
         #endregion
     }
