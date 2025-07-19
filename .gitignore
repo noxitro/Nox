@@ -88,3 +88,6 @@
 /runtime/bin/source/CustomTask/obj/Debug/netstandard2.0
 /runtime/bin/source/CustomTask/obj/Release/netstandard2.0
 /runtime/bin - コピー
+/bin/source/ReflectionGenerator/obj
+/bin/source/ReflectionGenerator/Sample/x64
+/bin/source/ReflectionGenerator/x64
