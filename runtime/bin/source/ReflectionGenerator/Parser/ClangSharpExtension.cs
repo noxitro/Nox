@@ -384,11 +384,11 @@ namespace ReflectionGenerator.Parser
         /// </summary>
         /// <param name="cursor"></param>
         /// <returns></returns>
-        public static string GetCanonicalTypeFullName(this ClangSharp.Interop.CXType type)
+        public static string GetCanonicalTypeFullName(this in ClangSharp.Interop.CXType type)
         {
             ClangSharp.Interop.CXCursor cursor = type.CanonicalType.Declaration;
 
-            if (cursor.Kind == CXCursorKind.CXCursor_NoDeclFound)
+			if (cursor.Kind == CXCursorKind.CXCursor_NoDeclFound)
             {
                 return type.CanonicalType.Spelling.CString;
             }
@@ -398,21 +398,17 @@ namespace ReflectionGenerator.Parser
 
             string str = type.CanonicalType.Spelling.CString;
 
-            if (namespaceStr != string.Empty)
-            {
-                str = str.Replace($"{namespaceStr}::", string.Empty);
-            }
-
             if (lexicalParentStr != string.Empty)
             {
                 str = $"{lexicalParentStr}::{str}";
             }
 
-            if (namespaceStr != string.Empty)
-            {
-                str = $"{namespaceStr}::{str}";
-            }
+            //if (namespaceStr != string.Empty)
+            //{
+            //    str = $"{namespaceStr}::{str}";
+            //}
 
+           // Trace.InfoLine(null, $"FQN:\t{str}");
             return str;
         }
 
@@ -652,7 +648,7 @@ namespace ReflectionGenerator.Parser
 		}
 
 
-		public static List<(string Name, System.Type Type, object Value, string comment)> GetMemberInfoList(this object instance, bool checkCHildren = true)
+		public static List<(string Name, System.Type Type, object Value, string comment)> GetMemberInfoList(this object instance, bool checkCHildren = true, int maxDepth = 5, int depth=0)
         {
             CXCursor? cursor = instance as CXCursor?;
 
@@ -662,10 +658,13 @@ namespace ReflectionGenerator.Parser
             {
                 if (checkCHildren)
                 {
-                    var children = cursor.Value.GetChildren();
-                    for (int i = 0; i < children.Count; ++i)
+                    if (depth < maxDepth)
                     {
-                        list.Add(($"Children[{i}]{children[i].Kind.ToString()}:{children[i].Spelling.CString}", children[i].GetType(), GetMemberInfoList(children[i]), string.Empty));
+                        var children = cursor.Value.GetChildren();
+                        for (int i = 0; i < children.Count; ++i)
+                        {
+                            list.Add(($"Children[{i}]{children[i].Kind.ToString()}:{children[i].Spelling.CString}", children[i].GetType(), GetMemberInfoList(children[i], checkCHildren, maxDepth, ++depth), string.Empty));
+                        }
                     }
                 }
             }

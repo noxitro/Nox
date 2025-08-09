@@ -40,7 +40,9 @@ namespace ReflectionGenerator.Info
             /// </summary>
             public required string Name { get; init; }
 
-            public required Integer64 Integer64 { get; init; }
+            public required bool IsUnsigned { get; init; }
+
+			public required Integer64 Integer64 { get; init; }
 
             /// <summary>
             /// 属性リスト
@@ -49,15 +51,24 @@ namespace ReflectionGenerator.Info
             #endregion
         }
 
+        #region 公開メソッド
+        public EnumInfo(ReadOnlySpan<EnumVariable> variableList)
+        {
+            _VariableList = variableList.ToArray();
+		}
+        #endregion
 
         #region 公開プロパティ
         /// <summary>
         /// 要素リスト
         /// 定義順
         /// </summary>
-        public required IReadOnlyList<EnumVariable> VariableList { get; init; }
-        #endregion
-    }
+        public readonly EnumVariable[] _VariableList;
+
+
+		public ReadOnlySpan<EnumVariable> VariableList => _VariableList;
+		#endregion
+	}
 
     /// <summary>
     /// Enum

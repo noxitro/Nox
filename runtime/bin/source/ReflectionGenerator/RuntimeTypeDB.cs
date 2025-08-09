@@ -46,6 +46,10 @@ namespace ReflectionGenerator
 		[MessagePack.MessagePackObject(true)]
 		public struct RuntimeTypeData
 		{
+			/// <summary>
+			/// 型ID
+			/// </summary>
+			public int TypeId { get; set; }
 			public string Name { get; set; }
 			public string FullName { get; set; }
 			public uint Size { get; set; }
@@ -66,7 +70,7 @@ namespace ReflectionGenerator
 		{
 			public string FullName { get; set; }
 			public string Namespace { get; set; }
-			public RuntimeTypeData TypeData { get; set; }
+			public uint TypeId { get; set; }
 			public RuntimeClassData[] ClassList { get; set; }
 			public RuntimeVariableData[] VariableList { get; set; }
 			public RuntimeVariableData[] FunctionList { get; set; }
@@ -77,6 +81,7 @@ namespace ReflectionGenerator
 		public struct RuntimeVariableData
 		{
 			public string Name { get; set; }
+			public uint TypeId { get; set; }
 			public RuntimeTypeData TypeData { get; set; }
 		}
 
@@ -84,7 +89,7 @@ namespace ReflectionGenerator
 		public struct RuntimeFunctionArgumentData
 		{
 			public string Name { get; set; }
-			public RuntimeTypeData TypeData { get; set; }
+			public uint TypeId { get; set; }
 			public RuntimeAttributeData[] AttributeList { get; set; }
 
 			public bool HasDefaultValue { get; set; }
@@ -94,10 +99,10 @@ namespace ReflectionGenerator
 		public struct RuntimeFunctionData
 		{
 			public string Name { get; set; }
-			public RuntimeTypeData TypeData { get; set; }
+			public uint TypeId { get; set; }
 			public RuntimeFunctionArgumentData[] ArgumentList { get; set; }
 
-			public RuntimeAttributeData Attribute { get; set; }
+			public RuntimeAttributeData[] AttributeList { get; set; }
 		}
 
 		[MessagePack.MessagePackObject(true)]
@@ -107,6 +112,8 @@ namespace ReflectionGenerator
 			public long Value { get; set; }
 			public ulong UnsignedValue { get; set; }
 			public string Name { get; set; }
+
+			public RuntimeAttributeData[] AttributeList { get; set; }
 		}
 
 		[MessagePack.MessagePackObject(true)]
@@ -117,7 +124,9 @@ namespace ReflectionGenerator
 			public string Namespace { get; set; }
 
 			public RuntimeEnumeratorData[] EnumeratorList { get; set; }
-			public RuntimeTypeData UnderlyingType { get; set; }
+			public uint UnderlyingTypeId { get; set; }
+
+			public RuntimeAttributeData[] AttributeList { get; set; }
 		}
 
 		[System.Serializable]
@@ -138,6 +147,12 @@ namespace ReflectionGenerator
 
 		public struct TypeDB
 		{
+			public RuntimeNamespaceDeclData[] GlobalDeclList { get; set; }
+			public RuntimeClassData[] ClassList { get; set; }
+			public RuntimeVariableData[] VariableList { get; set; }
+			public RuntimeFunctionData[] FunctionList { get; set; }
+			public RuntimeEnumData[] EnumList { get; set; }
+			public RuntimeTypeData[] TypeList { get; set; }
 		}
 		#endregion
 
@@ -170,7 +185,7 @@ namespace ReflectionGenerator
 		/// <param name="platform">プラットフォーム</param>
 		/// <param name="configuration">構成</param>
 		/// <returns></returns>
-		public static RuntimeNamespaceDeclData Desirialize(string platform, string configuration)
+		public static RuntimeNamespaceDeclData Deserialize(string platform, string configuration)
 		{
 			string path = GetPath(platform, configuration);
 			using (System.IO.FileStream fs = new System.IO.FileStream(path, System.IO.FileMode.Open))

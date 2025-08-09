@@ -2,9 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ReflectionGenerator
 {
@@ -33,6 +30,58 @@ namespace ReflectionGenerator
         }
 
         public static readonly int MAX_THREAD_ID = getNumMaxThreads();
+
+        public static void ParallelFor(int fromInclusive, int toExclusive, Action<int> func, int maxDegreeOfParallelism = 1)
+        {
+            if (maxDegreeOfParallelism <= 1)
+            {
+				//  シングルスレッドで実行する場合は、Parallel.Forを使用せずに通常のforループを使用します。
+				//  例外が発生する可能性があるため、Parallel.Forを使用しないようにします。
+				for (int i = fromInclusive; i < toExclusive; i++)
+                {
+                    func(i);
+				}
+			}
+            else
+            {
+                System.Threading.Tasks.Parallel.For(fromInclusive, toExclusive, new System.Threading.Tasks.ParallelOptions()
+                {
+                    MaxDegreeOfParallelism = maxDegreeOfParallelism
+                }, func);
+            }
+        }
+
+        public static void ParallelForEach<T>(IEnumerable<T> source, Action<T> func, int maxDegreeOfParallelism = 1)
+        {
+            System.Threading.Tasks.Parallel.ForEach(source, new System.Threading.Tasks.ParallelOptions()
+            {
+                MaxDegreeOfParallelism = maxDegreeOfParallelism
+            }, func);
+		}
+
+		public static uint Crc32(string str)
+        {
+			const uint CRC32POLY2 = 0xEDB88320U;/* 左右逆転 */
+            const byte STRING_TYPE_BIT_COUNT = 16;// 文字列のビット数
+
+			uint r = 0xFFFFFFFFU;
+			for (int i = 0, length = str.Length; i < length ; i++)
+			{
+				r ^= str[i];
+				for (int j = 0; j < STRING_TYPE_BIT_COUNT; j++)
+				{
+					if ((r & 1) != 0)
+					{
+						r = (r >> 1) ^ CRC32POLY2;
+					}
+					else
+					{
+						r >>= 1;
+					}
+				}
+			}
+			return r ^ 0xFFFFFFFFU;
+		}
         #endregion
     }
 }

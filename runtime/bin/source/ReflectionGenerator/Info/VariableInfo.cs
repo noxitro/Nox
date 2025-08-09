@@ -11,12 +11,22 @@ namespace ReflectionGenerator.Info
     /// </summary>
     public class VariableInfo : BaseInfo
     {
-        /// <summary>
-        /// 変数の型
-        /// </summary>
-        public required TypeData TypeData { get; init; }
+		/// <summary>
+		/// 変数の型
+		/// </summary>
+		private readonly TypeData _TypeData;
 
-        public required Info.ClassInfo? VariableTypeInfo { get; init; }
+		/// <summary>
+		/// 変数の型
+		/// </summary>
+		public required TypeData InitTypeData
+		{
+			init => _TypeData = value;
+		}
+
+        public ref readonly TypeData GetTypeData() => ref _TypeData;
+
+		public required Info.ClassInfo? VariableTypeInfo { get; init; }
 
         public override TypeInfoKind TypeInfoKind => TypeInfoKind.Variable;
         public required string Name { get; init; }

@@ -9,9 +9,9 @@ namespace ReflectionGenerator
     public static class Extension
     {
         #region 公開メソッド
-        public static string ToCppString(this AccessLevel accessLevel)
+        public static ReadOnlySpan<char> ToCppString(this AccessLevel accessLevel)
         {
-            return $"{nameof(AccessLevel)}::{accessLevel.ToString()}";
+            return $"nox::reflection::AccessLevel::{accessLevel.ToString()}";
         }
 
 		/// <summary>

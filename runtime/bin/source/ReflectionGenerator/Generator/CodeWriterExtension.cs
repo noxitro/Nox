@@ -30,12 +30,27 @@ namespace ReflectionGenerator.Generator
             codeWriter.WriteLine("//\twritten from ReflectionGenerator");
         }
 
-        public static void WriteLinePPIf(this CodeWriter codeWriter, string s)
+        public static void WriteLinePPIf(this CodeWriter codeWriter, ReadOnlySpan<char> s)
         {
             codeWriter.WriteLine($"#if\t{s}");
         }
 
-        public static void WriteLinePPEndIf(this CodeWriter codeWriter, string s)
+        public static void WriteLinePPIfNot(this CodeWriter codeWriter, ReadOnlySpan<char> s)
+        {
+            codeWriter.WriteLine($"#if\t!{s}");
+		}
+
+        public static void WriteLinePPIfDefine(this CodeWriter codeWriter, ReadOnlySpan<char> s)
+        {
+            codeWriter.WriteLine($"#if\tdefined({s})");
+		}
+
+        public static void WriteLinePPIfNotDefine(this CodeWriter codeWriter, ReadOnlySpan<char> s)
+        {
+            codeWriter.WriteLine($"#if\t!defined({s})");
+        }
+
+		public static void WriteLinePPEndIf(this CodeWriter codeWriter, ReadOnlySpan<char> s)
         {
             codeWriter.WriteLine($"#endif\t//\t{s}");
         }
@@ -47,7 +62,7 @@ namespace ReflectionGenerator.Generator
 
         public static void WriteLineCopyRight(this CodeWriter codeWriter)
         {
-            codeWriter.WriteLine("//\tCopyright (C) 2024 NOX ENGINE All Rights Rserved.");
+            codeWriter.WriteLine("//\tCopyright (C) 2025 NOX ENGINE All rights reserved.");
         }
 
         public static void WriteIncludeStdafx(this CodeWriter codeWriter)
@@ -55,14 +70,14 @@ namespace ReflectionGenerator.Generator
             codeWriter.WriteLine("#include\t\"stdafx.h\"");
         }
 
-        public static void WriteLineInclude(this CodeWriter codeWriter, string includePath)
+        public static void WriteLineInclude(this CodeWriter codeWriter, ReadOnlySpan<char> includePath)
         {
             codeWriter.WriteLine($"#include\t\"{includePath}\"");
         }
 
-        public static void WriteNamespace(this CodeWriter codeWriter, string namespaceName)
+        public static void WriteNamespace(this CodeWriter codeWriter, ReadOnlySpan<char> namespaceName)
         {
-            codeWriter.WriteLine("namespace {0}", namespaceName);
+            codeWriter.WriteLine($"namespace {namespaceName}");
         }
 
         public static void WriteNamespaceNitroReflectionGen(this CodeWriter codeWriter) => codeWriter.WriteNamespace("nitro::reflection::gen");
@@ -85,19 +100,19 @@ namespace ReflectionGenerator.Generator
             codeWriter.WriteLine("struct TypeInfoRefTypedefHolder<{0}, {1}> : TypeInfoRefHolderBase", name, typedefId.ToString(), recordName);
         }
 
-        public static void WriteLineRegion(this CodeWriter codeWriter, string name)
+        public static void WriteLineRegion(this CodeWriter codeWriter, ReadOnlySpan<char> name)
         {
-			codeWriter.WriteLine($"#pragma region {name}");
+			codeWriter.WriteLineIgnoreNest($"#pragma region {name}");
 		}
 
 		public static void WriteLineEndRegion(this CodeWriter codeWriter)
 		{
-			codeWriter.WriteLine("#pragma endregion");
+			codeWriter.WriteLineIgnoreNest("#pragma endregion");
 		}
 
-		public static void WriteLineEndRegion(this CodeWriter codeWriter, string comment)
+		public static void WriteLineEndRegion(this CodeWriter codeWriter, ReadOnlySpan<char> comment)
 		{
-			codeWriter.WriteLine($"#pragma endregion //\t{comment}");
+			codeWriter.WriteLineIgnoreNest($"#pragma endregion\t//\t{comment}");
 		}
 
 		/// <summary>

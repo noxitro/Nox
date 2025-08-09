@@ -91,3 +91,5 @@
 /bin/source/ReflectionGenerator/obj
 /bin/source/ReflectionGenerator/Sample/x64
 /bin/source/ReflectionGenerator/x64
+/bin/source/ReflectionGenerator/Sample/SampleCpp/x64/Debug/SampleCpp.tlog
+/bin/source/ReflectionGenerator/Sample/SampleCpp/x64/Debug

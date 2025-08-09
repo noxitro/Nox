@@ -14,8 +14,6 @@ namespace ReflectionGenerator
             return DetermineBuildOrder(projectPaths);
         }
 
-
-
         public static List<string> ExtractHeaderFiles(string projectFilePath)
         {
             List<string> headerFiles = new List<string>();
@@ -60,7 +58,7 @@ namespace ReflectionGenerator
                 return [];
             }
 
-            string[] lines = File.ReadAllLines(solutionFilePath);
+            IReadOnlyList<string> lines = File.ReadAllLines(solutionFilePath);
             System.Text.RegularExpressions.Regex projectRegex =
                 new System.Text.RegularExpressions.Regex(@"Project\(""\{.*\}""\) = "".*"", ""(.*\.vcxproj)""");
 

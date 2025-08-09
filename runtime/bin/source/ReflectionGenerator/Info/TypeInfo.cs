@@ -6,14 +6,25 @@ using System.Threading.Tasks;
 
 namespace ReflectionGenerator.Info
 {
-    public class Holder
-    {
-        public List<Info.VariableInfo> VariableInfoList { get; } = new List<Info.VariableInfo>();
-    }
-
     public struct TypeData
     {
-        public required ClangSharp.Interop.CXType RawValue { get; init; }
+        private readonly ClangSharp.Interop.CXType _RawValue;
+
+
+		public required ClangSharp.Interop.CXType RawValue
+        {
+            readonly get => _RawValue;
+            init
+            {
+                _RawValue = value;
+
+                IsConst = _RawValue.IsConstQualified;
+				RefQualifierKind = _RawValue.CXXRefQualifier;
+			}
+		}
+
+        public bool IsConst { readonly get; init; }
+		public ClangSharp.Interop.CXRefQualifierKind RefQualifierKind { readonly get; init; }
     }
 
     /// <summary>
@@ -72,6 +83,14 @@ namespace ReflectionGenerator.Info
         #endregion
     }
 
+	/// <summary>
+	/// 組み込み型情報
+	/// </summary>
+	public sealed class PrimitiveTypeInfo : TypeInfo
+    {
+
+    }
+
     /// <summary>
     /// クラス union情報
     /// </summary>
@@ -84,11 +103,24 @@ namespace ReflectionGenerator.Info
 
         public TypeInfo? ParentTypeInfo { get; set; } = null;
 
+        public List<TypeInfo> BaseTypeInfoList { get; }  = new List<TypeInfo>();
+
         /// <summary>
         /// Privateメンバもリフレクション対象
         /// </summary>
         public bool IsPrivateReflection { get; set; } = false;
-    }
+
+		/// <summary>
+		/// Attributeクラスか
+		/// NOTE:   nox::reflection::IAttributeを継承しているかどうか
+		/// </summary>
+		public required bool IsAttribute { get; init; } 
+
+        /// <summary>
+        /// nox::reflection::ReflectionObject継承クラスか
+        /// </summary>
+        public bool IsReflectionObject { get; set; }
+	}
 
     public class TemplateClassUnionInfo : ClassInfo
     {

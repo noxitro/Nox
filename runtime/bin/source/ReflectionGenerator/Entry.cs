@@ -230,6 +230,21 @@ namespace ReflectionGenerator
 				return 1;
 			}
 
+			//	
+			Dictionary<string, IReadOnlyList<string>> includeHeaderWithArtifactDict = new();
+			{
+				//  ソリューションファイルからプロジェクトファイルパスリストを取得する
+				IReadOnlyList<string> projectFilePathList = ExtractVCXProjectFile.ExtractBuildOrderProjectPathList(data.SolutionPath);
+
+				foreach (string projectFilePath in projectFilePathList)
+				{
+					IReadOnlyList<string> headerFiles = ExtractVCXProjectFile.ExtractHeaderFiles(projectFilePath);
+
+					string projectFileName = System.IO.Path.GetFileNameWithoutExtension(projectFilePath);
+					includeHeaderWithArtifactDict.Add(projectFileName, headerFiles);
+				}
+			}
+
 			Parser.CppParser parser = new Parser.CppParser();
 			if(parser.Parse(new Parser.CppParser.SetupDesc()
 			{ 
@@ -247,6 +262,7 @@ namespace ReflectionGenerator
 				ProjectFilePath = data.ProjectPath,
 				AdditionalOptions = data.AdditionalOptions,
 				UseRtti = data.UseRtti,
+				IncludeHeaderListWithArtifact = includeHeaderWithArtifactDict
 
 			}) == false)
 			{
@@ -267,6 +283,7 @@ namespace ReflectionGenerator
 					Build = true,
 					ReBuild = false,
 					ArtifactName = Define.UNKNOWN_MODULE_NAME,
+					IncludeHeaderList = []
 				});
 			}
 
@@ -303,8 +320,6 @@ namespace ReflectionGenerator
 				foreach (string engineTimeStampFileName in System.IO.Directory.GetFiles(engineBuildTimeStampFileDirectory))
 				{
 					bool build = false;
-
-
 					//                    allModuleNameList.Add(engineTimeStampFileName);
 
 					string fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(engineTimeStampFileName);
@@ -342,11 +357,22 @@ namespace ReflectionGenerator
 						//                        targetModuleNameList.Add(fileNameWithoutExtension);
 					}
 
+					//IReadOnlyList<string> includeHeaderList;
+					//if (includeHeaderWithArtifactDict.TryGetValue(fileNameWithoutExtension, out IReadOnlyList<string>? tmpList) == true && tmpList != null)
+					//{
+					//	includeHeaderList = tmpList;
+					//}
+					//else
+					//{
+					//	includeHeaderList = [];
+					//}
+
 					moduleInfoList.Add(new Generator.Generator.ARTIFACT_INFO()
 					{
 						Build = build,
 						ReBuild = false,
 						ArtifactName = fileNameWithoutExtension,
+						IncludeHeaderList = includeHeaderWithArtifactDict[fileNameWithoutExtension]
 					}
 					);
 
@@ -379,7 +405,9 @@ namespace ReflectionGenerator
 			//			generator.Setup(parser, argsData.OutputDirectory, argsData.BuildSpec, argsData.Platform, argsData.BuildSpecDefine, argsData.PlatformDefine);
 			//			generator.Generate();
 
-			Console.ReadLine();
+			//	ツールで参照するためのバイナリファイルを出力
+
+
 
 			return 0;
 		}

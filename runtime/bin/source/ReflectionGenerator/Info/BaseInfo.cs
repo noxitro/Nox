@@ -52,41 +52,48 @@ namespace ReflectionGenerator.Info
 
         public abstract TypeInfoKind TypeInfoKind { get; }
 
-        public required IReadOnlyList<AttributeInfo> AttributeInfoList { get; init; }
-        public AttributeInfo[] AttributeInfoArray { get;  }
+        private readonly IReadOnlyList<AttributeInfo> _AttributeInfoList;
+
+        public required IReadOnlyList<AttributeInfo> AttributeInfoList
+        {
+            get => _AttributeInfoList;
+            init
+            {
+                _AttributeInfoList = value;
+
+				foreach (var attr in AttributeInfoList)
+				{
+					if (attr.AttrKind != ClangSharp.Interop.CX_AttrKind.CX_AttrKind_Annotate)
+					{
+						continue;
+					}
+
+					EngineAnnotateAttribute? engineAnnotateAttribute = attr as EngineAnnotateAttribute;
+					if (engineAnnotateAttribute == null)
+					{
+						continue;
+					}
+
+					if (engineAnnotateAttribute.Value.Contains("nox::reflection::attr::Reflection"))
+					{
+						IsReflection = true;
+					}
+                    else if(engineAnnotateAttribute.Value.Contains("nox::reflection::attr::IgnoreReflection"))
+                    {
+                        IsIgnoreReflection = true;
+                    }
+				}
+			}
+		}
 
         /// <summary>
         /// エンジン側のリフレクション対象か
         /// TODO:   遅いならリファクタ
         /// </summary>
-        public bool IsReflection
-        {
-            get
-            {
-                foreach (var attr in AttributeInfoList)
-                {
-                    if (attr.AttrKind != ClangSharp.Interop.CX_AttrKind.CX_AttrKind_Annotate)
-                    {
-                        continue;
-                    }
+        public bool IsReflection { get; init; }
 
-                    EngineAnnotateAttribute? engineAnnotateAttribute = attr as EngineAnnotateAttribute;
-                    if (engineAnnotateAttribute == null)
-                    {
-                        continue;
-                    }
-                    if (engineAnnotateAttribute.Value == "nox::reflection::attr::IgnoreReflection")
-                    {
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-        }
-
-        public string Hash { get; }
-
+		public bool IsIgnoreReflection { get; init; }
+		public string Hash { get; }
 
         private static int IndexCounter = 0;
 
