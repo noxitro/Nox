@@ -98,15 +98,19 @@ namespace nox
 			inline constexpr ~FunctionPointerIdHolder()noexcept = delete;
 		};
 
+		struct InvalidFunctionPointerId : FunctionPointerId
+		{
+		public:
+			inline constexpr InvalidFunctionPointerId()noexcept = default;
+		};
+		constexpr InvalidFunctionPointerId kInvalidFunctionPointerId{};
+
 		template<auto>
 		struct ObjectPointerIdImpl : ObjectPointerId
 		{
 		};
 
 		template<auto ObjectPointer>
-			requires(
-		std::is_pointer_v<decltype(ObjectPointer)>
-			)
 		struct ObjectPointerIdHolder
 		{
 		private:
@@ -136,6 +140,11 @@ namespace nox
 		return nox::detail::NontypeIdHolder<Value>::value;
 	}
 
+	[[nodiscard]] inline constexpr const nox::FunctionPointerId& GetInvalidFunctionPointerId()noexcept
+	{
+		return nox::detail::kInvalidFunctionPointerId;
+	}
+
 	template<auto Func>	requires(
 		std::is_function_v<std::remove_pointer_t<decltype(Func)>> ||
 		std::is_member_function_pointer_v<decltype(Func)>)
@@ -150,9 +159,7 @@ namespace nox
 		return nox::detail::ObjectPointerIdInvalidValue;
 	}
 
-	template<auto ObjectPointer> requires(
-		std::is_pointer_v<decltype(ObjectPointer)>
-		)
+	template<auto ObjectPointer> 
 	[[nodiscard]] inline constexpr const nox::ObjectPointerId& GetObjectPointerId()noexcept
 	{
 		return nox::detail::ObjectPointerIdHolder<ObjectPointer>::value;

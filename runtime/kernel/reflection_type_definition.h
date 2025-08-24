@@ -5,6 +5,7 @@
 #pragma once
 
 #include	"advanced_type.h"
+#include	"reflection_attribute.h"
 
 namespace nox::reflection
 {

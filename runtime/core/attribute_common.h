@@ -70,8 +70,9 @@ namespace nox
 				inline	constexpr explicit Description(const std::u32string_view description)noexcept :
 					description_(description) {}
 
-			private:
+			//private:
 				const std::u32string_view description_;
+				std::u32string_view description2_;
 			};
 		}
 	}

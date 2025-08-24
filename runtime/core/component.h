@@ -24,6 +24,9 @@ namespace nox
 
 		inline	void	SetComponentChain(Component*const chain)noexcept { chain_ = chain; }
 		inline	Component* GetComponentChain()const noexcept { return chain_; }
+
+		/// @brief 有効かどうか
+		inline bool IsValid()const noexcept { return owner_ != nullptr; }
 	protected:
 		inline	Component()noexcept :
 			owner_(nullptr),
@@ -34,6 +37,4 @@ namespace nox
 		class GameObject* owner_;
 		Component* chain_;
 	};
-
-
 }

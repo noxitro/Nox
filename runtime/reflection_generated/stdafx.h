@@ -6,3 +6,6 @@
 
 #include	"../kernel/kernel.h"
 #include	"../reflection/reflection.h"
+#include	"../reflection/reflection_generated_register.h"
+#include	"../core/core.h"
+#include	"support_functions.h"

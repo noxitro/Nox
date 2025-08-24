@@ -1,11 +1,12 @@
 ﻿///	@file	function.h
 ///	@brief	function
 #pragma once
-#include	"type.h"
-#include	"reflection_object.h"
 
 namespace nox::reflection
 {
+	//	前方宣言
+	class ClassInfo;
+	class ReflectionObject;
 
 	/// @brief 関数の1引数情報
 	class FunctionArgumentInfo
@@ -267,16 +268,16 @@ namespace nox::reflection
 		}
 #pragma endregion
 
-		template<class T> requires(std::is_void_v<std::remove_pointer_t<T>>)
+		template<class T>// requires(std::is_void_v<std::remove_pointer_t<T>>)
 		static	inline	constexpr	T	ToInvokeParam(const InvokeArgument& argument)noexcept
 		{
 			if constexpr (std::is_const_v<std::remove_pointer_t<std::remove_reference_t<T>>> == true)
 			{
-				return argument.const_data_ptr;
+				return (T)(argument.const_data_ptr);
 			}
 			else
 			{
-				return argument.data_ptr;
+				return (T)(argument.data_ptr);
 			}
 		}
 
@@ -475,7 +476,6 @@ namespace nox::reflection
 			AccessLevel access_level,
 			const std::reference_wrapper<const ReflectionObject>* attribute_list,
 			const std::uint8_t attribute_list_length,
-			const nox::FunctionPointerId& function_id,
 			const std::reference_wrapper<const FunctionArgumentInfo>* function_param_list,
 			const std::uint8_t function_param_list_length,
 			const FunctionAttributeFlag extraAttributeFlags,
@@ -483,12 +483,12 @@ namespace nox::reflection
 		)noexcept
 		{
 			//	c++で解決できないものは、ここで解決する
-			const FunctionAttributeFlag method_attribute_flags = nox::reflection::GetFunctionAttributeFlags<RawFunction>() | extraAttributeFlags;
-		
+			const FunctionAttributeFlag method_attribute_flags = nox::util::BitOr(nox::reflection::GetFunctionAttributeFlags<RawFunction>(), extraAttributeFlags);
+			const nox::FunctionPointerId& function_id = nox::GetInvalidFunctionPointerId();
+
 			if constexpr (std::is_member_function_pointer_v<RawFunction> == true)
 			{
 				return nox::reflection::detail::FunctionInfoImpl<_Functions...>(
-					function_pointer,
 					name,
 					fullname,
 					_namespace,
@@ -507,7 +507,6 @@ namespace nox::reflection
 			else
 			{
 				return nox::reflection::detail::FunctionInfoImpl< _Functions...>(
-					function_pointer,
 					name,
 					fullname,
 					_namespace,

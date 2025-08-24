@@ -27,4 +27,7 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="ipc\README.md" />
+  </ItemGroup>
 </Project>

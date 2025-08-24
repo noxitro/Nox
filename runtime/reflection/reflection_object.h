@@ -53,6 +53,7 @@ namespace nox::reflection
 		NOX_ATTR_DECLARATION(::nox::reflection::attr::IgnoreReflection())	\
 		inline consteval void StaticAssertNoxDeclareReflectionObject()noexcept{ static_assert(std::is_base_of_v<::nox::reflection::ReflectionObject, ClassType>, "is not base of ReflectionObject"); }\
 	public:\
+		NOX_ATTR_DECLARATION(::nox::reflection::attr::IgnoreReflection())	\
 		inline constexpr const ::nox::reflection::Type& GetUnderlyingType()const noexcept override { return ::nox::reflection::Typeof<ClassType>(); }\
 		NOX_DECLARE_REFLECTION(ClassType)
 //	end define

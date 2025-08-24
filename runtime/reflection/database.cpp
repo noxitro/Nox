@@ -10,7 +10,10 @@
 #include	"variable_info.h"
 #include	"function_info.h"
 
-namespace
+#include	"reflection_generated_register.h"
+#include	"log_id.h"
+
+namespace nox::reflection
 {
 	/// @brief クラスデータ
 	struct ClassNode
@@ -26,7 +29,6 @@ namespace
 			prev_ptr(nullptr),
 			child_ptr(nullptr)
 		{
-
 		}
 
 		inline constexpr ClassNode(const ClassNode& rhs)noexcept :
@@ -142,12 +144,22 @@ namespace
 
 void nox::reflection::Initialize()
 {
-	artifact_map_.clear();
-	all_type_id_map_.clear();
+#if !NOX_MASTER
+	nox::StopWatch stopWatch;
+	stopWatch.Start();
+#endif // NOX_MASTER
+
+	nox::reflection::InitializeGen();
+
+#if !NOX_MASTER
+	NOX_INFO_LINE(nox::log_id::Reflection, U"reflection initialize:{0}msec", stopWatch.ElapsedMilliseconds());
+#endif
 }
 
 void nox::reflection::Finalize()
 {
+	nox::reflection::FinalizeGen();
+	constexpr auto n = nox::util::Crc32<char16_t>(u"abc");
 	artifact_map_ = {};
 	all_type_id_map_ = {};
 }
@@ -282,8 +294,10 @@ bool nox::reflection::IsBaseOf(const nox::reflection::ClassInfo& base, const nox
 	return false;
 }
 
-void	nox::reflection::Register(const std::uint32_t artifact_name_hash, const nox::reflection::ClassInfo& data)
+void	nox::reflection::Register(const nox::reflection::ClassInfo& data)
 {
+	const std::uint32_t artifact_name_hash = nox::util::Crc32(data.GetFullName());
+
 	const nox::reflection::Type& type = data.GetUnderlyingType();
 
 	Artifact& artifact = GetCreateArtifact(artifact_name_hash);
@@ -323,8 +337,9 @@ void	nox::reflection::Register(const std::uint32_t artifact_name_hash, const nox
 	}
 }
 
-void nox::reflection::Unregister(const std::uint32_t artifact_name_hash, const nox::reflection::ClassInfo& data)
+void nox::reflection::Unregister(const nox::reflection::ClassInfo& data)
 {
+	const std::uint32_t artifact_name_hash = nox::util::Crc32(data.GetFullName());
 }
 
 //
@@ -385,8 +400,9 @@ void nox::reflection::Unregister(const std::uint32_t artifact_name_hash, const n
 //	}
 //}
 
-void nox::reflection::Register(const std::uint32_t artifact_name_hash, const nox::reflection::EnumInfo& data)
+void nox::reflection::Register(const nox::reflection::EnumInfo& data)
 {
+	const std::uint32_t artifact_name_hash = nox::util::Crc32(data.GetFullName());
 	const nox::reflection::Type& type = data.GetUnderlyingType();
 
 	Artifact& artifact = GetCreateArtifact(artifact_name_hash);
@@ -396,27 +412,31 @@ void nox::reflection::Register(const std::uint32_t artifact_name_hash, const nox
 	artifact.chunk_with_name_hash.enum_map.emplace(nox::util::Crc32(data.GetFullName()), data);
 }
 
-void nox::reflection::Unregister(const std::uint32_t artifact_name_hash, const nox::reflection::EnumInfo& data)
+void nox::reflection::Unregister(const nox::reflection::EnumInfo& data)
 {
+	const std::uint32_t artifact_name_hash = nox::util::Crc32(data.GetFullName());
 }
 
-void nox::reflection::Register(const std::uint32_t artifact_name_hash, const nox::reflection::VariableInfo& data)
+void nox::reflection::Register(const nox::reflection::VariableInfo& data)
 {
+	NOX_INFO_LINE(nox::log_id::Reflection, U"Register VariableInfo:{0}", data.GetFullName());
+
+	const std::uint32_t artifact_name_hash = nox::util::Crc32(data.GetFullName());
 	Artifact& artifact = GetCreateArtifact(artifact_name_hash);
 	++artifact.counter_;
 
 	artifact.chunk_with_type_id.variable_map.emplace(&data.GetObjectPointerId(), data);
 	artifact.chunk_with_name_hash.variable_map.emplace(nox::util::Crc32(data.GetFullName()), data);
-
 }
 
-void nox::reflection::Unregister(const std::uint32_t artifact_name_hash, const nox::reflection::VariableInfo& data)
+void nox::reflection::Unregister(const nox::reflection::VariableInfo& data)
 {
-
+	const std::uint32_t artifact_name_hash = nox::util::Crc32(data.GetFullName());
 }
 
-void nox::reflection::Register(const std::uint32_t artifact_name_hash, const nox::reflection::FunctionInfo& data)
+void nox::reflection::Register(const nox::reflection::FunctionInfo& data)
 {
+	const std::uint32_t artifact_name_hash = nox::util::Crc32(data.GetFullName());
 	Artifact& artifact = GetCreateArtifact(artifact_name_hash);
 	++artifact.counter_;
 
@@ -424,7 +444,7 @@ void nox::reflection::Register(const std::uint32_t artifact_name_hash, const nox
 	artifact.chunk_with_name_hash.function_map.emplace(nox::util::Crc32(data.GetFullName()), data);
 }
 
-void nox::reflection::Unregister(const std::uint32_t artifact_name_hash, const nox::reflection::FunctionInfo& data)
+void nox::reflection::Unregister(const nox::reflection::FunctionInfo& data)
 {
-
+	const std::uint32_t artifact_name_hash = nox::util::Crc32(data.GetFullName());
 }

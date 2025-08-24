@@ -3,13 +3,13 @@
 ///	@file	type.h
 ///	@brief	type
 #pragma once
-
 #include	<string_view>
 #include	<span>
 #include	"basic_type.h"
 #include	"reflection_type_utility.h"
 #include	"type_traits/function_signature.h"
 #include	"type_id.h"
+
 namespace nox::reflection
 {
 	//	前方宣言
@@ -23,14 +23,13 @@ namespace nox::reflection
 	[[nodiscard]]
 	inline constexpr  bool operator==(const nox::reflection::Type& a, const nox::reflection::Type& b)noexcept;
 
-
 	namespace detail
 	{
 		/// @brief		型情報構築情報
 		/// @details	コンストラクタのパラメータが多すぎるため、構築情報を分離
 		struct TypeDesc
 		{
-			std::uint64_t id;
+			std::uint32_t id;
 			TypeKind kind;
 			TypeQualifierFlag attribute_flags;
 			std::uint32_t size;
@@ -363,7 +362,7 @@ namespace nox::reflection
 		const std::uint16_t array_rank_;
 
 		/// @brief 型ID
-		const std::uint64_t id_;
+		const std::uint32_t id_;
 
 		const std::uint32_t array_extent_;
 
@@ -471,7 +470,7 @@ namespace nox::reflection
 			{
 			}
 		};
-
+		
 		template<class T>
 		class CompileTimeTypeImpl : public Type
 		{

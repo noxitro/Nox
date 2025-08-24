@@ -1,8 +1,6 @@
 ﻿///	@file	class_info.h
 ///	@brief	クラス情報
 #pragma once
-#include	"type.h"
-#include	"reflection_object.h"
 
 namespace nox::reflection
 {
@@ -10,13 +8,25 @@ namespace nox::reflection
 	class FunctionInfo;
 	class VariableInfo;
 	class EnumInfo;
+	class ReflectionObject;
+	//struct IAttribute;
+
+	class TypeInfo
+	{
+
+	};
+
+	class PrimitiveTypeInfo : public TypeInfo
+	{
+
+	};
 
 	/// @brief ユーザー定義の複合型情報
 	/// @details クラス、構造体、共用体が該当します
-	class ClassInfo
+	class ClassInfo : public TypeInfo
 	{
 	public:
-		inline consteval explicit ClassInfo(
+		inline constexpr explicit ClassInfo(
 			const nox::reflection::Type& type,
 			ReflectionStringView name,
 			ReflectionStringView fullname,
@@ -185,10 +195,10 @@ namespace nox::reflection
 
 	namespace detail
 	{
-		class UserDefinedCompoundTypeInfoInvalid : public nox::reflection::ClassInfo
+		class InvalidTypeInfo : public nox::reflection::ClassInfo
 		{
 		public:
-			inline constexpr UserDefinedCompoundTypeInfoInvalid()noexcept :
+			inline constexpr InvalidTypeInfo()noexcept :
 				nox::reflection::ClassInfo(
 					nox::reflection::GetInvalidType(),
 					U"",
@@ -212,7 +222,7 @@ namespace nox::reflection
 			{}
 		};
 
-//		constexpr UserDefinedCompoundTypeInfoInvalid InvalidUserDefinedCompoundTypeInfo{};
+//		constexpr InvalidTypeInfo InvalidUserDefinedCompoundTypeInfo{};
 
 	/*	template<class T> requires(std::is_class_v<T> || std::is_union_v<T>)
 		inline constexpr nox::reflection::ClassInfo CreateUserDefinedCompoundTypeInfo(

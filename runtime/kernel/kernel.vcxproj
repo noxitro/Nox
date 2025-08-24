@@ -30,7 +30,15 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="guid.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="interface_class.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="io\stream.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -52,6 +60,10 @@
     <ClInclude Include="format_float.h" />
     <ClInclude Include="function.h" />
     <ClInclude Include="intrusive_ptr.h" />
+    <ClInclude Include="json.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="kernel.h" />
     <ClInclude Include="kernel_reflection.h">
       <SubType>
@@ -144,6 +156,7 @@
     <ClInclude Include="preprocessor\repeat.h" />
     <ClInclude Include="preprocessor\util.h" />
     <ClInclude Include="preprocessor\va_length.h" />
+    <ClInclude Include="reflection_attribute.h" />
     <ClInclude Include="singleton.h" />
     <ClInclude Include="stack.h">
       <SubType>
@@ -155,6 +168,10 @@
     </ClInclude>
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="nox_string.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="stop_watch.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -207,7 +224,15 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="guid.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="interface_class.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="io\stream.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -229,6 +254,10 @@
     <ClCompile Include="format_float.cpp" />
     <ClCompile Include="function.cpp" />
     <ClCompile Include="intrusive_ptr.cpp" />
+    <ClCompile Include="json.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="kernel.cpp">
       <SubType>
       </SubType>
@@ -318,6 +347,7 @@
     <ClCompile Include="preprocessor\repeat.cpp" />
     <ClCompile Include="preprocessor\util.cpp" />
     <ClCompile Include="preprocessor\va_length.cpp" />
+    <ClCompile Include="reflection_attribute.cpp" />
     <ClCompile Include="singleton.cpp" />
     <ClCompile Include="stack.cpp">
       <SubType>
@@ -331,6 +361,10 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="nox_string.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="stop_watch.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -380,17 +414,17 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>ClangCL</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>ClangCL</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>ClangCL</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <EnableUnitySupport>false</EnableUnitySupport>
   </PropertyGroup>

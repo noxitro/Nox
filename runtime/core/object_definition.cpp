@@ -5,3 +5,4 @@
 #include	"stdafx.h"
 #include	"object_definition.h"
 
+constexpr auto nnn = 121 / 12;

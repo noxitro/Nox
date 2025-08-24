@@ -7,10 +7,17 @@
 
 namespace nox
 {
+	class GameObject;
+
 	class Scene : public nox::ManagedObject
 	{
 		NOX_DECLARE_OBJECT(nox::Scene, nox::ManagedObject);
+	public:
+		void	setResource(class SceneResource& resource);
+
 	private:
 
+	private:
+		nox::Vector<std::reference_wrapper<GameObject>> object_list_;
 	};
 }

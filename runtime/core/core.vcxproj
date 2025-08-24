@@ -67,6 +67,22 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="resource_manager.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="scene_manager.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="scene_resource.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="scene_view.h">
       <SubType>
       </SubType>
@@ -169,6 +185,22 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="resource.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="resource_manager.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="scene_manager.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="scene_resource.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="scene_view.cpp">
       <SubType>
       </SubType>
@@ -226,9 +258,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\core2\core2.vcxproj" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\kernel\kernel.vcxproj">
       <Project>{ce18e5d8-faa4-48b4-a1d2-dab85fc1acbb}</Project>
     </ProjectReference>
@@ -246,17 +275,17 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>ClangCL</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>ClangCL</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>ClangCL</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <EnableUnitySupport>false</EnableUnitySupport>
   </PropertyGroup>

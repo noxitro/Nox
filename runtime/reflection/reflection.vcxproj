@@ -35,6 +35,14 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="log_id.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="reflection_generated_register.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="variable_info.h">
       <SubType>
       </SubType>
@@ -90,6 +98,14 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="function_info.cpp" />
+    <ClCompile Include="log_id.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="reflection_generated_register.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="variable_info.cpp">
       <SubType>
       </SubType>
@@ -133,17 +149,17 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>ClangCL</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>ClangCL</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>ClangCL</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <EnableUnitySupport>false</EnableUnitySupport>
   </PropertyGroup>

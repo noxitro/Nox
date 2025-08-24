@@ -1,13 +1,12 @@
 ﻿///	@file	field_info.h
 ///	@brief	field_info
 #pragma once
-#include	"type.h"
-#include	"reflection_object.h"
 
 namespace nox::reflection
 {
-	class ClassInfo;
 	//	前方宣言
+	class ClassInfo;
+	class ReflectionObject;
 
 	/// @brief フィールド情報
 	class VariableInfo
@@ -15,10 +14,10 @@ namespace nox::reflection
 	public:
 #pragma region 変数アクセスの型定義
 
-		using SetterMemberFunc = void(*)(nox::not_null<void*> instance, nox::not_null<void*> value);
-		using GetterMemberFunc = void(*)(not_null<void*> out, not_null<const void*> instance);
+		using SetterMemberFunc = void(*)(nox::not_null<void*> instance, const void* const value);
+		using GetterMemberFunc = void(*)(not_null<void*> out, not_null<void*> instance);
 		using SetterSubscriptOperatorMemberFunc = bool(*)(not_null<void*> instance, const void* const valuePtr, const std::uint32_t index);
-		using GetterSubscriptOperatorMemberFunc = bool(*)(not_null<void*> out, not_null<const void*> instance, const std::uint32_t index);
+		using GetterSubscriptOperatorMemberFunc = bool(*)(not_null<void*> out, not_null<void*> instance, const std::uint32_t index);
 	//	using SetterSubscriptOperatorFunc = bool(*)(not_null<const void*> instance, nox::not_null<void*> value, nox::not_null<const void*> args);
 	//	using GetterSubscriptOperatorFunc = bool(*)(not_null<void*> out, not_null<const void*> instance, nox::not_null<const void*> args);
 
@@ -54,7 +53,7 @@ namespace nox::reflection
 			const ReflectionStringView fullname,
 			const ReflectionStringView _namespace,
 			nox::reflection::AccessLevel access_level,
-			const std::uint32_t bit_width,
+			const std::int32_t bit_width,
 			const std::uint32_t field_offset,
 			const std::reference_wrapper<const class nox::reflection::ReflectionObject>* attribute_list,
 			const std::uint8_t	attribute_list_length,
@@ -112,7 +111,7 @@ namespace nox::reflection
 			ReflectionStringView fullname,
 			ReflectionStringView _namespace,
 			nox::reflection::AccessLevel access_level,
-			const std::uint32_t bit_width,
+			const std::int32_t bit_width,
 			const std::uint32_t field_offset,
 			const std::reference_wrapper<const class nox::reflection::ReflectionObject>* attribute_list,
 			std::uint8_t	attribute_list_length,
@@ -180,6 +179,29 @@ namespace nox::reflection
 		inline	constexpr	bool	IsReadOnly()const noexcept { return underlying_type_.IsConstQualified(); }
 #pragma endregion
 
+#pragma region 変数の設定
+		template<class TInstanceType, class TValueType>
+		inline constexpr bool TrySetValue(TInstanceType& instance, TValueType&& value)const
+		{
+			return TrySetValueMemberImpl(
+				static_cast<void*>(&instance),
+				nox::reflection::Typeof<TInstanceType>(),
+				static_cast<const void*>(&value),
+				nox::reflection::Typeof<TValueType>()
+			);
+		}
+
+		template<class TValueType>
+		inline constexpr bool TrySetValue(TValueType&& value)const
+		{
+			return TrySetValueGlobalImpl(
+				static_cast<const void*>(&value),
+				nox::reflection::Typeof<TValueType>()
+			);
+		}
+#pragma endregion
+
+
 #pragma region 変数の取得
 		/// @brief メンバ変数を取得
 		/// @tparam _ResultType 
@@ -188,13 +210,13 @@ namespace nox::reflection
 		/// @param owner_instance 
 		/// @return 
 		template<class _ResultType, concepts::ClassOrUnion _InstanceType>
-		inline	constexpr	bool	TryGetValue(_ResultType& out_value, const _InstanceType& owner_instance)const
+		inline	constexpr	bool	TryGetValue(_ResultType& out_value, _InstanceType& owner_instance)const
 		{
 			return TryGetValueMemberImpl(
 				static_cast<void*>(&out_value),
-				Typeof<_ResultType>(),
-				static_cast<const void*>(&owner_instance),
-				Typeof<_InstanceType>()
+				nox::reflection::Typeof<_ResultType>(),
+				static_cast<void*>(&owner_instance),
+				nox::reflection::Typeof<_InstanceType>()
 			);
 		}
 
@@ -210,7 +232,7 @@ namespace nox::reflection
 			return TryGetValueAddressMemberImpl(
 				static_cast<void*>(&out_value),
 				Typeof<std::remove_pointer_t<_ResultType>>(),
-				static_cast<const void*>(&owner_instance),
+				static_cast<void*>(&owner_instance),
 				Typeof<_InstanceType>()
 			);
 		}
@@ -237,7 +259,7 @@ namespace nox::reflection
 		template<concepts::Pointer _ResultType>
 		inline	constexpr	bool	TryGetValueAddress(_ResultType& out_value)const
 		{
-			if (getter_global_func_ == nullptr)
+			if (getter_address_global_func_ == nullptr)
 			{
 				return false;
 			}
@@ -247,13 +269,13 @@ namespace nox::reflection
 				return false;
 			}
 
-			constexpr const nox::reflection::Type& out_value_type = nox::reflection::Typeof<_ResultType>();
+			constexpr const nox::reflection::Type& out_value_type = nox::reflection::Typeof<std::remove_pointer_t<_ResultType>>();
 			if (underlying_type_.IsConvertible(out_value_type) == false)
 			{
 				return false;
 			}
 
-			std::invoke(getter_global_func_, out_value_type);
+			std::invoke(getter_address_global_func_, static_cast<void*>(&out_value));
 
 			return true;
 		}
@@ -305,10 +327,60 @@ namespace nox::reflection
 		}
 #pragma endregion
 
+#pragma region 変数設定の内部実装
+		inline constexpr bool TrySetValueMemberImpl(nox::not_null<void*> instance, const Type& owner_class_type, const void* value, const Type& value_type)const
+		{
+			if (setter_member_func_ == nullptr)
+			{
+				return false;
+			}
+
+			if (IsStatic() == true)
+			{
+				return false;
+			}
+
+			if (owner_class_type != containing_type_)
+			{
+				return false;
+			}
+
+			if (underlying_type_.IsConvertible(value_type) == false)
+			{
+				return false;
+			}
+
+			std::invoke(setter_member_func_, instance, value);
+
+			return true;
+		}
+
+		inline constexpr bool TrySetValueGlobalImpl(const void* value, const Type& value_type)const
+		{
+			if (setter_global_func_ == nullptr)
+			{
+				return false;
+			}
+
+			if (IsStatic() == false)
+			{
+				return false;
+			}
+
+			if (value_type.IsConvertible(underlying_type_) == false)
+			{
+				return false;
+			}
+
+			std::invoke(setter_global_func_, value);
+			return true;
+		}
+#pragma endregion
+
 
 #pragma region 変数の取得の内部実装
 
-		inline	constexpr	bool	TryGetValueMemberImpl(not_null<void*> out_ptr, const Type& out_type, not_null<const void*> ownerInstancePtr, const Type& owner_class_type)const
+		inline	constexpr	bool	TryGetValueMemberImpl(not_null<void*> out_ptr, const Type& out_type, not_null<void*> instance, const Type& owner_class_type)const
 		{
 			if (getter_member_func_ == nullptr)
 			{
@@ -320,12 +392,12 @@ namespace nox::reflection
 				return false;
 			}
 
-			std::invoke(getter_member_func_, out_ptr, ownerInstancePtr);
+			std::invoke(getter_member_func_, out_ptr, instance);
 
 			return true;
 		}
 
-		inline	constexpr	bool	TryGetValueAddressMemberImpl(nox::not_null<void*> out_ptr,  const Type& out_pointee_type, not_null<const void*> ownerInstancePtr, const Type& owner_class_type)const
+		inline	constexpr	bool	TryGetValueAddressMemberImpl(nox::not_null<void*> out_ptr,  const Type& out_pointee_type, not_null<void*> instance, const Type& owner_class_type)const
 		{
 			if (getter_address_member_func_ == nullptr)
 			{
@@ -337,7 +409,7 @@ namespace nox::reflection
 				return false;
 			}
 
-			std::invoke(getter_address_member_func_, out_ptr, ownerInstancePtr);
+			std::invoke(getter_address_member_func_, out_ptr, instance);
 
 			return true;
 		}
@@ -369,7 +441,7 @@ namespace nox::reflection
 		const nox::reflection::AccessLevel access_level_;
 
 		const std::uint32_t field_offset_;
-		const std::uint32_t bit_width_;
+		const std::int32_t bit_width_;
 
 		const nox::ObjectPointerId& object_id_;
 
@@ -451,7 +523,7 @@ namespace nox::reflection
 				const ReflectionStringView _namespace,
 				nox::reflection::AccessLevel access_level,
 				const nox::ObjectPointerId& object_id,
-				const std::uint32_t bit_width,
+				const std::int32_t bit_width,
 				const std::uint32_t field_offset,
 				const std::reference_wrapper<const class nox::reflection::ReflectionObject>* attribute_list,
 				const std::uint8_t	attribute_list_length,
@@ -495,7 +567,7 @@ namespace nox::reflection
 				ReflectionStringView _namespace,
 				nox::reflection::AccessLevel access_level,
 				const nox::ObjectPointerId& object_id,
-				const std::uint32_t bit_width,
+				const std::int32_t bit_width,
 				const std::uint32_t field_offset,
 				const std::reference_wrapper<const class nox::reflection::ReflectionObject>* attribute_list,
 				std::uint8_t	attribute_list_length,
@@ -546,8 +618,7 @@ namespace nox::reflection
 				const ReflectionStringView fullname,
 				const ReflectionStringView _namespace,
 				nox::reflection::AccessLevel access_level,
-				const nox::ObjectPointerId& object_id,
-				const std::uint32_t bit_width,
+				const std::int32_t bit_width,
 				const std::uint32_t field_offset,
 				const std::reference_wrapper<const class nox::reflection::ReflectionObject>* attribute_list,
 				const std::uint8_t	attribute_list_length,
@@ -570,7 +641,7 @@ namespace nox::reflection
 					field_offset,
 					attribute_list,
 					attribute_list_length,
-					object_id,
+					nox::GetInvalidObjectPointerId(),
 					field_attribute_flgas,
 					type,
 					owner_class_type,
@@ -589,7 +660,7 @@ namespace nox::reflection
 				ReflectionStringView _namespace,
 				nox::reflection::AccessLevel access_level,
 				const nox::ObjectPointerId& object_id,
-				const std::uint32_t bit_width,
+				const std::int32_t bit_width,
 				const std::uint32_t field_offset,
 				const std::reference_wrapper<const class nox::reflection::ReflectionObject>* attribute_list,
 				std::uint8_t	attribute_list_length,
@@ -635,8 +706,7 @@ namespace nox::reflection
 			ReflectionStringView fullname,
 			ReflectionStringView _namespace,
 			nox::reflection::AccessLevel access_level,
-			const nox::ObjectPointerId& object_id,
-			const std::uint32_t bit_width,
+			const std::int32_t bit_width,
 			const std::uint32_t field_offset,
 			const std::reference_wrapper<const class nox::reflection::ReflectionObject>* attribute_list,
 			const std::uint8_t	attribute_list_length,
@@ -653,7 +723,6 @@ namespace nox::reflection
 				fullname,
 				_namespace,
 				access_level,
-				object_id,
 				bit_width,
 				field_offset,
 				attribute_list,
@@ -696,7 +765,7 @@ namespace nox::reflection
 			const ReflectionStringView _namespace,
 			const nox::reflection::AccessLevel access_level,
 			const nox::ObjectPointerId& object_id,
-			const std::uint32_t bit_width,
+			const std::int32_t bit_width,
 			const std::uint32_t field_offset,
 			const std::reference_wrapper<const class nox::reflection::ReflectionObject>* attribute_list,
 			const std::uint8_t	attribute_list_length,
@@ -755,7 +824,7 @@ namespace nox::reflection
 			ReflectionStringView fullname,
 			ReflectionStringView _namespace,
 			nox::reflection::AccessLevel access_level,
-			const std::uint32_t bit_width,
+			const std::int32_t bit_width,
 			const std::uint32_t field_offset,
 			const std::reference_wrapper<const class nox::reflection::ReflectionObject>* attribute_list,
 			std::uint8_t	attribute_list_length,
@@ -804,7 +873,7 @@ namespace nox::reflection
 		/// @param field_offset 
 		/// @param attribute_list 
 		/// @param attribute_list_length 
-		/// @param additinal_flags 
+		/// @param additional_attribute_flags 
 		/// @param setter_global_func 
 		/// @param getter_global_func 
 		/// @param getter_address_global_func 
@@ -818,11 +887,11 @@ namespace nox::reflection
 			const ReflectionStringView fullname,
 			const ReflectionStringView _namespace,
 			const nox::reflection::AccessLevel access_level,
-			const std::uint32_t bit_width,
-			const std::uint32_t field_offset,
-			const std::reference_wrapper<const class nox::reflection::ReflectionObject>* attribute_list,
-			const std::uint8_t	attribute_list_length,
-			const VariableAttributeFlag additinal_flags,
+			const std::int32_t bit_width = -1,
+			const std::uint32_t field_offset = -1,
+			const std::reference_wrapper<const class nox::reflection::ReflectionObject>* attribute_list = nullptr,
+			const std::uint8_t	attribute_list_length = 0,
+			const VariableAttributeFlag additional_attribute_flags = VariableAttributeFlag::None,
 			const VariableInfo::SetterGlobalFunc setter_global_func = nullptr,
 			const VariableInfo::GetterGlobalFunc getter_global_func = nullptr,
 			const VariableInfo::GetterGlobalFunc getter_address_global_func = nullptr,
@@ -831,7 +900,7 @@ namespace nox::reflection
 			const VariableInfo::GetterSubscriptOperatorGlobalFunc getter_array_address_global_func = nullptr)noexcept
 		{
 			const nox::reflection::VariableAttributeFlag field_attribute_flgas =
-				nox::util::BitOr(nox::reflection::GetFieldAttributeFlags<decltype(object_pointer)>(), additinal_flags);
+				nox::util::BitOr(nox::reflection::GetFieldAttributeFlags<decltype(object_pointer)>(), additional_attribute_flags);
 
 			return nox::reflection::detail::VariableInfoImpl<decltype(object_pointer)>(
 				object_pointer,

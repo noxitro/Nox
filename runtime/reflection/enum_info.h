@@ -1,11 +1,13 @@
 ﻿///	@file	enum_info.h
 ///	@brief	enum_info
 #pragma once
-#include	"type.h"
-#include	"reflection_object.h"
 
 namespace nox::reflection
 {
+	//	前方宣言
+	class ClassInfo;
+	class ReflectionObject;
+
 	/// @brief Enum値情報
 	class EnumeratorInfo
 	{

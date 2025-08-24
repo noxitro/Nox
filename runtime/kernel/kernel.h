@@ -48,3 +48,7 @@
 #include	"iterator.h"
 #include	"reflection_type.h"
 #include	"stack.h"
+#include	"memory/memory_profile.h"
+#include	"stop_watch.h"
+#include	"log_id.h"
+#include	"guid.h"

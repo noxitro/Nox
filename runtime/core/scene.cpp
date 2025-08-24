@@ -4,3 +4,11 @@
 ///	@brief	scene
 #include	"stdafx.h"
 #include	"scene.h"
+
+#include	"scene_resource.h"
+
+
+void	nox::Scene::setResource(SceneResource& resource)
+{
+	//
+}

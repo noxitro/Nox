@@ -3,7 +3,6 @@
 ///	@file	database.h
 ///	@brief	型情報データベース
 #pragma once
-#include	"type.h"
 
 namespace nox::reflection
 {
@@ -100,19 +99,6 @@ namespace nox::reflection
 	
 #pragma endregion
 
-#pragma region 登録処理
-	void Register(const std::uint32_t artifact_name_hash, const nox::reflection::ClassInfo& data);
-	void Unregister(const std::uint32_t artifact_name_hash, const nox::reflection::ClassInfo& data);
 
-	void Register(const std::uint32_t artifact_name_hash, const nox::reflection::EnumInfo& data);
-	void Unregister(const std::uint32_t artifact_name_hash, const nox::reflection::EnumInfo& data);
-
-	void Register(const std::uint32_t artifact_name_hash, const nox::reflection::VariableInfo& data);
-	void Unregister(const std::uint32_t artifact_name_hash, const nox::reflection::VariableInfo& data);
-
-	void Register(const std::uint32_t artifact_name_hash, const nox::reflection::FunctionInfo& data);
-	void Unregister(const std::uint32_t artifact_name_hash, const nox::reflection::FunctionInfo& data);
-
-#pragma endregion
 
 }

@@ -35,6 +35,8 @@ namespace nox::concepts
 	template<class T>
 	concept Array = std::is_array_v<T>;
 
+	template<class T>
+	concept Trivial = std::is_trivial_v<T>;
 
 	namespace detail
 	{

@@ -13,44 +13,63 @@ namespace nox
 {
 	namespace assertion
 	{
-		enum class RuntimeAssertErrorType : uint8
+		namespace id
 		{
-			Default,
-			NullAccess,
+			/// @brief ログID
+			/// @details ログIDを定義する構造体を継承することで、ログIDを定義できます
+			struct ErrorId
+			{
+			};
 
-			/// @brief 範囲外アクセス
-			OutOfRange,
-			_MAX
-		};
+			/// @brief 無効なログID
+			struct Invalid : ErrorId
+			{
+				inline constexpr std::u32string_view operator()() const noexcept { return U"Invalid"; }
+			};
+
+			struct NullAccess : ErrorId
+			{
+				inline constexpr std::u32string_view operator()() const noexcept { return U"NullAccess"; }
+			};
+
+			struct OutOfRange : ErrorId
+			{
+				inline constexpr std::u32string_view operator()() const noexcept { return U"OutOfRange"; }
+			};
+		}
 
 		namespace detail
 		{
-			void	Assert(RuntimeAssertErrorType errorType, std::u32string_view message, const std::wstring_view file_name, const std::source_location& source_location)noexcept(false);
+			void	Assert(std::u32string_view error_category, std::u32string_view message, const std::wstring_view file_name, const std::source_location& source_location)noexcept(false);
 		}
 
-		inline	void	Assert(RuntimeAssertErrorType errorType, std::u32string_view message, const std::wstring_view file_name, const std::source_location location = std::source_location::current())noexcept(false)
+		template<std::derived_from<id::ErrorId> ErrorId>
+			requires(std::is_same_v<std::u32string_view, decltype(ErrorId()())>)
+		inline	void	Assert(std::u32string_view message, const std::wstring_view file_name, const std::source_location location = std::source_location::current())noexcept(false)
 		{
-			assertion::detail::Assert(errorType, message, file_name, location);
+			assertion::detail::Assert(ErrorId{}(), message, file_name, location);
 		}
 
 		inline	void	Assert(std::u32string_view message, const std::wstring_view file_name, const std::source_location location = std::source_location::current())noexcept(false)
 		{
-			assertion::detail::Assert(RuntimeAssertErrorType::Default, message, file_name, location);
+			assertion::detail::Assert(id::Invalid{}(), message, file_name, location);
 		}
 
 		inline void Assert(bool expression, std::u32string_view message, const std::wstring_view file_name, const std::source_location location = std::source_location::current())noexcept(false)
 		{
 			if (!expression)
 			{
-				assertion::detail::Assert(RuntimeAssertErrorType::Default, message, file_name, location);
+				assertion::detail::Assert(id::Invalid{}(), message, file_name, location);
 			}
 		}
 
-		inline void Assert(bool expression, RuntimeAssertErrorType error_type, std::u32string_view message, const std::wstring_view file_name, const std::source_location location = std::source_location::current())noexcept(false)
+		template<std::derived_from<id::ErrorId> ErrorId>
+			requires(std::is_same_v<std::u32string_view, decltype(ErrorId()())>)
+		inline void Assert(bool expression, std::u32string_view message, const std::wstring_view file_name, const std::source_location location = std::source_location::current())noexcept(false)
 		{
 			if (!expression)
 			{
-				assertion::detail::Assert(error_type, message, file_name, location);
+				assertion::detail::Assert(ErrorId{}(), message, file_name, location);
 			}
 		}
 	}
@@ -60,6 +79,9 @@ namespace nox
 /// @brief アサート
 #define	NOX_ASSERT(...) \
 	::nox::assertion::Assert(__VA_ARGS__, __FILEW__)
+#define NOX_ASSERT_ID(expression, id, ...) \
+	::nox::assertion::Assert<id>(expression, __VA_ARGS__, __FILEW__)
 #else
 #define	NOX_ASSERT(...) 
+#define NOX_ASSERT_ID(...)
 #endif // NOX_DEBUG || NOX_RELEASE

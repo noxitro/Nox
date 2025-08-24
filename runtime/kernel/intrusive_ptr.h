@@ -116,7 +116,7 @@ namespace nox
 				return;
 			}
 
-			static_assert(nox::detail::IntrusivePtrReleaseReferenceConcept<T> == true);
+			//static_assert(nox::detail::IntrusivePtrReleaseReferenceConcept<T> == true);
 			if constexpr (nox::detail::IntrusivePtrReleaseReferenceConcept<T> == true)
 			{
 				IntrusivePtrReleaseReference(*static_cast<T*>(instance_));

@@ -54,6 +54,12 @@
     <ClInclude Include="database.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="reflection_generated_register.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="log_id.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -90,6 +96,12 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="function_info.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="reflection_generated_register.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="log_id.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

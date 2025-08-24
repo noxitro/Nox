@@ -5,6 +5,7 @@
 #pragma once
 
 #include	"component.h"
+#include	"attribute_common.h"
 
 namespace nox
 {
@@ -25,16 +26,19 @@ namespace nox
 		/**
 		 * @brief ローカル座標(親からみた座標
 		*/
+		NOX_ATTR_DECLARATION(nox::attr::DataMember())
 		Vec3 position_;
 
 		/**
 		 * @brief ローカルスケール
 		*/
+		NOX_ATTR_DECLARATION(nox::attr::DataMember())
 		Vec3 scale_;
 
 		/**
 		 * @brief ローカルローテーション
 		*/
+		NOX_ATTR_DECLARATION(nox::attr::DataMember())
 		Quat rotation_;
 
 		///**

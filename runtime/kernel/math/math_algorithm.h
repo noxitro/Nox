@@ -3,11 +3,10 @@
 ///	@file	math_algorithm.h
 ///	@brief	math_algorithm
 #pragma once
-#include	"../basic_type.h"
-
 #include	<cmath>
+#include	<tuple>
+#include	"../basic_type.h"
 #include	"../type_traits/concepts.h"
-
 
 #include	"math_definition.h"
 
@@ -76,4 +75,15 @@ namespace nox::math
 	template<std::floating_point T>
 	[[nodiscard]]
 	inline	constexpr	T RadianToDegree(const T radian)noexcept { return radian * static_cast<T>(180.0) / nox::math::PI<T>; }
+
+	/// @brief 整数の割り算と剰余を同時に計算する
+	/// @tparam T 整数値の型 
+	/// @param dividend 
+	/// @param divisor 
+	/// @return 
+	template<std::integral T>
+	[[nodiscard]] inline constexpr std::pair<T, T> DivRem(T dividend, T divisor) noexcept
+	{
+		return { dividend / divisor, dividend % divisor };
+	}
 }

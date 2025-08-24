@@ -7,7 +7,74 @@
 
 #include	"game_object.h"
 #include	"test_behavior.h"
-#include	"../kernel/memory/new_delete.h"
+
+#include	"../reflection_generated/support_functions.h"
+
+int global_value = 10;
+std::array<int, 3> global_array_origin;
+int global_array= global_value;
+int& globa_ref = global_value;
+
+struct TEST {
+	int _v;
+	int& _rv = _v;
+
+	TEST() {}
+};
+
+constexpr std::array<std::reference_wrapper<const nox::reflection::Type>, 3> global_array2 = {
+	nox::reflection::Typeof<int>(),
+	nox::reflection::Typeof<int>(),
+	nox::reflection::Typeof<int>()
+};
+
+inline void testtest()
+{
+}
+
+//static constexpr auto variable_info_73 = nox::reflection::detail::CreateVariableInfoGlobal<&global_array>(
+//	U"dynamic_extent",	//	name
+//	U"gsl::dynamic_extent",	//	fullname
+//	U"gsl",	//	namespace
+//	nox::reflection::AccessLevel::Public,	//	access level
+//	-1,	//	bit with
+//	-1,	//	offset
+//	nullptr,	//	attribute
+//	0,	//	attribute length
+//	nox::reflection::VariableAttributeFlag::Static,	//	variable attribute flags
+//	+[](const void* const value) { using VariableType = decltype(global_array);
+//const bool is0 = std::is_convertible_v<VariableType, VariableType>;
+//const bool is1 = std::assignable_from<VariableType, VariableType>;
+//const bool is2 = nox::concepts::Assignable<VariableType, VariableType>;
+//
+//
+//if constexpr (nox::concepts::Assignable<VariableType, VariableType>) {
+//	global_array = *static_cast<std::add_pointer_t<const VariableType>>(value);
+//} },	//	setter
+//+[](nox::not_null<void*> out) { using VariableType = decltype(global_array); if constexpr (std::convertible_to<VariableType, std::remove_const_t<VariableType>>) {
+//	*static_cast<std::remove_const_t<std::decay_t<VariableType>>*>(out.get()) = global_array;
+//} },	//	getter
+//	+[](nox::not_null<void*> out) { 
+//		using VariableType = decltype(&global_array);
+//		const bool is0 = std::convertible_to<VariableType, std::remove_const_t<VariableType>>;
+//		const bool is1 = std::assignable_from<VariableType, std::remove_const_t<VariableType>>;
+//		const bool is2 = nox::concepts::Assignable<VariableType, std::remove_const_t<VariableType>>;
+//		
+//		if constexpr (std::convertible_to<VariableType, std::remove_const_t<VariableType>>) {
+//	*static_cast<VariableType*>(out.get()) = &global_array;
+//} },	//	getter address
+//	NOX_VARIABLE_INFO_SETTER_SUBSCRIPT_GLOBAL(global_array),	//	setter subscript
+//	+[](nox::not_null<void*> out, const std::uint32_t index) { using VariableType = decltype(global_array); if constexpr (nox::HasIndexOperatorValue<VariableType> == true) {
+//	using ElementType = nox::ContainerElementType<VariableType>; if (nox::util::IsValidIndex(global_array, index) == false) {
+//		return false;
+//	} if constexpr (std::convertible_to<ElementType, std::decay_t<ElementType>>) {
+//		*static_cast<std::remove_const_t<std::decay_t<ElementType>>*>(out.get()) = global_array[index]; return true;
+//	}
+//} return false; },	//	getter subscript
+//	NOX_VARIABLE_INFO_GETTER_ADDRESS_SUBSCRIPT_GLOBAL(global_array)	//	getter address subscript
+//	);
+
+
 
 namespace nox
 {
@@ -29,7 +96,6 @@ namespace nox
 	}
 }
 
-
 namespace
 {
 	class TestClass
@@ -37,7 +103,23 @@ namespace
 	public:
 		TestClass()
 		{
-			
+			+[](const void* const value, const std::uint32_t index)
+				{
+					using VariableType = decltype(gsl::dynamic_extent);
+					if constexpr (nox::HasIndexOperatorValue<VariableType> == true)
+					{
+						if (nox::util::IsValidIndex(gsl::dynamic_extent, index) == false) {
+							return false;
+						} gsl::dynamic_extent[index] = *static_cast<std::add_pointer_t<nox::ContainerElementType<VariableType>>>(value);
+					}
+				};
+
+
+			TestClass* owner = nullptr;
+			owner->TestClass::value0;
+			using TT = decltype(TestClass::value6);
+			auto n = &gsl::dynamic_extent;
+			decltype(auto) n2 = &gsl::dynamic_extent;
 		}
 
 		int value0 = 10;
@@ -183,10 +265,6 @@ namespace
 	{
 		const TestClass c_test_class;
 		TestClass test_class;
-
-		std::pair<nox::not_null<const void*>, const nox::reflection::Type&> pair0 =
-			std::make_pair(static_cast<const void*>(&test_class), nox::reflection::Typeof<int>());
-		std::pair<nox::not_null<const void*>, const nox::reflection::Type&> table[] = { pair0 };
 
 		const void* instance = &test_class;
 		const void* instance_c = &c_test_class;
@@ -426,8 +504,30 @@ namespace nox
 
 void nox::test::TestReflection()
 {
+	
 
-//	constexpr Desc d = Desc{.v = std::ref(vv)};
+	//	getter
+	void* out{};
+	const void* instance{};
+	{
+		using VariableType = decltype(nox::attr::dev::Description::description_);
+		using ClassType = nox::attr::dev::Description;
+		if constexpr (std::convertible_to<VariableType, std::remove_const_t<VariableType>>)
+		{
+			*static_cast<std::remove_const_t<std::decay_t<VariableType>>*>(out) = static_cast <const ClassType*> (instance)->nox::attr::dev::Description::description_;
+		}
+	}
+		
+	{
+			using VariableType = decltype(nox::attr::dev::Description::description_);
+			using ClassType = const nox::attr::dev::Description;
+			if constexpr (std::convertible_to<VariableType, std::remove_const_t<VariableType>>)
+			{
+				auto n = &static_cast<ClassType*>(instance)->nox::attr::dev::Description::description_;
+				auto n2 = &static_cast<ClassType*>(instance)->nox::attr::dev::Description::description2_;
+			}
+	}
+	//	constexpr Desc d = Desc{.v = std::ref(vv)};
 
 	/*{
 		class LC

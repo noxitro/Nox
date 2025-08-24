@@ -43,7 +43,7 @@ namespace nox
 		};
 	}
 	template<class T>
-	using ContainerElementType = typename detail::ContainerElement<T>::type;
+	using ContainerElementType = typename detail::ContainerElement<std::remove_reference_t<T>>::type;
 
 	
 #pragma endregion
