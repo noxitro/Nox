@@ -1,10 +1,37 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 
 namespace ReflectionGenerator
 {
+	[System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)]
+	public struct Integer64
+	{
+		[System.Runtime.InteropServices.FieldOffset(0)]
+		public long Int64;
+
+		[System.Runtime.InteropServices.FieldOffset(0)]
+		public ulong UInt64;
+	}
+
+	public class ScopeProfiler : IDisposable
+    {
+        private System.Diagnostics.Stopwatch _Stopwatch = new ();
+        public string Tag { private get; init; } = "Unknown";
+
+        public ScopeProfiler()
+        {
+            _Stopwatch.Start();
+		}
+
+        void IDisposable.Dispose()
+        {
+            Trace.InfoLine(null, $"[{Tag}]{_Stopwatch.ElapsedMilliseconds.ToString()}ms");
+			_Stopwatch.Stop();
+
+		}
+	}
+
     public static class Util
     {
         #region 公開メソッド
@@ -19,11 +46,15 @@ namespace ReflectionGenerator
         /// <summary>
         /// BreakPoint
         /// </summary>
-        [Conditional("DEBUG")]
+        [System.Diagnostics.Conditional("DEBUG")]
         public static void BreakPoint() { }
 
+		[System.Diagnostics.Conditional("DEBUG")]
+		[System.Runtime.CompilerServices.OverloadResolutionPriority(-1)] // lower priority than (bool, string) overload so that the compiler prefers using CallerArgumentExpression
+		public static void Assert([System.Diagnostics.CodeAnalysis.DoesNotReturnIf(false)] bool condition, [System.Runtime.CompilerServices.CallerArgumentExpression(nameof(condition))] string? message = null) =>
+			System.Diagnostics.Debug.Assert(condition, message);
 
-        private static int getNumMaxThreads()
+		private static int getNumMaxThreads()
         {
             System.Threading.ThreadPool.GetMaxThreads(out int maxThreads, out int completionPortThreads);
             return maxThreads;

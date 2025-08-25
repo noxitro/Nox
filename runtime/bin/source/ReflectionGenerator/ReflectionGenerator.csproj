@@ -27,6 +27,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\RuntimeTypeDB\RuntimeTypeDB.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="CustomTask">
       <HintPath>..\CustomTask\bin\x64\Release\netstandard2.0\CustomTask.dll</HintPath>
     </Reference>

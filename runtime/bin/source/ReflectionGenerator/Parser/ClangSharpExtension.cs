@@ -277,28 +277,6 @@ namespace ReflectionGenerator.Parser
                 default:
                     return $"{parentCursor.Type.CanonicalType.Spelling.CString}::{cursor.Spelling.CString}";
             }
-
-            //ClangSharp.Interop.CXCursor parentCursor = cursor.SemanticParent;
-            //switch(parentCursor.Kind)
-            //{
-            //    case CXCursorKind.CXCursor_Namespace:
-            //        return 
-            //}
-
-            //string str = string.Empty;
-            //foreach (string s in GetFullNameList(cursor))
-            //{
-            //    if (str != string.Empty)
-            //    {
-            //        str = s + "::" + str;
-            //    }
-            //    else
-            //    {
-            //        str = s;
-            //    }
-            //}
-
-            //return str;
         }
 
         public static string GetNamespace(this ClangSharp.Interop.CXCursor cursor)
@@ -648,7 +626,7 @@ namespace ReflectionGenerator.Parser
 		}
 
 
-		public static List<(string Name, System.Type Type, object Value, string comment)> GetMemberInfoList(this object instance, bool checkCHildren = true, int maxDepth = 5, int depth=0)
+		public static List<(string Name, System.Type Type, object Value, string comment)> GetMemberInfoList(this object instance, bool checkCHildren = true, int maxDepth = 2, int depth=0)
         {
             CXCursor? cursor = instance as CXCursor?;
 
@@ -777,6 +755,54 @@ namespace ReflectionGenerator.Parser
 
             return list;
         }
-         #endregion
-    }
+
+		public static bool IsConstinit(in CXCursor varCursor, in CXTranslationUnit tu)
+		{
+			// VarDecl / FieldDecl / ParmDecl 以外は早期除外 (constinit は変数定義限定)
+			switch (varCursor.kind)
+			{
+				case CXCursorKind.CXCursor_VarDecl:
+				case CXCursorKind.CXCursor_FieldDecl:
+					break;
+				default:
+					return false;
+			}
+
+			// 範囲取得
+			var extent = ClangSharp.Interop.clang.getCursorExtent(varCursor);
+			CXToken[] tokens;
+			unsafe
+			{
+				CXToken* tokenPtr;
+				uint count;
+				ClangSharp.Interop.clang.tokenize(tu, extent, &tokenPtr, &count);
+				if (count == 0) return false;
+				tokens = new Span<CXToken>(tokenPtr, (int)count).ToArray();
+
+				try
+				{
+					for (int i = 0; i < tokens.Length; i++)
+					{
+						var tokSpelling = ClangSharp.Interop.clang.getTokenSpelling(tu, tokens[i]).ToString();
+						// 型や識別子、修飾子の列を過ぎて '=' や '{' 初期化子開始に到達したら打ち切り
+						if (tokSpelling == "=" || tokSpelling == "{" || tokSpelling == ";")
+							break;
+
+						if (tokSpelling == "constinit")
+							return true;
+
+						// 変数名が出た後に 'constinit' は来ないので、識別子が変数名と思しき位置を越えたら適宜終了可
+						// （厳密判定には型名解決が要るため簡略化）
+					}
+				}
+				finally
+				{
+					ClangSharp.Interop.clang.disposeTokens(tu, tokenPtr, (uint)tokens.Length);
+				}
+			}
+
+			return false;
+		}
+		#endregion
+	}
 }

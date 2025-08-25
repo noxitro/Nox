@@ -125,6 +125,8 @@ namespace ReflectionGenerator.Parser
 
         private readonly Dictionary<int, string> _TypeNameDict = new Dictionary<int, string>();
 
+        private readonly Dictionary<int, Info.TypeData> _TypeDataDict = new Dictionary<int, Info.TypeData>();
+
         /// <summary>
         /// 型名を取得する
         /// キャッシュ対応
@@ -496,10 +498,7 @@ namespace ReflectionGenerator.Parser
 
 				//  end
 
-				Example.Exe(parseSourceFilePath, parseCommandLineList.ToArray());
-
-				return false;
-
+				//Example.Exe(parseSourceFilePath, parseCommandLineList.ToArray());
 
 				//  不明な属性を無視しない
 				_RootCXIndex = ClangSharp.Interop.CXIndex.Create(true, true);
@@ -515,7 +514,12 @@ namespace ReflectionGenerator.Parser
                      parseCommandLineList.ToArray(),
                      default,
 					// 関数の中身を解析しないことで、高速化を試みる
-					ClangSharp.Interop.CXTranslationUnit_Flags.CXTranslationUnit_SkipFunctionBodies,
+					ClangSharp.Interop.CXTranslationUnit_Flags.CXTranslationUnit_SkipFunctionBodies |
+                    ClangSharp.Interop.CXTranslationUnit_Flags.CXTranslationUnit_PrecompiledPreamble | 
+                    ClangSharp.Interop.CXTranslationUnit_Flags.CXTranslationUnit_CacheCompletionResults |
+                    ClangSharp.Interop.CXTranslationUnit_Flags.CXTranslationUnit_KeepGoing |
+                    ClangSharp.Interop.CXTranslationUnit_Flags.CXTranslationUnit_IgnoreNonErrorsFromIncludedFiles
+					,
                   //  ClangSharp.Interop.CXTranslationUnit_Flags.CXTranslationUnit_None,
                      out _RootTransUnit
                      );
@@ -566,17 +570,15 @@ namespace ReflectionGenerator.Parser
 
                 _IgnoreNamespaceList = setupParam.IgnoreNamespaceList;
 
-				//  解析開始
-				//  Data rootParam = new Data() { Kind = Kind.Class, Parent = null };
-				//  transUnit.Cursor.VisitChildren(VisitChild, clientData: (CXClientData)System.Runtime.CompilerServices.Unsafe.AsPointer(ref rootParam));
+                //  解析開始
+                //  Data rootParam = new Data() { Kind = Kind.Class, Parent = null };
+                //  transUnit.Cursor.VisitChildren(VisitChild, clientData: (CXClientData)System.Runtime.CompilerServices.Unsafe.AsPointer(ref rootParam));
+               
+                //p.DumpTrace();
 				//ParseRoot(_RootTransUnit.Cursor);
-				ParseClassCursor(_RootTransUnit.Cursor, default);
+				//ParseClassCursor(_RootTransUnit.Cursor, default);
 
 			}
-
-            //  namespaceを結合
-
-            Util.BreakPoint();
 
             return true;
         }
@@ -948,6 +950,11 @@ namespace ReflectionGenerator.Parser
 
         private void ParseType(ClangSharp.Interop.CXType cxType)
         {
+            if(cxType.GetHashCode() != cxType.CanonicalType.GetHashCode())
+            {
+                Util.BreakPoint();
+            }
+
             switch(cxType.TypeClass)
             {
                 case CX_TypeClass.CX_TypeClass_BlockPointer:
@@ -1264,11 +1271,6 @@ namespace ReflectionGenerator.Parser
 
         private void ParseClass(ClangSharp.Interop.CXCursor cursor)
         {
-            if(cursor.Spelling.CString.Contains("StringView"))
-            {
-                Util.BreakPoint();
-            }
-
             //  ラムダ式の場合はスキップ
             if (cursor.LambdaCallOperator != ClangSharp.Interop.CXCursor.Null)
             {
@@ -1294,11 +1296,6 @@ namespace ReflectionGenerator.Parser
             {
                 //System.Diagnostics.Debug.Assert(false, "");
                 return;
-            }
-
-            if(cursor.Spelling.CString.Contains("CppTest"))
-            {
-                Util.BreakPoint();
             }
 
             if(cursor.IsDefinition == false)
@@ -1346,7 +1343,12 @@ namespace ReflectionGenerator.Parser
                     info.IsReflectionObject = true;
 				}
 
-				if (info.Name == "GameObject")
+				if (info.Name == "FunctionInfo")
+				{
+					Util.BreakPoint();
+				}
+
+				if (info.Name == "InvokeArgument")
 				{
 					Util.BreakPoint();
 				}
@@ -1580,6 +1582,11 @@ namespace ReflectionGenerator.Parser
             {
                 Trace.WarningLine(this, $"削除された関数はスキップします {cursor.GetFullName()}");
                 return;
+			}
+
+            if(cursor.Spelling.CString.Contains("IsConst"))
+            {
+                Util.BreakPoint();
 			}
 
 			Info.FunctionInfo Create()
@@ -1905,6 +1912,7 @@ namespace ReflectionGenerator.Parser
 
                 case CXCursorKind.CXCursor_ClassDecl:
                 case CXCursorKind.CXCursor_StructDecl:
+                case CXCursorKind.CXCursor_UnionDecl:
                     ParseClass(cursor);
                     break;
 

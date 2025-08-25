@@ -16,15 +16,15 @@ namespace ReflectionGenerator
             Console.ForegroundColor = temp;
         }
 
-        public static void Log(ConsoleColor color, string log)
+        public static void Log(ConsoleColor color, ReadOnlySpan<char> log)
         {
             var temp = Console.ForegroundColor;
             Console.ForegroundColor = color;
-            Console.Write(log);
+            Console.Write(log.ToString());
             Console.ForegroundColor = temp;
         }
 
-        public static void Log(ConsoleColor color, object? obj, string log)
+        public static void Log(ConsoleColor color, object? obj, ReadOnlySpan<char> log)
         {
             string tag = obj == null ? string.Empty : $"[{obj.ToString()}]";
             Log(color, $"{tag}{log}");
@@ -56,7 +56,12 @@ namespace ReflectionGenerator
             Log(ConsoleColor.White, obj, log);
         }
 
-        public static void Error(object? obj, string log)
+		public static void Info(object? obj, ReadOnlySpan<char> log)
+		{
+			Log(ConsoleColor.White, obj, log);
+		}
+
+		public static void Error(object? obj, string log)
         {
             Log(ConsoleColor.Red, obj, log);
         }

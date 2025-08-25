@@ -94,3 +94,7 @@
 /bin/source/ReflectionGenerator/Sample/SampleCpp/x64/Debug/SampleCpp.tlog
 /bin/source/ReflectionGenerator/Sample/SampleCpp/x64/Debug
 
+/runtime/bin/source/ReflectionGenerator/bin
+
+/runtime/bin/source/ReflectionGeneratorCpp/Reflecti.a6cde9f7/x64/Release
+/runtime/bin/source/RuntimeTypeDB/obj

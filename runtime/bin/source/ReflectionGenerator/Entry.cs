@@ -6,77 +6,14 @@ namespace ReflectionGenerator
 	/// <summary>
 	/// エントリーポイント
 	/// </summary>
-	internal static class Entry
+	file class Entry
 	{
-		#region 列挙体定義
+		#region 内部クラス定義
 		private enum ErrorCode : int
 		{
 			Success,
 			Error
 		}
-        #endregion
-
-        #region 内部クラス定義
-
-		private class ConfigJsonData
-		{
-
-		}
-
-		private class MainArgsData
-        {
-			/// <summary>
-			/// モジュールごとの情報
-			/// </summary>
-			public class ModuleData
-            {
-				/// <summary>
-				/// ソースファイルパス
-				/// </summary>
-				public string SourceFilePath { get; set; } = string.Empty;
-
-				/// <summary>
-				/// タイムスタンプ
-				/// </summary>
-				public string TimeStamp { get; set; } = string.Empty; 
-            }
-
-			/// <summary>
-			/// モジュール情報リスト
-			/// </summary>
-			public List<ModuleData> ModuleDataList { get; set; } = new List<ModuleData>();
-
-			public string SourceFilePath { get; set; } = string.Empty;
-
-			public string OutputDirectory { get; set; } = string.Empty;
-
-			public string Configuration { get; set; } = string.Empty;
-			public string Platform { get; set; } = string.Empty;
-			public string ConfigurationDefine { get; set; } = string.Empty;
-			public string PlatformDefine { get; set; } = string.Empty;
-
-			public string MSBuildBinPath { get; set; } = string.Empty;
-
-			/// <summary>
-			/// 出力先ディレクトリ
-			/// </summary>
-			public string OutputProjectDir { get; set; } = string.Empty;
-
-
-			public string SolutionFilePath { get; set; } = string.Empty;
-
-			/// <summary>
-			/// ビルド中間ディレクトリ
-			/// </summary>
-			public string IntermediateDir { get; set; } = string.Empty;
-
-            public List<string> IgnoreNamespaceList { get; set; } = new List<string>();
-
-			public List<string> EnableNamespaceList { get; set; } = new List<string>();
-        }
-        #endregion
-
-        #region 非公開メソッド
 		private enum MainArgs : byte
 		{
 			Invalid,
@@ -133,88 +70,22 @@ namespace ReflectionGenerator
 
 			MSBuildBinPath,
 
-            EnableNamespaceList,
+			EnableNamespaceList,
 
-            /// <summary>
-            /// ビルド中間ディレクトリ
-            /// </summary>
-            IntermediateDir,
+			/// <summary>
+			/// ビルド中間ディレクトリ
+			/// </summary>
+			IntermediateDir,
 
 
-            _Max
+			_Max
 		}
+        #endregion
 
+        #region 非公開メソッド
 		internal static int Main(string[] args)
 		{
-			//	新制御
-#if true
 			return MainProcess2();
-#else
-			//	旧制御
-			return MainProcess(args);
-#endif
-
-		}
-
-		static string GetP()
-		{
-			string tempPath = System.IO.Path.GetTempPath();
-
-			string path = System.IO.Path.GetFullPath(tempPath + "/NoxReflectionPreData.bin");
-
-			return path;
-		}
-
-		static string GetP2()
-		{
-			string tempPath = System.IO.Path.GetTempPath();
-
-			string path = System.IO.Path.GetFullPath(tempPath + "/NoxReflectionPreData2.bin");
-
-			return path;
-		}
-
-		private static void Test()
-		{
-			Nox.CustomTask.Data data = new ();
-			data.CppVersion = "cpp17";
-
-			string path2 = GetP2();
-			string path = GetP();
-
-			WriteToFile(path2, data);
-
-
-			Nox.CustomTask.Data data2 = new();
-			byte[] buffer = System.IO.File.ReadAllBytes(path);
-			byte[] buffer2 = System.IO.File.ReadAllBytes(path2);
-
-			unsafe
-			{
-				fixed (byte* p = buffer)
-				{
-					System.Runtime.InteropServices.Marshal.PtrToStructure((IntPtr)p, data2);
-				}
-			}
-		}
-
-		private static void WriteToFile<T>(string filePath, T data)
-		{
-			int size = System.Runtime.InteropServices.Marshal.SizeOf(data);
-			byte[] buffer = new byte[size];
-
-			unsafe
-			{
-				fixed (byte* p = buffer)
-				{
-					System.Runtime.InteropServices.Marshal.StructureToPtr(data, (IntPtr)p, false);
-				}
-			}
-
-			using (var fileStream = new System.IO.FileStream(filePath, System.IO.FileMode.Create, System.IO.FileAccess.Write))
-			{
-				fileStream.Write(buffer, 0, buffer.Length);
-			}
 		}
 
 		private static int MainProcess2()
@@ -245,8 +116,8 @@ namespace ReflectionGenerator
 				}
 			}
 
-			Parser.CppParser parser = new Parser.CppParser();
-			if(parser.Parse(new Parser.CppParser.SetupDesc()
+			Parser2.CppParser parser = new Parser2.CppParser();
+			if(parser.Parse(new Parser2.CppParser.SetupDesc()
 			{ 
 				Configuration = data.Configuration,
 				Platform = data.Platform,
@@ -261,8 +132,10 @@ namespace ReflectionGenerator
 				AdditionalIncludeDirectories = data.AdditionalIncludeDirectories,
 				ProjectFilePath = data.ProjectPath,
 				AdditionalOptions = data.AdditionalOptions,
-				UseRtti = data.UseRtti,
-				IncludeHeaderListWithArtifact = includeHeaderWithArtifactDict
+				UseRTTI = data.UseRtti,
+				IncludeHeaderListWithArtifact = includeHeaderWithArtifactDict,
+				IntermediateOutputPath = data.IntermediateOutputPath,
+
 
 			}) == false)
 			{
@@ -270,18 +143,15 @@ namespace ReflectionGenerator
 				return 1;
 			}
 
-			if (parser.RootDeclHolder == null)
-			{
-				return 1;
-			}
 
 			List<Generator.Generator.ARTIFACT_INFO> moduleInfoList = new List<Generator.Generator.ARTIFACT_INFO>();
-			if (parser.TypeInfoListWithModuleNameDict.ContainsKey(Define.UNKNOWN_MODULE_NAME))
+			//if (parser.NamespaceDeclListWithProjectName.ContainsKey(Define.UNKNOWN_MODULE_NAME))
 			{
 				moduleInfoList.Add(new Generator.Generator.ARTIFACT_INFO()
 				{
 					Build = true,
 					ReBuild = false,
+					IsModule = false,
 					ArtifactName = Define.UNKNOWN_MODULE_NAME,
 					IncludeHeaderList = []
 				});
@@ -366,12 +236,23 @@ namespace ReflectionGenerator
 					//{
 					//	includeHeaderList = [];
 					//}
+					System.IO.BinaryReader s;
+					System.
 
+					ReadOnlySpan<string> ignoreModuleList = [
+						"unknown",
+						"kernel",
+						"core",
+						"reflection",
+						"reflection_generated",
+						];
+					
 					moduleInfoList.Add(new Generator.Generator.ARTIFACT_INFO()
 					{
 						Build = build,
 						ReBuild = false,
 						ArtifactName = fileNameWithoutExtension,
+						IsModule = !ignoreModuleList.Contains(fileNameWithoutExtension),
 						IncludeHeaderList = includeHeaderWithArtifactDict[fileNameWithoutExtension]
 					}
 					);
@@ -387,11 +268,9 @@ namespace ReflectionGenerator
 			//	コード出力
 			Generator.Generator generator = new Generator.Generator()
 			{
+				TypeInfoListWithArtifactNameDict = parser.NamespaceDeclListWithProjectNameDict,
 				OutputProjectDirectory = data.ProjectDir,
 				ModuleInfoList = moduleInfoList.ToArray(),
-				//                TargetModuleNameList = targetModuleNameList,
-				//AllModuleNameList = allModuleNameList,
-				TypeInfoListWithArtifactNameDict = parser.TypeInfoListWithModuleNameDict,
 				Configuration = data.Configuration,
 				ConfigurationDefine = data.ConfigurationDefine,
 				OutputDirectory = data.OutputGenerateDir,
@@ -400,18 +279,18 @@ namespace ReflectionGenerator
 
 			};
 
-			generator.Generate();
+			using (new ScopeProfiler() { Tag = "Generate" })
+			{
+				generator.Generate();
+			}
 
 			//			generator.Setup(parser, argsData.OutputDirectory, argsData.BuildSpec, argsData.Platform, argsData.BuildSpecDefine, argsData.PlatformDefine);
 			//			generator.Generate();
 
 			//	ツールで参照するためのバイナリファイルを出力
 
-
-
 			return 0;
 		}
-
 		#endregion
 	}
 }

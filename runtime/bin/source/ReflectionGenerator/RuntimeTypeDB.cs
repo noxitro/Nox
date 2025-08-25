@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 //	解析後バイナリデータとして保存する型情報
 //	ツール側はこのデータを読み込む
 
-namespace ReflectionGenerator
+namespace Invalid
 {
 	public static class RuntimeTypeDB
 	{
@@ -73,7 +73,7 @@ namespace ReflectionGenerator
 			public uint TypeId { get; set; }
 			public RuntimeClassData[] ClassList { get; set; }
 			public RuntimeVariableData[] VariableList { get; set; }
-			public RuntimeVariableData[] FunctionList { get; set; }
+			public RuntimeFunctionData[] FunctionList { get; set; }
 			public RuntimeEnumData[] EnumList { get; set; }
 		}
 
@@ -147,12 +147,17 @@ namespace ReflectionGenerator
 
 		public struct TypeDB
 		{
-			public RuntimeNamespaceDeclData[] GlobalDeclList { get; set; }
+			public RuntimeNamespaceDeclData RootNamespaceDecl { get; set; }
+		}
+
+		public struct TypeDB2
+		{
+			public RuntimeNamespaceDeclData[] NamespaceDeclList { get; set; }
 			public RuntimeClassData[] ClassList { get; set; }
 			public RuntimeVariableData[] VariableList { get; set; }
 			public RuntimeFunctionData[] FunctionList { get; set; }
 			public RuntimeEnumData[] EnumList { get; set; }
-			public RuntimeTypeData[] TypeList { get; set; }
+
 		}
 		#endregion
 
