@@ -98,7 +98,7 @@ namespace nox::stack_walker
 		std::array<nox::char16, 255> symbol_name_;
 
 		/// @brief 行番号
-		uint16 line_;
+		nox::uint32 line_;
 
 		/// @brief 解決済み
 		bool	is_resolver_;

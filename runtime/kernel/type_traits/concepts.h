@@ -64,8 +64,8 @@ namespace nox::concepts
 	}
 
 	/// @brief 代入可能
-	template<class T, class U>
-	concept Assignable = requires(T && a, U && b)
+	template<class From, class To>
+	concept Assignable = requires(From && a, To && b)
 	{
 		{ a = b };
 	};

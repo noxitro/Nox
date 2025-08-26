@@ -74,5 +74,38 @@ namespace RuntimeTypeDB
 
 	public static class Util
 	{
+		private static string GetPath(string platform, string configuration)
+		{
+			string fileName = "RuntimeTypeDB.bin";
+
+			string directory = $"D:\\github\\Nox\\runtime\\build\\RuntimeTypeDB\\{platform}\\{configuration}\\";
+
+			return $"{directory}{fileName}";
+		}
+
+		internal static void Serialize(TypeDB data, string platform, string configuration)
+		{
+			string path = GetPath(platform, configuration);
+			using (System.IO.FileStream fs = new System.IO.FileStream(path, System.IO.FileMode.Create))
+			{
+		//		MessagePack.MessagePackSerializer.Serialize(fs, data);
+			}
+		}
+
+		/// <summary>
+		/// デシリアライズ
+		/// </summary>
+		/// <param name="platform">プラットフォーム</param>
+		/// <param name="configuration">構成</param>
+		/// <returns></returns>
+		public static TypeDB Deserialize(string platform, string configuration)
+		{
+			string path = GetPath(platform, configuration);
+			using (System.IO.FileStream fs = new System.IO.FileStream(path, System.IO.FileMode.Open))
+			{
+				return default;
+			//	return MessagePack.MessagePackSerializer.Deserialize<RuntimeNamespaceDeclData>(fs);
+			}
+		}
 	}
 }
