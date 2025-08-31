@@ -167,12 +167,12 @@ namespace nox::reflection
 #define	NOX_DETAIL_ATTR_IMPL(x) __attribute__((annotate(#x)))
 #else
 ///@brief	属性付与のためのマクロ
-#define	NOX_DETAIL_ATTR_IMPL(x) //	[[annotate(NOX_PP_TO_STRING(NOX_REFLECTION_GENERATOR##x))]]
+#define	NOX_DETAIL_ATTR_IMPL(x) //[[annotate(#x)]]
 #endif // NOX_REFLECTION_GENERATOR
 
 ///@brief	属性付与
 ///@details	エンジン外でannotate属性が使われることを想定して、annotate("NOX_REFLECTION_GENERATOR")を付与する
-#define	NOX_ATTR(...) NOX_DETAIL_ATTR_IMPL(NOX_REFLECTION_GENERATOR) NOX_PP_REPEAT_AUTO(NOX_DETAIL_ATTR_IMPL, __VA_ARGS__)
+#define	NOX_ATTR(...) NOX_PP_REPEAT_AUTO(NOX_DETAIL_ATTR_IMPL, __VA_ARGS__)
 
 ///@brief	型に対しての属性付与
 #define	NOX_ATTR_TYPE(...) \
