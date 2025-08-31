@@ -13,7 +13,7 @@ namespace nox
 		NOX_DECLARE_OBJECT_ROOT(Object);
 	public:
 		constexpr Object() noexcept {}
-		virtual ~Object()noexcept override {}
+		virtual constexpr ~Object()noexcept override {}
 
 		/// @brief 文字列化　動的メモリ確保
 		/// @return 

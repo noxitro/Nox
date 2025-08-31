@@ -6,6 +6,7 @@
 #include	"core_entry.h"
 
 #include	"garbage_collector.h"
+#include	"resource_manager.h"
 #include	"test/test.h"
 
 nox::CoreEntry::CoreEntry()
@@ -22,15 +23,12 @@ nox::CoreEntry::~CoreEntry()
 void	nox::CoreEntry::Init()
 {
 	nox::GarbageCollector::CreateInstance();
-	nox::test::Test();
 }
-
 
 void	nox::CoreEntry::Finalize()
 {
 	nox::GarbageCollector::Instance().FrameGC();
 	nox::GarbageCollector::DeleteInstance();
-
 }
 
 void	nox::CoreEntry::GCUpdate()

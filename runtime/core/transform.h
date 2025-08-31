@@ -26,7 +26,7 @@ namespace nox
 		/**
 		 * @brief ローカル座標(親からみた座標
 		*/
-		NOX_ATTR_DECLARATION(nox::attr::DataMember())
+		NOX_ATTR_DECLARATION(nox::attr::dev::DisplayName(U"LocalPosition"), nox::attr::DataMember())
 		Vec3 position_;
 
 		/**

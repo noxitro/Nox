@@ -504,29 +504,52 @@ namespace nox
 
 void nox::test::TestReflection()
 {
-	
+	////	getter
+	//void* out{};
+	//void* instance{};
+	//const void* const value{};
+	//using VariableType = decltype(nox::ManagedObject::ref_count_);
+	//using ClassType = nox::ManagedObject;
+	//if constexpr (nox::concepts::Assignable<VariableType, std::remove_const_t<VariableType>>)
+	//{
+	//	*static_cast<const std::decay_t<VariableType>**>(out) = &static_cast<const ClassType*>(instance)->nox::ManagedObject::ref_count_;
+	//	auto n = static_cast<const std::decay_t< VariableType>**>(&static_cast<const ClassType*>(instance)->nox::ManagedObject::ref_count_);
+	//}
 
-	//	getter
-	void* out{};
+	////	getter
+	//void* out{};
+	//const void* instance{};
+	//{
+	//	using VariableType = decltype(nox::attr::dev::Description::description_);
+	//	using ClassType = nox::attr::dev::Description;
+	//	if constexpr (std::convertible_to<VariableType, std::remove_const_t<VariableType>>)
+	//	{
+	//		*static_cast<std::remove_const_t<std::decay_t<VariableType>>*>(out) = static_cast <const ClassType*> (instance)->nox::attr::dev::Description::description_;
+	//	}
+	//}
+	//	
+	//{
+	//		using VariableType = decltype(nox::attr::dev::Description::description2_);
+	//		using ClassType = const nox::attr::dev::Description;
+	//		if constexpr (std::convertible_to<VariableType, std::remove_const_t<VariableType>>)
+	//		{
+	//			
+	//			*static_cast<std::remove_reference_t<VariableType>**>(out) = &static_cast<ClassType*>(instance)->nox::attr::dev::Description::description2_;
+	//			auto n2 = &static_cast<ClassType*>(instance)->nox::attr::dev::Description::description2_;
+	//		}
+	//}
+
+	/*
+	* void* out{};
 	const void* instance{};
+	using VariableType = decltype(nox::Behavior::enabled_function_types_);
+	using ClassType = const nox::Behavior;
+	if constexpr (std::convertible_to<VariableType, std::remove_const_t<VariableType>>)
 	{
-		using VariableType = decltype(nox::attr::dev::Description::description_);
-		using ClassType = nox::attr::dev::Description;
-		if constexpr (std::convertible_to<VariableType, std::remove_const_t<VariableType>>)
-		{
-			*static_cast<std::remove_const_t<std::decay_t<VariableType>>*>(out) = static_cast <const ClassType*> (instance)->nox::attr::dev::Description::description_;
-		}
+		*static_cast<std::remove_reference_t<VariableType>**>(out) = &static_cast<const ClassType*>(instance)->nox::Behavior::enabled_function_types_;
 	}
-		
-	{
-			using VariableType = decltype(nox::attr::dev::Description::description_);
-			using ClassType = const nox::attr::dev::Description;
-			if constexpr (std::convertible_to<VariableType, std::remove_const_t<VariableType>>)
-			{
-				auto n = &static_cast<ClassType*>(instance)->nox::attr::dev::Description::description_;
-				auto n2 = &static_cast<ClassType*>(instance)->nox::attr::dev::Description::description2_;
-			}
-	}
+	*/
+
 	//	constexpr Desc d = Desc{.v = std::ref(vv)};
 
 	/*{

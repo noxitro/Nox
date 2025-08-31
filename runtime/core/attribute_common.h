@@ -20,6 +20,9 @@ namespace nox
 		class DataMember : public Attribute
 		{
 			NOX_DECLARE_OBJECT(DataMember, Attribute);
+		public:
+			inline constexpr DataMember()noexcept {}
+			inline constexpr ~DataMember() noexcept override {}
 		};
 
 		/// @brief シリアライズ非対象
@@ -52,7 +55,7 @@ namespace nox
 		{
 			class DisplayName : public Attribute
 			{
-				NOX_DECLARE_OBJECT(DisplayName, Object);
+				NOX_DECLARE_OBJECT(DisplayName, Attribute);
 			private:
 
 			public:
@@ -65,14 +68,13 @@ namespace nox
 
 			class Description : public Attribute
 			{
-				NOX_DECLARE_OBJECT(Description, Object);
+				NOX_DECLARE_OBJECT(Description, Attribute);
 			public:
 				inline	constexpr explicit Description(const std::u32string_view description)noexcept :
 					description_(description) {}
 
-			//private:
+			private:
 				const std::u32string_view description_;
-				std::u32string_view description2_;
 			};
 		}
 	}

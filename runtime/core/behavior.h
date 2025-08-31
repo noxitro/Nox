@@ -35,7 +35,7 @@ namespace nox
 		void	Loaded()override final;
 		void	UnLoaded()override final;
 
-	private:
+	public:
 		FunctionType enabled_function_types_;
 	};
 }

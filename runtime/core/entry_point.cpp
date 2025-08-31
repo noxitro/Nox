@@ -11,7 +11,6 @@ nox::int32 nox::EntryPoint(const std::span<const char16* const> args)
 {
 	//	メモリリークチェック
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-//	_CrtSetBreakAlloc(182);
 
 	nox::memory::Initialize(true);
 
@@ -21,7 +20,6 @@ nox::int32 nox::EntryPoint(const std::span<const char16* const> args)
 
 	Application::CreateInstance();
 
-	int* p = new int();
 	Application::Instance().Run();
 
 	Application::DeleteInstance();
