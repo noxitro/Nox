@@ -99,3 +99,5 @@
 /runtime/bin/source/ReflectionGeneratorCpp/Reflecti.a6cde9f7/x64/Release
 /runtime/bin/source/RuntimeTypeDB/obj
 /runtime/bin/source/RuntimeTypeDB/bin/Debug/net9.0
+/Editor/.vs/Editor
+/Editor/obj

@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-
+#if false
 namespace ReflectionGenerator.Parser
 {
     /// <summary>
@@ -158,9 +158,9 @@ namespace ReflectionGenerator.Parser
 
         private ClangSharp.Interop.CXIndex _RootCXIndex = default;
 		private ClangSharp.Interop.CXTranslationUnit _RootTransUnit = default;
-		#endregion
+        #endregion
 
-		#region 公開プロパティ
+        #region 公開プロパティ
 		/// <summary>
 		/// モジュール名リスト
 		/// </summary>
@@ -176,9 +176,9 @@ namespace ReflectionGenerator.Parser
         /// value:  型情報リスト
         /// </summary>
         public Dictionary<string, List<Info.NamespaceDeclInfo>> TypeInfoListWithModuleNameDict { get; } = new Dictionary<string, List<Info.NamespaceDeclInfo>>();
-		#endregion
+        #endregion
 
-		#region 公開メソッド
+        #region 公開メソッド
 	
 		/// <summary>
 		/// MSBuildを通して、コンパイルオプションを取得する
@@ -2666,7 +2666,7 @@ namespace ReflectionGenerator.Parser
             return true;
         }
 #if false
-		#region パース関係
+        #region パース関係
 
         private Info.ClassInfoOld CreateClassInfo(ClangSharp.Interop.CXCursor cursor)
         {
@@ -2929,16 +2929,16 @@ namespace ReflectionGenerator.Parser
 
             EnumInfoStack.Push(enumInfo);
         }
-		#endregion
+        #endregion
 #endif
 
-		#region テスト
+        #region テスト
 		/// <summary>
 		/// ClangSharp 全型情報収集器
 		/// </summary>
 		public class ComprehensiveTypeCollector : IDisposable
 		{
-			#region 型情報定義
+            #region 型情報定義
 
 			/// <summary>
 			/// 収集された型情報の基底クラス
@@ -3136,9 +3136,9 @@ namespace ReflectionGenerator.Parser
 					ArrayTypes.Count + TypedefTypes.Count;
 			}
 
-			#endregion
+            #endregion
 
-			#region フィールド
+            #region フィールド
 
 			private CXIndex _index;
 			private CXTranslationUnit _translationUnit;
@@ -3155,9 +3155,9 @@ namespace ReflectionGenerator.Parser
 			private readonly HashSet<uint> _processedCursors = new();
 			private readonly Dictionary<string, CollectedTypeInfo> _typeCache = new();
 
-			#endregion
+            #endregion
 
-			#region 公開メソッド
+            #region 公開メソッド
 
 			/// <summary>
 			/// ソースファイルから全型情報を収集
@@ -3246,9 +3246,9 @@ namespace ReflectionGenerator.Parser
 				}
 			}
 
-			#endregion
+            #endregion
 
-			#region 内部メソッド
+            #region 内部メソッド
 
 			/// <summary>
 			/// 診断情報をチェック
@@ -3916,7 +3916,7 @@ namespace ReflectionGenerator.Parser
 				return string.Join("::", namespaces);
 			}
 
-			#endregion
+            #endregion
 		}
 
 		// 使用例
@@ -3970,11 +3970,12 @@ namespace ReflectionGenerator.Parser
                 }
 			}
 		}
-		#endregion
+        #endregion
 
-		#endregion
+        #endregion
 	}
 
 
 
 }
+#endif

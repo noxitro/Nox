@@ -284,10 +284,11 @@ namespace ReflectionGenerator
 				generator.Generate();
 			}
 
-			//			generator.Setup(parser, argsData.OutputDirectory, argsData.BuildSpec, argsData.Platform, argsData.BuildSpecDefine, argsData.PlatformDefine);
-			//			generator.Generate();
-
 			//	ツールで参照するためのバイナリファイルを出力
+			using (new ScopeProfiler() { Tag = "Serialize" })
+			{
+				RuntimeTypeDBHelper.Serialize(data, parser.NamespaceDeclList);
+			}
 
 			return 0;
 		}

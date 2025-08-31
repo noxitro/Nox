@@ -234,11 +234,6 @@ namespace ReflectionGenerator.Parser
             return strList;
         }
 
-        public static Info.TypeData GetTypeData(this in ClangSharp.Interop.CXType type)
-        {
-            return new Info.TypeData() { RawValue = type };
-        }
-
         public static string GetFullName(this in ClangSharp.Interop.CXCursor cursor)
         {
             ClangSharp.Interop.CXCursor parentCursor = cursor.SemanticParent;

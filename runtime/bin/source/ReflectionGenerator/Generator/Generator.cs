@@ -595,7 +595,7 @@ namespace ReflectionGenerator.Generator
             List<Parser2.VariableDecl> globalVariableInfoList = new();
             List<Parser2.FunctionDecl> globalFunctionInfoList = new();
             List<Parser2.EnumDecl> globalEnumInfoList = new();
-            List<Parser2.ClassDecl> classInfoList = new();
+            List<Parser2.RecordDecl> classInfoList = new();
 
             //  定義を収集
             using(new ScopeProfiler() { Tag = "CollectDeclarations" })
@@ -639,7 +639,7 @@ namespace ReflectionGenerator.Generator
                         }
                         );
 
-                    namespaceDeclInfo.ClassList.ForEach(
+                    namespaceDeclInfo.RecordList.ForEach(
                         x =>
                         {
                             if (isReflection || x.ReflectionGenerateKind == Parser2.ReflectionGenerateKind.Reflection)
@@ -760,7 +760,7 @@ namespace ReflectionGenerator.Generator
                     int classDeclarationIndex = index - globalDeclarationLength;
                     int codeWriterWithClassIndex = calcIndex(classDeclarationIndex, classInfoList.Count, codeWriterWithClassList.Length);
 					CodeWriter codeWriter = codeWriterWithClassList[codeWriterWithClassIndex];
-					Parser2.ClassDecl classInfo = classInfoList[classDeclarationIndex];
+					Parser2.RecordDecl classInfo = classInfoList[classDeclarationIndex];
 
                     if(classInfo.Namespace.StartsWith("nox") == false)
                     {
@@ -901,7 +901,7 @@ namespace ReflectionGenerator.Generator
             return tmpDeclNameList.Count;
 		}
 
-        private void GenerateVariableInfo(BaseCodeWriter codeWriter, Parser2.VariableDecl variableInfo, Parser2.ClassDecl? declarationTypeInfo)
+        private void GenerateVariableInfo(BaseCodeWriter codeWriter, Parser2.VariableDecl variableInfo, Parser2.RecordDecl? declarationTypeInfo)
         {
 			//  属性定義
 			int enabledAttributeLength;
@@ -1491,7 +1491,7 @@ namespace ReflectionGenerator.Generator
 			codeWriter.WriteLine(");");
 		}
 
-        private bool GenerateFunctionInfo(BaseCodeWriter codeWriter, Parser2.FunctionDecl functionInfo, Parser2.ClassDecl? declarationTypeInfo)
+        private bool GenerateFunctionInfo(BaseCodeWriter codeWriter, Parser2.FunctionDecl functionInfo, Parser2.RecordDecl? declarationTypeInfo)
         {
             //TODO:  コンストラクタ、デストラクタは未対応
             if (functionInfo.FunctionAttributeFlags.IsAnyOn(
@@ -1669,7 +1669,7 @@ namespace ReflectionGenerator.Generator
 			return true;
 		}
 
-        private void GenerateEnumInfo(BaseCodeWriter codeWriter, Parser2.EnumDecl enumInfo, Parser2.ClassDecl? declarationTypeInfo)
+        private void GenerateEnumInfo(BaseCodeWriter codeWriter, Parser2.EnumDecl enumInfo, Parser2.RecordDecl? declarationTypeInfo)
         {
             ReadOnlySpan<Parser2.EnumDecl.EnumeratorInfo> enumeratorList = enumInfo.EnumeratorSpan;
             int numEnumerator = enumeratorList.Length;
@@ -1695,11 +1695,11 @@ namespace ReflectionGenerator.Generator
                 codeWriter.Push();
                 if (enumeratorInfo.IsUnsigned == true)
                 {
-                    codeWriter.WriteLine($"static_cast<std::uint64_t>({enumeratorInfo.Integer64.UInt64.ToString()}),");
+                    codeWriter.WriteLine($"static_cast<std::uint64_t>({enumeratorInfo.Uint64.ToString()}),");
                 }
                 else
                 {
-                    codeWriter.WriteLine($"static_cast<std::int64_t>({enumeratorInfo.Integer64.Int64.ToString()}),");
+                    codeWriter.WriteLine($"static_cast<std::int64_t>({enumeratorInfo.Int64.ToString()}),");
                 }
                 codeWriter.WriteLine($"U\"{enumeratorInfo.Name}\",\t//\tname");
                 codeWriter.WriteLine($"U\"{enumInfo.FullName}::{enumeratorInfo.Name}\",\t//\tfullName");
@@ -1764,7 +1764,7 @@ namespace ReflectionGenerator.Generator
             }
         }
 
-        private void GenerateClassInfo(BaseCodeWriter codeWriter, Parser2.ClassDecl classInfo, List<string> registerDeclNameList, ReadOnlySpan<char> parentDeclName = default)
+        private void GenerateClassInfo(BaseCodeWriter codeWriter, Parser2.RecordDecl classInfo, List<string> registerDeclNameList, ReadOnlySpan<char> parentDeclName = default)
         {
             if (parentDeclName.IsEmpty)
             {
@@ -1782,11 +1782,11 @@ namespace ReflectionGenerator.Generator
 
             //  クラス内クラス情報の生成
             {
-                int internalClassInfoListLength = classInfo.ClassList.Count;
+                int internalClassInfoListLength = classInfo.RecordList.Count;
 
                 ReadOnlySpan<char> lastParentDeclName = registerDeclNameList.Last();
 
-				foreach (Parser2.ClassDecl child in classInfo.ClassList)
+				foreach (Parser2.RecordDecl child in classInfo.RecordList)
                 {
                     if (child.ReflectionGenerateKind == Parser2.ReflectionGenerateKind.IgnoreReflection)
                     {
@@ -1799,7 +1799,7 @@ namespace ReflectionGenerator.Generator
                 {
                     for (int i = 0; i < internalClassInfoListLength; ++i)
                     {
-						Parser2.ClassDecl type = classInfo.ClassList[i];
+						Parser2.RecordDecl type = classInfo.RecordList[i];
                         codeWriter.WriteLine($"static constexpr const nox::reflection::Type& internal_type_{classInfo.Hash}_{i.ToString()} = nox::reflection::Typeof<decltype({type.FullName})>();");
                     }
 
@@ -2004,7 +2004,7 @@ namespace ReflectionGenerator.Generator
             }
             codeWriter.WriteLine($"{enumInfoRegisterDeclNameList.Count.ToString()},\t//\tenum_info_length");
 
-            if (classInfo.ClassList.Count > 0)
+            if (classInfo.RecordList.Count > 0)
             {
                 codeWriter.WriteLine($"internal_type_table_{classInfo.Hash},\t//\tinternal_type_list");
             }
@@ -2012,7 +2012,7 @@ namespace ReflectionGenerator.Generator
             {
                 codeWriter.WriteLine("nullptr,\t//\tinternal_type_list");
             }
-            codeWriter.WriteLine($"{classInfo.ClassList.Count.ToString()}\t//\tinternal_type_length");
+            codeWriter.WriteLine($"{classInfo.RecordList.Count.ToString()}\t//\tinternal_type_length");
 
             codeWriter.Pop();
             codeWriter.WriteLine(");");
