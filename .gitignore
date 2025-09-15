@@ -105,3 +105,6 @@
 /Editor/.vs
 /Editor/bin/Debug
 
+/Editor/Nox/bin/Debug/net9.0
+/Editor/Studio/bin/Debug
+/Editor/Studio/obj
