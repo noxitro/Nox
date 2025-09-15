@@ -7,7 +7,10 @@
 
 #include	"garbage_collector.h"
 #include	"resource_manager.h"
-#include	"test/test.h"
+
+#if NOX_DEVELOP
+#include	"dev/net/socket_scheduler.h"
+#endif // NOX_DEVELOP
 
 nox::CoreEntry::CoreEntry()
 {
@@ -23,10 +26,21 @@ nox::CoreEntry::~CoreEntry()
 void	nox::CoreEntry::Init()
 {
 	nox::GarbageCollector::CreateInstance();
+#if NOX_DEVELOP
+	nox::dev::net::SocketScheduler::CreateInstance();
+	nox::dev::net::SocketScheduler::Instance().Initialize();
+#endif // NOX_DEVELOP
+
 }
 
 void	nox::CoreEntry::Finalize()
 {
+#if NOX_DEVELOP
+	nox::dev::net::SocketScheduler::Instance().Finalize();
+	nox::dev::net::SocketScheduler::DeleteInstance();
+#endif // NOX_DEVELOP
+
+
 	nox::GarbageCollector::Instance().FrameGC();
 	nox::GarbageCollector::DeleteInstance();
 }

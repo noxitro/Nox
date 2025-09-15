@@ -44,7 +44,7 @@ namespace nox
 		void	CheckSingletonCreateInstance(void* instance_ptr, std::string_view type_name)noexcept(false);
 		void	CheckSingletonDeleteInstance(void* instance_ptr, std::string_view type_name)noexcept(false);
 	}
-
+	
 	/// @brief Singletonインターフェース
 	/// @tparam T 
 	template<class T> requires(
@@ -66,7 +66,7 @@ namespace nox
 			delete instance_;
 			instance_ = nullptr;
 		}
-		static	inline	bool	HasInstance()noexcept { return instance_ != nullptr; }
+		static	inline	constexpr	bool	HasInstance()noexcept { return instance_ != nullptr; }
 		static	inline	decltype(auto) Instance()noexcept { return util::Deref(instance_); }
 
 	protected:

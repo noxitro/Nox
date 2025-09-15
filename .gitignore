@@ -102,3 +102,6 @@
 /Editor/.vs/Editor
 /Editor/obj
 /Editor/Nox/obj
+/Editor/.vs
+/Editor/bin/Debug
+

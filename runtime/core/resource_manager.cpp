@@ -17,5 +17,7 @@ nox::Resource* nox::ResourceManager::GetResourceImpl(std::u16string_view path)
 	//	拡張子を取得
 	std::filesystem::path file_path = std::filesystem::path(path);
 
-	const char16* n = file_path.extension().c_str();
+	//const char16* n = file_path.extension().c_str();
+
+	return nullptr;
 }
