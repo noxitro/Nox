@@ -108,3 +108,5 @@
 /Editor/Nox/bin/Debug/net9.0
 /Editor/Studio/bin/Debug
 /Editor/Studio/obj
+/Editor/Core/bin/Debug
+/Editor/Core/obj
