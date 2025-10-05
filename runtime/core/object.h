@@ -8,7 +8,7 @@
 namespace nox
 {
 	/// @brief 基底オブジェクト
-	class Object : public nox::reflection::ReflectionObject
+	class Object : public ::nox::reflection::ReflectionObject
 	{
 		NOX_DECLARE_OBJECT_ROOT(Object);
 	public:
@@ -20,9 +20,9 @@ namespace nox
 		nox::String	ToString()const;
 
 		/// @brief 文字列化　バッファ指定
-		virtual nox::StringView	ToString(std::span<nox::char32> dest_buffer)const;
+		virtual ::nox::StringView	ToString(std::span<::nox::char16> dest_buffer)const;
 	protected:
-		inline	std::span<void(*)()> GetVTable()const noexcept { return nox::util::GetVTable(this); }
+		inline	std::span<void(*)()> GetVTable()const noexcept { return ::nox::util::GetVTable(this); }
 		/*bool	IsOverride(const nox::uint64 function_id, std::span<void(*)()> vtable)const noexcept;
 		inline bool	IsOverride(const nox::uint64 function_id)const noexcept
 		{

@@ -110,3 +110,5 @@
 /Editor/Studio/obj
 /Editor/Core/bin/Debug
 /Editor/Core/obj
+/runtime/bin/source/CustomTask/obj
+/runtime/bin/source/RuntimeTypeDB/bin/Release/net9.0

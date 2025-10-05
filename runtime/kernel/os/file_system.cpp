@@ -22,7 +22,7 @@ nox::String	nox::os::file_system::GetCurrentPath()
 		NOX_ASSERT(false, U"");
 	}
 
-	return nox::String(unicode::ConvertString<nox::U32String>(path_buffer.data()));
+	return nox::String(unicode::ConvertString<nox::U16String>(path_buffer.data()));
 #else
 	static_assert(false);
 #endif

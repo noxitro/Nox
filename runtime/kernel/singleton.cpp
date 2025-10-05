@@ -19,7 +19,7 @@ namespace nox
 
 void	nox::detail::SingletonManager::Register(nox::detail::ISingletonBase& obj)
 {
-	NOX_LOCAL_SCOPE(nox::os::ScopedLock, singleton_mutex_);
+	NOX_LOCAL_SCOPE(nox::os::ScopedLock{ singleton_mutex_ });
 	if (root_ == nullptr)
 	{
 		root_ = &obj;
@@ -41,7 +41,7 @@ void	nox::detail::SingletonManager::Register(nox::detail::ISingletonBase& obj)
 
 void	nox::detail::SingletonManager::Unregister(nox::detail::ISingletonBase& obj)
 {
-	NOX_LOCAL_SCOPE(nox::os::ScopedLock, singleton_mutex_);
+	NOX_LOCAL_SCOPE(nox::os::ScopedLock{ singleton_mutex_ });
 	NOX_ASSERT(root_ != nullptr, U"シングルトンが登録されていません");
 
 	if (root_->next_ == nullptr)

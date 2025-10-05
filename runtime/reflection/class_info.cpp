@@ -12,9 +12,21 @@ bool	nox::reflection::ClassInfo::IsBaseOf(const nox::reflection::ClassInfo& deri
 	return nox::reflection::IsBaseOf(*this, derived);
 }
 
+bool	nox::reflection::ClassInfo::IsSubclassOf(const nox::reflection::Type& base)const noexcept
+{
+	for (const nox::reflection::Type& type : GetBaseTypeList())
+	{
+		if (type == base)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 const nox::reflection::FunctionInfo* nox::reflection::ClassInfo::GetConstructor(std::span<const std::reference_wrapper<const nox::reflection::Type>> typeList)const noexcept
 {
-	const nox::uint8 numType = typeList.size();
+	const nox::uint8 numType = static_cast<nox::uint8>(typeList.size());
 
 	for (const nox::reflection::FunctionInfo& function_info : GetFunctionList())
 	{

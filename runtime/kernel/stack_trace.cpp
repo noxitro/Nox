@@ -75,7 +75,7 @@ namespace nox
 
 		//	hbgHelpはスレッドセーフではないので、ロックする必要がある
 		//	https://learn.microsoft.com/ja-jp/windows/win32/api/dbghelp/nf-dbghelp-symfromaddr
-		NOX_LOCAL_SCOPE(nox::os::ScopedLock, g_resolve_mutex);
+		NOX_LOCAL_SCOPE(nox::os::ScopedLock{ g_resolve_mutex });
 
 		//	シンボルハンドラの初期化
 		::SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES | SYMOPT_UNDNAME);
@@ -251,7 +251,7 @@ nox::String	nox::stack_walker::detail::WalkerBase::GetStackTraceString()const
 			buffer += U'\n';
 		}
 		
-		buffer += util::Format(U"{0} ({1})", stack.GetSymbolName().data(), stack.GetLine());
+		buffer += util::Format(u"{0} ({1})", stack.GetSymbolName().data(), stack.GetLine());
 	}
 
 	return buffer;

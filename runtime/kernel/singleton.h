@@ -53,11 +53,12 @@ namespace nox
 		class ISingleton : public nox::detail::ISingletonBase
 	{
 	public:
-		static	inline	void	CreateInstance()noexcept(false) {
+		static	inline	T&	CreateInstance()noexcept(false) {
 			nox::detail::CheckSingletonCreateInstance(instance_, nox::util::GetTypeName<T>());
 			instance_ = new T();
 
 			nox::detail::SingletonManager::Register(*instance_);
+			return *instance_;
 		}
 		static	inline	void	DeleteInstance()noexcept(false) {
 			nox::detail::SingletonManager::Unregister(*instance_);

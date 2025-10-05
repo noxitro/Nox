@@ -65,6 +65,11 @@ namespace nox
 		{
 		}
 
+		inline constexpr IntrusivePtr(const IntrusivePtr& ths)noexcept :
+			detail::IntrusivePtrBase(ths.instance_)
+		{
+		}
+
 		inline constexpr IntrusivePtr(IntrusivePtr&& ths)noexcept :
 			detail::IntrusivePtrBase(ths.instance_)
 		{
@@ -104,7 +109,7 @@ namespace nox
 		/// @param rhs 
 		/// @param tag 
 		template<class U> requires(std::is_base_of_v<U, T>)
-			inline constexpr IntrusivePtr(IntrusivePtr<U>&& rhs, nox::detail::IntrusivePtrDownCastTag tag)noexcept
+			inline constexpr IntrusivePtr(IntrusivePtr<U>&& rhs, nox::detail::IntrusivePtrDownCastTag _)noexcept
 		{
 			Move(rhs);
 		}

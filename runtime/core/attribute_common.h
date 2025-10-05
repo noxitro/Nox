@@ -3,18 +3,12 @@
 ///	@file	attribute_common.h
 ///	@brief	attribute_common
 #pragma once
-#include	"object.h"
+#include	"attribute.h"
 namespace nox
 {
 	namespace attr
 	{
-		/// @brief 属性基底
-		class Attribute : public Object, public nox::reflection::IAttribute
-		{
-			NOX_DECLARE_OBJECT(Attribute, Object);
-		public:
-			inline constexpr Attribute()noexcept {}
-		};
+		
 
 		/// @brief シリアライズ対象
 		class DataMember : public Attribute
@@ -59,22 +53,22 @@ namespace nox
 			private:
 
 			public:
-				inline	constexpr explicit DisplayName(const std::u32string_view display_name)noexcept :
+				inline	constexpr explicit DisplayName(const std::u16string_view display_name)noexcept :
 					display_name_(display_name) {}
 
 			private:
-				const std::u32string_view display_name_;
+				const std::u16string_view display_name_;
 			};
 
 			class Description : public Attribute
 			{
 				NOX_DECLARE_OBJECT(Description, Attribute);
 			public:
-				inline	constexpr explicit Description(const std::u32string_view description)noexcept :
+				inline	constexpr explicit Description(const std::u16string_view description)noexcept :
 					description_(description) {}
 
 			private:
-				const std::u32string_view description_;
+				const std::u16string_view description_;
 			};
 		}
 	}

@@ -32,96 +32,115 @@ namespace Nox.CustomTask
 	{
 		#region 公開プロパティ
 		// ソースコードファイル名
+		[Microsoft.Build.Framework.Required]
 		public string SourceFiles { get; set; } = string.Empty;
 
 		/// <summary>
 		/// 追加インクルードディレクトリ
 		/// </summary>
+		[Microsoft.Build.Framework.Required]
 		public string AdditionalIncludeDirectories { get; set; } = string.Empty;
 
 		/// <summary>
 		/// c++バージョン
 		/// </summary>
+		[Microsoft.Build.Framework.Required]
 		public string CppVersion { get; set; } = string.Empty;
 
 		/// <summary>
 		/// プリプロセッサマクロ定義
 		/// </summary>
+		[Microsoft.Build.Framework.Required]
 		public string PreprocessorMacro { get; set; } = string.Empty;
 
 		/// <summary>
 		/// 追加オプション
 		/// </summary>
+		[Microsoft.Build.Framework.Required]
 		public string AdditionalOptions { get; set; } = string.Empty;
 
 		/// <summary>
 		/// 解析対象のソースファイル
 		/// </summary>
+		[Microsoft.Build.Framework.Required]
 		public string ReflectionTargetSourceFile { get; set; } = string.Empty;
 
 		/// <summary>
 		/// ソリューションパス
 		/// </summary>
+		[Microsoft.Build.Framework.Required]
 		public string SolutionPath { get; set; } = string.Empty;
 
 		/// <summary>
 		/// ソリューションディレクトリ
 		/// </summary>
+		[Microsoft.Build.Framework.Required]
 		public string SolutionDir { get; set; } = string.Empty;
 
 		/// <summary>
 		/// reflection_generatedのプロジェクトパス
 		/// </summary>
+		[Microsoft.Build.Framework.Required]
 		public string ProjectPath { get; set; } = string.Empty;
 
 		/// <summary>
 		/// reflection_generatedのプロジェクトディレクトリ
 		/// </summary>
+		[Microsoft.Build.Framework.Required]
 		public string ProjectDir { get; set; } = string.Empty;
 
 		/// <summary>
 		/// コード出力先ディレクトリ
 		/// </summary>
+		[Microsoft.Build.Framework.Required]
 		public string OutputGenerateDir { get; set; } = string.Empty;
 
 		/// <summary>
 		/// 構成
 		/// </summary>
+		[Microsoft.Build.Framework.Required]
 		public string Configuration { get; set; } = string.Empty;
 
 		/// <summary>
 		/// 構成定義
 		/// </summary>
+		[Microsoft.Build.Framework.Required]
 		public string ConfigurationDefine { get; set; } = string.Empty;
 
 		/// <summary>
 		/// プラットフォーム
 		/// </summary>
+		[Microsoft.Build.Framework.Required]
 		public string Platform { get; set; } = string.Empty;
 
 		/// <summary>
 		/// プラットフォーム定義
 		/// </summary>
+		[Microsoft.Build.Framework.Required]
 		public string PlatformDefine { get; set; } = string.Empty;
 
 		/// <summary>
 		/// 出力ディレクトリ
 		/// </summary>
+		[Microsoft.Build.Framework.Required]
 		public string OutDir { get; set; } = string.Empty;
 
 		/// <summary>
 		/// 中間ディレクトリ
 		/// </summary>
+		[Microsoft.Build.Framework.Required]
 		public string IntermediateOutputPath { get; set; } = string.Empty;
 
 		/// <summary>
 		/// MSBuild のバイナリパス
 		/// </summary>
+		[Microsoft.Build.Framework.Required]
 		public string MSBuildBinPath { get; set; } = string.Empty;
 
 		/// <summary>
 		/// 最適化オプション
 		/// </summary>
+		[Microsoft.Build.Framework.Required]
 		public string Optimization { get; set; } = string.Empty;
 
 		public string BuildLogFile { get; set;} = string.Empty;
@@ -137,7 +156,7 @@ namespace Nox.CustomTask
 		{
 			Log.LogMessage(Microsoft.Build.Framework.MessageImportance.High, "This is a log message from MyCustomTask.");
 			
-			if (GenerateJson() == false)
+			if (Generate() == false)
 			{
 				return false;
 			}
@@ -147,7 +166,7 @@ namespace Nox.CustomTask
 		#endregion
 
 		#region 非公開メソッド
-		private bool GenerateJson()
+		private bool Generate()
 		{
 			Data data = new Data()
 			{

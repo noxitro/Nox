@@ -702,84 +702,85 @@ namespace ReflectionGenerator.Generator
 			Util.ParallelFor(0, globalDeclarationLength + classInfoList.Count, (int index) => 
             {
                 CodeStringBuilder codeStringBuilder = issueCodeStringBuilder();
-                codeStringBuilder.Push();
-
-				if (index < globalDeclarationLength)
+                using (codeStringBuilder.Indent())
                 {
-                    //  グローバル宣言
-                    int globalDeclarationIndex = index;
-                    string declName;
-                    if (globalDeclarationIndex < globalVariableInfoList.Count)
+
+                    if (index < globalDeclarationLength)
                     {
-                        //  変数宣言
-                        Parser2.VariableDecl variableInfo = globalVariableInfoList[globalDeclarationIndex];
-                        if(variableInfo.ReflectionGenerateKind == Parser2.ReflectionGenerateKind.IgnoreReflection)
+                        //  グローバル宣言
+                        int globalDeclarationIndex = index;
+                        string declName;
+                        if (globalDeclarationIndex < globalVariableInfoList.Count)
                         {
-                            return;
-						} 
+                            //  変数宣言
+                            Parser2.VariableDecl variableInfo = globalVariableInfoList[globalDeclarationIndex];
+                            if (variableInfo.ReflectionGenerateKind == Parser2.ReflectionGenerateKind.IgnoreReflection)
+                            {
+                                return;
+                            }
 
-						GenerateVariableInfo(codeStringBuilder, variableInfo, null);
+                            GenerateVariableInfo(codeStringBuilder, variableInfo, null);
 
-                        declName = $"variable_info_{variableInfo.Hash.ToString()}";
+                            declName = $"variable_info_{variableInfo.Hash.ToString()}";
 
-                    }
-                    else if (globalDeclarationIndex < globalVariableInfoList.Count + globalFunctionInfoList.Count)
-                    {
-						//  関数宣言
-						Parser2.FunctionDecl functionInfo = globalFunctionInfoList[globalDeclarationIndex - globalVariableInfoList.Count];
-						if (functionInfo.ReflectionGenerateKind == Parser2.ReflectionGenerateKind.IgnoreReflection)
-						{
-							return;
-						}
+                        }
+                        else if (globalDeclarationIndex < globalVariableInfoList.Count + globalFunctionInfoList.Count)
+                        {
+                            //  関数宣言
+                            Parser2.FunctionDecl functionInfo = globalFunctionInfoList[globalDeclarationIndex - globalVariableInfoList.Count];
+                            if (functionInfo.ReflectionGenerateKind == Parser2.ReflectionGenerateKind.IgnoreReflection)
+                            {
+                                return;
+                            }
 
-						GenerateFunctionInfo(codeStringBuilder, functionInfo, null);
-                        declName = $"function_info_{functionInfo.Hash.ToString()}";
+                            GenerateFunctionInfo(codeStringBuilder, functionInfo, null);
+                            declName = $"function_info_{functionInfo.Hash.ToString()}";
+                        }
+                        else
+                        {
+                            //  Enum宣言
+                            Parser2.EnumDecl enumInfo = globalEnumInfoList[globalDeclarationIndex - globalVariableInfoList.Count - globalFunctionInfoList.Count];
+                            GenerateEnumInfo(codeStringBuilder, enumInfo, null);
+                            declName = $"enum_info_{enumInfo.Hash.ToString()}";
+                        }
+
+                        //  書き込むコードのインデックスを取得
+                        int codeWriterWithGlobalIndex = calcIndex(globalDeclarationIndex, globalDeclarationLength, codeWriterWithGlobalList.Length);
+                        CodeWriter codeWriterWithGlobal = codeWriterWithGlobalList[codeWriterWithGlobalIndex];
+
+                        //  CodeWriterへ登録
+                        lock (codeWriterWithGlobal)
+                        {
+                            codeWriterWithGlobal.WriteLine(codeStringBuilder.ToString());
+                            registerDeclListTableWithGlobal[codeWriterWithGlobalIndex].Add(declName);
+                        }
                     }
                     else
                     {
-                        //  Enum宣言
-                        Parser2.EnumDecl enumInfo = globalEnumInfoList[globalDeclarationIndex - globalVariableInfoList.Count - globalFunctionInfoList.Count];
-                        GenerateEnumInfo(codeStringBuilder, enumInfo, null);
-                        declName = $"enum_info_{enumInfo.Hash.ToString()}";
+                        //  クラス宣言
+                        int classDeclarationIndex = index - globalDeclarationLength;
+                        int codeWriterWithClassIndex = calcIndex(classDeclarationIndex, classInfoList.Count, codeWriterWithClassList.Length);
+                        CodeWriter codeWriter = codeWriterWithClassList[codeWriterWithClassIndex];
+                        Parser2.RecordDecl classInfo = classInfoList[classDeclarationIndex];
+
+                        if (classInfo.Namespace.StartsWith("nox") == false)
+                        {
+                            //  未対応
+                            return;
+                        }
+
+                        List<string> registerClassDeclNameList = new List<string>();
+                        GenerateClassInfo(codeStringBuilder, classInfo, null, registerClassDeclNameList);
+
+                        lock (codeWriter)
+                        {
+                            codeWriter.WriteLine(codeStringBuilder.ToString());
+                            registerDeclListTableWithClass[codeWriterWithClassIndex].AddRange(registerClassDeclNameList);
+                            //						registerDeclListTableWithClass[codeWriterWithClassIndex].Add($"nox::reflection::gen::ReflectionGeneratedHolder<{classInfo.FullName}>::class_info_{classInfo.Hash}");
+                        }
                     }
 
-                    //  書き込むコードのインデックスを取得
-                    int codeWriterWithGlobalIndex = calcIndex(globalDeclarationIndex, globalDeclarationLength, codeWriterWithGlobalList.Length);
-					CodeWriter codeWriterWithGlobal = codeWriterWithGlobalList[codeWriterWithGlobalIndex];
-                
-                    //  CodeWriterへ登録
-                    lock (codeWriterWithGlobal)
-                    {
-                        codeWriterWithGlobal.WriteLine(codeStringBuilder.ToString());
-                        registerDeclListTableWithGlobal[codeWriterWithGlobalIndex].Add(declName);
-					}
-				}
-                else
-                {
-                    //  クラス宣言
-                    int classDeclarationIndex = index - globalDeclarationLength;
-                    int codeWriterWithClassIndex = calcIndex(classDeclarationIndex, classInfoList.Count, codeWriterWithClassList.Length);
-					CodeWriter codeWriter = codeWriterWithClassList[codeWriterWithClassIndex];
-					Parser2.RecordDecl classInfo = classInfoList[classDeclarationIndex];
-
-                    if(classInfo.Namespace.StartsWith("nox") == false)
-                    {
-                        //  未対応
-                        return;
-                    }
-
-                    List<string> registerClassDeclNameList = new List<string>();
-					GenerateClassInfo(codeStringBuilder, classInfo, registerClassDeclNameList);
-
-					lock (codeWriter)
-                    {
-                        codeWriter.WriteLine(codeStringBuilder.ToString());
-                        registerDeclListTableWithClass[codeWriterWithClassIndex].AddRange(registerClassDeclNameList);
-//						registerDeclListTableWithClass[codeWriterWithClassIndex].Add($"nox::reflection::gen::ReflectionGeneratedHolder<{classInfo.FullName}>::class_info_{classInfo.Hash}");
-					}
                 }
-
-                codeStringBuilder.Pop();
 				returnCodeStringBuilder(codeStringBuilder);
 			});
 
@@ -823,14 +824,13 @@ namespace ReflectionGenerator.Generator
 					//  登録処理
 					codeWriter.WriteLine(declStrRegister);
                     codeWriter.WriteLine("{");
-					codeWriter.Push();
-
-                    foreach (ReadOnlySpan<char> s in declarationList)
+                    using (codeWriter.Indent())
                     {
-                        codeWriter.WriteLine($"nox::reflection::Register({s});");
+                        foreach (ReadOnlySpan<char> s in declarationList)
+                        {
+                            codeWriter.WriteLine($"nox::reflection::Register({s});");
+                        }
                     }
-
-                    codeWriter.Pop();
                     codeWriter.WriteLine("}");
 
                     codeWriter.WriteNewLine();
@@ -838,14 +838,14 @@ namespace ReflectionGenerator.Generator
 					//  登録解除処理
 					codeWriter.WriteLine(declStrUnregister);
 					codeWriter.WriteLine("{");
-                    codeWriter.Push();
-
-					foreach (ReadOnlySpan<char> s in declarationList)
+                    using (codeWriter.Indent())
                     {
-                        codeWriter.WriteLine($"nox::reflection::Unregister({s});");
-                    }
 
-					codeWriter.Pop();
+                        foreach (ReadOnlySpan<char> s in declarationList)
+                        {
+                            codeWriter.WriteLine($"nox::reflection::Unregister({s});");
+                        }
+                    }
 					codeWriter.WriteLine("}");
 				},
                 useThreadCount);
@@ -881,20 +881,21 @@ namespace ReflectionGenerator.Generator
 			}
 
             codeWriter.WriteLine($"static constexpr const std::reference_wrapper<const nox::reflection::ReflectionObject> attribute_info_table_{hash}[{attributeInfoList.Length.ToString()}]={{");
-            codeWriter.Push();
-			for (int i = 0, length = tmpDeclNameList.Count; i < length; ++i)
+            using (codeWriter.Indent())
             {
-                string declName = tmpDeclNameList[i];
-                if(i == length - 1)
+                for (int i = 0, length = tmpDeclNameList.Count; i < length; ++i)
                 {
-					codeWriter.WriteLine(declName);
-				}
-                else
-                {
-                    codeWriter.WriteLine($"{declName},");
-				}
+                    string declName = tmpDeclNameList[i];
+                    if (i == length - 1)
+                    {
+                        codeWriter.WriteLine(declName);
+                    }
+                    else
+                    {
+                        codeWriter.WriteLine($"{declName},");
+                    }
+                }
             }
-            codeWriter.Pop();
 			codeWriter.WriteLine("};");
             codeWriter.WriteNewLine();
 
@@ -923,11 +924,11 @@ namespace ReflectionGenerator.Generator
 			{
 				if (variableInfo.Type.TypeAttributeFlags.IsAnyOn( Parser2.TypeAttributeFlag.LValueReference | Parser2.TypeAttributeFlag.RValueReference))
 				{
-					codeWriter.WriteLine($"static constexpr auto {GetVariableInfoDeclName(variableInfo)} = nox::reflection::detail::CreateVariableInfoMemberRef");
+					codeWriter.WriteLine($"static constexpr auto {GetVariableInfoDeclName(variableInfo)} = nox::reflection::detail::CreateVariableInfoMemberRef<decltype({variableInfo.FullName})>");
 				}
 				else
 				{
-					codeWriter.WriteLine($"static constexpr auto {GetVariableInfoDeclName(variableInfo)} = nox::reflection::detail::CreateVariableInfoMember<&{variableInfo.FullName}>");
+					codeWriter.WriteLine($"static constexpr auto {GetVariableInfoDeclName(variableInfo)} = nox::reflection::detail::CreateVariableInfoMember<decltype({variableInfo.FullName}), &{variableInfo.FullName}>");
 				}
 			}
 			//  グローバル変数
@@ -935,206 +936,237 @@ namespace ReflectionGenerator.Generator
 			{
 				if (variableInfo.Type.TypeAttributeFlags.IsAnyOn(Parser2.TypeAttributeFlag.LValueReference | Parser2.TypeAttributeFlag.RValueReference))
 				{
-					codeWriter.WriteLine($"static constexpr auto {GetVariableInfoDeclName(variableInfo)} = nox::reflection::detail::CreateVariableInfoGlobalRef");
+					codeWriter.WriteLine($"static constexpr auto {GetVariableInfoDeclName(variableInfo)} = nox::reflection::detail::CreateVariableInfoGlobalRef<decltype({variableInfo.FullName})>");
 				}
 				else
 				{
-					codeWriter.WriteLine($"static constexpr auto {GetVariableInfoDeclName(variableInfo)} = nox::reflection::detail::CreateVariableInfoGlobal<&{variableInfo.FullName}>");
+					codeWriter.WriteLine($"static constexpr auto {GetVariableInfoDeclName(variableInfo)} = nox::reflection::detail::CreateVariableInfoGlobal<decltype({variableInfo.FullName}), &{variableInfo.FullName}>");
 				}
 			}
-           
+            
             codeWriter.WriteLine("(");
-            codeWriter.Push();
+            using (codeWriter.Indent())
+            {
 
-			//  非参照型の場合
-			if (variableInfo.Type.TypeAttributeFlags.IsAnyOn(Parser2.TypeAttributeFlag.LValueReference | Parser2.TypeAttributeFlag.RValueReference))
-			{
-				codeWriter.WriteLine($"nox::reflection::Typeof<decltype({variableInfo.FullName})>(),\t//\ttype");
-				if (variableInfo.VariableAttributeFlags.IsOn(Parser2.VariableAttributeFlag.Static) == false)
-				{
-					System.Diagnostics.Debug.Assert(declarationTypeInfo != null, "declarationTypeInfo must not be null for non-static variables.");
-					codeWriter.WriteLine($"\tnox::reflection::Typeof<decltype({declarationTypeInfo.FullName})>(),\t//\towner type");
-				}
-				//  オブジェクトポインタ
-				//	buffer += $"\t&{variableInfo.FullName},\t//\t object_pointer\n";
-			}
-			else
-			{
-				
-			}
-
-			//  各種名前
-			codeWriter.WriteLine($"U\"{variableInfo.Name}\",\t//\tname");
-			codeWriter.WriteLine($"U\"{variableInfo.FullName}\",\t//\tfullName");
-			codeWriter.WriteLine($"U\"{variableInfo.Namespace}\",\t//\tnamespace");
-
-			codeWriter.WriteLine($"{variableInfo.AccessLevel.GetRuntimeFqn()},\t//\taccess level");
-			codeWriter.WriteLine($"{variableInfo.BitFieldWidth.ToString()},\t//\tbit with");
-			codeWriter.WriteLine($"{variableInfo.OffsetBits.ToString()},\t//\toffset");
-
-			//  属性
-			if (enabledAttributeLength > 0)
-			{
-				codeWriter.WriteLine($"attribute_info_table_{variableInfo.Hash},\t//\tattribute");
-			}
-			else
-			{
-				codeWriter.WriteLine("nullptr,\t//\tattribute");
-			}
-
-			codeWriter.WriteLine($"{enabledAttributeLength.ToString()},\t//\tattribute length");
-
-			//  変数属性
-			{
-				List<string> variableAttributeFlagsStrList = [];
-				if (variableInfo.VariableAttributeFlags.IsOn(Parser2.VariableAttributeFlag.Constexpr) == true)
-				{
-					variableAttributeFlagsStrList.Add("nox::reflection::VariableAttributeFlag::Constexpr");
-				}
-				if (variableInfo.VariableAttributeFlags.IsOn(Parser2.VariableAttributeFlag.Static) == true)
-				{
-					variableAttributeFlagsStrList.Add("nox::reflection::VariableAttributeFlag::Static");
-				}
-
-				if (variableAttributeFlagsStrList.Count > 0)
-				{
-					if (variableAttributeFlagsStrList.Count == 1)
-					{
-						codeWriter.WriteLine($"{variableAttributeFlagsStrList[0]},\t//\tvariable attribute flags");
-					}
-					else
-					{
-						codeWriter.WriteLine("nox::util::BitOr(");
-						for (int i = 0, length = variableAttributeFlagsStrList.Count; i < variableAttributeFlagsStrList.Count; ++i)
-						{
-							if (i != length - 1)
-							{
-                                codeWriter.WriteLine($"{variableAttributeFlagsStrList[i]},");
-							}
-							else
-							{
-								codeWriter.WriteLine(variableAttributeFlagsStrList[i]);
-							}
-						}
-                        codeWriter.WriteLine("),");
-					}
-				}
-				else
-				{
-					codeWriter.WriteLine("nox::reflection::VariableAttributeFlag::None,\t//\tvariable attribute flags");
-				}
-			}
-
-			//  getter, setterの記述
-			//  reflection_generatedプロジェクトのsupport_functionsにあるマクロを使用する
-			ReadOnlySpan<char> variableTypeDeclStr = $"using VariableType = decltype({variableInfo.FullName});";
-			ReadOnlySpan<char> elementTypeDeclStr = "using ElementType = nox::ContainerElementType<VariableType>;";
-
-			if (variableInfo.VariableAttributeFlags.IsOn(Parser2.VariableAttributeFlag.Static) == false)
-			{
-                System.Diagnostics.Debug.Assert(declarationTypeInfo != null, $"declarationTypeInfo is null\t{variableInfo.FullName}");
-
-                //  メンバ
-                ReadOnlySpan<char> classTypeDeclStr = $"using ClassType = {declarationTypeInfo.FullName};";
-
-				//{
-				//	if (variableInfo.Type is Parser2.PointerTypeInfo pointerTypeInfo)
-				//	{
-				//		if (pointerTypeInfo.PointeeType.TypeAttributeFlags.IsOn(Parser2.TypeAttributeFlag.Const))
-				//		{
-				//			classTypeDeclStr = $"using ClassType = const {declarationTypeInfo.FullName};";
-				//			instanceImplStr = "ClassType instanceImpl = static_cast<ClassType>(instance.get());";
-
-				//		}
-				//		else
-				//		{
-				//			classTypeDeclStr = $"using ClassType = {declarationTypeInfo.FullName};";
-				//			instanceImplStr = "ClassType instanceImpl = static_cast<ClassType>(instance.get());";
-				//		}
-				//	}
-				//	else
-				//	{
-				//		classTypeDeclStr = $"using ClassType = {declarationTypeInfo.FullName};";
-				//	}
-				//}
-
-				// setter
-				{
-					codeWriter.WriteLine("//\tsetter");
-
-                    if (variableInfo.Type.TypeAttributeFlags.IsOn(Parser2.TypeAttributeFlag.Const) == true)
+                //  非参照型の場合
+                if (variableInfo.Type.TypeAttributeFlags.IsAnyOn(Parser2.TypeAttributeFlag.LValueReference | Parser2.TypeAttributeFlag.RValueReference))
+                {
+                    codeWriter.WriteLine($"nox::reflection::Typeof<decltype({variableInfo.FullName})>(),\t//\ttype");
+                    if (variableInfo.VariableAttributeFlags.IsOn(Parser2.VariableAttributeFlag.Static) == false)
                     {
-                        codeWriter.WriteLine("nullptr,");
+                        System.Diagnostics.Debug.Assert(declarationTypeInfo != null, "declarationTypeInfo must not be null for non-static variables.");
+                        codeWriter.WriteLine($"\tnox::reflection::Typeof<decltype({declarationTypeInfo.FullName})>(),\t//\towner type");
+                    }
+                    //  オブジェクトポインタ
+                    //	buffer += $"\t&{variableInfo.FullName},\t//\t object_pointer\n";
+                }
+                else
+                {
+
+                }
+
+                //  各種名前
+                if (!variableInfo.Type.TypeAttributeFlags.IsAnyOn(Parser2.TypeAttributeFlag.LValueReference | Parser2.TypeAttributeFlag.RValueReference))
+                {
+                    codeWriter.WriteLine($"nox::GetObjectPointerId<&{variableInfo.FullName}>(),\t//\tobject_pointer_id");
+                }
+                codeWriter.WriteLine($"u8\"{variableInfo.Name}\",\t//\tname");
+                codeWriter.WriteLine($"u8\"{variableInfo.FullName}\",\t//\tfullName");
+                codeWriter.WriteLine($"u8\"{variableInfo.Namespace}\",\t//\tnamespace");
+
+                codeWriter.WriteLine($"{variableInfo.AccessLevel.GetRuntimeFqn()},\t//\taccess level");
+                codeWriter.WriteLine($"{variableInfo.BitFieldWidth.ToString()},\t//\tbit with");
+                codeWriter.WriteLine($"{variableInfo.OffsetBits.ToString()},\t//\toffset");
+
+                //  属性
+                if (enabledAttributeLength > 0)
+                {
+                    codeWriter.WriteLine($"attribute_info_table_{variableInfo.Hash},\t//\tattribute");
+                }
+                else
+                {
+                    codeWriter.WriteLine("nullptr,\t//\tattribute");
+                }
+
+                codeWriter.WriteLine($"{enabledAttributeLength.ToString()},\t//\tattribute length");
+
+                //  変数属性
+                {
+                    List<string> variableAttributeFlagsStrList = [];
+                    if (variableInfo.VariableAttributeFlags.IsOn(Parser2.VariableAttributeFlag.Constexpr) == true)
+                    {
+                        variableAttributeFlagsStrList.Add("nox::reflection::VariableAttributeFlag::Constexpr");
+                    }
+                    if (variableInfo.VariableAttributeFlags.IsOn(Parser2.VariableAttributeFlag.Static) == true)
+                    {
+                        variableAttributeFlagsStrList.Add("nox::reflection::VariableAttributeFlag::Static");
+                    }
+
+                    if (variableAttributeFlagsStrList.Count > 0)
+                    {
+                        if (variableAttributeFlagsStrList.Count == 1)
+                        {
+                            codeWriter.WriteLine($"{variableAttributeFlagsStrList[0]},\t//\tvariable attribute flags");
+                        }
+                        else
+                        {
+                            codeWriter.WriteLine("nox::util::BitOr(");
+                            for (int i = 0, length = variableAttributeFlagsStrList.Count; i < variableAttributeFlagsStrList.Count; ++i)
+                            {
+                                if (i != length - 1)
+                                {
+                                    codeWriter.WriteLine($"{variableAttributeFlagsStrList[i]},");
+                                }
+                                else
+                                {
+                                    codeWriter.WriteLine(variableAttributeFlagsStrList[i]);
+                                }
+                            }
+                            codeWriter.WriteLine("),");
+                        }
                     }
                     else
                     {
-                        codeWriter.WriteLine("+[](nox::not_null<void*> instance, const void* const value)");
-                        codeWriter.WriteLine("{");
-                        codeWriter.Push();
-                        codeWriter.WriteLine(variableTypeDeclStr);
-                        codeWriter.WriteLine(classTypeDeclStr);
-
-                        codeWriter.WriteLine("if constexpr(nox::concepts::Assignable<VariableType, VariableType>)");
-                        codeWriter.WriteLine("{");
-                        codeWriter.Push();
-                        codeWriter.WriteLine($"static_cast<ClassType*>(instance.get())->{variableInfo.FullName} = *static_cast <const std::remove_reference_t<VariableType>*> (value);");
-                        codeWriter.Pop();
-                        codeWriter.WriteLine("}");
-
-                        codeWriter.Pop();
-                        codeWriter.WriteLine("},");
+                        codeWriter.WriteLine("nox::reflection::VariableAttributeFlag::None,\t//\tvariable attribute flags");
                     }
                 }
 
-				// getter
-				{
-					codeWriter.WriteLine("//\tgetter");
+                //  getter, setterの記述
+                //  reflection_generatedプロジェクトのsupport_functionsにあるマクロを使用する
+                ReadOnlySpan<char> variableTypeDeclStr = $"using VariableType = decltype({variableInfo.FullName});";
+                ReadOnlySpan<char> elementTypeDeclStr = "using ElementType = nox::ContainerElementType<VariableType>;";
 
-					codeWriter.WriteLine("+[](nox::not_null<void*> out, nox::not_null<const void*> instance)");
-					codeWriter.WriteLine("{");
-					codeWriter.Push();
-					codeWriter.WriteLine(variableTypeDeclStr);
-					codeWriter.WriteLine(classTypeDeclStr);
+                if (variableInfo.VariableAttributeFlags.IsOn(Parser2.VariableAttributeFlag.Static) == false)
+                {
+                    System.Diagnostics.Debug.Assert(declarationTypeInfo != null, $"declarationTypeInfo is null\t{variableInfo.FullName}");
 
-					codeWriter.WriteLine("if constexpr (nox::concepts::Assignable<VariableType, std::remove_const_t<VariableType>>)");
-					codeWriter.WriteLine("{");
-					codeWriter.Push();
-					codeWriter.WriteLine($"*static_cast<std::remove_reference_t<VariableType>*>(out.get()) = static_cast <const ClassType*> (instance.get())->{variableInfo.FullName};");
-					codeWriter.Pop();
-					codeWriter.WriteLine("}");
+                    //  メンバ
+                    ReadOnlySpan<char> classTypeDeclStr = $"using ClassType = {declarationTypeInfo.FullName};";
 
-					codeWriter.Pop();
-					codeWriter.WriteLine("},");
-				}
+                    //{
+                    //	if (variableInfo.Type is Parser2.PointerTypeInfo pointerTypeInfo)
+                    //	{
+                    //		if (pointerTypeInfo.PointeeType.TypeAttributeFlags.IsOn(Parser2.TypeAttributeFlag.Const))
+                    //		{
+                    //			classTypeDeclStr = $"using ClassType = const {declarationTypeInfo.FullName};";
+                    //			instanceImplStr = "ClassType instanceImpl = static_cast<ClassType>(instance);";
 
-				// getter address
-				{
-					codeWriter.WriteLine("//\tgetter address");
+                    //		}
+                    //		else
+                    //		{
+                    //			classTypeDeclStr = $"using ClassType = {declarationTypeInfo.FullName};";
+                    //			instanceImplStr = "ClassType instanceImpl = static_cast<ClassType>(instance);";
+                    //		}
+                    //	}
+                    //	else
+                    //	{
+                    //		classTypeDeclStr = $"using ClassType = {declarationTypeInfo.FullName};";
+                    //	}
+                    //}
 
-					codeWriter.WriteLine("+[](nox::not_null<void*> out, nox::not_null<const void*> instance)");
-					codeWriter.WriteLine("{");
-					codeWriter.Push();
-					codeWriter.WriteLine(variableTypeDeclStr);
-					codeWriter.WriteLine(classTypeDeclStr);
+                    // setter
+                    {
+                        codeWriter.WriteLine("//\tsetter");
 
-					codeWriter.WriteLine("if constexpr(nox::concepts::Assignable<VariableType, std::remove_const_t<VariableType>>)");
-					codeWriter.WriteLine("{");
-					codeWriter.Push();
-					codeWriter.WriteLine($"*static_cast<const std::remove_reference_t<VariableType>**>(out.get()) = &static_cast<const ClassType*>(instance.get())->{variableInfo.FullName};");
-					codeWriter.Pop();
-					codeWriter.WriteLine("}");
+                        if (variableInfo.Type.TypeAttributeFlags.IsOn(Parser2.TypeAttributeFlag.Const) == true)
+                        {
+                            codeWriter.WriteLine("nullptr,");
+                        }
+                        else
+                        {
+                            codeWriter.WriteLine("+[](void* instance, void* value)->void");
+                            codeWriter.WriteLine("{");
+                            using (codeWriter.Indent())
+                            {
+                                codeWriter.WriteLine(variableTypeDeclStr);
+                                codeWriter.WriteLine(classTypeDeclStr);
 
-					codeWriter.Pop();
-					codeWriter.WriteLine("},");
-				}
+                                codeWriter.WriteLine("if constexpr(nox::concepts::Assignable<VariableType, VariableType>)");
+                                codeWriter.WriteLine("{");
+                                using (codeWriter.Indent())
+                                {
+                                    codeWriter.WriteLine($"static_cast<ClassType*>(instance)->{variableInfo.FullName} = *static_cast <const std::remove_reference_t<VariableType>*> (value);");
+                                }
+                                codeWriter.WriteLine("}");
+                            }
+                            codeWriter.WriteLine("},");
+                        }
+                    }
 
-				// setter subscripts
-				{
-					codeWriter.WriteLine("//\tsetter subscripts");
+                    // getter
+                    {
+                        codeWriter.WriteLine("//\tgetter");
 
-					codeWriter.WriteLine("nullptr,");
+                        codeWriter.WriteLine($"+[](void* instance)->nox::reflection::ReflectionOptional<decltype({variableInfo.FullName})>");
+                        codeWriter.WriteLine("{");
+                        using (codeWriter.Indent())
+                        {
+                            codeWriter.WriteLine(variableTypeDeclStr);
+                            codeWriter.WriteLine(classTypeDeclStr);
+
+                            codeWriter.WriteLine("if constexpr (nox::concepts::Assignable<VariableType, std::remove_const_t<VariableType>>)");
+                            codeWriter.WriteLine("{");
+                            using (codeWriter.Indent())
+                            {
+                                codeWriter.WriteLine($"return static_cast <const ClassType*> (instance)->{variableInfo.FullName};");
+                            }
+                            codeWriter.WriteLine("}");
+                            codeWriter.WriteLine("else");
+                            codeWriter.WriteLine("{");
+                            using (codeWriter.Indent())
+                            {
+                                codeWriter.WriteLine("return std::nullopt;");
+                            }
+                            codeWriter.WriteLine("}");
+                        }
+                        codeWriter.WriteLine("},");
+                    }
+
+                    // getter address
+                    {
+                        codeWriter.WriteLine("//\tgetter address");
+
+                        codeWriter.WriteLine("+[](void* instance)->void*");
+                        codeWriter.WriteLine("{");
+                        using (codeWriter.Indent())
+                        {
+                            codeWriter.WriteLine(variableTypeDeclStr);
+                            codeWriter.WriteLine(classTypeDeclStr);
+
+                            codeWriter.WriteLine("if constexpr(nox::concepts::Assignable<VariableType, std::remove_const_t<VariableType>>)");
+                            codeWriter.WriteLine("{");
+                            using (codeWriter.Indent())
+                            {
+                                codeWriter.WriteLine("if constexpr (std::is_convertible_v<VariableType, const void*>)");
+                                using (codeWriter.Indent())
+                                {
+                                    codeWriter.WriteLine($"return const_cast<void*>(static_cast<const void*>(&static_cast<const ClassType*>(instance)->{variableInfo.FullName}));");
+                                }
+                                codeWriter.WriteLine("else");
+                                using (codeWriter.Indent())
+                                {
+                                    codeWriter.WriteLine($"return const_cast<void*>(static_cast<const volatile void*>(&static_cast<const ClassType*>(instance)->{variableInfo.FullName}));");
+                                }
+                            }
+                            codeWriter.WriteLine("}");
+                            codeWriter.WriteLine("else");
+                            codeWriter.WriteLine("{");
+                            using (codeWriter.Indent())
+                            {
+                                codeWriter.WriteLine("return std::nullptr;");
+                            }
+                            codeWriter.WriteLine("}");
+                        }
+                        codeWriter.WriteLine("},");
+                    }
+
+                    // setter subscripts
+                    {
+                        codeWriter.WriteLine("//\tsetter subscripts");
+
+                        codeWriter.WriteLine("nullptr,");
 #if false
-					codeWriter.WriteLine("+[](nox::not_null<void*> instance, const void* const value, const std::uint32_t index)");
+					codeWriter.WriteLine("+[](void* instance, const void* const value, const std::uint32_t index)");
 					codeWriter.WriteLine("{");
 					codeWriter.Push();
 					codeWriter.WriteLine(variableTypeDeclStr);
@@ -1145,7 +1177,7 @@ namespace ReflectionGenerator.Generator
 					codeWriter.Push();
                     codeWriter.WriteLine(elementTypeDeclStr);
 
-                    codeWriter.WriteLine($"if (nox::util::IsValidIndex(static_cast<ClassType*>(instance.get())->{variableInfo.FullName}, index) == false)");
+                    codeWriter.WriteLine($"if (nox::util::IsValidIndex(static_cast<ClassType*>(instance)->{variableInfo.FullName}, index) == false)");
                     codeWriter.WriteLine("{");
                     codeWriter.Push();
                     codeWriter.WriteLine("return false;");
@@ -1155,7 +1187,7 @@ namespace ReflectionGenerator.Generator
 					codeWriter.WriteLine("if constexpr (nox::concepts::Assignable<ElementType, ElementType>)");
                     codeWriter.WriteLine("{");
                     codeWriter.Push();
-                    codeWriter.WriteLine($"static_cast<ClassType*>(instance.get())->{variableInfo.FullName}[index] = *static_cast<ElementType*>(value);");
+                    codeWriter.WriteLine($"static_cast<ClassType*>(instance)->{variableInfo.FullName}[index] = *static_cast<ElementType*>(value);");
                     codeWriter.WriteLine("return true;");
 
 					codeWriter.Pop();
@@ -1174,15 +1206,15 @@ namespace ReflectionGenerator.Generator
 					codeWriter.Pop();
 					codeWriter.WriteLine("},");
 #endif
-				}
+                    }
 
-				// getter subscripts
-				{
-					codeWriter.WriteLine("//\tgetter subscripts");
+                    // getter subscripts
+                    {
+                        codeWriter.WriteLine("//\tgetter subscripts");
 
-					codeWriter.WriteLine("nullptr,");
+                        codeWriter.WriteLine("nullptr,");
 #if false
-					codeWriter.WriteLine("+[](nox::not_null<void*> out, nox::not_null<const void*> instance, const std::uint32_t index)");
+					codeWriter.WriteLine("+[](void* out, const void* instance, const std::uint32_t index)");
 					codeWriter.WriteLine("{");
 					codeWriter.Push();
 					codeWriter.WriteLine(variableTypeDeclStr);
@@ -1193,7 +1225,7 @@ namespace ReflectionGenerator.Generator
 					codeWriter.Push();
 					codeWriter.WriteLine(elementTypeDeclStr);
 
-					codeWriter.WriteLine($"if (nox::util::IsValidIndex(static_cast<ClassType*>(instance.get())->{variableInfo.FullName}, index) == false)");
+					codeWriter.WriteLine($"if (nox::util::IsValidIndex(static_cast<ClassType*>(instance)->{variableInfo.FullName}, index) == false)");
 					codeWriter.WriteLine("{");
 					codeWriter.Push();
 					codeWriter.WriteLine("return false;");
@@ -1203,7 +1235,7 @@ namespace ReflectionGenerator.Generator
 					codeWriter.WriteLine("if constexpr (nox::concepts::Assignable<ElementType, ElementType>)");
 					codeWriter.WriteLine("{");
 					codeWriter.Push();
-					codeWriter.WriteLine($"*static_cast<ElementType*>(out.get()) = static_cast<const ClassType*>(instance.get())->{variableInfo.FullName}[index];");
+					codeWriter.WriteLine($"*static_cast<ElementType*>(out) = static_cast<const ClassType*>(instance)->{variableInfo.FullName}[index];");
 					codeWriter.WriteLine("return true;");
 
 					codeWriter.Pop();
@@ -1222,15 +1254,15 @@ namespace ReflectionGenerator.Generator
 					codeWriter.Pop();
 					codeWriter.WriteLine("},");
 #endif
-				}
+                    }
 
-				// getter address subscripts
-				{
-					codeWriter.WriteLine("//\tgetter subscripts");
+                    // getter address subscripts
+                    {
+                        codeWriter.WriteLine("//\tgetter subscripts");
 
-					codeWriter.WriteLine("nullptr");
+                        codeWriter.WriteLine("nullptr");
 #if false
-					codeWriter.WriteLine("+[](nox::not_null<void*> out, nox::not_null<void*> instance, const std::uint32_t index)");
+					codeWriter.WriteLine("+[](void* out, void* instance, const std::uint32_t index)");
 					codeWriter.WriteLine("{");
 					codeWriter.Push();
 					codeWriter.WriteLine(variableTypeDeclStr);
@@ -1241,7 +1273,7 @@ namespace ReflectionGenerator.Generator
 					codeWriter.Push();
 					codeWriter.WriteLine(elementTypeDeclStr);
 
-					codeWriter.WriteLine($"if (nox::util::IsValidIndex(static_cast<ClassType*>(instance.get())->{variableInfo.FullName}, index) == false)");
+					codeWriter.WriteLine($"if (nox::util::IsValidIndex(static_cast<ClassType*>(instance)->{variableInfo.FullName}, index) == false)");
 					codeWriter.WriteLine("{");
 					codeWriter.Push();
 					codeWriter.WriteLine("return false;");
@@ -1251,7 +1283,7 @@ namespace ReflectionGenerator.Generator
 					codeWriter.WriteLine("if constexpr (nox::concepts::Assignable<ElementType, ElementType>)");
 					codeWriter.Push();
 					codeWriter.WriteLine("{");
-					codeWriter.WriteLine($"*static_cast<std::add_pointer_t<nox::AddConstPointerType<ElementType*>>>(out.get()) = &static_cast<ClassType*>(instance.get())->{variableInfo.FullName}[index];");
+					codeWriter.WriteLine($"*static_cast<std::add_pointer_t<nox::AddConstPointerType<ElementType*>>>(out) = &static_cast<ClassType*>(instance)->{variableInfo.FullName}[index];");
 					codeWriter.WriteLine("return true;");
 
 					codeWriter.Pop();
@@ -1271,84 +1303,110 @@ namespace ReflectionGenerator.Generator
 
 					codeWriter.WriteLine("}");
 #endif
-				}
-			}
-			else
-			{
-                //  グローバル
-
-                // setter
+                    }
+                }
+                else
                 {
-					codeWriter.WriteLine("//\tsetter");
+                    //  グローバル
 
-					if (variableInfo.Type.TypeAttributeFlags.IsOn(Parser2.TypeAttributeFlag.Const) == true)
-					{
-						codeWriter.WriteLine("nullptr,");
-					}
-					else
-					{
-						codeWriter.WriteLine("+[](const void* const value)");
-						codeWriter.WriteLine("{");
-						codeWriter.Push();
-						codeWriter.WriteLine(variableTypeDeclStr);
+                    // setter
+                    {
+                        codeWriter.WriteLine("//\tsetter");
 
-						codeWriter.WriteLine("if constexpr (nox::concepts::Assignable<VariableType, VariableType>)");
-						codeWriter.WriteLine("{");
-						codeWriter.Push();
-						codeWriter.WriteLine($"{variableInfo.FullName} = *static_cast<const std::remove_reference_t<VariableType>*>(value);");
-						codeWriter.Pop();
-						codeWriter.WriteLine("}");
+                        if (variableInfo.Type.TypeAttributeFlags.IsOn(Parser2.TypeAttributeFlag.Const) == true)
+                        {
+                            codeWriter.WriteLine("nullptr,");
+                        }
+                        else
+                        {
+                            codeWriter.WriteLine("+[](void* value)");
+                            codeWriter.WriteLine("{");
+                            using (codeWriter.Indent())
+                            {
+                                codeWriter.WriteLine(variableTypeDeclStr);
 
-						codeWriter.Pop();
-						codeWriter.WriteLine("},");
-					}
-				}
+                                codeWriter.WriteLine("if constexpr (nox::concepts::Assignable<VariableType, VariableType>)");
+                                codeWriter.WriteLine("{");
+                                using (codeWriter.Indent())
+                                {
+                                    codeWriter.WriteLine($"{variableInfo.FullName} = *static_cast<const std::remove_reference_t<VariableType>*>(value);");
+                                }
+                                codeWriter.WriteLine("}");
+                            }
+                            codeWriter.WriteLine("},");
+                        }
+                    }
 
-                // getter
-                {
-					codeWriter.WriteLine("//\tgetter");
+                    // getter
+                    {
+                        codeWriter.WriteLine("//\tgetter");
 
-					codeWriter.WriteLine("+[](nox::not_null<void*> out)");
-					codeWriter.WriteLine("{");
-					codeWriter.Push();
-					codeWriter.WriteLine(variableTypeDeclStr);
+                        codeWriter.WriteLine($"+[]()->nox::reflection::ReflectionOptional<decltype({variableInfo.FullName})>");
+                        codeWriter.WriteLine("{");
+                        using (codeWriter.Indent())
+                        {
+                            codeWriter.WriteLine(variableTypeDeclStr);
 
-					codeWriter.WriteLine("if constexpr (nox::concepts::Assignable<VariableType, std::remove_const_t<VariableType>>)");
-					codeWriter.WriteLine("{");
-					codeWriter.Push();
-					codeWriter.WriteLine($"*static_cast<std::remove_reference_t<std::remove_reference_t<VariableType>>*>(out.get()) = {variableInfo.FullName};");
-					codeWriter.Pop();
-					codeWriter.WriteLine("}");
+                            codeWriter.WriteLine("if constexpr (nox::concepts::Assignable<VariableType, std::remove_const_t<VariableType>>)");
+                            codeWriter.WriteLine("{");
+                            using (codeWriter.Indent())
+                            {
+                                codeWriter.WriteLine($"return {variableInfo.FullName};");
+                            }
+                            codeWriter.WriteLine("}");
+                            codeWriter.WriteLine("else");
+                            codeWriter.WriteLine("{");
+                            using (codeWriter.Indent())
+                            {
+                                codeWriter.WriteLine("return std::nullopt;");
+                            }
+                            codeWriter.WriteLine("}");
+                        }
+                        codeWriter.WriteLine("},");
+                    }
 
-					codeWriter.Pop();
-					codeWriter.WriteLine("},");
-				}
+                    // getter address
+                    {
+                        codeWriter.WriteLine("//\tgetter address");
 
-                // getter address
-                {
-					codeWriter.WriteLine("//\tgetter address");
+                        codeWriter.WriteLine("+[](void* instance)->void*");
+                        codeWriter.WriteLine("{");
+                        using (codeWriter.Indent())
+                        {
+                            codeWriter.WriteLine(variableTypeDeclStr);
 
-					codeWriter.WriteLine("+[](nox::not_null<void*> instance, const void* const value)");
-					codeWriter.WriteLine("{");
-					codeWriter.Push();
-					codeWriter.WriteLine(variableTypeDeclStr);
+                            codeWriter.WriteLine("if constexpr (nox::concepts::Assignable<VariableType, std::remove_const_t<VariableType>>)");
+                            codeWriter.WriteLine("{");
+                            using (codeWriter.Indent())
+                            {
+                                codeWriter.WriteLine("if constexpr (std::is_convertible_v<VariableType, const void*>)");
+                                using (codeWriter.Indent())
+                                {
+                                    codeWriter.WriteLine($"return const_cast<void*>(static_cast<const void*>(&{variableInfo.FullName}));");
+                                }
+                                codeWriter.WriteLine("else");
+                                using (codeWriter.Indent())
+                                {
+                                    codeWriter.WriteLine($"return const_cast<void*>(static_cast<const volatile void*>(&{variableInfo.FullName}));");
+                                }
+                            }
+                            codeWriter.WriteLine("}");
+                            codeWriter.WriteLine("else");
+                            codeWriter.WriteLine("{");
+                            using (codeWriter.Indent())
+                            {
+                                codeWriter.WriteLine("return std::nullptr;");
+                            }
+                            codeWriter.WriteLine("}");
+                        }
+                        codeWriter.WriteLine("},");
+                    }
 
-					codeWriter.WriteLine("if constexpr (nox::concepts::Assignable<VariableType, std::remove_const_t<VariableType>>)");
-					codeWriter.WriteLine("{");
-					codeWriter.Push();
-					codeWriter.WriteLine($"*static_cast<const std::remove_reference_t<VariableType>**>(out.get()) = &{variableInfo.FullName};");
-					codeWriter.Pop();
-					codeWriter.WriteLine("}");
+                    // setter subscripts
+                    {
+                        codeWriter.WriteLine("//\tsetter subscripts");
 
-					codeWriter.Pop();
-					codeWriter.WriteLine("},");
-				}
-
-                // setter subscripts
-                {
-					codeWriter.WriteLine("//\tsetter subscripts");
-
-                    codeWriter.WriteLine("nullptr,");
+                        codeWriter.WriteLine("nullptr,");
 
 #if false
                     codeWriter.WriteLine("+[](const void* const value, const std::uint32_t index)");
@@ -1361,7 +1419,7 @@ namespace ReflectionGenerator.Generator
 					codeWriter.Push();
 					codeWriter.WriteLine(elementTypeDeclStr);
 
-					codeWriter.WriteLine($"if (nox::util::IsValidIndex(static_cast<ClassType*>(instance.get())->{variableInfo.FullName}, index) == false)");
+					codeWriter.WriteLine($"if (nox::util::IsValidIndex(static_cast<ClassType*>(instance)->{variableInfo.FullName}, index) == false)");
 					codeWriter.WriteLine("{");
 					codeWriter.Push();
 					codeWriter.WriteLine("return false;");
@@ -1390,15 +1448,15 @@ namespace ReflectionGenerator.Generator
 					codeWriter.Pop();
 					codeWriter.WriteLine("},");
 #endif
-				}
+                    }
 
-				// getter subscripts
-				{
-					codeWriter.WriteLine("//\tgetter subscripts");
+                    // getter subscripts
+                    {
+                        codeWriter.WriteLine("//\tgetter subscripts");
 
-                    codeWriter.WriteLine("nullptr,");
+                        codeWriter.WriteLine("nullptr,");
 #if false
-                    codeWriter.WriteLine("+[](nox::not_null<void*> out, nox::not_null<const void*> instance, const std::uint32_t index)");
+                    codeWriter.WriteLine("+[](void* out, const void* instance, const std::uint32_t index)");
 					codeWriter.WriteLine("{");
 					codeWriter.Push();
 					codeWriter.WriteLine(variableTypeDeclStr);
@@ -1418,7 +1476,7 @@ namespace ReflectionGenerator.Generator
 					codeWriter.WriteLine("if constexpr (nox::concepts::Assignable<ElementType, ElementType>)");
 					codeWriter.WriteLine("{");
 					codeWriter.Push();
-					codeWriter.WriteLine($"*static_cast<std::remove_reference_t<ElementType>*>(out.get()) = {variableInfo.FullName}[index];");
+					codeWriter.WriteLine($"*static_cast<std::remove_reference_t<ElementType>*>(out) = {variableInfo.FullName}[index];");
 					codeWriter.WriteLine("return true;");
 
 					codeWriter.Pop();
@@ -1437,15 +1495,15 @@ namespace ReflectionGenerator.Generator
 					codeWriter.Pop();
 					codeWriter.WriteLine("},");
 #endif
-				}
+                    }
 
-				// getter address subscripts
-				{
-					codeWriter.WriteLine("//\tgetter subscripts");
+                    // getter address subscripts
+                    {
+                        codeWriter.WriteLine("//\tgetter subscripts");
 
-					codeWriter.WriteLine("nullptr");
+                        codeWriter.WriteLine("nullptr");
 #if false
-					codeWriter.WriteLine("+[](nox::not_null<void*> out, nox::not_null<void*> instance, const std::uint32_t index)");
+					codeWriter.WriteLine("+[](void* out, void* instance, const std::uint32_t index)");
 					codeWriter.WriteLine("{");
 					codeWriter.Push();
 					codeWriter.WriteLine(variableTypeDeclStr);
@@ -1465,7 +1523,7 @@ namespace ReflectionGenerator.Generator
 					codeWriter.WriteLine("if constexpr (nox::concepts::Assignable<ElementType, ElementType>)");
 					codeWriter.Push();
 					codeWriter.WriteLine("{");
-					codeWriter.WriteLine($"*static_cast<std::add_pointer_t<nox::AddConstPointerType<ElementType*>>>(out.get()) = &{variableInfo.FullName}[index];");
+					codeWriter.WriteLine($"*static_cast<std::add_pointer_t<nox::AddConstPointerType<ElementType*>>>(out) = &{variableInfo.FullName}[index];");
 					codeWriter.WriteLine("return true;");
 
 					codeWriter.Pop();
@@ -1484,10 +1542,10 @@ namespace ReflectionGenerator.Generator
 					codeWriter.Pop();
 					codeWriter.WriteLine("}");
 #endif
-				}
-			}
+                    }
+                }
 
-			codeWriter.Pop();
+            }
 			codeWriter.WriteLine(");");
 		}
 
@@ -1517,152 +1575,190 @@ namespace ReflectionGenerator.Generator
                 }
             }
 
+            ReadOnlySpan<char> functionTypeFqn;
+            bool isStatic = functionInfo.FunctionAttributeFlags.IsOn(Parser2.FunctionAttributeFlag.Static);
+            if (isStatic)
+            {
+                functionTypeFqn = $"nox::ToFunctionPointerType<{functionInfo.TypeInfo.FullName}>";
+            }
+            else
+            {
+                Util.Assert(declarationTypeInfo != null);
+                functionTypeFqn = $"nox::ToMemberFunctionPointerType<{functionInfo.TypeInfo.FullName}, {declarationTypeInfo.FullName}>";
+            }
+
             ReadOnlySpan<Parser2.FunctionDecl.ArgumentInfo> argumentList = functionInfo.ArgumentSpan;
             int numArgument = argumentList.Length;
             bool isNoexcept = functionInfo.FunctionAttributeFlags.IsOn(Parser2.FunctionAttributeFlag.Noexcept);
             {
+                ReadOnlySpan<char> returnTypeFullName = functionInfo.TypeInfo.ReturnType.FullName;
+
                 if (numArgument > 0)
                 {
                     for (int i = 0, length = numArgument; i < length; ++i)
                     {
                         ref readonly Parser2.FunctionDecl.ArgumentInfo argumentInfo = ref argumentList[i];
 
-
                         codeWriter.WriteLine($"static constexpr auto function_arg_info_{functionInfo.Hash}_{i.ToString()} = nox::reflection::FunctionArgumentInfo(");
-                        codeWriter.Push();
+                        using (codeWriter.Indent())
+                        {
+                            codeWriter.WriteLine($"u8\"{argumentInfo.Name}\",\t//\tname");
+                            codeWriter.WriteLine($"nullptr,\t//\tattribute_list");
+                            codeWriter.WriteLine($"0,\t//\tattribute_length");
+                            codeWriter.WriteLine($"nox::reflection::Typeof<{argumentInfo.TypeInfo.FullName}>(),\t//\ttype");
+                            codeWriter.WriteLine($"{argumentInfo.IsDefault.ToLowerString()}\t//\tis_default");
 
-                        codeWriter.WriteLine($"U\"{argumentInfo.Name}\",\t//\tname");
-                        codeWriter.WriteLine($"nullptr,");
-                        codeWriter.WriteLine($"0,");
-                        codeWriter.WriteLine($"nox::reflection::Typeof<{argumentInfo.TypeInfo.FullName}>(),");
-                        codeWriter.WriteLine($"{argumentInfo.IsDefault.ToLowerString()}");
-
-                        codeWriter.WriteLine(");");
-                        codeWriter.Pop();
+                            codeWriter.WriteLine(");");
+                        }
                     }
 
                     codeWriter.WriteLine($"static constexpr std::reference_wrapper<const nox::reflection::FunctionArgumentInfo> function_arg_table_{functionInfo.Hash}[{numArgument.ToString()}]={{");
-                    codeWriter.Push();
-
-                    for (int i = 0, length = numArgument; i < length; ++i)
+                    using (codeWriter.Indent())
                     {
-                        if (i != length - 1)
+
+                        for (int i = 0, length = numArgument; i < length; ++i)
                         {
-                            codeWriter.WriteLine($"function_arg_info_{functionInfo.Hash}_{i.ToString()},");
+                            if (i != length - 1)
+                            {
+                                codeWriter.WriteLine($"function_arg_info_{functionInfo.Hash}_{i.ToString()},");
+                            }
+                            else
+                            {
+                                codeWriter.WriteLine($"function_arg_info_{functionInfo.Hash}_{i.ToString()}");
+                            }
+                        }
+
+                        codeWriter.WriteLine("};");
+                    }
+                }
+
+                string preStr;
+                {
+                    if (isStatic == false || numArgument > 0)
+                    {
+                        if (functionInfo.FunctionAttributeFlags.IsOn(Parser2.FunctionAttributeFlag.Constexpr))
+                        {
+                            preStr = "+[](void** args) constexpr";
                         }
                         else
                         {
-                            codeWriter.WriteLine($"function_arg_info_{functionInfo.Hash}_{i.ToString()}");
+                            preStr = "+[](void** args)";
+                        }
+                    }
+                    else
+                    {
+                        if (functionInfo.FunctionAttributeFlags.IsOn(Parser2.FunctionAttributeFlag.Constexpr))
+                        {
+                            preStr = "+[](void** _) constexpr";
+                        }
+                        else
+                        {
+                            preStr = "+[](void** _)";
                         }
                     }
 
-                    codeWriter.WriteLine("};");
-                    codeWriter.Pop();
+                    preStr += $" -> {returnTypeFullName} {{ ";
+                    if (functionInfo.TypeInfo.ReturnType.TypeKind != Parser2.TypeKind.Void)
+                    {
+                        preStr += "return ";
+                    }
+                    //                    preStr += $"std::invoke(static_cast<std::remove_reference_t<{functionTypeFqn}>>(&{functionInfo.FullName})";
+
+                    if (isStatic)
+                    {
+                        preStr += $"{functionInfo.FullName}(";
+                    }
+                    else
+                    {
+                        Util.Assert(declarationTypeInfo != null);
+                        preStr += $"static_cast<std::add_pointer_t<{declarationTypeInfo.FullName}>>(args[0])->{functionInfo.FullName}(";
+                    }
                 }
 
-                codeWriter.WriteLine($"static constexpr auto function_info_{functionInfo.Hash} = nox::reflection::detail::CreateFunctionInfo(");
-            }
-            codeWriter.Push();
-
-            codeWriter.WriteLine($"static_cast<std::remove_reference_t<{functionInfo.TypeInfo.FullName}>>(&{functionInfo.FullName}),\t//function_pointer");
-            codeWriter.WriteLine($"U\"{functionInfo.Name}\",\t//\tname");
-            codeWriter.WriteLine($"U\"{functionInfo.FullName}\",\t//\tfullName");
-            codeWriter.WriteLine($"U\"{functionInfo.Namespace}\",\t//\tnamespace");
-
-            if (declarationTypeInfo != null)
-            {
-                codeWriter.WriteLine($"{functionInfo.AccessLevel.ToCppString()},\t//\taccess_level");
-            }
-            else
-            {
-                codeWriter.WriteLine("nox::reflection::AccessLevel::Public,\t//\taccess_level");
-            }
-
-            if (enabledAttributeLength > 0)
-            {
-                codeWriter.WriteLine($"attribute_info_table_{functionInfo.Hash},\t//\tattribute_info_table");
-            }
-            else
-            {
-                codeWriter.WriteLine("nullptr,\t//\tattribute_info_table");
-
-            }
-            codeWriter.WriteLine($"{enabledAttributeLength},\t//\tattribute_info_length");
-
-            if (numArgument > 0)
-            {
-                codeWriter.WriteLine($"function_arg_table_{functionInfo.Hash},\t//\tfunction_arg_table");
-            }
-            else
-            {
-                codeWriter.WriteLine("nullptr,\t//\tfunction_arg_table");
-            }
-            codeWriter.WriteLine($"{numArgument},\t//\targument_length");
-        
-            codeWriter.WriteLine("nox::reflection::FunctionAttributeFlag::None,");
-
-            if(functionInfo.FullName == "nox::attr::Attribute::StaticAssertNoxDeclareReflectionObject")
-            {
-                Util.BreakPoint();
-            }
-			for (int i = 0, length = 1 + (int)functionInfo.NumDefaultArgument; i < length; ++i)
-            {
-                codeWriter.WriteNest();
-				codeWriter.Write($"+[](");
-
-				for (int argIndex = 0, argLength = (int)numArgument - i; argIndex < argLength; ++argIndex)
-				{
-                    ref readonly Parser2.FunctionDecl.ArgumentInfo argumentInfo = ref argumentList[argIndex];
-
-					codeWriter.Write($"{argumentInfo.TypeInfo.FullName} arg{argIndex.ToString()}");
-					if (argIndex != argLength - 1)
-                    {
-                        codeWriter.Write(",");
-					}
-				}
-
-                if (functionInfo.FunctionAttributeFlags.IsOn(Parser2.FunctionAttributeFlag.Constexpr) == true)
+                codeWriter.WriteLine($"static constexpr std::tuple<{returnTypeFullName}(*)(void**), std::uint8_t> function_variation_table_{functionInfo.Hash}[{(1 + functionInfo.NumDefaultArgument).ToString()}] = {{");
+                using (codeWriter.Indent())
                 {
-                    codeWriter.Write($")constexpr noexcept({isNoexcept.ToLowerString()})");
-				}
+
+                    for (int i = 0, length = 1 + (int)functionInfo.NumDefaultArgument; i < length; ++i)
+                    {
+                        string s = string.Empty;
+
+                        int argLength = (int)numArgument - i;
+                        for (int argIndex = 0; argIndex < argLength; ++argIndex)
+                        {
+                            ref readonly Parser2.FunctionDecl.ArgumentInfo argumentInfo = ref argumentList[argIndex];
+                            int rawArgIndex = argIndex + (isStatic ? 0 : 1);
+
+                            if (argIndex == 0)
+                            {
+                                s += $"*static_cast<std::add_pointer_t<std::remove_reference_t<{argumentInfo.TypeInfo.FullName}>>>(args[{rawArgIndex.ToString()}])";
+                            }
+                            else
+                            {
+                                s += $", *static_cast<std::add_pointer_t<std::remove_reference_t<{argumentInfo.TypeInfo.FullName}>>>(args[{rawArgIndex.ToString()}])";
+                            }
+                        }
+
+                        if (i != length - 1)
+                        {
+                            codeWriter.WriteLine($"{{ {preStr}{s}); }}, {argLength.ToString()} }},");
+                            codeWriter.WriteNewLine();
+                        }
+                        else
+                        {
+                            codeWriter.WriteLine($"{{ {preStr}{s}); }}, {argLength.ToString()} }}");
+                        }
+                    }
+                }
+                codeWriter.WriteLine("};");
+                codeWriter.WriteNewLine();
+            }
+
+            codeWriter.WriteLine($"static constexpr auto function_info_{functionInfo.Hash} = nox::reflection::detail::CreateFunctionInfo<{functionTypeFqn}>(");
+            using (codeWriter.Indent())
+            {
+//                codeWriter.WriteLine($"static_cast<std::remove_reference_t<{functionTypeFqn}>>(&{functionInfo.FullName}),\t//function_pointer");
+                codeWriter.WriteLine($"nox::GetFunctionPointerId<static_cast<{functionTypeFqn}>(&{functionInfo.FullName})>(),\t//\tfunction_id");
+                codeWriter.WriteLine($"u8\"{functionInfo.Name}\",\t//\tname");
+                codeWriter.WriteLine($"u8\"{functionInfo.FullName}\",\t//\tfullName");
+                codeWriter.WriteLine($"u8\"{functionInfo.Namespace}\",\t//\tnamespace");
+
+                if (declarationTypeInfo != null)
+                {
+                    codeWriter.WriteLine($"{functionInfo.AccessLevel.ToCppString()},\t//\taccess_level");
+                }
                 else
                 {
-					codeWriter.Write($")noexcept({isNoexcept.ToLowerString()})");
-				}
-                codeWriter.WriteNewLine();
-				codeWriter.WriteLine("{");
-                codeWriter.Push();
-
-                codeWriter.WriteNest();
-				if (functionInfo.TypeInfo.ReturnType.TypeKind != Parser2.TypeKind.Void)
-				{
-					codeWriter.Write("return ");
-				}
-                codeWriter.Write($"std::invoke(static_cast<std::remove_reference_t<{functionInfo.TypeInfo.FullName}>>(&{functionInfo.FullName})");
-
-                for (int argIndex = 0, argLength = (int)numArgument - i; argIndex < argLength; ++argIndex)
-                {
-                    ref readonly Parser2.FunctionDecl.ArgumentInfo argumentInfo = ref argumentList[argIndex];
-
-                    codeWriter.Write($", arg{argIndex.ToString()}");
+                    codeWriter.WriteLine("nox::reflection::AccessLevel::Public,\t//\taccess_level");
                 }
 
-				codeWriter.Write(");");
-				codeWriter.WriteNewLine();
-
-				codeWriter.Pop();
-				codeWriter.WriteLine("}");
-
-				codeWriter.Push();
-
-                if (i != length - 1)
+                if (enabledAttributeLength > 0)
                 {
-					codeWriter.WriteLine(",");
-				}
-                codeWriter.Pop();
-			}
+                    codeWriter.WriteLine($"attribute_info_table_{functionInfo.Hash},\t//\tattribute_info_table");
+                }
+                else
+                {
+                    codeWriter.WriteLine("nullptr,\t//\tattribute_info_table");
 
-			codeWriter.Pop();
+                }
+                codeWriter.WriteLine($"{enabledAttributeLength},\t//\tattribute_info_length");
+
+                if (numArgument > 0)
+                {
+                    codeWriter.WriteLine($"function_arg_table_{functionInfo.Hash},\t//\tfunction_arg_table");
+                }
+                else
+                {
+                    codeWriter.WriteLine("nullptr,\t//\tfunction_arg_table");
+                }
+                codeWriter.WriteLine($"{numArgument},\t//\targument_length");
+
+                codeWriter.WriteLine("nox::reflection::FunctionAttributeFlag::None,");
+
+                codeWriter.WriteLine($"function_variation_table_{functionInfo.Hash},\t//\tfunction_holder_table");
+                codeWriter.WriteLine($"{1 + functionInfo.NumDefaultArgument}\t//\tfunction_holder_length");
+
+            }
             codeWriter.WriteLine(");");
             codeWriter.WriteNewLine();
 
@@ -1692,38 +1788,47 @@ namespace ReflectionGenerator.Generator
                 }
 
                 codeWriter.WriteLine($"static constexpr const auto enumerator_info_{enumInfo.Hash}_{i.ToString()} = nox::reflection::EnumeratorInfo(");
-                codeWriter.Push();
-                if (enumeratorInfo.IsUnsigned == true)
+                using (codeWriter.Indent())
                 {
-                    codeWriter.WriteLine($"static_cast<std::uint64_t>({enumeratorInfo.Uint64.ToString()}),");
+                    if (enumeratorInfo.IsUnsigned == true)
+                    {
+                        codeWriter.WriteLine($"static_cast<std::uint64_t>({enumeratorInfo.Uint64.ToString()}),");
+                    }
+                    else
+                    {
+                        codeWriter.WriteLine($"static_cast<std::int64_t>({enumeratorInfo.Int64.ToString()}),");
+                    }
+                    codeWriter.WriteLine($"u8\"{enumeratorInfo.Name}\",\t//\tname");
+                    codeWriter.WriteLine($"u8\"{enumInfo.FullName}::{enumeratorInfo.Name}\",\t//\tfullName");
+                    if (enabledAttributeLength > 0)
+                    {
+                        codeWriter.WriteLine($"attribute_info_table_{attribute_info_table_hash},\t//\tattribute_info_table");
+                    }
+                    else
+                    {
+                        codeWriter.WriteLine($"nullptr,\t//\tattribute_info_table");
+                    }
+                    codeWriter.WriteLine($"{enabledAttributeLength}\t//\tattribute_length");
                 }
-                else
-                {
-                    codeWriter.WriteLine($"static_cast<std::int64_t>({enumeratorInfo.Int64.ToString()}),");
-                }
-                codeWriter.WriteLine($"U\"{enumeratorInfo.Name}\",\t//\tname");
-                codeWriter.WriteLine($"U\"{enumInfo.FullName}::{enumeratorInfo.Name}\",\t//\tfullName");
-                if (enabledAttributeLength > 0)
-                {
-                    codeWriter.WriteLine($"attribute_info_table_{attribute_info_table_hash},\t//\tattribute_info_table");
-                }
-                else
-                {
-                    codeWriter.WriteLine($"nullptr,\t//\tattribute_info_table");
-                }
-                codeWriter.WriteLine($"{enabledAttributeLength},\t//\tattribute_length");
-                codeWriter.Pop();
-                codeWriter.WriteLine("}};");
+                codeWriter.WriteLine(");");
             }
 
             {
-                codeWriter.WriteLine($"static constexpr const std::reference_wrapper<const nox::reflection::EnumeratorInfo> enumerator_info_table = {{");
-                codeWriter.Push();
-                for (int i = 0; i < numEnumerator; ++i)
+                codeWriter.WriteLine($"static constexpr const std::reference_wrapper<const nox::reflection::EnumeratorInfo> enumerator_info_table_{enumInfo.Hash}[] = {{");
+                using (codeWriter.Indent())
                 {
-                    codeWriter.WriteLine($"enumerator_info_{enumInfo.Hash}_{i.ToString()},");
+                    for (int i = 0; i < numEnumerator; ++i)
+                    {
+                        if (i == numEnumerator - 1)
+                        {
+                            codeWriter.WriteLine($"enumerator_info_{enumInfo.Hash}_{i.ToString()}");
+                        }
+                        else
+                        {
+                            codeWriter.WriteLine($"enumerator_info_{enumInfo.Hash}_{i.ToString()},");
+                        }
+                    }
                 }
-                codeWriter.Pop();
                 codeWriter.WriteLine("};");
 
 				int enabledAttributeLength;
@@ -1742,29 +1847,31 @@ namespace ReflectionGenerator.Generator
                 }
 
                 codeWriter.WriteLine($"static constexpr const nox::reflection::EnumInfo enum_info_{enumInfo.Hash} = nox::reflection::EnumInfo(");
-                codeWriter.Push();
-                codeWriter.WriteLine($"nox::reflection::Typeof<{enumInfo.FullName}>(),\t//\ttype");
-                codeWriter.WriteLine($"U\"{enumInfo.Name}\",\t//\tname");
-                codeWriter.WriteLine($"U\"{enumInfo.FullName}\",\t//\tfullName");
-                codeWriter.WriteLine($"U\"{enumInfo.Namespace}\",\t//\tnamespace");
-                codeWriter.WriteLine($"{enumInfo.AccessLevel.ToCppString()},\t//\taccess_level");
-                if (enabledAttributeLength > 0)
+                using (codeWriter.Indent())
                 {
-                    codeWriter.WriteLine($"attribute_info_table_{enumInfo.Hash},\t//\tattribute_info_table");
+                    codeWriter.WriteLine($"nox::reflection::Typeof<{enumInfo.FullName}>(),\t//\ttype");
+                    codeWriter.WriteLine($"u8\"{enumInfo.Name}\",\t//\tname");
+                    codeWriter.WriteLine($"u8\"{enumInfo.FullName}\",\t//\tfullName");
+                    codeWriter.WriteLine($"u8\"{enumInfo.Namespace}\",\t//\tnamespace");
+                    codeWriter.WriteLine($"{enumInfo.AccessLevel.ToCppString()},\t//\taccess_level");
+                    if (enabledAttributeLength > 0)
+                    {
+                        codeWriter.WriteLine($"attribute_info_table_{enumInfo.Hash},\t//\tattribute_info_table");
+                    }
+                    else
+                    {
+                        codeWriter.WriteLine("nullptr,\t//\tattribute_info_table");
+                    }
+                    codeWriter.WriteLine($"{enabledAttributeLength.ToString()},\t//\tattribute_length");
+                    codeWriter.WriteLine($"enumerator_info_table_{enumInfo.Hash},\t//\tenumerator_info_table");
+                    codeWriter.WriteLine($"{numEnumerator.ToString()}\t//\tenumerator_length");
                 }
-                else
-                {
-                    codeWriter.WriteLine("nullptr,\t//\tattribute_info_table");
-                }
-                codeWriter.WriteLine($"{enabledAttributeLength.ToString()},\t//\tattribute_length");
-                codeWriter.WriteLine($"enumerator_info_table_{enumInfo.Hash},\t//\tenumerator_info_table");
-                codeWriter.Pop();
-                codeWriter.WriteLine("};");
+                codeWriter.WriteLine(");");
                 codeWriter.WriteNewLine();
             }
         }
 
-        private void GenerateClassInfo(BaseCodeWriter codeWriter, Parser2.RecordDecl classInfo, List<string> registerDeclNameList, ReadOnlySpan<char> parentDeclName = default)
+        private void GenerateClassInfo(BaseCodeWriter codeWriter, Parser2.RecordDecl classInfo, Parser2.RecordDecl? declarationTypeInfo, List<string> registerDeclNameList, ReadOnlySpan<char> parentDeclName = default)
         {
             if (parentDeclName.IsEmpty)
             {
@@ -1778,246 +1885,269 @@ namespace ReflectionGenerator.Generator
             codeWriter.WriteLine("template<>");
             codeWriter.WriteLine($"struct nox::reflection::gen::ReflectionGeneratedHolder<{classInfo.FullName}>");
             codeWriter.WriteLine("{");
-			codeWriter.Push();
-
-            //  クラス内クラス情報の生成
+            using (codeWriter.Indent())
             {
-                int internalClassInfoListLength = classInfo.RecordList.Count;
 
-                ReadOnlySpan<char> lastParentDeclName = registerDeclNameList.Last();
-
-				foreach (Parser2.RecordDecl child in classInfo.RecordList)
+                //  クラス内クラス情報の生成
                 {
-                    if (child.ReflectionGenerateKind == Parser2.ReflectionGenerateKind.IgnoreReflection)
+                    int internalClassInfoListLength = classInfo.RecordList.Count;
+
+                    ReadOnlySpan<char> lastParentDeclName = registerDeclNameList.Last();
+
+                    foreach (Parser2.RecordDecl child in classInfo.RecordList)
                     {
-                        continue;
-                    }
-                    GenerateClassInfo(codeWriter, child, registerDeclNameList, lastParentDeclName);
-                }
-
-                if (internalClassInfoListLength > 0)
-                {
-                    for (int i = 0; i < internalClassInfoListLength; ++i)
-                    {
-						Parser2.RecordDecl type = classInfo.RecordList[i];
-                        codeWriter.WriteLine($"static constexpr const nox::reflection::Type& internal_type_{classInfo.Hash}_{i.ToString()} = nox::reflection::Typeof<decltype({type.FullName})>();");
-                    }
-
-					codeWriter.WriteLine($"static constexpr const std::reference_wrapper<const nox::reflection::Type> internal_type_table_{classInfo.Hash}[] = {{");
-					codeWriter.Push();
-
-					for (int i = 0; i < internalClassInfoListLength; ++i)
-					{
-						if (i != internalClassInfoListLength - 1)
-						{
-							codeWriter.WriteLine($"internal_type_{classInfo.Hash}_{i.ToString()},");
-						}
-						else
-						{
-							codeWriter.WriteLine($"internal_type_{classInfo.Hash}_{i.ToString()}");
-						}
-					}
-					codeWriter.Pop();
-					codeWriter.WriteLine("};");
-				}
-            }
-
-			{
-				int baseTypeInfoListLength = classInfo.BaseList.Count;
-
-                if (baseTypeInfoListLength > 0)
-                {
-                    for (int i = 0; i < baseTypeInfoListLength; ++i)
-                    {
-                        Parser2.BaseSpecifierDecl baseTypeInfo = classInfo.BaseList[i];
-                        codeWriter.WriteLine($"static constexpr const nox::reflection::Type& base_type_{classInfo.Hash}_{i.ToString()} = nox::reflection::Typeof<decltype({baseTypeInfo.FullName})>();");
-                    }
-
-                    codeWriter.WriteLine($"static constexpr const std::reference_wrapper<const nox::reflection::Type> base_type_table_{classInfo.Hash}[] = {{");
-                    codeWriter.Push();
-
-                    for (int i = 0; i < baseTypeInfoListLength; ++i)
-                    {
-						if (i != baseTypeInfoListLength - 1)
-						{
-							codeWriter.WriteLine($"base_type_{classInfo.Hash}_{i.ToString()},");
-						}
-						else
-						{
-                            codeWriter.WriteLine($"base_type_{classInfo.Hash}_{i.ToString()}");
-						}
-                    }
-                    codeWriter.Pop();
-                    codeWriter.WriteLine("};");
-                }
-            }
-
-			int enabledAttributeLength;
-            {
-                ReadOnlySpan<Parser2.AttributeDecl> attributeList = classInfo.AttributeSpan;
-				if (attributeList.Length > 0)
-                {
-                    enabledAttributeLength = GenerateAttributeInfoList(codeWriter, attributeList, classInfo.Hash);
-                }
-                else
-                {
-                    enabledAttributeLength = 0;
-                }
-            }
-
-            List<string> variableInfoRegisterDeclNameList = new List<string>();
-			{
-                foreach (Parser2.VariableDecl variableInfo in classInfo.VariableList)
-                {
-                    if (variableInfo.ReflectionGenerateKind == Parser2.ReflectionGenerateKind.IgnoreReflection)
-                    {
-                        continue;
-                    }
-					variableInfoRegisterDeclNameList.Add($"variable_info_{variableInfo.Hash}");
-                    GenerateVariableInfo(codeWriter, variableInfo, classInfo);
-                }
-
-                if (variableInfoRegisterDeclNameList.Count > 0)
-                {
-                    codeWriter.WriteLine($"static constexpr const std::reference_wrapper<const nox::reflection::VariableInfo> variable_info_table_{classInfo.Hash}[{variableInfoRegisterDeclNameList.Count}] = {{");
-                    codeWriter.Push();
-                    for (int i = 0, length = variableInfoRegisterDeclNameList.Count; i < length; ++i)
-                    {
-                        if (i != length - 1)
+                        if (child.ReflectionGenerateKind == Parser2.ReflectionGenerateKind.IgnoreReflection)
                         {
-                            codeWriter.WriteLine($"{variableInfoRegisterDeclNameList[i]},");
+                            continue;
                         }
-                        else
-                        {
-                            codeWriter.WriteLine(variableInfoRegisterDeclNameList[i]);
-                        }
+                        GenerateClassInfo(codeWriter, child, classInfo, registerDeclNameList, lastParentDeclName);
                     }
-                    codeWriter.Pop();
-                    codeWriter.WriteLine("};");
-				}
-            }
 
-			List<string> functionInfoRegisterDeclNameList = new List<string>();
-			{
-                foreach (Parser2.FunctionDecl functionInfo in classInfo.FunctionList)
-                {
-					if (functionInfo.ReflectionGenerateKind == Parser2.ReflectionGenerateKind.IgnoreReflection)
+                    if (internalClassInfoListLength > 0)
                     {
-                        continue;
+                        for (int i = 0; i < internalClassInfoListLength; ++i)
+                        {
+                            Parser2.RecordDecl type = classInfo.RecordList[i];
+                            codeWriter.WriteLine($"static constexpr const nox::reflection::Type& internal_type_{classInfo.Hash}_{i.ToString()} = nox::reflection::Typeof<decltype({type.FullName})>();");
+                        }
+
+                        codeWriter.WriteLine($"static constexpr const std::reference_wrapper<const nox::reflection::Type> internal_type_table_{classInfo.Hash}[] = {{");
+                        using (codeWriter.Indent())
+                        {
+
+                            for (int i = 0; i < internalClassInfoListLength; ++i)
+                            {
+                                if (i != internalClassInfoListLength - 1)
+                                {
+                                    codeWriter.WriteLine($"internal_type_{classInfo.Hash}_{i.ToString()},");
+                                }
+                                else
+                                {
+                                    codeWriter.WriteLine($"internal_type_{classInfo.Hash}_{i.ToString()}");
+                                }
+                            }
+                        }
+                        codeWriter.WriteLine("};");
                     }
-					functionInfoRegisterDeclNameList.Add($"function_info_{functionInfo.Hash}");
-                    GenerateFunctionInfo(codeWriter, functionInfo, classInfo);
                 }
 
-                if (functionInfoRegisterDeclNameList.Count > 0)
                 {
-                    codeWriter.WriteLine($"static constexpr const std::reference_wrapper<const nox::reflection::FunctionInfo> function_info_table_{classInfo.Hash}[{functionInfoRegisterDeclNameList.Count}] = {{");
-                    codeWriter.Push();
-                    for (int i = 0, length = functionInfoRegisterDeclNameList.Count; i < length; ++i)
-                    {
-                        if (i != length - 1)
-                        {
-                            codeWriter.WriteLine($"{functionInfoRegisterDeclNameList[i]},");
-                        }
-                        else
-                        {
-                            codeWriter.WriteLine(functionInfoRegisterDeclNameList[i]);
-                        }
-					}
-                    codeWriter.Pop();
-                    codeWriter.WriteLine("};");
-				}
-            }
+                    int baseTypeInfoListLength = classInfo.BaseSpan.Length;
 
-            List<string> enumInfoRegisterDeclNameList = new List<string>();
-
-			{
-                foreach (Parser2.EnumDecl enumInfo in classInfo.EnumList)
-                {
-                    if (enumInfo.ReflectionGenerateKind == Parser2.ReflectionGenerateKind.IgnoreReflection)
+                    if (baseTypeInfoListLength > 0)
                     {
-                        continue;
+                        codeWriter.WriteLine($"static constexpr const std::reference_wrapper<const nox::reflection::Type> base_type_table_{classInfo.Hash}[{baseTypeInfoListLength.ToString()}] = {{");
+                        using (codeWriter.Indent())
+                        {
+
+                            for (int i = 0; i < baseTypeInfoListLength; ++i)
+                            {
+                                Parser2.BaseSpecifierDecl baseTypeInfo = classInfo.BaseSpan[i];
+                                if (i != baseTypeInfoListLength - 1)
+                                {
+                                    codeWriter.WriteLine($"nox::reflection::Typeof<{baseTypeInfo.FullName}>(),");
+                                }
+                                else
+                                {
+                                    codeWriter.WriteLine($"nox::reflection::Typeof<{baseTypeInfo.FullName}>()");
+                                }
+                            }
+                        }
+                        codeWriter.WriteLine("};");
                     }
-					enumInfoRegisterDeclNameList.Add($"enum_info_{enumInfo.Hash}");
-                    GenerateEnumInfo(codeWriter, enumInfo, classInfo);
                 }
 
-                if (enumInfoRegisterDeclNameList.Count > 0)
+                int enabledAttributeLength;
                 {
-                    codeWriter.WriteLine($"enum_info_table_{classInfo.Hash}");
+                    ReadOnlySpan<Parser2.AttributeDecl> attributeList = classInfo.AttributeSpan;
+                    if (attributeList.Length > 0)
+                    {
+                        enabledAttributeLength = GenerateAttributeInfoList(codeWriter, attributeList, classInfo.Hash);
+                    }
+                    else
+                    {
+                        enabledAttributeLength = 0;
+                    }
                 }
-            }
 
-            codeWriter.WriteLine($"static constexpr const nox::reflection::ClassInfo class_info_{classInfo.Hash} = nox::reflection::ClassInfo(");
-            codeWriter.Push();
-            codeWriter.WriteLine($"nox::reflection::Typeof<{classInfo.FullName}>(),\t//\ttype");
-            codeWriter.WriteLine($"U\"{classInfo.Name}\",\t//\tname");
-            codeWriter.WriteLine($"U\"{classInfo.FullName}\",\t//\tfullName");
-            codeWriter.WriteLine($"U\"{classInfo.Namespace}\",\t//\tnamespace");
-            codeWriter.WriteLine($"nox::reflection::GetInvalidType(),\t//\texternal_class_type");
-            if (classInfo.BaseList.Count > 0)
-            {
-                codeWriter.WriteLine($"base_type_table_{classInfo.Hash},\t//\tbase_type_list");
-            }
-            else
-            {
-                codeWriter.WriteLine("nullptr,\t//\tbase_type_list");
-            }
-            codeWriter.WriteLine($"{classInfo.BaseList.Count.ToString()},\t//\tbase_type_length");
+                List<string> variableInfoRegisterDeclNameList = new List<string>();
+                {
+                    foreach (Parser2.VariableDecl variableInfo in classInfo.VariableList)
+                    {
+                        if (variableInfo.ReflectionGenerateKind == Parser2.ReflectionGenerateKind.IgnoreReflection)
+                        {
+                            continue;
+                        }
+                        variableInfoRegisterDeclNameList.Add($"variable_info_{variableInfo.Hash}");
+                        GenerateVariableInfo(codeWriter, variableInfo, classInfo);
+                    }
 
-            if (enabledAttributeLength > 0)
-            {
-                codeWriter.WriteLine($"attribute_info_table_{classInfo.Hash},\t//\tattribute_list");
-            }
-            else
-            {
-                codeWriter.WriteLine("nullptr,\t//\tattribute_list");
-            }
-            codeWriter.WriteLine($"{enabledAttributeLength.ToString()},\t//\tattribute_length");
+                    if (variableInfoRegisterDeclNameList.Count > 0)
+                    {
+                        codeWriter.WriteLine($"static constexpr const std::reference_wrapper<const nox::reflection::VariableInfo> variable_info_table_{classInfo.Hash}[{variableInfoRegisterDeclNameList.Count}] = {{");
+                        using (codeWriter.Indent())
+                        {
+                            for (int i = 0, length = variableInfoRegisterDeclNameList.Count; i < length; ++i)
+                            {
+                                if (i != length - 1)
+                                {
+                                    codeWriter.WriteLine($"{variableInfoRegisterDeclNameList[i]},");
+                                }
+                                else
+                                {
+                                    codeWriter.WriteLine(variableInfoRegisterDeclNameList[i]);
+                                }
+                            }
+                        }
+                        codeWriter.WriteLine("};");
+                    }
+                }
 
-            if (variableInfoRegisterDeclNameList.Count > 0)
-            {
-                codeWriter.WriteLine($"variable_info_table_{classInfo.Hash},\t//\tvariable_info_list");
-            }
-            else
-            {
-                codeWriter.WriteLine("nullptr,\t//\tvariable_info_list");
-            }
-            codeWriter.WriteLine($"{variableInfoRegisterDeclNameList.Count.ToString()},\t//\tvariable_info_length");
+                List<string> functionInfoRegisterDeclNameList = new List<string>();
+                {
+                    foreach (Parser2.FunctionDecl functionInfo in classInfo.FunctionList)
+                    {
+                        if (functionInfo.ReflectionGenerateKind == Parser2.ReflectionGenerateKind.IgnoreReflection)
+                        {
+                            continue;
+                        }
+                        functionInfoRegisterDeclNameList.Add($"function_info_{functionInfo.Hash}");
+                        GenerateFunctionInfo(codeWriter, functionInfo, classInfo);
+                    }
 
-            if (functionInfoRegisterDeclNameList.Count > 0)
-            {
-                codeWriter.WriteLine($"function_info_table_{classInfo.Hash},\t//\tfunction_info_list");
-            }
-            else
-            {
-                codeWriter.WriteLine("nullptr,\t//\tfunction_info_list");
-            }
-            codeWriter.WriteLine($"{functionInfoRegisterDeclNameList.Count.ToString()},\t//\tfunction_info_length");
-            if (enumInfoRegisterDeclNameList.Count > 0)
-            {
-                codeWriter.WriteLine($"enum_info_table_{classInfo.Hash},\t//\tenum_info_list");
-            }
-            else
-            {
-                codeWriter.WriteLine("nullptr,\t//\tenum_info_list");
-            }
-            codeWriter.WriteLine($"{enumInfoRegisterDeclNameList.Count.ToString()},\t//\tenum_info_length");
+                    if (functionInfoRegisterDeclNameList.Count > 0)
+                    {
+                        codeWriter.WriteLine($"static constexpr const std::reference_wrapper<const nox::reflection::FunctionInfo> function_info_table_{classInfo.Hash}[{functionInfoRegisterDeclNameList.Count}] = {{");
+                        using (codeWriter.Indent())
+                        {
+                            for (int i = 0, length = functionInfoRegisterDeclNameList.Count; i < length; ++i)
+                            {
+                                if (i != length - 1)
+                                {
+                                    codeWriter.WriteLine($"{functionInfoRegisterDeclNameList[i]},");
+                                }
+                                else
+                                {
+                                    codeWriter.WriteLine(functionInfoRegisterDeclNameList[i]);
+                                }
+                            }
+                        }
+                        codeWriter.WriteLine("};");
+                    }
+                }
 
-            if (classInfo.RecordList.Count > 0)
-            {
-                codeWriter.WriteLine($"internal_type_table_{classInfo.Hash},\t//\tinternal_type_list");
-            }
-            else
-            {
-                codeWriter.WriteLine("nullptr,\t//\tinternal_type_list");
-            }
-            codeWriter.WriteLine($"{classInfo.RecordList.Count.ToString()}\t//\tinternal_type_length");
+                List<string> enumInfoRegisterDeclNameList = new List<string>();
 
-            codeWriter.Pop();
-            codeWriter.WriteLine(");");
+                {
+                    foreach (Parser2.EnumDecl enumInfo in classInfo.EnumList)
+                    {
+                        if (enumInfo.ReflectionGenerateKind == Parser2.ReflectionGenerateKind.IgnoreReflection)
+                        {
+                            continue;
+                        }
+                        enumInfoRegisterDeclNameList.Add($"enum_info_{enumInfo.Hash}");
+                        GenerateEnumInfo(codeWriter, enumInfo, classInfo);
+                    }
 
-            codeWriter.Pop();
+                    int enumInfoRegisterDeclNameListLength = enumInfoRegisterDeclNameList.Count;
+                    if (enumInfoRegisterDeclNameListLength > 0)
+                    {
+                        codeWriter.WriteLine($"static constexpr std::reference_wrapper<const nox::reflection::EnumInfo> enum_info_table_{classInfo.Hash}[{enumInfoRegisterDeclNameListLength.ToString()}] = {{");
+                        using (codeWriter.Indent())
+                        {
+                            for (int i = 0, length = enumInfoRegisterDeclNameListLength; i < length; ++i)
+                            {
+                                if (i != length - 1)
+                                {
+                                    codeWriter.WriteLine($"{enumInfoRegisterDeclNameList[i]},");
+                                }
+                                else
+                                {
+                                    codeWriter.WriteLine(enumInfoRegisterDeclNameList[i]);
+                                }
+                            }
+                        }
+                        codeWriter.WriteLine("};");
+                    }
+                }
+
+                codeWriter.WriteLine($"static constexpr const nox::reflection::ClassInfo class_info_{classInfo.Hash} = nox::reflection::ClassInfo(");
+                using (codeWriter.Indent())
+                {
+                    codeWriter.WriteLine($"nox::reflection::Typeof<{classInfo.FullName}>(),\t//\ttype");
+                    codeWriter.WriteLine($"u8\"{classInfo.Name}\",\t//\tname");
+                    codeWriter.WriteLine($"u8\"{classInfo.FullName}\",\t//\tfullName");
+                    codeWriter.WriteLine($"u8\"{classInfo.Namespace}\",\t//\tnamespace");
+                    if (declarationTypeInfo != null)
+                    {
+                        codeWriter.WriteLine($"{declarationTypeInfo.FullName},\t//\texternal_class_type");
+                    }
+                    else
+                    {
+                        codeWriter.WriteLine("nox::reflection::GetInvalidType(),\t//\texternal_class_type");
+                    }
+                    if (classInfo.BaseSpan.Length > 0)
+                    {
+                        codeWriter.WriteLine($"base_type_table_{classInfo.Hash},\t//\tbase_type_list");
+                    }
+                    else
+                    {
+                        codeWriter.WriteLine("nullptr,\t//\tbase_type_list");
+                    }
+                    codeWriter.WriteLine($"{classInfo.BaseSpan.Length.ToString()},\t//\tbase_type_length");
+
+                    if (enabledAttributeLength > 0)
+                    {
+                        codeWriter.WriteLine($"attribute_info_table_{classInfo.Hash},\t//\tattribute_list");
+                    }
+                    else
+                    {
+                        codeWriter.WriteLine("nullptr,\t//\tattribute_list");
+                    }
+                    codeWriter.WriteLine($"{enabledAttributeLength.ToString()},\t//\tattribute_length");
+
+                    if (variableInfoRegisterDeclNameList.Count > 0)
+                    {
+                        codeWriter.WriteLine($"variable_info_table_{classInfo.Hash},\t//\tvariable_info_list");
+                    }
+                    else
+                    {
+                        codeWriter.WriteLine("nullptr,\t//\tvariable_info_list");
+                    }
+                    codeWriter.WriteLine($"{variableInfoRegisterDeclNameList.Count.ToString()},\t//\tvariable_info_length");
+
+                    if (functionInfoRegisterDeclNameList.Count > 0)
+                    {
+                        codeWriter.WriteLine($"function_info_table_{classInfo.Hash},\t//\tfunction_info_list");
+                    }
+                    else
+                    {
+                        codeWriter.WriteLine("nullptr,\t//\tfunction_info_list");
+                    }
+                    codeWriter.WriteLine($"{functionInfoRegisterDeclNameList.Count.ToString()},\t//\tfunction_info_length");
+                    if (enumInfoRegisterDeclNameList.Count > 0)
+                    {
+                        codeWriter.WriteLine($"enum_info_table_{classInfo.Hash},\t//\tenum_info_list");
+                    }
+                    else
+                    {
+                        codeWriter.WriteLine("nullptr,\t//\tenum_info_list");
+                    }
+                    codeWriter.WriteLine($"{enumInfoRegisterDeclNameList.Count.ToString()},\t//\tenum_info_length");
+
+                    if (classInfo.RecordList.Count > 0)
+                    {
+                        codeWriter.WriteLine($"internal_type_table_{classInfo.Hash},\t//\tinternal_type_list");
+                    }
+                    else
+                    {
+                        codeWriter.WriteLine("nullptr,\t//\tinternal_type_list");
+                    }
+                    codeWriter.WriteLine($"{classInfo.RecordList.Count.ToString()}\t//\tinternal_type_length");
+
+                }
+                codeWriter.WriteLine(");");
+            }
             codeWriter.WriteLine("};");
             codeWriter.WriteNewLine();
 		}

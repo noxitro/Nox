@@ -19,7 +19,6 @@ namespace nox
 			Update = 1 << 2,
 			LateUpdate = 1 << 3,
 			Destroy = 1 << 4,
-
 		};
 	public:
 		Behavior();
@@ -35,7 +34,7 @@ namespace nox
 		void	Loaded()override final;
 		void	UnLoaded()override final;
 
-	public:
+	private:
 		FunctionType enabled_function_types_;
 	};
 }

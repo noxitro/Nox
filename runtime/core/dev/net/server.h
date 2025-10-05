@@ -17,7 +17,10 @@ namespace nox::dev::net
 			bool resume_port;
 		};
 
-		void Initialize(const InitializeContext& context);
+	public:
+		~Server()override;
+		void Startup(const Server::InitializeContext& context);
+		void Shutdown();
 
 	private:
 		enum class Phase : nox::uint8
@@ -31,7 +34,7 @@ namespace nox::dev::net
 		};
 
 	private:
-		InitializeContext initialize_context_;
+		Server::InitializeContext initialize_context_;
 		nox::Vector<PeerContext> client_list_;
 		nox::Vector<nox::dev::net::raw_socket_t> detached_client_list_;
 		bool shutdown_;

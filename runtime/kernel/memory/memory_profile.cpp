@@ -104,7 +104,7 @@ void nox::memory::profile::EnableMemoryProfile()
 {
 	g_is_enabled = true;
 
-	NOX_LOCAL_SCOPE(nox::memory::ScopeMemorySegment<nox::memory::SegmentType::Develop>);
+	NOX_LOCAL_SCOPE(nox::memory::ScopeMemorySegment<nox::memory::SegmentType::Develop>{});
 	g_profile_data_table.resize(1024 * 1024);
 }
 

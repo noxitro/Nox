@@ -3,7 +3,6 @@
 ///	@file	type_info.h
 ///	@brief	type_info
 #pragma once
-
 namespace nox::reflection
 {
 	class TypeInfo

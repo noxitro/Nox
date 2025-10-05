@@ -43,16 +43,16 @@ nox::U16String	nox::os::GetDirectoryUTF8()
 
 nox::String	nox::os::GetDirectory()
 {
-	std::array<nox::char32, nox::os::MAX_PATH_LENGTH> buffer;
+	std::array<nox::char16, nox::os::MAX_PATH_LENGTH> buffer;
 	return nox::String(GetDirectory(buffer));
 }
 
-nox::StringView	nox::os::GetDirectory(std::span<nox::char32> dest_buffer)
+nox::StringView	nox::os::GetDirectory(std::span<nox::char16> dest_buffer)
 {
 	std::array<nox::wchar16, nox::os::MAX_PATH_LENGTH> native_buffer;
 	NOX_ASSERT(::GetCurrentDirectoryW(nox::os::MAX_PATH_LENGTH, native_buffer.data()) != NULL, U"GetCurrentDirectoryW failed");
 
-	nox::unicode::ConvertU32String(native_buffer.data(), dest_buffer);
+	nox::unicode::ConvertU16String(native_buffer.data(), dest_buffer);
 	return nox::StringView(dest_buffer.data(), dest_buffer.size());
 }
 

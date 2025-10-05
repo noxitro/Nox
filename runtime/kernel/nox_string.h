@@ -39,7 +39,7 @@ namespace nox
 	}
 
 	/// @brief String
-	class String : public nox::detail::StringBase<nox::U32String>
+	class String : public nox::detail::StringBase<nox::U16String>
 	{
 	public:
 		inline constexpr	String() noexcept :
@@ -152,8 +152,8 @@ namespace nox
 			return *this;
 		}
 
-		[[nodiscard]] inline constexpr operator nox::U32String& () noexcept { return string_; }
-		[[nodiscard]] inline constexpr operator const nox::U32String& ()const noexcept { return string_; }
+		[[nodiscard]] inline constexpr operator nox::U16String& () noexcept { return string_; }
+		[[nodiscard]] inline constexpr operator const nox::U16String& ()const noexcept { return string_; }
 #pragma endregion
 
 
@@ -168,9 +168,9 @@ namespace nox
 			return unicode::ConvertWString(string_);
 		}
 
-		inline	nox::U16String	ToU16String()const
+		inline	nox::U32String	ToU32String()const
 		{
-			return unicode::ConvertU16String(string_);
+			return unicode::ConvertU32String(string_);
 		}
 #pragma endregion
 	private:

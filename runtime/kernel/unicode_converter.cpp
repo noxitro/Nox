@@ -557,6 +557,12 @@ std::u16string_view	nox::unicode::ConvertU16String(const std::u32string_view str
     return std::u16string_view(dest_buffer);
 }
 
+nox::U16String	nox::unicode::ConvertU16String(std::string_view str_view)
+{
+	NOX_ASSERT(false, U"");
+    return {};
+}
+
 nox::U16String	nox::unicode::ConvertU16String(std::u8string_view str_view)
 {
     const size_t length = GetUTF16Length(str_view);

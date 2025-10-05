@@ -23,6 +23,7 @@ namespace nox
 		//	update
 		_Update,
 
+		SocketUpdate,
 		GCUpdate,
 
 		//	terminal

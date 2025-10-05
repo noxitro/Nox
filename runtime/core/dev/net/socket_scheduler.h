@@ -21,15 +21,15 @@ namespace nox::dev::net
 		void	Update();
 		void	Finalize();
 
-		void	RegisterEntity(Server& entity);
-		void	RegisterEntity(Client& entity);
-		void	RegisterSocket(Server& entity);
+		void	RegisterEntity(nox::dev::net::Server& entity);
+		void	RegisterEntity(nox::dev::net::Client& entity);
 
-		void	UnregisterEntity(Server& entity);
-		void	UnregisterEntity(Client& entity);
-		void	UnregisterSocket(Server& entity);
+		void	UnregisterEntity(nox::dev::net::Server& entity);
+		void	UnregisterEntity(nox::dev::net::Client& entity);
+
 	private:
 		void	UpdateTask();
+		void	CheckConnectionServerClient();
 
 	private:
 		nox::Vector<std::reference_wrapper<Server>>	server_list_;

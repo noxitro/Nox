@@ -50,7 +50,7 @@ namespace nox
 		U16String	GetDirectoryUTF8();
 
 		nox::String	GetDirectory();
-		nox::StringView	GetDirectory(std::span<nox::char32> dest_buffer);
+		nox::StringView	GetDirectory(std::span<nox::char16> dest_buffer);
 
 		ProcessMemoryInfo GetCurrentProcessMemoryInfo();
 	}

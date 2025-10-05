@@ -29,15 +29,5 @@ namespace nox::dev::editor_ipc
 	private:
 		nox::uint32 id_;
 	};
-
-	class Query : public nox::dev::editor_ipc::EditorIpcEntity
-	{
-		NOX_DECLARE_OBJECT(nox::dev::editor_ipc::Query, nox::dev::editor_ipc::EditorIpcEntity);
-	};
-
-	class Response : public nox::dev::editor_ipc::EditorIpcEntity
-	{
-		NOX_DECLARE_OBJECT(nox::dev::editor_ipc::Response, nox::dev::editor_ipc::EditorIpcEntity);
-	};
 }
 #endif

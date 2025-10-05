@@ -36,7 +36,7 @@ namespace nox
 	class StringView //: public nox::detail::StringViewBase<std::u32string_view>
 	{
 	public:
-		using string_view_type = std::u32string_view;
+		using string_view_type = std::u16string_view;
 		using traits_type = typename string_view_type::traits_type;
 		using value_type = typename string_view_type::value_type;
 		using pointer = typename string_view_type::pointer;
@@ -62,7 +62,7 @@ namespace nox
 
 			StringView(const class String& s)noexcept;
 
-			inline	constexpr StringView(std::u32string_view s) noexcept:
+			inline	constexpr StringView(string_view_type s) noexcept:
 				view_(s){}
 
 			inline	constexpr StringView(const value_type* s, size_type length) noexcept:
@@ -84,12 +84,6 @@ namespace nox
 					: view_{ std::forward<_Range>(_Rng) } {}
 
 #pragma region 関数
-		inline	std::u16string_view	ToU16String(std::span<char16> dest_buffer)const
-		{
-			return unicode::ConvertU16String(view_, dest_buffer);
-		}
-
-		inline	U16String	ToU16String()const { return unicode::ConvertU16String(view_); }
 #pragma endregion
 
 
@@ -150,7 +144,7 @@ namespace nox
 		[[nodiscard]]
 		inline	constexpr const_reference operator [](size_type index) const noexcept { return view_[index]; }
 
-		inline constexpr operator std::u32string_view() const noexcept { return view_; }
+		inline constexpr operator std::u16string_view() const noexcept { return view_; }
 #pragma endregion
 
 	private:

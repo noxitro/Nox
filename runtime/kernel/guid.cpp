@@ -26,6 +26,10 @@ nox::Guid nox::Guid::NewGuid() noexcept
 		}
 		return g;
 	}
+	else
+	{
+		return {};
+	}
 
 #else
 	return {};

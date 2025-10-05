@@ -6,6 +6,14 @@
 
 namespace nox::dev::net
 {
+	// --- 新規: IP アドレス / エンドポイント抽象 ------------------------
+	enum class IpFamily : nox::uint8 
+	{ 
+		Unknown = 0, 
+		IPv4 = 1, 
+		IPv6 = 2 
+	};
+
 #if NOX_WINDOWS
 	using port_t = nox::uint32;
 	using raw_socket_t = ::SOCKET;
@@ -45,5 +53,12 @@ namespace nox::dev::net
 	{
 		ConnectionContext connection;
 		raw_socket_t socket;
+	};
+
+	struct IpAddress
+	{
+		IpFamily	family;
+		address_t	address;
+		port_t		port;
 	};
 }

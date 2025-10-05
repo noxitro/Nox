@@ -32,7 +32,7 @@ void	nox::assertion::detail::Assert(std::u32string_view error_category, std::u32
 	std::array<char16, 2048> assert_message = { 0 };
 	nox::util::Format(assert_message, u"{0}\n{1}\nLine:{2}, Column:{3}", native_message.data(), file_name.data(), source_location.line(), source_location.column());
 
-	NOX_LOCAL_SCOPE(os::ScopedLock, kMutex);
+	NOX_LOCAL_SCOPE(os::ScopedLock{ kMutex });
 #if! NDEBUG
 	::_wassert(nox::util::CharCast<wchar16>(assert_message.data()), file_name.data(), source_location.line());
 #endif

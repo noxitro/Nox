@@ -25,6 +25,11 @@ namespace nox
 			static_assert(std::is_base_of_v<BaseType, ClassType>, "base type failed");\
 		}\
 	public:\
+		template<class... Args> requires(std::is_constructible_v<ClassType, Args...>)\
+		inline static constexpr ClassType& Ctor(Args&&... args)noexcept(std::is_nothrow_constructible_v<ClassType, Args...>)\
+		{\
+			return *new ClassType(std::forward<Args>(args)...);\
+		}\
 		using Base = BaseType
 //	end define
 

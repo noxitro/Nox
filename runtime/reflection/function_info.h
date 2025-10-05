@@ -39,6 +39,7 @@ namespace nox::reflection
 		[[nodiscard]] inline	constexpr const ReflectionStringView GetName()const noexcept { return name_; }
 
 		/// @brief タイプ情報を取得
+		[[nodiscard]] inline	constexpr const Type& GetType()const noexcept { return underlying_type_; }
 		[[nodiscard]] inline	constexpr const Type& GetUnderlyingType()const noexcept { return underlying_type_; }
 
 		/// @brief デフォルト値を持っているか
@@ -68,92 +69,19 @@ namespace nox::reflection
 //		const std::span<std::reference_wrapper<const ReflectionObject>> attribute_list_;
 	};
 
+	namespace detail
+	{
+		template<class>
+		class FunctionInfoImpl;
+	}
+
 	/// @brief 関数情報
 	class FunctionInfo
 	{
-	protected:
-		/// @brief 関数呼び出し用の引数情報
-		struct InvokeArgument
-		{
-		private:
-			struct TagConst {};
-			struct TagNonConst {};
-
-		public:
-			constexpr InvokeArgument()noexcept = delete;
-			constexpr InvokeArgument(const InvokeArgument&)noexcept = delete;
-			constexpr InvokeArgument(const InvokeArgument&&)noexcept = delete;
-
-			inline	constexpr explicit InvokeArgument(
-				const reflection::Type& type,
-				const void*const _constDataPtr,
-				TagConst&&
-			)noexcept :
-				underlying_type_(type),
-				const_data_ptr(_constDataPtr),
-				is_const_(true)
-			{}
-
-			inline	constexpr explicit InvokeArgument(
-					const reflection::Type& type,
-					void*const _dataPtr,
-					TagNonConst&&
-				)noexcept :
-				underlying_type_(type),
-				data_ptr(_dataPtr),
-				is_const_(false)
-			{}
-
-			inline	constexpr	InvokeArgument(const reflection::Type& type)noexcept :
-				underlying_type_(type),
-				const_data_ptr(nullptr),
-				is_const_(true)
-			{}
-
-
-			/// @brief 書き換え不可(data_ptr == nullptr)
-			const bool is_const_;
-
-			union
-			{
-				/// @brief 引数実態(constVer)
-				const void*const const_data_ptr;
-
-				/// @brief 引数実態
-				void* const data_ptr;
-			};
-
-			/// @brief 引数の型
-			const reflection::Type& underlying_type_;
-			
-			inline	constexpr	bool	IsConst()const noexcept { return is_const_; }
-
-			template<class T>
-			inline	static	constexpr	InvokeArgument	MakeArgument(T&& value)noexcept
-			{
-				if constexpr (std::is_convertible_v<std::add_pointer_t<T>, void*> == true)
-				{
-					return InvokeArgument(
-						reflection::Typeof<T>(),
-						static_cast<void*>(&value),
-						TagNonConst()
-					);
-				}
-				else
-				{
-					return InvokeArgument(
-						reflection::Typeof<T>(),
-						static_cast<const void*>(&value),
-						TagConst()
-					);
-				}
-			}
-		};
-
 	public:
 		inline	constexpr	explicit FunctionInfo(
 			ReflectionStringView	name,
-			ReflectionStringView fullname,
+			ReflectionStringView	fullname,
 			ReflectionStringView	_namespace,
 			const std::reference_wrapper<const ReflectionObject>* attribute_list,
 			const std::uint8_t attribute_list_length,
@@ -237,94 +165,103 @@ namespace nox::reflection
 		template<class ResultType = void, class... Args>
 		inline	constexpr	ResultType	Invoke(Args&&... args)const
 		{
-			//	戻り値なし
-			if constexpr (std::is_void_v<ResultType> == true)
+			std::optional<ResultType> result = TryInvoke<ResultType>(std::forward<Args>(args)...);
+			NOX_ASSERT(result.has_value(), U"関数呼び出しに失敗しました");
+
+			if constexpr (std::is_void_v<ResultType>)
 			{
-				if (IsNoReturn())
-				{
-					const std::array<const InvokeArgument, sizeof...(Args)> argument_list{ InvokeArgument::MakeArgument<Args>(std::forward<Args>(args))... };
-					TryInvokeImpl(nullptr, nox::reflection::GetInvalidType(), argument_list);
-				}
-				else 
-				{
-//					constexpr InvokeArgument invalid_argument = InvokeArgument();
-					const std::array<const InvokeArgument, 1 + sizeof...(Args)> argument_list{ InvokeArgument(result_type_), InvokeArgument::MakeArgument<Args>(std::forward<Args>(args))... };
-					TryInvokeImpl(nullptr, nox::reflection::GetInvalidType(), argument_list);
-				}
+				return;
 			}
 			else
 			{
-				NOX_ASSERT(this->result_type_ != nox::reflection::GetInvalidType(), U"戻り値が存在しない関数です");
-
-				constexpr const nox::reflection::Type& return_type = nox::reflection::Typeof<ResultType>();
-
-				std::array<std::uint8_t, sizeof(ResultType)> buffer{ 0 };
-				const std::array<const InvokeArgument, 1+sizeof...(Args)> argument_list{ InvokeArgument::MakeArgument(*reinterpret_cast<ResultType*>(buffer.data())), InvokeArgument::MakeArgument<Args>(std::forward<Args>(args))...};
-
-				TryInvokeImpl(buffer.data(), return_type, argument_list);
-
-				return std::move(*reinterpret_cast<ResultType*>(buffer.data()));
+				return *result;
 			}
 		}
+
+		template<class R = void, class... Args> 
+		inline	constexpr	std::optional<std::conditional_t<std::is_void_v<R>, std::monostate, R>>  TryInvoke(Args&&... args)const
+		{
+			if constexpr (std::is_void_v<R>)
+			{
+				return TryInvokeImpl<R>(std::forward<Args>(args)...);
+			}
+			else
+			{
+				if (result_type_ == nox::reflection::Typeof<R>())
+				{
+					return TryInvokeImpl<R>(std::forward<Args>(args)...);
+				}
+				else if (result_type_ == nox::reflection::Typeof<std::add_const_t<R>>())
+				{
+					return TryInvokeImpl<std::add_const_t<R>>(std::forward<Args>(args)...);
+				}
+				else if (result_type_ == nox::reflection::Typeof<std::remove_const_t<R>>())
+				{
+					return TryInvokeImpl<std::remove_const_t<R>>(std::forward<Args>(args)...);
+				}
+				else if (result_type_ == nox::reflection::Typeof<std::add_lvalue_reference_t<R>>())
+				{
+					return TryInvokeImpl<std::add_lvalue_reference_t<R>>(std::forward<Args>(args)...);
+				}
+				else if (result_type_ == nox::reflection::Typeof<std::add_lvalue_reference_t<const R>>())
+				{
+					return TryInvokeImpl<std::add_lvalue_reference_t<const R>>(std::forward<Args>(args)...);
+				}
+				else
+				{
+					return std::nullopt;
+				}
+			}
+		}
+
 #pragma endregion
 
-		template<class T>// requires(std::is_void_v<std::remove_pointer_t<T>>)
-		static	inline	constexpr	T	ToInvokeParam(const InvokeArgument& argument)noexcept
+	protected:
+		inline constexpr virtual std::optional<std::monostate> InvokeImplNoReturn(std::span<void*> args)const = 0;
+
+	private:
+		template<class R, class... Args>
+		inline	constexpr	std::optional<std::conditional_t<std::is_void_v<R>, std::monostate, R>>	TryInvokeImpl(Args&&... args)const
 		{
-			if constexpr (std::is_const_v<std::remove_pointer_t<std::remove_reference_t<T>>> == true)
+			const std::uint8_t need_param_length = GetNonDefaultParamLength() + (IsStatic() ? 0 : 1);
+			if (sizeof...(Args) > need_param_length)
 			{
-				return (T)(argument.const_data_ptr);
+				return std::nullopt;
+			}
+
+			constexpr std::array<std::reference_wrapper<const nox::reflection::Type>, sizeof...(Args)> invoke_type_list = { reflection::Typeof<Args>()... };
+			if (IsStatic()==false)
+			{
+				const nox::reflection::Type& type = invoke_type_list[0];
+				if (type.IsConvertible(containing_type_) == false)
+				{
+					return std::nullopt;
+				}
+			}
+
+			{
+				const std::uint8_t offset = IsStatic() ? 0 : 1;
+				for (std::uint8_t i = offset; i < sizeof...(Args) + offset; ++i)
+				{
+					const nox::reflection::Type& type = invoke_type_list[i];
+					if (type.IsConvertible(this->GetFunctionParam(i- offset).GetType()) == false)
+					{
+						return std::nullopt;
+					}
+				}
+			}
+
+			std::array<void*, sizeof...(Args)> invoke_args = { const_cast<void*>(static_cast<const void*>(&args))... };
+			if constexpr (std::is_void_v<R>)
+			{
+				return InvokeImplNoReturn(invoke_args);
 			}
 			else
 			{
-				return (T)(argument.data_ptr);
+				return static_cast<const nox::reflection::detail::FunctionInfoImpl<R>&>(*this).InvokeImpl(invoke_args);
 			}
 		}
 
-
-	protected:
-		virtual constexpr	bool TryInvokeImpl(void* result, const reflection::Type& result_type, const std::span<const InvokeArgument>& argument_list)const = 0;
-
-		/// @brief 実際の関数呼び出し
-		/// @tparam Func 
-		/// @tparam ...Indices 
-		/// @param func 
-		/// @param argument_list 
-		/// @param  
-		template<class Func, std::size_t... Indices>
-		inline constexpr void TryInvokeImpl_Private(Func func, const std::span<const InvokeArgument>& argument_list, std::index_sequence<Indices...>)const
-		{
-			//	引数開始インデックス
-			std::uint8_t argument_start_index = 0;
-
-			//	戻り値
-			if (IsNoReturn() == false)
-			{
-				NOX_ASSERT(argument_list[argument_start_index].underlying_type_.IsConvertible(result_type_) == false, U"戻り値の型チェックに失敗しました");
-
-				++argument_start_index;
-			}
-
-			if (IsStatic() == false)
-			{
-				NOX_ASSERT(argument_list[argument_start_index].underlying_type_.IsConvertible(containing_type_) == false, U"インスタンスの型チェックに失敗しました");
-
-				++argument_start_index;
-			}
-
-			//	引数チェック
-			for (std::uint8_t i = argument_start_index; i < static_cast<std::uint8_t>(argument_list.size()); ++i)
-			{
-				//	型チェック
-				if (argument_list[i].underlying_type_.IsConvertible(this->GetFunctionParam(i - argument_start_index).GetUnderlyingType()) == false)
-				{
-					NOX_ASSERT(false, nox::util::Format(U"型チェックに失敗しました i:{0}", static_cast<std::uint32_t>(i)));
-				}
-			}
-			
-			//	呼び出し
-			std::invoke(func, FunctionInfo::ToInvokeParam<std::tuple_element_t<Indices, FunctionArgsTupleType<Func>>>(argument_list[Indices])...);
-		}
 	protected:
 		/// @brief 属性の数
 		std::uint8_t attribute_list_length_;
@@ -365,8 +302,8 @@ namespace nox::reflection
 
 	namespace detail
 	{
-		template<nox::concepts::GlobalFunctionPointer... _Functions>
-		class FunctionInfoImpl : public FunctionInfo
+		template<class ResultType>
+		class FunctionInfoImpl final : public FunctionInfo
 		{
 		public:
 			inline constexpr FunctionInfoImpl(const FunctionInfoImpl&)noexcept = delete;
@@ -385,7 +322,8 @@ namespace nox::reflection
 				const reflection::Type& result_type,
 				AccessLevel access_level,
 				FunctionAttributeFlag method_attribute_flags,
-				_Functions... functions
+				const std::tuple<ResultType(*)(void**), std::uint8_t>* function_holder_table,
+				std::uint8_t function_holder_table_length
 			)noexcept :
 				FunctionInfo(
 					name,
@@ -401,75 +339,64 @@ namespace nox::reflection
 					access_level,
 					method_attribute_flags
 				),
-				functions_(std::make_tuple(functions...))
+				function_holder_table_(function_holder_table),
+				function_holder_table_length_(function_holder_table_length)
 			{}
 
-		protected:
-			inline constexpr	bool TryInvokeImpl(void*const result, const reflection::Type& result_type, const std::span<const InvokeArgument>& argument_list)const override
+		public:
+			inline constexpr std::optional<std::conditional_t<std::is_void_v<ResultType>, std::monostate, ResultType>> InvokeImpl(std::span<void*> args)const
 			{
-				//	引数数チェック
-		//		const bool is_static = IsStatic();
-		//		const std::uint8_t function_arugment_length = GetFunctionParamLength();
-				const std::uint8_t check_length = GetFunctionParamLength() + (IsStatic() == false ? 1 : 0) + (IsNoReturn() == false ? 1 : 0);
-				if (static_cast<std::uint8_t>(argument_list.size()) > check_length)
-				{
-					NOX_ASSERT(false, U"引数が一致しません");
-					return false;
-				}
+				return InvokeImpl<ResultType>(args);
+			}
 
-				//	戻り値のチェック
-				if (result != nullptr && result_type.IsConvertible(result_type_) == false)
-				{
-					NOX_ASSERT(false, U"戻り値の型が一致しません");
-					return false;
-				}
-
-				const auto apply_lambda =
-					[this, &result, &result_type, &argument_list]<class _F>(_F func)constexpr
-				{
-					if (std::tuple_size_v<FunctionArgsTupleType<_F>> == argument_list.size())
-					{
-						FunctionInfo::TryInvokeImpl_Private(func, argument_list, std::make_index_sequence<std::tuple_size_v<FunctionArgsTupleType<_F>>>());
-						return true;
-					}
-					return false;
-				};
-
-
-				bool is_success = false;
-				std::apply(
-					[&apply_lambda, &is_success]<class... Funcs>(Funcs... funcs)
-				{
-					if ((apply_lambda(funcs) || ...))
-					{
-						is_success = true;
-						return;
-					}
-				},
-					functions_);
-
-				NOX_ASSERT(is_success, U"関数呼び出しに失敗しました");
-				//	return result;
-				return true;
+		protected:
+			inline constexpr std::optional<std::monostate> InvokeImplNoReturn(std::span<void*> args)const override
+			{
+				return InvokeImpl<void>(args);
 			}
 
 		private:
+			template<class R>
+			inline constexpr std::optional<std::conditional_t<std::is_void_v<R>, std::monostate, R>> InvokeImpl(std::span<void*> args)const
+			{
+				const std::uint8_t raw_arg_length = static_cast<std::uint8_t>(args.size()) - (IsStatic() ? 0 : 1);
+				const std::optional<ResultType(*)(void**)> function_pointer_result = FindFunctionPointer(static_cast<std::uint8_t>(args.size()));
+				if (function_pointer_result.has_value() == false)
+				{
+					return std::nullopt;
+				}
+
+				if constexpr (std::is_void_v<R>)
+				{
+					std::invoke(*function_pointer_result, args.data());
+					return std::monostate{};
+				}
+				else
+				{
+					return std::invoke(*function_pointer_result, args.data());
+				}
+			}
+
+			inline constexpr std::optional<ResultType(*)(void**)> FindFunctionPointer(std::uint8_t arg_length)const noexcept
+			{
+				for (std::uint8_t i = 0; i < function_holder_table_length_; ++i)
+				{
+					if (std::get<1>(function_holder_table_[i]) == arg_length)
+					{
+						return std::get<0>(function_holder_table_[i]);
+					}
+				}
+				return std::nullopt;
+			}
+		private:
 			/// @brief 関数リスト
-			const std::tuple<_Functions...> functions_;
+			const std::tuple<ResultType(*)(void**), std::uint8_t>* function_holder_table_;
+			const std::uint8_t function_holder_table_length_;
 		};
 
-	/*	template<class T>
-		inline	consteval	FunctionArgumentInfo	CreateFunctionParameter(
-			ReflectionStringView name,
-			std::span<ReflectionObject> attribute_list,
-			bool hasDefaultValue)noexcept
-		{
-			return FunctionArgumentInfo(name, attribute_ptr_table, attribute_length, reflection::Typeof<T>(), hasDefaultValue);
-		}*/
-
-		template<class RawFunction, class... _Functions>
-		inline	constexpr	auto	CreateFunctionInfo(
-			const RawFunction& function_pointer,
+		template<class RawFunction>
+		inline	constexpr	nox::reflection::detail::FunctionInfoImpl<nox::FunctionResultType<RawFunction>>	CreateFunctionInfo(
+			const nox::FunctionPointerId& function_id,
 			ReflectionStringView	name,
 			ReflectionStringView	fullname,
 			ReflectionStringView	_namespace,
@@ -479,16 +406,16 @@ namespace nox::reflection
 			const std::reference_wrapper<const FunctionArgumentInfo>* function_param_list,
 			const std::uint8_t function_param_list_length,
 			const FunctionAttributeFlag extraAttributeFlags,
-			_Functions... functions
+			const std::tuple<nox::FunctionResultType<RawFunction>(*)(void**), std::uint8_t>* function_holder_table,
+			const std::uint8_t function_holder_table_length
 		)noexcept
 		{
 			//	c++で解決できないものは、ここで解決する
 			const FunctionAttributeFlag method_attribute_flags = nox::util::BitOr(nox::reflection::GetFunctionAttributeFlags<RawFunction>(), extraAttributeFlags);
-			const nox::FunctionPointerId& function_id = nox::GetInvalidFunctionPointerId();
-
+			
 			if constexpr (std::is_member_function_pointer_v<RawFunction> == true)
 			{
-				return nox::reflection::detail::FunctionInfoImpl<_Functions...>(
+				return nox::reflection::detail::FunctionInfoImpl<nox::FunctionResultType<RawFunction>>(
 					name,
 					fullname,
 					_namespace,
@@ -497,16 +424,17 @@ namespace nox::reflection
 					function_id,
 					function_param_list,
 					function_param_list_length,
-					nox::reflection::Typeof<FunctionClassType<RawFunction>>(),
-					nox::reflection::Typeof<FunctionResultType<RawFunction>>(),
+					nox::reflection::Typeof<nox::FunctionClassType<RawFunction>>(),
+					nox::reflection::Typeof<nox::FunctionResultType<RawFunction>>(),
 					access_level,
 					method_attribute_flags,
-					functions...
+					function_holder_table,
+					function_holder_table_length
 				);
 			}
 			else
 			{
-				return nox::reflection::detail::FunctionInfoImpl< _Functions...>(
+				return nox::reflection::detail::FunctionInfoImpl<nox::FunctionResultType<RawFunction>>(
 					name,
 					fullname,
 					_namespace,
@@ -516,10 +444,11 @@ namespace nox::reflection
 					function_param_list,
 					function_param_list_length,
 					nox::reflection::GetInvalidType(),
-					nox::reflection::Typeof<FunctionResultType<RawFunction>>(),
+					nox::reflection::Typeof<nox::FunctionResultType<RawFunction>>(),
 					access_level,
 					method_attribute_flags,
-					functions...
+					function_holder_table,
+					function_holder_table_length
 				);
 			}
 			

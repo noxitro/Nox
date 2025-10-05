@@ -26,6 +26,9 @@
 //	windows.hはwinsock2.hが先にインクルードされていないと、
 //	winsock.hを自動的にインクルードしてしまう。
 #include	<WinSock2.h>
+#include	<WS2tcpip.h>
+
+#pragma comment(lib, "Ws2_32.lib")
 
 #include	<Windows.h>
 #pragma	warning(pop)

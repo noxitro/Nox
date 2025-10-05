@@ -10,12 +10,14 @@
 
 #if NOX_DEVELOP
 #include	"dev/net/socket_scheduler.h"
+#include	"dev/editor_ipc_server.h"
 #endif // NOX_DEVELOP
 
 nox::CoreEntry::CoreEntry()
 {
 	Register<&nox::CoreEntry::Init>(ModuleEntryCategory::CoreInit);
 	Register<&nox::CoreEntry::GCUpdate>(ModuleEntryCategory::GCUpdate);
+	Register<&nox::CoreEntry::SocketUpdate>(ModuleEntryCategory::SocketUpdate);
 	Register<&nox::CoreEntry::Finalize>(ModuleEntryCategory::CoreFinalize);
 }
 
@@ -29,13 +31,15 @@ void	nox::CoreEntry::Init()
 #if NOX_DEVELOP
 	nox::dev::net::SocketScheduler::CreateInstance();
 	nox::dev::net::SocketScheduler::Instance().Initialize();
-#endif // NOX_DEVELOP
 
+	nox::dev::editor_ipc::EditorIpcServer& editor_ipc_server = nox::dev::editor_ipc::EditorIpcServer::CreateInstance();
+#endif // NOX_DEVELOP
 }
 
 void	nox::CoreEntry::Finalize()
 {
 #if NOX_DEVELOP
+	nox::dev::editor_ipc::EditorIpcServer::DeleteInstance();
 	nox::dev::net::SocketScheduler::Instance().Finalize();
 	nox::dev::net::SocketScheduler::DeleteInstance();
 #endif // NOX_DEVELOP
@@ -43,6 +47,13 @@ void	nox::CoreEntry::Finalize()
 
 	nox::GarbageCollector::Instance().FrameGC();
 	nox::GarbageCollector::DeleteInstance();
+}
+
+void	nox::CoreEntry::SocketUpdate()
+{
+#if NOX_DEVELOP
+	nox::dev::net::SocketScheduler::Instance().Update();
+#endif
 }
 
 void	nox::CoreEntry::GCUpdate()

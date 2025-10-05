@@ -23,13 +23,7 @@ namespace nox::reflection
 		/// @brief class,union型のリフレクション用の前方宣言
 		/// @tparam T 
 		template<class T>  requires(std::is_class_v<T> || std::is_enum_v<T> || std::is_union_v<T>)
-			struct ReflectionGeneratedHolder;
-
-		/// @brief 名前空間に存在するリフレクション用の前方宣言
-		/// @tparam ModuleId モジュール名のハッシュ値
-		/// @tparam Id 名前空間文字列のハッシュ値
-		template<std::uint32_t ModuleId, std::uint32_t Id>
-		struct ReflectionGeneratedGlobalHolder;
+		struct ReflectionGeneratedHolder;
 	}
 
 	///	@brief				リフレクション定義
@@ -54,7 +48,7 @@ namespace nox::reflection
 		inline consteval void StaticAssertNoxDeclareReflectionObject()noexcept{ static_assert(std::is_base_of_v<::nox::reflection::ReflectionObject, ClassType>, "is not base of ReflectionObject"); }\
 	public:\
 		NOX_ATTR_DECLARATION(::nox::reflection::attr::IgnoreReflection())	\
-		inline constexpr const ::nox::reflection::Type& GetUnderlyingType()const noexcept override { return ::nox::reflection::Typeof<ClassType>(); }\
+		inline constexpr const ::nox::reflection::Type& GetType()const noexcept override { return ::nox::reflection::Typeof<ClassType>(); }\
 		NOX_DECLARE_REFLECTION(ClassType)
 //	end define
 	
@@ -64,7 +58,7 @@ namespace nox::reflection
 		NOX_DECLARE_REFLECTION(ReflectionObject);
 	public:
 		/// @brief 型情報を取得
-		inline constexpr virtual const ::nox::reflection::Type& GetUnderlyingType()const noexcept = 0;
+		inline constexpr virtual const ::nox::reflection::Type& GetType()const noexcept = 0;
 
 	//protected:
 		[[nodiscard]] inline constexpr ReflectionObject()noexcept = default;

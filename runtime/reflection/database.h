@@ -11,6 +11,7 @@ namespace nox::reflection
 	class EnumInfo;
 	class VariableInfo;
 	class FunctionInfo;
+	class ReflectionObject;
 
 	/// @brief 初期化
 	void Initialize();
@@ -76,9 +77,9 @@ namespace nox::reflection
 #pragma endregion
 
 #pragma region Utility
-	bool IsBaseOf(const nox::reflection::ClassInfo& base, const nox::reflection::ClassInfo& derived);
-
-	inline bool IsBaseOf(const nox::reflection::Type& baseType, const nox::reflection::Type& derivedType)
+	bool IsBaseOf(const nox::reflection::ClassInfo& base, const nox::reflection::ClassInfo& derived)noexcept;
+	
+	inline bool IsBaseOf(const nox::reflection::Type& baseType, const nox::reflection::Type& derivedType)noexcept
 	{
 		if (baseType.IsClass() == false || derivedType.IsClass() == false)
 		{
@@ -96,9 +97,31 @@ namespace nox::reflection
 		return IsBaseOf(*base, *derived);
 	}
 
-	
+	namespace detail
+	{
+		bool IsBaseOf(const nox::reflection::Type& base, const nox::reflection::ReflectionObject& from)noexcept;
+	}
+
+	template<class T>
+		requires(std::derived_from<T, nox::reflection::ReflectionObject>)
+	inline T* AsCast(nox::reflection::ReflectionObject& from) noexcept
+	{
+		if (nox::reflection::detail::IsBaseOf(nox::reflection::Typeof<T>(), from) == false)
+		{
+			return nullptr;
+		}
+		return static_cast<T*>(&from);
+	}
+
+	template<class T>
+		requires(std::derived_from<T, nox::reflection::ReflectionObject>)
+	inline const T* AsCast(const nox::reflection::ReflectionObject& from) noexcept
+	{
+		if (nox::reflection::detail::IsBaseOf(nox::reflection::Typeof<T>(), from) == false)
+		{
+			return nullptr;
+		}
+		return static_cast<const T*>(&from);
+	}
 #pragma endregion
-
-
-
 }

@@ -121,7 +121,7 @@ nox::Component* nox::GameObject::GetComponent(const nox::reflection::Type& type)
 
 	for (Component* component = transform_; component != nullptr; component = component->GetComponentChain())
 	{
-		if (component->GetUnderlyingType().GetUserDefinedCompoundTypeInfo()->IsBaseOf(*class_info) == true)
+		if (component->GetType().GetUserDefinedCompoundTypeInfo()->IsBaseOf(*class_info) == true)
 		{
 			return component;
 		}
@@ -133,7 +133,7 @@ nox::Component* nox::GameObject::GetSameComponent(const nox::reflection::Type& t
 {
 	for (Component* component = transform_; component != nullptr; component = component->GetComponentChain())
 	{
-		if (component->GetUnderlyingType() == type)
+		if (component->GetType() == type)
 		{
 			return component;
 		}

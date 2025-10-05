@@ -386,12 +386,22 @@ namespace nox
 		struct FunctionSignature<Result(*)(Args...)> : nox::detail::FunctionSignatureFunctionPointer<Result, Args...>
 		{
 			static constexpr bool is_noexcept = false;
+
+			using ToFuncionType = Result(Args...);
+			using ToFunctionPointerType = Result(*)(Args...);
+			template<class U>
+			using ToMemberFunctionPointerType = Result(U::*)(Args...);
 		};
 
 		template<class Result, class... Args>
 		struct FunctionSignature<Result(*)(Args...)noexcept> : nox::detail::FunctionSignatureFunctionPointer<Result, Args...>
 		{
 			static constexpr bool is_noexcept = true;
+
+			using ToFuncionType = Result(Args...)noexcept;
+			using ToFunctionPointerType = Result(*)(Args...)noexcept;
+			template<class U>
+			using ToMemberFunctionPointerType = Result(U::*)(Args...)noexcept;
 		};
 #pragma endregion
 
@@ -651,6 +661,12 @@ namespace nox
 	/// @brief メンバ関数を持つクラスの型
 	template<class T> requires(std::is_member_function_pointer_v<T>)
 	using FunctionClassType = typename nox::detail::FunctionSignatureAdapter<T>::ClassType;
+
+	template<class T>
+	using ToFunctionPointerType = typename nox::detail::FunctionSignatureAdapter<T>::ToFunctionPointerType;
+
+	template<class T, class ClassType> requires(!std::is_member_object_pointer_v<T> && (std::is_class_v<ClassType> || std::is_union_v<ClassType>))
+	using ToMemberFunctionPointerType = typename nox::detail::FunctionSignatureAdapter<T>::template ToMemberFunctionPointerType<ClassType>;
 
 	/// @brief 引数の型tuple
 	template<concepts::FunctionSignatureType T>

@@ -21,6 +21,45 @@ namespace nox::reflection
 
 	};
 
+	/// @brief 継承元クラスの型、アクセスレベル、属性リストを保持する BaseSpecifier クラス。
+	class BaseSpecifierInfo
+	{
+	public:
+		inline constexpr explicit BaseSpecifierInfo(
+			const nox::reflection::Type& type,
+			const nox::reflection::AccessLevel accessLevel,
+			const std::reference_wrapper<const nox::reflection::ReflectionObject>* attribute_list,
+			const std::uint8_t attribute_length
+		)noexcept:
+			accessLevel_(accessLevel),
+			attribute_length_(attribute_length),
+			type_(type),
+			attribute_list_(attribute_list)
+		{}
+
+		inline constexpr const nox::reflection::Type& GetType()const noexcept { return type_; }
+		inline constexpr nox::reflection::AccessLevel GetAccessLevel()const noexcept { return accessLevel_; }
+		[[nodiscard]] inline	constexpr	std::uint8_t	GetAttributeListLength()const noexcept { return attribute_length_; }
+		[[nodiscard]] inline	constexpr	const std::span<const std::reference_wrapper<const reflection::ReflectionObject>> GetAttributeList()const noexcept { return std::span(attribute_list_, attribute_length_); }
+		[[nodiscard]] inline	constexpr	const nox::reflection::ReflectionObject& GetAttribute(const std::uint8_t index)const noexcept { return nox::util::At(attribute_list_, attribute_length_, index); }
+	private:
+		const nox::reflection::AccessLevel accessLevel_;
+		const std::uint8_t attribute_length_;
+
+		const nox::reflection::Type& type_;
+		const std::reference_wrapper<const nox::reflection::ReflectionObject>* attribute_list_;
+	};
+
+	/// @brief 型エイリアスに関する情報を保持するクラスです。
+	class TypeAliasInfo
+	{
+	private:
+		const nox::reflection::Type& underlying_type_;
+		const ReflectionStringView name_;
+		const ReflectionStringView fullname_;
+		const ReflectionStringView namespace_;
+	};
+
 	/// @brief ユーザー定義の複合型情報
 	/// @details クラス、構造体、共用体が該当します
 	class ClassInfo : public TypeInfo
@@ -91,7 +130,7 @@ namespace nox::reflection
 		{
 			for (std::int32_t i = 0; i < attribute_length_; ++i)
 			{
-				if (attribute_list_[i].get().GetUnderlyingType() == nox::reflection::Typeof<T>())
+				if (attribute_list_[i].get().GetType() == nox::reflection::Typeof<T>())
 				{
 					return static_cast<const T*>(&attribute_list_[i].get());
 				}
@@ -101,8 +140,6 @@ namespace nox::reflection
 
 		[[nodiscard]] inline constexpr std::uint8_t GetBaseTypeLength()const noexcept { return base_type_length_; }
 		[[nodiscard]] inline constexpr const std::span<const std::reference_wrapper<const reflection::Type>> GetBaseTypeList()const noexcept { return std::span(base_type_list_, base_type_length_); }
-
-
 		[[nodiscard]] inline constexpr std::uint8_t GetVariableLength()const noexcept { return variable_length_; }
 		[[nodiscard]] inline constexpr const std::span<const std::reference_wrapper<const nox::reflection::VariableInfo>> GetVariableList()const noexcept { return std::span(variable_list_, variable_length_); }
 		[[nodiscard]] inline constexpr std::uint8_t GetFunctionLength()const noexcept { return function_length_; }
@@ -113,10 +150,8 @@ namespace nox::reflection
 		[[nodiscard]] inline constexpr	std::span<const std::reference_wrapper<const nox::reflection::EnumInfo>> GetEnumInfoList()const noexcept { return std::span(enum_list_, enum_length_); }
 		[[nodiscard]] inline constexpr const nox::reflection::EnumInfo& GetEnumInfo(std::uint8_t index)const noexcept { return nox::util::At(enum_list_, enum_length_, index); }
 
-		/// @brief 継承関係を調べる
-		/// @param derived 
-		/// @return 
 		[[nodiscard]] bool	IsBaseOf(const nox::reflection::ClassInfo& derived)const noexcept;
+		[[nodiscard]] bool	IsSubclassOf(const nox::reflection::Type& base)const noexcept;
 
 		const nox::reflection::FunctionInfo* GetCopyConstructor()const noexcept;
 		const nox::reflection::FunctionInfo* GetMoveConstructor()const noexcept;
@@ -201,9 +236,9 @@ namespace nox::reflection
 			inline constexpr InvalidTypeInfo()noexcept :
 				nox::reflection::ClassInfo(
 					nox::reflection::GetInvalidType(),
-					U"",
-					U"",
-					U"",
+					u8"",
+					u8"",
+					u8"",
 					nox::reflection::GetInvalidType(),
 
 					nullptr,

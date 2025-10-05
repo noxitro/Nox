@@ -94,7 +94,7 @@ namespace nox::reflection
 		inline constexpr explicit EnumInfo(const EnumInfo&&)noexcept = delete;
 	public:
 		inline consteval explicit EnumInfo(
-			const nox::reflection::Type& underlying_type,
+			const nox::reflection::Type& type,
 			ReflectionStringView name,
 			ReflectionStringView fullname,
 			ReflectionStringView _namespace,
@@ -112,11 +112,12 @@ namespace nox::reflection
 			attribute_length_(attribute_length),
 			variable_list_(variable_list),
 			variable_length_(variable_length),
-			underlying_type_(underlying_type)
+			type_(type)
 		{}
 
 		/// @brief 基底型を取得
-		inline	constexpr	const nox::reflection::Type& GetUnderlyingType()const noexcept { return underlying_type_; }
+		inline	constexpr	const nox::reflection::Type& GetType()const noexcept { return type_; }
+		inline	constexpr	const nox::reflection::Type& GetUnderlyingType()const noexcept { return type_.GetUnderlyingType(); }
 
 		inline	constexpr	ReflectionStringView	GetName()const noexcept { return name_; }
 		inline	constexpr	ReflectionStringView	GetFullName()const noexcept { return fullname_; }
@@ -131,7 +132,7 @@ namespace nox::reflection
 		template<std::integral T>
 		inline	constexpr	std::optional<std::span<T>> GetValueList(std::span<T> buffer)const noexcept
 		{
-			if (underlying_type_ != nox::reflection::Typeof<T>())
+			if (GetUnderlyingType() != nox::reflection::Typeof<T>())
 			{
 				return std::nullopt;
 			}
@@ -147,7 +148,7 @@ namespace nox::reflection
 		template<std::integral T>
 		inline	constexpr	std::optional<nox::Vector<T>> GetValueList()const noexcept
 		{
-			if (underlying_type_ != nox::reflection::Typeof<T>())
+			if (GetUnderlyingType() != nox::reflection::Typeof<T>())
 			{
 				return std::nullopt;
 			}
@@ -189,7 +190,7 @@ namespace nox::reflection
 		const std::reference_wrapper<const EnumeratorInfo>*const variable_list_;
 
 		/// @brief 型情報
-		const nox::reflection::Type& underlying_type_;
+		const nox::reflection::Type& type_;
 
 		/// @brief 名前
 		const	ReflectionStringView	name_;

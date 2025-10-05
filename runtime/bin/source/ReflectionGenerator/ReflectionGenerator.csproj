@@ -6,8 +6,17 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <!-- 単一ファイル -->
+    <PublishSingleFile>true</PublishSingleFile>
 
-    <!--BinaryFormatterを使えるようにする-->
+	  <!-- ネイティブ(libclang など) を自己展開させる -->
+	  <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+
+	  <!-- PDB を外へ出したくない場合 -->
+	  <DebugType>none</DebugType>
+	  <DebugSymbols>false</DebugSymbols>
+
+	  <!--BinaryFormatterを使えるようにする-->
 	<EnableUnsafeBinaryFormatterSerialization>true</EnableUnsafeBinaryFormatterSerialization>
   </PropertyGroup>
 

@@ -14,7 +14,7 @@ namespace
 
 void	nox::GarbageCollector::Register(nox::ManagedObject& managed_object)
 {
-	NOX_LOCAL_SCOPE(nox::os::Mutex, mutex_);
+	NOX_LOCAL_SCOPE(nox::os::Mutex{ mutex_ });
 	managed_objects_.emplace_back(managed_object);
 }
 

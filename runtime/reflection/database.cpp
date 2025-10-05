@@ -9,6 +9,7 @@
 #include	"enum_info.h"
 #include	"variable_info.h"
 #include	"function_info.h"
+#include	"reflection_object.h"
 
 #include	"reflection_generated_register.h"
 #include	"log_id.h"
@@ -273,7 +274,7 @@ const nox::reflection::VariableInfo* nox::reflection::FindVariableInfoWithNameHa
 	return nullptr;
 }
 
-bool nox::reflection::IsBaseOf(const nox::reflection::ClassInfo& base, const nox::reflection::ClassInfo& derived)
+bool nox::reflection::IsBaseOf(const nox::reflection::ClassInfo& base, const nox::reflection::ClassInfo& derived)noexcept
 {
 	const nox::reflection::Type& base_type = base.GetUnderlyingType();
 
@@ -292,6 +293,11 @@ bool nox::reflection::IsBaseOf(const nox::reflection::ClassInfo& base, const nox
 	}
 
 	return false;
+}
+
+bool nox::reflection::detail::IsBaseOf(const nox::reflection::Type& base, const nox::reflection::ReflectionObject& from)noexcept
+{
+	return nox::reflection::IsBaseOf(base, from.GetType());
 }
 
 void	nox::reflection::Register(const nox::reflection::ClassInfo& data)
@@ -447,4 +453,9 @@ void nox::reflection::Register(const nox::reflection::FunctionInfo& data)
 void nox::reflection::Unregister(const nox::reflection::FunctionInfo& data)
 {
 	const std::uint32_t artifact_name_hash = nox::util::Crc32(data.GetFullName());
+
+	Artifact& artifact = GetCreateArtifact(artifact_name_hash);
+
+	artifact.chunk_with_type_id.function_map.erase(&data.GetFunctionId());
+	artifact.chunk_with_name_hash.function_map.erase(nox::util::Crc32(data.GetFullName()));
 }

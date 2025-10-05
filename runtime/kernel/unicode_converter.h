@@ -12,58 +12,102 @@ namespace nox::unicode
 #pragma region cstring
 	nox::NString	ConvertNString(std::u8string_view str_view);
 	nox::NString	ConvertNString(std::u16string_view str_view);
-	nox::NString	ConvertNString(std::wstring_view str_view);
 	nox::NString	ConvertNString(std::u32string_view str_view);
+	nox::NString	ConvertNString(std::wstring_view str_view);
 
+	template<std::same_as<char> To, class From>
+		requires(std::is_void_v<std::void_t<decltype(::nox::unicode::ConvertNString(std::declval<From>()))>>)
+	inline	auto	ConvertString(From&& str, std::span<To> dest_buffer)
+	{
+		return ::nox::unicode::ConvertNString(str, dest_buffer);
+	}
+
+	template<std::same_as<::nox::NString> To, class From>
+		requires(std::is_void_v<std::void_t<decltype(::nox::unicode::ConvertNString(std::declval<From>()))>>)
+	inline	To	ConvertString(From&& str)
+	{
+		return ::nox::unicode::ConvertNString(str);
+	}
 #pragma endregion
+
+#pragma region char8
 
 	nox::U8String	ConvertU8String(std::string_view str_view);
 	nox::U8String	ConvertU8String(std::u16string_view str_view);
-	inline nox::U8String	ConvertU8String(std::wstring_view str_view)
-	{
-		return ConvertU8String({ reinterpret_cast<const char16*>(str_view.data()), str_view.size() });
-	}
 	nox::U8String	ConvertU8String(std::u32string_view str_view);
+	inline nox::U8String	ConvertU8String(std::wstring_view str_view) 
+	{
+		return ConvertU8String({ reinterpret_cast<const char16*>(str_view.data()), str_view.size() }); 
+	}
 
 	std::u8string_view	ConvertU8String(std::string_view str_view, std::span<nox::char8> dest_buffer);
 	std::u8string_view	ConvertU8String(std::u16string_view str_view, std::span<nox::char8> dest_buffer);
+	std::u8string_view	ConvertU8String(std::u32string_view str_view, std::span<nox::char8> dest_buffer);
 	inline std::u8string_view	ConvertU8String(std::wstring_view str_view, std::span<nox::char8> dest_buffer)
 	{
 		return ConvertU8String({ reinterpret_cast<const char16*>(str_view.data()), str_view.size() }, dest_buffer);
 	}
-	std::u8string_view	ConvertU8String(std::u32string_view str_view, std::span<nox::char8> dest_buffer);
+
+	template<std::same_as<::nox::U8String> To, class From>
+		requires(std::is_void_v<std::void_t<decltype(unicode::ConvertU8String(std::declval<From>()))>>)
+	inline	To	ConvertString(From&& str)
+	{
+		return ::nox::unicode::ConvertU8String(str);
+	}
+	template<std::same_as<char8> To, class From>
+		requires(std::is_void_v<std::void_t<decltype(::nox::unicode::ConvertU8String(std::declval<From>()))>>)
+	inline	auto	ConvertString(From&& str, std::span<To> dest_buffer)
+	{
+		return ::nox::unicode::ConvertU8String(str, dest_buffer);
+	}
+#pragma endregion
 
 #pragma region char16
-
-	std::u16string_view	ConvertU16String(const std::u8string_view str_view, std::span<char16> dest_buffer);
-	inline std::u16string_view	ConvertU16String(const std::string_view str_view, std::span<char16> dest_buffer)
+	nox::U16String	ConvertU16String(std::string_view str_view);
+	nox::U16String	ConvertU16String(std::u8string_view str_view);
+	nox::U16String	ConvertU16String(std::u32string_view str_view);
+	inline nox::U16String	ConvertU16String(std::wstring_view str_view)
 	{
-		return ConvertU16String({ reinterpret_cast<const char8*>(str_view.data()), str_view.size() }, dest_buffer);
+		return nox::U16String(reinterpret_cast<const char16*>(str_view.data()), str_view.size());
 	}
 
+	std::u16string_view	ConvertU16String(const std::u8string_view str_view, std::span<char16> dest_buffer);
+	std::u16string_view	ConvertU16String(const std::u32string_view str_view, std::span<char16> dest_buffer);
 	inline std::u16string_view	ConvertU16String(const std::wstring_view str_view, std::span<char16> dest_buffer)
 	{
 		memory::WideCopy(util::CharCast<wchar16>(dest_buffer.data()), dest_buffer.size(), str_view.data(), str_view.size());
 		return std::u16string_view(dest_buffer);
 	}
-
-	std::u16string_view	ConvertU16String(const std::u32string_view str_view, std::span<char16> dest_buffer);
-
-	nox::U16String	ConvertU16String(std::u8string_view str_view);
-	inline nox::U16String	ConvertU16String(std::string_view str_view)
+	inline std::u16string_view	ConvertU16String(const std::string_view str_view, std::span<char16> dest_buffer)
 	{
-		return nox::U16String(reinterpret_cast<const char16*>(str_view.data()), str_view.size());
+		return ConvertU16String({ reinterpret_cast<const char8*>(str_view.data()), str_view.size() }, dest_buffer);
 	}
 
-	inline nox::U16String	ConvertU16String(std::wstring_view str_view)
+	template<std::same_as<nox::U16String> To, class From>
+		requires(std::is_void_v<std::void_t<decltype(::nox::unicode::ConvertU16String(std::declval<From>()))>>)
+	inline	To	ConvertString(From&& str)
 	{
-		return nox::U16String(reinterpret_cast<const char16*>(str_view.data()), str_view.size());
+		return ::nox::unicode::ConvertU16String(str);
 	}
-	nox::U16String	ConvertU16String(std::u32string_view str_view);
-
+	template<std::same_as<::nox::char16> To, class From>
+		requires(std::is_void_v<std::void_t<decltype(::nox::unicode::ConvertU16String(std::declval<From>()))>>)
+	inline	auto	ConvertString(From&& str, std::span<To> dest_buffer)
+	{
+		return ::nox::unicode::ConvertU16String(str, dest_buffer);
+	}
 #pragma endregion
 
 #pragma region wstring
+	nox::WString	ConvertWString(std::u8string_view str_view);
+	nox::WString	ConvertWString(std::u32string_view str_view);
+	inline nox::WString	ConvertWString(std::string_view str_view)
+	{
+		return ConvertWString({ reinterpret_cast<const char8*>(str_view.data()), str_view.size() });
+	}
+	inline nox::WString	ConvertWString(std::u16string_view str_view)
+	{
+		return nox::WString(util::CharCast<wchar16>(str_view.data()), str_view.length());
+	}
 
 	inline void	ConvertWString(const std::u8string_view str_view, std::span<wchar_t> dest_buffer)
 	{
@@ -82,142 +126,55 @@ namespace nox::unicode
 		ConvertU16String(str_view, buffer);
 	}
 
-	nox::WString	ConvertWString(std::u8string_view str_view);
-
-	inline nox::WString	ConvertWString(std::string_view str_view)
+	template<std::same_as<::nox::WString> To, class From>
+		requires(std::is_void_v<std::void_t<decltype(::nox::unicode::ConvertWString(std::declval<From>()))>>)
+	inline	To	ConvertString(From&& str)
 	{
-		return ConvertWString({ reinterpret_cast<const char8*>(str_view.data()), str_view.size() });
+		return ::nox::unicode::ConvertWString(str);
 	}
 
-	inline nox::WString	ConvertWString(std::u16string_view str_view)
+	template<std::same_as<wchar16> To, class From>
+	//	requires(std::is_void_v<std::void_t<decltype(unicode::ConvertWString(std::declval<From>()))>>)
+	inline	void	ConvertString(From&& str, std::span<To> dest_buffer)
 	{
-		return nox::WString(util::CharCast<wchar16>(str_view.data()), str_view.length());
+		::nox::unicode::ConvertWString(str, dest_buffer);
 	}
-
-	nox::WString	ConvertWString(std::u32string_view str_view);
 #pragma endregion
 
 #pragma region char32
+	::nox::U32String	ConvertU32String(std::u8string_view str_view);
+	::nox::U32String	ConvertU32String(std::u16string_view str_view);
+	inline ::nox::U32String	ConvertU32String(std::string_view str_view)
+	{
+		return ConvertU32String({ reinterpret_cast<const char8*>(str_view.data()), str_view.size() });
+	}
+	inline ::nox::U32String	ConvertU32String(std::wstring_view str_view)
+	{
+		return ConvertU32String({ reinterpret_cast<const char16*>(str_view.data()), str_view.size() });
+	}
 	
 	std::u32string_view	ConvertU32String(const std::u8string_view str_view, std::span<char32> dest_buffer);
+	std::u32string_view	ConvertU32String(const std::u16string_view str_view, std::span<char32> dest_buffer);
 	inline std::u32string_view	ConvertU32String(const std::string_view str_view, std::span<char32> dest_buffer)
 	{
 		return ConvertU32String({ reinterpret_cast<const char8*>(str_view.data()), str_view.size() }, dest_buffer);
 	}
-	std::u32string_view	ConvertU32String(const std::u16string_view str_view, std::span<char32> dest_buffer);
 	inline std::u32string_view	ConvertU32String(const std::wstring_view str_view, std::span<char32> dest_buffer)
 	{
 		return ConvertU32String({ reinterpret_cast<const char16*>(str_view.data()), str_view.size() }, dest_buffer);
 	}
 
-	nox::U32String	ConvertU32String(std::u8string_view str_view);
-	inline nox::U32String	ConvertU32String(std::string_view str_view)
-	{
-		return ConvertU32String({ reinterpret_cast<const char8*>(str_view.data()), str_view.size() });
-	}
-	nox::U32String	ConvertU32String(std::u16string_view str_view);
-	inline nox::U32String	ConvertU32String(std::wstring_view str_view)
-	{
-		return ConvertU32String({ reinterpret_cast<const char16*>(str_view.data()), str_view.size() });
-	}
-
-#pragma endregion
-
-	/// @brief span ver
-	/// @tparam From 
-	/// @tparam To 
-	/// @param str 
-	/// @param dest_buffer 
-	template<std::same_as<char> To, class From>
-		requires(std::is_void_v<std::void_t<decltype(unicode::ConvertNString(std::declval<From>()))>>)
-	inline	void	ConvertString(From&& str, std::span<To> dest_buffer)
-	{
-		unicode::ConvertNString(str, dest_buffer);
-	}
-
-	template<std::same_as<nox::NString> To, class From>
-		requires(std::is_void_v<std::void_t<decltype(unicode::ConvertNString(std::declval<From>()))>>)
-	inline	To	ConvertString(From&& str)
-	{
-		return unicode::ConvertNString(str);
-	}
-
-	template<std::same_as<nox::WString> To, class From>
-		requires(std::is_void_v<std::void_t<decltype(unicode::ConvertWString(std::declval<From>()))>>)
-		inline	To	ConvertString(From&& str)
-	{
-		return unicode::ConvertWString(str);
-	}
-
-
-		/// @brief 
-		/// @tparam From 
-		/// @tparam To 
-		/// @param str 
-		/// @param dest_buffer 
-		/// @return 
-		template<std::same_as<wchar16> To, class From>
-		//	requires(std::is_void_v<std::void_t<decltype(unicode::ConvertWString(std::declval<From>()))>>)
-		inline	void	ConvertString(From&& str, std::span<To> dest_buffer)
-		{
-			unicode::ConvertWString(str, dest_buffer);
-		}
-
-	template<std::same_as<nox::U8String> To, class From>
-		requires(std::is_void_v<std::void_t<decltype(unicode::ConvertU8String(std::declval<From>()))>>)
-	inline	To	ConvertString(From&& str)
-	{
-		return unicode::ConvertU8String(str);
-	}
-
-	template<std::same_as<char8> To, class From>
-	//	requires(std::is_void_v<std::void_t<decltype(unicode::ConvertU8String(std::declval<From>()))>>)
-	inline	void	ConvertString(From&& str, std::span<To> dest_buffer)
-	{
-		unicode::ConvertU8String(str, dest_buffer);
-	}
-
-
-	template<std::same_as<nox::U16String> To, class From>
-		requires(std::is_void_v<std::void_t<decltype(unicode::ConvertU16String(std::declval<From>()))>>)
-	inline	To	ConvertString(From&& str)
-	{
-		return unicode::ConvertU16String(str);
-	}
-
-	/// @brief ConvertU16String span ver
-	/// @tparam From 
-	/// @tparam To 
-	/// @param dest_buffer 
-	/// @param str 
-	template<class To, class From>
-	//	requires(std::is_void_v<std::void_t<decltype(unicode::ConvertU16String(std::declval<From>()))>>)
-	inline	void	ConvertString(From&& str, std::span<To> dest_buffer)
-	{
-		unicode::ConvertU16String(str, dest_buffer);
-	}
-
-	/// @brief ConvertU32String
-	/// @tparam From 
-	/// @tparam To 
-	/// @param str 
-	/// @return 
-	template<std::same_as<nox::U32String> To, class From>
+	template<std::same_as<::nox::U32String> To, class From>
 		requires(std::is_void_v<std::void_t<decltype(unicode::ConvertU32String(std::declval<From>()))>>)
-		inline	To	ConvertString(From&& str)
+	inline	To	ConvertString(From&& str)
 	{
-		return unicode::ConvertU32String(str);
+		return ::nox::unicode::ConvertU32String(str);
 	}
-
-		/// @brief ConvertU32String span ver
-		/// @tparam From 
-		/// @tparam To 
-		/// @param str 
-		/// @return 
-		template<std::same_as<char32> To, class From>
-			//requires(std::is_void_v<std::void_t<decltype(unicode::ConvertU32String(std::declval<From>()))>>)
-		inline	void	ConvertString(From&& str, std::span<To> dest_buffer)
-		{
-			unicode::ConvertU32String(str, dest_buffer);
-		}
+	template<std::same_as<::nox::char32> To, class From>
+		requires(std::is_void_v<std::void_t<decltype(unicode::ConvertU32String(std::declval<From>()))>>)
+	inline	auto	ConvertString(From&& str, std::span<To> dest_buffer)
+	{
+		return ::nox::unicode::ConvertU32String(str, dest_buffer);
+	}
+#pragma endregion
 }

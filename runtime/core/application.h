@@ -14,7 +14,7 @@ namespace nox
 
 	/// @brief Coreの管理クラス
 	class 
-		NOX_ATTR_TYPE(::nox::attr::dev::Description(U"Application"), nox::attr::dev::DisplayName(U"アプリケーション"))
+		NOX_ATTR_TYPE(::nox::attr::dev::Description(u"Application"), nox::attr::dev::DisplayName(u"アプリケーション"))
 		Application : public Object, public ISingleton<Application>
 	{
 		NOX_DECLARE_OBJECT(Application, Object);

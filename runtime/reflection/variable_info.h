@@ -8,27 +8,45 @@ namespace nox::reflection
 	class ClassInfo;
 	class ReflectionObject;
 
+	namespace detail
+	{
+		template<class>
+		class VariableInfoImpl;
+		/*struct TypeErasedPtr
+		{
+			void* ptr;
+			const nox::reflection::Type& type;
+		};*/
+	}
+
 	/// @brief フィールド情報
 	class VariableInfo
 	{
 	public:
 #pragma region 変数アクセスの型定義
 
-		using SetterMemberFunc = void(*)(nox::not_null<void*> instance, const void* const value);
-		using GetterMemberFunc = void(*)(not_null<void*> out, not_null<void*> instance);
-		using SetterSubscriptOperatorMemberFunc = bool(*)(not_null<void*> instance, const void* const valuePtr, const std::uint32_t index);
-		using GetterSubscriptOperatorMemberFunc = bool(*)(not_null<void*> out, not_null<void*> instance, const std::uint32_t index);
-	//	using SetterSubscriptOperatorFunc = bool(*)(not_null<const void*> instance, nox::not_null<void*> value, nox::not_null<const void*> args);
-	//	using GetterSubscriptOperatorFunc = bool(*)(not_null<void*> out, not_null<const void*> instance, nox::not_null<const void*> args);
+		using SetterMemberFunc = void(*)(void* instance, void* value);
+		template<class R>
+		using GetterMemberFunc = nox::reflection::ReflectionOptional<R>(*)(void* instance);
+		using GetterAddressMemberFunc = void*(*)(void* instance);
 
-		using SetterGlobalFunc = void(*)(const void* const value);
-		using GetterGlobalFunc = void(*)(not_null<void*> out);
-		using SetterSubscriptOperatorGlobalFunc = bool(*)(const void* const value, const std::uint32_t index);
-		using GetterSubscriptOperatorGlobalFunc = bool(*)(not_null<void*> out, const std::uint32_t index);
-	//	using SetterSubscriptOperatorGlobalFunc = bool(*)(nox::not_null<void*> value, nox::not_null<const void*> args);
-	//	using GetterSubscriptOperatorGlobalFunc = bool(*)(not_null<void*> out, nox::not_null<const void*> args);
+		using SetterSubscriptOperatorMemberFunc = bool(*)(void* instance, void* valuePtr, const std::uint32_t index);
+		template<class R>
+		using GetterSubscriptOperatorMemberFunc = nox::reflection::ReflectionOptional<R>(*)(void* instance, const std::uint32_t index);
+		using GetterAddressSubscriptOperatorMemberFunc = void*(*)(void* instance, const std::uint32_t index);
+
+		using SetterGlobalFunc = void(*)(void* value);
+		template<class R>
+		using GetterGlobalFunc = nox::reflection::ReflectionOptional<R>(*)();
+		using GetterAddressGlobalFunc = void*(*)();
+
+		using SetterSubscriptOperatorGlobalFunc = bool(*)(void* value, const std::uint32_t index);
+		template<class R>
+		using GetterSubscriptOperatorGlobalFunc = nox::reflection::ReflectionOptional<R>(*)(const std::uint32_t index);
+		using GetterAddressSubscriptOperatorGlobalFunc = void*(*)(const std::uint32_t index);
 
 #pragma endregion
+
 	public:
 		/// @brief メンバフィールド用のコンストラクタ
 		/// @param name 
@@ -62,11 +80,9 @@ namespace nox::reflection
 			const nox::reflection::Type& type,
 			const nox::reflection::Type& owner_class_type,
 			const SetterMemberFunc setter_member_func = nullptr,
-			const GetterMemberFunc getter_member_func = nullptr,
-			const GetterMemberFunc getter_address_member_func = nullptr,
+			const GetterAddressMemberFunc getter_address_member_func = nullptr,
 			const SetterSubscriptOperatorMemberFunc setter_array_member_func = nullptr,
-			const GetterSubscriptOperatorMemberFunc getter_array_member_func = nullptr,
-			const GetterSubscriptOperatorMemberFunc getter_array_address_member_func = nullptr
+			const GetterAddressSubscriptOperatorMemberFunc getter_array_address_member_func = nullptr
 		)noexcept :
 			name_(name),
 			fullname_(fullname),
@@ -81,10 +97,8 @@ namespace nox::reflection
 			underlying_type_(type),
 			containing_type_(owner_class_type),
 			setter_member_func_(setter_member_func),
-			getter_member_func_(getter_member_func),
 			getter_address_member_func_(getter_address_member_func),
 			setter_array_member_func_(setter_array_member_func),
-			getter_array_member_func_(getter_array_member_func),
 			getter_array_address_member_func_(getter_array_address_member_func)
 		{}
 
@@ -120,11 +134,9 @@ namespace nox::reflection
 			const nox::reflection::Type& type,
 			const nox::reflection::Type& owner_class_type,
 			const SetterGlobalFunc setter_global_func = nullptr,
-			const GetterGlobalFunc getter_global_func = nullptr,
-			const GetterGlobalFunc getter_address_global_func = nullptr,
+			const GetterAddressGlobalFunc getter_address_global_func = nullptr,
 			const SetterSubscriptOperatorGlobalFunc setter_array_global_func = nullptr,
-			const GetterSubscriptOperatorGlobalFunc getter_array_global_func = nullptr,
-			const GetterSubscriptOperatorGlobalFunc getter_array_address_global_func = nullptr
+			const GetterAddressSubscriptOperatorGlobalFunc getter_array_address_global_func = nullptr
 		)noexcept :
 			name_(name),
 			fullname_(fullname),
@@ -139,10 +151,8 @@ namespace nox::reflection
 			underlying_type_(type),
 			containing_type_(owner_class_type),
 			setter_global_func_(setter_global_func),
-			getter_global_func_(getter_global_func),
 			getter_address_global_func_(getter_address_global_func),
 			setter_array_global_func_(setter_array_global_func),
-			getter_array_global_func_(getter_array_global_func),
 			getter_array_address_global_func_(getter_array_address_global_func)
 		{}
 
@@ -181,12 +191,12 @@ namespace nox::reflection
 
 #pragma region 変数の設定
 		template<class TInstanceType, class TValueType>
-		inline constexpr bool TrySetValue(TInstanceType& instance, TValueType&& value)const
+		inline constexpr bool TrySetValue(TInstanceType&& instance, TValueType&& value)const
 		{
 			return TrySetValueMemberImpl(
-				static_cast<void*>(&instance),
+				const_cast<void*>(static_cast<const void*>(&instance)),
 				nox::reflection::Typeof<TInstanceType>(),
-				static_cast<const void*>(&value),
+				const_cast<void*>(static_cast<const void*>(&value)),
 				nox::reflection::Typeof<TValueType>()
 			);
 		}
@@ -195,7 +205,7 @@ namespace nox::reflection
 		inline constexpr bool TrySetValue(TValueType&& value)const
 		{
 			return TrySetValueGlobalImpl(
-				static_cast<const void*>(&value),
+				const_cast<void*>(static_cast<const void*>(&value)),
 				nox::reflection::Typeof<TValueType>()
 			);
 		}
@@ -203,102 +213,100 @@ namespace nox::reflection
 
 
 #pragma region 変数の取得
+		template<class R>
+		inline constexpr R GetValue()const
+		{
+			std::optional<R> result = this->TryGetValue<R>();
+			NOX_ASSERT(result.has_value(), U"変数の取得に失敗しました");
+			return result.value();
+		}
+
+		template<class R, concepts::ClassOrUnion _InstanceType>
+		inline constexpr R GetValue(_InstanceType&& owner_instance)const
+		{
+			std::optional<R> result = this->TryGetValue<R>(std::forward<_InstanceType>(owner_instance));
+			NOX_ASSERT(result.has_value(), U"変数の取得に失敗しました");
+			return result.value();
+		}
+
 		/// @brief メンバ変数を取得
 		/// @tparam _ResultType 
 		/// @tparam _InstanceType 
 		/// @param out_value 
 		/// @param owner_instance 
 		/// @return 
-		template<class _ResultType, concepts::ClassOrUnion _InstanceType>
-		inline	constexpr	bool	TryGetValue(_ResultType& out_value, _InstanceType& owner_instance)const
+		template<class R, concepts::ClassOrUnion _InstanceType>
+		inline	constexpr	nox::reflection::ReflectionOptional<R>	TryGetValue(_InstanceType&& owner_instance)const
 		{
-			return TryGetValueMemberImpl(
-				static_cast<void*>(&out_value),
-				nox::reflection::Typeof<_ResultType>(),
-				static_cast<void*>(&owner_instance),
-				nox::reflection::Typeof<_InstanceType>()
-			);
-		}
-
-		/// @brief メンバ変数のアドレスを取得
-		/// @tparam _InstanceType 
-		/// @tparam _ResultType 
-		/// @param out_value 
-		/// @param owner_instance 
-		/// @return 
-		template<concepts::Pointer _ResultType, concepts::ClassOrUnion _InstanceType> 
-		inline	constexpr	bool	TryGetValueAddress(_ResultType& out_value, _InstanceType& owner_instance)const
-		{
-			return TryGetValueAddressMemberImpl(
-				static_cast<void*>(&out_value),
-				Typeof<std::remove_pointer_t<_ResultType>>(),
-				static_cast<void*>(&owner_instance),
-				Typeof<_InstanceType>()
-			);
-		}
-
-		/// @brief グローバル変数を取得
-		/// @tparam _ResultType 
-		/// @param out_value 
-		/// @return 
-		template<class _ResultType>
-		inline	constexpr	bool	TryGetValue(_ResultType& out_value)const
-		{
-			constexpr const nox::reflection::Type& out_value_type = nox::reflection::Typeof<_ResultType>();
-
-			return TryGetValueGlobalImpl(
-				static_cast<void*>(&out_value),
-				out_value_type
-			);
-		}
-
-		/// @brief グローバル変数のアドレスを取得する
-		/// @tparam _ResultType 
-		/// @param out_value 
-		/// @return 
-		template<concepts::Pointer _ResultType>
-		inline	constexpr	bool	TryGetValueAddress(_ResultType& out_value)const
-		{
-			if (getter_address_global_func_ == nullptr)
+			if (IsStatic() == true)
 			{
-				return false;
+				return std::nullopt;
 			}
 
+			if (underlying_type_.IsConvertible(nox::reflection::Typeof<R>()) == false)
+			{
+				return std::nullopt;
+			}
+
+			return InvokeImpl<R>([]<class ImplR>(const nox::reflection::VariableInfo& self, nox::not_null<void*> instance_ptr)
+				-> nox::reflection::ReflectionOptional<ImplR>
+			{
+				return static_cast<const nox::reflection::detail::VariableInfoImpl<ImplR>&>(self).GetValueImpl(instance_ptr);
+			},
+				const_cast<void*>(static_cast<const void*>(&owner_instance))
+			);
+		}
+
+		template<class R>
+		inline	constexpr	nox::reflection::ReflectionOptional<R>	TryGetValue()const
+		{
 			if (IsStatic() == false)
 			{
-				return false;
+				return std::nullopt;
 			}
 
-			constexpr const nox::reflection::Type& out_value_type = nox::reflection::Typeof<std::remove_pointer_t<_ResultType>>();
-			if (underlying_type_.IsConvertible(out_value_type) == false)
+			if (underlying_type_.IsConvertible(nox::reflection::Typeof<R>()) == false)
 			{
-				return false;
+				return std::nullopt;
 			}
 
-			std::invoke(getter_address_global_func_, static_cast<void*>(&out_value));
-
-			return true;
+			return InvokeImpl<R>([]<class ImplR>(const nox::reflection::VariableInfo& self)
+				-> nox::reflection::ReflectionOptional<ImplR>
+			{
+				return static_cast<const nox::reflection::detail::VariableInfoImpl<ImplR>&>(self).GetValueImpl();
+			});
 		}
 
 #pragma endregion
 	private:
-
+		template<class R, class F, class... Args>
+		inline	constexpr	nox::reflection::ReflectionOptional<R> InvokeImpl(F&& f, Args&&... args)const
+		{
+			if (underlying_type_ == nox::reflection::Typeof<R>())
+			{
+				return f.template operator() < R > (*this, std::forward<Args>(args)...);
+			}
+			else
+			{
+				return std::nullopt;
+			}
+		}
 #pragma region 呼び出しチェック関数
 		/// @brief メンバ関数アクセス時のチェック
 		/// @return 
-		inline	constexpr	bool	CheckMemberParams(const Type& return_type, const Type& owner_class_type)const noexcept
+		inline	constexpr	bool	CheckMemberParams(const Type& out_type, const Type& owner_class_type)const noexcept
 		{
 			if (IsStatic() == true)
 			{
 				return false;
 			}
 
-			if (underlying_type_.IsConvertible(return_type) == false)
+			if (underlying_type_.IsConvertible(out_type) == false)
 			{
 				return false;
 			}
 
-			if (owner_class_type != containing_type_)
+			if (owner_class_type.GetRemoveAllModifiersType() != containing_type_)
 			{
 				return false;
 			}
@@ -328,7 +336,7 @@ namespace nox::reflection
 #pragma endregion
 
 #pragma region 変数設定の内部実装
-		inline constexpr bool TrySetValueMemberImpl(nox::not_null<void*> instance, const Type& owner_class_type, const void* value, const Type& value_type)const
+		inline constexpr bool TrySetValueMemberImpl(void* instance, const Type& owner_class_type, void* value, const Type& value_type)const
 		{
 			if (setter_member_func_ == nullptr)
 			{
@@ -340,7 +348,13 @@ namespace nox::reflection
 				return false;
 			}
 
-			if (owner_class_type != containing_type_)
+			if (owner_class_type.GetRemoveAllModifiersType() != containing_type_)
+			{
+				return false;
+			}
+
+			// const メンバは書き込み禁止
+			if (underlying_type_.IsConstQualified())
 			{
 				return false;
 			}
@@ -355,7 +369,7 @@ namespace nox::reflection
 			return true;
 		}
 
-		inline constexpr bool TrySetValueGlobalImpl(const void* value, const Type& value_type)const
+		inline constexpr bool TrySetValueGlobalImpl(void* value, const Type& value_type)const
 		{
 			if (setter_global_func_ == nullptr)
 			{
@@ -367,68 +381,23 @@ namespace nox::reflection
 				return false;
 			}
 
+			// const グローバルは書き込み禁止
+			if (underlying_type_.IsConstQualified())
+			{
+				return false;
+			}
+
 			if (value_type.IsConvertible(underlying_type_) == false)
 			{
 				return false;
 			}
 
-			std::invoke(setter_global_func_, value);
+			std::invoke(setter_global_func_, const_cast<void*>(value));
 			return true;
 		}
 #pragma endregion
 
-
 #pragma region 変数の取得の内部実装
-
-		inline	constexpr	bool	TryGetValueMemberImpl(not_null<void*> out_ptr, const Type& out_type, not_null<void*> instance, const Type& owner_class_type)const
-		{
-			if (getter_member_func_ == nullptr)
-			{
-				return false;
-			}
-
-			if (CheckMemberParams(out_type, owner_class_type) == false)
-			{
-				return false;
-			}
-
-			std::invoke(getter_member_func_, out_ptr, instance);
-
-			return true;
-		}
-
-		inline	constexpr	bool	TryGetValueAddressMemberImpl(nox::not_null<void*> out_ptr,  const Type& out_pointee_type, not_null<void*> instance, const Type& owner_class_type)const
-		{
-			if (getter_address_member_func_ == nullptr)
-			{
-				return false;
-			}
-
-			if (CheckMemberParams(out_pointee_type, owner_class_type) == false)
-			{
-				return false;
-			}
-
-			std::invoke(getter_address_member_func_, out_ptr, instance);
-
-			return true;
-		}
-
-		constexpr bool TryGetValueGlobalImpl(not_null<void*> outPtr, const Type& out_type)const
-		{
-			if (getter_global_func_ == nullptr)
-			{
-				return false;
-			}
-
-			if (CheckParams(out_type) == false)
-			{
-				return false;
-			}
-
-			std::invoke(getter_global_func_, outPtr);
-			return true;
-		}
 #pragma endregion
 	private:
 		/// @brief 属性テーブルの長さ
@@ -461,20 +430,12 @@ namespace nox::reflection
 			const SetterGlobalFunc setter_global_func_;
 		};
 
-		/// @brief Getter
-		union
-		{
-			const GetterMemberFunc getter_member_func_;
-			const GetterGlobalFunc getter_global_func_;
-		};
-
 		/// @brief getter address_
 		union
 		{
-			const GetterMemberFunc getter_address_member_func_;
-			const GetterGlobalFunc getter_address_global_func_;
+			const GetterAddressMemberFunc getter_address_member_func_;
+			const GetterAddressGlobalFunc getter_address_global_func_;
 		};
-
 
 		/// @brief 配列 setter
 		union
@@ -483,18 +444,13 @@ namespace nox::reflection
 			const SetterSubscriptOperatorGlobalFunc setter_array_global_func_;
 		};
 
-		/// @brief 配列 getter
-		union
-		{
-			const GetterSubscriptOperatorMemberFunc getter_array_member_func_;
-			const GetterSubscriptOperatorGlobalFunc getter_array_global_func_;
-		};
+		
 		
 		/// @brief 配列 getter address_
 		union
 		{
-			const GetterSubscriptOperatorMemberFunc getter_array_address_member_func_;
-			const GetterSubscriptOperatorGlobalFunc getter_array_address_global_func_;
+			const GetterAddressSubscriptOperatorMemberFunc getter_array_address_member_func_;
+			const GetterAddressSubscriptOperatorGlobalFunc getter_array_address_global_func_;
 		};
 
 		/// @brief 名前
@@ -512,12 +468,11 @@ namespace nox::reflection
 	{
 		/// @brief 変数情報
 		/// @tparam T オブジェクトポインタ型
-		template<class T> requires(std::is_pointer_v<T> || std::is_member_object_pointer_v<T>)
+		template<class ResultType>
 		class VariableInfoImpl final: public VariableInfo
 		{
 		public:
-			inline constexpr VariableInfoImpl(
-				const T& object_pointer,
+			inline constexpr explicit VariableInfoImpl(
 				const ReflectionStringView name,
 				const ReflectionStringView fullname,
 				const ReflectionStringView _namespace,
@@ -531,11 +486,11 @@ namespace nox::reflection
 				const nox::reflection::Type& type,
 				const nox::reflection::Type& owner_class_type,
 				const SetterMemberFunc setter_member_func = nullptr,
-				const GetterMemberFunc getter_member_func = nullptr,
-				const GetterMemberFunc getter_address_member_func = nullptr,
+				const GetterMemberFunc<ResultType> getter_member_func = nullptr,
+				const GetterAddressMemberFunc getter_address_member_func = nullptr,
 				const SetterSubscriptOperatorMemberFunc setter_array_member_func = nullptr,
-				const GetterSubscriptOperatorMemberFunc getter_array_member_func = nullptr,
-				const GetterSubscriptOperatorMemberFunc getter_array_address_member_func = nullptr
+				const GetterSubscriptOperatorMemberFunc<ResultType> getter_array_member_func = nullptr,
+				const GetterAddressSubscriptOperatorMemberFunc getter_array_address_member_func = nullptr
 			)noexcept:
 				VariableInfo(
 					name,
@@ -551,17 +506,15 @@ namespace nox::reflection
 					type,
 					owner_class_type,
 					setter_member_func,
-					getter_member_func,
 					getter_address_member_func,
 					setter_array_member_func,
-					getter_array_member_func,
 					getter_array_address_member_func
 				),
-				object_pointer_(object_pointer)
+				getter_member_func_(getter_member_func),
+				getter_array_member_func_(getter_array_member_func)
 			{}
 
-			inline constexpr VariableInfoImpl(
-				const T& object_pointer,
+			inline constexpr explicit VariableInfoImpl(
 				ReflectionStringView name,
 				ReflectionStringView fullname,
 				ReflectionStringView _namespace,
@@ -575,11 +528,11 @@ namespace nox::reflection
 				const nox::reflection::Type& type,
 				const nox::reflection::Type& owner_class_type,
 				const SetterGlobalFunc setter_global_func = nullptr,
-				const GetterGlobalFunc getter_global_func = nullptr,
-				const GetterGlobalFunc getter_address_global_func = nullptr,
+				const GetterGlobalFunc<ResultType> getter_global_func = nullptr,
+				const GetterAddressGlobalFunc getter_address_global_func = nullptr,
 				const SetterSubscriptOperatorGlobalFunc setter_array_global_func = nullptr,
-				const GetterSubscriptOperatorGlobalFunc getter_array_global_func = nullptr,
-				const GetterSubscriptOperatorGlobalFunc getter_array_address_global_func = nullptr
+				const GetterSubscriptOperatorGlobalFunc<ResultType> getter_array_global_func = nullptr,
+				const GetterAddressSubscriptOperatorGlobalFunc getter_array_address_global_func = nullptr
 			)noexcept:
 				VariableInfo(
 					name,
@@ -595,111 +548,67 @@ namespace nox::reflection
 					type,
 					owner_class_type,
 					setter_global_func,
-					getter_global_func,
 					getter_address_global_func,
 					setter_array_global_func,
-					getter_array_global_func,
 					getter_array_address_global_func
 				),
-				object_pointer_(object_pointer)
+				getter_global_func_(getter_global_func),
+				getter_array_global_func_(getter_array_global_func)
 			{}
 
+			inline constexpr nox::reflection::ReflectionOptional<ResultType> GetValueImpl(nox::not_null<void*> args)const
+			{
+				if (getter_member_func_ == nullptr)
+				{
+					return std::nullopt;
+				}
+				return std::invoke(getter_member_func_, args.get());
+			}
+
+			inline constexpr nox::reflection::ReflectionOptional<ResultType> GetValueImpl()const
+			{
+				if (getter_global_func_ == nullptr)
+				{
+					return std::nullopt;
+				}
+				return std::invoke(getter_global_func_);
+			}
+
+			inline constexpr nox::reflection::ReflectionOptional<ResultType> GetArrayValueImpl(void* const args, const std::uint32_t index)const
+			{
+				if (getter_array_member_func_ == nullptr)
+				{
+					return std::nullopt;
+				}
+				return std::invoke(getter_array_member_func_, args, index);
+			}
+
+			inline constexpr nox::reflection::ReflectionOptional<ResultType> GetArrayValueImpl(const std::uint32_t index)const
+			{
+				if (getter_array_global_func_ == nullptr)
+				{
+					return std::nullopt;
+				}
+				return std::invoke(getter_array_global_func_, index);
+			}
 		private:
-			const T& object_pointer_;
+			union
+			{
+				const GetterMemberFunc<ResultType> getter_member_func_;
+				const GetterGlobalFunc<ResultType> getter_global_func_;
+			};
+
+			/// @brief 配列 getter
+			union
+			{
+				const GetterSubscriptOperatorMemberFunc<ResultType> getter_array_member_func_;
+				const GetterSubscriptOperatorGlobalFunc<ResultType> getter_array_global_func_;
+			};
 		};
 
-		/// @brief		参照変数情報
-		/// @details	参照変数はオブジェクトポインタを持たないため、IDは0固定
-		class VariableInfoRefImpl final : public VariableInfo
-		{
-		public:
-			inline constexpr VariableInfoRefImpl(
-				const ReflectionStringView name,
-				const ReflectionStringView fullname,
-				const ReflectionStringView _namespace,
-				nox::reflection::AccessLevel access_level,
-				const std::int32_t bit_width,
-				const std::uint32_t field_offset,
-				const std::reference_wrapper<const class nox::reflection::ReflectionObject>* attribute_list,
-				const std::uint8_t	attribute_list_length,
-				const nox::reflection::VariableAttributeFlag field_attribute_flgas,
-				const nox::reflection::Type& type,
-				const nox::reflection::Type& owner_class_type,
-				const SetterMemberFunc setter_member_func = nullptr,
-				const GetterMemberFunc getter_member_func = nullptr,
-				const GetterMemberFunc getter_address_member_func = nullptr,
-				const SetterSubscriptOperatorMemberFunc setter_array_member_func = nullptr,
-				const GetterSubscriptOperatorMemberFunc getter_array_member_func = nullptr,
-				const GetterSubscriptOperatorMemberFunc getter_array_address_member_func = nullptr
-			)noexcept :
-				VariableInfo(
-					name,
-					fullname,
-					_namespace,
-					access_level,
-					bit_width,
-					field_offset,
-					attribute_list,
-					attribute_list_length,
-					nox::GetInvalidObjectPointerId(),
-					field_attribute_flgas,
-					type,
-					owner_class_type,
-					setter_member_func,
-					getter_member_func,
-					getter_address_member_func,
-					setter_array_member_func,
-					getter_array_member_func,
-					getter_array_address_member_func
-				)
-			{}
-
-			inline constexpr VariableInfoRefImpl(
-				ReflectionStringView name,
-				ReflectionStringView fullname,
-				ReflectionStringView _namespace,
-				nox::reflection::AccessLevel access_level,
-				const nox::ObjectPointerId& object_id,
-				const std::int32_t bit_width,
-				const std::uint32_t field_offset,
-				const std::reference_wrapper<const class nox::reflection::ReflectionObject>* attribute_list,
-				std::uint8_t	attribute_list_length,
-				nox::reflection::VariableAttributeFlag field_attribute_flgas,
-				const nox::reflection::Type& type,
-				const nox::reflection::Type& owner_class_type,
-				const SetterGlobalFunc setter_global_func = nullptr,
-				const GetterGlobalFunc getter_global_func = nullptr,
-				const GetterGlobalFunc getter_address_global_func = nullptr,
-				const SetterSubscriptOperatorGlobalFunc setter_array_global_func = nullptr,
-				const GetterSubscriptOperatorGlobalFunc getter_array_global_func = nullptr,
-				const GetterSubscriptOperatorGlobalFunc getter_array_address_global_func = nullptr
-			)noexcept :
-				VariableInfo(
-					name,
-					fullname,
-					_namespace,
-					access_level,
-					bit_width,
-					field_offset,
-					attribute_list,
-					attribute_list_length,
-					object_id,
-					field_attribute_flgas,
-					type,
-					owner_class_type,
-					setter_global_func,
-					getter_global_func,
-					getter_address_global_func,
-					setter_array_global_func,
-					getter_array_global_func,
-					getter_array_address_global_func
-				)
-			{}
-		};
-
-	
 		/// @brief		参照メンバ変数情報
-		inline constexpr nox::reflection::detail::VariableInfoRefImpl CreateVariableInfoMemberRef(
+		template<class R>
+		inline constexpr nox::reflection::detail::VariableInfoImpl<R> CreateVariableInfoMemberRef(
 			const nox::reflection::Type& pointeeType,
 			const nox::reflection::Type& ownerType,
 			ReflectionStringView name,
@@ -712,17 +621,18 @@ namespace nox::reflection
 			const std::uint8_t	attribute_list_length,
 			const nox::reflection::VariableAttributeFlag additinal_flags,
 			const VariableInfo::SetterMemberFunc setter_member_func = nullptr,
-			const VariableInfo::GetterMemberFunc getter_member_func = nullptr,
-			const VariableInfo::GetterMemberFunc getter_address_member_func = nullptr,
+			const VariableInfo::GetterMemberFunc<R> getter_member_func = nullptr,
+			const VariableInfo::GetterAddressMemberFunc getter_address_member_func = nullptr,
 			const VariableInfo::SetterSubscriptOperatorMemberFunc setter_array_member_func = nullptr,
-			const VariableInfo::GetterSubscriptOperatorMemberFunc getter_array_member_func = nullptr,
-			const VariableInfo::GetterSubscriptOperatorMemberFunc getter_array_address_member_func = nullptr)noexcept
+			const VariableInfo::GetterSubscriptOperatorMemberFunc<R> getter_array_member_func = nullptr,
+			const VariableInfo::GetterAddressSubscriptOperatorMemberFunc getter_array_address_member_func = nullptr)noexcept
 		{
-			return nox::reflection::detail::VariableInfoRefImpl(
+			return nox::reflection::detail::VariableInfoImpl<R>(
 				name,
 				fullname,
 				_namespace,
 				access_level,
+				nox::GetInvalidObjectPointerId(),
 				bit_width,
 				field_offset,
 				attribute_list,
@@ -738,51 +648,32 @@ namespace nox::reflection
 				getter_array_address_member_func
 			);
 		}
-
-		/// @brief	グローバル参照変数情報を構築
-		/// @param pointeeType 
-		/// @param name 
-		/// @param fullname 
-		/// @param _namespace 
-		/// @param access_level 
-		/// @param object_id 
-		/// @param bit_width 
-		/// @param field_offset 
-		/// @param attribute_list 
-		/// @param attribute_list_length 
-		/// @param additinal_flags 
-		/// @param setter_global_func 
-		/// @param getter_global_func 
-		/// @param getter_address_global_func 
-		/// @param setter_array_global_func 
-		/// @param getter_array_global_func 
-		/// @param getter_array_address_global_func 
-		/// @return 
-		inline constexpr nox::reflection::detail::VariableInfoRefImpl CreateVariableInfoGlobalRef(
+		
+		template<class R>
+		inline constexpr nox::reflection::detail::VariableInfoImpl<R> CreateVariableInfoGlobalRef(
 			const nox::reflection::Type& type,
 			const ReflectionStringView name,
 			const ReflectionStringView fullname,
 			const ReflectionStringView _namespace,
 			const nox::reflection::AccessLevel access_level,
-			const nox::ObjectPointerId& object_id,
 			const std::int32_t bit_width,
 			const std::uint32_t field_offset,
 			const std::reference_wrapper<const class nox::reflection::ReflectionObject>* attribute_list,
 			const std::uint8_t	attribute_list_length,
 			const VariableAttributeFlag additinal_flags,
 			const VariableInfo::SetterGlobalFunc setter_global_func = nullptr,
-			const VariableInfo::GetterGlobalFunc getter_global_func = nullptr,
-			const VariableInfo::GetterGlobalFunc getter_address_global_func = nullptr,
+			const VariableInfo::GetterGlobalFunc<R> getter_global_func = nullptr,
+			const VariableInfo::GetterAddressGlobalFunc getter_address_global_func = nullptr,
 			const VariableInfo::SetterSubscriptOperatorGlobalFunc setter_array_global_func = nullptr,
-			const VariableInfo::GetterSubscriptOperatorGlobalFunc getter_array_global_func = nullptr,
-			const VariableInfo::GetterSubscriptOperatorGlobalFunc getter_array_address_global_func = nullptr)noexcept
+			const VariableInfo::GetterSubscriptOperatorGlobalFunc<R> getter_array_global_func = nullptr,
+			const VariableInfo::GetterAddressSubscriptOperatorGlobalFunc getter_array_address_global_func = nullptr)noexcept
 		{
-			return nox::reflection::detail::VariableInfoRefImpl(
+			return nox::reflection::detail::VariableInfoImpl(
 				name,
 				fullname,
 				_namespace,
 				access_level,
-				object_id,
+				nox::GetInvalidObjectPointerId(),
 				bit_width,
 				field_offset,
 				attribute_list,
@@ -799,27 +690,9 @@ namespace nox::reflection
 			);
 		}
 
-		/// @brief メンバ変数情報を構築
-		/// @tparam T 
-		/// @param object_pointer 
-		/// @param name 
-		/// @param fullname 
-		/// @param _namespace 
-		/// @param access_level 
-		/// @param bit_width 
-		/// @param field_offset 
-		/// @param attribute_list 
-		/// @param attribute_list_length 
-		/// @param additinal_flags 
-		/// @param setter_member_func 
-		/// @param getter_member_func 
-		/// @param getter_address_member_func 
-		/// @param setter_array_member_func 
-		/// @param getter_array_member_func 
-		/// @param getter_array_address_member_func 
-		/// @return 
-		template<auto object_pointer>
-		inline constexpr nox::reflection::detail::VariableInfoImpl<decltype(object_pointer)> CreateVariableInfoMember(
+		template<class R, auto object_pointer>
+		inline constexpr nox::reflection::detail::VariableInfoImpl<R> CreateVariableInfoMember(
+			const nox::ObjectPointerId& object_pointer_id,
 			ReflectionStringView name,
 			ReflectionStringView fullname,
 			ReflectionStringView _namespace,
@@ -830,22 +703,21 @@ namespace nox::reflection
 			std::uint8_t	attribute_list_length,
 			const VariableAttributeFlag additinal_flags,
 			const VariableInfo::SetterMemberFunc setter_member_func = nullptr,
-			const VariableInfo::GetterMemberFunc getter_member_func = nullptr,
-			const VariableInfo::GetterMemberFunc getter_address_member_func = nullptr,
+			const VariableInfo::GetterMemberFunc<R> getter_member_func = nullptr,
+			const VariableInfo::GetterAddressMemberFunc getter_address_member_func = nullptr,
 			const VariableInfo::SetterSubscriptOperatorMemberFunc setter_array_member_func = nullptr,
-			const VariableInfo::GetterSubscriptOperatorMemberFunc getter_array_member_func = nullptr,
-			const VariableInfo::GetterSubscriptOperatorMemberFunc getter_array_address_member_func = nullptr)noexcept
+			const VariableInfo::GetterSubscriptOperatorMemberFunc<R> getter_array_member_func = nullptr,
+			const VariableInfo::GetterAddressSubscriptOperatorMemberFunc getter_array_address_member_func = nullptr)noexcept
 		{
 			const nox::reflection::VariableAttributeFlag field_attribute_flgas =
 				nox::util::BitOr(nox::reflection::GetFieldAttributeFlags<decltype(object_pointer)>(), additinal_flags);
 		
-			return nox::reflection::detail::VariableInfoImpl<decltype(object_pointer)>(
-				object_pointer,
+			return nox::reflection::detail::VariableInfoImpl<R>(
 				name,
 				fullname,
 				_namespace,
 				access_level,
-				nox::GetObjectPointerId<object_pointer>(),
+				object_pointer_id,
 				bit_width,
 				field_offset,
 				attribute_list,
@@ -862,27 +734,9 @@ namespace nox::reflection
 			);
 		}
 
-		/// @brief グローバル変数情報を構築
-		/// @tparam T 
-		/// @param object_pointer 
-		/// @param name 
-		/// @param fullname 
-		/// @param _namespace 
-		/// @param access_level 
-		/// @param bit_width 
-		/// @param field_offset 
-		/// @param attribute_list 
-		/// @param attribute_list_length 
-		/// @param additional_attribute_flags 
-		/// @param setter_global_func 
-		/// @param getter_global_func 
-		/// @param getter_address_global_func 
-		/// @param setter_array_global_func 
-		/// @param getter_array_global_func 
-		/// @param getter_array_address_global_func 
-		/// @return 
-		template<auto object_pointer>
+		template<class R, auto object_pointer>
 		inline constexpr nox::reflection::detail::VariableInfoImpl<decltype(object_pointer)> CreateVariableInfoGlobal(
+			const nox::ObjectPointerId& object_pointer_id,
 			const ReflectionStringView name,
 			const ReflectionStringView fullname,
 			const ReflectionStringView _namespace,
@@ -893,22 +747,21 @@ namespace nox::reflection
 			const std::uint8_t	attribute_list_length = 0,
 			const VariableAttributeFlag additional_attribute_flags = VariableAttributeFlag::None,
 			const VariableInfo::SetterGlobalFunc setter_global_func = nullptr,
-			const VariableInfo::GetterGlobalFunc getter_global_func = nullptr,
-			const VariableInfo::GetterGlobalFunc getter_address_global_func = nullptr,
+			const VariableInfo::GetterGlobalFunc<R> getter_global_func = nullptr,
+			const VariableInfo::GetterAddressGlobalFunc getter_address_global_func = nullptr,
 			const VariableInfo::SetterSubscriptOperatorGlobalFunc setter_array_global_func = nullptr,
-			const VariableInfo::GetterSubscriptOperatorGlobalFunc getter_array_global_func = nullptr,
-			const VariableInfo::GetterSubscriptOperatorGlobalFunc getter_array_address_global_func = nullptr)noexcept
+			const VariableInfo::GetterSubscriptOperatorGlobalFunc<R> getter_array_global_func = nullptr,
+			const VariableInfo::GetterAddressSubscriptOperatorGlobalFunc getter_array_address_global_func = nullptr)noexcept
 		{
 			const nox::reflection::VariableAttributeFlag field_attribute_flgas =
 				nox::util::BitOr(nox::reflection::GetFieldAttributeFlags<decltype(object_pointer)>(), additional_attribute_flags);
 
 			return nox::reflection::detail::VariableInfoImpl<decltype(object_pointer)>(
-				object_pointer,
 				name,
 				fullname,
 				_namespace,
 				access_level,
-				nox::GetObjectPointerId<object_pointer>(),
+				object_pointer_id,
 				bit_width,
 				field_offset,
 				attribute_list,
@@ -925,87 +778,6 @@ namespace nox::reflection
 			);
 		}
 
-		///// @brief メンバフィールドのフィールド情報を作成
-		///// @tparam _OwnerType 
-		///// @param name 
-		///// @param fullname 
-		///// @param _namespace 
-		///// @param access_level 
-		///// @param attribute_ptr_table 
-		///// @param attribute_length 
-		///// @param field_attribute_flgas 
-		///// @param type 
-		///// @param setter_member_func 
-		///// @param getter_member_func 
-		///// @param setter_array_member_func 
-		///// @param getter_array_member_func 
-		///// @return 
-		//template<concepts::ClassOrUnion _OwnerType>
-		//inline constexpr	nox::reflection::VariableInfo	CreateFieldInfo(
-		//	ReflectionStringView name,
-		//	ReflectionStringView fullname,
-		//	ReflectionStringView _namespace,
-		//	nox::reflection::AccessLevel access_level,
-		//	const std::reference_wrapper<const class nox::reflection::ReflectionObject>* attribute_list,
-		//	std::uint8_t	attribute_list_length,
-		//	const nox::reflection::Type& type,
-		//	const nox::reflection::VariableInfo::SetterMemberFunc setter_member_func = nullptr,
-		//	const nox::reflection::VariableInfo::GetterMemberFunc getter_member_func = nullptr,
-		//	const nox::reflection::VariableInfo::GetterMemberFunc getter_address_member_func = nullptr,
-		//	const nox::reflection::VariableInfo::SetterSubscriptOperatorMemberFunc setter_array_member_func = nullptr,
-		//	const nox::reflection::VariableInfo::GetterSubscriptOperatorMemberFunc getter_array_member_func = nullptr,
-		//	const nox::reflection::VariableInfo::GetterSubscriptOperatorMemberFunc getter_array_address_member_func = nullptr
-		//)noexcept
-		//{
-		//	return nox::reflection::VariableInfo(
-		//		name,
-		//		fullname,
-		//		_namespace,
-		//		access_level,
-		//		attribute_list,
-		//		attribute_list_length,
-		//		VariableAttributeFlag::Member,
-		//		type,
-		//		Typeof< _OwnerType>(),
-		//		setter_member_func,
-		//		getter_member_func,
-		//		getter_address_member_func,
-		//		setter_array_member_func,
-		//		getter_array_member_func,
-		//		getter_array_address_member_func
-		//	);
-		//}
-
-		/*inline constexpr	VariableInfo	CreateFieldInfo(
-			ReflectionStringView name,
-			ReflectionStringView fullname,
-			ReflectionStringView _namespace,
-			AccessLevel access_level,
-			const class ReflectionObject* const* attribute_ptr_table,
-			std::uint8_t	attribute_length,
-			const Type& type,
-			const VariableInfo::SetterGlobalFunc setter_member_func = nullptr,
-			const VariableInfo::GetterGlobalFunc getter_member_func = nullptr,
-			const VariableInfo::SetterSubscriptOperatorGlobalFunc setter_array_member_func = nullptr,
-			const VariableInfo::GetterSubscriptOperatorGlobalFunc getter_array_member_func = nullptr
-		)noexcept
-		{
-			return VariableInfo(
-				name,
-				fullname,
-				_namespace,
-				access_level,
-				attribute_ptr_table,
-				attribute_length,
-				VariableAttributeFlag::None,
-				type,
-				InvalidType,
-				setter_member_func,
-				getter_member_func,
-				setter_array_member_func,
-				getter_array_member_func
-			);
-		}*/
 	}
 }
 

@@ -31,7 +31,7 @@ namespace nox::reflection
 		{
 			std::uint32_t id;
 			TypeKind kind;
-			TypeQualifierFlag attribute_flags;
+			TypeAttributeFlag attribute_flags;
 			std::uint32_t size;
 			std::uint32_t alignment;
 			std::uint16_t array_rank;
@@ -176,7 +176,7 @@ namespace nox::reflection
 		[[nodiscard]] inline	constexpr TypeKind	GetTypeKind()const noexcept { return kind_; }
 
 		/// @brief タイプ属性を取得
-		[[nodiscard]] inline	constexpr TypeQualifierFlag GetTypeAttributeFlags()const noexcept { return attribute_flags_; }
+		[[nodiscard]] inline	constexpr TypeAttributeFlag GetTypeAttributeFlags()const noexcept { return attribute_flags_; }
 
 		/// @brief 配列の次元数を取得
 		[[nodiscard]] inline constexpr std::uint16_t GetArrayRank()const noexcept { return array_rank_; }
@@ -187,7 +187,7 @@ namespace nox::reflection
 		/// @brief タイプ属性を保持しているかチェック
 		/// @param flag タイプ属性
 		/// @return 保持しているかどうか
-		[[nodiscard]] inline	constexpr bool	IsTypeAttributeFlag(const TypeQualifierFlag flag)const noexcept { return util::IsBitAnd(attribute_flags_, flag); }
+		[[nodiscard]] inline	constexpr bool	IsTypeAttributeFlag(const TypeAttributeFlag flag)const noexcept { return util::IsBitAnd(attribute_flags_, flag); }
 
 		/// @brief ポインタ型を取り除いた型を取得
 		[[nodiscard]] inline constexpr const Type& GetRemovePointerType()const noexcept { return remove_pointer_type_; }
@@ -255,6 +255,7 @@ namespace nox::reflection
 			const Type* type = &remove_element_type_;
 #pragma warning(push)
 #pragma warning(disable: 4296)
+#pragma warning(disable: 6295)
 			for (; index >= 0; --index, type = &type->remove_element_type_)
 			{
 				if (type->IsBoundedArray() == false)
@@ -326,12 +327,14 @@ namespace nox::reflection
 
 #pragma endregion
 
-#pragma region Qualifier
-		[[nodiscard]] inline	constexpr	bool	IsConstQualified()const noexcept { return nox::util::IsBitAnd(attribute_flags_, TypeQualifierFlag::Const); }
+#pragma region Attribute
+		[[nodiscard]] inline	constexpr	bool	IsConstQualified()const noexcept { return nox::util::IsBitAnd(attribute_flags_, TypeAttributeFlag::Const); }
 		[[nodiscard]] inline	constexpr	bool	IsPointer()const noexcept { return kind_ == TypeKind::Pointer; }
 		[[nodiscard]] inline	constexpr	bool	IsReference()const noexcept { return IsLValueReference() || IsRValueReference(); }
 		[[nodiscard]] inline	constexpr	bool	IsLValueReference()const noexcept { return kind_ == TypeKind::LvalueReference; }
 		[[nodiscard]] inline	constexpr	bool	IsRValueReference()const noexcept { return kind_ == TypeKind::RvalueReference; }
+		[[nodiscard]] inline	constexpr	bool	IsInterface()const noexcept { return nox::util::IsBitAnd(attribute_flags_, TypeAttributeFlag::Interface); }
+
 #pragma endregion
 
 #pragma region operator
@@ -356,7 +359,7 @@ namespace nox::reflection
 		const TypeKind kind_;
 
 		/// @brief 型属性
-		const TypeQualifierFlag attribute_flags_;
+		const TypeAttributeFlag attribute_flags_;
 
 		/// @brief 配列の次元数
 		const std::uint16_t array_rank_;
@@ -440,7 +443,7 @@ namespace nox::reflection
 					nox::reflection::detail::TypeDesc{
 						.id = 0,
 						.kind = TypeKind::Invalid,
-						.attribute_flags = TypeQualifierFlag::None,
+						.attribute_flags = TypeAttributeFlag::None,
 						.size = 0,
 						.alignment = 0,
 						.array_rank = 0,

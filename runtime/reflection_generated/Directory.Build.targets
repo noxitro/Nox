@@ -3,7 +3,7 @@
 	<!-- vcxproj と同じディレクトリにあるMyCustomTask.dll のタスクを使用 -->
   <UsingTask
     TaskName="Nox.CustomTask.Task"
-    AssemblyFile="../bin/CustomTask.dll" />
+    AssemblyFile="D:\github\Nox\runtime\bin\CustomTask.dll" />
 
 	<!--変数定義-->
 	<!--Debug構成-->
@@ -62,5 +62,15 @@
 		  CppVersion="$(CppVersion)"
 		  UseRtti="%(ClCompile.RuntimeTypeInfo)"
 		  />
-	  </Target>
+
+	  <!-- ReflectionGenerator.exe 呼び出し -->
+	  <Exec
+		Condition="Exists('D:\github\Nox\runtime\bin\ReflectionGenerator.exe')"
+		Command="&quot;D:\github\Nox\runtime\bin\ReflectionGenerator.exe&quot; -project &quot;$(ProjectPath)&quot; -solution &quot;$(SolutionPath)&quot; -config &quot;$(Configuration)&quot; -platform &quot;$(Platform)&quot; -out &quot;$(ProjectDir)gen&quot;" />
+
+	  <!-- 無い場合の警告 -->
+	  <Warning Condition="!Exists('D:\github\Nox\runtime\bin\ReflectionGenerator.exe')"
+			   Text="ReflectionGenerator.exe が見つかりません: D:\github\Nox\runtime\bin\ReflectionGenerator.exe" />
+
+  </Target>
 </Project>

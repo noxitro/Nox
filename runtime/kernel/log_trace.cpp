@@ -21,9 +21,9 @@ namespace nox
 	{
 		constexpr std::array<nox::StringView, nox::util::ToUnderlying(nox::debug::LogCategory::_Max)> table =
 		{
-			U"Info",
-			U"Warning",
-			U"Error",
+			u"Info",
+			u"Warning",
+			u"Error",
 		};
 
 		return table.at(nox::util::ToUnderlying(log_category));
@@ -40,17 +40,17 @@ namespace nox
 	constinit std::array<ThreadData, nox::os::MAX_THREAD_ID> thread_data_table = { 0 };
 }
 
-void nox::debug::detail::TraceDirect(nox::debug::LogCategory log_category, const nox::StringView category, const StringView message, bool isNewLine, const std::source_location& source_location)
+void nox::debug::detail::TraceDirect(nox::debug::LogCategory log_category, const std::u32string_view category, const std::u32string_view message, bool isNewLine, const std::source_location& source_location)
 {
 	std::array<char16, 2048> buffer = { 0 };
 	//source_location;
 	if (isNewLine)
 	{
-		util::Format(buffer, u"[{0}][{1}]{2}\n", GetLogCategoryName(log_category), category.data(), message.data());
+//		util::Format(buffer, u"[{0}][{1}]{2}\n", GetLogCategoryName(log_category), category.data(), message.data());
 	}
 	else
 	{
-		util::Format(buffer, u"[{0}][{1}]{2}", GetLogCategoryName(log_category), category.data(), message.data());
+	//	util::Format(buffer, u"[{0}][{1}]{2}", GetLogCategoryName(log_category), category.data(), message.data());
 	}
 
 	const wchar_t* converted_str = nox::util::CharCast<wchar_t>(buffer.data());

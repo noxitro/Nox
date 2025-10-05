@@ -195,7 +195,7 @@ void	nox::memory::CheckMemoryLeak()
             if (nox::memory::profile::EnabledMemoryProfile())
             {
 				const nox::memory::profile::ProfileData& profile_data = nox::memory::profile::FindProfileData(heap_info.profile_handle);
-				const nox::uint8 stack_length = profile_data.call_stack_address_table.size();
+				const nox::uint8 stack_length = static_cast<nox::uint8>(profile_data.call_stack_address_table.size());
                 //  有効なスタックトレースの数
                 nox::uint8 enabledStackCount = 0;
 
@@ -261,7 +261,7 @@ void* nox::memory::Allocate(const size_t size, size_t align_mask, const Instance
 {
 	NOX_ASSERT(g_unique_flag.IsOn(UniqueFlag::Finalized) == false, U"メモリアロケータの終了処理後にメモリ確保が行われました");
 
-    const nox::uint32 align_size = align_mask <= sizeof(HeapInfo) ? sizeof(HeapInfo) : sizeof(HeapInfo) + align_mask;
+    const nox::uint32 align_size = align_mask <= sizeof(HeapInfo) ? sizeof(HeapInfo) : static_cast<nox::uint32>(sizeof(HeapInfo)) + align_mask;
   //  const nox::uint32 align_size = sizeof(HeapInfo) + align_mask;
     const nox::uint32 use_block = (size + align_size + (k_heap_block - 1)) >> k_heap_shift;
     const nox::uint32 alloc_size = use_block << k_heap_shift;

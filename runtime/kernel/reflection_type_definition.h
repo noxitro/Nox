@@ -26,7 +26,7 @@ namespace nox::reflection
 	using ReflectionCharType = char32_t;
 #else
 	/// @brief リフレクションシステムで扱う文字の型
-	using ReflectionCharType = char32_t;
+	using ReflectionCharType = char8_t;
 #endif // 
 
 #undef	NOX_REFLECTION_BUILD_CHAR
@@ -177,7 +177,7 @@ namespace nox::reflection
 	};
 
 	/// @brief 型修飾子
-	enum class TypeQualifierFlag : std::uint16_t
+	enum class TypeAttributeFlag : std::uint16_t
 	{
 		None = 0,
 
@@ -218,6 +218,9 @@ namespace nox::reflection
 		CopyConstructible = 1 << 12,
 
 		MoveConstructible = 1 << 13,
+
+		/// @brief インターフェースクラス nox::Interfaceを継承している
+		Interface = 1 << 14,
 	};
 
 	///// @brief 型修飾子

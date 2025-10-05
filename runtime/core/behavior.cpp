@@ -5,40 +5,11 @@
 #include	"stdafx.h"
 #include	"behavior.h"
 
-namespace
+#include	"behavior_manager.h"
+
+namespace nox
 {
-//	inline constexpr bool hasFunctionPointer(const std::span<void(*)()> v_table, const nox::uint64 function_id)noexcept
-//	{
-//		for (void(*v)() : v_table)
-//		{
-//			const nox::uint64 id = reinterpret_cast<nox::uint64>(v);
-//
-//			if (id == function_id)
-//			{
-//				return true;
-//			}
-//		}
-//
-//		return false;
-//	}
-//
-//	template<nox::concepts::EveryFunctionType T>
-//	inline constexpr bool hasFunctionPointer(const std::span<void(*)()> v_table, T func_addr)noexcept
-//	{
-//		return hasFunctionPointer(v_table, nox::util::GetFunctionPointerID(func_addr));
-//	}
-//
-//	inline std::span<const void*const> GetVTable2(nox::not_null<const void*> ptr)
-//	{
-//		const void* const* vt = *reinterpret_cast<const void* const*const*>(ptr.get());
-//		nox::int32 counter = 0;
-//		while (vt[counter] != nullptr)
-//		{
-//			++counter;
-//		}
-//
-//		return std::span(vt, counter);
-//	}
+
 }
 
 nox::Behavior::Behavior():
@@ -49,11 +20,45 @@ nox::Behavior::Behavior():
 
 nox::Behavior::~Behavior()
 {
-
 }
 
 void	nox::Behavior::Loaded()
 {
+	nox::BehaviorManager::Instance().Register(*this);
+
+	const nox::reflection::ClassInfo*const class_info = nox::reflection::FindClassInfo(GetType());
+	if (class_info != nullptr)
+	{
+		constexpr const nox::FunctionPointerId& awake_id = nox::GetFunctionPointerId<&nox::Behavior::Awake>();
+		constexpr const nox::FunctionPointerId& start_id = nox::GetFunctionPointerId<&nox::Behavior::Start>();
+		constexpr const nox::FunctionPointerId& update_id = nox::GetFunctionPointerId<&nox::Behavior::Update>();
+		constexpr const nox::FunctionPointerId& late_update_id = nox::GetFunctionPointerId<&nox::Behavior::LateUpdate>();
+		constexpr const nox::FunctionPointerId& destroy_id = nox::GetFunctionPointerId<&nox::Behavior::Destroy>();
+
+		for (const nox::reflection::FunctionInfo& function_info : class_info->GetFunctionList())
+		{
+			if (function_info.GetFunctionId() == awake_id)
+			{
+				enabled_function_types_ = nox::util::BitOr(enabled_function_types_, FunctionType::Awake);
+			}
+			else if (function_info.GetFunctionId() == start_id)
+			{
+				enabled_function_types_ = nox::util::BitOr(enabled_function_types_, FunctionType::Start);
+			}
+			else if (function_info.GetFunctionId() == update_id)
+			{
+				enabled_function_types_ = nox::util::BitOr(enabled_function_types_, FunctionType::Update);
+			}
+			else if (function_info.GetFunctionId() == late_update_id)
+			{
+				enabled_function_types_ = nox::util::BitOr(enabled_function_types_, FunctionType::LateUpdate);
+			}
+			else if (function_info.GetFunctionId() == destroy_id)
+			{
+				enabled_function_types_ = nox::util::BitOr(enabled_function_types_, FunctionType::Destroy);
+			}
+		}
+	}
 }
 
 void	nox::Behavior::UnLoaded()

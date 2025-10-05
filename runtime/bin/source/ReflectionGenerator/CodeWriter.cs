@@ -11,17 +11,33 @@ namespace ReflectionGenerator
 		/// </summary>
 		protected uint _NestDepth = 0;
 
-		public void Push()
+        public readonly struct IndentScope : IDisposable
+        {
+            private readonly BaseCodeWriter _Writer;
+            public IndentScope(BaseCodeWriter w)
+            {
+                _Writer = w;
+                _Writer.Push();
+            }
+            void IDisposable.Dispose()
+            {
+                _Writer.Pop();
+            }
+        }
+
+        public void Push()
 		{
 			++_NestDepth;
-		}
+        }
 
 		public void Pop()
 		{
 			--_NestDepth;
-		}
+        }
 
-		public abstract void Write(ReadOnlySpan<char> str);
+        public IndentScope Indent() => new IndentScope(this);
+
+        public abstract void Write(ReadOnlySpan<char> str);
         public abstract void Write<T>(string str, params T[] args) where T : struct;
         public abstract void WriteLine(ReadOnlySpan<char> str);
         public abstract void WriteLine<T>(string str, T args0, params T[] args) where T : struct;
@@ -78,9 +94,9 @@ namespace ReflectionGenerator
             /// </summary>
             Decl_Paren
         }
-		#endregion
+        #endregion
 
-		#region 非公開フィールド
+        #region 非公開フィールド
 		private readonly StreamWriter _Stream;
 
         private Stack<ScopeType> _ScopeStack = new Stack<ScopeType>();
@@ -88,7 +104,7 @@ namespace ReflectionGenerator
 #if DEBUG
 		private readonly string _FilePath;
 #endif
-        #endregion
+#endregion
 
         #region 公開メソッド
         /// <summary>
@@ -199,10 +215,10 @@ namespace ReflectionGenerator
 			_Stream.WriteLine(str, args0, args);
 		}
 
-		#endregion
+        #endregion
 
-		#region 非公開メソッド
-		#endregion
+        #region 非公開メソッド
+        #endregion
 	}
 
     public class CodeStringBuilder : BaseCodeWriter
@@ -251,6 +267,6 @@ namespace ReflectionGenerator
         {
             return _StringBuilder.ToString();
 		}
-		#endregion
+        #endregion
 	}
 }

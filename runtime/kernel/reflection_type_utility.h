@@ -9,8 +9,21 @@
 #include	"type_traits/object_pointer_signature.h"
 #include	"algorithm.h"
 #include	"string_format.h"
+
+namespace nox
+{
+	class Interface;
+}
+
 namespace nox::reflection
 {
+	template<class T>
+	using ReflectionOptional = std::optional<
+		std::conditional_t<std::is_void_v<T>, std::monostate,
+		std::conditional_t<std::is_reference_v<T>, std::reference_wrapper<std::remove_reference_t<T>>, T>
+		>
+	>;
+
 	///**
 	//	 * @brief タイプ識別から名前を取得
 	//	 * @param typeKind
@@ -220,16 +233,16 @@ namespace nox::reflection
 	 * @return
 	*/
 	template<class T>
-	[[nodiscard]] inline constexpr TypeQualifierFlag GetTypeAttributeFlags()noexcept
+	[[nodiscard]] inline constexpr TypeAttributeFlag GetTypeAttributeFlags()noexcept
 	{
-		TypeQualifierFlag type_attr_flags = TypeQualifierFlag::None;
+		TypeAttributeFlag type_attr_flags = TypeAttributeFlag::None;
 
-		type_attr_flags = nox::util::BitOrConditional<std::is_const_v<T>, TypeQualifierFlag::Const>(type_attr_flags);
-		type_attr_flags = nox::util::BitOrConditional<std::is_volatile_v<T>, TypeQualifierFlag::Volatile>(type_attr_flags);
-		type_attr_flags = nox::util::BitOrConditional<std::is_final_v<T>, TypeQualifierFlag::Final>(type_attr_flags);
-		type_attr_flags = nox::util::BitOrConditional<std::is_abstract_v<T>, TypeQualifierFlag::Abstract>(type_attr_flags);
-		type_attr_flags = nox::util::BitOrConditional<std::is_unsigned_v<T>, TypeQualifierFlag::Unsigned>(type_attr_flags);
-		type_attr_flags = nox::util::BitOrConditional<std::is_polymorphic_v<T>, TypeQualifierFlag::Polymorphic>(type_attr_flags);
+		type_attr_flags = nox::util::BitOrConditional<std::is_const_v<T>, TypeAttributeFlag::Const>(type_attr_flags);
+		type_attr_flags = nox::util::BitOrConditional<std::is_volatile_v<T>, TypeAttributeFlag::Volatile>(type_attr_flags);
+		type_attr_flags = nox::util::BitOrConditional<std::is_final_v<T>, TypeAttributeFlag::Final>(type_attr_flags);
+		type_attr_flags = nox::util::BitOrConditional<std::is_abstract_v<T>, TypeAttributeFlag::Abstract>(type_attr_flags);
+		type_attr_flags = nox::util::BitOrConditional<std::is_unsigned_v<T>, TypeAttributeFlag::Unsigned>(type_attr_flags);
+		type_attr_flags = nox::util::BitOrConditional<std::is_polymorphic_v<T>, TypeAttributeFlag::Polymorphic>(type_attr_flags);
 
 		return type_attr_flags;
 	}
@@ -245,6 +258,7 @@ namespace nox::reflection
 		attr_flags = nox::util::BitOrConditional<nox::IsFunctionLValueReference<T>, FunctionAttributeFlag::LvalueRef>(attr_flags);
 		attr_flags = nox::util::BitOrConditional<nox::IsFunctionRValueReference<T>, FunctionAttributeFlag::RvalueRef>(attr_flags);
 		attr_flags = nox::util::BitOrConditional<nox::IsFunctionNoexceptValue<T>, FunctionAttributeFlag::Noexcept>(attr_flags);
+		attr_flags = nox::util::BitOrConditional<std::is_base_of_v<nox::Interface, T>, FunctionAttributeFlag::Noexcept>(attr_flags);
 
 		return attr_flags;
 	}

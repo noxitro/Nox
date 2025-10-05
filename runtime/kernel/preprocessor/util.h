@@ -13,15 +13,15 @@
 *@brief ユニークなローカル変数を定義します
 *@note 関数内でのみ使用できます
 */
-#define	NOX_LOCAL_SCOPE(Type, ...) static_assert(__PRETTY_FUNCTION__); const Type NOX_PP_CAT_I(__local, __LINE__){__VA_ARGS__}
-#define	NOX_LOCAL_SCOPE_C(Type, ...) static_assert(__PRETTY_FUNCTION__); constexpr Type NOX_PP_CAT_I(__local, __LINE__){__VA_ARGS__}
+#define	NOX_LOCAL_SCOPE(x) static_assert(__PRETTY_FUNCTION__); const decltype(x) NOX_PP_CAT_I(__local, __LINE__){x}
+#define	NOX_LOCAL_SCOPE_C(x) static_assert(__PRETTY_FUNCTION__); constexpr decltype(x) NOX_PP_CAT_I(__local, __LINE__){x}
 #elif defined(_MSC_VER)
 /*
 *@brief ユニークなローカル変数を定義します
 *@note 関数内でのみ使用できます
 */
-#define	NOX_LOCAL_SCOPE(Type, ...) static_assert(__FUNCTION__); const Type NOX_PP_CAT_I(__local, __LINE__){__VA_ARGS__}
-#define	NOX_LOCAL_SCOPE_C(Type, ...) static_assert(__FUNCTION__); constexpr Type NOX_PP_CAT_I(__local, __LINE__){__VA_ARGS__}
+#define	NOX_LOCAL_SCOPE(x) static_assert(__FUNCTION__); const decltype(x) NOX_PP_CAT_I(__local, __LINE__){x}
+#define	NOX_LOCAL_SCOPE_C(x) static_assert(__FUNCTION__); constexpr decltype(x) NOX_PP_CAT_I(__local, __LINE__){x}
 
 #endif
 

@@ -19,11 +19,19 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="attribute.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="attribute_common.h">
       <SubType>
       </SubType>
     </ClInclude>
     <ClInclude Include="behavior.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="behavior_manager.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -40,6 +48,14 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="core_memory.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="dev\editor_ipc_query.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="dev\editor_ipc_response.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -80,6 +96,10 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="game_object.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="log_id.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -163,9 +183,17 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="update_order_attribute.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="application.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="attribute.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -174,6 +202,10 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="behavior.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="behavior_manager.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -186,6 +218,14 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="core_memory.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="dev\editor_ipc_query.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="dev\editor_ipc_response.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -226,6 +266,10 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="game_object.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="log_id.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -309,6 +353,10 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="transform.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="update_order_attribute.cpp">
       <SubType>
       </SubType>
     </ClCompile>

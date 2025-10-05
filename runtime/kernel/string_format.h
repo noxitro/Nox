@@ -55,14 +55,27 @@ namespace nox::util
 			}
 
 			//	span ver
-			template<class From> //requires(!std::is_same_v< CharType, From>)
-				static inline void Get(From&& arg, std::span< CharType> dest_buffer)
+			template<class From> requires(!std::is_same_v< CharType, From>)
+				static inline auto Get(From&& arg, std::span< CharType> dest_buffer)
 			{
 				return nox::unicode::ConvertString<CharType>(std::forward<From>(arg), dest_buffer);
 			}
 		};
 
 		//	formatの引数として渡すとき変換が必要かどうかをチェックする
+		template<class To, class From>
+		inline consteval bool IsFormatArgNoConvertNeeded()
+		{
+			if constexpr (std::is_arithmetic_v<std::decay_t<From>> && !IsCharTypeValue<std::decay_t<From>>)
+			{
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		}
+
 		template<class To, class From>
 		struct CheckThroughFormatString : std::false_type {};
 
@@ -136,10 +149,10 @@ namespace nox::util
 	namespace detail
 	{
 		template <typename Char, size_t SIZE>
-		[[nodiscard]] inline nox::BasicString<Char> FmtToString(const fmt::basic_memory_buffer<Char, SIZE>& buf)
+		[[nodiscard]] inline nox::BasicString<Char> FmtToString(const ::fmt::basic_memory_buffer<Char, SIZE>& buf)
 		{
 			auto size = buf.size();
-			fmt::detail::assume(size < nox::util::detail::GetStringMaxSize<Char>());
+			::fmt::detail::assume(size < nox::util::detail::GetStringMaxSize<Char>());
 			return nox::BasicString<Char>(buf.data(), size);
 		}
 

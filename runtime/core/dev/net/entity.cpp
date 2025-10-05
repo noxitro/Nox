@@ -5,7 +5,21 @@
 #include	"stdafx.h"
 #include	"entity.h"
 
-::size_t nox::dev::net::Entity::recive(nox::dev::net::raw_socket_t socket,nox::not_null<void*> buffer,::size_t size_to_read,bool& disconnected)
+#if NOX_WINDOWS
+
+
+#endif
+
+nox::dev::net::Entity::Entity()
+	: socket_(INVALID_SOCKET)
+{
+}
+
+nox::dev::net::Entity::~Entity()
+{
+}
+
+::size_t nox::dev::net::Entity::Receive(nox::dev::net::raw_socket_t socket,nox::not_null<void*> buffer,::size_t size_to_read,bool& disconnected)
 {
 	disconnected = false;
 
@@ -54,7 +68,7 @@
 #endif
 }
 
-::size_t nox::dev::net::Entity::send(nox::dev::net::raw_socket_t socket, nox::not_null<const void*> buffer, ::size_t size_to_send, bool& disconnected, bool non_aio)
+::size_t nox::dev::net::Entity::Send(nox::dev::net::raw_socket_t socket, nox::not_null<const void*> buffer, ::size_t size_to_send, bool& disconnected, bool non_aio)
 {
 	disconnected = false;
 
@@ -97,22 +111,22 @@
 #endif
 }
 
-void nox::dev::net::Entity::onConnect(nox::dev::net::ConnectionContext& context)
+void nox::dev::net::Entity::OnConnect(nox::dev::net::ConnectionContext& context)
 {
 	(void)context;
 }
 
-void nox::dev::net::Entity::onDisconnect(nox::dev::net::DisconnectionContext& context)
+void nox::dev::net::Entity::OnDisconnect(nox::dev::net::DisconnectionContext& context)
 {
 	(void)context;
 }
 
-void nox::dev::net::Entity::onSent(const nox::dev::net::PeerContext& context, nox::uint32 handle, nox::not_null<const void*> buffer, ::size_t size_to_send, ::size_t size_sent)
+void nox::dev::net::Entity::OnSent(const nox::dev::net::PeerContext& context, nox::uint32 handle, nox::not_null<const void*> buffer, ::size_t size_to_send, ::size_t size_sent)
 {
 	(void)context; (void)handle; (void)buffer; (void)size_to_send; (void)size_sent;
 }
 
-void nox::dev::net::Entity::onRecive(const nox::dev::net::PeerContext& context)
+void nox::dev::net::Entity::OnReceive(const nox::dev::net::PeerContext& context)
 {
 	(void)context;
 }

@@ -4,15 +4,14 @@ using System.Linq;
 
 namespace ReflectionGenerator
 {
-	[System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)]
-	public struct Integer64
-	{
-		[System.Runtime.InteropServices.FieldOffset(0)]
-		public long Int64;
-
-		[System.Runtime.InteropServices.FieldOffset(0)]
-		public ulong UInt64;
-	}
+    public enum CharKind : byte
+    {
+        Char,
+        Char8,
+        Char16,
+        Char32,
+        WChar16,
+    }
 
 	public class ScopeProfiler : IDisposable
     {
@@ -35,6 +34,32 @@ namespace ReflectionGenerator
     public static class Util
     {
         #region 公開メソッド
+        public static char GetCharPrefix(CharKind kind)
+        {
+            return kind switch
+            {
+                CharKind.Char => '\"',
+                CharKind.Char8 => 'u',
+                CharKind.Char16 => 'u',
+                CharKind.Char32 => 'U',
+                CharKind.WChar16 => 'L',
+                _ => throw new NotImplementedException(),
+            };
+        }
+
+        public static string ToCppString(ReadOnlySpan<char> str, CharKind kind = CharKind.Char8)
+        {
+            return kind switch
+            {
+                CharKind.Char => $"\"{str.ToString()}\"",
+                CharKind.Char8 => $"u8\"{str.ToString()}\"",
+                CharKind.Char16 => $"u\"{str.ToString()}\"",
+                CharKind.Char32 => $"U\"{str.ToString()}\"",
+                CharKind.WChar16 => $"L\"{str.ToString()}\"",
+                _ => throw new NotImplementedException(),
+            };
+        }
+
         public static uint BitOr(uint a, uint b) => a | b;
         public static uint BitXor(uint a, uint b) => a & ~b;
 
