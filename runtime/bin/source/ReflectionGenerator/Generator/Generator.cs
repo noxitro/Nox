@@ -602,6 +602,8 @@ namespace ReflectionGenerator.Generator
 			{
                 void probe(Parser2.NamespaceDecl namespaceDeclInfo)
                 {
+                    //bool reflectionNamespace 
+
                     if (namespaceDeclInfo.ReflectionGenerateKind == Parser2.ReflectionGenerateKind.IgnoreReflection)
                     {
                         return;
@@ -856,31 +858,50 @@ namespace ReflectionGenerator.Generator
         #region 定義生成群
         private int GenerateAttributeInfoList(BaseCodeWriter codeWriter, ReadOnlySpan<Parser2.AttributeDecl> attributeInfoList, ReadOnlySpan<char> hash)
         {
-            List<string> tmpDeclNameList = new List<string>();
+            int attributeInfoListLength = attributeInfoList.Length;
+            if (attributeInfoListLength == 0)
+            {
+                return 0;
+			}
+
+			List<string> tmpDeclNameList = new List<string>();
             for (int i = 0, length = attributeInfoList.Length; i < length; ++i)
             {
                 Parser2.AttributeDecl attributeInfo = attributeInfoList[i];
                 string attr_decl_name = $"attribute_info_{attributeInfo.Hash}_{i.ToString()}";
+
+                switch(attributeInfo.AttrKind)
+                {
+                    case Parser2.AttrKind.EngineAnnotate:
+						string fullDecl = attributeInfo.Value;
+						codeWriter.WriteLine($"static constexpr decltype(auto) {attr_decl_name} = {fullDecl};");
+						break;
+
+                    case Parser2.AttrKind.ReflectionTarget:
+                    case Parser2.AttrKind.IgnoreReflectionTarget:
+                        continue;
+
+                    default:
+						ReadOnlySpan<char> standardAttrKindName = attributeInfo.AttrKind switch
+						{
+							Parser2.AttrKind.NoDiscard => "nox::reflection::StandardAttrKind::NoDiscard",
+							_ => "nox::reflection::StandardAttrKind::Invalid"
+						};
+
+						codeWriter.WriteLine($"static constexpr nox::reflection::attr::StandardAttribute {attr_decl_name} = nox::reflection::attr::StandardAttribute({standardAttrKindName});\t//\t{attributeInfo.AttrName}({attributeInfo.Value})");
+						break;
+                }
+
 				tmpDeclNameList.Add(attr_decl_name);
-
-                if (attributeInfo.AttrKind == Parser2.AttrKind.EngineAnnotate)
-                {
-					string fullDecl = attributeInfo.Value;
-					codeWriter.WriteLine($"static constexpr decltype(auto) {attr_decl_name} = {fullDecl};");
-				}
-                else
-                {
-					ReadOnlySpan<char> standardAttrKindName = attributeInfo.AttrKind switch
-					{
-                        Parser2.AttrKind.NoDiscard => "nox::reflection::StandardAttrKind::NoDiscard",
-						_ => "nox::reflection::StandardAttrKind::Invalid"
-					};
-
-					codeWriter.WriteLine($"static constexpr nox::reflection::attr::StandardAttribute {attr_decl_name} = nox::reflection::attr::StandardAttribute({standardAttrKindName});");
-				}
 			}
 
-            codeWriter.WriteLine($"static constexpr const std::reference_wrapper<const nox::reflection::ReflectionObject> attribute_info_table_{hash}[{attributeInfoList.Length.ToString()}]={{");
+            int tmpDeclNameListLength = tmpDeclNameList.Count;
+            if (tmpDeclNameListLength <= 0)
+            {
+                return 0;
+            }
+
+			codeWriter.WriteLine($"static constexpr const std::reference_wrapper<const nox::reflection::ReflectionObject> attribute_info_table_{hash}[{tmpDeclNameListLength.ToString()}]={{");
             using (codeWriter.Indent())
             {
                 for (int i = 0, length = tmpDeclNameList.Count; i < length; ++i)
@@ -899,11 +920,17 @@ namespace ReflectionGenerator.Generator
 			codeWriter.WriteLine("};");
             codeWriter.WriteNewLine();
 
-            return tmpDeclNameList.Count;
+            return tmpDeclNameListLength;
 		}
 
         private void GenerateVariableInfo(BaseCodeWriter codeWriter, Parser2.VariableDecl variableInfo, Parser2.RecordDecl? declarationTypeInfo)
         {
+			//  無名クラスはスキップ
+			if (variableInfo.Type.TypeAttributeFlags.IsOn(Parser2.TypeAttributeFlag.Anonymous))
+            {
+                return;
+            }
+
 			//  属性定義
 			int enabledAttributeLength;
             {
@@ -917,12 +944,18 @@ namespace ReflectionGenerator.Generator
 					enabledAttributeLength = 0;
 				}
 			}
-			
 
-			//  メンバ変数
-			if (variableInfo.VariableAttributeFlags.IsOn(Parser2.VariableAttributeFlag.Static) == false)
+			//  アドレスを取得できない変数かどうか
+			bool noAddressOf = 
+                variableInfo.Type.TypeAttributeFlags.IsAnyOn(Parser2.TypeAttributeFlag.LValueReference | Parser2.TypeAttributeFlag.RValueReference) ||
+				variableInfo.BitFieldWidth >= 0
+				;
+
+            //  メンバ変数
+            bool isStatic = variableInfo.VariableAttributeFlags.IsOn(Parser2.VariableAttributeFlag.Static);
+			if (isStatic == false)
 			{
-				if (variableInfo.Type.TypeAttributeFlags.IsAnyOn( Parser2.TypeAttributeFlag.LValueReference | Parser2.TypeAttributeFlag.RValueReference))
+				if (noAddressOf)
 				{
 					codeWriter.WriteLine($"static constexpr auto {GetVariableInfoDeclName(variableInfo)} = nox::reflection::detail::CreateVariableInfoMemberRef<decltype({variableInfo.FullName})>");
 				}
@@ -934,7 +967,7 @@ namespace ReflectionGenerator.Generator
 			//  グローバル変数
 			else
 			{
-				if (variableInfo.Type.TypeAttributeFlags.IsAnyOn(Parser2.TypeAttributeFlag.LValueReference | Parser2.TypeAttributeFlag.RValueReference))
+				if (noAddressOf)
 				{
 					codeWriter.WriteLine($"static constexpr auto {GetVariableInfoDeclName(variableInfo)} = nox::reflection::detail::CreateVariableInfoGlobalRef<decltype({variableInfo.FullName})>");
 				}
@@ -947,30 +980,21 @@ namespace ReflectionGenerator.Generator
             codeWriter.WriteLine("(");
             using (codeWriter.Indent())
             {
-
-                //  非参照型の場合
-                if (variableInfo.Type.TypeAttributeFlags.IsAnyOn(Parser2.TypeAttributeFlag.LValueReference | Parser2.TypeAttributeFlag.RValueReference))
-                {
-                    codeWriter.WriteLine($"nox::reflection::Typeof<decltype({variableInfo.FullName})>(),\t//\ttype");
-                    if (variableInfo.VariableAttributeFlags.IsOn(Parser2.VariableAttributeFlag.Static) == false)
-                    {
-                        System.Diagnostics.Debug.Assert(declarationTypeInfo != null, "declarationTypeInfo must not be null for non-static variables.");
-                        codeWriter.WriteLine($"\tnox::reflection::Typeof<decltype({declarationTypeInfo.FullName})>(),\t//\towner type");
-                    }
-                    //  オブジェクトポインタ
-                    //	buffer += $"\t&{variableInfo.FullName},\t//\t object_pointer\n";
-                }
-                else
-                {
-
-                }
-
-                //  各種名前
-                if (!variableInfo.Type.TypeAttributeFlags.IsAnyOn(Parser2.TypeAttributeFlag.LValueReference | Parser2.TypeAttributeFlag.RValueReference))
+                if (!noAddressOf)
                 {
                     codeWriter.WriteLine($"nox::GetObjectPointerId<&{variableInfo.FullName}>(),\t//\tobject_pointer_id");
                 }
-                codeWriter.WriteLine($"u8\"{variableInfo.Name}\",\t//\tname");
+                else
+                {
+					codeWriter.WriteLine($"nox::reflection::Typeof<decltype({variableInfo.FullName})>(),\t//\ttype");
+					if (!isStatic)
+					{
+						System.Diagnostics.Debug.Assert(declarationTypeInfo != null, "declarationTypeInfo must not be null for non-static variables.");
+						codeWriter.WriteLine($"nox::reflection::Typeof<{declarationTypeInfo.FullName}>(),\t//\towner_type");
+					}
+				}
+
+				codeWriter.WriteLine($"u8\"{variableInfo.Name}\",\t//\tname");
                 codeWriter.WriteLine($"u8\"{variableInfo.FullName}\",\t//\tfullName");
                 codeWriter.WriteLine($"u8\"{variableInfo.Namespace}\",\t//\tnamespace");
 
@@ -1126,38 +1150,45 @@ namespace ReflectionGenerator.Generator
                     {
                         codeWriter.WriteLine("//\tgetter address");
 
-                        codeWriter.WriteLine("+[](void* instance)->void*");
-                        codeWriter.WriteLine("{");
-                        using (codeWriter.Indent())
+                        if (noAddressOf)
                         {
-                            codeWriter.WriteLine(variableTypeDeclStr);
-                            codeWriter.WriteLine(classTypeDeclStr);
+                            codeWriter.WriteLine("nullptr,");
+						}
+                        else
+                        {
+                            codeWriter.WriteLine("+[](void* instance)->void*");
+                            codeWriter.WriteLine("{");
+                            using (codeWriter.Indent())
+                            {
+                                codeWriter.WriteLine(variableTypeDeclStr);
+                                codeWriter.WriteLine(classTypeDeclStr);
 
-                            codeWriter.WriteLine("if constexpr(nox::concepts::Assignable<VariableType, std::remove_const_t<VariableType>>)");
-                            codeWriter.WriteLine("{");
-                            using (codeWriter.Indent())
-                            {
-                                codeWriter.WriteLine("if constexpr (std::is_convertible_v<VariableType, const void*>)");
+                                codeWriter.WriteLine("if constexpr(nox::concepts::Assignable<VariableType, std::remove_const_t<VariableType>>)");
+                                codeWriter.WriteLine("{");
                                 using (codeWriter.Indent())
                                 {
-                                    codeWriter.WriteLine($"return const_cast<void*>(static_cast<const void*>(&static_cast<const ClassType*>(instance)->{variableInfo.FullName}));");
+                                    codeWriter.WriteLine("if constexpr (std::is_convertible_v<VariableType, const void*>)");
+                                    using (codeWriter.Indent())
+                                    {
+                                        codeWriter.WriteLine($"return const_cast<void*>(static_cast<const void*>(&static_cast<const ClassType*>(instance)->{variableInfo.FullName}));");
+                                    }
+                                    codeWriter.WriteLine("else");
+                                    using (codeWriter.Indent())
+                                    {
+                                        codeWriter.WriteLine($"return const_cast<void*>(static_cast<const volatile void*>(&static_cast<const ClassType*>(instance)->{variableInfo.FullName}));");
+                                    }
                                 }
+                                codeWriter.WriteLine("}");
                                 codeWriter.WriteLine("else");
+                                codeWriter.WriteLine("{");
                                 using (codeWriter.Indent())
                                 {
-                                    codeWriter.WriteLine($"return const_cast<void*>(static_cast<const volatile void*>(&static_cast<const ClassType*>(instance)->{variableInfo.FullName}));");
+                                    codeWriter.WriteLine("return nullptr;");
                                 }
+                                codeWriter.WriteLine("}");
                             }
-                            codeWriter.WriteLine("}");
-                            codeWriter.WriteLine("else");
-                            codeWriter.WriteLine("{");
-                            using (codeWriter.Indent())
-                            {
-                                codeWriter.WriteLine("return std::nullptr;");
-                            }
-                            codeWriter.WriteLine("}");
+                            codeWriter.WriteLine("},");
                         }
-                        codeWriter.WriteLine("},");
                     }
 
                     // setter subscripts
@@ -1395,7 +1426,7 @@ namespace ReflectionGenerator.Generator
                             codeWriter.WriteLine("{");
                             using (codeWriter.Indent())
                             {
-                                codeWriter.WriteLine("return std::nullptr;");
+                                codeWriter.WriteLine("return nullptr;");
                             }
                             codeWriter.WriteLine("}");
                         }
@@ -1551,8 +1582,14 @@ namespace ReflectionGenerator.Generator
 
         private bool GenerateFunctionInfo(BaseCodeWriter codeWriter, Parser2.FunctionDecl functionInfo, Parser2.RecordDecl? declarationTypeInfo)
         {
-            //TODO:  コンストラクタ、デストラクタは未対応
-            if (functionInfo.FunctionAttributeFlags.IsAnyOn(
+			//  無名クラスはスキップ
+			if (functionInfo.TypeInfo.TypeAttributeFlags.IsOn(Parser2.TypeAttributeFlag.Anonymous))
+			{
+                return false;
+			}
+
+			//TODO:  コンストラクタ、デストラクタは未対応
+			if (functionInfo.FunctionAttributeFlags.IsAnyOn(
                  Parser2.FunctionAttributeFlag.DefaultConstructor |
                  Parser2.FunctionAttributeFlag.CopyConstructor |
                  Parser2.FunctionAttributeFlag.MoveConstructor |
@@ -1589,9 +1626,14 @@ namespace ReflectionGenerator.Generator
 
             ReadOnlySpan<Parser2.FunctionDecl.ArgumentInfo> argumentList = functionInfo.ArgumentSpan;
             int numArgument = argumentList.Length;
-            bool isNoexcept = functionInfo.FunctionAttributeFlags.IsOn(Parser2.FunctionAttributeFlag.Noexcept);
-            {
-                ReadOnlySpan<char> returnTypeFullName = functionInfo.TypeInfo.ReturnType.FullName;
+            //bool isNoexcept = functionInfo.FunctionAttributeFlags.IsOn(Parser2.FunctionAttributeFlag.Noexcept);
+
+            //  純粋仮想関数や=delete関数は呼び出し不可なのでスキップ
+            bool isCallableFunction = functionInfo.FunctionAttributeFlags.IsOn(Parser2.FunctionAttributeFlag.Abstract) == false;
+
+			if (isCallableFunction)
+			{
+				ReadOnlySpan<char> returnTypeFullName = functionInfo.TypeInfo.ReturnType.FullName;
 
                 if (numArgument > 0)
                 {
@@ -1701,12 +1743,12 @@ namespace ReflectionGenerator.Generator
 
                         if (i != length - 1)
                         {
-                            codeWriter.WriteLine($"{{ {preStr}{s}); }}, {argLength.ToString()} }},");
+                            codeWriter.WriteLine($"{{ {preStr}{s}); }}, static_cast<std::uint8_t>({argLength.ToString()}) }},");
                             codeWriter.WriteNewLine();
                         }
                         else
                         {
-                            codeWriter.WriteLine($"{{ {preStr}{s}); }}, {argLength.ToString()} }}");
+                            codeWriter.WriteLine($"{{ {preStr}{s}); }}, static_cast<std::uint8_t>({argLength.ToString()}) }}");
                         }
                     }
                 }
@@ -1753,10 +1795,59 @@ namespace ReflectionGenerator.Generator
                 }
                 codeWriter.WriteLine($"{numArgument},\t//\targument_length");
 
-                codeWriter.WriteLine("nox::reflection::FunctionAttributeFlag::None,");
+                {
+                    List<string> attributeStrList = new();
 
-                codeWriter.WriteLine($"function_variation_table_{functionInfo.Hash},\t//\tfunction_holder_table");
-                codeWriter.WriteLine($"{1 + functionInfo.NumDefaultArgument}\t//\tfunction_holder_length");
+                    foreach (Parser2.FunctionAttributeFlag flag in EnumUtil<Parser2.FunctionAttributeFlag>.ValueList)
+                    {
+                        if (functionInfo.FunctionAttributeFlags.IsOn(flag) == false)
+                        {
+                            continue;
+                        }
+
+                        switch (flag)
+                        {
+                            case Parser2.FunctionAttributeFlag.Abstract:
+                                attributeStrList.Add("nox::reflection::FunctionAttributeFlag::Abstract");
+                                break;
+                            case Parser2.FunctionAttributeFlag.Consteval:
+                                attributeStrList.Add("nox::reflection::FunctionAttributeFlag::Consteval");
+                                break;
+                            case Parser2.FunctionAttributeFlag.Constexpr:
+                                attributeStrList.Add("nox::reflection::FunctionAttributeFlag::Constexpr");
+                                break;
+                        }
+                    }
+
+                    int length = attributeStrList.Count;
+
+                    if (length > 0)
+                    {
+                        codeWriter.WriteNest();
+                        codeWriter.Write("nox::util::BitOr(");
+                        for (int i = 0; i < length; ++i)
+                        {
+                            codeWriter.Write($"{attributeStrList[i]}");
+                        }
+                        codeWriter.Write(", nox::reflection::FunctionAttributeFlag::None)");
+                        codeWriter.Write(",\t//\tfunction_attribute_flag");
+                        codeWriter.WriteNewLine();
+                    }
+                    else
+                    {
+                        codeWriter.WriteLine("nox::reflection::FunctionAttributeFlag::None,\t//\tfunction_attribute_flag");
+                    }
+                }
+
+                if (isCallableFunction)
+                {
+					codeWriter.WriteLine($"function_variation_table_{functionInfo.Hash},\t//\tfunction_holder_table");
+				}
+                else
+                {
+					codeWriter.WriteLine("nullptr,\t//\tfunction_holder_table");
+				}
+				codeWriter.WriteLine($"{1 + functionInfo.NumDefaultArgument}\t//\tfunction_holder_length");
 
             }
             codeWriter.WriteLine(");");
@@ -1871,8 +1962,46 @@ namespace ReflectionGenerator.Generator
             }
         }
 
-        private void GenerateClassInfo(BaseCodeWriter codeWriter, Parser2.RecordDecl classInfo, Parser2.RecordDecl? declarationTypeInfo, List<string> registerDeclNameList, ReadOnlySpan<char> parentDeclName = default)
+		static bool IsReflectionTargetDecl(Parser2.TypeDecl typeDecl, bool inter = false)
+		{
+			if (typeDecl.ReflectionGenerateKind == Parser2.ReflectionGenerateKind.IgnoreReflection)
+			{
+				return false;
+			}
+
+            if(!inter)
+            {
+                return true;
+            }
+
+            if (typeDecl.AccessLevel == AccessLevel.Public )
+            {
+                return true;
+            }
+
+            if (typeDecl.ReflectionGenerateKind == Parser2.ReflectionGenerateKind.PrivateReflection)
+            {
+                return true;
+            }
+
+            return false;
+		}
+
+		private void GenerateClassInfo(BaseCodeWriter codeWriter, Parser2.RecordDecl classInfo, Parser2.RecordDecl? declarationTypeInfo, List<string> registerDeclNameList, ReadOnlySpan<char> parentDeclName = default)
         {
+            //  template classはスキップ
+            if (classInfo is Parser2.TemplateClassDecl)
+            {
+                return;
+            }
+
+            //  無名クラスはスキップ
+            if (classInfo.RecordAttributeFlags.IsOn(Parser2.RecordAttributeFlag.Anonymous))
+            {
+                //TODO:  無名クラスのフィールドへのリフレクション対応
+                return;
+            }
+
             if (parentDeclName.IsEmpty)
             {
                 registerDeclNameList.Add($"nox::reflection::gen::ReflectionGeneratedHolder<{classInfo.FullName}>::class_info_{classInfo.Hash}");
@@ -1882,52 +2011,67 @@ namespace ReflectionGenerator.Generator
 				registerDeclNameList.Add($"{parentDeclName}::ReflectionGeneratedHolder<{classInfo.FullName}>::class_info_{classInfo.Hash}");
 			}
 
-            codeWriter.WriteLine("template<>");
+            codeWriter.WriteLine($"//\t{classInfo.Meta.SourceLocation}");
+			codeWriter.WriteLine("template<>");
             codeWriter.WriteLine($"struct nox::reflection::gen::ReflectionGeneratedHolder<{classInfo.FullName}>");
             codeWriter.WriteLine("{");
             using (codeWriter.Indent())
             {
 
                 //  クラス内クラス情報の生成
-                {
-                    int internalClassInfoListLength = classInfo.RecordList.Count;
+                int internalClassInfoListLength = 0;
 
+				{
                     ReadOnlySpan<char> lastParentDeclName = registerDeclNameList.Last();
 
                     foreach (Parser2.RecordDecl child in classInfo.RecordList)
                     {
-                        if (child.ReflectionGenerateKind == Parser2.ReflectionGenerateKind.IgnoreReflection)
+                        if (IsReflectionTargetDecl(child,true) == false)
                         {
                             continue;
                         }
                         GenerateClassInfo(codeWriter, child, classInfo, registerDeclNameList, lastParentDeclName);
                     }
 
-                    if (internalClassInfoListLength > 0)
+					int tmpInternalClassInfoListLength = classInfo.RecordList.Count;
+					if (tmpInternalClassInfoListLength > 0)
                     {
-                        for (int i = 0; i < internalClassInfoListLength; ++i)
+                        Span<int> enabledIndexList = stackalloc int[tmpInternalClassInfoListLength];
+						for (int i = 0; i < tmpInternalClassInfoListLength; ++i)
                         {
                             Parser2.RecordDecl type = classInfo.RecordList[i];
-                            codeWriter.WriteLine($"static constexpr const nox::reflection::Type& internal_type_{classInfo.Hash}_{i.ToString()} = nox::reflection::Typeof<decltype({type.FullName})>();");
+							//  無名クラスはスキップ
+                            if (type.RecordAttributeFlags.IsOn(Parser2.RecordAttributeFlag.Anonymous))
+                            {
+                                continue;
+                            }
+
+                            enabledIndexList[internalClassInfoListLength++] = i;
+
+							codeWriter.WriteLine($"static constexpr const nox::reflection::Type& internal_type_{classInfo.Hash}_{i.ToString()} = nox::reflection::Typeof<decltype({type.FullName})>();");
                         }
 
-                        codeWriter.WriteLine($"static constexpr const std::reference_wrapper<const nox::reflection::Type> internal_type_table_{classInfo.Hash}[] = {{");
-                        using (codeWriter.Indent())
+                        if (internalClassInfoListLength > 0)
                         {
-
-                            for (int i = 0; i < internalClassInfoListLength; ++i)
+                            codeWriter.WriteLine($"static constexpr const std::reference_wrapper<const nox::reflection::Type> internal_type_table_{classInfo.Hash}[{internalClassInfoListLength.ToString()}] = {{");
+                            using (codeWriter.Indent())
                             {
-                                if (i != internalClassInfoListLength - 1)
+
+                                for (int i = 0; i < internalClassInfoListLength; ++i)
                                 {
-                                    codeWriter.WriteLine($"internal_type_{classInfo.Hash}_{i.ToString()},");
-                                }
-                                else
-                                {
-                                    codeWriter.WriteLine($"internal_type_{classInfo.Hash}_{i.ToString()}");
+                                    int declIndex = enabledIndexList[i];
+                                    if (i != internalClassInfoListLength - 1)
+                                    {
+                                        codeWriter.WriteLine($"internal_type_{classInfo.Hash}_{declIndex.ToString()},");
+                                    }
+                                    else
+                                    {
+                                        codeWriter.WriteLine($"internal_type_{classInfo.Hash}_{declIndex.ToString()}");
+                                    }
                                 }
                             }
+                            codeWriter.WriteLine("};");
                         }
-                        codeWriter.WriteLine("};");
                     }
                 }
 
@@ -1974,11 +2118,16 @@ namespace ReflectionGenerator.Generator
                 {
                     foreach (Parser2.VariableDecl variableInfo in classInfo.VariableList)
                     {
-                        if (variableInfo.ReflectionGenerateKind == Parser2.ReflectionGenerateKind.IgnoreReflection)
+                        if (variableInfo.FullName.Contains("attribute_length_"))
                         {
-                            continue;
+                            Util.BreakPoint();
                         }
-                        variableInfoRegisterDeclNameList.Add($"variable_info_{variableInfo.Hash}");
+
+						if (IsReflectionTargetDecl(variableInfo,true) == false)
+						{
+							continue;
+						}
+						variableInfoRegisterDeclNameList.Add($"variable_info_{variableInfo.Hash}");
                         GenerateVariableInfo(codeWriter, variableInfo, classInfo);
                     }
 
@@ -2007,11 +2156,11 @@ namespace ReflectionGenerator.Generator
                 {
                     foreach (Parser2.FunctionDecl functionInfo in classInfo.FunctionList)
                     {
-                        if (functionInfo.ReflectionGenerateKind == Parser2.ReflectionGenerateKind.IgnoreReflection)
-                        {
-                            continue;
-                        }
-                        functionInfoRegisterDeclNameList.Add($"function_info_{functionInfo.Hash}");
+						if (IsReflectionTargetDecl(functionInfo,true) == false)
+						{
+							continue;
+						}
+						functionInfoRegisterDeclNameList.Add($"function_info_{functionInfo.Hash}");
                         GenerateFunctionInfo(codeWriter, functionInfo, classInfo);
                     }
 
@@ -2041,11 +2190,11 @@ namespace ReflectionGenerator.Generator
                 {
                     foreach (Parser2.EnumDecl enumInfo in classInfo.EnumList)
                     {
-                        if (enumInfo.ReflectionGenerateKind == Parser2.ReflectionGenerateKind.IgnoreReflection)
-                        {
-                            continue;
-                        }
-                        enumInfoRegisterDeclNameList.Add($"enum_info_{enumInfo.Hash}");
+						if (IsReflectionTargetDecl(enumInfo,true) == false)
+						{
+							continue;
+						}
+						enumInfoRegisterDeclNameList.Add($"enum_info_{enumInfo.Hash}");
                         GenerateEnumInfo(codeWriter, enumInfo, classInfo);
                     }
 
@@ -2135,7 +2284,7 @@ namespace ReflectionGenerator.Generator
                     }
                     codeWriter.WriteLine($"{enumInfoRegisterDeclNameList.Count.ToString()},\t//\tenum_info_length");
 
-                    if (classInfo.RecordList.Count > 0)
+                    if (internalClassInfoListLength > 0)
                     {
                         codeWriter.WriteLine($"internal_type_table_{classInfo.Hash},\t//\tinternal_type_list");
                     }
@@ -2143,7 +2292,7 @@ namespace ReflectionGenerator.Generator
                     {
                         codeWriter.WriteLine("nullptr,\t//\tinternal_type_list");
                     }
-                    codeWriter.WriteLine($"{classInfo.RecordList.Count.ToString()}\t//\tinternal_type_length");
+                    codeWriter.WriteLine($"{internalClassInfoListLength.ToString()}\t//\tinternal_type_length");
 
                 }
                 codeWriter.WriteLine(");");

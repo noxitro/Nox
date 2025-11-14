@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
@@ -13,8 +13,8 @@
 	  <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
 
 	  <!-- PDB を外へ出したくない場合 -->
-	  <DebugType>none</DebugType>
-	  <DebugSymbols>false</DebugSymbols>
+	  <!--<DebugType>none</DebugType>-->
+	  <!--<DebugSymbols>false</DebugSymbols>-->
 
 	  <!--BinaryFormatterを使えるようにする-->
 	<EnableUnsafeBinaryFormatterSerialization>true</EnableUnsafeBinaryFormatterSerialization>
@@ -27,11 +27,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ClangSharp" Version="20.1.2.1" />
-    <PackageReference Include="ClangSharp.Interop" Version="20.1.2.1" />
+    <PackageReference Include="ClangSharp" Version="20.1.2.4" />
+    <PackageReference Include="ClangSharp.Interop" Version="20.1.2.4" />
     <PackageReference Include="libclang.runtime.win-x64" Version="20.1.2" />
     <PackageReference Include="libClangSharp.runtime.win-x64" Version="20.1.2" />
-    <PackageReference Include="Microsoft.Build" Version="17.15.0-preview-25277-114" />
+    <PackageReference Include="Microsoft.Build" Version="17.14.28" />
   </ItemGroup>
 
   <ItemGroup>

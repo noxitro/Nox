@@ -224,7 +224,7 @@ namespace ReflectionGenerator
     public class CodeStringBuilder : BaseCodeWriter
     {
         #region フィールド
-        private readonly System.Text.StringBuilder _StringBuilder = new System.Text.StringBuilder();
+        private readonly System.Text.StringBuilder _StringBuilder = new ();
         #endregion
 
         #region 公開メソッド

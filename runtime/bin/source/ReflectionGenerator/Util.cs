@@ -140,4 +140,23 @@ namespace ReflectionGenerator
 		}
         #endregion
     }
+
+    public static class EnumUtil<T> where T : struct, System.Enum
+	{
+        #region フィールド
+        private static readonly T[] _ValueList = (T[])System.Enum.GetValues(typeof(T));
+        private static readonly string[] _NameList = System.Enum.GetNames(typeof(T));
+		#endregion
+
+		#region 公開プロパティ
+		public static ReadOnlySpan<T> ValueList => _ValueList;
+        public static ReadOnlySpan<string> NameList => _NameList;
+        #endregion
+
+        #region 非公開メソッド
+        private static class IntegralValueHolder<Integral> where Integral : struct, System.Numerics.IBinaryInteger<Integral>
+        {
+		}
+		#endregion
+	}
 }
