@@ -19,6 +19,7 @@
 #include	<utility>
 #include	<vector>
 #include	<ranges>
+#include	<expected>
 
 #include	"basic_type.h"
 #include	"memory/stl_allocate_adapter.h"
@@ -36,6 +37,12 @@ namespace nox
 
 	template<class T>
 	using Vector = std::vector<T, memory::StlAllocateAdapter<T>>;
+
+	template<class T>
+	using Deque = std::deque<T, memory::StlAllocateAdapter<T>>;
+
+	template<class T>
+	using Queue = std::queue<T, Deque<T>>;
 
 	template<class T>
 	using List = std::list<T, memory::StlAllocateAdapter<T>>;

@@ -172,18 +172,18 @@ namespace nox::stack_walker
 			[[nodiscard]] inline	constexpr uint8 GetCollectLength()const noexcept { return collect_length_; }
 
 			[[nodiscard]] inline	const StackFrame& GetStack(const uint8 index)const {
-				NOX_ASSERT_ID(index < collect_length_, nox::assertion::id::OutOfRange, U"コールスタックの取得に失敗　範囲外アクセス");
+				NOX_ASSERT(index < collect_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
 				return stack_table_[index];
 			}
 
 			[[nodiscard]] inline	StackFrame& GetStack(const uint8 index){
-				NOX_ASSERT_ID(index < collect_length_, nox::assertion::id::OutOfRange, U"コールスタックの取得に失敗　範囲外アクセス");
+				NOX_ASSERT(index < collect_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
 				return stack_table_[index];
 			}
 
 			inline void SetCollectLength(const uint8 length)
 			{
-				NOX_ASSERT_ID(length <= stack_length_, nox::assertion::id::OutOfRange, U"コールスタックの取得に失敗　範囲外アクセス");
+				NOX_ASSERT(length <= stack_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
 				collect_length_ = length;
 			}
 

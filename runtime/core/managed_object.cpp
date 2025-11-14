@@ -30,7 +30,7 @@ void	nox::ManagedObject::AddRef()
 void	nox::ManagedObject::ReleaseRef()
 {
 	const auto ref_count = nox::os::atomic::Decrement(ref_count_);
-	NOX_ASSERT(ref_count >= -2, U"");
+	NOX_ASSERT(ref_count >= -2, u"");
 
 	switch (ref_count)
 	{

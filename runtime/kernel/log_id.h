@@ -7,23 +7,23 @@
 
 namespace nox::log_id
 {
-	struct Kernel : LogId
+	struct Kernel : nox::log_id::LogId
 	{
-		inline constexpr std::u32string_view operator()() const noexcept { return U"Kernel"; }
+		inline constexpr std::u16string_view operator()() const noexcept { return u"Kernel"; }
 	};
 
-	struct Memory : LogId
+	struct Memory : nox::log_id::LogId
 	{
-		inline constexpr std::u32string_view operator()() const noexcept { return U"Memory"; }
+		inline constexpr std::u16string_view operator()() const noexcept { return u"Memory"; }
 	};
 
-	struct OS : LogId
+	struct OS : nox::log_id::LogId
 	{
-		inline constexpr std::u32string_view operator()() const noexcept { return U"OS"; }
+		inline constexpr std::u16string_view operator()() const noexcept { return u"OS"; }
 	};
 
-	struct Reflection : LogId
+	struct Reflection : nox::log_id::LogId
 	{
-		inline constexpr std::u32string_view operator()() const noexcept { return U"Reflection"; }
+		inline constexpr std::u16string_view operator()() const noexcept { return u"Reflection"; }
 	};
 }

@@ -4,15 +4,20 @@
 ///	@brief	socket_scheduler
 #pragma once
 #include	"../../object.h"
+#include	"dev_net_definition.h"
 
 namespace nox::dev::net
 {
+	class Entity;
 	class Server;
 	class Client;
 
 	class SocketScheduler : public nox::Object, public nox::ISingleton<SocketScheduler>
 	{
 		NOX_DECLARE_OBJECT(nox::dev::net::SocketScheduler, nox::Object);
+		friend struct SocketSchedulerDetail;
+	private:
+		
 	public:
 		SocketScheduler();
 		~SocketScheduler()override;
@@ -29,7 +34,7 @@ namespace nox::dev::net
 
 	private:
 		void	UpdateTask();
-		void	CheckConnectionServerClient();
+		void	DoConnectionServerClient();
 
 	private:
 		nox::Vector<std::reference_wrapper<Server>>	server_list_;

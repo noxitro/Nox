@@ -359,7 +359,7 @@ namespace nox::reflection
 			template<class R>
 			inline constexpr std::optional<std::conditional_t<std::is_void_v<R>, std::monostate, R>> InvokeImpl(std::span<void*> args)const
 			{
-				const std::uint8_t raw_arg_length = static_cast<std::uint8_t>(args.size()) - (IsStatic() ? 0 : 1);
+			//	const std::uint8_t raw_arg_length = static_cast<std::uint8_t>(args.size()) - (IsStatic() ? 0 : 1);
 				const std::optional<ResultType(*)(void**)> function_pointer_result = FindFunctionPointer(static_cast<std::uint8_t>(args.size()));
 				if (function_pointer_result.has_value() == false)
 				{

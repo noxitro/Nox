@@ -8,11 +8,12 @@
 
 namespace nox::dev::editor_ipc
 {
-	class EditorIpcServer : public nox::Object, public nox::dev::net::Server, public nox::ISingleton<EditorIpcServer>
+	class EditorIpcServer : public nox::dev::net::Server, public nox::ISingleton<EditorIpcServer>
 	{
+		NOX_DECLARE_OBJECT(nox::dev::editor_ipc::EditorIpcServer, nox::dev::net::Server);
 	public:
 		EditorIpcServer();
-		~EditorIpcServer();
+		~EditorIpcServer()override;
 
 		void	SendQuery(class Query& query);
 

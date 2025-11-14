@@ -609,8 +609,8 @@ namespace nox::reflection
 		/// @brief		参照メンバ変数情報
 		template<class R>
 		inline constexpr nox::reflection::detail::VariableInfoImpl<R> CreateVariableInfoMemberRef(
-			const nox::reflection::Type& pointeeType,
-			const nox::reflection::Type& ownerType,
+			const nox::reflection::Type& type,
+			const nox::reflection::Type& owner_type,
 			ReflectionStringView name,
 			ReflectionStringView fullname,
 			ReflectionStringView _namespace,
@@ -638,8 +638,8 @@ namespace nox::reflection
 				attribute_list,
 				attribute_list_length,
 				additinal_flags,
-				pointeeType,
-				ownerType,
+				type,
+				owner_type,
 				setter_member_func,
 				getter_member_func,
 				getter_address_member_func,

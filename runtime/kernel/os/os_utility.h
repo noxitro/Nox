@@ -3,11 +3,10 @@
 ///	@file	os_utility.h
 ///	@brief	os_utility
 #pragma once
-#include	"os_definition.h"
-
-#include	"../basic_definition.h"
-
 #include	<string_view>
+
+#include	"os_definition.h"
+#include	"../basic_definition.h"
 
 namespace nox::os
 {

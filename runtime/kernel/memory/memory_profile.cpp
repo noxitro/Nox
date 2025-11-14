@@ -4,6 +4,9 @@
 ///	@brief	memory_profile
 #include	"stdafx.h"
 #include	"memory_profile.h"
+
+#include	"nox_memory.h"
+
 //#include	"../stack_trace.h"
 #include	"../algorithm.h"
 #include	"../os/atomic.h"
@@ -133,6 +136,6 @@ const nox::memory::profile::ProfileData& nox::memory::profile::FindProfileData(n
 		return handle_data;
 	}
 
-	NOX_ASSERT(false, nox::util::Format(U"プロファイルデータが見つかりませんでした handle:{0}", profiler_handle));
+	NOX_ASSERT(false, nox::util::Format(u"プロファイルデータが見つかりませんでした handle:{0}", profiler_handle));
 	return *(ProfileData*)nullptr;
 }

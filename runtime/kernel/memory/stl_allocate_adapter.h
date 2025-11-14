@@ -1,9 +1,14 @@
 ﻿#pragma once
-
-#include	"memory.h"
+#include	"memory_definition.h"
 
 namespace nox::memory
 {
+	namespace detail
+	{
+		void* AllocateStlAllocateAdapter(size_t size);
+		void DeallocateStlAllocateAdapter(void* ptr);
+	}
+
 	/// @brief  STLアロケータアダプタ
 	/// @tparam T 確保する型
 	template<class T>
@@ -34,7 +39,7 @@ namespace nox::memory
 		*/
 		inline T* allocate(const size_t num)
 		{
-			return static_cast<T*>(memory::Allocate(sizeof(T) * num, memory::InstanceType::Stl));
+			return static_cast<T*>(nox::memory::detail::AllocateStlAllocateAdapter(sizeof(T) * num));
 		}
 
 		/**
@@ -44,7 +49,7 @@ namespace nox::memory
 		*/
 		inline void deallocate(T* const ptr, const size_t /*num*/)
 		{
-			memory::Deallocate(ptr);
+			nox::memory::detail::DeallocateStlAllocateAdapter(ptr);
 		}
 	};
 }

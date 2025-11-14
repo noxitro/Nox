@@ -280,7 +280,7 @@ std::span<nox::char16>	nox::stack_walker::detail::WalkerBase::GetStackTraceU16St
 
 void	nox::stack_walker::Initialize()
 {
-	NOX_ASSERT(mHandlePtr == nullptr, U"初期化済み");
+	NOX_ASSERT(mHandlePtr == nullptr, u"初期化済み");
 	mHandlePtr = os::LoadDLL(u"kernel32.dll");
 	gRtiCaptureStackBackTrace = os::GetProcAddress<StackBackTraceFuncType>(mHandlePtr, "RtlCaptureStackBackTrace");
 
@@ -288,7 +288,7 @@ void	nox::stack_walker::Initialize()
 
 void	nox::stack_walker::Finalize()
 {
-	NOX_ASSERT(mHandlePtr != nullptr, U"破棄済み");
+	NOX_ASSERT(mHandlePtr != nullptr, u"破棄済み");
 	gRtiCaptureStackBackTrace = nullptr;
 	os::UnloadDLL(mHandlePtr);
 }

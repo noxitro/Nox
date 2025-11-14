@@ -21,7 +21,7 @@ namespace nox
 
 		/// @brief 参照カウンタ取得
 		[[nodiscard]] inline	nox::int32	GetRefCount()const noexcept{ return ref_count_; }
-	//private:
+	private:
 		/// @brief 参照カウンタ
 		volatile nox::int32 ref_count_;
 	};

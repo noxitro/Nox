@@ -38,6 +38,9 @@ namespace nox::concepts
 	template<class T>
 	concept Trivial = std::is_trivial_v<T>;
 
+	template<class T>
+	concept TriviallyCopyable = std::is_trivially_copyable_v<T>;
+
 	namespace detail
 	{
 		template<class T>
