@@ -3,17 +3,15 @@
 ///	@file	utility.h
 ///	@brief	utility
 #pragma once
-#include <functional>
 
-namespace nox::util
+namespace nox
 {
 	class ScopeExit
 	{
 	public:
-		inline explicit ScopeExit(const std::function<void()>& func)noexcept :
+		inline constexpr explicit ScopeExit(void(* const func)())noexcept :
 			func_(func)
 		{
-
 		}
 
 		inline ~ScopeExit()
@@ -22,6 +20,6 @@ namespace nox::util
 		}
 
 	private:
-		std::function<void()> func_;
+		void(* const func_)();
 	};
 }

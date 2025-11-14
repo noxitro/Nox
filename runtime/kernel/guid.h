@@ -6,7 +6,6 @@
 #include "basic_type.h"
 #include "nox_string.h"
 #include "type_traits/concepts.h"
-#include "type_traits/type_traits.h"
 
 namespace nox
 {

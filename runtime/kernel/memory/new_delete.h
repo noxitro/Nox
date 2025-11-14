@@ -6,7 +6,7 @@
 ///				inline展開させると、ビルドエラーになるのでcppに分離
 
 #pragma once
-#include	"nox_memory.h"
+#include	"memory.h"
 #if NOX_WIN64
 
 #include	"../os/windows.h"

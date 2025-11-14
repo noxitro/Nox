@@ -23,8 +23,8 @@ namespace nox::dev::editor_ipc
 		void Deserialize(SocketStreamReader& reader);
 
 	protected:
-		virtual void OnSerialize(SocketStreamWriter&) {}
-		virtual void OnDeserialize(SocketStreamReader&) {}
+		virtual void OnSerialize(SocketStreamWriter& writer) {}
+		virtual void OnDeserialize(SocketStreamReader& reader) {}
 
 	private:
 		nox::uint32 id_;

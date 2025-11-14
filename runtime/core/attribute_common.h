@@ -8,6 +8,8 @@ namespace nox
 {
 	namespace attr
 	{
+		
+
 		/// @brief シリアライズ対象
 		class DataMember : public Attribute
 		{

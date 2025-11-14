@@ -73,7 +73,7 @@ namespace nox
 	protected:
 		inline ISingleton()noexcept(false)
 		{
-			NOX_ASSERT(ISingleton<T>::instance_ == nullptr, u"Singleton instance is already created");
+			NOX_ASSERT(ISingleton<T>::instance_ == nullptr, U"Singleton instance is already created");
 		}
 
 	private:

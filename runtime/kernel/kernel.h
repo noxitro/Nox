@@ -13,7 +13,7 @@
 
 #include	"assertion.h"
 #include	"singleton.h"
-#include	"memory/nox_memory.h"
+#include	"memory/memory.h"
 #include	"memory/memory_util.h"
 
 //	os
@@ -52,5 +52,3 @@
 #include	"stop_watch.h"
 #include	"log_id.h"
 #include	"guid.h"
-#include	"dynamic_array.h"
-#include	"utility.h"

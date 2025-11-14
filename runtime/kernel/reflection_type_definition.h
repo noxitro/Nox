@@ -299,9 +299,6 @@ namespace nox::reflection
 
 		/// @brief コピー代入演算子
 		CopyAssignment = 1 << 15,
-
-		/// @brief consteval
-		Consteval = 1 << 16,
 	};
 
 	/// @brief フィールド属性情報

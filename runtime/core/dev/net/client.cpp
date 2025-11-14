@@ -8,4 +8,5 @@
 void nox::dev::net::Client::Initialize(const InitializeContext& context)
 {
 	initialize_context_ = context;
+	state_ = ConnectionState::Init;
 }

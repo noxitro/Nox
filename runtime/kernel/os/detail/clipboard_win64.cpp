@@ -37,7 +37,7 @@ bool nox::os::clipboard::Clear()
 bool nox::os::clipboard::SetText(const nox::StringView text)
 {
 	std::array<nox::char8, 1024> buffer = { 0 };
-	NOX_ASSERT(text.size() < buffer.size(), nox::util::Format(u"buffer size over:{0}, max:{1}", text.size(), buffer.size()));
+	NOX_ASSERT(text.size() < buffer.size(), nox::util::Format(U"buffer size over:{0}, max:{1}", text.size(), buffer.size()));
 	return nox::os::clipboard::SetText(nox::unicode::ConvertU8String(text, buffer));
 }
 

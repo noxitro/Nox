@@ -12,13 +12,14 @@
 #include	"os/windows.h"
 #endif // NOX_WIN64
 
+
 #include	<iostream>
 
 namespace nox
 {
-	inline constexpr std::u16string_view GetLogCategoryName(nox::debug::LogCategory log_category)noexcept
+	inline constexpr nox::StringView GetLogCategoryName(nox::debug::LogCategory log_category)noexcept
 	{
-		constexpr std::array<std::u16string_view, nox::util::ToUnderlying(nox::debug::LogCategory::_Max)> table =
+		constexpr std::array<nox::StringView, nox::util::ToUnderlying(nox::debug::LogCategory::_Max)> table =
 		{
 			u"Info",
 			u"Warning",
@@ -39,43 +40,19 @@ namespace nox
 	constinit std::array<ThreadData, nox::os::MAX_THREAD_ID> thread_data_table = { 0 };
 }
 
-void nox::debug::detail::TraceDirect(nox::debug::LogCategory log_category, const std::u16string_view category, const std::u32string_view message, bool isNewLine, const std::source_location& source_location)
+void nox::debug::detail::TraceDirect(nox::debug::LogCategory log_category, const std::u32string_view category, const std::u32string_view message, bool isNewLine, const std::source_location& source_location)
 {
 	std::array<char16, 2048> buffer = { 0 };
 	//source_location;
 	if (isNewLine)
 	{
-		nox::util::Format(buffer, u"[{0}][{1}]{2}\n", GetLogCategoryName(log_category), category.data(), message.data());
+//		util::Format(buffer, u"[{0}][{1}]{2}\n", GetLogCategoryName(log_category), category.data(), message.data());
 	}
 	else
 	{
-		util::Format(buffer, u"[{0}][{1}]{2}", GetLogCategoryName(log_category), category.data(), message.data());
+	//	util::Format(buffer, u"[{0}][{1}]{2}", GetLogCategoryName(log_category), category.data(), message.data());
 	}
-	
-	const wchar_t* converted_str = nox::util::CharCast<wchar_t>(buffer.data());
 
-	//	コンソールへの出力
-#if NOX_WINDOWS
-	//	デバッグウィンドウに出力
-	::OutputDebugStringW(converted_str);
-#endif // NOX_WIN64
-
-	std::wcout << converted_str ;
-}
-
-void nox::debug::detail::TraceDirect(nox::debug::LogCategory log_category, const std::u16string_view category, const std::u16string_view message, bool isNewLine, const std::source_location& source_location)
-{
-	std::array<char16, 2048> buffer = { 0 };
-	//source_location;
-	if (isNewLine)
-	{
-		nox::util::Format(buffer, u"[{0}][{1}]{2}\n", "Info", category.data(), message.data());
-	}
-	else
-	{
-		util::Format(buffer, u"[{0}][{1}]{2}", GetLogCategoryName(log_category), category.data(), message.data());
-	}
-	
 	const wchar_t* converted_str = nox::util::CharCast<wchar_t>(buffer.data());
 
 	//	コンソールへの出力

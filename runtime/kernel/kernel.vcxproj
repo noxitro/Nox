@@ -18,10 +18,6 @@
     <ClInclude Include="advanced_definition.h" />
     <ClInclude Include="advanced_type.h" />
     <ClInclude Include="algorithm.h" />
-    <ClInclude Include="algorithm_lite.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
     <ClInclude Include="any.h" />
     <ClInclude Include="assertion.h" />
     <ClInclude Include="basic_definition.h" />
@@ -30,19 +26,11 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="dynamic_array.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
     <ClInclude Include="easing.h">
       <SubType>
       </SubType>
     </ClInclude>
     <ClInclude Include="guid.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="inplace_array.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -109,7 +97,7 @@
     <ClInclude Include="math\vector3d.h" />
     <ClInclude Include="math\vector4d.h" />
     <ClInclude Include="math\vector_util.h" />
-    <ClInclude Include="memory\nox_memory.h" />
+    <ClInclude Include="memory\memory.h" />
     <ClInclude Include="memory\memory_definition.h" />
     <ClInclude Include="memory\memory_profile.h">
       <SubType>
@@ -196,10 +184,6 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="string_util.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
     <ClInclude Include="type_id.h">
       <SubType>
       </SubType>
@@ -228,10 +212,6 @@
     <ClCompile Include="advanced_definition.cpp" />
     <ClCompile Include="advanced_type.cpp" />
     <ClCompile Include="algorithm.cpp" />
-    <ClCompile Include="algorithm_lite.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
     <ClCompile Include="any.cpp" />
     <ClCompile Include="assertion.cpp" />
     <ClCompile Include="basic_definition.cpp" />
@@ -240,19 +220,11 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="dynamic_array.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
     <ClCompile Include="easing.cpp">
       <SubType>
       </SubType>
     </ClCompile>
     <ClCompile Include="guid.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="inplace_array.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -323,7 +295,7 @@
     <ClCompile Include="math\vector3d.cpp" />
     <ClCompile Include="math\vector4d.cpp" />
     <ClCompile Include="math\vector_util.cpp" />
-    <ClCompile Include="memory\nox_memory.cpp" />
+    <ClCompile Include="memory\memory.cpp" />
     <ClCompile Include="memory\memory_definition.cpp" />
     <ClCompile Include="memory\memory_profile.cpp">
       <SubType>
@@ -402,10 +374,6 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="reflection_type_definition.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="string_util.cpp">
       <SubType>
       </SubType>
     </ClCompile>

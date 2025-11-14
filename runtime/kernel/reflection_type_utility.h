@@ -8,6 +8,7 @@
 #include	"type_traits/type_name.h"
 #include	"type_traits/object_pointer_signature.h"
 #include	"algorithm.h"
+#include	"string_format.h"
 
 namespace nox
 {

@@ -6,7 +6,7 @@
 #include	"entity.h"
 namespace nox::dev::net
 {
-	/*enum class ConnectionState : nox::uint8
+	enum class ConnectionState : nox::uint8
 	{
 		Init,
 		OpenConnection,
@@ -19,11 +19,10 @@ namespace nox::dev::net
 		ConnectionError,
 		Disconnected,
 		DisconnectedRecover
-	};*/
+	};
 
 	class Client : public nox::dev::net::Entity
 	{
-		NOX_DECLARE_OBJECT(nox::dev::net::Client, nox::dev::net::Entity);
 	public:
 		struct InitializeContext
 		{

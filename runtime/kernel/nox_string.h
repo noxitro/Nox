@@ -3,9 +3,9 @@
 ///	@file	string.h
 ///	@brief	string
 #pragma once
-#include	"advanced_type.h"
-#include	"basic_definition.h"
 
+#include	"advanced_type.h"
+#include	"unicode_converter.h"
 namespace nox
 {
 	//	前方宣言
@@ -158,11 +158,20 @@ namespace nox
 
 
 #pragma region 変換
-		nox::NString ToNString()const;
+		inline nox::NString ToNString()const
+		{
+			return unicode::ConvertNString(string_);
+		}
 
-		nox::WString ToWString()const;
+		inline nox::WString ToWString()const
+		{
+			return unicode::ConvertWString(string_);
+		}
 
-		nox::U32String	ToU32String()const;
+		inline	nox::U32String	ToU32String()const
+		{
+			return unicode::ConvertU32String(string_);
+		}
 #pragma endregion
 	private:
 		string_type string_;

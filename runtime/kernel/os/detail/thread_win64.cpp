@@ -153,7 +153,7 @@ void	nox::os::detail::ThreadWin64::AssignThreadId()
 	}
 
 	//	空きスレッドが見つからなかった
-	NOX_ASSERT(threadId >= 0, u"空きスレッドが見つかりませんでした");
+	NOX_ASSERT(threadId >= 0, U"空きスレッドが見つかりませんでした");
 
 	if (::DuplicateHandle(
 		GetCurrentProcess(),
@@ -165,7 +165,7 @@ void	nox::os::detail::ThreadWin64::AssignThreadId()
 		DUPLICATE_SAME_ACCESS
 	) == FALSE)
 	{
-		NOX_ASSERT(false, u"スレッドの複製に失敗しました");
+		NOX_ASSERT(false, U"スレッドの複製に失敗しました");
 		return;
 	}
 

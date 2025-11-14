@@ -153,6 +153,27 @@ namespace nox::util
 		return ary;
 	}*/
 #pragma endregion
+	
+#pragma region 文字列操作
+	/// @brief 確保済みバッファに対しての文字列コピー
+	/// @tparam CharType 
+	/// @param source 
+	/// @param dest_buffer 
+	template <concepts::Char CharType>
+	inline void StrCopy(std::basic_string_view<CharType> source, std::span<CharType> dest_buffer)
+	{
+		NOX_ASSERT(dest_buffer.size() >= source.size(), U"buffer size over");
+		std::ranges::copy(source, dest_buffer.data());
+		//	buffer[size] = std::char_traits<Char>::eof();	//	終端文字を格納
+
+		//	終端文字を格納
+		//	サイズがちょうどの場合は何もしない
+		if (dest_buffer.size() < source.size())
+		{
+			dest_buffer[source.size()] = 0;	
+		}
+	}
+#pragma endregion
 
 //#if false
 //	/// @brief 関数ポインタのアドレスをint64で取得する
@@ -214,7 +235,7 @@ namespace nox::util
 	template<class T>
 	inline constexpr decltype(auto) At(T&& container, size_t length, size_t index)noexcept(false)
 	{
-		NOX_ASSERT(index < length, nox::assertion::id::OutOfRange{}, u"index over");
+		NOX_ASSERT_ID(index < length, nox::assertion::id::OutOfRange, U"index over");
 		return container[index];
 	}
 

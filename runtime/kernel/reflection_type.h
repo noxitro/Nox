@@ -720,7 +720,7 @@ namespace nox::reflection
 	namespace detail
 	{
 		/// @brief 無効型
-		constexpr nox::reflection::detail::CompileTimeInvalidType k_invalid_type{};
+		constexpr nox::reflection::detail::CompileTimeInvalidType kInvalidType{};
 
 		template<class T>
 		struct ReflectionTypeHolder;
@@ -748,7 +748,7 @@ namespace nox::reflection
 #pragma region 関数群
 	inline constexpr const nox::reflection::Type& GetInvalidType()noexcept
 	{
-		return nox::reflection::detail::k_invalid_type;
+		return nox::reflection::detail::kInvalidType;
 	}
 
 	/// @brief 型情報を取得
