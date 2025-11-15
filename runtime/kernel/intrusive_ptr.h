@@ -128,7 +128,7 @@ namespace nox
 			}
 			else
 			{
-				NOX_ASSERT(false, U"ここには来ないはず");
+				NOX_ASSERT(false, u"ここには来ないはず");
 			}
 		}
 

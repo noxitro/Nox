@@ -17,7 +17,7 @@ namespace nox::assertion::id
 {
 	struct StreamError : ErrorId
 	{
-		inline constexpr std::u32string_view operator()() const noexcept { return U"StreamError"; }
+		inline constexpr std::u16string_view operator()() const noexcept { return u"StreamError"; }
 	};
 }
 
@@ -44,7 +44,7 @@ namespace nox::io
 		, owned_size_(0)
 		, writable_(false)
 	{
-		NOX_ASSERT(data != nullptr || size == 0, U"MemoryStream: data が nullptr なのに size > 0 です");
+		NOX_ASSERT(data != nullptr || size == 0, u"MemoryStream: data が nullptr なのに size > 0 です");
 	}
 
 	bool MemoryStream::Seek(long long offset, SeekOrigin origin) const noexcept
@@ -57,33 +57,33 @@ namespace nox::io
 		case SeekOrigin::End:     base = static_cast<long long>(size_); break;
 		}
 		const long long next = base + offset;
-		if (next < 0) { NOX_ASSERT(false, U"MemoryStream::Seek: 負の位置は無効です"); return false; }
+		if (next < 0) { NOX_ASSERT(false, u"MemoryStream::Seek: 負の位置は無効です"); return false; }
 		const nox::uint64 p = static_cast<nox::uint64>(next);
-		if (p > size_) { NOX_ASSERT(false, U"MemoryStream::Seek: 範囲外の位置です"); return false; }
+		if (p > size_) { NOX_ASSERT(false, u"MemoryStream::Seek: 範囲外の位置です"); return false; }
 		pos_ = p;
 		return true;
 	}
 
 	nox::uint64 MemoryStream::Read(void* dst, nox::uint64 bytes) const
 	{
-		NOX_ASSERT(dst != nullptr || bytes == 0, U"MemoryStream::Read: dst が nullptr です");
+		NOX_ASSERT(dst != nullptr || bytes == 0, u"MemoryStream::Read: dst が nullptr です");
 		if (bytes == 0) return 0;
 		const nox::uint64 avail = (pos_ <= size_) ? (size_ - pos_) : 0;
 		const nox::uint64 n = (bytes <= avail) ? bytes : avail;
 		if (n > 0)
 		{
 			const nox::uint8* src = (view_ != nullptr) ? view_ : (owned_size_ ? owned_.data() : nullptr);
-			NOX_ASSERT(src != nullptr, U"MemoryStream::Read: 内部バッファが無効です");
+			NOX_ASSERT(src != nullptr, u"MemoryStream::Read: 内部バッファが無効です");
 			::memcpy(dst, src + pos_, static_cast<size_t>(n));
 			pos_ += n;
 		}
-		NOX_ASSERT(n == bytes, U"MemoryStream::Read: 予期せぬEOF/読み取り不足");
+		NOX_ASSERT(n == bytes, u"MemoryStream::Read: 予期せぬEOF/読み取り不足");
 		return n;
 	}
 
 	bool MemoryStream::Write(const void* src, nox::uint64 bytes)
 	{
-		NOX_ASSERT(CanWrite(), U"MemoryStream::Write: 書き込み不可のストリームです");
+		NOX_ASSERT(CanWrite(), u"MemoryStream::Write: 書き込み不可のストリームです");
 		if (!CanWrite()) return false;
 		if (bytes == 0) return true;
 
@@ -95,7 +95,7 @@ namespace nox::io
 			size_ = static_cast<nox::uint64>(owned_.size());
 			owned_size_ = size_;
 		}
-		NOX_ASSERT(src != nullptr, U"MemoryStream::Write: src が nullptr です");
+		NOX_ASSERT(src != nullptr, u"MemoryStream::Write: src が nullptr です");
 		::memcpy(owned_.data() + pos_, src, static_cast<size_t>(bytes));
 		pos_ += bytes;
 		return true;
@@ -146,7 +146,7 @@ namespace nox::io
 			{
 				LARGE_INTEGER li{};
 				const BOOL okSize = ::GetFileSizeEx(h, &li);
-				NOX_ASSERT(okSize, U"FileStream::Open: GetFileSizeEx に失敗しました");
+				NOX_ASSERT(okSize, u"FileStream::Open: GetFileSizeEx に失敗しました");
 				if (okSize)
 				{
 					const nox::uint64 sz = static_cast<nox::uint64>(li.QuadPart);
@@ -155,7 +155,7 @@ namespace nox::io
 						buffer_.resize(static_cast<size_t>(sz));
 						DWORD readBytes = 0;
 						const BOOL ok = ::ReadFile(h, buffer_.data(), static_cast<DWORD>(sz), &readBytes, nullptr);
-						NOX_ASSERT(ok && readBytes == sz, U"FileStream::Open: ReadFile に失敗しました");
+						NOX_ASSERT(ok && readBytes == sz, u"FileStream::Open: ReadFile に失敗しました");
 						length_ = static_cast<nox::uint64>(readBytes);
 					}
 				}
@@ -164,11 +164,11 @@ namespace nox::io
 			else
 			{
 				NOX_ASSERT(mode_ == FileMode::OpenOrCreate || mode_ == FileMode::Create || mode_ == FileMode::CreateNew,
-					U"FileStream::Open: ファイルが存在せず Open モードで失敗しました");
+					u"FileStream::Open: ファイルが存在せず Open モードで失敗しました");
 			}
 		}
 #else
-		NOX_ASSERT(false, U"FileStream::Open: 非Windowsは未実装です");
+		NOX_ASSERT(false, u"FileStream::Open: 非Windowsは未実装です");
 		return false;
 #endif
 		length_ = static_cast<nox::uint64>(buffer_.size());
@@ -185,32 +185,32 @@ namespace nox::io
 		case SeekOrigin::End:     base = static_cast<long long>(length_); break;
 		}
 		const long long next = base + offset;
-		if (next < 0) { NOX_ASSERT(false, U"FileStream::Seek: 負の位置は無効です"); return false; }
+		if (next < 0) { NOX_ASSERT(false, u"FileStream::Seek: 負の位置は無効です"); return false; }
 		const nox::uint64 p = static_cast<nox::uint64>(next);
-		if (p > length_) { NOX_ASSERT(false, U"FileStream::Seek: 範囲外の位置です"); return false; }
+		if (p > length_) { NOX_ASSERT(false, u"FileStream::Seek: 範囲外の位置です"); return false; }
 		pos_ = p;
 		return true;
 	}
 
 	nox::uint64 FileStream::Read(void* dst, nox::uint64 bytes) const
 	{
-		NOX_ASSERT(CanRead(), U"FileStream::Read: 読み込み不可のストリームです");
+		NOX_ASSERT(CanRead(), u"FileStream::Read: 読み込み不可のストリームです");
 		if (!CanRead()) return 0;
 		const nox::uint64 avail = (pos_ <= length_) ? (length_ - pos_) : 0;
 		const nox::uint64 n = (bytes <= avail) ? bytes : avail;
 		if (n > 0)
 		{
-			NOX_ASSERT(dst != nullptr, U"FileStream::Read: dst が nullptr です");
+			NOX_ASSERT(dst != nullptr, u"FileStream::Read: dst が nullptr です");
 			::memcpy(dst, buffer_.data() + pos_, static_cast<size_t>(n));
 			pos_ += n;
 		}
-		NOX_ASSERT(n == bytes, U"FileStream::Read: 予期せぬEOF/読み取り不足");
+		NOX_ASSERT(n == bytes, u"FileStream::Read: 予期せぬEOF/読み取り不足");
 		return n;
 	}
 
 	bool FileStream::Write(const void* src, nox::uint64 bytes)
 	{
-		NOX_ASSERT(CanWrite(), U"FileStream::Write: 書き込み不可のストリームです");
+		NOX_ASSERT(CanWrite(), u"FileStream::Write: 書き込み不可のストリームです");
 		if (!CanWrite()) return false;
 		if (bytes == 0) return true;
 
@@ -219,7 +219,7 @@ namespace nox::io
 		{
 			buffer_.resize(static_cast<size_t>(need));
 		}
-		NOX_ASSERT(src != nullptr, U"FileStream::Write: src が nullptr です");
+		NOX_ASSERT(src != nullptr, u"FileStream::Write: src が nullptr です");
 		::memcpy(buffer_.data() + pos_, src, static_cast<size_t>(bytes));
 		pos_ += bytes;
 		if (pos_ > length_) length_ = pos_;
@@ -238,19 +238,19 @@ namespace nox::io
 
 		HANDLE h = ::CreateFileW(reinterpret_cast<LPCWSTR>(path_u16_.data()),
 			GENERIC_WRITE, 0, nullptr, createDisp, FILE_ATTRIBUTE_NORMAL, nullptr);
-		NOX_ASSERT(h != INVALID_HANDLE_VALUE, U"FileStream::Flush: CreateFileW に失敗しました");
+		NOX_ASSERT(h != INVALID_HANDLE_VALUE, u"FileStream::Flush: CreateFileW に失敗しました");
 		if (h == INVALID_HANDLE_VALUE) return false;
 
 		DWORD written = 0;
 		const BOOL ok = ::WriteFile(h, buffer_.data(), static_cast<DWORD>(length_), &written, nullptr);
 		::CloseHandle(h);
-		NOX_ASSERT(ok && written == length_, U"FileStream::Flush: WriteFile に失敗しました");
+		NOX_ASSERT(ok && written == length_, u"FileStream::Flush: WriteFile に失敗しました");
 		if (!(ok && written == length_)) return false;
 
 		dirty_ = false;
 		return true;
 #else
-		NOX_ASSERT(false, U"FileStream::Flush: 非Windowsは未実装です");
+		NOX_ASSERT(false, u"FileStream::Flush: 非Windowsは未実装です");
 		return false;
 #endif
 	}
@@ -289,7 +289,7 @@ namespace nox::io
 			if ((b & 0x80u) == 0) return value;
 			shift += 7;
 		}
-		NOX_ASSERT(false, U"BinaryReader::Read7BitEncodedUInt32: 不正なエンコードです");
+		NOX_ASSERT(false, u"BinaryReader::Read7BitEncodedUInt32: 不正なエンコードです");
 		return 0;
 	}
 
@@ -304,14 +304,14 @@ namespace nox::io
 			if ((b & 0x80u) == 0) return value;
 			shift += 7;
 		}
-		NOX_ASSERT(false, U"BinaryReader::Read7BitEncodedUInt64: 不正なエンコードです");
+		NOX_ASSERT(false, u"BinaryReader::Read7BitEncodedUInt64: 不正なエンコードです");
 		return 0;
 	}
 
 	nox::uint64 BinaryReader::readPod(void* v, nox::uint64 size)
 	{
 		const auto got = s_.Read(v, size);
-		NOX_ASSERT(got == size, U"");
+		NOX_ASSERT(got == size, u"");
 		return got;
 	}
 }

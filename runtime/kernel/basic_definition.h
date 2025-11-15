@@ -80,3 +80,13 @@ static_assert(false, "not support compiler");
 #define	NOX_CONDITINAL_DEVELOP(x)
 #endif // NOX_DEBUG
 
+/// @brief 一度だけ評価する
+#define NOX_ONCE_EVALUATE(f) \
+	[&](){ \
+		static bool once_evaluated_flag = false; \
+		if (once_evaluated_flag == false) \
+		{ \
+			once_evaluated_flag = true; \
+			f; \
+		} \
+	}()

@@ -24,7 +24,7 @@
 #include	"third_party/fmt/xchar.h"
 #pragma warning(pop)
 
-#include	"algorithm.h"
+#include	"string_util.h"
 
 namespace nox::util
 {
@@ -34,22 +34,22 @@ namespace nox::util
 		size_t GetStringMaxSize();
 
 		template<class CharType> requires(IsCharTypeValue<CharType>)
-		struct FormatStringHolder
+			struct FormatStringHolder
 		{
 			template<class From> requires(!std::is_same_v< CharType, From>)
-			static inline nox::BasicString<CharType> Get(const From* arg)
+				static inline nox::BasicString<CharType> Get(From&& arg)
 			{
 				return nox::unicode::ConvertString<nox::BasicString<CharType>>(arg);
 			}
 
 			template<class From> requires(!std::is_same_v< CharType, From>)
-			static inline  nox::BasicString<CharType> Get(const nox::BasicString<From>& arg)
+				static inline  nox::BasicString<CharType> Get(const nox::BasicString<From>& arg)
 			{
 				return nox::unicode::ConvertString<nox::BasicString<CharType>>(arg);
 			}
 
 			template<class From> requires(!std::is_same_v< CharType, From>)
-				static inline  nox::BasicString<CharType> Get(const std::basic_string_view<From> arg)
+				static inline  nox::BasicString<CharType> Get(std::basic_string_view<From> arg)
 			{
 				return nox::unicode::ConvertString<nox::BasicString<CharType>>(arg);
 			}
@@ -58,7 +58,7 @@ namespace nox::util
 			template<class From> requires(!std::is_same_v< CharType, From>)
 				static inline auto Get(From&& arg, std::span< CharType> dest_buffer)
 			{
-				return nox::unicode::ConvertString<CharType>(std::forward<From>(arg), dest_buffer);
+				return nox::unicode::ConvertString<CharType>(arg, dest_buffer);
 			}
 		};
 
@@ -85,24 +85,26 @@ namespace nox::util
 		template<class To, class From> requires(std::is_same_v<To, std::decay_t<std::remove_pointer_t<std::decay_t<From>>>>)
 			struct CheckThroughFormatString<To, From> : std::true_type {};
 
-		template<class To, class From> requires(IsStringClassAllValue<std::decay_t<From>> && std::is_same_v<To, typename std::decay_t<From>::value_type>)
+		template<class To, class From> requires(IsStringClassAllValue<std::decay_t<From>>&& std::is_same_v<To, typename std::decay_t<From>::value_type>)
 			struct CheckThroughFormatString<To, From> : std::true_type {};
 
 		template<class To, class From> requires(IsCharTypeValue<To>)
 			constexpr bool CheckThroughFormatStringValue = CheckThroughFormatString<To, From>::value;
 
-		template<class To, class From> requires(std::is_void_v<std::void_t<FormatStringHolder<To>>>)
+		template<class From, class To>
+		inline constexpr bool IsFormatterValue = ::fmt::is_formattable<From, To>::value || std::is_convertible_v<From, std::basic_string_view<To>>;
+
+
+		template<nox::concepts::Char To, class From> requires(IsFormatterValue<From, To>)
 		inline auto ToFormatArg(From&& arg)
 		{
-			if constexpr (CheckThroughFormatStringValue<To, From> == true)
-			{
-				return arg;
-			}
-			else
-			{
-				return FormatStringHolder<To>::Get(arg);
-			}
-			
+			return arg;
+		}
+
+		template<nox::concepts::Char To, class From> //requires(fmt::is_formattable<From, To>::value || std::is_convertible_v<From, std::basic_string_view<To>>)
+		inline decltype(auto) ToFormatArg(From&& arg)
+		{
+			return FormatStringHolder<To>::Get(arg);
 		}
 
 		/// @brief バッファ指定版
@@ -111,18 +113,17 @@ namespace nox::util
 		/// @param arg 
 		/// @param dest_buffer 
 		/// @return 
-		template<class To, class From> requires(std::is_void_v<std::void_t<FormatStringHolder<To>>>)
+		template<nox::concepts::Char To, class From> requires(IsFormatterValue<From, To>)
+			inline auto ToFormatArg(From&& arg, std::span<To>)
+		{
+			return arg;
+		}
+
+		template<nox::concepts::Char To, class From> requires(!IsFormatterValue<From, To>)
 			inline auto ToFormatArg(From&& arg, std::span<To> dest_buffer)
 		{
-			if constexpr (CheckThroughFormatStringValue<To, From> == true)
-			{
-				return arg;
-			}
-			else
-			{
-				FormatStringHolder<To>::Get(arg, dest_buffer);
-				return dest_buffer.data();
-			}
+			FormatStringHolder<To>::Get(arg, dest_buffer);
+			return dest_buffer.data();
 		}
 	}
 
@@ -175,21 +176,21 @@ namespace nox::util
 
 		//	span ver
 		template<concepts::Char CharType, class... Args>
-		inline void FormatImpl(std::span<CharType> dest_buffer, fmt::basic_string_view<CharType> format_str, Args&&... args)
+		inline void FormatImpl(std::span<CharType> dest_buffer, ::fmt::basic_string_view<CharType> format_str, Args&&... args)
 		{
-			fmt::basic_memory_buffer<CharType> buf;
-			fmt::detail::vformat_to(buf, format_str, ::fmt::make_format_args<::fmt::buffered_context<CharType>>(args...));
+			::fmt::basic_memory_buffer<CharType> buf;
+			::fmt::detail::vformat_to(buf, format_str, ::fmt::make_format_args<::fmt::buffered_context<CharType>>(args...));
 
 			const size_t bufSize = buf.size();
-			fmt::detail::assume(bufSize < nox::util::detail::GetStringMaxSize<CharType>());
+			::fmt::detail::assume(bufSize < nox::util::detail::GetStringMaxSize<CharType>());
 
-			util::StrCopy({ buf.data(), bufSize }, dest_buffer);
+			nox::util::StrCopy({ buf.data(), bufSize }, dest_buffer);
 		}
 
 		template<concepts::Char CharType, class FormatStr, class ArgsTuple, size_t... Indices>
-		inline void FormatImpl(std::span<CharType> dest_buffer, const FormatStr& format_str, ArgsTuple&& source, std::span<std::span<CharType>> dest_buffer_array, std::index_sequence<Indices...>)
+		inline void Format(std::span<CharType> dest_buffer, const FormatStr& format_str, ArgsTuple&& source, std::span<std::span<CharType>> dest_buffer_array, std::index_sequence<Indices...>)
 		{
-			FormatImpl(dest_buffer, fmt::detail::to_string_view(format_str), nox::util::detail::ToFormatArg<CharType>(std::get<Indices>(source), dest_buffer_array[Indices])...);
+			nox::util::detail::FormatImpl(dest_buffer, ::fmt::detail::to_string_view(format_str), nox::util::detail::ToFormatArg<CharType>(std::get<Indices>(source), dest_buffer_array[Indices])...);
 		}
 	}
 
@@ -224,6 +225,6 @@ namespace nox::util
 			args_span[i] = std::span<nox::StringCharType<S>>(args_buffer[i]);
 		}
 
-		util::detail::FormatImpl(dest_buffer, format_str, std::make_tuple(std::forward<Args>(args)...), std::span<std::span<nox::StringCharType<S>>>(args_span), std::make_index_sequence<sizeof...(Args)>());
+		nox::util::detail::Format(dest_buffer, format_str, std::make_tuple(std::forward<Args>(args)...), std::span<std::span<nox::StringCharType<S>>>(args_span), std::make_index_sequence<sizeof...(Args)>());
 	}
 }

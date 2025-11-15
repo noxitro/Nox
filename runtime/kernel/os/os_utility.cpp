@@ -45,7 +45,7 @@ void* nox::os::detail::GetProcAddressImpl(void* const moduleHandle, const char* 
 	::FARPROC const proc = ::GetProcAddress(
 		static_cast<::HMODULE>(moduleHandle), procNamePtr);
 
-	NOX_ASSERT(proc != nullptr, util::Format(U"dll読み込みに失敗 procName = {0}", procNamePtr));
+	NOX_ASSERT(proc != nullptr, u"dll読み込みに失敗 procName = {0}", procNamePtr);
 
 	return proc;
 }
@@ -55,7 +55,7 @@ void* nox::os::LoadDLL(std::u16string_view path, void* handlePtr, const uint32 f
 {
 	const ::HMODULE moduleHandlePtr = ::LoadLibraryExW(util::CharCast<wchar16>(path.data()), handlePtr, static_cast<::DWORD>(flags));
 
-	NOX_ASSERT(moduleHandlePtr != nullptr, util::Format(U"dll読み込みに失敗 path = {0}", path));
+	NOX_ASSERT(moduleHandlePtr != nullptr, util::Format(u"dll読み込みに失敗 path = {0}", path));
 
 	return moduleHandlePtr;
 }

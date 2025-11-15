@@ -74,10 +74,23 @@ namespace ReflectionGenerator.Generator
         /// </summary>
         public required IReadOnlyDictionary<string, List<Parser2.NamespaceDecl>> TypeInfoListWithArtifactNameDict { get; init; }
 
+        private IReadOnlyList<Parser2.NamespaceDecl> NamespaceDeclList
+        {
+            get
+            {
+                List<Parser2.NamespaceDecl> namespaceDeclList = new List<Parser2.NamespaceDecl>();
+                foreach (var pair in TypeInfoListWithArtifactNameDict)
+                {
+                    namespaceDeclList.AddRange(pair.Value);
+                }
+                return namespaceDeclList;
+			}
+        }
+
 		/// <summary>
 		/// 1ファイル内の定義数
 		/// </summary>
-		public uint NumOfDefinitionInFile { private get; init; } = 10;
+		public uint NumOfDefinitionInFile { private get; init; } = 30;
 
         /// <summary>
         /// 出力先ディレクトリ
@@ -116,7 +129,7 @@ namespace ReflectionGenerator.Generator
         #endregion
 
         #region 公開メソッド
-        public unsafe bool Generate()
+		public unsafe bool Generate()
         {
 			string baseGenHeaderFilePath = $"{OutputDirectory}/gen.h";
 
@@ -129,33 +142,11 @@ namespace ReflectionGenerator.Generator
                 Directory.CreateDirectory(_BaseDirectory);
             }
 
-            //  モジュールごとのディレクトリを作成
-            //  ~/gen/BuildSpec/Platform/ModuleName
-            string[] moduleDirectoryList = new string[ModuleInfoList.Length];
-
-            for (int i = 0; i < moduleDirectoryList.Length; ++i)
-            {
-                moduleDirectoryList[i] = System.IO.Path.GetFullPath($"{_BaseDirectory}/{ModuleInfoList[i].ArtifactName}");
-                if (Directory.Exists(moduleDirectoryList[i]) == false)
-                {
-                    Directory.CreateDirectory(moduleDirectoryList[i]);
-                }
-            }
-
 			//  モジュールごとのヘッダファイルを生成
 			//  ~/gen/BuildSpec/Platform/gen_BuildSpec_Platform_ModuleName.h
-			for (int moduleListIndex = 0; moduleListIndex < ModuleInfoList.Length; ++moduleListIndex)
             {
-                ref readonly ARTIFACT_INFO moduleInfo = ref ModuleInfoList[moduleListIndex];
-                string artifactName = moduleInfo.ArtifactName;
 
-                string genHeaderFilePath = System.IO.Path.GetFullPath($"{moduleDirectoryList[moduleListIndex]}/gen_{Platform}_{Configuration}_{artifactName}.h");
-
-                //  ファイルが存在する場合、かつ再ビルドフラグが立っていない場合はスキップ
-                if (File.Exists(genHeaderFilePath) == true && moduleInfo.Build == false)
-                {
-                   // continue;
-                }
+                string genHeaderFilePath = System.IO.Path.GetFullPath($"{_BaseDirectory}/gen_{Platform}_{Configuration}.g.h");
 
                 using (CodeWriter codeWriter = new CodeWriter(genHeaderFilePath))
                 {
@@ -172,11 +163,11 @@ namespace ReflectionGenerator.Generator
                     {
                         string indexStr = i.ToString().PadLeft(NUM_DIGIT_INDEX, '0');
 
-                        codeWriter.WriteLine($"void\tRegister_{Platform}_{Configuration}_{artifactName}_{ClassInfoStr}_{indexStr}();");
-                        codeWriter.WriteLine($"void\tUnregister_{Platform}_{Configuration}_{artifactName}_{ClassInfoStr}_{indexStr}();");
+                        codeWriter.WriteLine($"void\tRegister_{Platform}_{Configuration}_{ClassInfoStr}_{indexStr}();");
+                        codeWriter.WriteLine($"void\tUnregister_{Platform}_{Configuration}_{ClassInfoStr}_{indexStr}();");
 
-                        codeWriter.WriteLine($"void\tRegister_{Platform}_{Configuration}_{artifactName}_GlobalDecl_{indexStr}();");
-                        codeWriter.WriteLine($"void\tUnregister_{Platform}_{Configuration}_{artifactName}_GlobalDecl_{indexStr}();");
+                        codeWriter.WriteLine($"void\tRegister_{Platform}_{Configuration}_GlobalDecl_{indexStr}();");
+                        codeWriter.WriteLine($"void\tUnregister_{Platform}_{Configuration}_GlobalDecl_{indexStr}();");
                     }
 
                     codeWriter.PopScope();
@@ -185,7 +176,7 @@ namespace ReflectionGenerator.Generator
                     codeWriter.WriteLinePPEndIf(ConfigurationDefine);
                 }
 
-				GenerateDeclaration(moduleInfo);
+				GenerateDeclaration();
 			}
 
             //  モジュールごとのソースファイルを生成
@@ -195,7 +186,7 @@ namespace ReflectionGenerator.Generator
 
             //  統括ソースファイルを生成
             {
-                string unitySourceFilePath = System.IO.Path.GetFullPath($"{_BaseDirectory}/gen_{Platform}_{Configuration}.cpp");
+                string unitySourceFilePath = System.IO.Path.GetFullPath($"{_BaseDirectory}/gen_{Platform}_{Configuration}.g.cpp");
                 using (CodeWriter codeWriter = new CodeWriter(unitySourceFilePath))
                 {
                     codeWriter.WriteLineSource();
@@ -215,30 +206,25 @@ namespace ReflectionGenerator.Generator
                     //  最適化をOFF
                     codeWriter.WriteLine("#pragma optimize(\"\", off)");
 
-					//  各ヘッダファイルをインクルード
-					for (int i = 0; i < ModuleInfoList.Length; ++i)
-                    {
-                        ref readonly ARTIFACT_INFO moduleInfo = ref ModuleInfoList[i];
-                        codeWriter.WriteLineInclude($"{moduleInfo.ArtifactName}/gen_{Platform}_{Configuration}_{moduleInfo.ArtifactName}.h");
-                    }
+					codeWriter.WriteLineInclude($"/gen_{Platform}_{Configuration}.g.h");
 
 					{
 						// 登録
 						codeWriter.WriteLine($"void ::{NOX_REFLECTION_GEN_NAMESPACE_STR}::Register_{Platform}_{Configuration}()");
                         {
                             codeWriter.PushScope(CodeWriter.ScopeType.Define);
-							for (int i = 0; i < ModuleInfoList.Length; ++i)
+							//for (int i = 0; i < ModuleInfoList.Length; ++i)
                             {
-                                ref readonly ARTIFACT_INFO moduleInfo = ref ModuleInfoList[i];
-                                codeWriter.WriteLineRegion(moduleInfo.ArtifactName);
+                                //ref readonly ARTIFACT_INFO moduleInfo = ref ModuleInfoList[i];
+                                //codeWriter.WriteLineRegion(moduleInfo.ArtifactName);
                                 for (int divideIndex = 0; divideIndex < NumOfDefinitionInFile; ++divideIndex)
                                 {
                                     string indexStr = divideIndex.ToString().PadLeft(NUM_DIGIT_INDEX, '0');
 
-                                    codeWriter.WriteLine($"::{NOX_REFLECTION_GEN_NAMESPACE_STR}::Register_{Platform}_{Configuration}_{moduleInfo.ArtifactName}_{ClassInfoStr}_{indexStr}();");
-                                    codeWriter.WriteLine($"::{NOX_REFLECTION_GEN_NAMESPACE_STR}::Register_{Platform}_{Configuration}_{moduleInfo.ArtifactName}_GlobalDecl_{indexStr}();");
+                                    codeWriter.WriteLine($"::{NOX_REFLECTION_GEN_NAMESPACE_STR}::Register_{Platform}_{Configuration}_{ClassInfoStr}_{indexStr}();");
+                                    codeWriter.WriteLine($"::{NOX_REFLECTION_GEN_NAMESPACE_STR}::Register_{Platform}_{Configuration}_GlobalDecl_{indexStr}();");
                                 }
-                                codeWriter.WriteLineEndRegion(moduleInfo.ArtifactName);
+                                //codeWriter.WriteLineEndRegion(moduleInfo.ArtifactName);
                             }
 							codeWriter.PopScope();
                         }
@@ -247,18 +233,18 @@ namespace ReflectionGenerator.Generator
                         codeWriter.WriteLine($"void ::{NOX_REFLECTION_GEN_NAMESPACE_STR}::Unregister_{Platform}_{Configuration}()");
                         {
                             codeWriter.PushScope(CodeWriter.ScopeType.Define);
-							for (int i = 0; i < ModuleInfoList.Length; ++i)
+						//	for (int i = 0; i < ModuleInfoList.Length; ++i)
                             {
-                                ref readonly ARTIFACT_INFO moduleInfo = ref ModuleInfoList[i];
-                                codeWriter.WriteLineRegion(moduleInfo.ArtifactName);
+                            //    ref readonly ARTIFACT_INFO moduleInfo = ref ModuleInfoList[i];
+                            //    codeWriter.WriteLineRegion(moduleInfo.ArtifactName);
                                 for (int divideIndex = 0; divideIndex < NumOfDefinitionInFile; ++divideIndex)
                                 {
                                     string indexStr = divideIndex.ToString().PadLeft(NUM_DIGIT_INDEX, '0');
 
-                                    codeWriter.WriteLine($"::{NOX_REFLECTION_GEN_NAMESPACE_STR}::Unregister_{Platform}_{Configuration}_{moduleInfo.ArtifactName}_{ClassInfoStr}_{indexStr}();");
-                                    codeWriter.WriteLine($"::{NOX_REFLECTION_GEN_NAMESPACE_STR}::Unregister_{Platform}_{Configuration}_{moduleInfo.ArtifactName}_GlobalDecl_{indexStr}();");
+                                    codeWriter.WriteLine($"::{NOX_REFLECTION_GEN_NAMESPACE_STR}::Unregister_{Platform}_{Configuration}_{ClassInfoStr}_{indexStr}();");
+                                    codeWriter.WriteLine($"::{NOX_REFLECTION_GEN_NAMESPACE_STR}::Unregister_{Platform}_{Configuration}_GlobalDecl_{indexStr}();");
                                 }
-                                codeWriter.WriteLineEndRegion(moduleInfo.ArtifactName);
+                            //    codeWriter.WriteLineEndRegion(moduleInfo.ArtifactName);
                             }
 							codeWriter.PopScope();
                         }
@@ -311,148 +297,146 @@ namespace ReflectionGenerator.Generator
             return Math.Min(index * numOfDivision / length, numOfDivision - 1);
 		}
 
+  //      private void GenerateDeclaration()
+  //      {
+  //          //  ソースファイルの作成
+  //          for(int moduleIndex = 0, moduleLength = ModuleInfoList.Length; moduleIndex < moduleLength; ++moduleIndex)
+  //          {
+  //              ref readonly ARTIFACT_INFO moduleInfo = ref ModuleInfoList[moduleIndex];
+  //              if (moduleInfo.Build == false)
+  //              {
+  //                  continue;
+  //              }
+
+		//		string artifactName = moduleInfo.ArtifactName;
+
+		//		//  書き込み対象のリスト
+		//		CodeWriter[] codeWriterWithClassList = new CodeWriter[NumOfDefinitionInFile];
+		//		CodeWriter[] codeWriterWithGlobalList = new CodeWriter[NumOfDefinitionInFile];
+
+		//		//  ファイル数で分割する
+		//		for (int i = 0; i < NumOfDefinitionInFile; ++i)
+		//		{
+
+		//			{
+		//				string path = System.IO.Path.GetFullPath($"{_BaseDirectory}/{artifactName}/{artifactName}_{ClassInfoStr}_{i}.cpp");
+		//				codeWriterWithClassList[i] = new CodeWriter(path);
+		//			}
+
+		//			{
+		//				string path = System.IO.Path.GetFullPath($"{_BaseDirectory}/{artifactName}/{artifactName}_GlobalDecl_{i}.cpp");
+		//				codeWriterWithGlobalList[i] = new CodeWriter(path);
+		//			}
+
+		//		}
+
+		//		int useThreadCount = Util.MAX_THREAD_ID;
+		//		useThreadCount = 1;    //  デバッグのため、スレッド数を1に固定
+		//		{
+		//			//MEMO 追加のインクルードディレクトリにプロジェクトディレクトリを指定している必要がある
+		//			string baseHeaderFilePath = $"gen_{Platform}_{Configuration}_{artifactName}.h";
+
+  //                  string additionalIncludeDir;
+  //                  if (moduleInfo.IsModule == true)
+  //                  {
+  //                     additionalIncludeDir = $"../../../../../{moduleInfo.ArtifactName}/{moduleInfo.ArtifactName}.h";
+  //                  }
+  //                  else
+  //                  {
+  //                      additionalIncludeDir = string.Empty;
+  //                  }
+
+  //                      Util.ParallelFor(0, codeWriterWithGlobalList.Length + codeWriterWithClassList.Length, (int index) =>
+  //                      {
+  //                          CodeWriter codeWriter;
+  //                          if (index < codeWriterWithGlobalList.Length)
+  //                          {
+  //                              //  グローバル宣言
+  //                              codeWriter = codeWriterWithGlobalList[index];
+  //                          }
+  //                          else
+  //                          {
+  //                              //  クラス宣言
+  //                              codeWriter = codeWriterWithClassList[index - codeWriterWithGlobalList.Length];
+  //                          }
+
+  //                          codeWriter.WriteLineSource();
+  //                          codeWriter.WriteNewLine();
+  //                          codeWriter.WriteIncludeStdafx();
+  //                          codeWriter.WriteLineInclude(baseHeaderFilePath);
+
+  //                          if (additionalIncludeDir != string.Empty)
+  //                          {
+  //                              codeWriter.WriteLineInclude(additionalIncludeDir);
+  //                          }
+
+  //                          codeWriter.WriteNewLine();
+
+  //                          //  プリプロセッサ
+  //                          codeWriter.WriteLinePPIf(ConfigurationDefine);
+  //                          codeWriter.WriteLinePPIf(PlatformDefine);
+  //                          codeWriter.WriteLinePPIfNot(CPP_DEFINE.INTELLISENSE);
+
+  //                          //codeWriter.WriteLine($"#include\t\"../../../../support_functions.h\"");
+  //                          //foreach (ReadOnlySpan<char> headerFileName in moduleInfo.IncludeHeaderList)
+  //                          {
+  //                              //	codeWriter.WriteLineInclude(headerFileName);
+  //                          }
+
+  //                          codeWriter.WriteNewLine();
+
+  //                          //  定義
+  //                          codeWriter.WriteLine($"namespace {NOX_REFLECTION_GEN_NAMESPACE_STR}");
+  //                          codeWriter.WriteLine("{");
+  //                          codeWriter.Push();
+  //                      },
+  //                      useThreadCount
+  //                      );
+		//		}
+
+  //              {
+		//			TypeInfoListWithArtifactNameDict.TryGetValue(artifactName, out List<Parser2.NamespaceDecl>? namespaceDeclList);
+		//			GenerateWithArtifact(artifactName, namespaceDeclList, codeWriterWithGlobalList, codeWriterWithClassList);
+		//		}
+
+		//		Util.ParallelFor(0, codeWriterWithGlobalList.Length + codeWriterWithClassList.Length, (int index) =>
+		//		{
+		//			CodeWriter codeWriter;
+		//			if (index < codeWriterWithGlobalList.Length)
+		//			{
+		//				//  グローバル宣言
+		//				codeWriter = codeWriterWithGlobalList[index];
+		//			}
+		//			else
+		//			{
+		//				//  クラス宣言
+		//				codeWriter = codeWriterWithClassList[index - codeWriterWithGlobalList.Length];
+		//			}
+
+		//			codeWriter.Pop();
+		//			codeWriter.WriteLine("}");
+		//			codeWriter.WriteLinePPEndIf(CPP_DEFINE.INTELLISENSE);
+		//			codeWriter.WriteLinePPEndIf(PlatformDefine);
+		//			codeWriter.WriteLinePPEndIf(ConfigurationDefine);
+		//		},
+		//		useThreadCount);
+
+
+		//		foreach (CodeWriter codeWriter in codeWriterWithGlobalList)
+		//		{
+		//			codeWriter.Dispose();
+		//		}
+		//		foreach (CodeWriter codeWriter in codeWriterWithClassList)
+		//		{
+		//			codeWriter.Dispose();
+		//		}
+		//	}
+		//}
+
         private void GenerateDeclaration()
-        {
-            //  ソースファイルの作成
-            for(int moduleIndex = 0, moduleLength = ModuleInfoList.Length; moduleIndex < moduleLength; ++moduleIndex)
-            {
-                ref readonly ARTIFACT_INFO moduleInfo = ref ModuleInfoList[moduleIndex];
-                if (moduleInfo.Build == false)
-                {
-                    continue;
-                }
-
-				string artifactName = moduleInfo.ArtifactName;
-
-				//  書き込み対象のリスト
-				CodeWriter[] codeWriterWithClassList = new CodeWriter[NumOfDefinitionInFile];
-				CodeWriter[] codeWriterWithGlobalList = new CodeWriter[NumOfDefinitionInFile];
-
-				//  ファイル数で分割する
-				for (int i = 0; i < NumOfDefinitionInFile; ++i)
-				{
-
-					{
-						string path = System.IO.Path.GetFullPath($"{_BaseDirectory}/{artifactName}/{artifactName}_{ClassInfoStr}_{i}.cpp");
-						codeWriterWithClassList[i] = new CodeWriter(path);
-					}
-
-					{
-						string path = System.IO.Path.GetFullPath($"{_BaseDirectory}/{artifactName}/{artifactName}_GlobalDecl_{i}.cpp");
-						codeWriterWithGlobalList[i] = new CodeWriter(path);
-					}
-
-				}
-
-				int useThreadCount = Util.MAX_THREAD_ID;
-				useThreadCount = 1;    //  デバッグのため、スレッド数を1に固定
-				{
-					//MEMO 追加のインクルードディレクトリにプロジェクトディレクトリを指定している必要がある
-					string baseHeaderFilePath = $"gen_{Platform}_{Configuration}_{artifactName}.h";
-
-                    string additionalIncludeDir;
-                    if (moduleInfo.IsModule == true)
-                    {
-                       additionalIncludeDir = $"../../../../../{moduleInfo.ArtifactName}/{moduleInfo.ArtifactName}.h";
-                    }
-                    else
-                    {
-                        additionalIncludeDir = string.Empty;
-                    }
-
-                        Util.ParallelFor(0, codeWriterWithGlobalList.Length + codeWriterWithClassList.Length, (int index) =>
-                        {
-                            CodeWriter codeWriter;
-                            if (index < codeWriterWithGlobalList.Length)
-                            {
-                                //  グローバル宣言
-                                codeWriter = codeWriterWithGlobalList[index];
-                            }
-                            else
-                            {
-                                //  クラス宣言
-                                codeWriter = codeWriterWithClassList[index - codeWriterWithGlobalList.Length];
-                            }
-
-                            codeWriter.WriteLineSource();
-                            codeWriter.WriteNewLine();
-                            codeWriter.WriteIncludeStdafx();
-                            codeWriter.WriteLineInclude(baseHeaderFilePath);
-
-                            if (additionalIncludeDir != string.Empty)
-                            {
-                                codeWriter.WriteLineInclude(additionalIncludeDir);
-                            }
-
-                            codeWriter.WriteNewLine();
-
-                            //  プリプロセッサ
-                            codeWriter.WriteLinePPIf(ConfigurationDefine);
-                            codeWriter.WriteLinePPIf(PlatformDefine);
-                            codeWriter.WriteLinePPIfNot(CPP_DEFINE.INTELLISENSE);
-
-                            //codeWriter.WriteLine($"#include\t\"../../../../support_functions.h\"");
-                            //foreach (ReadOnlySpan<char> headerFileName in moduleInfo.IncludeHeaderList)
-                            {
-                                //	codeWriter.WriteLineInclude(headerFileName);
-                            }
-
-                            codeWriter.WriteNewLine();
-
-                            //  定義
-                            codeWriter.WriteLine($"namespace {NOX_REFLECTION_GEN_NAMESPACE_STR}");
-                            codeWriter.WriteLine("{");
-                            codeWriter.Push();
-                        },
-                        useThreadCount
-                        );
-				}
-
-                {
-					TypeInfoListWithArtifactNameDict.TryGetValue(artifactName, out List<Parser2.NamespaceDecl>? namespaceDeclList);
-					GenerateWithArtifact(artifactName, namespaceDeclList, codeWriterWithGlobalList, codeWriterWithClassList);
-				}
-
-				Util.ParallelFor(0, codeWriterWithGlobalList.Length + codeWriterWithClassList.Length, (int index) =>
-				{
-					CodeWriter codeWriter;
-					if (index < codeWriterWithGlobalList.Length)
-					{
-						//  グローバル宣言
-						codeWriter = codeWriterWithGlobalList[index];
-					}
-					else
-					{
-						//  クラス宣言
-						codeWriter = codeWriterWithClassList[index - codeWriterWithGlobalList.Length];
-					}
-
-					codeWriter.Pop();
-					codeWriter.WriteLine("}");
-					codeWriter.WriteLinePPEndIf(CPP_DEFINE.INTELLISENSE);
-					codeWriter.WriteLinePPEndIf(PlatformDefine);
-					codeWriter.WriteLinePPEndIf(ConfigurationDefine);
-				},
-				useThreadCount);
-
-
-				foreach (CodeWriter codeWriter in codeWriterWithGlobalList)
-				{
-					codeWriter.Dispose();
-				}
-				foreach (CodeWriter codeWriter in codeWriterWithClassList)
-				{
-					codeWriter.Dispose();
-				}
-			}
-		}
-
-        private void GenerateDeclaration(in ARTIFACT_INFO artifactInfo)
         {
 			//  ソースファイルの作成
 			{
-				string artifactName = artifactInfo.ArtifactName;
-
 				//  書き込み対象のリスト
 				CodeWriter[] codeWriterWithClassList = new CodeWriter[NumOfDefinitionInFile];
 				CodeWriter[] codeWriterWithGlobalList = new CodeWriter[NumOfDefinitionInFile];
@@ -462,12 +446,12 @@ namespace ReflectionGenerator.Generator
 				{
 
 					{
-						string path = System.IO.Path.GetFullPath($"{_BaseDirectory}/{artifactName}/{artifactName}_{ClassInfoStr}_{i}.cpp");
+						string path = System.IO.Path.GetFullPath($"{_BaseDirectory}/{ClassInfoStr}_{i}.g.cpp");
 						codeWriterWithClassList[i] = new CodeWriter(path);
 					}
 
 					{
-						string path = System.IO.Path.GetFullPath($"{_BaseDirectory}/{artifactName}/{artifactName}_GlobalDecl_{i}.cpp");
+						string path = System.IO.Path.GetFullPath($"{_BaseDirectory}/GlobalDecl_{i}.g.cpp");
 						codeWriterWithGlobalList[i] = new CodeWriter(path);
 					}
 
@@ -477,17 +461,7 @@ namespace ReflectionGenerator.Generator
 				useThreadCount = 1;    //  デバッグのため、スレッド数を1に固定
 				{
 					//MEMO 追加のインクルードディレクトリにプロジェクトディレクトリを指定している必要がある
-					string baseHeaderFilePath = $"gen_{Platform}_{Configuration}_{artifactName}.h";
-
-					string additionalIncludeDir;
-					if (artifactInfo.IsModule == true)
-					{
-						additionalIncludeDir = $"../../../../../{artifactInfo.ArtifactName}/{artifactInfo.ArtifactName}.h";
-					}
-					else
-					{
-						additionalIncludeDir = string.Empty;
-					}
+					string baseHeaderFilePath = $"gen_{Platform}_{Configuration}.g.h";
 
 					Util.ParallelFor(0, codeWriterWithGlobalList.Length + codeWriterWithClassList.Length, (int index) =>
 					{
@@ -515,11 +489,6 @@ namespace ReflectionGenerator.Generator
 						codeWriter.WriteLinePPIf(PlatformDefine);
 						codeWriter.WriteLinePPIfNot(CPP_DEFINE.INTELLISENSE);
 
-						if (additionalIncludeDir != string.Empty)
-						{
-							codeWriter.WriteLineInclude(additionalIncludeDir);
-						}
-
 						codeWriter.WriteLine("#pragma optimize(\"\", off)");
 
 						//codeWriter.WriteLine($"#include\t\"../../../../support_functions.h\"");
@@ -540,14 +509,7 @@ namespace ReflectionGenerator.Generator
 				}
 
 				{
-					if (TypeInfoListWithArtifactNameDict.TryGetValue(artifactName, out List<Parser2.NamespaceDecl> ? namespaceDeclList))
-                    {
-                        GenerateWithArtifact(artifactName, namespaceDeclList, codeWriterWithGlobalList, codeWriterWithClassList);
-                    }
-                    else
-                    {
-						GenerateWithArtifact(artifactName, [], codeWriterWithGlobalList, codeWriterWithClassList);
-					}
+					GenerateWithArtifact(NamespaceDeclList, codeWriterWithGlobalList, codeWriterWithClassList);
 				}
 
 				Util.ParallelFor(0, codeWriterWithGlobalList.Length + codeWriterWithClassList.Length, (int index) =>
@@ -587,7 +549,7 @@ namespace ReflectionGenerator.Generator
 
 		}
 
-		private void GenerateWithArtifact(string artifactName, IReadOnlyList<Parser2.NamespaceDecl> namespaceDeclInfoList, CodeWriter[] codeWriterWithGlobalList, CodeWriter[] codeWriterWithClassList)
+		private void GenerateWithArtifact(IReadOnlyList<Parser2.NamespaceDecl> namespaceDeclInfoList, CodeWriter[] codeWriterWithGlobalList, CodeWriter[] codeWriterWithClassList)
         {
             int useThreadCount = Util.MAX_THREAD_ID;
             useThreadCount = 1;    //  デバッグのため、スレッド数を1に固定
@@ -806,8 +768,8 @@ namespace ReflectionGenerator.Generator
 
 						ReadOnlySpan<char> indexStr = codeWriterWithGlobalIndex.ToString().PadLeft(NUM_DIGIT_INDEX, '0');
 
-						declStrRegister = $"void\t{NOX_REFLECTION_GEN_NAMESPACE_STR}::Register_{Platform}_{Configuration}_{artifactName}_GlobalDecl_{indexStr}()";
-						declStrUnregister =$"void\t{NOX_REFLECTION_GEN_NAMESPACE_STR}::Unregister_{Platform}_{Configuration}_{artifactName}_GlobalDecl_{indexStr}()";
+						declStrRegister = $"void\t{NOX_REFLECTION_GEN_NAMESPACE_STR}::Register_{Platform}_{Configuration}_GlobalDecl_{indexStr}()";
+						declStrUnregister =$"void\t{NOX_REFLECTION_GEN_NAMESPACE_STR}::Unregister_{Platform}_{Configuration}_GlobalDecl_{indexStr}()";
 					}
                     else
                     {
@@ -819,8 +781,8 @@ namespace ReflectionGenerator.Generator
 
 						ReadOnlySpan<char> indexStr = codeWriterWithClassIndex.ToString().PadLeft(NUM_DIGIT_INDEX, '0');
 
-						declStrRegister = $"void\t{NOX_REFLECTION_GEN_NAMESPACE_STR}::Register_{Platform}_{Configuration}_{artifactName}_ClassDecl_{indexStr}()";
-						declStrUnregister = $"void\t{NOX_REFLECTION_GEN_NAMESPACE_STR}::Unregister_{Platform}_{Configuration}_{artifactName}_ClassDecl_{indexStr}()";
+						declStrRegister = $"void\t{NOX_REFLECTION_GEN_NAMESPACE_STR}::Register_{Platform}_{Configuration}_ClassDecl_{indexStr}()";
+						declStrUnregister = $"void\t{NOX_REFLECTION_GEN_NAMESPACE_STR}::Unregister_{Platform}_{Configuration}_ClassDecl_{indexStr}()";
 					}
 
 					//  登録処理

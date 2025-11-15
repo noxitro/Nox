@@ -51,21 +51,21 @@ namespace nox
 		inline	void PushAsync(const T& value)
 		{
 			const nox::int32 index = nox::os::atomic::Read(top_);
-			NOX_ASSERT(index < static_cast<nox::int32>(Size - 1), U"Stack overflow");
+			NOX_ASSERT(index < static_cast<nox::int32>(Size - 1), u"Stack overflow");
 			stack_[nox::os::atomic::Increment(top_)] = value;
 		}
 
 		inline	void PushAsync(T&& value)
 		{
 			const nox::int32 index = nox::os::atomic::Read(top_);
-			NOX_ASSERT(index < static_cast<nox::int32>(Size - 1), U"Stack overflow");
+			NOX_ASSERT(index < static_cast<nox::int32>(Size - 1), u"Stack overflow");
 			stack_[nox::os::atomic::Increment(top_)] = value;
 		}
 
 		inline	T& PopAsync()
 		{
 			const nox::int32 index = nox::os::atomic::Read(top_);
-			NOX_ASSERT(index >= 0, U"Stack underflow");
+			NOX_ASSERT(index >= 0, u"Stack underflow");
 			nox::os::atomic::Decrement(top_);
 			return stack_[index];
 		}
@@ -73,7 +73,7 @@ namespace nox
 		inline	T& Peek()
 		{
 			const nox::int32 index = nox::os::atomic::Read(top_);
-			NOX_ASSERT(index >= 0, U"Stack underflow");
+			NOX_ASSERT(index >= 0, u"Stack underflow");
 			return stack_[index];
 		}
 

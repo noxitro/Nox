@@ -19,7 +19,7 @@ nox::String	nox::os::file_system::GetCurrentPath()
 	std::array<wchar16, os::MAX_PATH_LENGTH> path_buffer;
 	if (::GetCurrentDirectoryW(static_cast<::DWORD>(path_buffer.size()), path_buffer.data()) == 0)
 	{
-		NOX_ASSERT(false, U"");
+		NOX_ASSERT(false, u"");
 	}
 
 	return nox::String(unicode::ConvertString<nox::U16String>(path_buffer.data()));

@@ -5,13 +5,15 @@
 #include	"stdafx.h"
 #include	"entity.h"
 
-#if NOX_WINDOWS
+#include	"dev_net_api.h"
 
-
-#endif
+namespace nox::dev::net
+{
+	/// @brief 送受信の最大サイズ
+	constexpr nox::int32 k_max_size = 65536;
+}
 
 nox::dev::net::Entity::Entity()
-	: socket_(INVALID_SOCKET)
 {
 }
 
@@ -19,114 +21,67 @@ nox::dev::net::Entity::~Entity()
 {
 }
 
-::size_t nox::dev::net::Entity::Receive(nox::dev::net::raw_socket_t socket,nox::not_null<void*> buffer,::size_t size_to_read,bool& disconnected)
+std::expected<void, nox::dev::net::SocketIoError> nox::dev::net::Entity::Receive(nox::dev::net::raw_socket_t socket, nox::not_null<void*> buffer, nox::int32 size_to_read, nox::dev::net::ReceiveFlag flag)
 {
-	disconnected = false;
+	NOX_ASSERT(size_to_read > 0 && size_to_read <= k_max_size, nox::util::Format(u"size_to_read is zero or too large. size:{0}", size_to_read));
 
-#if NOX_WINDOWS
-	if (socket == INVALID_SOCKET)
+	if (socket == k_raw_invalid_socket)
 	{
-		disconnected = true;
-		return 0;
+		return std::unexpected(SocketIoError{ .kind = nox::dev::net::SocketIoError::InvalidSocket });
 	}
 
-	int len = static_cast<int>(size_to_read > static_cast<::size_t>(INT_MAX) ? INT_MAX : size_to_read);
-	int ret = ::recv(socket, static_cast<char*>(buffer.get()), len, 0);
-	if (ret == 0)
+	//	受け取りきる
+	nox::int32 remain_size = size_to_read;
+	while (remain_size > 0)
 	{
-		// graceful disconnect
-		disconnected = true;
-		return 0;
-	}
-	if (ret == SOCKET_ERROR)
-	{
-		const int err = ::WSAGetLastError();
-		// Non-fatal for non-blocking sockets
-		if (err == WSAEWOULDBLOCK || err == WSAEINTR)
+		nox::int32 recived = nox::dev::net::Receive(socket, static_cast<char*>(buffer.get()) + (size_to_read - remain_size), remain_size, nox::util::ToUnderlying(flag));
+		if (recived > 0)
 		{
-			return 0;
+			remain_size -= recived;
 		}
-		// Treat other errors as disconnects
-		switch (err)
+		else if (recived == 0)
 		{
-		case WSAECONNRESET:
-		case WSAENETRESET:
-		case WSAENETDOWN:
-		case WSAESHUTDOWN:
-		case WSAENOTCONN:
-			disconnected = true;
-			break;
-		default:
-			break;
+			// 切断
+			return std::unexpected(SocketIoError{ .kind = nox::dev::net::SocketIoError::Disconnected });
 		}
-		return 0;
+		else
+		{
+			const nox::int32 err = ::WSAGetLastError();
+			// その他エラー処理
+			return std::unexpected(SocketIoError{ .kind = SocketIoError::Other, .platform_code = err });
+		}
 	}
-	return static_cast<::size_t>(ret);
-#else
-	(void)socket; (void)buffer; (void)size_to_read; (void)disconnected;
-	return 0;
-#endif
+
+	return {};
 }
 
-::size_t nox::dev::net::Entity::Send(nox::dev::net::raw_socket_t socket, nox::not_null<const void*> buffer, ::size_t size_to_send, bool& disconnected, bool non_aio)
+std::expected<void, nox::dev::net::SocketIoError> nox::dev::net::Entity::Send(nox::dev::net::raw_socket_t socket, nox::not_null<const void*> buffer, nox::int32 size_to_send, nox::dev::net::SendFlag flag)
 {
-	disconnected = false;
-
-#if NOX_WINDOWS
-	if (socket == INVALID_SOCKET)
+	NOX_ASSERT(size_to_send > 0 && size_to_send <= k_max_size, nox::util::Format(u"size_to_send is zero or too large. size:{0}", size_to_send));
+	if (socket == k_raw_invalid_socket)
 	{
-		disconnected = true;
-		return 0;
+		return std::unexpected(SocketIoError{ .kind = nox::dev::net::SocketIoError::InvalidSocket });
 	}
-
-	int len = static_cast<int>(size_to_send > static_cast<::size_t>(INT_MAX) ? INT_MAX : size_to_send);
-	int ret = ::send(socket, static_cast<const char*>(buffer.get()), len, 0);
-	if (ret == SOCKET_ERROR)
+	//	送りきる
+	nox::int32 remain_size = size_to_send;
+	while (remain_size > 0)
 	{
-		const int err = ::WSAGetLastError();
-		// Non-fatal for non-blocking sockets
-		if (err == WSAEWOULDBLOCK || err == WSAEINTR)
+		nox::int32 sent = nox::dev::net::Send(socket, static_cast<const char*>(buffer.get()) + (size_to_send - remain_size), remain_size, nox::util::ToUnderlying(flag));
+		if (sent > 0)
 		{
-			return 0;
+			remain_size -= sent;
 		}
-		// Treat other errors as disconnects
-		switch (err)
+		else if (sent == 0)
 		{
-		case WSAECONNRESET:
-		case WSAENETRESET:
-		case WSAENETDOWN:
-		case WSAESHUTDOWN:
-		case WSAENOTCONN:
-			disconnected = true;
-			break;
-		default:
-			break;
+			// 切断
+			return std::unexpected(SocketIoError{ .kind = nox::dev::net::SocketIoError::Disconnected });
 		}
-		return 0;
+		else
+		{
+			const nox::int32 err = ::WSAGetLastError();
+			// その他エラー処理
+			return std::unexpected(SocketIoError{ .kind = SocketIoError::Other, .platform_code = err });
+		}
 	}
-	return static_cast<::size_t>(ret);
-#else
-	(void)socket; (void)buffer; (void)size_to_send; (void)disconnected;
-	return 0;
-#endif
-}
-
-void nox::dev::net::Entity::OnConnect(nox::dev::net::ConnectionContext& context)
-{
-	(void)context;
-}
-
-void nox::dev::net::Entity::OnDisconnect(nox::dev::net::DisconnectionContext& context)
-{
-	(void)context;
-}
-
-void nox::dev::net::Entity::OnSent(const nox::dev::net::PeerContext& context, nox::uint32 handle, nox::not_null<const void*> buffer, ::size_t size_to_send, ::size_t size_sent)
-{
-	(void)context; (void)handle; (void)buffer; (void)size_to_send; (void)size_sent;
-}
-
-void nox::dev::net::Entity::OnReceive(const nox::dev::net::PeerContext& context)
-{
-	(void)context;
+	return {};
 }

@@ -14,18 +14,52 @@
 #include	"reflection_generated_register.h"
 #include	"log_id.h"
 
+namespace nox::util
+{
+	//template<class Key, class Value, class Hasher = std::hash<Key>, class Keyeq = std::equal_to<Key>>
+	//inline constexpr 
+	//	std::conditional_t<
+	//	IsReferenceWrapperV<Value>, 
+	//	std::optional<Value>, 
+	//	std::optional<std::reference_wrapper<std::remove_reference_t<Value>>>
+	//	>
+	//	Find(const nox::UnorderedMap<Key, Value, Hasher, Keyeq>& container, Key&& key)
+	//{
+	//	auto it = container.find(std::forward<Key>(key));
+	//	if (it != container.end())
+	//	{
+	//		return it->second;
+	//	}
+	//	return std::nullopt;
+	//}
+
+}
+
 namespace nox::reflection
 {
 	/// @brief クラスデータ
 	struct ClassNode
 	{
-		std::reference_wrapper<const nox::reflection::ClassInfo> class_info;
+		std::reference_wrapper<const nox::reflection::Type> type;
+		//	ノード構築時に不明な場合があるのでポインタで保持
+		//	子を登録する時、親が登録されていないことがあるため
+		const nox::reflection::ClassInfo* class_info;
 		ClassNode* next_ptr;
 		const ClassNode* prev_ptr;
 		ClassNode* child_ptr;
 
-		inline constexpr ClassNode(const nox::reflection::ClassInfo& _class_info)noexcept :
-			class_info(_class_info),
+		inline constexpr explicit ClassNode(const nox::reflection::Type& _type)noexcept :
+			type(_type),
+			class_info(nullptr),
+			next_ptr(nullptr),
+			prev_ptr(nullptr),
+			child_ptr(nullptr)
+		{
+		}
+
+		inline constexpr explicit ClassNode(const nox::reflection::ClassInfo& _class_info)noexcept :
+			type(_class_info.GetUnderlyingType()),
+			class_info(&_class_info),
 			next_ptr(nullptr),
 			prev_ptr(nullptr),
 			child_ptr(nullptr)
@@ -33,6 +67,7 @@ namespace nox::reflection
 		}
 
 		inline constexpr ClassNode(const ClassNode& rhs)noexcept :
+			type(rhs.type),
 			class_info(rhs.class_info),
 			next_ptr(rhs.next_ptr),
 			prev_ptr(rhs.prev_ptr),
@@ -44,6 +79,7 @@ namespace nox::reflection
 
 		inline ClassNode& operator =(const ClassNode& rhs)noexcept
 		{
+			type = rhs.type;
 			class_info = rhs.class_info;
 			next_ptr = rhs.next_ptr;
 			prev_ptr = rhs.prev_ptr;
@@ -85,7 +121,7 @@ namespace nox::reflection
 
 		inline Artifact(const Artifact&)noexcept
 		{
-			NOX_ASSERT(false, U"failed");
+			NOX_ASSERT(false, u"failed");
 		}
 
 		inline Artifact(Artifact&& rhs)noexcept
@@ -111,58 +147,128 @@ namespace nox::reflection
 	/// @brief 全ての翻訳単位の情報を格納するマップ
 	nox::UnorderedMap<std::uint32_t, Artifact> artifact_map_;
 
-	/// @brief 全ての型情報を格納するマップ
-	nox::UnorderedMap<std::uint64_t, std::reference_wrapper<const nox::reflection::Type>> all_type_id_map_;
+	nox::HashSet<const nox::reflection::Type*> all_type_hash_set_;
+	nox::Vector<std::reference_wrapper<const nox::reflection::Type>> all_type_list_;
 
-	inline	Artifact& GetCreateArtifact(std::uint32_t name_hash)
+	/// @brief		全ての型情報を格納するマップ
+	/// @details	TODO:	翻訳単位は未対応
+	inline	Artifact& GetCreateArtifact(std::uint32_t)
 	{
-		if (artifact_map_.contains(name_hash) == true)
+		auto it = artifact_map_.find(0);
+		if (it != artifact_map_.end())
 		{
-			return artifact_map_.at(name_hash);
+			return it->second;
 		}
+		return artifact_map_.emplace(0, Artifact{}).first->second;
 
-		return artifact_map_.emplace(name_hash, Artifact{}).first->second;
+		//if (artifact_map_.contains(name_hash) == true)
+		//{
+		//	return artifact_map_.at(name_hash);
+		//}
+
+		//return artifact_map_.emplace(name_hash, Artifact{}).first->second;
 	}
 
-	inline	void RegisterTypeIdMap(const nox::reflection::Type& type)
+	inline	void RegisterTypeIdMap(const nox::reflection::Type&)
 	{
-		const auto id = type.GetTypeID();
-		if (all_type_id_map_.contains(id) == false)
-		{
-			all_type_id_map_.emplace(type.GetTypeID(), type);
-		}
-		else
-		{
-			NOX_ASSERT(false, nox::util::Format(U"TypeIdが重複していますA:{0}, B:{1}", all_type_id_map_.at(id).get().GetTypeName(), type.GetTypeName()));
-		}
 	}
 
-	inline	void UnregisterTypeIdMap(const nox::reflection::Type& type)
+	inline	void UnregisterTypeIdMap(const nox::reflection::Type&)
 	{
-		all_type_id_map_.erase(type.GetTypeID());
+	}
+
+	struct INewDeleteDisabled
+	{
+		static void* operator new(std::size_t) = delete;
+		static void* operator new[](std::size_t) = delete;
+		static void  operator delete(void*) = delete;
+		static void  operator delete[](void*) = delete;
+	};
+
+	struct ScopeProfile : INewDeleteDisabled
+	{
+		inline ScopeProfile(const std::u16string_view label):
+			stop_watch_(),
+			label_{}
+		{
+			nox::util::StrCopy(label, std::span<nox::char16>(label_));
+			stop_watch_.Start();
+		}
+
+		inline ~ScopeProfile()
+		{
+			const std::u16string_view s = label_.data();
+			NOX_INFO_LINE(nox::log_id::Reflection, u"{0}:{1}msec", s, stop_watch_.ElapsedMilliseconds());
+		}
+
+		static void* operator new(std::size_t) = delete;
+		static void* operator new[](std::size_t) = delete;
+	private:
+		nox::StopWatch stop_watch_;
+		std::array<nox::char16, 256> label_;
+	};
+}
+
+namespace nox::util
+{
+	inline std::optional<std::reference_wrapper<nox::reflection::ClassNode>> Find(nox::UnorderedMap<const nox::reflection::Type*, nox::reflection::ClassNode>& dict, const nox::reflection::Type* key)
+	{
+		auto it = dict.find(key);
+		if (it != dict.end())
+		{
+			return std::ref(it->second);
+		}
+
+		return std::nullopt;
 	}
 }
 
 void nox::reflection::Initialize()
 {
+	{
 #if !NOX_MASTER
-	nox::StopWatch stopWatch;
-	stopWatch.Start();
+		NOX_LOCAL_SCOPE(ScopeProfile(u"reflection initialize"));
 #endif // NOX_MASTER
 
-	nox::reflection::InitializeGen();
+		nox::reflection::InitializeGen();
+	}
 
-#if !NOX_MASTER
-	NOX_INFO_LINE(nox::log_id::Reflection, U"reflection initialize:{0}msec", stopWatch.ElapsedMilliseconds());
-#endif
+	//	verify type id map
+	for (const auto& artifact_map_pair : artifact_map_)
+	{
+		for (const auto& class_node_pair : artifact_map_pair.second.chunk_with_type_id.class_node_map)
+		{
+			NOX_ASSERT(class_node_pair.second.class_info != nullptr, u"class_info is null:{0}", class_node_pair.second.type.get().GetTypeName());
+		}
+	}
+
+	//	
+	{
+		NOX_INFO_LINE(nox::log_id::Reflection, u"=====typedb=====");
+		nox::uint32 class_count = 0;
+		nox::uint32 enum_count = 0;
+		nox::uint32 function_count = 0;
+		nox::uint32 variable_count = 0;
+		for (const auto& artifact_map_pair : artifact_map_)
+		{
+			class_count += static_cast<nox::uint32>(artifact_map_pair.second.chunk_with_type_id.class_node_map.size());
+			enum_count += static_cast<nox::uint32>(artifact_map_pair.second.chunk_with_type_id.enum_map.size());
+			function_count += static_cast<nox::uint32>(artifact_map_pair.second.chunk_with_type_id.function_map.size());
+			variable_count += static_cast<nox::uint32>(artifact_map_pair.second.chunk_with_type_id.variable_map.size());
+		}
+		NOX_INFO_LINE(nox::log_id::Reflection, u"class type count:{0}", class_count);
+		NOX_INFO_LINE(nox::log_id::Reflection, u"enum type count:{0}", enum_count);
+		NOX_INFO_LINE(nox::log_id::Reflection, u"function count:{0}", function_count);
+		NOX_INFO_LINE(nox::log_id::Reflection, u"variable count:{0}", variable_count);
+		NOX_INFO_LINE(nox::log_id::Reflection, u"=====typedb end=====");
+	}
 }
 
 void nox::reflection::Finalize()
 {
 	nox::reflection::FinalizeGen();
-	constexpr auto n = nox::util::Crc32<char16_t>(u"abc");
 	artifact_map_ = {};
-	all_type_id_map_ = {};
+	//all_type_id_map_ = {};
 }
 
 const nox::reflection::ClassInfo* nox::reflection::FindClassInfo(const nox::reflection::Type& type)noexcept
@@ -172,7 +278,7 @@ const nox::reflection::ClassInfo* nox::reflection::FindClassInfo(const nox::refl
 		const auto it = artifact.chunk_with_type_id.class_node_map.find(&type);
 		if (it != artifact.chunk_with_type_id.class_node_map.end())
 		{
-			return &it->second.class_info.get();
+			return it->second.class_info;
 		}
 	}
 
@@ -186,7 +292,7 @@ const nox::reflection::ClassInfo* nox::reflection::FindClassInfo(std::uint32_t n
 		const auto it = artifact.chunk_with_name_hash.class_node_map.find(namehash);
 		if (it != artifact.chunk_with_name_hash.class_node_map.end())
 		{
-			return &it->second.get().class_info.get();
+			return it->second.get().class_info;
 		}
 	}
 	return nullptr;
@@ -309,6 +415,11 @@ void	nox::reflection::Register(const nox::reflection::ClassInfo& data)
 	Artifact& artifact = GetCreateArtifact(artifact_name_hash);
 	++artifact.counter_;
 
+	if (data.GetFullName().contains(u8"ReflectionObject"))
+	{
+		nox::DebugBreak();
+	}
+
 	if (data.GetUnderlyingType().IsUnion() == true)
 	{
 		artifact.chunk_with_type_id.union_map.emplace(&type, data);
@@ -316,16 +427,38 @@ void	nox::reflection::Register(const nox::reflection::ClassInfo& data)
 	}
 	else
 	{
-		ClassNode& new_class_node = artifact.chunk_with_type_id.class_node_map.emplace(&type, ClassNode(data)).first->second;
-		artifact.chunk_with_name_hash.class_node_map.emplace(nox::util::Crc32(data.GetFullName()), new_class_node);
+		//	継承関係の構築
+		ClassNode& self_class_node = [&]()->ClassNode& {
+			auto r = nox::util::Find(artifact.chunk_with_type_id.class_node_map, &type);
+			if (r)
+			{
+				//	既に存在する場合
+				ClassNode& node = r.value();
+				NOX_ASSERT(node.class_info == nullptr, u"already registered class info:{}", data.GetFullName());
+				node.class_info = &data;
 
+				artifact.chunk_with_name_hash.class_node_map.emplace(nox::util::Crc32(data.GetFullName()), node);
+				return node;
+			}
+			else
+			{
+				ClassNode& new_class_node = artifact.chunk_with_type_id.class_node_map.emplace(&type, ClassNode(data)).first->second;
+				artifact.chunk_with_name_hash.class_node_map.emplace(nox::util::Crc32(data.GetFullName()), new_class_node);
+				return new_class_node;
+			}
+			}();
 
-		for (const nox::reflection::Type& baseType : data.GetBaseTypeList())
+		for (const nox::reflection::Type& base_type : data.GetBaseTypeList())
 		{
-			ClassNode& parent_class_node = artifact.chunk_with_type_id.class_node_map.at(&baseType);
+			if (artifact.chunk_with_type_id.class_node_map.contains(&base_type) == false)
+			{
+				artifact.chunk_with_type_id.class_node_map.emplace(&base_type, ClassNode(base_type));
+			}
+
+			ClassNode& parent_class_node = artifact.chunk_with_type_id.class_node_map.at(&base_type);
 			if (parent_class_node.child_ptr == nullptr)
 			{
-				parent_class_node.child_ptr = &new_class_node;
+				parent_class_node.child_ptr = &self_class_node;
 			}
 			else
 			{
@@ -333,8 +466,8 @@ void	nox::reflection::Register(const nox::reflection::ClassInfo& data)
 				{
 					if (class_node->next_ptr == nullptr)
 					{
-						class_node->next_ptr = &new_class_node;
-						new_class_node.prev_ptr = class_node;
+						class_node->next_ptr = &self_class_node;
+						self_class_node.prev_ptr = class_node;
 						break;
 					}
 				}

@@ -63,7 +63,12 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="dev\net\dev_net_api.h" />
     <ClInclude Include="dev\net\dev_net_definition.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="dev\net\dev_net_log_id.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -233,7 +238,12 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="dev\net\dev_net_api.cpp" />
     <ClCompile Include="dev\net\dev_net_definition.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="dev\net\dev_net_log_id.cpp">
       <SubType>
       </SubType>
     </ClCompile>

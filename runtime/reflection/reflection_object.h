@@ -53,7 +53,7 @@ namespace nox::reflection
 //	end define
 	
 	/// @brief リフレクションオブジェクト
-	class ReflectionObject
+	class NOX_ATTR_TYPE(nox::reflection::attr::Reflection()) ReflectionObject
 	{
 		NOX_DECLARE_REFLECTION(ReflectionObject);
 	public:

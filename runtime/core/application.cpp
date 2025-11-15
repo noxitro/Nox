@@ -147,6 +147,6 @@ void	nox::Application::RegisterModuleEntry(void(*func)(nox::ModuleEntry&), nox::
 
 	//	重複チェック
 
-	NOX_ASSERT(module_entry_bitset_.test(nox::util::ToUnderlying(type)) == false, nox::util::Format(U"重複エントリ:{0}", (int)type));
+	NOX_ASSERT(module_entry_bitset_.test(nox::util::ToUnderlying(type)) == false, nox::util::Format(u"重複エントリ:{0}", (int)type));
 	module_entry_bitset_.set(nox::util::ToUnderlying(type));
 }
