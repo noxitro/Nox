@@ -13,9 +13,9 @@ namespace ReflectionGenerator
         WChar16,
     }
 
-	public class ScopeProfiler : IDisposable
+	public readonly struct ScopeProfiler : System.IDisposable
     {
-        private System.Diagnostics.Stopwatch _Stopwatch = new ();
+        private readonly System.Diagnostics.Stopwatch _Stopwatch = new ();
         public string Tag { private get; init; } = "Unknown";
 
         public ScopeProfiler()
@@ -23,7 +23,7 @@ namespace ReflectionGenerator
             _Stopwatch.Start();
 		}
 
-        void IDisposable.Dispose()
+        void System.IDisposable.Dispose()
         {
             Trace.InfoLine(null, $"[{Tag}]{_Stopwatch.ElapsedMilliseconds.ToString()}ms");
 			_Stopwatch.Stop();

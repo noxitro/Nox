@@ -81,7 +81,7 @@ namespace ReflectionGenerator.Parser
                 case CX_CXXAccessSpecifier.CX_CXXProtected: return AccessLevel.Protected;
                 case CX_CXXAccessSpecifier.CX_CXXPrivate: return AccessLevel.Private;
                 case CX_CXXAccessSpecifier.CX_CXXInvalidAccessSpecifier:
-                    return AccessLevel.Private;
+                    return AccessLevel.Public;
             }
             Trace.ErrorLine(null, string.Format("不明なCX_CXXAccessSpecifierです :{0}", accessSpecifier.ToString()));
             return AccessLevel.Public;
