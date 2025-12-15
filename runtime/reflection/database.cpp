@@ -176,37 +176,18 @@ namespace nox::reflection
 	inline	void UnregisterTypeIdMap(const nox::reflection::Type&)
 	{
 	}
-
-	struct INewDeleteDisabled
+	
+	inline const ClassNode* FindClassNode(const nox::reflection::Type& type)
 	{
-		static void* operator new(std::size_t) = delete;
-		static void* operator new[](std::size_t) = delete;
-		static void  operator delete(void*) = delete;
-		static void  operator delete[](void*) = delete;
-	};
+		const auto& class_node_map = artifact_map_.at(0).chunk_with_type_id.class_node_map;
 
-	struct ScopeProfile : INewDeleteDisabled
-	{
-		inline ScopeProfile(const std::u16string_view label):
-			stop_watch_(),
-			label_{}
+		auto it = class_node_map.find(&type);
+		if (it != class_node_map.end())
 		{
-			nox::util::StrCopy(label, std::span<nox::char16>(label_));
-			stop_watch_.Start();
+			return &it->second;
 		}
-
-		inline ~ScopeProfile()
-		{
-			const std::u16string_view s = label_.data();
-			NOX_INFO_LINE(nox::log_id::Reflection, u"{0}:{1}msec", s, stop_watch_.ElapsedMilliseconds());
-		}
-
-		static void* operator new(std::size_t) = delete;
-		static void* operator new[](std::size_t) = delete;
-	private:
-		nox::StopWatch stop_watch_;
-		std::array<nox::char16, 256> label_;
-	};
+		return nullptr;
+	}
 }
 
 namespace nox::util
@@ -227,20 +208,13 @@ void nox::reflection::Initialize()
 {
 	{
 #if !NOX_MASTER
-		NOX_LOCAL_SCOPE(ScopeProfile(u"reflection initialize"));
+		NOX_LOCAL_SCOPE(nox::util::ScopeProfile(u"reflection initialize"));
 #endif // NOX_MASTER
 
 		nox::reflection::InitializeGen();
 	}
 
-	//	verify type id map
-	for (const auto& artifact_map_pair : artifact_map_)
-	{
-		for (const auto& class_node_pair : artifact_map_pair.second.chunk_with_type_id.class_node_map)
-		{
-			NOX_ASSERT(class_node_pair.second.class_info != nullptr, u"class_info is null:{0}", class_node_pair.second.type.get().GetTypeName());
-		}
-	}
+	//TODO	object下のクラス情報の整合性チェック
 
 	//	
 	{
@@ -415,11 +389,6 @@ void	nox::reflection::Register(const nox::reflection::ClassInfo& data)
 	Artifact& artifact = GetCreateArtifact(artifact_name_hash);
 	++artifact.counter_;
 
-	if (data.GetFullName().contains(u8"ReflectionObject"))
-	{
-		nox::DebugBreak();
-	}
-
 	if (data.GetUnderlyingType().IsUnion() == true)
 	{
 		artifact.chunk_with_type_id.union_map.emplace(&type, data);
@@ -542,7 +511,7 @@ void nox::reflection::Unregister(const nox::reflection::ClassInfo& data)
 void nox::reflection::Register(const nox::reflection::EnumInfo& data)
 {
 	const std::uint32_t artifact_name_hash = nox::util::Crc32(data.GetFullName());
-	const nox::reflection::Type& type = data.GetUnderlyingType();
+	const nox::reflection::Type& type = data.GetType();
 
 	Artifact& artifact = GetCreateArtifact(artifact_name_hash);
 	++artifact.counter_;

@@ -169,12 +169,20 @@
     <ClInclude Include="preprocessor\util.h" />
     <ClInclude Include="preprocessor\va_length.h" />
     <ClInclude Include="reflection_attribute.h" />
+    <ClInclude Include="scope_profile.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="singleton.h" />
     <ClInclude Include="stack.h">
       <SubType>
       </SubType>
     </ClInclude>
     <ClInclude Include="stack_trace.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="stack_trace_definition.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -376,12 +384,20 @@
     <ClCompile Include="preprocessor\util.cpp" />
     <ClCompile Include="preprocessor\va_length.cpp" />
     <ClCompile Include="reflection_attribute.cpp" />
+    <ClCompile Include="scope_profile.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="singleton.cpp" />
     <ClCompile Include="stack.cpp">
       <SubType>
       </SubType>
     </ClCompile>
     <ClCompile Include="stack_trace.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="stack_trace_definition.cpp">
       <SubType>
       </SubType>
     </ClCompile>

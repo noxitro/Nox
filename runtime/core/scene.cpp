@@ -7,8 +7,6 @@
 
 #include	"scene_resource.h"
 
-void	nox::Scene::setResource(SceneResource& resource)
+void	nox::Scene::SetResource(SceneResource& resource)
 {
-	using t = ToMemberFunctionPointerType<nox::String()const, nox::Object>;
-	static_cast<ToMemberFunctionPointerType<nox::String()const, nox::Object>>(&nox::Object::ToString);
 }

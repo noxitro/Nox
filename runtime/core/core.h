@@ -10,3 +10,7 @@
 
 #include	"scene_view.h"
 #include	"transform.h"
+#include	"scene.h"
+#include	"scene_resource.h"
+#include	"application.h"
+#include	"module_entry.h"

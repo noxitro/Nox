@@ -541,7 +541,7 @@ namespace nox::reflection
 		private:
 			[[nodiscard]] static inline constexpr void* CreateObject()
 			{
-				if constexpr (std::is_constructible_v<T> == true)
+				if constexpr (nox::concepts::RuntimeDefaultNewable<T> == true)
 				{
 					if constexpr (std::is_array_v<T> == true)
 					{
@@ -561,7 +561,7 @@ namespace nox::reflection
 
 			[[nodiscard]] static inline constexpr void* CreateObjectPlacement(void* buffer)
 			{
-				if constexpr (std::is_constructible_v<T> == true)
+				if constexpr (nox::concepts::RuntimeDefaultNewable<T> == true)
 				{
 					if constexpr (std::is_array_v<T> == true)
 					{
@@ -717,7 +717,7 @@ namespace nox::reflection
 		};
 	}
 
-	namespace detail
+	namespace NOX_ATTR(nox::reflection::attr::IgnoreReflection()) detail
 	{
 		/// @brief 無効型
 		constexpr nox::reflection::detail::CompileTimeInvalidType k_invalid_type{};
@@ -746,7 +746,7 @@ namespace nox::reflection
 	}
 	
 #pragma region 関数群
-	inline constexpr const nox::reflection::Type& GetInvalidType()noexcept
+	inline constexpr const nox::reflection::Type& nox::reflection::GetInvalidType()noexcept
 	{
 		return nox::reflection::detail::k_invalid_type;
 	}

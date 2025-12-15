@@ -15,9 +15,9 @@ namespace nox
 	/// @brief Coreの管理クラス
 	class 
 		NOX_ATTR_TYPE(::nox::attr::dev::Description(u"Application"), nox::attr::dev::DisplayName(u"アプリケーション"))
-		Application : public Object, public ISingleton<Application>
+		Application : public nox::Object, public nox::ISingleton<Application>
 	{
-		NOX_DECLARE_OBJECT(Application, Object);
+		NOX_DECLARE_OBJECT(Application, nox::Object);
 	private:
 		enum class UpdateCategory : uint8
 		{
@@ -32,36 +32,16 @@ namespace nox
 
 		struct ModuleEntryInfo
 		{
-			const nox::ModuleEntryCategory priority;
+			nox::ModuleEntryCategory priority;
 			void(*func)(nox::ModuleEntry&);
-			nox::ModuleEntry& entry;
-			
-
-			/*inline constexpr ModuleEntryInfo(
-				nox::ModuleEntryCategory _priority, 
-				void(nox::ModuleEntry::*_func)(), 
-				nox::ModuleEntry& _entry)noexcept
-				: priority(_priority), func(_func), entry(&_entry)
-			{
-			}
-
-			inline constexpr ModuleEntryInfo(const ModuleEntryInfo& info)noexcept
-				: priority(info.priority), func(info.func), entry(info.entry)
-			{
-			}
-
-			inline constexpr ModuleEntryInfo(ModuleEntryInfo&& rhs)noexcept:
-				ModuleEntryInfo(rhs)
-			{
-
-			}*/
-
+			nox::not_null<nox::ModuleEntry*> entry;
 		};
 
 	public:
 		Application()noexcept;
 		~Application()override;
-
+		
+		
 		void	Run();
 
 		void	RegisterModuleEntry(void(*func)(nox::ModuleEntry&), nox::ModuleEntry& entry,const nox::ModuleEntryCategory type);

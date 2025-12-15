@@ -3,6 +3,7 @@
 #pragma once
 #include	<type_traits>
 #include	<concepts>
+#include	<memory>
 
 namespace nox::concepts
 {
@@ -71,6 +72,14 @@ namespace nox::concepts
 	concept Assignable = requires(From && a, To && b)
 	{
 		{ a = b };
+	};
+
+	// 実行時にデフォルト new 可能か（consteval コンストラクタのみの型は false）
+	template<class T>
+	concept RuntimeDefaultNewable = std::is_constructible_v<T> && requires 
+	{
+		new T();
+		[]()constexpr noexcept->void {T* _ = new T(); }();
 	};
 }
 

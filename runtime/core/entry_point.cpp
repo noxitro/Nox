@@ -14,19 +14,19 @@ nox::int32 nox::EntryPoint(const std::span<const char16* const> args)
 
 	nox::memory::Initialize(true);
 
-	reflection::Initialize();
+	nox::reflection::Initialize();
 
-	os::Initialize(args);
+	nox::os::Initialize(args);
 
-	Application::CreateInstance();
+	nox::Application::CreateInstance();
 
-	Application::Instance().Run();
+	nox::Application::Instance().Run();
 
-	Application::DeleteInstance();
+	nox::Application::DeleteInstance();
 
-	os::Finalize();
+	nox::os::Finalize();
 
-	reflection::Finalize();
+	nox::reflection::Finalize();
 
 	nox::memory::ReleaseBootMemory();
 	nox::memory::CheckMemoryLeak();

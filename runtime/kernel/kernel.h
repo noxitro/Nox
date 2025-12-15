@@ -54,3 +54,5 @@
 #include	"guid.h"
 #include	"dynamic_array.h"
 #include	"utility.h"
+#include	"interface_class.h"
+#include	"scope_profile.h"

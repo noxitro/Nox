@@ -366,4 +366,26 @@ namespace nox
 	template<class T>
 	constexpr bool IsSequenceContainerClassValue = detail::IsStdArrayV<T> || detail::IsVectorV<T>;
 
+	namespace detail
+	{
+		template<class T, class = void>
+		struct is_addressable_impl : std::false_type {};
+
+		template<class T>
+		struct is_addressable_impl<T, std::void_t<
+			decltype(std::addressof(std::declval<std::remove_reference_t<T>&>()))
+			>> : std::true_type {};
+	}
+
+	/// @brief &（address-of）でアドレス取得が可能か
+	/// @note ビットフィールドは型では判別できないため、この特性は true になり得ます。
+	///       実メンバのアドレス可否は bit 幅メタ情報と併用してください。
+	template<class T>
+	inline constexpr bool IsAddressableValue = nox::detail::is_addressable_impl<T>::value;
+
+	namespace concepts
+	{
+		template<class T>
+		concept Addressable = IsAddressableValue<T>;
+	}
 }

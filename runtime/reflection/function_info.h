@@ -9,7 +9,7 @@ namespace nox::reflection
 	class ReflectionObject;
 
 	/// @brief 関数の1引数情報
-	class FunctionArgumentInfo
+	class NOX_ATTR(nox::reflection::attr::IgnoreReflection()) FunctionArgumentInfo
 	{
 	public:
 		/**
@@ -346,13 +346,13 @@ namespace nox::reflection
 		public:
 			inline constexpr std::optional<std::conditional_t<std::is_void_v<ResultType>, std::monostate, ResultType>> InvokeImpl(std::span<void*> args)const
 			{
-				return InvokeImpl<ResultType>(args);
+				return this->InvokeImpl<ResultType>(args);
 			}
 
 		protected:
 			inline constexpr std::optional<std::monostate> InvokeImplNoReturn(std::span<void*> args)const override
 			{
-				return InvokeImpl<void>(args);
+				return this->InvokeImpl<void>(args);
 			}
 
 		private:

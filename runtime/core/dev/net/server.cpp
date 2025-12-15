@@ -84,6 +84,7 @@ bool nox::dev::net::Server::Startup(const InitializeContext& context)
 	ChangePhase(Phase::Startuped);
 
 	nox::dev::net::SocketScheduler::Instance().RegisterEntity(*this);
+	return true;
 }
 
 void nox::dev::net::Server::Update()

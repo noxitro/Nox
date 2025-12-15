@@ -81,7 +81,7 @@ namespace nox::reflection
 			const std::uint8_t function_length,
 			const std::reference_wrapper<const nox::reflection::EnumInfo>* enum_list,
 			const std::uint8_t enum_length,
-			const std::reference_wrapper<const nox::reflection::ClassInfo>* internal_type_list,
+			const std::reference_wrapper<const nox::reflection::Type>* internal_type_list,
 			const std::uint8_t internal_class_length
 		)noexcept:
 			underlying_type_(type),
@@ -98,7 +98,7 @@ namespace nox::reflection
 			function_list_(function_list),
 			function_length_(function_length),
 			internal_type_list_(internal_type_list),
-			internal_class_length_(internal_class_length),
+			internal_type_length_(internal_class_length),
 			enum_list_(enum_list),
 			enum_length_(enum_length)
 		{
@@ -144,8 +144,8 @@ namespace nox::reflection
 		[[nodiscard]] inline constexpr const std::span<const std::reference_wrapper<const nox::reflection::VariableInfo>> GetVariableList()const noexcept { return std::span(variable_list_, variable_length_); }
 		[[nodiscard]] inline constexpr std::uint8_t GetFunctionLength()const noexcept { return function_length_; }
 		[[nodiscard]] inline constexpr const std::span<const std::reference_wrapper<const nox::reflection::FunctionInfo>> GetFunctionList()const noexcept { return std::span(function_list_, function_length_); }
-		[[nodiscard]] inline constexpr std::uint8_t GetInternalClassLength()const noexcept { return internal_class_length_; }
-		[[nodiscard]] inline constexpr const std::span<const std::reference_wrapper<const nox::reflection::ClassInfo>> GetInternalClassList()const noexcept { return std::span(internal_type_list_, internal_class_length_); }
+		[[nodiscard]] inline constexpr std::uint8_t GetInternalTypeLength()const noexcept { return internal_type_length_; }
+		[[nodiscard]] inline constexpr const std::span<const std::reference_wrapper<const nox::reflection::Type>> GetInternalClassList()const noexcept { return std::span(internal_type_list_, internal_type_length_); }
 		[[nodiscard]] inline constexpr std::uint8_t GetEnumLength()const noexcept { return enum_length_; }
 		[[nodiscard]] inline constexpr	std::span<const std::reference_wrapper<const nox::reflection::EnumInfo>> GetEnumInfoList()const noexcept { return std::span(enum_list_, enum_length_); }
 		[[nodiscard]] inline constexpr const nox::reflection::EnumInfo& GetEnumInfo(std::uint8_t index)const noexcept { return nox::util::At(enum_list_, enum_length_, index); }
@@ -157,6 +157,10 @@ namespace nox::reflection
 		const nox::reflection::FunctionInfo* GetMoveConstructor()const noexcept;
 
 		const nox::reflection::FunctionInfo* GetConstructor(std::span<const std::reference_wrapper<const nox::reflection::Type>> args)const noexcept;
+		inline const nox::reflection::FunctionInfo* GetConstructor(std::initializer_list<const std::reference_wrapper<const nox::reflection::Type>> args)const noexcept
+		{
+			return GetConstructor(std::span(args.begin(), args.end()));
+		}
 
 		template<class... Args>
 		inline const nox::reflection::FunctionInfo* GetConstructor()const noexcept
@@ -189,7 +193,7 @@ namespace nox::reflection
 		std::uint8_t function_length_;
 
 		/// @brief 内部クラスの長さ
-		std::uint8_t internal_class_length_;
+		std::uint8_t internal_type_length_;
 
 		/// @brief 列挙体の数
 		std::uint8_t enum_length_;
@@ -213,7 +217,7 @@ namespace nox::reflection
 		const std::reference_wrapper<const class nox::reflection::FunctionInfo>* function_list_;
 
 		/// @brief 内部複合型テーブル
-		const std::reference_wrapper<const nox::reflection::ClassInfo>* internal_type_list_;
+		const std::reference_wrapper<const nox::reflection::Type>* internal_type_list_;
 
 		/// @brief 内部列挙体テーブル
 		const std::reference_wrapper<const class nox::reflection::EnumInfo>* enum_list_;

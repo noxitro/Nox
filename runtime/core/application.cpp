@@ -15,20 +15,16 @@ namespace
 {
 	inline	void HookException(nox::uint32 code, ::_EXCEPTION_POINTERS* const exception_ptr)
 	{
-		
 	}
-
 }
 
 nox::Application::Application()noexcept :
 	module_entry_bitset_{}
 {
-
 }
 
 nox::Application::~Application()
 {
-
 }
 
 void	nox::Application::Init()
@@ -48,27 +44,27 @@ void	nox::Application::Run()
 
 	for (const ModuleEntryInfo& entry_info : module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Init)])
 	{
-		entry_info.func(entry_info.entry);
+		entry_info.func(*entry_info.entry);
 	}
 
 	for (const ModuleEntryInfo& entry_info : module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Start)])
 	{
-		entry_info.func(entry_info.entry);
+		entry_info.func(*entry_info.entry);
 	}
 
 	for (const ModuleEntryInfo& entry_info : module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Update)])
 	{
-		entry_info.func(entry_info.entry);
+		entry_info.func(*entry_info.entry);
 	}
 
 	for (const ModuleEntryInfo& entry_info : module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Terminal)])
 	{
-		entry_info.func(entry_info.entry);
+		entry_info.func(*entry_info.entry);
 	}
 
 	for (const ModuleEntryInfo& entry_info : module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Finalize)])
 	{
-		entry_info.func(entry_info.entry);
+		entry_info.func(*entry_info.entry);
 	}
 
 	//nox::os::Thread game_thread;
@@ -143,7 +139,7 @@ constexpr nox::Application::UpdateCategory	nox::Application::ToUpdateCategory(no
 void	nox::Application::RegisterModuleEntry(void(*func)(nox::ModuleEntry&), nox::ModuleEntry& entry, const nox::ModuleEntryCategory type)
 {
 	nox::Vector<ModuleEntryInfo>& vector = module_entry_info_list_table_[nox::util::ToUnderlying(ToUpdateCategory(type))];
-	vector.emplace_back(ModuleEntryInfo{ .priority = type, .func = func, .entry = entry});
+	vector.emplace_back(ModuleEntryInfo{ .priority = type, .func = func, .entry = &entry});
 
 	//	重複チェック
 

@@ -8,8 +8,6 @@
 #include	<tuple>
 #include	"preprocessor/repeat.h"
 
-namespace nox::reflection
-{
 //	属性付与マクロ
 #if NOX_REFLECTION_GENERATOR
 //#if defined(__clang__)
@@ -27,6 +25,8 @@ namespace nox::reflection
 ///@details	エンジン外でannotate属性が使われることを想定して、annotate("NOX_REFLECTION_GENERATOR")を付与する
 #define	NOX_ATTR(...) NOX_PP_REPEAT_AUTO(NOX_DETAIL_ATTR_IMPL, __VA_ARGS__)
 
+namespace nox::reflection
+{
 	/// @brief 属性クラスインターフェース
 	struct NOX_ATTR(nox::reflection::Reflection()) IAttribute
 	{
@@ -38,15 +38,15 @@ namespace nox::reflection
 	/// @tparam T 
 	/// @tparam U 
 	template<class T, class U> requires(!std::is_same_v<IAttribute, T>&& std::is_base_of_v<IAttribute, T> && !std::is_same_v<IAttribute, U>&& std::is_base_of_v<IAttribute, U>)
-		struct IsIgnoreAttribute : std::false_type {};
+		struct NOX_ATTR(nox::reflection::IgnoreReflection()) IsIgnoreAttribute : std::false_type {};
 
 	/// @brief この属性を付けている場合、他の属性を付与できない
 	/// @tparam T 
 	template<class T> requires(!std::is_same_v<IAttribute, T>&& std::is_base_of_v<IAttribute, T>)
-		struct IsOnlyAttribute : std::false_type {};
+		struct NOX_ATTR(nox::reflection::IgnoreReflection()) IsOnlyAttribute : std::false_type {};
 
 #pragma region 属性型チェック
-	namespace detail
+	namespace NOX_ATTR(nox::reflection::IgnoreReflection()) detail
 	{
 		template<class _FirstType, class... _Types>
 		inline constexpr bool CheckAttributeType()noexcept
@@ -178,7 +178,7 @@ namespace nox::reflection
 
 ///@brief	型に対しての属性付与
 #define	NOX_ATTR_TYPE(...) \
-	alignas([]()constexpr noexcept{return 0; static_assert(::nox::reflection::detail::CheckAttributes<decltype(std::make_tuple(__VA_ARGS__))>(), "failed attributes"); }())	\
+	alignas([]()constexpr noexcept -> int {return 0; static_assert(::nox::reflection::detail::CheckAttributes<decltype(std::make_tuple(__VA_ARGS__))>(), "failed attributes"); }())	\
 	NOX_ATTR(__VA_ARGS__)
 
 ///@brief	変数や関数などの定義に対しての属性付与

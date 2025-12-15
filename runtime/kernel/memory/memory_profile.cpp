@@ -7,7 +7,7 @@
 
 #include	"nox_memory.h"
 
-//#include	"../stack_trace.h"
+#include	"../stack_trace.h"
 #include	"../algorithm.h"
 #include	"../os/atomic.h"
 #include	"../string_format.h"
@@ -122,7 +122,7 @@ bool nox::memory::profile::EnabledMemoryProfile()
 	return g_is_enabled;
 }
 
-const nox::memory::profile::ProfileData& FindProfileData(nox::not_null<const void*> addr)
+const nox::memory::profile::ProfileData& nox::memory::profile::FindProfileData(nox::not_null<const void*> addr)
 {
 	return nox::memory::profile::FindProfileData(nox::memory::GetHeapInfo(addr).profile_handle);
 }

@@ -13,7 +13,7 @@ namespace nox
 	{
 		NOX_DECLARE_OBJECT(nox::Scene, nox::ManagedObject);
 	public:
-		void	setResource(class SceneResource& resource);
+		void	SetResource(class SceneResource& resource);
 
 	private:
 

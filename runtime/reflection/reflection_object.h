@@ -26,6 +26,7 @@ namespace nox::reflection
 		struct ReflectionGeneratedHolder;
 	}
 
+#if NOX_REFLECTION_GENERATOR
 	///	@brief				リフレクション定義
 	///	@param ClassType 	型
 	///	@details			クラス内で定義することで、privateメンバもリフレクション対象になります
@@ -36,8 +37,50 @@ namespace nox::reflection
 		inline constexpr void StaticAssertNoxDeclareReflection()noexcept{ \
 			static_assert(std::is_same_v<ClassType, std::remove_cvref_t<decltype(*this)>>); \
 		}\
+		enum class NOX_ATTR(::nox::reflection::attr::IgnoreReflection()) NoxPrivateReflectionMarker {}; \
 		friend struct ::nox::reflection::gen::ReflectionGeneratedHolder<ClassType>
 //	end define
+
+#define	NOX_DECLARE_REFLECTION_INNER(ClassType, RootExternalClassType) \
+	friend struct ::nox::reflection::gen::ReflectionTypeActivator<ClassType>;	\
+	private:\
+		NOX_ATTR_DECLARATION(::nox::reflection::attr::IgnoreReflection())	\
+		inline constexpr void StaticAssertNoxDeclareReflection()noexcept{ \
+			static_assert(std::is_same_v<ClassType, std::remove_cvref_t<decltype(*this)>>); \
+		}\
+		enum class NOX_ATTR(::nox::reflection::attr::IgnoreReflection()) NoxPrivateReflectionMarker {}; \
+		friend struct ::nox::reflection::gen::ReflectionGeneratedHolder<RootExternalClassType>
+//	end define NOX_DECLARE_REFLECTION_INNER
+#else
+
+	///	@brief				リフレクション定義
+	///	@param ClassType 	型
+	///	@details			クラス内で定義することで、privateメンバもリフレクション対象になります
+#define	NOX_DECLARE_REFLECTION(ClassType) \
+	friend struct ::nox::reflection::gen::ReflectionTypeActivator<ClassType>;	\
+	private:\
+		NOX_ATTR_DECLARATION(::nox::reflection::attr::IgnoreReflection())	\
+		inline constexpr void StaticAssertNoxDeclareReflection()noexcept{ \
+			static_assert(std::is_same_v<ClassType, std::remove_cvref_t<decltype(*this)>>); \
+		}\
+		friend struct ::nox::reflection::gen::ReflectionGeneratedHolder<ClassType>
+//	end define
+
+	///	@brief				リフレクション定義（内部クラス用）
+	///	@param ClassType 	型
+	/// @param RootExternalClassType ルート外部クラス型
+	///	@details			クラス内で定義することで、privateメンバもリフレクション対象になります
+#define	NOX_DECLARE_REFLECTION_INNER(ClassType, RootExternalClassType) \
+	friend struct ::nox::reflection::gen::ReflectionTypeActivator<ClassType>;	\
+	private:\
+		NOX_ATTR_DECLARATION(::nox::reflection::attr::IgnoreReflection())	\
+		inline constexpr void StaticAssertNoxDeclareReflection()noexcept{ \
+			static_assert(std::is_same_v<ClassType, std::remove_cvref_t<decltype(*this)>>); \
+		}\
+		friend struct ::nox::reflection::gen::ReflectionGeneratedHolder<RootExternalClassType>
+//	end define NOX_DECLARE_REFLECTION_INNER
+
+#endif // NOX_REFLECTION_GENERATOR
 
 	/// @brief		リフレクションオブジェクト定義
 	///	@param ClassType 	型

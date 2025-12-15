@@ -5,6 +5,9 @@
 #include	"stdafx.h"
 #include	"test_behavior.h"
 
+#include	"module_entry.h"
+#include	"application.h"
+
 void	nox::test::TestBehavior::Awake()
 {
 }

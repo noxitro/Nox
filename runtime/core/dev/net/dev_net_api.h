@@ -25,7 +25,7 @@ namespace nox::dev::net
 #endif // NOX_WINDOWS
 	}
 
-	inline	nox::int32	Accept(nox::dev::net::raw_socket_t socket, nox::dev::net::raw_sockaddr& addr, nox::int32& length)
+	inline	nox::dev::net::raw_socket_t	Accept(nox::dev::net::raw_socket_t socket, nox::dev::net::raw_sockaddr& addr, nox::int32& length)
 	{
 #if NOX_WINDOWS
 		return ::accept(socket, &addr, &length);

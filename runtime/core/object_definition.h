@@ -7,6 +7,23 @@
 namespace nox
 {
 	class ManagedObject;
+
+	namespace detail
+	{
+		template<class T, class... Args> requires( std::is_constructible_v<T, Args...>)
+		inline constexpr T& ObjectCtor(Args&&... args)noexcept(std::is_nothrow_constructible_v<T, Args...>)
+		{
+			return *new T(std::forward<Args>(args)...);
+		}
+
+		template<class T, class... Args>
+		inline constexpr T& ObjectCtor(Args&&...)noexcept
+		{
+			NOX_ASSERT(false, u"ここには来ないはず");
+			T*const dummy = nullptr;
+			return *dummy;
+		}
+	}
 }
 
 ///@brief	基底オブジェクトの定義
@@ -28,7 +45,7 @@ namespace nox
 		template<class... Args> requires(std::is_constructible_v<ClassType, Args...>)\
 		inline static constexpr ClassType& Ctor(Args&&... args)noexcept(std::is_nothrow_constructible_v<ClassType, Args...>)\
 		{\
-			return *new ClassType(std::forward<Args>(args)...);\
+			return ::nox::detail::ObjectCtor<ClassType>(std::forward<Args>(args)...);\
 		}\
 		using Base = BaseType
 //	end define

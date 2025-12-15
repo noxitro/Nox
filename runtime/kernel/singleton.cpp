@@ -35,6 +35,7 @@ void	nox::detail::SingletonManager::Register(nox::detail::ISingletonBase& obj)
 				obj.prev_ = current;
 				break;
 			}
+			current = current->next_;
 		}
 	}
 }
@@ -65,6 +66,8 @@ void	nox::detail::SingletonManager::Unregister(nox::detail::ISingletonBase& obj)
 				}
 				break;
 			}
+
+			current = current->next_;
 		}
 	}
 }
@@ -81,11 +84,11 @@ void	nox::detail::SingletonManager::CheckReak()
 
 void	nox::detail::CheckSingletonCreateInstance(void* instance_ptr, std::string_view type_name)noexcept(false)
 {
-	NOX_ASSERT(instance_ptr == nullptr, util::Format(u"インスタンスを生成済みです:{0}", type_name.data()));
+	NOX_ASSERT(instance_ptr == nullptr, u"インスタンスを生成済みです:{0}", type_name.data());
 }
 
 void	nox::detail::CheckSingletonDeleteInstance(void* instance_ptr, std::string_view type_name)noexcept(false)
 {
-	NOX_ASSERT(instance_ptr != nullptr, util::Format(u"インスタンスを破棄済みです:{0}", type_name.data()));
+	NOX_ASSERT(instance_ptr != nullptr, u"インスタンスを破棄済みです:{0}", type_name.data());
 }
 

@@ -11,6 +11,7 @@
 #include    "memory_profile.h"
 #include    "../bit_flag.h"
 #include    "../stack.h"
+#include    "../stack_trace.h"
 
 namespace nox::memory
 {
