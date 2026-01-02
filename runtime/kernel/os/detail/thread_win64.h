@@ -5,6 +5,7 @@
 #pragma once
 #include	"thread_base.h"
 
+#if NOX_WIN64
 #include	"../windows.h"
 
 namespace nox::os::detail
@@ -12,7 +13,7 @@ namespace nox::os::detail
 	class ThreadWin64 : public ThreadBase
 	{
 	public:
-		inline constexpr ThreadWin64()noexcept :
+		inline ThreadWin64()noexcept :
 			native_thread_handle_(nullptr),
 			native_thread_id_(0)
 		{
@@ -42,7 +43,7 @@ namespace nox::os::detail
 		 * @param func
 		 * @param ...args
 		*/
-	//	void Dispatch(const Delegate<void()>& func);
+		void Dispatch(std::function<void()> func);
 
 		/**
 		 * @brief 停止
@@ -85,3 +86,4 @@ namespace nox::os::detail
 		static inline thread_local ThreadWin64* current_thread_ = nullptr;
 	};
 }
+#endif

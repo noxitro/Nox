@@ -60,7 +60,6 @@ namespace nox
 			//!<@brief	配列への変換
 			[[nodiscard]]	constexpr	inline	std::array<_ValueType, 3> ToArray()const { return std::array<_ValueType, 3>{x, y, z}; }
 
-
 			//------------------------------------------------------
 			//	operator
 			//------------------------------------------------------
@@ -83,4 +82,5 @@ namespace nox
 	}
 
 	using Vec3 = nox::detail::Vector3D<nox::float_t>;
+	using Vec3d = nox::detail::Vector3D<nox::double_t>;
 }

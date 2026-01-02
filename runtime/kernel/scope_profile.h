@@ -5,17 +5,10 @@
 #pragma once
 #include	"stop_watch.h"
 #include	"advanced_type.h"
+#include	"utility.h"
 
 namespace nox::util
 {
-	struct INewDeleteDisabled
-	{
-		static void* operator new(std::size_t) = delete;
-		static void* operator new[](std::size_t) = delete;
-		static void  operator delete(void*) = delete;
-		static void  operator delete[](void*) = delete;
-	};
-
 	struct ScopeProfile : INewDeleteDisabled
 	{
 		ScopeProfile(const std::u16string_view label);

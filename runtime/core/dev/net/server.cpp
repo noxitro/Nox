@@ -16,6 +16,18 @@ namespace nox::dev::net
 	inline constexpr std::string_view k_hand_shake_str3 = "HandShake3";
 }
 
+nox::dev::net::Server::Server() :
+	flags_{},
+	is_startup_(false),
+	shutdown_(false),
+	phase_(nox::dev::net::Server::Phase::None),
+	is_error_(false),
+	socket_(nox::dev::net::k_raw_invalid_socket),
+	initialize_context_{}
+{
+
+}
+
 nox::dev::net::Server::~Server()
 {
 	nox::dev::net::SocketScheduler::Instance().UnregisterEntity(*this);
@@ -53,7 +65,7 @@ bool nox::dev::net::Server::Startup(const InitializeContext& context)
 #if NOX_WINDOWS
 	raw_sockaddr_in ip_address;
 	ip_address.sin_family = AF_INET;
-	ip_address.sin_addr.S_un.S_addr = INADDR_ANY;
+	ip_address.sin_addr.S_un.S_addr = INADDR_ANY;	//	全てのマシンを受け付け
 	ip_address.sin_port = ::htons(static_cast<nox::uint16>(context.port));
 	this->socket_ = ::socket(ip_address.sin_family, SOCK_STREAM, 0);
 	

@@ -7,7 +7,7 @@
 
 namespace nox
 {
-	class Interface
+	struct Interface
 	{
 		inline constexpr Interface()noexcept = default;
 	};

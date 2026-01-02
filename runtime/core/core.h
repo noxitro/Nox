@@ -14,3 +14,4 @@
 #include	"scene_resource.h"
 #include	"application.h"
 #include	"module_entry.h"
+#include	"core_entry.h"

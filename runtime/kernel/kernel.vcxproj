@@ -147,6 +147,14 @@
     <ClInclude Include="os\detail\fie_win64.h" />
     <ClInclude Include="os\detail\mutex_base.h" />
     <ClInclude Include="os\detail\mutex_win64.h" />
+    <ClInclude Include="os\detail\read_write_lock_interface.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="os\detail\read_write_lock_win64.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="os\detail\thread_base.h" />
     <ClInclude Include="os\detail\thread_win64.h" />
     <ClInclude Include="os\detail\window_win64.h" />
@@ -156,6 +164,10 @@
     <ClInclude Include="os\os.h" />
     <ClInclude Include="os\os_definition.h" />
     <ClInclude Include="os\os_utility.h" />
+    <ClInclude Include="os\read_write_lock.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="os\thread.h" />
     <ClInclude Include="os\window.h" />
     <ClInclude Include="os\windows.h" />
@@ -364,6 +376,14 @@
     <ClCompile Include="os\detail\fie_win64.cpp" />
     <ClCompile Include="os\detail\mutex_base.cpp" />
     <ClCompile Include="os\detail\mutex_win64.cpp" />
+    <ClCompile Include="os\detail\read_write_lock_interface.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="os\detail\read_write_lock_win64.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="os\detail\thread_base.cpp" />
     <ClCompile Include="os\detail\thread_win64.cpp" />
     <ClCompile Include="os\detail\window_win64.cpp" />
@@ -372,6 +392,10 @@
     <ClCompile Include="os\os.cpp" />
     <ClCompile Include="os\os_definition.cpp" />
     <ClCompile Include="os\os_utility.cpp" />
+    <ClCompile Include="os\read_write_lock.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="os\window.cpp" />
     <ClCompile Include="os\windows.cpp" />
     <ClCompile Include="parallel_execute_checker.cpp">

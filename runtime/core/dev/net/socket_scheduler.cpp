@@ -7,7 +7,7 @@
 
 #include	"server.h"
 #include	"client.h"
-
+#include	"application.h"
 namespace nox::util
 {
 	
@@ -35,12 +35,15 @@ void	nox::dev::net::SocketScheduler::Initialize()
 	NOX_ASSERT(error_code == 0, nox::util::Format(u"WSAStartup failed. error_code={0}", error_code));
 #endif // NOX_WINDOWS
 
+	thread_.SetThreadName(u"SocketScheduler");
+	thread_.SetThreadPriority(nox::os::ThreadPriority::Lowest);
+	thread_.Dispatch([this]() {
+		this->UpdateTask();
+		});
 }
 
 void	nox::dev::net::SocketScheduler::Update()
 {
-	UpdateTask();
-
 }
 
 void	nox::dev::net::SocketScheduler::Finalize()
@@ -54,9 +57,17 @@ void	nox::dev::net::SocketScheduler::Finalize()
 
 void	nox::dev::net::SocketScheduler::UpdateTask()
 {
-	for (nox::dev::net::Server& server : server_list_)
+	while (true)
 	{
-		server.PollAccept();
+		if (nox::Application::Instance().IsKill())
+		{
+			break;
+		}
+
+		for (nox::dev::net::Server& server : server_list_)
+		{
+			server.PollAccept();
+		}
 	}
 }
 

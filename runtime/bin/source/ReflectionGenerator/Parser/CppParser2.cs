@@ -551,8 +551,6 @@ namespace ReflectionGenerator.Parser2
 		}
 	}
 
-	
-
 	file static class Local
 	{
 		public static ReflectionGenerateKind GetReflectionGenerateKind(ReadOnlySpan<AttributeDecl> attributeList)
@@ -786,7 +784,6 @@ namespace ReflectionGenerator.Parser2
 		Int64,
 		UInt64,
 
-		//	
 		Long,
 		UnsignedLong,
 
@@ -908,11 +905,6 @@ namespace ReflectionGenerator.Parser2
 		Mutable = 1 << 5,
 	}
 
-	public struct TypeData
-	{
-
-	}
-
 	public struct TypeAlias
 	{
 		public string Name { get; init; }
@@ -924,28 +916,20 @@ namespace ReflectionGenerator.Parser2
 		public required string Name { get; init; }
 		public required string FullName { get; init; }
 		public required string Namespace { get; init; }
-		public uint DeclHash { get; init; } = 0;
-#if DEBUG
-		public ClangSharp.Interop.CXCursor Decl { private get; init; }
-#endif
+		public required long Size { get; init; }
+		public required long Alignment { get; init; }
 
 		public required TypeKind TypeKind { get; init; }
 		public required TypeAttributeFlag TypeAttributeFlags { get; init; }
+		public List<TypeAlias> _TypeAliasList { get; } = new List<TypeAlias>();
+		public uint DeclHash { get; init; } = 0;
 
-		/// <summary>
-		/// 
-		/// </summary>
-		public List<TypeAlias> _TypeDefList { get; } = new List<TypeAlias>();
 
-		//      public static readonly TypeInfo Invalid = new TypeInfo() {
-		//          Name = string.Empty,
-		//          FullName = string.Empty,
-		//          Namespace = string.Empty,
-		//	DeclHash = 0,
-		//	TypeAttributeFlags = TypeAttributeFlag.None,
-		//	TypeKind = TypeKind.Invalid,
-		//};
+		//protected DeclBase Decl { get; init; } = InvalidDecl.Invalid;
 
+#if DEBUG
+		public ClangSharp.Interop.CXCursor CXDecl { private get; init; }
+#endif
 
 		public abstract class TemplateArgument
 		{
@@ -991,10 +975,21 @@ namespace ReflectionGenerator.Parser2
 
 	public sealed class PrimitiveTypeInfo : TypeInfo
 	{
-
 	}
+
+
 	public sealed class InvalidTypeInfo : TypeInfo
 	{
+		public static readonly InvalidTypeInfo Invalid = new InvalidTypeInfo()
+		{
+			Name = "invalid",
+			FullName = "invalid",
+			Namespace = string.Empty,
+			Size = 0,
+			Alignment = 0,
+			TypeKind = TypeKind.Invalid,
+			TypeAttributeFlags = TypeAttributeFlag.None,
+		};
 	}
 
 	public sealed class UnknownTypeInfo : TypeInfo
@@ -1065,12 +1060,14 @@ namespace ReflectionGenerator.Parser2
 
 	public class EnumTypeInfo : TypeInfo
 	{
+		public required Parser2.TypeInfo UnderlyingTypeInfo { get; init; }
+
 	}
 	#endregion
 
 	#region 宣言情報
 	[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public class DeclBase 
+    public abstract class DeclBase 
     {
 		public required string Usr { get; init; }
 
@@ -1121,11 +1118,22 @@ namespace ReflectionGenerator.Parser2
 #endif
 	}
 
-	public interface ISpecializationDecl
+	file sealed class InvalidDecl : DeclBase
 	{
-
+		public static readonly InvalidDecl Invalid = new InvalidDecl()
+		{
+			Usr = string.Empty,
+			DeclHash = 0,
+			ParentDeclHash = 0,
+			ParentUniqueDeclKey = default,
+			Meta = default,
+			DeclCategory = DeclCategory.Unknown,
+			ReflectionGenerateKind = ReflectionGenerateKind.None,
+#if DEBUG
+			DebugHashCode = 0,
+#endif
+		};
 	}
-
 
 	public class NamedDecl : DeclBase
     {
@@ -1530,8 +1538,6 @@ namespace ReflectionGenerator.Parser2
 		#region 公開メソッド
 		public void DumpTrace()
         {
-			ClangSharp.Interop.CXCursor c;
-			
             //MergedNamespace rootNamespaceDecl = _NamespaceDeclDict[string.Empty];
             probeNamespaceDecl(NamespaceNodeRoot, 0);
 
@@ -1872,6 +1878,7 @@ namespace ReflectionGenerator.Parser2
 							container.RecordList.Add(declImpl);
 
 							//	NOTE:	テンプレートクラスの特殊化でprivate型が使われているかどうかを調べる
+							Util.Assert(declImpl.TypeInfo != null);
 							if (HasPrivateTypeWithTypeInfo(declImpl.TypeInfo) == true)
 							{
 								declImpl.ReflectionGenerateKind = ReflectionGenerateKind.IgnoreReflection;
@@ -3153,6 +3160,8 @@ namespace ReflectionGenerator.Parser2
                         FullName = type.GetFQN(),
                         Namespace = string.Empty,
 						TypeKind = typeKind,
+						Size = type.SizeOf,
+						Alignment = type.AlignOf,
 					};
                     break;
 
@@ -3177,8 +3186,10 @@ namespace ReflectionGenerator.Parser2
 									DeclHash = type.Declaration.Hash,
 									TypeKind = typeKind,
 									TemplateArgumentList = CreateTemplateArguments(type),
+									Size = type.SizeOf,
+									Alignment = type.AlignOf,
 #if DEBUG
-									Decl = type.Declaration.GetDefinitionCursor(),
+									CXDecl = type.Declaration.GetDefinitionCursor(),
 #endif
 								};
 								break;
@@ -3191,8 +3202,10 @@ namespace ReflectionGenerator.Parser2
 									Namespace = type.GetNamespace(),
 									DeclHash = type.Declaration.Hash,
 									TypeKind = typeKind,
+									Size = type.SizeOf,
+									Alignment = type.AlignOf,
 #if DEBUG
-									Decl = type.Declaration.GetDefinitionCursor(),
+									CXDecl = type.Declaration.GetDefinitionCursor(),
 #endif
 								};
 								break;
@@ -3208,8 +3221,10 @@ namespace ReflectionGenerator.Parser2
 						Namespace = type.GetNamespace(),
 						DeclHash = type.Declaration.Hash,
 						TypeKind = typeKind,
+						Size = type.SizeOf,
+						Alignment = type.AlignOf,
 #if DEBUG
-						Decl = type.Declaration.GetDefinitionCursor(),
+						CXDecl = type.Declaration.GetDefinitionCursor(),
 #endif
 					};
 					break;
@@ -3235,8 +3250,10 @@ namespace ReflectionGenerator.Parser2
 								ArgumentTypeList = typeList,
 								TypeKind = typeKind,
 								TemplateArgumentList = CreateTemplateArguments(declaration),
+								Size = type.SizeOf,
+								Alignment = type.AlignOf,
 #if DEBUG
-								Decl = declaration,
+								CXDecl = declaration,
 #endif
 							};
 						}
@@ -3251,8 +3268,10 @@ namespace ReflectionGenerator.Parser2
 								ReturnType = GetOrCreateTypeInfo(type.ResultType),
 								ArgumentTypeList = typeList,
 								TypeKind = typeKind,
+								Size = type.SizeOf,
+								Alignment = type.AlignOf,
 #if DEBUG
-								Decl = declaration,
+								CXDecl = declaration,
 #endif
 							};
 						}
@@ -3269,6 +3288,8 @@ namespace ReflectionGenerator.Parser2
                         PointeeType = GetOrCreateTypeInfo(type.PointeeType),
                         DeclHash = type.Declaration.Hash,
 						TypeKind = typeKind,
+						Size = type.SizeOf,
+						Alignment = type.AlignOf,
 					};
 
 					break;
@@ -3285,6 +3306,8 @@ namespace ReflectionGenerator.Parser2
                         PointeeType = GetOrCreateTypeInfo(type.PointeeType),
 						DeclHash = type.Declaration.Hash,
 						TypeKind = typeKind,
+						Size = type.SizeOf,
+						Alignment = type.AlignOf,
 					};
 					break;
 					
@@ -3313,6 +3336,8 @@ namespace ReflectionGenerator.Parser2
                         PointeeType = GetOrCreateTypeInfo(type.CanonicalType),
 						DeclHash = type.Declaration.Hash,
 						TypeKind = typeKind,
+						Size = type.SizeOf,
+						Alignment = type.AlignOf,
 					};
                     break;
 				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_UnresolvedUsing:
@@ -3324,14 +3349,13 @@ namespace ReflectionGenerator.Parser2
 						Namespace = type.GetNamespace(),
 						DeclHash = type.Declaration.Hash,
 						TypeKind = typeKind,
+						Size = type.SizeOf,
+						Alignment = type.AlignOf,
 					};
 					break;
 
 				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Enum:
-					if (type.Declaration.Spelling.CString.Contains("InstanceType"))
-					{
-						Util.BreakPoint();
-					}
+					
                     typeInfo = new EnumTypeInfo()
                     {
 						TypeAttributeFlags = typeAttributeFlags,
@@ -3340,6 +3364,9 @@ namespace ReflectionGenerator.Parser2
                         Namespace = type.GetNamespace(),
 						DeclHash = type.Declaration.Hash,
 						TypeKind = typeKind,
+						Size = type.SizeOf,
+						Alignment = type.AlignOf,
+						UnderlyingTypeInfo = GetOrCreateTypeInfo(type.UnderlyingType),
 					};
 					break;
 
@@ -3352,6 +3379,8 @@ namespace ReflectionGenerator.Parser2
 						FullName = type.GetFQN(),
 						Namespace = string.Empty,
 						TypeKind = typeKind,
+						Size = type.SizeOf,
+						Alignment = type.AlignOf,
 					};
 					break;
 
@@ -3363,6 +3392,8 @@ namespace ReflectionGenerator.Parser2
 						FullName = type.GetFQN(),
 						Namespace = string.Empty,
 						TypeKind = typeKind,
+						Size = type.SizeOf,
+						Alignment = type.AlignOf,
 					};
 					break;
 
@@ -3379,6 +3410,8 @@ namespace ReflectionGenerator.Parser2
 						FullName = type.GetFQN(),
 						Namespace = string.Empty,
 						TypeKind = typeKind,
+						Size = type.SizeOf,
+						Alignment = type.AlignOf,
 					};
 					break;
 
@@ -3390,6 +3423,8 @@ namespace ReflectionGenerator.Parser2
 						FullName = type.GetFQN(),
 						Namespace = string.Empty,
 						TypeKind = typeKind,
+						Size = type.SizeOf,
+						Alignment = type.AlignOf,
 					};
 					break;
 
@@ -3401,6 +3436,8 @@ namespace ReflectionGenerator.Parser2
 						FullName = type.GetFQN(),
 						Namespace = string.Empty,
 						TypeKind = typeKind,
+						Size = type.SizeOf,
+						Alignment = type.AlignOf,
 					};
 					break;
 
@@ -3414,6 +3451,8 @@ namespace ReflectionGenerator.Parser2
 						FullName = type.GetFQN(),
 						Namespace = string.Empty,
 						TypeKind = typeKind,
+						Size = type.SizeOf,
+						Alignment = type.AlignOf,
 					};
 					break;
 
@@ -3425,6 +3464,8 @@ namespace ReflectionGenerator.Parser2
 						FullName = type.GetFQN(),
 						Namespace = string.Empty,
 						TypeKind = typeKind,
+						Size = type.SizeOf,
+						Alignment = type.AlignOf,
 					};
 					break;
 

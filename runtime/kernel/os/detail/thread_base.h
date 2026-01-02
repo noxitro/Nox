@@ -87,7 +87,7 @@ namespace nox::os
 	class ThreadBase : public ThreadInterface
 	{
 	public:
-		inline constexpr ThreadBase()noexcept :
+		inline ThreadBase()noexcept :
 			thread_id_(-1),
 			thread_state_(ThreadState::Wait),
 			thread_priority_(ThreadPriority::Normal),
@@ -123,6 +123,7 @@ namespace nox::os
 		{
 			terminate_func_table_.at(T::GetThreadId()) = [&func, &args...]() {std::invoke(func, args...); };
 		}*/
+		static void	Sleep(nox::uint32 milliseccond);
 	protected:
 
 		/**
@@ -148,25 +149,17 @@ namespace nox::os
 		/// @brief スレッド状態
 		ThreadState thread_state_;
 
-		/**
-		 * @brief 優先度
-		*/
+		/// @brief 優先度
 		ThreadPriority thread_priority_;
 
-		/**
-		 * @brief スタックサイズ
-		*/
+		/// @brief スタックサイズ
 		int32 stack_size_;
 
-		/**
-		 * @brief スレッド実行関数
-		*/
-	//	Delegate<void()> thread_func_;
+		/// @brief スレッド実行関数
+		std::function<void()> thread_func_;
 
-		/**
-		 * @brief スレッド終了時の関数テーブル
-		*/
-	//	static inline constinit std::array<Delegate<void()>, MAX_THREAD_ID> terminate_func_table_;
+		/// @brief スレッド終了時の関数テーブル
+		static inline std::array<std::function<void()>, MAX_THREAD_ID> terminate_func_table_{};
 	};
 
 

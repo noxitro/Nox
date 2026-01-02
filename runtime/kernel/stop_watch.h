@@ -75,6 +75,12 @@ namespace nox
 			}
 		}
 
+		inline void Restart()noexcept
+		{
+			start_time_ = std::chrono::high_resolution_clock::now();
+			elapsed_ = std::chrono::nanoseconds::zero();
+		}
+
 		inline constexpr void Stop()noexcept
 		{
 			if (running_)

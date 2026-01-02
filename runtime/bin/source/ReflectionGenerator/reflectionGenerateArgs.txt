@@ -13,4 +13,4 @@
 -PlatformDefine
 "x64Define"
 -MSBuildBinPath
-"C:\Program Files\Microsoft Visual Studio\18\Insiders\MSBuild\Current\Bin\amd64"
+"C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\amd64"

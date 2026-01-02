@@ -48,6 +48,12 @@ namespace nox::reflection
 		const ClassNode* prev_ptr;
 		ClassNode* child_ptr;
 
+		inline const nox::reflection::ClassInfo& getClassInfo()const noexcept
+		{
+			NOX_ASSERT(class_info != nullptr, u"ClassInfo is null");
+			return *class_info;
+		}
+
 		inline constexpr explicit ClassNode(const nox::reflection::Type& _type)noexcept :
 			type(_type),
 			class_info(nullptr),
@@ -58,7 +64,7 @@ namespace nox::reflection
 		}
 
 		inline constexpr explicit ClassNode(const nox::reflection::ClassInfo& _class_info)noexcept :
-			type(_class_info.GetUnderlyingType()),
+			type(_class_info.GetType()),
 			class_info(&_class_info),
 			next_ptr(nullptr),
 			prev_ptr(nullptr),
@@ -90,83 +96,37 @@ namespace nox::reflection
 		inline ClassNode& operator =(ClassNode&& rts)noexcept = delete;
 	};
 
-	/// @brief 翻訳単位(project)の情報
-	struct Artifact
-	{
-		std::int32_t counter_;
-
-		//	型情報をキーとした検索用
-		struct
-		{
-			nox::UnorderedMap<const nox::reflection::Type*, ClassNode> class_node_map;
-			nox::UnorderedMap<const nox::reflection::Type*, std::reference_wrapper<const nox::reflection::ClassInfo>> union_map;
-			nox::UnorderedMap<const nox::ObjectPointerId*, std::reference_wrapper<const nox::reflection::VariableInfo>> variable_map;
-			nox::UnorderedMap<const nox::FunctionPointerId*, std::reference_wrapper<const nox::reflection::FunctionInfo>> function_map;
-			nox::UnorderedMap<const nox::reflection::Type*, std::reference_wrapper<const nox::reflection::EnumInfo>> enum_map;
-		}chunk_with_type_id;
-
-		//	名前のハッシュをキーとした検索用
-		struct
-		{
-			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const ClassNode>> class_node_map;
-			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::ClassInfo>> union_map;
-			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::VariableInfo>> variable_map;
-			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::FunctionInfo>> function_map;
-			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::EnumInfo>> enum_map;
-
-		}chunk_with_name_hash;
-
-		inline Artifact() :counter_(0)
-		{}
-
-		inline Artifact(const Artifact&)noexcept
-		{
-			NOX_ASSERT(false, u"failed");
-		}
-
-		inline Artifact(Artifact&& rhs)noexcept
-		{
-			counter_ = rhs.counter_;
-
-			chunk_with_type_id.class_node_map = std::move(rhs.chunk_with_type_id.class_node_map);
-			chunk_with_type_id.union_map = std::move(rhs.chunk_with_type_id.union_map);
-			chunk_with_type_id.variable_map = std::move(rhs.chunk_with_type_id.variable_map);
-			chunk_with_type_id.function_map = std::move(rhs.chunk_with_type_id.function_map);
-			chunk_with_type_id.enum_map = std::move(rhs.chunk_with_type_id.enum_map);
-
-			chunk_with_name_hash.class_node_map = std::move(rhs.chunk_with_name_hash.class_node_map);
-			chunk_with_name_hash.union_map = std::move(rhs.chunk_with_name_hash.union_map);
-			chunk_with_name_hash.variable_map = std::move(rhs.chunk_with_name_hash.variable_map);
-			chunk_with_name_hash.function_map = std::move(rhs.chunk_with_name_hash.function_map);
-			chunk_with_name_hash.enum_map = std::move(rhs.chunk_with_name_hash.enum_map);
-		}
-	};
-
 	//	DB
+	// //	型情報をキーとした検索用
+	struct
+	{
+		nox::UnorderedMap<const nox::reflection::Type*, ClassNode> class_node_map;
+		nox::UnorderedMap<const nox::reflection::Type*, std::reference_wrapper<const nox::reflection::ClassInfo>> union_map;
+		nox::UnorderedMap<const nox::ObjectPointerId*, std::reference_wrapper<const nox::reflection::VariableInfo>> variable_map;
+		nox::UnorderedMap<const nox::FunctionPointerId*, std::reference_wrapper<const nox::reflection::FunctionInfo>> function_map;
+		nox::UnorderedMap<const nox::reflection::Type*, std::reference_wrapper<const nox::reflection::EnumInfo>> enum_map;
+	}chunk_with_type_id;
 
+	//	名前のハッシュをキーとした検索用
+	struct
+	{
+		nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const ClassNode>> class_node_map;
+		nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::ClassInfo>> union_map;
+		nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::VariableInfo>> variable_map;
+		nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::FunctionInfo>> function_map;
+		nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::EnumInfo>> enum_map;
+
+	}chunk_with_name_hash;
 	/// @brief 全ての翻訳単位の情報を格納するマップ
-	nox::UnorderedMap<std::uint32_t, Artifact> artifact_map_;
 
 	nox::HashSet<const nox::reflection::Type*> all_type_hash_set_;
 	nox::Vector<std::reference_wrapper<const nox::reflection::Type>> all_type_list_;
 
-	/// @brief		全ての型情報を格納するマップ
-	/// @details	TODO:	翻訳単位は未対応
-	inline	Artifact& GetCreateArtifact(std::uint32_t)
+	inline	const nox::reflection::ClassNode& GetRootClassNode()noexcept
 	{
-		auto it = artifact_map_.find(0);
-		if (it != artifact_map_.end())
-		{
-			return it->second;
-		}
-		return artifact_map_.emplace(0, Artifact{}).first->second;
-
-		//if (artifact_map_.contains(name_hash) == true)
-		//{
-		//	return artifact_map_.at(name_hash);
-		//}
-
-		//return artifact_map_.emplace(name_hash, Artifact{}).first->second;
+		auto r = chunk_with_type_id.class_node_map.find(&nox::reflection::Typeof<nox::reflection::ReflectionObject>());
+		NOX_ASSERT(r != chunk_with_type_id.class_node_map.end(), u"ReflectionObject class node not found");
+		return r->second;
 	}
 
 	inline	void RegisterTypeIdMap(const nox::reflection::Type&)
@@ -179,7 +139,7 @@ namespace nox::reflection
 	
 	inline const ClassNode* FindClassNode(const nox::reflection::Type& type)
 	{
-		const auto& class_node_map = artifact_map_.at(0).chunk_with_type_id.class_node_map;
+		const auto& class_node_map = chunk_with_type_id.class_node_map;
 
 		auto it = class_node_map.find(&type);
 		if (it != class_node_map.end())
@@ -223,12 +183,12 @@ void nox::reflection::Initialize()
 		nox::uint32 enum_count = 0;
 		nox::uint32 function_count = 0;
 		nox::uint32 variable_count = 0;
-		for (const auto& artifact_map_pair : artifact_map_)
+
 		{
-			class_count += static_cast<nox::uint32>(artifact_map_pair.second.chunk_with_type_id.class_node_map.size());
-			enum_count += static_cast<nox::uint32>(artifact_map_pair.second.chunk_with_type_id.enum_map.size());
-			function_count += static_cast<nox::uint32>(artifact_map_pair.second.chunk_with_type_id.function_map.size());
-			variable_count += static_cast<nox::uint32>(artifact_map_pair.second.chunk_with_type_id.variable_map.size());
+			class_count += static_cast<nox::uint32>(chunk_with_type_id.class_node_map.size());
+			enum_count += static_cast<nox::uint32>(chunk_with_type_id.enum_map.size());
+			function_count += static_cast<nox::uint32>(chunk_with_type_id.function_map.size());
+			variable_count += static_cast<nox::uint32>(chunk_with_type_id.variable_map.size());
 		}
 		NOX_INFO_LINE(nox::log_id::Reflection, u"class type count:{0}", class_count);
 		NOX_INFO_LINE(nox::log_id::Reflection, u"enum type count:{0}", enum_count);
@@ -236,21 +196,63 @@ void nox::reflection::Initialize()
 		NOX_INFO_LINE(nox::log_id::Reflection, u"variable count:{0}", variable_count);
 		NOX_INFO_LINE(nox::log_id::Reflection, u"=====typedb end=====");
 	}
+
+	//	dump class node
+	{
+		NOX_INFO_LINE(nox::log_id::Reflection, u"======class node dump======");
+
+
+		constexpr std::array<nox::char16, 1024> space = []()constexpr noexcept->auto
+		{
+			std::array<nox::char16, 1024> result = {};
+			for (nox::uint16 i = 0; i < result.size(); ++i)
+			{
+				result[i] = u'\t';
+			}
+			return result;
+			}();
+
+		const auto dump_class_node = [&space](this auto self, const nox::reflection::ClassNode& node, nox::uint16 depth = 0) -> void
+			{
+				if (depth > 0)
+				{
+					NOX_INFO_LINE(nox::log_id::Reflection, u"{0}{1}", std::u16string_view(space.data(), depth), node.getClassInfo().GetFullName());
+				}
+				else 
+				{
+					NOX_INFO_LINE(nox::log_id::Reflection, u"{0}", node.getClassInfo().GetFullName());
+				}
+
+				if (node.child_ptr != nullptr)
+				{
+					self(*node.child_ptr, depth + 1);
+				}
+
+				if (node.next_ptr != nullptr)
+				{
+					self(*node.next_ptr, depth);
+				}
+			};
+
+		dump_class_node(GetRootClassNode());
+
+		NOX_INFO_LINE(nox::log_id::Reflection, u"======class node dump end======");
+	}
 }
 
 void nox::reflection::Finalize()
 {
 	nox::reflection::FinalizeGen();
-	artifact_map_ = {};
+	chunk_with_type_id = {};
+	chunk_with_name_hash = {};
 	//all_type_id_map_ = {};
 }
 
 const nox::reflection::ClassInfo* nox::reflection::FindClassInfo(const nox::reflection::Type& type)noexcept
 {
-	for (const Artifact& artifact : artifact_map_ | std::views::values)
 	{
-		const auto it = artifact.chunk_with_type_id.class_node_map.find(&type);
-		if (it != artifact.chunk_with_type_id.class_node_map.end())
+		const auto it = chunk_with_type_id.class_node_map.find(&type);
+		if (it != chunk_with_type_id.class_node_map.end())
 		{
 			return it->second.class_info;
 		}
@@ -261,10 +263,9 @@ const nox::reflection::ClassInfo* nox::reflection::FindClassInfo(const nox::refl
 
 const nox::reflection::ClassInfo* nox::reflection::FindClassInfo(std::uint32_t namehash)noexcept
 {
-	for (const Artifact& artifact : artifact_map_ | std::views::values)
 	{
-		const auto it = artifact.chunk_with_name_hash.class_node_map.find(namehash);
-		if (it != artifact.chunk_with_name_hash.class_node_map.end())
+		const auto it = chunk_with_name_hash.class_node_map.find(namehash);
+		if (it != chunk_with_name_hash.class_node_map.end())
 		{
 			return it->second.get().class_info;
 		}
@@ -272,12 +273,39 @@ const nox::reflection::ClassInfo* nox::reflection::FindClassInfo(std::uint32_t n
 	return nullptr;
 }
 
+namespace nox::reflection
+{
+}
+
+void nox::reflection::ForeachDerivedClassInfoList(const nox::reflection::Type& type, std::move_only_function<void(const nox::reflection::ClassInfo&)> callback, bool include_self, bool recursive)
+{
+	const auto search = [&type, &callback, include_self, recursive](this auto self, const nox::reflection::ClassNode& node, bool target_child = false)->void
+		{
+			const bool target_self = node.type == type;
+			if (target_child || (include_self && target_self))
+			{
+				callback(node.getClassInfo());
+			}
+
+			if (node.child_ptr != nullptr)
+			{
+				self(*node.child_ptr, target_self);
+			}
+
+			if (node.next_ptr != nullptr)
+			{
+				self(*node.next_ptr);
+			}
+		};
+
+	search(nox::reflection::GetRootClassNode());
+}
+
 const nox::reflection::EnumInfo* nox::reflection::FindEnumInfo(const nox::reflection::Type& type)noexcept
 {
-	for (const Artifact& artifact : artifact_map_ | std::views::values)
 	{
-		const auto it = artifact.chunk_with_type_id.enum_map.find(&type);
-		if (it != artifact.chunk_with_type_id.enum_map.end())
+		const auto it = chunk_with_type_id.enum_map.find(&type);
+		if (it != chunk_with_type_id.enum_map.end())
 		{
 			return &it->second.get();
 		}
@@ -287,14 +315,8 @@ const nox::reflection::EnumInfo* nox::reflection::FindEnumInfo(const nox::reflec
 
 const nox::reflection::EnumInfo* nox::reflection::FindEnumInfo(const std::uint32_t artiifact_name_hash, const nox::reflection::Type& type)noexcept
 {
-	const auto artifact_it = artifact_map_.find(artiifact_name_hash);
-	if (artifact_it == artifact_map_.end())
-	{
-		return nullptr;
-	}
-
-	const auto enum_it = artifact_it->second.chunk_with_type_id.enum_map.find(&type);
-	if (enum_it == artifact_it->second.chunk_with_type_id.enum_map.end())
+	const auto enum_it = chunk_with_type_id.enum_map.find(&type);
+	if (enum_it == chunk_with_type_id.enum_map.end())
 	{
 		return nullptr;
 	}
@@ -304,10 +326,9 @@ const nox::reflection::EnumInfo* nox::reflection::FindEnumInfo(const std::uint32
 
 const nox::reflection::FunctionInfo* nox::reflection::FindFunctionInfo(const nox::FunctionPointerId& id)noexcept
 {
-	for (const Artifact& artifact : artifact_map_ | std::views::values)
 	{
-		const auto it = artifact.chunk_with_type_id.function_map.find(&id);
-		if (it != artifact.chunk_with_type_id.function_map.end())
+		const auto it = chunk_with_type_id.function_map.find(&id);
+		if (it != chunk_with_type_id.function_map.end())
 		{
 			return &it->second.get();
 		}
@@ -317,10 +338,9 @@ const nox::reflection::FunctionInfo* nox::reflection::FindFunctionInfo(const nox
 
 const nox::reflection::FunctionInfo* nox::reflection::FindFunctionInfoWithNameHash(const std::uint32_t name_hash)noexcept
 {
-	for (const Artifact& artifact : artifact_map_ | std::views::values)
 	{
-		const auto it = artifact.chunk_with_name_hash.function_map.find(name_hash);
-		if (it != artifact.chunk_with_name_hash.function_map.end())
+		const auto it = chunk_with_name_hash.function_map.find(name_hash);
+		if (it != chunk_with_name_hash.function_map.end())
 		{
 			return &it->second.get();
 		}
@@ -330,10 +350,9 @@ const nox::reflection::FunctionInfo* nox::reflection::FindFunctionInfoWithNameHa
 
 const nox::reflection::VariableInfo* nox::reflection::FindVariableInfo(const nox::ObjectPointerId& id)noexcept
 {
-	for (const Artifact& artifact : artifact_map_ | std::views::values)
 	{
-		const auto it = artifact.chunk_with_type_id.variable_map.find(&id);
-		if (it != artifact.chunk_with_type_id.variable_map.end())
+		const auto it = chunk_with_type_id.variable_map.find(&id);
+		if (it != chunk_with_type_id.variable_map.end())
 		{
 			return &it->second.get();
 		}
@@ -343,10 +362,9 @@ const nox::reflection::VariableInfo* nox::reflection::FindVariableInfo(const nox
 
 const nox::reflection::VariableInfo* nox::reflection::FindVariableInfoWithNameHash(const std::uint32_t name_hash)noexcept
 {
-	for (const Artifact& artifact : artifact_map_ | std::views::values)
 	{
-		const auto it = artifact.chunk_with_name_hash.variable_map.find(name_hash);
-		if (it != artifact.chunk_with_name_hash.variable_map.end())
+		const auto it = chunk_with_name_hash.variable_map.find(name_hash);
+		if (it != chunk_with_name_hash.variable_map.end())
 		{
 			return &it->second.get();
 		}
@@ -356,7 +374,7 @@ const nox::reflection::VariableInfo* nox::reflection::FindVariableInfoWithNameHa
 
 bool nox::reflection::IsBaseOf(const nox::reflection::ClassInfo& base, const nox::reflection::ClassInfo& derived)noexcept
 {
-	const nox::reflection::Type& base_type = base.GetUnderlyingType();
+	const nox::reflection::Type& base_type = base.GetType();
 
 	//TODO:	遅い
 	for (const nox::reflection::Type& tmp_base_type : derived.GetBaseTypeList())
@@ -382,23 +400,19 @@ bool nox::reflection::detail::IsBaseOf(const nox::reflection::Type& base, const 
 
 void	nox::reflection::Register(const nox::reflection::ClassInfo& data)
 {
-	const std::uint32_t artifact_name_hash = nox::util::Crc32(data.GetFullName());
+	const nox::reflection::Type& type = data.GetType();
 
-	const nox::reflection::Type& type = data.GetUnderlyingType();
-
-	Artifact& artifact = GetCreateArtifact(artifact_name_hash);
-	++artifact.counter_;
-
-	if (data.GetUnderlyingType().IsUnion() == true)
+	if (data.GetType().IsUnion() == true)
 	{
-		artifact.chunk_with_type_id.union_map.emplace(&type, data);
-		artifact.chunk_with_name_hash.union_map.emplace(nox::util::Crc32(data.GetFullName()), data);
+		chunk_with_type_id.union_map.emplace(&type, data);
+		chunk_with_name_hash.union_map.emplace(nox::util::Crc32(data.GetFullName()), data);
+		return;
 	}
 	else
 	{
 		//	継承関係の構築
 		ClassNode& self_class_node = [&]()->ClassNode& {
-			auto r = nox::util::Find(artifact.chunk_with_type_id.class_node_map, &type);
+			const auto r = nox::util::Find(chunk_with_type_id.class_node_map, &type);
 			if (r)
 			{
 				//	既に存在する場合
@@ -406,25 +420,30 @@ void	nox::reflection::Register(const nox::reflection::ClassInfo& data)
 				NOX_ASSERT(node.class_info == nullptr, u"already registered class info:{}", data.GetFullName());
 				node.class_info = &data;
 
-				artifact.chunk_with_name_hash.class_node_map.emplace(nox::util::Crc32(data.GetFullName()), node);
+				chunk_with_name_hash.class_node_map.emplace(nox::util::Crc32(data.GetFullName()), node);
 				return node;
 			}
 			else
 			{
-				ClassNode& new_class_node = artifact.chunk_with_type_id.class_node_map.emplace(&type, ClassNode(data)).first->second;
-				artifact.chunk_with_name_hash.class_node_map.emplace(nox::util::Crc32(data.GetFullName()), new_class_node);
+				ClassNode& new_class_node = chunk_with_type_id.class_node_map.emplace(&type, ClassNode(data)).first->second;
+				chunk_with_name_hash.class_node_map.emplace(nox::util::Crc32(data.GetFullName()), new_class_node);
 				return new_class_node;
 			}
 			}();
 
 		for (const nox::reflection::Type& base_type : data.GetBaseTypeList())
 		{
-			if (artifact.chunk_with_type_id.class_node_map.contains(&base_type) == false)
+			if (base_type.IsInterface())
 			{
-				artifact.chunk_with_type_id.class_node_map.emplace(&base_type, ClassNode(base_type));
+				continue;
 			}
 
-			ClassNode& parent_class_node = artifact.chunk_with_type_id.class_node_map.at(&base_type);
+			if (chunk_with_type_id.class_node_map.contains(&base_type) == false)
+			{
+				chunk_with_type_id.class_node_map.emplace(&base_type, ClassNode(base_type));
+			}
+
+			ClassNode& parent_class_node = chunk_with_type_id.class_node_map.at(&base_type);
 			if (parent_class_node.child_ptr == nullptr)
 			{
 				parent_class_node.child_ptr = &self_class_node;
@@ -453,19 +472,19 @@ void nox::reflection::Unregister(const nox::reflection::ClassInfo& data)
 //
 //void Reflection::Register(const ClassInfo& data)
 //{
-//	NOX_ASSERT(class_data_map_.contains(data.GetUnderlyingType().GetTypeID()) == true, U"");
+//	NOX_ASSERT(class_data_map_.contains(data.GetType().GetTypeID()) == true, U"");
 //
-//	class_data_map_.emplace(data.GetUnderlyingType().GetTypeID(), ClassData{.class_info_ptr = &data});
+//	class_data_map_.emplace(data.GetType().GetTypeID(), ClassData{.class_info_ptr = &data});
 //
 //	//	親子関係の構築
 //	//	親より先に子が登録された場合の保険処理
-//	ClassData& newClassData = class_data_map_.at(data.GetUnderlyingType().GetTypeID());
+//	ClassData& newClassData = class_data_map_.at(data.GetType().GetTypeID());
 //	auto baseTypeList = data.GetBaseTypeList();
 //	for (const ClassInfo& baseType : baseTypeList)
 //	{
-//		if (class_data_map_.contains(baseType.GetUnderlyingType().GetTypeID()) == false)
+//		if (class_data_map_.contains(baseType.GetType().GetTypeID()) == false)
 //		{
-//			class_data_map_.emplace(baseType.GetUnderlyingType().GetTypeID(), ClassData());
+//			class_data_map_.emplace(baseType.GetType().GetTypeID(), ClassData());
 //		}
 //	}
 //
@@ -510,14 +529,10 @@ void nox::reflection::Unregister(const nox::reflection::ClassInfo& data)
 
 void nox::reflection::Register(const nox::reflection::EnumInfo& data)
 {
-	const std::uint32_t artifact_name_hash = nox::util::Crc32(data.GetFullName());
 	const nox::reflection::Type& type = data.GetType();
 
-	Artifact& artifact = GetCreateArtifact(artifact_name_hash);
-	++artifact.counter_;
-
-	artifact.chunk_with_type_id.enum_map.emplace(&type, data);
-	artifact.chunk_with_name_hash.enum_map.emplace(nox::util::Crc32(data.GetFullName()), data);
+	chunk_with_type_id.enum_map.emplace(&type, data);
+	chunk_with_name_hash.enum_map.emplace(nox::util::Crc32(data.GetFullName()), data);
 }
 
 void nox::reflection::Unregister(const nox::reflection::EnumInfo& data)
@@ -527,37 +542,24 @@ void nox::reflection::Unregister(const nox::reflection::EnumInfo& data)
 
 void nox::reflection::Register(const nox::reflection::VariableInfo& data)
 {
-	NOX_INFO_LINE(nox::log_id::Reflection, U"Register VariableInfo:{0}", data.GetFullName());
+//	NOX_INFO_LINE(nox::log_id::Reflection, U"Register VariableInfo:{0}", data.GetFullName());
 
-	const std::uint32_t artifact_name_hash = nox::util::Crc32(data.GetFullName());
-	Artifact& artifact = GetCreateArtifact(artifact_name_hash);
-	++artifact.counter_;
-
-	artifact.chunk_with_type_id.variable_map.emplace(&data.GetObjectPointerId(), data);
-	artifact.chunk_with_name_hash.variable_map.emplace(nox::util::Crc32(data.GetFullName()), data);
+	chunk_with_type_id.variable_map.emplace(&data.GetObjectPointerId(), data);
+	chunk_with_name_hash.variable_map.emplace(nox::util::Crc32(data.GetFullName()), data);
 }
 
 void nox::reflection::Unregister(const nox::reflection::VariableInfo& data)
 {
-	const std::uint32_t artifact_name_hash = nox::util::Crc32(data.GetFullName());
 }
 
 void nox::reflection::Register(const nox::reflection::FunctionInfo& data)
 {
-	const std::uint32_t artifact_name_hash = nox::util::Crc32(data.GetFullName());
-	Artifact& artifact = GetCreateArtifact(artifact_name_hash);
-	++artifact.counter_;
-
-	artifact.chunk_with_type_id.function_map.emplace(&data.GetFunctionId(), data);
-	artifact.chunk_with_name_hash.function_map.emplace(nox::util::Crc32(data.GetFullName()), data);
+	chunk_with_type_id.function_map.emplace(&data.GetFunctionId(), data);
+	chunk_with_name_hash.function_map.emplace(nox::util::Crc32(data.GetFullName()), data);
 }
 
 void nox::reflection::Unregister(const nox::reflection::FunctionInfo& data)
 {
-	const std::uint32_t artifact_name_hash = nox::util::Crc32(data.GetFullName());
-
-	Artifact& artifact = GetCreateArtifact(artifact_name_hash);
-
-	artifact.chunk_with_type_id.function_map.erase(&data.GetFunctionId());
-	artifact.chunk_with_name_hash.function_map.erase(nox::util::Crc32(data.GetFullName()));
+	chunk_with_type_id.function_map.erase(&data.GetFunctionId());
+	chunk_with_name_hash.function_map.erase(nox::util::Crc32(data.GetFullName()));
 }

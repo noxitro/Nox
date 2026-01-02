@@ -77,7 +77,7 @@ namespace nox
 		}
 
 	private:
-		static inline T* instance_ = nullptr;
+		static inline constinit T* instance_ = nullptr;
 	
 	};
 

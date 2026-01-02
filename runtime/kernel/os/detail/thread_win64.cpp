@@ -5,7 +5,6 @@
 #include	"stdafx.h"
 #include	"thread_win64.h"
 
-
 #if NOX_WIN64
 #include	<process.h>
 
@@ -13,6 +12,8 @@
 #include	"../../assertion.h"
 #include	"../../algorithm.h"
 #include	"../../convert_string.h"
+#include	"../../log_trace.h"
+#include	"../../log_id.h"
 
 namespace
 {
@@ -31,12 +32,12 @@ nox::os::detail::ThreadWin64::~ThreadWin64()noexcept
 {
 	Wait();
 }
-#if false
-void	nox::os::detail::ThreadWin64::Dispatch(const Delegate<void()>& func)
+
+void	nox::os::detail::ThreadWin64::Dispatch( std::function<void()> func)
 {
 	//	関数をセット
 	thread_func_ = func;
-	NOX_ASSERT(thread_func_.IsEmpty() == false, U"スレッドコールバックがnullです");
+	NOX_ASSERT(thread_func_ != nullptr, u"スレッドコールバックがnullです");
 
 	//	終了していなければ待つ
 	Wait();
@@ -81,12 +82,12 @@ void	nox::os::detail::ThreadWin64::Dispatch(const Delegate<void()>& func)
 
 	thread_state_ = ThreadState::Work;
 }
-#endif
 
 void	nox::os::detail::ThreadWin64::Wait()
 {
 	if (native_thread_handle_ == nullptr)
 	{
+		NOX_ERROR_LINE(nox::log_id::OS, u"native_thread_handle_ is null");
 		return;
 	}
 
@@ -175,25 +176,19 @@ void	nox::os::detail::ThreadWin64::AssignThreadId()
 
 inline nox::uint32 CALLBACK nox::os::detail::ThreadWin64::ThreadProc(void* argPtr)
 {
-	ThreadWin64* const thisPtr = static_cast<ThreadWin64*>(argPtr);
-	if (thisPtr == nullptr)
-	{
-		return 0;
-	}
-#if false
-	if (thisPtr->thread_func_.IsEmpty() == false)
-	{
-		//	通常関数実行
-		thisPtr->thread_func_.Invoke();
-	}
+	ThreadWin64* const this_ptr = static_cast<ThreadWin64*>(argPtr);
+	NOX_ASSERT(this_ptr != nullptr, u"ThreadWin64::ThreadProc argPtr is null");
+
+	//	通常関数実行
+	this_ptr->thread_func_();
 
 	//	スレッドの終了関数実行
-	const nox::Delegate<void()>& terminateFunc = terminate_func_table_.at(GetThreadId());
-	if (terminateFunc.IsEmpty() == false)
+	auto&& terminateFunc = terminate_func_table_.at(GetThreadId());
+	if (terminateFunc != nullptr)
 	{
-	//	terminateFunc.Invoke();
+		terminateFunc();
 	}
-#endif
+
 	return 0;
 }
 

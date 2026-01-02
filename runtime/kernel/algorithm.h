@@ -294,7 +294,14 @@ namespace nox::util
 	template<bool conditional, auto flag, class FlagType = decltype(flag)>
 	inline constexpr FlagType BitOrConditional(FlagType value)noexcept
 	{
-		return nox::util::BitOr(value, flag);
+		if constexpr (conditional)
+		{
+			return nox::util::BitOr(value, flag);
+		}
+		else
+		{
+			return value;
+		}
 	}
 
 	template<concepts::ClassOrUnion T>

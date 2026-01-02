@@ -11,7 +11,7 @@
 
 namespace nox
 {
-	class Interface;
+	struct Interface;
 }
 
 namespace nox::reflection
@@ -242,6 +242,7 @@ namespace nox::reflection
 		type_attr_flags = nox::util::BitOrConditional<std::is_abstract_v<T>, TypeAttributeFlag::Abstract>(type_attr_flags);
 		type_attr_flags = nox::util::BitOrConditional<std::is_unsigned_v<T>, TypeAttributeFlag::Unsigned>(type_attr_flags);
 		type_attr_flags = nox::util::BitOrConditional<std::is_polymorphic_v<T>, TypeAttributeFlag::Polymorphic>(type_attr_flags);
+		type_attr_flags = nox::util::BitOrConditional<std::is_base_of_v<nox::Interface, T>, TypeAttributeFlag::Interface>(type_attr_flags);
 
 		return type_attr_flags;
 	}

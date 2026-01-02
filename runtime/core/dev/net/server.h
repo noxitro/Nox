@@ -40,6 +40,7 @@ namespace nox::dev::net
 			ConnectionState connection_state = ConnectionState::Invalid;
 		};
 	public:
+		Server();
 		~Server()override;
 		bool Startup(const Server::InitializeContext& context);
 		void Shutdown();

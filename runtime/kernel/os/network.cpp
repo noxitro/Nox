@@ -21,7 +21,7 @@ void	nox::os::network::Initialize()
     ::WSADATA wsa_data;
     const int32 error_code = ::WSAStartup(MAKEWORD(2, 2), &wsa_data);
  //   util::Format(u"error code:{0}", error_code);
-  //  NOX_ASSERT(error_code != 0, util::Format(U"error code:{0}", error_code));
+    NOX_ASSERT(error_code != 0, u"error code:{0}", error_code);
 
  //   ::GetHostNameW
 #endif // NOXWIN64

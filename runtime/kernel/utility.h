@@ -24,4 +24,21 @@ namespace nox::util
 	private:
 		std::function<void()> func_;
 	};
+
+	struct INewDeleteDisabled
+	{
+		static void* operator new(std::size_t) = delete;
+		static void* operator new[](std::size_t) = delete;
+		static void  operator delete(void*) = delete;
+		static void  operator delete[](void*) = delete;
+	};
+
+	struct ICopyMoveDisabled
+	{
+		inline constexpr ICopyMoveDisabled() noexcept = default;
+		inline constexpr ICopyMoveDisabled(const ICopyMoveDisabled&) noexcept = delete;
+		inline constexpr ICopyMoveDisabled(ICopyMoveDisabled&&) noexcept = delete;
+		inline constexpr ICopyMoveDisabled& operator=(const ICopyMoveDisabled&) noexcept = delete;
+		inline constexpr ICopyMoveDisabled& operator=(ICopyMoveDisabled&&) noexcept = delete;
+	};
 }

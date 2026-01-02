@@ -7,6 +7,7 @@
 #include	<type_traits>
 #include	<tuple>
 #include	"preprocessor/repeat.h"
+#include	"interface_class.h"
 
 //	属性付与マクロ
 #if NOX_REFLECTION_GENERATOR
@@ -28,7 +29,7 @@
 namespace nox::reflection
 {
 	/// @brief 属性クラスインターフェース
-	struct NOX_ATTR(nox::reflection::Reflection()) IAttribute
+	struct NOX_ATTR(nox::reflection::Reflection()) IAttribute : nox::Interface
 	{
 	protected:
 		[[nodiscard]] inline constexpr IAttribute()noexcept = default;

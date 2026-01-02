@@ -8,7 +8,10 @@
 #include	"type_traits/type_name.h"
 #include	"reflection_type.h"
 
+namespace nox
+{
 
+}
 
 #if false
 namespace nox

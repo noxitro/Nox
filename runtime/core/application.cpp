@@ -6,10 +6,6 @@
 #include	"stdafx.h"
 #include	"application.h"
 #include	"module_entry.h"
-//import nox.math;
-
-//	test
-#include	"core_entry.h"
 
 namespace
 {
@@ -19,7 +15,10 @@ namespace
 }
 
 nox::Application::Application()noexcept :
-	module_entry_bitset_{}
+	module_entry_bitset_{},
+	enabled_vsync_(false),
+	target_frame_rate_(60),
+	kill_(false)
 {
 }
 
@@ -30,12 +29,12 @@ nox::Application::~Application()
 void	nox::Application::Init()
 {
 	//	モジュールエントリクラス群を収集
-	//	auto class_info = nox::reflection::Reflection::Instance().FindClassInfo<nox::ModuleEntry>();
-	nox::CoreEntry* const core_entry = static_cast<nox::CoreEntry*>(nox::reflection::Typeof<nox::CoreEntry>().CreateObject());
-	if (core_entry != nullptr)
-	{
-		module_entry_list_.emplace_back(*core_entry);
-	}
+	nox::reflection::ForeachDerivedClassInfoList(nox::reflection::Typeof<nox::ModuleEntry>(),
+		[this](const nox::reflection::ClassInfo& class_info) {
+
+			nox::ModuleEntry* module_entry = static_cast<nox::ModuleEntry*>(class_info.GetType().CreateObject());
+			module_entry_list_.emplace_back(*module_entry);
+		});
 }
 
 void	nox::Application::Run()
@@ -52,10 +51,27 @@ void	nox::Application::Run()
 		entry_info.func(*entry_info.entry);
 	}
 
-	for (const ModuleEntryInfo& entry_info : module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Update)])
-	{
-		entry_info.func(*entry_info.entry);
-	}
+	stop_watch_.Start();
+
+	nox::os::Thread game_thread;
+	game_thread.SetThreadName(u"Game");
+	game_thread.Dispatch([this]() {
+
+		while (!this->kill_)
+		{
+			try
+			{
+				this->Update();
+			}
+			catch (const std::exception&)
+			{
+				//	
+				break;
+			}
+		}
+		});
+
+	game_thread.Wait();
 
 	for (const ModuleEntryInfo& entry_info : module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Terminal)])
 	{
@@ -67,26 +83,6 @@ void	nox::Application::Run()
 		entry_info.func(*entry_info.entry);
 	}
 
-	//nox::os::Thread game_thread;
-	//game_thread.SetThreadName(u"Game");
-	//game_thread.Dispatch([this]() {
-
-	//	while (true)
-	//	{
-	//		try
-	//		{
-	//			this->Update();
-	//		}
-	//		catch (const std::exception&)
-	//		{
-	//			//	
-	//			break;
-	//		}
-	//	}
-	//	});
-
-	//game_thread.Wait();
-
 	Exit();
 }
 
@@ -95,13 +91,39 @@ void	nox::Application::InvokeModuleEntry(const UpdateCategory category)
 
 }
 
+void nox::Application::SetVSync(bool flag)noexcept
+{
+	enabled_vsync_ = flag;
+}
+
 void	nox::Application::Update()
 {
+	elapsed_milli_seconds_ = stop_watch_.ElapsedMilliseconds();
+	if (enabled_vsync_)
+	{
+		if (elapsed_milli_seconds_ < next_elapsed_milli_seconds_)
+		{
+			nox::os::Thread::Sleep(1);
+			return;
+		}
+	}
 
+	for (const ModuleEntryInfo& entry_info : module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Update)])
+	{
+		entry_info.func(*entry_info.entry);
+	}
+
+	++frame_counter_;
+
+	//	次のフレーム更新時間
+	next_elapsed_milli_seconds_ += (1000.0f / static_cast<nox::float_t>(target_frame_rate_));
+
+	stop_watch_.Restart();
 }
 
 void	nox::Application::Exit()
 {
+	kill_ = true;
 	for (nox::ModuleEntry& entry : module_entry_list_)
 	{
 		nox::util::SafeDelete(&entry);
@@ -143,6 +165,6 @@ void	nox::Application::RegisterModuleEntry(void(*func)(nox::ModuleEntry&), nox::
 
 	//	重複チェック
 
-	NOX_ASSERT(module_entry_bitset_.test(nox::util::ToUnderlying(type)) == false, nox::util::Format(u"重複エントリ:{0}", (int)type));
+	NOX_ASSERT(module_entry_bitset_.test(nox::util::ToUnderlying(type)) == false, u"重複エントリ:{0}", (int)type);
 	module_entry_bitset_.set(nox::util::ToUnderlying(type));
 }

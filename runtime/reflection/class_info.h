@@ -54,7 +54,7 @@ namespace nox::reflection
 	class TypeAliasInfo
 	{
 	private:
-		const nox::reflection::Type& underlying_type_;
+		const nox::reflection::Type& type_;
 		const ReflectionStringView name_;
 		const ReflectionStringView fullname_;
 		const ReflectionStringView namespace_;
@@ -84,7 +84,7 @@ namespace nox::reflection
 			const std::reference_wrapper<const nox::reflection::Type>* internal_type_list,
 			const std::uint8_t internal_class_length
 		)noexcept:
-			underlying_type_(type),
+			type_(type),
 			name_(name),
 			fullname_(fullname),
 			namespace_(_namespace),
@@ -106,13 +106,13 @@ namespace nox::reflection
 		}
 
 #pragma region アクセサ
-		[[nodiscard]] inline	constexpr	bool	IsValid()const noexcept { return underlying_type_.IsValid(); }
+		[[nodiscard]] inline	constexpr	const nox::reflection::Type& GetType()const noexcept { return type_; }
+		[[nodiscard]] inline	constexpr	bool	IsValid()const noexcept { return type_.IsValid(); }
 
 		[[nodiscard]] inline	constexpr	ReflectionStringView GetName()const noexcept { return name_; }
 		[[nodiscard]] inline	constexpr	ReflectionStringView GetFullName()const noexcept { return fullname_; }
 		[[nodiscard]] inline	constexpr	ReflectionStringView GetNamespace()const noexcept { return namespace_; }
 
-		[[nodiscard]] inline	constexpr	const nox::reflection::Type& GetUnderlyingType()const noexcept { return underlying_type_; }
 		[[nodiscard]] inline	constexpr	const nox::reflection::Type& GetExternalType()const noexcept { return external_class_type_; }
 		[[nodiscard]] inline	const nox::reflection::ClassInfo& GetExternalUserDefinedCompoundTypeInfo()const noexcept { return nox::util::Deref(external_class_type_.GetUserDefinedCompoundTypeInfo()); }
 
@@ -199,7 +199,7 @@ namespace nox::reflection
 		std::uint8_t enum_length_;
 
 		/// @brief 自身のタイプ
-		const Type& underlying_type_;
+		const Type& type_;
 
 		/// @brief 自身が所属するクラス
 		const nox::reflection::Type&	external_class_type_;

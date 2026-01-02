@@ -1,6 +1,8 @@
 ﻿
-namespace RuntimeTypeDB
+namespace ReflectionGenerator.RuntimeTypeDB
 {
+	//	NOTE:	Enum定義関連は、ReflectionGenerator/Parser/CppParser2.csと合わせる
+
 	file static class Local
 	{
 	}
@@ -12,49 +14,76 @@ namespace RuntimeTypeDB
 		Public
 	}
 
+	//	元の定義:CppParser2.TypeKind
 	public enum RuntimeTypeKind : byte
 	{
 		Invalid,
 		Void,
 		Bool,
 		Char,
+		SignedChar,
+		UnsignedChar,
 		Char8,
 		Char16,
 		Char32,
 		WChar16,
 
 		Int8,
-		Uint8,
+		UInt8,
 		Int16,
 		Uint16,
 		Int32,
-		Uint32,
+		UInt32,
 		Int64,
-		Uint64,
+		UInt64,
+
+		Long,
+		UnsignedLong,
 
 		Float,
 		Double,
+		Enum,
 
 		Class,
-		Array,
+		Struct,
+		Union,
+		BoundedArray,
+		UnboundedArray,
 		Pointer,
-		Reference,
+		LValueReference,
+		RValueReference,
+
+		// void()
+		Function,
+		// void(Class::*)(), int Class::*
+		MemberPointer,
+
+		TypeAlias,
+		Nullptr,
+		Auto,
 	}
 
 	public enum TypeAttributeFlag : uint
 	{
-
+		None,
+		LValueReference = 1 << 0,
+		RValueReference = 1 << 1,
+		Const = 1 << 2,
+		Volatile = 1 << 3,
+		Anonymous = 1 << 4,
+		Elaborated = 1 << 5,
 	}
 
 	public enum RecordAttributeFlag : ushort
 	{
 		None,
-		Class=1<<0,
-		Struct=1<<1,
-		Union=1<<2,
+		Class = 1 << 0,
+		Struct = 1 << 1,
+		Union = 1 << 2,
+		Anonymous = 1 << 3,
 	}
 
-	public enum FunctionAttributeFlag : ushort
+	public enum FunctionAttributeFlag : uint
 	{
 		None,
 		Noexcept = 1 << 0,
@@ -74,6 +103,8 @@ namespace RuntimeTypeDB
 		Destructor = 1 << 13,
 		Static = 1 << 14,
 		Explicit = 1 << 15,
+		Delete = 1 << 16,
+		OutOfLine = 1 << 17,
 	}
 
 	public enum VariableAttributeFlag : ushort
@@ -87,11 +118,19 @@ namespace RuntimeTypeDB
 		Mutable = 1 << 5,
 	}
 
+	//	元の定義:CppParser2.AttrKind
 	public enum AttributeKind : byte
 	{
 		Invalid,
 		Annotate,
 		EngineAnnotate,
+		/// <summary>
+		/// ReflectionGenerator用EngineAnnotate属性
+		/// </summary>
+		ReflectionTarget,
+		IgnoreReflectionTarget,
+		NoDiscard,
+		Standard,
 	}
 
 	[MessagePack.MessagePackObject(true)]
@@ -104,8 +143,39 @@ namespace RuntimeTypeDB
 		public AttributeDecl() { }
 	}
 
+	#region 型情報
+	[MessagePack.MessagePackObject(true)]
+	public class TypeInfo
+	{
+		public RuntimeTypeKind Kind { get; set; }
+		public string Name { get; set; } = string.Empty;
+		public string FullName { get; set; } = string.Empty;
+		public string Namespace { get; set; } = string.Empty;
+		public long Size { get; set; }
+		public long Alignment { get; set; }
+
+		public TypeInfo[] ArgumentTypeList { get; set; } = [];
+		public TypeInfo ReturnType { get; set; } = TypeInfo.Invalid;
+
+		public TypeInfo UnderlyingTypeInfo { get; set; } = TypeInfo.Invalid;
+		public TypeInfo PointeeTypeInfo { get; set; } = TypeInfo.Invalid;
+
+		public DeclBase Decl { get; init; } = RuntimeInvalidDecl.Invalid;
+
+
+		public static TypeInfo Invalid { get; } = new TypeInfo();
+
+	}
+	#endregion
+
+	#region 宣言情報
 	[MessagePack.MessagePackObject(true)]
 	public class DeclBase { }
+
+	file class RuntimeInvalidDecl : DeclBase
+	{
+		public static readonly RuntimeInvalidDecl Invalid = new ();
+	}
 
 	[MessagePack.MessagePackObject(true)]
 	public class NamedDecl : DeclBase
@@ -117,24 +187,23 @@ namespace RuntimeTypeDB
 	}
 
 	[MessagePack.MessagePackObject(true)]
-	public class TypeInfo
+	public class NamespaceDecl : NamedDecl
 	{
-		public RuntimeTypeKind Kind { get; set; }
-		public AttributeDecl AttrKind { get; set; }
-		public string Name { get; set; } = string.Empty;
-		public string FullName { get; set; } = string.Empty;
-		public string Namespace { get; set; } = string.Empty;
-		public int Size { get; set; }
-		public int Alignment { get; set; }
-
-		public TypeInfo[] ArgumentTypeList { get; set; } = [];
-		public TypeInfo ReturnType { get; set; } = TypeInfo.Invalid;
-
-		public static TypeInfo Invalid { get; } = new TypeInfo();
+		public NamespaceDecl[] NamespaceList { get; set; } = [];
+		public RecordDecl[] RecordList { get; set; } = [];
+		public VariableDecl[] VariableList { get; set; } = [];
+		public FunctionDecl[] FunctionList { get; set; } = [];
+		public EnumDecl[] EnumList { get; set; } = [];
 	}
 
 	[MessagePack.MessagePackObject(true)]
-	public partial class FunctionDecl : NamedDecl
+	public class TypeDecl : NamedDecl
+	{
+		public string Namespace { get; set; } = string.Empty;
+	}
+
+	[MessagePack.MessagePackObject(true)]
+	public partial class FunctionDecl : TypeDecl
 	{
 		[MessagePack.MessagePackObject(true)]
 		public struct ArgumentInfo
@@ -149,12 +218,12 @@ namespace RuntimeTypeDB
 
 		public TypeInfo TypeInfo { get; set; } = TypeInfo.Invalid;
 		public FunctionAttributeFlag FunctionAttributeFlags { get; set; } = FunctionAttributeFlag.None;
-		public ArgumentInfo[] ArgumentList { private get; set; } = [];
+		public ArgumentInfo[] ArgumentList { get; set; } = [];
 		public int NumDefaultArgument { get; set; } = 0;
 	}
 
 	[MessagePack.MessagePackObject(true)]
-	public class EnumDecl : NamedDecl
+	public class EnumDecl : TypeDecl
 	{
 		[MessagePack.MessagePackObject(true)]
 		public struct EnumeratorInfo
@@ -169,22 +238,11 @@ namespace RuntimeTypeDB
 		}
 
 		public required TypeInfo TypeInfo { get; set; }
-		public required TypeInfo UnderlyingTypeInfo { get; set; }
 		public EnumeratorInfo[] EnumeratorInfoList { get; set; } = [];
 	}
 
 	[MessagePack.MessagePackObject(true)]
-	public class NamespaceDecl : NamedDecl
-	{
-		public NamespaceDecl[] NamespaceList { get; set; } = [];
-		public RecordDecl[] RecordList { get; set; } = [];
-		public VariableDecl[] VariableList { get; set; } = [];
-		public FunctionDecl[] FunctionList { get; set; } = [];
-		public EnumDecl[] EnumList { get; set; } = [];
-	}
-
-	[MessagePack.MessagePackObject(true)]
-	public class RecordDecl : NamedDecl
+	public class RecordDecl : TypeDecl
 	{
 		public required TypeInfo TypeInfo { get; set; }
 		public RecordDecl[] RecordList { get; set; } = [];
@@ -194,13 +252,14 @@ namespace RuntimeTypeDB
 	}
 
 	[MessagePack.MessagePackObject(true)]
-	public class VariableDecl
+	public class VariableDecl : TypeDecl
 	{
 		public TypeInfo Type { get; set; } = TypeInfo.Invalid;
 		public VariableAttributeFlag VariableAttributeFlags { get; set; } = VariableAttributeFlag.None;
 		public long OffsetBits { get; set; } = 0;
 		public int BitFieldWidth { get; set; } = 0;
 	}
+	#endregion
 
 	[MessagePack.MessagePackObject(true)]
 	public class TypeDB
@@ -210,19 +269,41 @@ namespace RuntimeTypeDB
 
 	public static class Util
 	{
+		private const string FileName = "RuntimeTypeDB.bin";
+		private const int MaxPathLength = 1024;
+
 		private static string GetPath(ReadOnlySpan<char> platform, ReadOnlySpan<char> configuration)
 		{
-			ReadOnlySpan<char> fileName = "RuntimeTypeDB.bin";
 			ReadOnlySpan<char> directory = System.IO.Path.GetTempPath();
 
-			string path = $"{directory}/{fileName}";
+			string path = $"{directory}/{FileName}";
 			return System.IO.Path.GetFullPath(path);
 		}
 
-		public static void Serialize(TypeDB data, string platform, string configuration)
+		private static ReadOnlySpan<char> GetPath2(Span<char> dest, ReadOnlySpan<char> platform, ReadOnlySpan<char> configuration)
 		{
-			string path = GetPath(platform, configuration);
-			using (System.IO.FileStream fs = new System.IO.FileStream(path, System.IO.FileMode.Create))
+			// GetTempPath は string を返すのでここだけはヒープ確保
+			string directoryString = System.IO.Path.GetTempPath();
+			ReadOnlySpan<char> directory = directoryString.AsSpan();
+			ReadOnlySpan<char> fileSpan = FileName.AsSpan();
+
+			int requiredLen = directory.Length + fileSpan.Length;
+			if (requiredLen > dest.Length)
+				throw new ArgumentException("dest が短すぎます。", nameof(dest));
+
+			directory.CopyTo(dest);
+			fileSpan.CopyTo(dest[directory.Length..]);
+
+			return dest[..requiredLen];
+		}
+
+		public static void Serialize(TypeDB data, ReadOnlySpan<char> platform, ReadOnlySpan<char> configuration)
+		{
+			Span<char> pathBuffer = stackalloc char[MaxPathLength];
+
+			ReadOnlySpan<char> path = GetPath2(pathBuffer, platform, configuration);
+
+			using (System.IO.FileStream fs = new System.IO.FileStream(path.ToString(), System.IO.FileMode.Create))
 			{
 				MessagePack.MessagePackSerializer.Serialize(fs, data);
 			}
@@ -234,10 +315,12 @@ namespace RuntimeTypeDB
 		/// <param name="platform">プラットフォーム</param>
 		/// <param name="configuration">構成</param>
 		/// <returns></returns>
-		public static TypeDB? Deserialize(string platform, string configuration)
+		public static TypeDB? Deserialize(ReadOnlySpan<char> platform, ReadOnlySpan<char> configuration)
 		{
-			string path = GetPath(platform, configuration);
-			using (System.IO.FileStream fs = new System.IO.FileStream(path, System.IO.FileMode.Open))
+			Span<char> pathBuffer = stackalloc char[MaxPathLength];
+
+			ReadOnlySpan<char> path = GetPath2(pathBuffer, platform, configuration);
+			using (System.IO.FileStream fs = new System.IO.FileStream(path.ToString(), System.IO.FileMode.Open))
 			{
 				return MessagePack.MessagePackSerializer.Deserialize<TypeDB>(fs);
 			}

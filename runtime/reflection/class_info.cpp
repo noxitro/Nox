@@ -57,7 +57,7 @@ const nox::reflection::FunctionInfo* nox::reflection::ClassInfo::GetConstructor(
 			const nox::reflection::FunctionArgumentInfo& argInfo = paramTypeList[i];
 			const nox::reflection::Type& type = typeList[i];
 
-			if (type.IsConvertible(argInfo.GetUnderlyingType()) == false)
+			if (type.IsConvertible(argInfo.GetType()) == false)
 			{
 				continue;
 			}

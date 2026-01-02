@@ -30,6 +30,32 @@ namespace nox::reflection
 		return FindClassInfo(nox::reflection::Typeof<T>());
 	}
 
+	/// @brief 指定した型の派生クラスを列挙する
+	/// @param type         基底クラスとして扱う型情報
+	/// @param callback     列挙対象となったクラス情報ごとに呼び出されるコールバック
+	/// @param include_self true の場合は基底クラス自身（type に対応するクラス）も最初に callback へ渡す
+	/// @param recursive    true の場合は子孫クラス（孫以降の階層）まで再帰的に列挙する。false の場合は直下の派生クラスのみ
+	NOX_ATTR(nox::reflection::attr::IgnoreReflection())
+	void ForeachDerivedClassInfoList(const nox::reflection::Type& type, std::move_only_function<void(const nox::reflection::ClassInfo&)> callback, bool include_self = false, bool recursive = true);
+
+	/// @brief 指定した型の派生クラスを列挙する
+	/// @tparam T 基底クラスとして扱う型
+	/// @param callback     列挙対象となったクラス情報ごとに呼び出されるコールバック
+	/// @param include_self true の場合は基底クラス自身（type に対応するクラス）も最初に callback へ渡す
+	/// @param recursive    true の場合は子孫クラス（孫以降の階層）まで再帰的に列挙する。false の場合は直下の派生クラスのみ
+
+	template<class T> requires(nox::concepts::ClassOrUnion<T>)
+	inline void ForeachDerivedClassInfoList(std::move_only_function<void(const nox::reflection::ClassInfo&)> callback, bool include_self = false, bool recursive = true)
+	{
+		nox::reflection::ForeachDerivedClassInfoList(nox::reflection::Typeof<T>(), callback, include_self, recursive);
+	}
+
+	template<class T>
+	inline std::span<const nox::reflection::ClassInfo*> FindSubClassInfoList(std::span<const nox::reflection::ClassInfo*> dest, bool sublevel = true)
+	{
+		return {};
+	}
+
 	//	列挙体の取得
 	const nox::reflection::EnumInfo* FindEnumInfo(const nox::reflection::Type& type)noexcept;
 	template<nox::concepts::Enum T>

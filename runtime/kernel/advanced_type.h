@@ -20,6 +20,7 @@
 #include	<vector>
 #include	<ranges>
 #include	<expected>
+#include	<chrono>
 
 #include	"basic_type.h"
 #include	"memory/stl_allocate_adapter.h"

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MessagePack.Resolvers;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -101,8 +102,12 @@ namespace ReflectionGenerator
 				declList[i] = new RuntimeTypeDB.EnumDecl
 				{
 					TypeInfo = CreateTypeInfo(source.TypeInfo),
-					UnderlyingTypeInfo = CreateTypeInfo(source.UnderlyingTypeInfo),
 					EnumeratorInfoList = enumeratorInfoList,
+					Name = source.Name,
+					FullName = source.FullName,
+					AccessLevel = (RuntimeTypeDB.AccessLevel)source.AccessLevel,
+					Namespace = source.Namespace,
+					AttributeList = CreateAttributeList(source.AttributeSpan),
 				};
 			}
 			return declList;
@@ -129,22 +134,19 @@ namespace ReflectionGenerator
 					Namespace = source.Namespace,
 				};
 
-				var rd = new RuntimeTypeDB.RecordDecl
+				declList[i] = new RuntimeTypeDB.RecordDecl
 				{
 					Name = source.Name,
 					FullName = source.FullName,
+					Namespace = source.Namespace,
 					AccessLevel = (RuntimeTypeDB.AccessLevel)source.AccessLevel,
 					AttributeList = CreateAttributeList(source.AttributeSpan),
 					TypeInfo = recordType,
+					RecordList = CreateRecordDeclList(source.RecordList),
+					FunctionList = CreateFunctionDeclList(source.FunctionList),
+					VariableList = CreateVariableDeclList(source.VariableList),
+					EnumList = CreateEnumDeclList(source.EnumList),
 				};
-
-				// Child collections
-				rd.RecordList = CreateRecordDeclList(source.RecordList);
-				rd.FunctionList = CreateFunctionDeclList(source.FunctionList);
-				rd.VariableList = CreateVariableDeclList(source.VariableList);
-				rd.EnumList = CreateEnumDeclList(source.EnumList);
-
-				declList[i] = rd;
 			}
 
 			return declList;
@@ -179,6 +181,11 @@ namespace ReflectionGenerator
 
 				declList[i] = new RuntimeTypeDB.FunctionDecl
 				{
+					Name = source.Name,
+					FullName = source.FullName,
+					Namespace = source.Namespace,
+					AccessLevel = (RuntimeTypeDB.AccessLevel)source.AccessLevel,
+					AttributeList = CreateAttributeList(source.AttributeSpan),
 					TypeInfo = CreateTypeInfo(source.TypeInfo),
 					FunctionAttributeFlags = (RuntimeTypeDB.FunctionAttributeFlag)(ushort)source.FunctionAttributeFlags,
 					ArgumentList = argList,
@@ -199,6 +206,11 @@ namespace ReflectionGenerator
 				Parser2.VariableDecl src = sourceList[i];
 				declList[i] = new RuntimeTypeDB.VariableDecl
 				{
+					Name = src.Name,
+					FullName = src.FullName,
+					Namespace = src.Namespace,
+					AccessLevel = (RuntimeTypeDB.AccessLevel)src.AccessLevel,
+					AttributeList = CreateAttributeList(src.AttributeSpan),
 					Type = CreateTypeInfo(src.Type),
 					VariableAttributeFlags = (RuntimeTypeDB.VariableAttributeFlag)(ushort)src.VariableAttributeFlags,
 					OffsetBits = src.OffsetBits,
@@ -210,48 +222,68 @@ namespace ReflectionGenerator
 
 		private static RuntimeTypeDB.TypeInfo CreateTypeInfo(Parser2.TypeInfo src)
 		{
-			// 関数型
-			if (src is Parser2.FunctionTypeInfo f)
+			switch (src)
 			{
-				int argc = f.ArgumentTypeList.Length;
-				var args = argc == 0 ? Array.Empty<RuntimeTypeDB.TypeInfo>() : new RuntimeTypeDB.TypeInfo[argc];
-				for (int i = 0; i < argc; i++)
-				{
-					args[i] = CreateTypeInfo(f.ArgumentTypeList[i]);
-				}
+				case Parser2.FunctionTypeInfo f:
+					{
+						int argc = f.ArgumentTypeList.Length;
+						var args = argc == 0 ? Array.Empty<RuntimeTypeDB.TypeInfo>() : new RuntimeTypeDB.TypeInfo[argc];
+						for (int i = 0; i < argc; i++)
+						{
+							args[i] = CreateTypeInfo(f.ArgumentTypeList[i]);
+						}
 
-				return new RuntimeTypeDB.TypeInfo
-				{
-					// 必要なら RuntimeTypeKind に Function を追加してここで設定
-					Kind = RuntimeTypeDB.RuntimeTypeKind.Invalid,
-					Name = f.Name,
-					FullName = f.FullName,
-					Namespace = f.Namespace,
-					ArgumentTypeList = args,
-					ReturnType = CreateTypeInfo(f.ReturnType),
-				};
+						return new RuntimeTypeDB.TypeInfo
+						{
+							// 必要なら RuntimeTypeKind に Function を追加してここで設定
+							Kind = RuntimeTypeDB.RuntimeTypeKind.Invalid,
+							Name = f.Name,
+							FullName = f.FullName,
+							Namespace = f.Namespace,
+							ArgumentTypeList = args,
+							ReturnType = CreateTypeInfo(f.ReturnType),
+							Size = f.Size,
+							Alignment = f.Alignment,
+						};
+					}
+
+				case Parser2.PointerTypeInfo impl:
+					return new RuntimeTypeDB.TypeInfo
+					{
+						Size = impl.Size,
+						Alignment = impl.Alignment,
+						Kind = RuntimeTypeDB.RuntimeTypeKind.Pointer,
+						Name = impl.Name,
+						FullName = impl.FullName,
+						Namespace = impl.Namespace,
+					};
+
+				case Parser2.EnumTypeInfo impl:
+					return new RuntimeTypeDB.TypeInfo
+					{
+						Size = impl.Size,
+						Alignment = impl.Alignment,
+						Kind = RuntimeTypeDB.RuntimeTypeKind.Enum,
+						Name = impl.Name,
+						FullName = impl.FullName,
+						Namespace = impl.Namespace,
+						UnderlyingTypeInfo = CreateTypeInfo(impl.UnderlyingTypeInfo),
+					};
+
+				default:
+
+					// それ以外は素直にマップ
+					return new RuntimeTypeDB.TypeInfo
+					{
+						Kind = (RuntimeTypeDB.RuntimeTypeKind)src.TypeKind,
+						Name = src.Name,
+						FullName = src.FullName,
+						Namespace = src.Namespace,
+						Size = src.Size,
+						Alignment = src.Alignment,
+
+					};
 			}
-
-			// ポインタ/参照系
-			if (src is Parser2.PointerTypeInfo p)
-			{
-				return new RuntimeTypeDB.TypeInfo
-				{
-					Kind = RuntimeTypeDB.RuntimeTypeKind.Pointer,
-					Name = p.Name,
-					FullName = p.FullName,
-					Namespace = p.Namespace,
-				};
-			}
-
-			// それ以外は素直にマップ
-			return new RuntimeTypeDB.TypeInfo
-			{
-				Kind = (RuntimeTypeDB.RuntimeTypeKind)src.TypeKind,
-				Name = src.Name,
-				FullName = src.FullName,
-				Namespace = src.Namespace,
-			};
 		}
 	}
 }

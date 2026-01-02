@@ -113,3 +113,7 @@
 /runtime/bin/source/CustomTask/obj
 /runtime/bin/source/RuntimeTypeDB/bin/Release/net9.0
 /Editor2/.vs
+/Editor/Core.UI/bin/Debug/net10.0-windows
+/Editor/Core.UI/obj
+/runtime/.vs
+/runtime/bin/source/RuntimeTypeDB/bin

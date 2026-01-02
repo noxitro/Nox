@@ -87,3 +87,12 @@ nox::os::ProcessMemoryInfo nox::os::GetCurrentProcessMemoryInfo()
 		.shared_commit_usage = pmc.SharedCommitUsage
 	};
 }
+
+void	nox::os::Sleep(const uint32 milliseconds)
+{
+#if NOX_WINDOWS
+	::Sleep(milliseconds);
+#else
+	static_assert(false);
+#endif // NOX_WINDOWS
+}

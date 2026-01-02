@@ -39,5 +39,7 @@ namespace nox::dev::net
 	private:
 		nox::Vector<std::reference_wrapper<Server>>	server_list_;
 		nox::Vector<std::reference_wrapper<Client>>	client_list_;
+
+		nox::os::Thread thread_;
 	};
 }
