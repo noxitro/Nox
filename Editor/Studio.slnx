@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Core.UI/Core.UI.csproj" Id="0011b384-fa2b-4517-a18e-4c16e5631adc" />
+  <Project Path="Core/Core.csproj" Id="ed8c3d06-16b6-4db9-9c76-356b0a6d2b34" />
+  <Project Path="Nox/Nox.csproj" Id="fdde3172-384d-4ff9-9d2d-650f060682fc" />
+  <Project Path="NoxUI/NoxUI.csproj" Id="f37bf212-9731-4b38-aed6-2c7aeaa40ddc" />
+  <Project Path="Studio.Wpf/Studio.Wpf.csproj" Id="bfeda458-f785-4173-95c8-2d3c577c40dc" />
+</Solution>
