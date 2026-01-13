@@ -1,0 +1,30 @@
+<Solution>
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Master" />
+    <BuildType Name="Release" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="app/app.vcxproj" Id="e21d57c8-c4b7-4702-9f36-12c332b64433" />
+  <Project Path="core/core.vcxproj" Id="0d108199-d079-4739-83ad-ce83c4d53332">
+    <BuildDependency Project="kernel/kernel.vcxproj" />
+    <BuildDependency Project="reflection/reflection.vcxproj" />
+  </Project>
+  <Project Path="kernel/kernel.vcxproj" Id="ce18e5d8-faa4-48b4-a1d2-dab85fc1acbb" />
+  <Project Path="modules/render/render.vcxproj" Id="9f598188-078a-4394-8435-81fd3a1b893b" />
+  <Project Path="reflection/reflection.vcxproj" Id="45ab985e-3772-4261-95ec-c6de7d26edbb">
+    <BuildDependency Project="kernel/kernel.vcxproj" />
+  </Project>
+  <Project Path="reflection_generated/reflection_generated.vcxproj" Id="3fa8ce37-1f60-456c-996c-140c5f8a65ed">
+    <BuildDependency Project="app/app.vcxproj" />
+    <BuildDependency Project="core/core.vcxproj" />
+    <BuildDependency Project="kernel/kernel.vcxproj" />
+    <BuildDependency Project="reflection/reflection.vcxproj" />
+  </Project>
+  <Project Path="runtime.vcxproj" Id="5a45457e-aa1c-4b40-920e-43eb7ef9e03f">
+    <BuildDependency Project="app/app.vcxproj" />
+    <BuildDependency Project="core/core.vcxproj" />
+    <BuildDependency Project="kernel/kernel.vcxproj" />
+    <BuildDependency Project="reflection/reflection.vcxproj" />
+  </Project>
+</Solution>
