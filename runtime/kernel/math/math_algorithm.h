@@ -32,6 +32,26 @@ namespace nox::math
 		return source;
 	}
 
+	template<std::integral T>
+	inline constexpr T Pow(T base, T exp) noexcept
+	{
+		if (exp < 0)
+		{
+			return 0; // 整数型で負のべき乗は0（または1/base^|exp|だが整数では0）
+		}
+		T result = 1;
+		while (exp)
+		{
+			if (exp & 1)
+			{
+				result *= base;
+			}
+			base *= base;
+			exp >>= 1;
+		}
+		return result;
+	}
+
 	/// @brief 0.0 ～ 1.0の間に収める
 	/// @tparam T 浮動小数点型
 	/// @param value 値

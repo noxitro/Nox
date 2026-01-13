@@ -14,20 +14,55 @@ namespace
 	}
 }
 
+namespace nox::os
+{
+	void Update()
+	{
+		::MSG msg;
+
+		while (true)
+		{
+			if (::PeekMessageW(&msg, nullptr, 0U, 0U, PM_NOREMOVE))
+			{
+				if (!::GetMessageW(&msg, nullptr, 0U, 0U))
+				{
+					break;
+				}
+				::TranslateMessage(&msg);
+				::DispatchMessageW(&msg);
+			}
+		}
+	}
+}
+
 nox::Application::Application()noexcept :
 	module_entry_bitset_{},
 	enabled_vsync_(false),
 	target_frame_rate_(60),
-	kill_(false)
+	kill_(false),
+	window_(nullptr)
 {
 }
 
 nox::Application::~Application()
 {
+	nox::util::SafeDelete(window_);
 }
 
 void	nox::Application::Init()
 {
+	//	windowを生成
+	{
+		nox::os::WindowSetupDesc desc;
+		desc.width = 1280;
+		desc.height = 720;
+		desc.window_style = nox::os::WindowStyle::Normal;
+		desc.title_ptr = u"NOX ENGINE Application";
+
+		window_ = &nox::os::Window::Create(desc);
+		window_->Show();
+	}
+
 	//	モジュールエントリクラス群を収集
 	nox::reflection::ForeachDerivedClassInfoList(nox::reflection::Typeof<nox::ModuleEntry>(),
 		[this](const nox::reflection::ClassInfo& class_info) {
@@ -70,6 +105,10 @@ void	nox::Application::Run()
 			}
 		}
 		});
+
+	nox::os::Update();
+	//	ここを抜けたらkill
+	kill_ = true;
 
 	game_thread.Wait();
 
@@ -124,9 +163,10 @@ void	nox::Application::Update()
 void	nox::Application::Exit()
 {
 	kill_ = true;
-	for (nox::ModuleEntry& entry : module_entry_list_)
+	for (nox::uint32 i = 0; i < module_entry_list_.size(); ++i)
 	{
-		nox::util::SafeDelete(&entry);
+		nox::ModuleEntry& entry = module_entry_list_[i];
+		delete (&entry);
 	}
 
 	module_entry_list_.clear();

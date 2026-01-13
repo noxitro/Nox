@@ -6,9 +6,15 @@
 #include	"entry_point.h"
 
 #include	"application.h"
+#include	"log_id.h"
 
 nox::int32 nox::EntryPoint(const std::span<const char16* const> args)
 {
+	//	runtime開始を通知
+	NOX_INFO_LINE(nox::log_id::CoreCommon, u"================================");
+	NOX_INFO_LINE(nox::log_id::CoreCommon, u"=== NOX ENGINE RUNTIME START ===");
+	NOX_INFO_LINE(nox::log_id::CoreCommon, u"================================\n\n");
+
 	//	メモリリークチェック
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 

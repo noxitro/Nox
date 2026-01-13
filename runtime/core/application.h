@@ -51,6 +51,7 @@ namespace nox
 		void SetVSync(bool flag)noexcept;
 
 		inline	constexpr bool IsKill()const noexcept { return kill_; }
+		inline	constexpr nox::os::Window& GetMainWindow()const noexcept { return nox::util::Deref(this->window_); }
 	private:
 		inline	void	Init();
 		inline	void	Update();
@@ -73,5 +74,8 @@ namespace nox
 
 		/// @brief モジュールエントリ重複チェック用ビットセット
 		std::bitset<nox::util::ToUnderlying(nox::ModuleEntryCategory::_Max)> module_entry_bitset_;
+
+		/// @brief メインウィンドウ
+		nox::os::Window* window_;
 	};
 }

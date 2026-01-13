@@ -4,3 +4,7 @@
 ///	@brief	fixed_string
 #include	"stdafx.h"
 #include	"fixed_string.h"
+
+namespace nox
+{
+}

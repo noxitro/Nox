@@ -22,6 +22,7 @@
 #include	"os/mutex.h"
 #include	"os/thread.h"
 #include	"os/clipboard.h"
+#include	"os/window.h"
 
 #include	"function.h"
 #include	"log_trace.h"
@@ -56,3 +57,4 @@
 #include	"utility.h"
 #include	"interface_class.h"
 #include	"scope_profile.h"
+

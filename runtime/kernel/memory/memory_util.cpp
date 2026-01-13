@@ -7,9 +7,6 @@
 #include	"../os/windows.h"
 #endif // NOX_WIN64
 
-
-
-
 void	nox::memory::detail::ZeroMemImpl(void* ptr, size_t size)
 {
 #if NOX_WINDOWS

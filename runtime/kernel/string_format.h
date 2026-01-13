@@ -213,7 +213,7 @@ namespace nox::util
 	/// @param dest_buffer 結果を格納する出力用バッファ
 	/// @param format_str フォーマット用文字列
 	/// @param ...args 引数群
-	template <class S, size_t ArgumentBufferSize = 256, class... Args>
+	template <class S, size_t ArgumentBufferSize = 512, class... Args>
 	inline void Format(std::span<nox::StringCharType<S>> dest_buffer, const S& format_str, Args&&... args)
 	{
 		//	引数変換のための作業用バッファ

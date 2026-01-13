@@ -1,8 +1,10 @@
 ﻿#pragma once
 #include	<string_view>
+#include	<functional>
 
 #include	"../basic_definition.h"
 #include	"memory_definition.h"
+#include	"../reflection_attribute.h"
 
 namespace nox::memory
 {
@@ -54,7 +56,8 @@ namespace nox::memory
 
 	/// @brief ヒープ情報リストを収集
 	/// @param evaluate 評価用関数
-	void CollectHeapInfoList(nox::not_null<void(*)(const nox::memory::HeapInfo&)> evaluate);
+	NOX_ATTR(nox::reflection::attr::IgnoreReflection())
+	void CollectHeapInfoList(std::move_only_function<void(const nox::memory::HeapInfo&)> evaluate);
 
 	inline constexpr std::u32string_view GetSegmentTypeNameU32(SegmentType segment_type)noexcept
 	{

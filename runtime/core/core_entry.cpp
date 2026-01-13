@@ -17,7 +17,6 @@ nox::CoreEntry::CoreEntry()
 {
 	Register<&nox::CoreEntry::Init>(ModuleEntryCategory::CoreInit);
 	Register<&nox::CoreEntry::GCUpdate>(ModuleEntryCategory::GCUpdate);
-	Register<&nox::CoreEntry::SocketUpdate>(ModuleEntryCategory::SocketUpdate);
 	Register<&nox::CoreEntry::Finalize>(ModuleEntryCategory::CoreFinalize);
 }
 
@@ -47,13 +46,6 @@ void	nox::CoreEntry::Finalize()
 
 	nox::GarbageCollector::Instance().FrameGC();
 	nox::GarbageCollector::DeleteInstance();
-}
-
-void	nox::CoreEntry::SocketUpdate()
-{
-#if NOX_DEVELOP
-	nox::dev::net::SocketScheduler::Instance().Update();
-#endif
 }
 
 void	nox::CoreEntry::GCUpdate()

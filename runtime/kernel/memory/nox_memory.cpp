@@ -86,7 +86,7 @@ namespace nox::memory
     inline nox::memory::SegmentType GetSegmentType(bool on_dirty_flag = false)
     {
 		//  初期化処理が呼ばれるまでに走ったメモリ確保はBootセグメントに属する
-		if (g_unique_flag.IsOn(nox::memory::UniqueFlag::Initialized))
+		if (g_unique_flag.IsOn(nox::memory::UniqueFlag::Initialized)==false)
 		{
 			return nox::memory::SegmentType::Boot;
 		}
@@ -111,9 +111,9 @@ namespace nox::memory
 	/// @brief アドレスからHeapInfoを取得
     /// @param ptr 
     /// @return 
-    inline  nox::memory::HeapInfo& GetHeapInfo(nox::not_null<void*> ptr)noexcept
+    inline  nox::memory::HeapInfo& GetHeapInfo(void* ptr)noexcept
     {
-        nox::memory::HeapInfo& heapInfo = *reinterpret_cast<nox::memory::HeapInfo*>((nox::uint8*)ptr.get() - sizeof(nox::memory::HeapInfo));
+        nox::memory::HeapInfo& heapInfo = *reinterpret_cast<nox::memory::HeapInfo*>((nox::uint8*)ptr - sizeof(nox::memory::HeapInfo));
         //NOX_ASSERT(nox::memory::IsValidHeapInfo(heapInfo) == true, U"Invalid Heap Info");
         return heapInfo;
     }
@@ -135,6 +135,21 @@ namespace nox::memory
   //      }
 		//return reinterpret_cast<nox::memory::HeapInfo*>(reinterpret_cast<nox::uint8>(&heap_info) - heap_info.prev_offset);
   //  }
+
+    inline  void* GetRawPtrFromHeapInfo(HeapInfo& heap_info)
+    {
+        const auto alignment = static_cast<size_t>(heap_info.align_size);
+        auto* const hip = &heap_info;
+
+        // hip は raw_ptr 以上のアドレス（先頭 or 先頭+α）なので、
+        // alignment で下方向に揃えれば raw_ptr に戻せる
+        auto addr = reinterpret_cast<nox::uintptr>(hip);
+
+        // align_down
+        addr &= ~(static_cast<nox::uintptr>(alignment - 1));
+
+        return reinterpret_cast<void*>(addr);
+    }
 }
 
 void    nox::memory::Initialize(bool enabled_profile)
@@ -182,15 +197,25 @@ void	nox::memory::ReleaseBootMemory()
 
 void	nox::memory::CheckMemoryLeak()
 {
-	nox::memory::CollectHeapInfoList(+[](const nox::memory::HeapInfo& heap_info)
+	nox::uint32 leak_count = 0;
+
+	nox::memory::CollectHeapInfoList([&leak_count](const nox::memory::HeapInfo& heap_info)
 		{
+			//  bootセグメントのリークは無視
+            if (heap_info.segment_type == nox::memory::SegmentType::Boot)
+            {
+                return;
+			}
+
 			const nox::memory::SegmentType segment_type = heap_info.segment_type;
-			NOX_ERROR_LINE(nox::log_id::Memory, nox::util::Format(u"Memory Leak Detected\n\tsegment:{0}, size:{1}", nox::memory::GetSegmentTypeNameU32(segment_type), heap_info.size));
+			NOX_ERROR_LINE(nox::log_id::Memory, u"Memory Leak Detected\n\tsegment:{0}, size:{1}", nox::memory::GetSegmentTypeNameU32(segment_type), heap_info.size);
 
             if (heap_info.profile_handle == 0)
             {
                 return;
             }
+
+            ++leak_count;
 
             //  プロファイラに登録されているならコールスタックを出力
             if (nox::memory::profile::EnabledMemoryProfile())
@@ -215,9 +240,14 @@ void	nox::memory::CheckMemoryLeak()
                 nox::stack_walker::Trace(address_list);
             }
 		});
+
+    if (leak_count > 0)
+    {
+		NOX_ERROR_LINE(nox::log_id::Memory, u"Total Memory Leak Count: {0}", leak_count);
+    }
 }
 
-void nox::memory::CollectHeapInfoList(nox::not_null<void(*)(const nox::memory::HeapInfo&)> evaluate)
+void nox::memory::CollectHeapInfoList(std::move_only_function<void(const nox::memory::HeapInfo&)> evaluate)
 {
 	for (const nox::memory::HeapInfo* work_ptr = nox::memory::head_heap_info_ptr_; work_ptr != nullptr; work_ptr = work_ptr->next)
 	{
@@ -255,9 +285,89 @@ nox::memory::InstanceType nox::memory::GetInstanceType(nox::not_null<const void*
 
 const nox::memory::HeapInfo& nox::memory::GetHeapInfo(nox::not_null<const void*> ptr)noexcept
 {
-    return static_cast<nox::memory::HeapInfo&(*)(nox::not_null<void*>)>(&nox::memory::GetHeapInfo)(const_cast<void*>(ptr.get()));
+    return static_cast<nox::memory::HeapInfo&(*)(void*)>(&nox::memory::GetHeapInfo)(const_cast<void*>(ptr.get()));
 }
 
+namespace nox::memory
+{
+    inline void* Allocate2(const size_t size, size_t align_mask, const InstanceType instance_type)
+    {
+        NOX_ASSERT(g_unique_flag.IsOn(UniqueFlag::Finalized) == false,
+            u"メモリアロケータの終了処理後にメモリ確保が行われました");
+
+        // HeapInfo 分 + ユーザ要求サイズ分
+        const size_t header_size = sizeof(HeapInfo);
+        const size_t raw_size = header_size + size;
+
+        // ヒープの最小ブロック単位で丸める（既存ロジックを維持）
+        const nox::uint32 use_block =
+            static_cast<nox::uint32>((raw_size + (k_heap_block - 1)) >> k_heap_shift);
+        const nox::uint32 alloc_size = use_block << k_heap_shift;
+
+        void* const raw_ptr = std::malloc(alloc_size);
+        NOX_ASSERT(raw_ptr != nullptr, u"メモリ確保に失敗しました");
+
+        const nox::memory::SegmentType segment_type = GetSegmentType(true);
+
+        // HeapInfo は常に先頭に配置
+        auto* const heap_info_ptr = static_cast<HeapInfo*>(raw_ptr);
+        HeapInfo& heap_info = *heap_info_ptr;
+
+        // ユーザポインタ（HeapInfo 直後）
+        auto* const user_ptr_u8 = reinterpret_cast<nox::uint8*>(heap_info_ptr) + sizeof(HeapInfo);
+        void* const aligned_ptr = static_cast<void*>(user_ptr_u8);
+
+        // HeapInfo 設定
+        heap_info.size = alloc_size;
+        heap_info.align_size = 0; // 追加アラインをしていないので 0 か sizeof(HeapInfo) 程度に
+        heap_info.instance_type = instance_type;
+        heap_info.segment_type = segment_type;
+        heap_info.magic = k_heap_info_magic;
+
+        info_with_segment_table_[nox::util::ToUnderlying(heap_info.segment_type)].total_size
+            += heap_info.size;
+
+        if (segment_type != nox::memory::SegmentType::Develop &&
+            memory::profile::EnabledMemoryProfile())
+        {
+            heap_info.profile_handle = memory::profile::Register(heap_info);
+        }
+        else
+        {
+            heap_info.profile_handle = 0;
+        }
+
+        // 連結リストに接続
+        {
+            nox::os::ScopedLock lock(mutex_);
+
+            if (nox::memory::head_heap_info_ptr_ == nullptr)
+            {
+                head_heap_info_ptr_ = &heap_info;
+                tail_heap_info_ptr_ = &heap_info;
+                heap_info.next = heap_info.prev = nullptr;
+            }
+            else
+            {
+                heap_info.next = nullptr;
+                heap_info.prev = tail_heap_info_ptr_;
+
+                tail_heap_info_ptr_->next = &heap_info;
+                tail_heap_info_ptr_ = &heap_info;
+            }
+        }
+
+        return aligned_ptr;
+    }
+}
+
+#if true
+void* nox::memory::Allocate(const size_t size, size_t align_mask, const InstanceType instance_type)
+{
+    return Allocate2(size, align_mask, instance_type);
+}
+
+#else
 void* nox::memory::Allocate(const size_t size, size_t align_mask, const InstanceType instance_type)
 {
 	NOX_ASSERT(g_unique_flag.IsOn(UniqueFlag::Finalized) == false, u"メモリアロケータの終了処理後にメモリ確保が行われました");
@@ -326,10 +436,11 @@ void* nox::memory::Allocate(const size_t size, size_t align_mask, const Instance
 
     return aligned_ptr;
 }
+#endif // false
 
 void	nox::memory::Deallocate(nox::not_null<void*> ptr)
 {
-    HeapInfo& heap_info = GetHeapInfo(ptr);
+    HeapInfo& heap_info = GetHeapInfo(ptr.get());
 
     info_with_segment_table_[nox::util::ToUnderlying(heap_info.segment_type)].total_size -= heap_info.size;
 

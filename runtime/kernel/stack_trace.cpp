@@ -278,6 +278,134 @@ std::span<nox::char16>	nox::stack_walker::detail::WalkerBase::GetStackTraceU16St
 	return dest_buffer;
 }
 
+bool	nox::stack_walker::detail::WalkerSlimBase::Collect(const uint8 startDepth)
+{
+	if (gRtiCaptureStackBackTrace == nullptr)
+	{
+		return false;
+	}
+
+	//	コールスタックバッファ
+	std::array<void*, nox::stack_walker::MAX_STACK_DEPTH> bufferAry = { nullptr };
+
+	//	取得
+	uint8 stackLength = static_cast<uint8>(gRtiCaptureStackBackTrace(startDepth, stack_length_, bufferAry.data(), nullptr));
+
+	stackLength = math::Min(stackLength, stack_length_);
+
+	for (uint8 i = 0; i < stackLength; ++i)
+	{
+		stack_table_[i].SetAddress(reinterpret_cast<std::size_t>(bufferAry.at(i)));
+	}
+
+	is_collected_ = true;
+	collect_length_ = stackLength;
+	return true;
+}
+
+void	nox::stack_walker::detail::WalkerSlimBase::Clear()noexcept
+{
+	is_collected_ = false;
+}
+
+namespace nox::stack_walker
+{
+	constexpr	nox::int32	k_max_name_size = 1024;
+
+	inline	bool	TraceImpl(::HANDLE const processHandle, ::SYMBOL_INFOW* const symbol, const nox::stack_walker::SlimStackFrame& stack)
+	{
+		//	アドレス
+		const ::DWORD64 nativeAddr = static_cast<::DWORD64>(stack.GetAddress());
+		::DWORD64  dwDisplacement64 = 0;
+
+		/* トレースアドレスからシンボル情報を取得 */
+		if (::SymFromAddrW(processHandle, nativeAddr, &dwDisplacement64, symbol) == false)
+		{
+			return false;
+		}
+
+		std::array<nox::char16, nox::stack_walker::k_max_name_size> u32_symbol_name{ 0 };
+		nox::unicode::ConvertU16String(symbol->Name, u32_symbol_name);
+		
+		//	ラインを取得
+		::IMAGEHLP_LINEW64 line;
+		line.SizeOfStruct = sizeof(::IMAGEHLP_LINEW64);
+
+		::DWORD dwDisplacement = 0x10000000;
+		//	::SymSetOptions()
+
+		if (::SymGetLineFromAddrW64(processHandle, nativeAddr, &dwDisplacement, &line) == FALSE)
+		{
+			return false;
+		}
+
+		std::array<nox::char16, 1024> u32_file_name = { 0 };
+		nox::unicode::ConvertU16String(line.FileName, u32_file_name);
+
+		//	モジュール情報
+		::IMAGEHLP_MODULEW64 moduleInfo;
+		moduleInfo.SizeOfStruct = sizeof(::IMAGEHLP_MODULEW64);
+
+		if (::SymGetModuleInfoW64(processHandle, nativeAddr, &moduleInfo) == FALSE)
+		{
+			return false;
+		}
+
+		std::array<nox::char16, 1024> u32_module_name;
+		nox::unicode::ConvertU16String(moduleInfo.ModuleName, u32_module_name);
+
+		//	[Symbol名]([ライン])
+		NOX_INFO_LINE(log_id::Kernel, u"{0} ({1})", std::u16string_view(u32_symbol_name.data(), symbol->NameLen), line.LineNumber);
+		return true;
+	}
+}
+
+void	nox::stack_walker::detail::WalkerSlimBase::Trace()const
+{
+	if (is_collected_ == false)
+	{
+		return;
+	}
+
+	::HANDLE const processHandle = ::GetCurrentProcess();
+	if (processHandle == nullptr)
+	{
+		return;
+	}
+
+	/* シンボル情報サイズを算出 */
+	constexpr size_t SymbolInfoSize = sizeof(::SYMBOL_INFOW) + ((k_max_name_size + 1) * sizeof(nox::wchar16));
+
+	//	シンボル情報のメモリ確保
+	std::array<nox::uint8, SymbolInfoSize> symbolBuffer;
+	::SYMBOL_INFOW* const symbol = reinterpret_cast <::SYMBOL_INFOW*>(symbolBuffer.data());
+	symbol->MaxNameLen = k_max_name_size;
+	symbol->SizeOfStruct = sizeof(::SYMBOL_INFOW);
+
+	//	hbgHelpはスレッドセーフではないので、ロックする必要がある
+	//	https://learn.microsoft.com/ja-jp/windows/win32/api/dbghelp/nf-dbghelp-symfromaddr
+	NOX_LOCAL_SCOPE(nox::os::ScopedLock{ g_resolve_mutex });
+
+	//	シンボルハンドラの初期化
+	::SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES | SYMOPT_UNDNAME);
+	::SymInitialize(processHandle, nullptr, TRUE);
+
+	NOX_INFO_LINE(log_id::Kernel, u"===CallStackTrace開始===");
+
+	for (uint8 i = 0; i < stack_length_; ++i)
+	{
+		const nox::stack_walker::SlimStackFrame& stack = stack_table_[i];
+
+		if (nox::stack_walker::TraceImpl(processHandle, symbol, stack) == false)
+		{
+			NOX_INFO_LINE(log_id::Kernel, u"途中で失敗しました");
+			break;
+		}
+	}
+
+	NOX_INFO_LINE(log_id::Kernel, u"===CallStackTrace終了===\n");
+}
+
 void	nox::stack_walker::Initialize()
 {
 	NOX_ASSERT(mHandlePtr == nullptr, u"初期化済み");
@@ -295,14 +423,14 @@ void	nox::stack_walker::Finalize()
 
 void nox::stack_walker::Trace(std::span<const size_t> address_list)
 {
-	nox::stack_walker::Walker walker;
+	nox::stack_walker::StackWalkerSlim walker;
 	walker.SetCollectLength(address_list.size());
+	walker.Collected();
 
 	for (int32 i = 0; i < address_list.size(); ++i)
 	{
 		walker.GetStack(i).SetAddress(address_list[i]);
 	}
 
-	walker.Resolve();
 	walker.Trace();
 }

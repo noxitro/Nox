@@ -19,7 +19,6 @@ namespace nox
 		void	Init();
 		void	Finalize();
 
-		void	SocketUpdate();
 		void	GCUpdate();
 	};
 }

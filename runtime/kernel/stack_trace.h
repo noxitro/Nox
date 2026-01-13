@@ -99,19 +99,12 @@ namespace nox::stack_walker
 	class SlimStackFrame
 	{
 	public:
-		inline void SetAddress(std::size_t address)noexcept { address_ = address; }
+		inline	void	SetAddress(std::size_t address)noexcept { address_ = address; }
+		inline	std::size_t	GetAddress()const noexcept { return address_; }
 
-		std::span<char16, 246> ResolveModuleName()const;
-		std::u16string_view ResolveModuleName(std::span<char16> dest_buffer)const;
 	private:
 		/// @brief アドレス
 		std::size_t address_;
-
-		/// @brief 行番号
-		uint32 line_:31;
-
-		/// @brief 解決済み
-		bool	is_resolver_:1;
 	};
 
 	/**
@@ -225,6 +218,79 @@ namespace nox::stack_walker
 	private:
 		/// @brief スタック配列
 		std::array<StackFrame, _STACK_DEPTH> stack_table_;
+	};
+
+	namespace detail
+	{
+		class WalkerSlimBase
+		{
+		public:
+			constexpr WalkerSlimBase()noexcept = delete;
+
+			inline constexpr explicit WalkerSlimBase(SlimStackFrame* const stackTbl, const uint8 stackLength)noexcept :
+				stack_table_(stackTbl),
+				stack_length_(stackLength),
+				collect_length_(0),
+				is_collected_(false)
+			{
+			}
+
+			inline ~WalkerSlimBase() = default;
+
+			/// @brief コールスタックを収集
+			/// @param startDepth 
+			/// @return 
+			bool	Collect(const uint8 startDepth = 0);
+
+			void	Clear()noexcept;
+			void	Trace()const;
+
+			inline	void Collected()noexcept
+			{
+				is_collected_ = true;
+			}
+
+			inline void SetCollectLength(const uint8 length)
+			{
+				NOX_ASSERT(length <= stack_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
+				collect_length_ = length;
+			}
+
+			[[nodiscard]] inline	const SlimStackFrame& GetStack(const uint8 index)const {
+				NOX_ASSERT(index < collect_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
+				return stack_table_[index];
+			}
+
+			[[nodiscard]] inline	SlimStackFrame& GetStack(const uint8 index) {
+				NOX_ASSERT(index < collect_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
+				return stack_table_[index];
+			}
+
+			/// @brief 有効なスタックリストを取得
+			[[nodiscard]] inline	std::span<const SlimStackFrame> GetStackList()const noexcept { return std::span(stack_table_, collect_length_); }
+		private:
+			SlimStackFrame* const stack_table_;
+
+			/// @brief 最大スタック数
+			const uint8 stack_length_;
+
+			/// @brief コールスタック数
+			uint8 collect_length_;
+
+			/// @brief 有効なコールスタックを取得済みか
+			bool	is_collected_;
+		};
+	}
+
+	template<uint8 _STACK_DEPTH = nox::stack_walker::DEFAULT_STACK_DEPTH> requires(_STACK_DEPTH <= MAX_STACK_DEPTH)
+		class StackWalkerSlim : public detail::WalkerSlimBase
+	{
+	public:
+		inline constexpr StackWalkerSlim()noexcept :
+			detail::WalkerSlimBase(stack_table_.data(), static_cast<uint8>(stack_table_.size())) {}
+		inline constexpr ~StackWalkerSlim() = default;
+	private:
+		std::array<SlimStackFrame, _STACK_DEPTH> stack_table_;
 	};
 
 	//template<uint8 _STACK_DEPTH = nox::stack_walker::DEFAULT_STACK_DEPTH> requires(_STACK_DEPTH <= MAX_STACK_DEPTH)

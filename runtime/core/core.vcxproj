@@ -96,6 +96,18 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="dev\remote\test.g.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="dev\socket_stream_reader.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="dev\socket_stream_writer.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="entry_point.h">
       <SubType>
       </SubType>
@@ -268,6 +280,18 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="dev\net\socket_scheduler.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="dev\remote\test.g.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="dev\socket_stream_reader.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="dev\socket_stream_writer.cpp">
       <SubType>
       </SubType>
     </ClCompile>

@@ -19,11 +19,6 @@ namespace nox::dev::net
 		};
 
 	private:
-		enum class Phase : nox::uint8
-		{
-			None,
-			Startuped,
-		};
 
 		enum class Flag : nox::uint8
 		{
@@ -45,11 +40,17 @@ namespace nox::dev::net
 		bool Startup(const Server::InitializeContext& context);
 		void Shutdown();
 
-		inline bool IsStartup()const noexcept { return IsFlag(Flag::Startup); }
-		void PollAccept();
+		inline bool IsStartup()const noexcept { return is_startup_; }
+		//void PollAccept();
 
-		void Update();
+		/// @brief 接続処理
+		/// @param fd 
+		void	Connection(::fd_set& fds);
 
+		/// @brief SocketSchedulerから呼び出される更新処理
+		void Update(::fd_set& fds);
+
+		inline constexpr nox::dev::net::raw_socket_t GetSocket()const noexcept { return socket_; }
 	protected:
 		void Connected(const nox::dev::net::ConnectionContext& context);
 		virtual void OnConnected(const nox::dev::net::ConnectionContext& context) {}
@@ -57,22 +58,13 @@ namespace nox::dev::net
 		void Disconnected(const nox::dev::net::ConnectionContext& context);
 		virtual void OnDisconnected(const nox::dev::net::ConnectionContext& context) {}
 	private:
-		inline	void ChangePhase(Phase phase);
-
-	private:
-		inline	void SetFlag(Flag flag, bool is_on)noexcept;
-		inline	bool IsFlag(Flag flag)const noexcept;
-
-	private:
 		Server::InitializeContext initialize_context_;
 		nox::Vector<PeerContext> client_list_;
+
 		/// @brief 
 		nox::Vector<nox::dev::net::raw_socket_t> detached_client_list_;
-		Flag flags_;
-		bool is_startup_;
-		bool shutdown_;
-		Phase phase_;
-		bool is_error_;
 		nox::dev::net::raw_socket_t socket_;
+
+		bool is_startup_:1;
 	};
 }

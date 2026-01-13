@@ -3,16 +3,20 @@
 ///	@file	editor_ipc_query.h
 ///	@brief	editor_ipc_query
 #pragma once
+#if NOX_DEVELOP
 #include	"editor_ipc_entity.h"
 
-#if NOX_DEVELOP
 namespace nox::dev::editor_ipc
 {
+	class Response;
 	class Query : public nox::dev::editor_ipc::EditorIpcEntity
 	{
 		NOX_DECLARE_OBJECT(nox::dev::editor_ipc::Query, nox::dev::editor_ipc::EditorIpcEntity);
 	public:
 		inline constexpr Query() {}
+		inline constexpr ~Query() noexcept override {}
+
+		inline constexpr virtual Response* Execute()const { return nullptr; }
 	};
 }
 #endif // NOX_DEVELOP

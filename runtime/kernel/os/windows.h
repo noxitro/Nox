@@ -32,6 +32,31 @@
 
 #include	<Windows.h>
 #pragma	warning(pop)
+
+//	ここでundefするので、先に必要な関数を定義
+namespace nox::os::file_descriptor
+{
+	inline	void	Zero(::fd_set& fd)
+	{
+		FD_ZERO(&fd);
+	}
+
+	inline	void	Set(::SOCKET socket, ::fd_set& fd)
+	{
+		FD_SET(socket, &fd);
+	}
+
+	inline	bool	IsSet(::SOCKET socket, ::fd_set& fd)
+	{
+		return FD_ISSET(socket, &fd);
+	}
+
+	inline	void	Clear(::SOCKET socket, ::fd_set& fd)
+	{
+		FD_CLR(socket, &fd);
+	}
+}
+
 #undef	near
 #undef	far
 

@@ -87,7 +87,7 @@ void	nox::os::detail::ThreadWin64::Wait()
 {
 	if (native_thread_handle_ == nullptr)
 	{
-		NOX_ERROR_LINE(nox::log_id::OS, u"native_thread_handle_ is null");
+	//	NOX_ERROR_LINE(nox::log_id::OS, u"native_thread_handle_ is null");
 		return;
 	}
 

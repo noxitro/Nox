@@ -23,7 +23,6 @@ namespace nox::dev::net
 		~SocketScheduler()override;
 
 		void	Initialize();
-		void	Update();
 		void	Finalize();
 
 		void	RegisterEntity(nox::dev::net::Server& entity);
@@ -38,8 +37,11 @@ namespace nox::dev::net
 
 	private:
 		nox::Vector<std::reference_wrapper<Server>>	server_list_;
+		nox::Vector<std::tuple<std::reference_wrapper<Server>, bool>> pending_server_list_;
+
 		nox::Vector<std::reference_wrapper<Client>>	client_list_;
 
 		nox::os::Thread thread_;
+		nox::os::Mutex mutex_server_list_;
 	};
 }

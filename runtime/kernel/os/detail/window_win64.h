@@ -13,14 +13,17 @@ namespace nox::os::detail
 {
 	class WindowWin64 : public Window
 	{
+		friend class WindowWin64Impl;
 	public:
-		WindowWin64()noexcept;
-		~WindowWin64();
+		WindowWin64(const WindowSetupDesc& desc)noexcept;
+		~WindowWin64()override;
 
 		inline virtual void* GetNativeHandle()const override { return window_handle_; }
 		void	SetPos(const UInt2& pos)override;
 		UInt2 GetPos()const noexcept override;
-
+		void Show()override;
+		void Destroy()override;
+		std::u16string_view GetWindowTitle(std::span<nox::char16> dest)const noexcept override;
 	private:
 		void	Init()override;
 

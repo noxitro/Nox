@@ -10,7 +10,7 @@ namespace nox::util
 	class ScopeExit
 	{
 	public:
-		inline explicit ScopeExit(const std::function<void()>& func)noexcept :
+		inline explicit ScopeExit(const std::function<void()> func)noexcept :
 			func_(func)
 		{
 

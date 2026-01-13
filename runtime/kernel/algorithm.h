@@ -371,8 +371,8 @@ namespace nox::util
 	/// @brief delete呼び出し後nullptrを格納する
 	/// @tparam T ポインタの型
 	/// @param ptr delete対象のポインタ
-	template<nox::concepts::detail::Deletable T>
-	inline constexpr void SafeDelete(T&& ptr)
+	template<class T> requires(std::is_pointer_v<T>)
+	inline constexpr void SafeDelete(T& ptr)
 	{
 		if (ptr != nullptr)
 		{

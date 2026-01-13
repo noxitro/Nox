@@ -6,7 +6,7 @@ namespace nox::memory
 	namespace detail
 	{
 		void* AllocateStlAllocateAdapter(size_t size);
-		void DeallocateStlAllocateAdapter(void* ptr);
+		void DeallocateStlAllocateAdapter(void* ptr, size_t num);
 	}
 
 	/// @brief  STLアロケータアダプタ
@@ -47,9 +47,9 @@ namespace nox::memory
 		 * @param ptr 解放アドレス
 		 * @param num 個数
 		*/
-		inline void deallocate(T* const ptr, const size_t /*num*/)
+		inline void deallocate(T* const ptr, const size_t num)
 		{
-			nox::memory::detail::DeallocateStlAllocateAdapter(ptr);
+			nox::memory::detail::DeallocateStlAllocateAdapter(ptr, num);
 		}
 	};
 }

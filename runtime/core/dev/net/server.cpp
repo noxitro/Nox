@@ -17,11 +17,7 @@ namespace nox::dev::net
 }
 
 nox::dev::net::Server::Server() :
-	flags_{},
 	is_startup_(false),
-	shutdown_(false),
-	phase_(nox::dev::net::Server::Phase::None),
-	is_error_(false),
 	socket_(nox::dev::net::k_raw_invalid_socket),
 	initialize_context_{}
 {
@@ -33,109 +29,75 @@ nox::dev::net::Server::~Server()
 	nox::dev::net::SocketScheduler::Instance().UnregisterEntity(*this);
 }
 
-inline	void	nox::dev::net::Server::SetFlag(Flag flag, bool is_on)noexcept
-{
-	if (is_on)
-	{
-		flags_ = static_cast<Flag>(static_cast<nox::uint8>(flags_) | static_cast<nox::uint8>(flag));
-	}
-	else
-	{
-		flags_ = static_cast<Flag>(static_cast<nox::uint8>(flags_) & ~static_cast<nox::uint8>(flag));
-	}
-}
-
-inline	bool	nox::dev::net::Server::IsFlag(Flag flag)const noexcept
-{
-	return (static_cast<nox::uint8>(flags_) & static_cast<nox::uint8>(flag)) != 0;
-}
-
 bool nox::dev::net::Server::Startup(const InitializeContext& context)
 {
-	if (IsFlag(Flag::Startup))
+	if (IsStartup()==true)
 	{
-		return false;
+		this->Shutdown();
 	}
-
+	const nox::int32 err = ::WSAGetLastError();
 	initialize_context_ = context;
-	shutdown_ = false;
-	phase_ = Phase::None;
-	is_error_ = false;
+
+	//PollAccept();
 
 #if NOX_WINDOWS
 	raw_sockaddr_in ip_address;
 	ip_address.sin_family = AF_INET;
 	ip_address.sin_addr.S_un.S_addr = INADDR_ANY;	//	全てのマシンを受け付け
-	ip_address.sin_port = ::htons(static_cast<nox::uint16>(context.port));
+	ip_address.sin_port = ::htons(static_cast<nox::uint16>(this->initialize_context_.port));
 	this->socket_ = ::socket(ip_address.sin_family, SOCK_STREAM, 0);
-	
+
 	NOX_ASSERT(socket_ != INVALID_SOCKET, nox::util::Format(u"socket() failed. error_code={0}", ::WSAGetLastError()));
 
 	//	非ブロッキング
 	::u_long nb = 1;
-	if(::ioctlsocket(this->socket_, FIONBIO, &nb) == k_raw_error_socket)
+	if (::ioctlsocket(this->socket_, FIONBIO, &nb) == k_raw_error_socket)
 	{
 		NOX_ASSERT(false, nox::util::Format(u"ioctlsocket() failed. error_code={0}", ::WSAGetLastError()));
 	}
 
 	//	遅延を減らす
 	nox::dev::net::SetNoDelay(this->socket_, true);
+
+	//TODO:	ネットワークレイテンシの向上
 #endif // NOX_WINDOWS
 
 	//	socketにアドレスを割り当て
 	nox::dev::net::Bind(this->socket_, *reinterpret_cast<const nox::dev::net::raw_sockaddr*>(&ip_address), sizeof(ip_address));
 
-	//	接続町状態にする
-	if (nox::dev::net::Listen(this->socket_, context.max_connection) == k_raw_error_socket)
+	//	接続待ち状態にする
+	if (nox::dev::net::Listen(this->socket_, this->initialize_context_.max_connection) == k_raw_error_socket)
 	{
 		NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"Listenに失敗しました");
 		return false;
 	}
 
-	SetFlag(Flag::Startup, true);
-	ChangePhase(Phase::Startuped);
-
+	is_startup_ = true;
 	nox::dev::net::SocketScheduler::Instance().RegisterEntity(*this);
 	return true;
 }
 
-void nox::dev::net::Server::Update()
-{
-	switch (phase_)
-	{
-	case Phase::None:
-		break;
-
-	case Phase::Startuped:
-		PollAccept();
-		break;
-	}
-}
-
-inline	void nox::dev::net::Server::ChangePhase(nox::dev::net::Server::Phase phase)
-{
-	NOX_ASSERT(phase_ != phase, u"Same phase.");
-
-	switch (phase)
-	{
-	case Phase::Startuped:
-		break;
-	}
-
-	phase_ = phase;
-}
-
-void nox::dev::net::Server::PollAccept()
+void	nox::dev::net::Server::Connection(::fd_set& fds)
 {
 	if (IsStartup() == false)
 	{
 		return;
 	}
 
-	nox::dev::net::SocketScheduler& socket_scheduler = nox::dev::net::SocketScheduler::Instance();
+	if (!nox::os::file_descriptor::IsSet(this->socket_, fds))
+	{
+		return;
+	}
+
+	constexpr ::timeval timeout
+	{
+		.tv_sec = 0,
+		.tv_usec = 10000
+	};
 
 	while (true)
 	{
+		//	受け付けられる接続が無くなるまでacceptを繰り返す
 		nox::dev::net::raw_sockaddr_in addr{};
 		int client_len = sizeof(addr);
 		const nox::dev::net::raw_socket_t client_socket = nox::dev::net::Accept(this->socket_, reinterpret_cast<nox::dev::net::raw_sockaddr&>(addr), client_len);
@@ -151,15 +113,6 @@ void nox::dev::net::Server::PollAccept()
 			break;
 		}
 
-		bool success = false;
-		nox::util::ScopeExit([&success, &client_socket]()
-			{
-				if (!success)
-				{
-					nox::dev::net::CloseSocket(client_socket);
-				}
-			});
-
 		// 接続ソケットに低遅延/KeepAlive等の推奨オプションを適用（任意）
 		{
 			::u_long nb = 1;
@@ -172,25 +125,70 @@ void nox::dev::net::Server::PollAccept()
 			::setsockopt(client_socket, SOL_SOCKET, SO_KEEPALIVE, reinterpret_cast<const char*>(&on), sizeof(on));
 		}
 
-		//	handshakeを受信
+		bool success = false;
+		NOX_LOCAL_SCOPE(nox::util::ScopeExit([&success, &client_socket]() {
+			if (!success)
+			{
+				::closesocket(client_socket);
+			}
+			}));
+
+		//	handshake1の受信
 		{
-			std::array<char, k_hand_shake_str1.length()> dest_buffer{};
+			::fd_set read_fds{};
+			::fd_set except_fds{};
+
+			nox::os::file_descriptor::Zero(read_fds);
+			nox::os::file_descriptor::Zero(except_fds);
+
+			nox::os::file_descriptor::Set(client_socket, read_fds);
+			nox::os::file_descriptor::Set(client_socket, except_fds);
+
+			const auto select_result = ::select(0, &read_fds, nullptr, &except_fds, &timeout);
+
+			if (select_result == nox::dev::net::k_raw_error_socket)
+			{
+				const int err = ::WSAGetLastError();
+				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, nox::util::Format(u"select(handshake1) failed. error_code={0}", err));
+				break;
+			}
+
+			if (select_result == 0)
+			{
+				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"timeout handshake1");
+				break;
+			}
+
+			if (nox::os::file_descriptor::IsSet(client_socket, except_fds) == true)
+			{
+				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"exception handshake1");
+				break;
+			}
+
+			if (nox::os::file_descriptor::IsSet(client_socket, read_fds) == false)
+			{
+				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"invalid socket handshake1");
+				break;
+			}
+
+			std::array<char, k_hand_shake_str1.length()> dest_buffer{0};
 			auto r = this->Receive(client_socket, dest_buffer.data(), static_cast<nox::int32>(k_hand_shake_str1.length()));
 			if (!r)
 			{
 				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"ハンドシェイク1の受信に失敗しました");
 				break;
 			}
-			if (dest_buffer.data() != k_hand_shake_str1)
+
+			if (std::string_view(dest_buffer.data(), dest_buffer.size()) != k_hand_shake_str1)
 			{
 				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"ハンドシェイク1の内容が不正です");
 				break;
 			}
 		}
-
-		//	handshakeを送信
+		
+		//	handshake2の送信
 		{
-			auto r = this->Send(client_socket, k_hand_shake_str2.data(), static_cast<nox::int32>(k_hand_shake_str2.length()));
+			const auto r = this->Send(client_socket, k_hand_shake_str2.data(), static_cast<nox::int32>(k_hand_shake_str2.length()));
 			if (!r)
 			{
 				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"ハンドシェイク2の送信に失敗しました");
@@ -198,8 +196,44 @@ void nox::dev::net::Server::PollAccept()
 			}
 		}
 
-		//	handshakeを受信
+		//	handshake3の受信
 		{
+			::fd_set read_fds{};
+			::fd_set except_fds{};
+
+			nox::os::file_descriptor::Zero(read_fds);
+			nox::os::file_descriptor::Zero(except_fds);
+
+			nox::os::file_descriptor::Set(client_socket, read_fds);
+			nox::os::file_descriptor::Set(client_socket, except_fds);
+
+			const auto select_result = ::select(0, &read_fds, nullptr, &except_fds, &timeout);
+
+			if (select_result == nox::dev::net::k_raw_error_socket)
+			{
+				const int err = ::WSAGetLastError();
+				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, nox::util::Format(u"select(handshake1) failed. error_code={0}", err));
+				break;
+			}
+
+			if (select_result == 0)
+			{
+				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"timeout handshake1");
+				break;
+			}
+
+			if (nox::os::file_descriptor::IsSet(client_socket, except_fds) == true)
+			{
+				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"exception handshake1");
+				break;
+			}
+
+			if (nox::os::file_descriptor::IsSet(client_socket, read_fds) == false)
+			{
+				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"invalid socket handshake1");
+				break;
+			}
+
 			std::array<char, k_hand_shake_str3.length()> dest_buffer{};
 			auto r = this->Receive(client_socket, dest_buffer.data(), static_cast<nox::int32>(k_hand_shake_str3.length()));
 			if (!r)
@@ -207,21 +241,33 @@ void nox::dev::net::Server::PollAccept()
 				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"ハンドシェイク3の受信に失敗しました");
 				break;
 			}
-			if (dest_buffer.data() != k_hand_shake_str3)
+
+			if (std::string_view(dest_buffer.data(), dest_buffer.size()) != k_hand_shake_str3)
 			{
-				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"ハンドシェイク1の内容が不正です");
+				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"ハンドシェイク3の内容が不正です");
 				break;
 			}
+
+			//	接続確立
+			success = true;
+
+			client_list_.emplace_back(PeerContext{ .socket = client_socket });
+			NOX_INFO_LINE(nox::dev::net::log_id::DevNet, u"接続完了");
 		}
+	}
+}
 
-		success = true;
+void nox::dev::net::Server::Update(::fd_set& fds)
+{
+	if (IsStartup() == false)
+	{
+		return;
+	}
 
-		nox::dev::net::ConnectionContext context;
-		context.unique_id = 0; // TODO: ユニークIDの発行
-		context.address = *reinterpret_cast<nox::dev::net::address_t*>(&addr.sin_addr);
-		context.port = ::ntohs(addr.sin_port);
-
-		Connected(context);
+	//	受信処理
+	if (nox::os::file_descriptor::IsSet(this->socket_, fds) == true)
+	{
+		OnReceive();
 	}
 }
 

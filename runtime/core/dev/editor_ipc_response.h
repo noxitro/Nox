@@ -3,9 +3,9 @@
 ///	@file	editor_ipc_response.h
 ///	@brief	editor_ipc_response
 #pragma once
+#if NOX_DEVELOP
 #include	"editor_ipc_entity.h"
 
-#if NOX_DEVELOP
 namespace nox::dev::editor_ipc
 {
 	class Response : public nox::dev::editor_ipc::EditorIpcEntity
@@ -14,6 +14,8 @@ namespace nox::dev::editor_ipc
 	public:
 		inline constexpr Response() noexcept {}
 		inline constexpr ~Response() noexcept override {}
+
+		inline constexpr virtual void Execute()const { }
 	};
 }
 #endif // NOX_DEVELOP

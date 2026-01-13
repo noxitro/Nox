@@ -82,10 +82,10 @@ nox::uint16 nox::memory::profile::Register(const nox::memory::HeapInfo& heap_inf
 	//	コールスタックの取得
 	//	アドレスのみ保持しておく
 	{
-		nox::stack_walker::Walker walker;
+		nox::stack_walker::StackWalkerSlim walker;
 		walker.Collect(1);
 
-		const std::span<const nox::stack_walker::StackFrame> stack_list = walker.GetStackList();
+		const std::span<const nox::stack_walker::SlimStackFrame> stack_list = walker.GetStackList();
 		for (nox::uint8 i = 0; i < stack_list.size(); ++i)
 		{
 			profile_data.call_stack_address_table[i] = stack_list[i].GetAddress();

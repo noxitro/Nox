@@ -147,6 +147,10 @@
     <ClInclude Include="os\detail\fie_win64.h" />
     <ClInclude Include="os\detail\mutex_base.h" />
     <ClInclude Include="os\detail\mutex_win64.h" />
+    <ClInclude Include="os\detail\nox_winsock.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="os\detail\read_write_lock_interface.h">
       <SubType>
       </SubType>
@@ -157,6 +161,10 @@
     </ClInclude>
     <ClInclude Include="os\detail\thread_base.h" />
     <ClInclude Include="os\detail\thread_win64.h" />
+    <ClInclude Include="os\detail\window_base.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="os\detail\window_win64.h" />
     <ClInclude Include="os\file_system.h" />
     <ClInclude Include="os\mutex.h" />
@@ -181,6 +189,10 @@
     <ClInclude Include="preprocessor\util.h" />
     <ClInclude Include="preprocessor\va_length.h" />
     <ClInclude Include="reflection_attribute.h" />
+    <ClInclude Include="ring_buffer.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="scope_profile.h">
       <SubType>
       </SubType>
@@ -376,6 +388,10 @@
     <ClCompile Include="os\detail\fie_win64.cpp" />
     <ClCompile Include="os\detail\mutex_base.cpp" />
     <ClCompile Include="os\detail\mutex_win64.cpp" />
+    <ClCompile Include="os\detail\nox_winsock.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="os\detail\read_write_lock_interface.cpp">
       <SubType>
       </SubType>
@@ -386,6 +402,10 @@
     </ClCompile>
     <ClCompile Include="os\detail\thread_base.cpp" />
     <ClCompile Include="os\detail\thread_win64.cpp" />
+    <ClCompile Include="os\detail\window_base.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="os\detail\window_win64.cpp" />
     <ClCompile Include="os\file_system.cpp" />
     <ClCompile Include="os\network.cpp" />
@@ -408,6 +428,10 @@
     <ClCompile Include="preprocessor\util.cpp" />
     <ClCompile Include="preprocessor\va_length.cpp" />
     <ClCompile Include="reflection_attribute.cpp" />
+    <ClCompile Include="ring_buffer.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="scope_profile.cpp">
       <SubType>
       </SubType>
