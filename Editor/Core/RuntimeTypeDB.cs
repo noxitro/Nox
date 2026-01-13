@@ -93,28 +93,35 @@ namespace Core
 		/// </summary>
 		private Core.RuntimeNamespaceDecl[] _NamespaceDeclList = [];
 
-		private readonly Dictionary<string, DeclBase> _DeclDictWithFQN = new();
+	//	private readonly Dictionary<string, DeclBase> _DeclDictWithFQN = new();
 		private readonly Dictionary<string, RuntimeTypeInfo> _TypeInfoDictWithFQN = new();
 
 		private readonly List<RuntimeRecordDecl> _RecordDeclList = new();
+		private readonly Dictionary<string, RuntimeRecordDecl> _RecordDeclDictWithFQN = new();
 		#endregion
 
 		#region 公開メソッド
 		public void Build(PlatformType platform, ConfigurationType configuration)
 		{
-			ReadOnlySpan<char> platformStr = platform.GetName();
-			ReadOnlySpan<char> configurationStr = configuration.GetName();
+			ReflectionGenerator.RuntimeTypeDB.TypeDB? typeDB;
+			using (new Nox.ScopeProfiler<Core.LogId.Runtime>("RuntimeTypeDB Deserialize"))
+			{
+				typeDB = ReflectionGenerator.RuntimeTypeDB.Util.Deserialize(platform.GetName(), configuration.GetName());
+			}
 
-			ReflectionGenerator.RuntimeTypeDB.TypeDB? typeDB = ReflectionGenerator.RuntimeTypeDB.Util.Deserialize(platformStr, configurationStr);
-			
-			Nox.LogTrace.ErrorLine<Core.LogId.Runtime>("RuntimeTypeDBの生成に失敗");
+			if (typeDB == null)
+			{
+				Nox.LogTrace.ErrorLine<Core.LogId.Runtime>("RuntimeTypeDBの生成に失敗");
+			}
 			Nox.Util.Assert(typeDB != null, "RuntimeTypeDBの生成に失敗");
 
-			_DeclDictWithFQN.Clear();
-			_NamespaceDeclList = CreateNamespaceDeclList(typeDB.NamespaceList);
+			using (new Nox.ScopeProfiler<Core.LogId.Runtime>("RuntimeTypeDB CreateNamespaceDeclList"))
+			{
+				_NamespaceDeclList = CreateNamespaceDeclList(typeDB.NamespaceList);
+			}
 		}
 
-		public static Core.RuntimeRecordDecl GetRuntimeRecordDecl<T>() where T : Core.RuntimeObject, IRuntimeObject<T>
+		public static Core.RuntimeRecordDecl? GetRuntimeRecordDecl<T>() where T : Core.RuntimeObject, IRuntimeObject<T>
 		{
 			return IRuntimeObject<T>.RuntimeRecordDecl;
 		}
@@ -128,19 +135,28 @@ namespace Core
 			return null;
 		}
 
-		public Core.DeclBase? FindDecl(ReadOnlySpan<char> fqn)
+		public Core.RuntimeRecordDecl? FindRecordDecl(ReadOnlySpan<char> fqn)
 		{
-			if (_DeclDictWithFQN.TryGetValue(fqn.ToString(), out var decl))
+			if (_RecordDeclDictWithFQN.TryGetValue(fqn.ToString(), out var typeInfo) == true)
 			{
-				return decl;
+				return typeInfo;
 			}
 			return null;
 		}
 
-		public T? FindDecl<T>(ReadOnlySpan<char> fqn) where T : Core.DeclBase
-		{
-			return FindDecl(fqn) as T;
-		}
+		//public Core.DeclBase? FindDecl(ReadOnlySpan<char> fqn)
+		//{
+		//	if (_DeclDictWithFQN.TryGetValue(fqn.ToString(), out var decl))
+		//	{
+		//		return decl;
+		//	}
+		//	return null;
+		//}
+
+		//public T? FindDecl<T>(ReadOnlySpan<char> fqn) where T : Core.DeclBase
+		//{
+		//	return FindDecl(fqn) as T;
+		//}
 		#endregion
 
 		#region 非公開メソッド
@@ -174,6 +190,8 @@ namespace Core
 			for (int i = 0; i < sourceList.Length; i++)
 			{
 				var source = sourceList[i];
+
+				var typeInfo = GetCreateRuntimeTypeInfo(source.TypeInfo, source);
 				declList[i] = new RuntimeRecordDecl()
 				{
 					Name = source.Name,
@@ -183,8 +201,13 @@ namespace Core
 					RecordList = CreateRecordDeclList(source.RecordList),
 					EnumList = CreateEnumDeclList(source.EnumList),
 					VariableList = CreateVariableDeclList(source.VariableList),
-					FunctionList = CreateFunctionDeclList(source.FunctionList)
+					FunctionList = CreateFunctionDeclList(source.FunctionList),
+					//IsNoxObject = source.IsNoxObject,
+					//IsReflectionClass = source.IsReflectionClass,
+					TypeInfo = typeInfo,
 				};
+				typeInfo.Decl = declList[i];
+
 
 				AddDeclWithFQN(declList[i]);
 			}
@@ -216,10 +239,10 @@ namespace Core
 					FullName = source.FullName,
 					Name = source.Name,
 					Namespace = source.Namespace,
-
+					FixedUnderlyingType = source.FixedUnderlyingType,
 					AttributeList = CreateAttributeList(source.AttributeList),
 					EnumeratorInfoList = enumeratorInfoList, 
-					TypeInfo = CreateRuntimeTypeInfo(source.TypeInfo),
+					TypeInfo = GetCreateRuntimeTypeInfo(source.TypeInfo, source),
 				};
 
 				AddDeclWithFQN(declList[i]);
@@ -239,7 +262,7 @@ namespace Core
 					Name = source.Name,
 					Namespace = source.Namespace,
 					AttributeList = CreateAttributeList(source.AttributeList),
-					TypeInfo = CreateRuntimeTypeInfo(source.Type),
+					TypeInfo = GetCreateRuntimeTypeInfo(source.Type),
 					VariableAttributeFlags = (RuntimeVariableAttributeFlag)(byte)source.VariableAttributeFlags,
 					OffsetBits = source.OffsetBits,
 					BitFieldWidth = source.BitFieldWidth
@@ -266,7 +289,7 @@ namespace Core
 					{
 						Name = sourceArg.Name,
 						IsDefault = sourceArg.IsDefault,
-						TypeInfo = CreateRuntimeTypeInfo(sourceArg.TypeInfo),
+						TypeInfo = GetCreateRuntimeTypeInfo(sourceArg.TypeInfo),
 						AttributeList = CreateAttributeList(sourceArg.AttributeList),
 					};
 				}
@@ -277,7 +300,7 @@ namespace Core
 					FullName = source.FullName,
 					Namespace = source.Namespace,
 					AttributeList = CreateAttributeList(source.AttributeList),
-					TypeInfo = CreateRuntimeTypeInfo(source.TypeInfo),
+					TypeInfo = GetCreateRuntimeTypeInfo(source.TypeInfo),
 					FunctionAttributeFlags = (RuntimeFunctionAttributeFlag)(byte)source.FunctionAttributeFlags,
 					ArgumentList = argList,
 					NumDefaultArgument = source.NumDefaultArgument
@@ -299,12 +322,26 @@ namespace Core
 		}
 
 
-		private RuntimeTypeInfo CreateRuntimeTypeInfo(ReflectionGenerator.RuntimeTypeDB.TypeInfo source)
+		private RuntimeTypeInfo GetCreateRuntimeTypeInfo(ReflectionGenerator.RuntimeTypeDB.TypeInfo source, ReflectionGenerator.RuntimeTypeDB.DeclBase? declaration = null)
 		{
+			{
+				if (_TypeInfoDictWithFQN.TryGetValue(source.FullName, out RuntimeTypeInfo? outValue) == true)
+				{
+					return outValue;
+				}
+			}
+
 			RuntimeTypeInfo underlyingTypeInfo;
 			if (source.Kind == ReflectionGenerator.RuntimeTypeDB.RuntimeTypeKind.Enum)
 			{
-				underlyingTypeInfo = CreateRuntimeTypeInfo(source.UnderlyingTypeInfo);
+				if (source.UnderlyingTypeInfo.Kind != ReflectionGenerator.RuntimeTypeDB.RuntimeTypeKind.Invalid)
+				{
+					underlyingTypeInfo = GetCreateRuntimeTypeInfo(source.UnderlyingTypeInfo);
+				}
+				else
+				{
+					underlyingTypeInfo = RuntimeTypeInfo.Invalid;
+				}
 			}
 			else
 			{
@@ -316,7 +353,7 @@ namespace Core
 				source.Kind == ReflectionGenerator.RuntimeTypeDB.RuntimeTypeKind.LValueReference ||
 				source.Kind == ReflectionGenerator.RuntimeTypeDB.RuntimeTypeKind.RValueReference)
 			{
-				pointeeTypeInfo = CreateRuntimeTypeInfo(source.PointeeTypeInfo);
+				pointeeTypeInfo = GetCreateRuntimeTypeInfo(source.PointeeTypeInfo);
 			}
 			else
 			{
@@ -335,6 +372,8 @@ namespace Core
 				PointeeTypeInfo = pointeeTypeInfo,
 			};
 
+//			Nox.LogTrace.InfoLine<Core.LogId.Runtime>("type:{0}", runtimeTypeInfo.FullName);
+
 			Nox.Util.Assert(_TypeInfoDictWithFQN.ContainsKey(runtimeTypeInfo.FullName) == false, "同じFQNのRuntimeTypeInfoが既に登録されています。FQN={0}", runtimeTypeInfo.FullName);
 			_TypeInfoDictWithFQN[runtimeTypeInfo.FullName] = runtimeTypeInfo;
 
@@ -343,8 +382,8 @@ namespace Core
 
 		private void AddDeclWithFQN(NamedDecl decl)
 		{
-			Nox.Util.Assert(_DeclDictWithFQN.ContainsKey(decl.FullName) == false, "同じFQNのDeclが既に登録されています。FQN={0}", decl.FullName);
-			_DeclDictWithFQN[decl.FullName] = decl;
+		//	Nox.Util.Assert(_DeclDictWithFQN.ContainsKey(decl.FullName) == false, "同じFQNのDeclが既に登録されています。FQN={0}", decl.FullName);
+		//	_DeclDictWithFQN[decl.FullName] = decl;
 		}
 		#endregion
 	}

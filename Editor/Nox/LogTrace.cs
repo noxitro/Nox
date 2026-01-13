@@ -21,6 +21,12 @@ namespace Nox
 			public Unknown() { }
 			public string Tag { get; } = nameof(Unknown);
 		}
+
+		public readonly struct Kernel : ILogId<Kernel>
+		{
+			public Kernel() { }
+			public string Tag { get; } = nameof(Kernel);
+		}
 	}
 
 	public static class LogTrace
@@ -56,7 +62,9 @@ namespace Nox
 		#region 非公開メソッド
 		private static void TraceLine(LogLevel logLevel, string tag, string message, params scoped ReadOnlySpan<object> arg)
 		{
-			System.Console.WriteLine("[{0}][{1}]{2}", GetLogLevelString(logLevel), tag, string.Format(message, arg));
+			string s = string.Format("[{0}][{1}]{2}", GetLogLevelString(logLevel), tag, string.Format(message, arg));
+
+			System.Diagnostics.Trace.WriteLine(s);
 		}
 
 		private static string GetLogLevelString(LogLevel logLevel)

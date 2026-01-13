@@ -123,3 +123,14 @@
 /Editor/NoxUI/obj
 /Editor/Studio.Wpf/bin/Debug/net10.0-windows
 /Editor/Studio.Wpf/obj
+/Editor/BenchmarkSuite1/obj
+/Editor/BenchmarkSuite1/bin/Release/net10.0
+/Editor/Core/bin/Release
+/Editor/Core.UI/bin/Release/net10.0-windows
+/Editor/Module/Render/bin/Debug/net10.0
+/Editor/Module/Render/bin/Release
+/Editor/Module/Render/obj
+/Editor/Nox/bin/Debug/net10.0-windows
+/Editor/Nox/bin/Release
+/Editor/NoxUI/bin
+/Editor/Studio.Wpf/bin/Release/net10.0-windows

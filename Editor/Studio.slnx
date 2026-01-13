@@ -1,4 +1,8 @@
 <Solution>
+  <Folder Name="/Module/">
+    <Project Path="Module/Render/Render.csproj" Id="5c45e86d-0b67-42ef-9946-6c3aecbeec56" />
+  </Folder>
+  <Project Path="BenchmarkSuite1/BenchmarkSuite1.csproj" />
   <Project Path="Core.UI/Core.UI.csproj" Id="0011b384-fa2b-4517-a18e-4c16e5631adc" />
   <Project Path="Core/Core.csproj" Id="ed8c3d06-16b6-4db9-9c76-356b0a6d2b34" />
   <Project Path="Nox/Nox.csproj" Id="fdde3172-384d-4ff9-9d2d-650f060682fc" />

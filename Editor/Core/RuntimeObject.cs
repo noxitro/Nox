@@ -100,6 +100,14 @@ namespace Core
 
 	public interface IRuntimeObject<T> where T : Core.RuntimeObject, IRuntimeObject<T> 
 	{
-		public static RuntimeRecordDecl RuntimeRecordDecl { get; private set; } = RuntimeRecordDecl.Invalid;
+		private static RuntimeRecordDecl? _RuntimeRecordDecl = null;
+		public static RuntimeRecordDecl RuntimeRecordDecl
+		{
+			get
+			{
+				Nox.Util.Assert(_RuntimeRecordDecl != null, "_RuntimeRecordDecl is null");
+				return _RuntimeRecordDecl;
+			}
+		}
 	}
 }

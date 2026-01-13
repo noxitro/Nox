@@ -8,6 +8,7 @@ namespace Core.Net
 	{
 		#region 非公開フィールド
 		private readonly List<Core.Net.Client> _ClientList = new();
+		private readonly List<(Core.Net.Client Client, bool isAdd)> _ReqClientList = new();
 		private readonly Nox.LockObject _LockClientList = new();
 
 		private bool _IsStopped;
@@ -42,7 +43,7 @@ namespace Core.Net
 		{
 			lock(_LockClientList)
 			{
-				_ClientList.Add(client);
+				_ReqClientList.Add((client, true));
 			}
 		}
 
@@ -50,27 +51,12 @@ namespace Core.Net
 		{
 			lock(_LockClientList)
 			{
-				_ClientList.Remove(client);
+				_ReqClientList.Add((client, false));
 			}
 		}
 		#endregion
 
 		#region 非公開メソッド
-		private void RunLoop(CancellationToken token)
-		{
-			const int intervalMs = 10;
-
-			while (!token.IsCancellationRequested)
-			{
-				Update();
-
-				if (token.WaitHandle.WaitOne(intervalMs))
-				{
-					break;
-				}
-			}
-		}
-
 
 		private void Update()
 		{
@@ -78,11 +64,25 @@ namespace Core.Net
 			{
 				lock (_LockClientList)
 				{
-					foreach (var client in _ClientList)
+					foreach(var req in _ReqClientList)
 					{
-						// クライアント更新処理をここに追加
+						if (req.isAdd)
+						{
+							_ClientList.Add(req.Client);
+						}
+						else
+						{
+							_ClientList.Remove(req.Client);
+						}
 					}
 				}
+
+				foreach(Client client in _ClientList)
+				{
+					client.Connection();
+					client.Update();
+				}
+
 			}
 		}
 		#endregion

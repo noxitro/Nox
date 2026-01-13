@@ -4,9 +4,39 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Studio.Wpf"
+        xmlns:views="clr-namespace:Core.UI.Views;assembly=Core.UI"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="Studio" Height="1080" Width="1920">
     <Grid>
+        <Grid.RowDefinitions>
+            <!-- 上部ツールバー行 -->
+            <RowDefinition Height="40"/>
+            
+            <!-- runtime 再生ボタン行 -->
+            <RowDefinition Height="40" />
 
+            <!-- ドッキング領域 -->
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- ====== 上部ツールバー ====== -->
+        <ToolBarTray Grid.Row="0" Background="#FF2B2B2B">
+            <ToolBar>
+                <Button Content="File" />
+                <Button Content="Edit" />
+                <Button Content="View" />
+                <!-- 必要に応じてメニュー的なボタンを追加 -->
+            </ToolBar>
+        </ToolBarTray>
+
+        <!-- ====== Runtime コントロールバー ====== -->
+        <views:RuntimeControlView Grid.Row="1" />
+
+        <!-- ====== ドッキング領域（将来のレイアウト用） ====== -->
+        <!--
+        <DockPanel Grid.Row="2">
+            ここに Hierarchy / Inspector / GameView などを配置
+        </DockPanel>
+        -->
     </Grid>
 </Window>

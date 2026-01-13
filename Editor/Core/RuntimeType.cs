@@ -139,6 +139,7 @@ namespace Core
 
 		public RuntimeTypeInfo PointeeTypeInfo { get; init; } = Invalid;
 		public RuntimeTypeInfo UnderlyingTypeInfo { get; init; } = Invalid;
+		public DeclBase Decl { get; set; } = RuntimeInvalidDecl.Invalid;
 		#endregion
 
 		public static readonly Core.RuntimeTypeInfo Invalid = new Core.RuntimeTypeInfo()
@@ -161,7 +162,11 @@ namespace Core
 	#region 宣言情報
 	public abstract class DeclBase
 	{
+	}
 
+	public sealed class RuntimeInvalidDecl : DeclBase
+	{
+		public static readonly RuntimeInvalidDecl Invalid = new();
 	}
 
 	public abstract class NamedDecl : DeclBase
@@ -183,19 +188,12 @@ namespace Core
 		public required RuntimeEnumDecl[] EnumList { get; init; }
 		public required RuntimeVariableDecl[] VariableList { get; init; }
 		public required RuntimeFunctionDecl[] FunctionList { get; init; }
+		//	未実装
+		public bool IsReflectionClass { get; set; }
+		//	未実装
+		public bool IsNoxObject { get; init; }
+		public required RuntimeTypeInfo TypeInfo { get; init; }
 		#endregion
-
-		public static RuntimeRecordDecl Invalid = new RuntimeRecordDecl()
-		{
-			Name = string.Empty,
-			FullName = string.Empty,
-			Namespace = string.Empty,
-			RecordList = [],
-			EnumList = [],
-			VariableList = [],
-			FunctionList = [],
-			AttributeList = []
-		};
 	}
 
 	public sealed class RuntimeFunctionDecl : RuntimeTypeDecl
@@ -239,6 +237,7 @@ namespace Core
 
 		public required RuntimeTypeInfo TypeInfo { get; init; }
 		public required EnumeratorInfo[] EnumeratorInfoList { get; init; } = [];
+		public required bool FixedUnderlyingType { get; init; } = false;
 		public ReadOnlySpan<EnumeratorInfo> GetEnumeratorList() => EnumeratorInfoList;
 	}
 
