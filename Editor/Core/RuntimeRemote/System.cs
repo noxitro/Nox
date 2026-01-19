@@ -4,19 +4,21 @@ using System.Text;
 
 namespace Core.RuntimeRemote
 {
-	[Core.RuntimeRemote.RuntimeRemoteCode("core/dev/remote/system")]
+	[Core.RuntimeRemote.Attr.RuntimeRemoteCode("core/dev/remote/system")]
 	public sealed class ResourceConvertQuery : Core.RuntimeRemote.Query
 	{
 		public ResourceConvertQuery(ReadOnlySpan<char> path)
 		{
-			if (path.Length >= Path.Length)
+			if (path.Length >= NativePath.Length)
 			{
 				Nox.Util.Assert(false, "Path length exceeds the maximum allowed length.");
 			}
-			path.CopyTo(Path);
+			path.CopyTo(NativePath);
 		}
 
-		[Core.RuntimeRemote.RuntimeRemoteCodeNativeFQN("std::array<nox::char16, 256>")]
-		public char[] Path { get; } = new char[256];
+		private const uint NativePathSize = 256;
+
+		[Core.RuntimeRemote.Attr.FixedString(NativePathSize)]
+		public char[] NativePath { get; } = new char[NativePathSize];
 	}
 }

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Core.RuntimeRemote
+namespace Core.RuntimeRemote.Attr
 {
 	/// <summary>
 	/// runtimeパス下に出力します
@@ -37,5 +37,19 @@ namespace Core.RuntimeRemote
 		}
 
 		public string FQN { get; init; }
+	}
+
+	/// <summary>
+	/// c#側のarrayをcpp側で固定長配列として扱うための属性
+	/// </summary>
+	[System.AttributeUsage(System.AttributeTargets.Property)]
+	public sealed class FixedStringAttribute : System.Attribute
+	{
+		public FixedStringAttribute(uint length)
+		{
+			Length = length;
+		}
+
+		public uint Length { get; init; }
 	}
 }

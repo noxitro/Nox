@@ -57,7 +57,7 @@ namespace Nox
 		}
 
 		public IndentScope Indent() => new IndentScope(this);
-		public IndentScope Indent(ReadOnlySpan<char> begin, ReadOnlySpan<char> end) => new IndentScope(this);
+		public IndentScope Indent(ReadOnlySpan<char> begin, ReadOnlySpan<char> end) => new IndentScope(this, begin, end);
 
 		public abstract void Write(ReadOnlySpan<char> str);
 		public abstract void Write<T>(string str, params T[] args) where T : struct;

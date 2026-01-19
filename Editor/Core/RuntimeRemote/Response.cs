@@ -6,8 +6,6 @@ namespace Core.RuntimeRemote
 {
 	public abstract class Response : Core.RuntimeRemote.Entity
 	{
-		public virtual void Execute()
-		{
-		}
+
 	}
 }

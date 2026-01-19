@@ -58,13 +58,13 @@ namespace Core.RuntimeRemote
 
 		private readonly struct RemoteTypeInfo
 		{
-			public readonly Core.RuntimeRemote.RuntimeRemoteCodeAttribute Attr;
+			public readonly Core.RuntimeRemote.Attr.RuntimeRemoteCodeAttribute Attr;
 			public readonly System.Type Type;
 			public readonly bool IsQuery;
 
 			public readonly PropertyInfo[] PropertyList = [];
 
-			public RemoteTypeInfo(System.Type type, Core.RuntimeRemote.RuntimeRemoteCodeAttribute attr, bool isQuery)
+			public RemoteTypeInfo(System.Type type, Core.RuntimeRemote.Attr.RuntimeRemoteCodeAttribute attr, bool isQuery)
 			{
 				Type = type;
 				Attr = attr;
@@ -80,7 +80,7 @@ namespace Core.RuntimeRemote
 			System.Type queryType = typeof(Core.RuntimeRemote.Query);
 			System.Type responseType = typeof(Core.RuntimeRemote.Response);
 
-			System.Type runtimeRemoteCodeAttributeType = typeof(Core.RuntimeRemote.RuntimeRemoteCodeAttribute);
+			System.Type runtimeRemoteCodeAttributeType = typeof(Core.RuntimeRemote.Attr.RuntimeRemoteCodeAttribute);
 
 			//	key: 出力先ファイルパス
 			Dictionary<string, Data> dict = new();
@@ -108,7 +108,7 @@ namespace Core.RuntimeRemote
 					continue;
 				}
 
-				RuntimeRemoteCodeAttribute? attr = type.GetCustomAttribute<Core.RuntimeRemote.RuntimeRemoteCodeAttribute>();
+				Core.RuntimeRemote.Attr.RuntimeRemoteCodeAttribute? attr = type.GetCustomAttribute<Core.RuntimeRemote.Attr.RuntimeRemoteCodeAttribute>();
 				if (attr == null)
 				{
 					continue;
@@ -200,22 +200,11 @@ namespace Core.RuntimeRemote
 							{
 								if (param.Attr.EnabledExecute)
 								{
-									codeWriter.WriteLine("nox::dev::editor_ipc::Respose* Execute()const override;");
+									codeWriter.WriteLine("nox::PlacementObject<nox::dev::editor_ipc::Respose> Execute(std::span<nox::uint8> storage)const override;");
 								}
 								else
 								{
-									codeWriter.WriteLine("inline constexpr nox::dev::editor_ipc::Respose* Execute()const override { return nullptr; }");
-								}
-							}
-							else
-							{
-								if (param.Attr.EnabledExecute)
-								{
-									codeWriter.WriteLine("void Execute()const override;");
-								}
-								else
-								{
-									codeWriter.WriteLine("inline constexpr void Execute()const override { }");
+									codeWriter.WriteLine("inline constexpr nox::PlacementObject<nox::dev::editor_ipc::Respose> Execute(std::span<nox::uint8>)const override { return nullptr; }");
 								}
 							}
 

@@ -4,7 +4,6 @@ using System.Text;
 
 namespace Core.Net
 {
-
 	public class RemoteWriter
 	{
 		#region 公開メソッド
