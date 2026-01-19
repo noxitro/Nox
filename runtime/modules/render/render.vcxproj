@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Master|x64">
+      <Configuration>Master</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>18.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{9f598188-078a-4394-8435-81fd3a1b893b}</ProjectGuid>
+    <RootNamespace>render</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v145</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v145</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v145</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\property_sheet\nox_common.props" />
+    <Import Project="..\..\property_sheet\nox_debug.props" />
+    <Import Project="..\..\property_sheet\nox_x64.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\property_sheet\nox_common.props" />
+    <Import Project="..\..\property_sheet\nox_release.props" />
+    <Import Project="..\..\property_sheet\nox_x64.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\property_sheet\nox_common.props" />
+    <Import Project="..\..\property_sheet\nox_master.props" />
+    <Import Project="..\..\property_sheet\nox_x64.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile />
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile />
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'">
+    <ClCompile />
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="entry.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="definition.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="graphic_buffer.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="os\definition_dx12.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="os\device_dx12.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="os\graphic_buffer_dx12.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="os\os_dx12.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="render.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="renderer.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="os\render_device.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="render_command.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="render_command_type.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="render_context.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="render_resource.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="entry.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="definition.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="graphic_buffer.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="os\definition_dx12.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="os\device_dx12.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="os\graphic_buffer_dx12.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="os\os_dx12.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="render.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="renderer.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="os\render_device.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="render_command.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="render_command_type.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="render_context.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="render_resource.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

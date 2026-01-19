@@ -96,36 +96,44 @@ namespace nox::reflection
 		inline ClassNode& operator =(ClassNode&& rts)noexcept = delete;
 	};
 
-	//	DB
+	struct DB
+	{
+		//	DB
 	// //	型情報をキーとした検索用
-	struct
+		struct
+		{
+			nox::UnorderedMap<const nox::reflection::Type*, ClassNode> class_node_map;
+			nox::UnorderedMap<const nox::reflection::Type*, std::reference_wrapper<const nox::reflection::ClassInfo>> union_map;
+			nox::UnorderedMap<const nox::ObjectPointerId*, std::reference_wrapper<const nox::reflection::VariableInfo>> variable_map;
+			nox::UnorderedMap<const nox::FunctionPointerId*, std::reference_wrapper<const nox::reflection::FunctionInfo>> function_map;
+			nox::UnorderedMap<const nox::reflection::Type*, std::reference_wrapper<const nox::reflection::EnumInfo>> enum_map;
+		}chunk_with_type_id;
+
+		//	名前のハッシュをキーとした検索用
+		struct
+		{
+			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const ClassNode>> class_node_map;
+			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::ClassInfo>> union_map;
+			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::VariableInfo>> variable_map;
+			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::FunctionInfo>> function_map;
+			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::EnumInfo>> enum_map;
+		}chunk_with_name_hash;
+		/// @brief 全ての翻訳単位の情報を格納するマップ
+
+		nox::HashSet<const nox::reflection::Type*> all_type_hash_set_;
+		nox::Vector<std::reference_wrapper<const nox::reflection::Type>> all_type_list_;
+	};
+
+	DB* database = nullptr;
+	inline constexpr DB& GetDB()noexcept
 	{
-		nox::UnorderedMap<const nox::reflection::Type*, ClassNode> class_node_map;
-		nox::UnorderedMap<const nox::reflection::Type*, std::reference_wrapper<const nox::reflection::ClassInfo>> union_map;
-		nox::UnorderedMap<const nox::ObjectPointerId*, std::reference_wrapper<const nox::reflection::VariableInfo>> variable_map;
-		nox::UnorderedMap<const nox::FunctionPointerId*, std::reference_wrapper<const nox::reflection::FunctionInfo>> function_map;
-		nox::UnorderedMap<const nox::reflection::Type*, std::reference_wrapper<const nox::reflection::EnumInfo>> enum_map;
-	}chunk_with_type_id;
-
-	//	名前のハッシュをキーとした検索用
-	struct
-	{
-		nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const ClassNode>> class_node_map;
-		nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::ClassInfo>> union_map;
-		nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::VariableInfo>> variable_map;
-		nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::FunctionInfo>> function_map;
-		nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::EnumInfo>> enum_map;
-
-	}chunk_with_name_hash;
-	/// @brief 全ての翻訳単位の情報を格納するマップ
-
-	nox::HashSet<const nox::reflection::Type*> all_type_hash_set_;
-	nox::Vector<std::reference_wrapper<const nox::reflection::Type>> all_type_list_;
+		return *database;
+	}
 
 	inline	const nox::reflection::ClassNode& GetRootClassNode()noexcept
 	{
-		auto r = chunk_with_type_id.class_node_map.find(&nox::reflection::Typeof<nox::reflection::ReflectionObject>());
-		NOX_ASSERT(r != chunk_with_type_id.class_node_map.end(), u"ReflectionObject class node not found");
+		auto r = GetDB().chunk_with_type_id.class_node_map.find(&nox::reflection::Typeof<nox::reflection::ReflectionObject>());
+		NOX_ASSERT(r != GetDB().chunk_with_type_id.class_node_map.end(), u"ReflectionObject class node not found");
 		return r->second;
 	}
 
@@ -139,7 +147,7 @@ namespace nox::reflection
 	
 	inline const ClassNode* FindClassNode(const nox::reflection::Type& type)
 	{
-		const auto& class_node_map = chunk_with_type_id.class_node_map;
+		const auto& class_node_map = GetDB().chunk_with_type_id.class_node_map;
 
 		auto it = class_node_map.find(&type);
 		if (it != class_node_map.end())
@@ -166,6 +174,8 @@ namespace nox::util
 
 void nox::reflection::Initialize()
 {
+	database = new DB();
+
 	{
 #if !NOX_MASTER
 		NOX_LOCAL_SCOPE(nox::util::ScopeProfile(u"reflection initialize"));
@@ -185,10 +195,10 @@ void nox::reflection::Initialize()
 		nox::uint32 variable_count = 0;
 
 		{
-			class_count += static_cast<nox::uint32>(chunk_with_type_id.class_node_map.size());
-			enum_count += static_cast<nox::uint32>(chunk_with_type_id.enum_map.size());
-			function_count += static_cast<nox::uint32>(chunk_with_type_id.function_map.size());
-			variable_count += static_cast<nox::uint32>(chunk_with_type_id.variable_map.size());
+			class_count += static_cast<nox::uint32>(GetDB().chunk_with_type_id.class_node_map.size());
+			enum_count += static_cast<nox::uint32>(GetDB().chunk_with_type_id.enum_map.size());
+			function_count += static_cast<nox::uint32>(GetDB().chunk_with_type_id.function_map.size());
+			variable_count += static_cast<nox::uint32>(GetDB().chunk_with_type_id.variable_map.size());
 		}
 		NOX_INFO_LINE(nox::log_id::Reflection, u"class type count:{0}", class_count);
 		NOX_INFO_LINE(nox::log_id::Reflection, u"enum type count:{0}", enum_count);
@@ -243,16 +253,49 @@ void nox::reflection::Initialize()
 void nox::reflection::Finalize()
 {
 	nox::reflection::FinalizeGen();
-	chunk_with_type_id = {};
-	chunk_with_name_hash = {};
-	//all_type_id_map_ = {};
+	delete database;
+	database = nullptr;
+
+	//GetDB().chunk_with_type_id = {};
+	//GetDB().chunk_with_name_hash = {};
+
+
+	//// 型IDキー側
+	//GetDB().chunk_with_type_id.class_node_map.clear();
+	//GetDB().chunk_with_type_id.class_node_map.rehash(0);
+	//GetDB().chunk_with_type_id.union_map.clear();
+	//GetDB().chunk_with_type_id.union_map.rehash(0);
+	//GetDB().chunk_with_type_id.variable_map.clear();
+	//GetDB().chunk_with_type_id.variable_map.rehash(0);
+	//GetDB().chunk_with_type_id.function_map.clear();
+	//GetDB().chunk_with_type_id.function_map.rehash(0);
+	//GetDB().chunk_with_type_id.enum_map.clear();
+	//GetDB().chunk_with_type_id.enum_map.rehash(0);
+
+	//// 名前ハッシュキー側
+	//GetDB().chunk_with_name_hash.class_node_map.clear();
+	//GetDB().chunk_with_name_hash.class_node_map.rehash(0);
+	//GetDB().chunk_with_name_hash.union_map.clear();
+	//GetDB().chunk_with_name_hash.union_map.rehash(0);
+	//GetDB().chunk_with_name_hash.variable_map.clear();
+	//GetDB().chunk_with_name_hash.variable_map.rehash(0);
+	//GetDB().chunk_with_name_hash.function_map.clear();
+	//GetDB().chunk_with_name_hash.function_map.rehash(0);
+	//GetDB().chunk_with_name_hash.enum_map.clear();
+	//GetDB().chunk_with_name_hash.enum_map.rehash(0);
+
+//	all_type_hash_set_.clear();
+//	all_type_hash_set_.rehash(0);
+
+//	all_type_list_.clear();
+//	all_type_list_.shrink_to_fit();
 }
 
 const nox::reflection::ClassInfo* nox::reflection::FindClassInfo(const nox::reflection::Type& type)noexcept
 {
 	{
-		const auto it = chunk_with_type_id.class_node_map.find(&type);
-		if (it != chunk_with_type_id.class_node_map.end())
+		const auto it = GetDB().chunk_with_type_id.class_node_map.find(&type);
+		if (it != GetDB().chunk_with_type_id.class_node_map.end())
 		{
 			return it->second.class_info;
 		}
@@ -264,8 +307,8 @@ const nox::reflection::ClassInfo* nox::reflection::FindClassInfo(const nox::refl
 const nox::reflection::ClassInfo* nox::reflection::FindClassInfo(std::uint32_t namehash)noexcept
 {
 	{
-		const auto it = chunk_with_name_hash.class_node_map.find(namehash);
-		if (it != chunk_with_name_hash.class_node_map.end())
+		const auto it = GetDB().chunk_with_name_hash.class_node_map.find(namehash);
+		if (it != GetDB().chunk_with_name_hash.class_node_map.end())
 		{
 			return it->second.get().class_info;
 		}
@@ -304,8 +347,8 @@ void nox::reflection::ForeachDerivedClassInfoList(const nox::reflection::Type& t
 const nox::reflection::EnumInfo* nox::reflection::FindEnumInfo(const nox::reflection::Type& type)noexcept
 {
 	{
-		const auto it = chunk_with_type_id.enum_map.find(&type);
-		if (it != chunk_with_type_id.enum_map.end())
+		const auto it = GetDB().chunk_with_type_id.enum_map.find(&type);
+		if (it != GetDB().chunk_with_type_id.enum_map.end())
 		{
 			return &it->second.get();
 		}
@@ -315,8 +358,8 @@ const nox::reflection::EnumInfo* nox::reflection::FindEnumInfo(const nox::reflec
 
 const nox::reflection::EnumInfo* nox::reflection::FindEnumInfo(const std::uint32_t artiifact_name_hash, const nox::reflection::Type& type)noexcept
 {
-	const auto enum_it = chunk_with_type_id.enum_map.find(&type);
-	if (enum_it == chunk_with_type_id.enum_map.end())
+	const auto enum_it = GetDB().chunk_with_type_id.enum_map.find(&type);
+	if (enum_it == GetDB().chunk_with_type_id.enum_map.end())
 	{
 		return nullptr;
 	}
@@ -327,8 +370,8 @@ const nox::reflection::EnumInfo* nox::reflection::FindEnumInfo(const std::uint32
 const nox::reflection::FunctionInfo* nox::reflection::FindFunctionInfo(const nox::FunctionPointerId& id)noexcept
 {
 	{
-		const auto it = chunk_with_type_id.function_map.find(&id);
-		if (it != chunk_with_type_id.function_map.end())
+		const auto it = GetDB().chunk_with_type_id.function_map.find(&id);
+		if (it != GetDB().chunk_with_type_id.function_map.end())
 		{
 			return &it->second.get();
 		}
@@ -339,8 +382,8 @@ const nox::reflection::FunctionInfo* nox::reflection::FindFunctionInfo(const nox
 const nox::reflection::FunctionInfo* nox::reflection::FindFunctionInfoWithNameHash(const std::uint32_t name_hash)noexcept
 {
 	{
-		const auto it = chunk_with_name_hash.function_map.find(name_hash);
-		if (it != chunk_with_name_hash.function_map.end())
+		const auto it = GetDB().chunk_with_name_hash.function_map.find(name_hash);
+		if (it != GetDB().chunk_with_name_hash.function_map.end())
 		{
 			return &it->second.get();
 		}
@@ -351,8 +394,8 @@ const nox::reflection::FunctionInfo* nox::reflection::FindFunctionInfoWithNameHa
 const nox::reflection::VariableInfo* nox::reflection::FindVariableInfo(const nox::ObjectPointerId& id)noexcept
 {
 	{
-		const auto it = chunk_with_type_id.variable_map.find(&id);
-		if (it != chunk_with_type_id.variable_map.end())
+		const auto it = GetDB().chunk_with_type_id.variable_map.find(&id);
+		if (it != GetDB().chunk_with_type_id.variable_map.end())
 		{
 			return &it->second.get();
 		}
@@ -363,8 +406,8 @@ const nox::reflection::VariableInfo* nox::reflection::FindVariableInfo(const nox
 const nox::reflection::VariableInfo* nox::reflection::FindVariableInfoWithNameHash(const std::uint32_t name_hash)noexcept
 {
 	{
-		const auto it = chunk_with_name_hash.variable_map.find(name_hash);
-		if (it != chunk_with_name_hash.variable_map.end())
+		const auto it = GetDB().chunk_with_name_hash.variable_map.find(name_hash);
+		if (it != GetDB().chunk_with_name_hash.variable_map.end())
 		{
 			return &it->second.get();
 		}
@@ -404,15 +447,17 @@ void	nox::reflection::Register(const nox::reflection::ClassInfo& data)
 
 	if (data.GetType().IsUnion() == true)
 	{
-		chunk_with_type_id.union_map.emplace(&type, data);
-		chunk_with_name_hash.union_map.emplace(nox::util::Crc32(data.GetFullName()), data);
+		const auto r = GetDB().chunk_with_type_id.union_map.emplace(&type, data);
+		NOX_ASSERT(r.second, u"union already registered:{}", data.GetFullName());
+		const auto r2 = GetDB().chunk_with_name_hash.union_map.emplace(nox::util::Crc32(data.GetFullName()), data);
+		NOX_ASSERT(r2.second, u"union already registered with name hash:{}", data.GetFullName());
 		return;
 	}
 	else
 	{
 		//	継承関係の構築
 		ClassNode& self_class_node = [&]()->ClassNode& {
-			const auto r = nox::util::Find(chunk_with_type_id.class_node_map, &type);
+			const auto r = nox::util::Find(GetDB().chunk_with_type_id.class_node_map, &type);
 			if (r)
 			{
 				//	既に存在する場合
@@ -420,13 +465,17 @@ void	nox::reflection::Register(const nox::reflection::ClassInfo& data)
 				NOX_ASSERT(node.class_info == nullptr, u"already registered class info:{}", data.GetFullName());
 				node.class_info = &data;
 
-				chunk_with_name_hash.class_node_map.emplace(nox::util::Crc32(data.GetFullName()), node);
+				const auto r = GetDB().chunk_with_name_hash.class_node_map.emplace(nox::util::Crc32(data.GetFullName()), node);
+				NOX_ASSERT(r.second, u"class already registered with name hash:{}", data.GetFullName());
 				return node;
 			}
 			else
 			{
-				ClassNode& new_class_node = chunk_with_type_id.class_node_map.emplace(&type, ClassNode(data)).first->second;
-				chunk_with_name_hash.class_node_map.emplace(nox::util::Crc32(data.GetFullName()), new_class_node);
+				const auto r2 = GetDB().chunk_with_type_id.class_node_map.emplace(&type, ClassNode(data));
+				NOX_ASSERT(r2.second, u"class already registered:{}", data.GetFullName());
+				ClassNode& new_class_node = r2.first->second;
+				const auto r3 = GetDB().chunk_with_name_hash.class_node_map.emplace(nox::util::Crc32(data.GetFullName()), new_class_node);
+				NOX_ASSERT(r3.second, u"class already registered with name hash:{}", data.GetFullName());
 				return new_class_node;
 			}
 			}();
@@ -438,12 +487,13 @@ void	nox::reflection::Register(const nox::reflection::ClassInfo& data)
 				continue;
 			}
 
-			if (chunk_with_type_id.class_node_map.contains(&base_type) == false)
+			if (GetDB().chunk_with_type_id.class_node_map.contains(&base_type) == false)
 			{
-				chunk_with_type_id.class_node_map.emplace(&base_type, ClassNode(base_type));
+				const auto r = GetDB().chunk_with_type_id.class_node_map.emplace(&base_type, ClassNode(base_type));
+				NOX_ASSERT(r.second, u"base class already registered:{}", base_type.GetTypeName());
 			}
 
-			ClassNode& parent_class_node = chunk_with_type_id.class_node_map.at(&base_type);
+			ClassNode& parent_class_node = GetDB().chunk_with_type_id.class_node_map.at(&base_type);
 			if (parent_class_node.child_ptr == nullptr)
 			{
 				parent_class_node.child_ptr = &self_class_node;
@@ -531,8 +581,10 @@ void nox::reflection::Register(const nox::reflection::EnumInfo& data)
 {
 	const nox::reflection::Type& type = data.GetType();
 
-	chunk_with_type_id.enum_map.emplace(&type, data);
-	chunk_with_name_hash.enum_map.emplace(nox::util::Crc32(data.GetFullName()), data);
+	const auto r = GetDB().chunk_with_type_id.enum_map.emplace(&type, data);
+	NOX_ASSERT(r.second, u"enum already registered:{}", data.GetFullName());
+	const auto r2 = GetDB().chunk_with_name_hash.enum_map.emplace(nox::util::Crc32(data.GetFullName()), data);
+	NOX_ASSERT(r2.second, u"enum already registered with name hash:{}", data.GetFullName());
 }
 
 void nox::reflection::Unregister(const nox::reflection::EnumInfo& data)
@@ -542,10 +594,10 @@ void nox::reflection::Unregister(const nox::reflection::EnumInfo& data)
 
 void nox::reflection::Register(const nox::reflection::VariableInfo& data)
 {
-//	NOX_INFO_LINE(nox::log_id::Reflection, U"Register VariableInfo:{0}", data.GetFullName());
-
-	chunk_with_type_id.variable_map.emplace(&data.GetObjectPointerId(), data);
-	chunk_with_name_hash.variable_map.emplace(nox::util::Crc32(data.GetFullName()), data);
+//	const auto r = GetDB().chunk_with_type_id.variable_map.emplace(&data.GetObjectPointerId(), data);
+//	NOX_ASSERT(r.second, u"variable already registered:{}", data.GetFullName());
+//	const auto r2 = GetDB().chunk_with_name_hash.variable_map.emplace(nox::util::Crc32(data.GetFullName()), data);
+//	NOX_ASSERT(r2.second, u"variable already registered with name hash:{}", data.GetFullName());
 }
 
 void nox::reflection::Unregister(const nox::reflection::VariableInfo& data)
@@ -554,12 +606,15 @@ void nox::reflection::Unregister(const nox::reflection::VariableInfo& data)
 
 void nox::reflection::Register(const nox::reflection::FunctionInfo& data)
 {
-	chunk_with_type_id.function_map.emplace(&data.GetFunctionId(), data);
-	chunk_with_name_hash.function_map.emplace(nox::util::Crc32(data.GetFullName()), data);
+//	const auto r = GetDB().chunk_with_type_id.function_map.emplace(&data.GetFunctionId(), data);
+//	NOX_ASSERT(r.second, u"function already registered:{}", data.GetFullName());
+
+//	const auto r2 = GetDB().chunk_with_name_hash.function_map.emplace(nox::util::Crc32(data.GetFullName()), data);
+//	NOX_ASSERT(r2.second, u"function already registered with name hash:{}", data.GetFullName());
 }
 
 void nox::reflection::Unregister(const nox::reflection::FunctionInfo& data)
 {
-	chunk_with_type_id.function_map.erase(&data.GetFunctionId());
-	chunk_with_name_hash.function_map.erase(nox::util::Crc32(data.GetFullName()));
+	GetDB().chunk_with_type_id.function_map.erase(&data.GetFunctionId());
+	GetDB().chunk_with_name_hash.function_map.erase(nox::util::Crc32(data.GetFullName()));
 }

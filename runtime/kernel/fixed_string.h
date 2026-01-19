@@ -10,102 +10,67 @@
 namespace nox
 {
     template<class T, size_t _Length> requires(_Length >= 1)
-    struct BasicFixedString
+        struct BasicFixedString
     {
     public:
         using value_type = T;
         static constexpr size_t Length = _Length;
 
-        consteval BasicFixedString() noexcept :
-            array_{ },
+        constexpr BasicFixedString() noexcept :
+            array_{},
             native_length_(0U)
         {
         }
 
-        inline constexpr BasicFixedString(const T(&s)[_Length]) noexcept :
-            native_length_(_Length-1)
+        inline constexpr BasicFixedString(const T(&s)[_Length]) noexcept
         {
-            std::ranges::copy(s, array_.begin());
+            native_length_ = _Length;
+            std::ranges::copy_n(s, native_length_, array_.begin());
         }
 
-		template<size_t _OtherLength> requires(_OtherLength <= _Length && _OtherLength != _Length)
-        inline constexpr BasicFixedString(const T(&s)[_OtherLength]) noexcept :
-            native_length_(_OtherLength - 1)
-        {
-            std::ranges::copy(s, array_.begin());
-        }
+        // 格納可能な最大文字数（終端を管理しない設計なら _Length）
+        inline constexpr size_t Capacity() const noexcept { return _Length; }
 
-#pragma region 関数
-
-        [[nodiscard]] inline constexpr const T* const CStr() const noexcept { return static_cast<const T* const>(array_.data()); }
-        [[nodiscard]] inline constexpr T* CStr() noexcept { return static_cast<T*>(array_.data()); }
-        [[nodiscard]] inline constexpr const void* Data() const noexcept { return static_cast<const void* const>(array_.data()); }
-        [[nodiscard]] inline constexpr void* Data() noexcept { return static_cast<void*>(array_.data()); }
-
-		inline constexpr size_t Capacity() const noexcept { return _Length; }
-
-        /**
-         * @brief 文字列の長さを取得
-         * @return 文字列の長さ
-        */
         [[nodiscard]] inline constexpr size_t Size() const noexcept { return native_length_; }
+        inline constexpr std::span<const T> AsSpan() const noexcept { return std::span<const T>(array_.data(), native_length_); }
+        inline constexpr const std::array<T, _Length>& AsArray() const noexcept { return array_; }
 
-
-		inline constexpr std::span<const T> AsSpan() const noexcept { return std::span<const T>(array_.data(), native_length_); }
-		inline constexpr const std::array<T, _Length>& AsArray() const noexcept { return array_; }
-#pragma endregion
-		template<size_t _OtherLength> requires(_OtherLength < _Length)
-        inline constexpr BasicFixedString& operator=(const T(&s)[_OtherLength]) noexcept
+        inline constexpr void Assign(std::basic_string_view<T> str)
         {
-            native_length_ = _OtherLength - 1;
-            std::ranges::copy(s, array_.begin());
-            return *this;
-		}
+            native_length_ = static_cast<uint32_t>(nox::math::Min(str.length(), static_cast<size_t>(_Length)));
+            std::ranges::copy_n(str.data(), native_length_, array_.begin());
+        }
 
         inline constexpr BasicFixedString& operator=(std::basic_string_view<T> s) noexcept
         {
-            native_length_ = static_cast<uint32_t>(nox::math::Min(s.length(), static_cast<size_t>(_Length - 1)));
+            native_length_ = static_cast<uint32_t>(nox::math::Min(s.length(), static_cast<size_t>(_Length)));
             std::ranges::copy_n(s.data(), native_length_, array_.begin());
-			return *this;
+            return *this;
         }
 
         inline constexpr operator std::basic_string_view<T>() const noexcept
         {
             return std::basic_string_view<T>{ array_.data(), native_length_};
-		}
+        }
 
-        inline constexpr bool operator==(const BasicFixedString<T, _Length>& other) const noexcept
+        inline constexpr operator std::span<T>() noexcept
         {
-            if (native_length_ != other.native_length_)
-            {
-                return false;
-            }
+            return std::span<T>(array_.data(), native_length_);
+        }
 
-            if consteval
-            {
-                // 定数評価時は constexpr に評価可能なループを使う
-                for (size_t i = 0; i < native_length_; ++i)
-                {
-                    if (array_[i] != other.array_[i])
-                    {
-                        return false;
-                    }
-                }
-                return true;
-            }
-            else 
-            {
-                const std::size_t bytes = static_cast<std::size_t>(native_length_) * sizeof(T);
-                return std::memcmp(static_cast<const void*>(array_.data()),
-                    static_cast<const void*>(other.array_.data()),
-                    bytes) == 0;
-            }
-		}
- //   private:
+        inline constexpr operator std::span<const T>()const noexcept 
+        { 
+            return std::span<const T>(array_.data(), native_length_); 
+        }
 
+        inline constexpr bool operator==(std::basic_string_view<T> other) const noexcept
+        {
+            const std::basic_string_view<T> a = *this;
+			return a == other;
+        }
+
+    private:
         std::array<T, _Length> array_;
-
-        /// @brief 実際の文字列長
-        uint32_t native_length_;
+        nox::uint32 native_length_;
     };
 }

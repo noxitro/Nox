@@ -18,12 +18,13 @@ nox::CoreEntry::CoreEntry()
 	Register<&nox::CoreEntry::Init>(ModuleEntryCategory::CoreInit);
 	Register<&nox::CoreEntry::GCUpdate>(ModuleEntryCategory::GCUpdate);
 	Register<&nox::CoreEntry::Finalize>(ModuleEntryCategory::CoreFinalize);
+	Register<&nox::CoreEntry::SocketUpdate>(ModuleEntryCategory::SocketUpdate);
 }
 
 nox::CoreEntry::~CoreEntry()
 {
 }
-
+#include	"dev/remote/test.g.h"
 void	nox::CoreEntry::Init()
 {
 	nox::GarbageCollector::CreateInstance();
@@ -46,6 +47,14 @@ void	nox::CoreEntry::Finalize()
 
 	nox::GarbageCollector::Instance().FrameGC();
 	nox::GarbageCollector::DeleteInstance();
+}
+
+void	nox::CoreEntry::SocketUpdate()
+{
+#if NOX_DEVELOP
+	nox::dev::editor_ipc::EditorIpcServer::Instance().Update();
+#endif // NOX_DEVELOP
+
 }
 
 void	nox::CoreEntry::GCUpdate()

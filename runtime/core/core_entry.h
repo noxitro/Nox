@@ -18,7 +18,7 @@ namespace nox
 	private:
 		void	Init();
 		void	Finalize();
-
+		void	SocketUpdate();
 		void	GCUpdate();
 	};
 }

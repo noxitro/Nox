@@ -13,6 +13,7 @@ namespace nox::memory
 	namespace detail
 	{
 		void	ZeroMemImpl(void* ptr, size_t size);
+		void	CheckConstructAt(size_t type_size, size_t storage_size)noexcept;
 	}
 
 	/*!********************************************************************
@@ -37,6 +38,14 @@ namespace nox::memory
 	inline not_null<void*>	Copy(Dest& dest, const Source& src, size_t size = sizeof(Source))
 	{
 		return Copy(&dest, &src, size);
+	}
+
+	/// @brief サイズチェック付き配置new
+	template<class T, class... Args>
+	inline constexpr T* ConstructAt(std::span<nox::uint8> storage, Args&&... args) 
+	{
+		nox::memory::detail::CheckConstructAt(sizeof(T), storage.size());
+		return std::construct_at(static_cast<T*>(static_cast<void*>(storage.data())), std::forward<Args>(args)...);
 	}
 }
 

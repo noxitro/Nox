@@ -57,6 +57,8 @@ namespace nox::dev::net
 
 		void Disconnected(const nox::dev::net::ConnectionContext& context);
 		virtual void OnDisconnected(const nox::dev::net::ConnectionContext& context) {}
+
+		inline const nox::Vector<PeerContext>& GetClientList()const noexcept { return client_list_; }
 	private:
 		Server::InitializeContext initialize_context_;
 		nox::Vector<PeerContext> client_list_;

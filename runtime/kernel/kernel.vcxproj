@@ -98,6 +98,10 @@
     </ClInclude>
     <ClInclude Include="math\matrix3d.h" />
     <ClInclude Include="math\matrix4d.h" />
+    <ClInclude Include="placement_object.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="math\point2d.h" />
     <ClInclude Include="math\point3d.h" />
     <ClInclude Include="math\point3x3.h" />
@@ -105,6 +109,10 @@
     <ClInclude Include="math\point4x4.h" />
     <ClInclude Include="math\quaternion.h" />
     <ClInclude Include="math\quaternion_util.h" />
+    <ClInclude Include="math\sphere.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="math\vector2d.h" />
     <ClInclude Include="math\vector3d.h" />
     <ClInclude Include="math\vector4d.h" />
@@ -343,6 +351,10 @@
     </ClCompile>
     <ClCompile Include="math\matrix3d.cpp" />
     <ClCompile Include="math\matrix4d.cpp" />
+    <ClCompile Include="placement_object.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="math\point2d.cpp" />
     <ClCompile Include="math\point3d.cpp" />
     <ClCompile Include="math\point3x3.cpp" />
@@ -350,6 +362,10 @@
     <ClCompile Include="math\point4x4.cpp" />
     <ClCompile Include="math\quaternion.cpp" />
     <ClCompile Include="math\quaternion_util.cpp" />
+    <ClCompile Include="math\sphere.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="math\vector2d.cpp" />
     <ClCompile Include="math\vector2d.ixx" />
     <ClCompile Include="math\vector3d.cpp" />

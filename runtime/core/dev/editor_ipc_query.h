@@ -16,7 +16,10 @@ namespace nox::dev::editor_ipc
 		inline constexpr Query() {}
 		inline constexpr ~Query() noexcept override {}
 
-		inline constexpr virtual Response* Execute()const { return nullptr; }
+		/// @brief Queryを受信した時に実行される
+		/// @param buffer Responseを作成するためのバッファ　配置newを使用してResponseを作成すること
+		/// @return 
+		inline constexpr virtual nox::PlacementObject<Response> Execute(std::span<nox::uint8> buffer)const { return nullptr; }
 	};
 }
 #endif // NOX_DEVELOP

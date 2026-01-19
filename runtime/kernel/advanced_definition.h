@@ -2,12 +2,15 @@
 ///	@brief	advanced_definition
 #pragma once
 #include	"basic_definition.h"
-#include	"assertion.h"
-#include	"string_format.h"
 #include	"type_traits/type_name.h"
 
 namespace nox::util
 {
+	namespace detail
+	{
+		void AssertDeref(std::string_view name);
+	}
+
 	/// @brief	ポインタの参照先を取得する　nullptrだった場合例外を投げる
 	/// @tparam T 
 	/// @param ptr 
@@ -15,7 +18,10 @@ namespace nox::util
 	template<class T> requires(std::is_pointer_v<T>)
 		inline constexpr std::remove_pointer_t<T>& Deref(const T& ptr)noexcept
 	{
-		NOX_ASSERT(ptr != nullptr, u"{0}はnullptrです", util::GetTypeName<T>());
+		if (ptr == nullptr)
+		{
+			nox::util::detail::AssertDeref(util::GetTypeName<T>());
+		}
 		return *ptr;
 	}
 

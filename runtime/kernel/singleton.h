@@ -3,8 +3,6 @@
 ///	@file	singleton.h
 ///	@brief	singleton
 #pragma once
-#include	"assertion.h"
-
 #include	"advanced_definition.h"
 #include	"type_traits/type_name.h"
 
@@ -71,9 +69,8 @@ namespace nox
 		static	inline	decltype(auto) Instance()noexcept { return util::Deref(instance_); }
 
 	protected:
-		inline ISingleton()noexcept(false)
+		inline ISingleton()noexcept
 		{
-			NOX_ASSERT(ISingleton<T>::instance_ == nullptr, u"Singleton instance is already created");
 		}
 
 	private:

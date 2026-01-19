@@ -12,6 +12,11 @@ bool	nox::reflection::ClassInfo::IsBaseOf(const nox::reflection::ClassInfo& deri
 	return nox::reflection::IsBaseOf(*this, derived);
 }
 
+bool	nox::reflection::ClassInfo::IsBaseOf(const nox::reflection::Type& derived)const noexcept
+{
+	return nox::reflection::IsBaseOf(*this, derived);
+}
+
 bool	nox::reflection::ClassInfo::IsSubclassOf(const nox::reflection::Type& base)const noexcept
 {
 	for (const nox::reflection::Type& type : GetBaseTypeList())

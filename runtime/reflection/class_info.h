@@ -151,6 +151,13 @@ namespace nox::reflection
 		[[nodiscard]] inline constexpr const nox::reflection::EnumInfo& GetEnumInfo(std::uint8_t index)const noexcept { return nox::util::At(enum_list_, enum_length_, index); }
 
 		[[nodiscard]] bool	IsBaseOf(const nox::reflection::ClassInfo& derived)const noexcept;
+		[[nodiscard]] bool	IsBaseOf(const nox::reflection::Type& derived)const noexcept;
+		template<class T>
+		inline bool IsBaseOf()const noexcept
+		{
+			return this->IsBaseOf(nox::reflection::Typeof<T>());
+		}
+
 		[[nodiscard]] bool	IsSubclassOf(const nox::reflection::Type& base)const noexcept;
 
 		const nox::reflection::FunctionInfo* GetCopyConstructor()const noexcept;

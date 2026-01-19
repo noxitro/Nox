@@ -87,6 +87,7 @@ namespace nox::dev::net
 		port_t port;
 		peer_name_t peername;
 		port_name_t portname;
+		raw_socket_t socket;
 	};
 	using DisconnectionContext = ConnectionContext;
 

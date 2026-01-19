@@ -10,37 +10,31 @@
 
 namespace nox::dev::editor_ipc
 {
-	class Query;
-	class Response;
-
 	class ConvertQuery : public nox::dev::editor_ipc::Query
 	{
 		NOX_DECLARE_OBJECT(nox::dev::editor_ipc::ConvertQuery, nox::dev::editor_ipc::Query);
 	public:
-		ConvertQuery() {}
+		inline constexpr ConvertQuery() {}
 		void OnSerialize(SocketStreamWriter&)override;
 		void OnDeserialize(SocketStreamReader&)override;
 		inline constexpr auto& GetPath()const noexcept { return path_; }
+		inline void SetPath(std::u8string_view s) {
+			path_ = s;
+		}
 
-		inline constexpr Response* Execute()const override { return nullptr; }
+		nox::PlacementObject<Response> Execute(std::span<nox::uint8> buffer)const override;
 	private:
-		std::array<nox::char8, 256> path_;
+		nox::BasicFixedString<nox::char8, 256> path_;
 	};
 
 	class ConvertResponse : public nox::dev::editor_ipc::Response
 	{
 		NOX_DECLARE_OBJECT(nox::dev::editor_ipc::ConvertResponse, nox::dev::editor_ipc::Response);
 	public:
-		void OnSerialize(SocketStreamWriter&)override;
-		void OnDeserialize(SocketStreamReader&)override;
-		inline constexpr const auto& GetResultPath()const noexcept { return path_; }
-
-		inline constexpr void Execute()const override
-		{
-			//	resource managerに通知
-		}
+		inline constexpr void OnSerialize(SocketStreamWriter&)override {}
+		inline constexpr void OnDeserialize(SocketStreamReader&)override {}
+	
 	private:
-		std::array<nox::char8, 256> path_;
 	};
 }
 #endif // NOX_DEVELOP

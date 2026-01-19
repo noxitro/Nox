@@ -5,13 +5,9 @@
 #include	"stdafx.h"
 #include	"stack_trace.h"
 #include	"basic_definition.h"
-#include	"os/mutex.h"
-#include	"os/os_utility.h"
 
-#include	"string_format.h"
-#include	"log_id.h"
-#include	"math/math_algorithm.h"
 #if NOX_WINDOWS
+#include	"os/windows.h"
 #pragma warning(push, 0)
 #pragma warning(disable:4514)
 #pragma warning(disable:4820)
@@ -20,6 +16,13 @@
 #pragma comment(lib, "imagehlp.lib")
 #pragma comment(lib, "Dbghelp.lib")
 #endif // NITRO_WIN64
+
+#include	"os/mutex.h"
+#include	"os/os_utility.h"
+#include	"string_format.h"
+#include	"log_id.h"
+#include	"math/math_algorithm.h"
+#include	"assertion.h"
 
 namespace nox
 {
@@ -278,6 +281,22 @@ std::span<nox::char16>	nox::stack_walker::detail::WalkerBase::GetStackTraceU16St
 	return dest_buffer;
 }
 
+const nox::stack_walker::StackFrame& nox::stack_walker::detail::WalkerBase::GetStack(const uint8 index)const {
+	NOX_ASSERT(index < collect_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
+	return stack_table_[index];
+}
+
+nox::stack_walker::StackFrame& nox::stack_walker::detail::WalkerBase::GetStack(const uint8 index) {
+	NOX_ASSERT(index < collect_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
+	return stack_table_[index];
+}
+
+void nox::stack_walker::detail::WalkerBase::SetCollectLength(const uint8 length)
+{
+	NOX_ASSERT(length <= stack_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
+	collect_length_ = length;
+}
+
 bool	nox::stack_walker::detail::WalkerSlimBase::Collect(const uint8 startDepth)
 {
 	if (gRtiCaptureStackBackTrace == nullptr)
@@ -404,6 +423,22 @@ void	nox::stack_walker::detail::WalkerSlimBase::Trace()const
 	}
 
 	NOX_INFO_LINE(log_id::Kernel, u"===CallStackTrace終了===\n");
+}
+
+void nox::stack_walker::detail::WalkerSlimBase::SetCollectLength(const uint8 length)
+{
+	NOX_ASSERT(length <= stack_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
+	collect_length_ = length;
+}
+
+const nox::stack_walker::SlimStackFrame& nox::stack_walker::detail::WalkerSlimBase::GetStack(const uint8 index)const {
+	NOX_ASSERT(index < collect_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
+	return stack_table_[index];
+}
+
+nox::stack_walker::SlimStackFrame& nox::stack_walker::detail::WalkerSlimBase::GetStack(const uint8 index) {
+	NOX_ASSERT(index < collect_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
+	return stack_table_[index];
 }
 
 void	nox::stack_walker::Initialize()

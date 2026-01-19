@@ -9,6 +9,8 @@
 
 namespace nox::dev::editor_ipc
 {
+	
+
 	class SocketStreamWriter;
 	class SocketStreamReader;
 
@@ -19,9 +21,10 @@ namespace nox::dev::editor_ipc
 		inline constexpr EditorIpcEntity() noexcept : id_(0) {}
 		inline constexpr ~EditorIpcEntity() noexcept override {}
 
-		void Serialize(SocketStreamWriter& writer);
+		void Serialize(nox::uint32 id, SocketStreamWriter& writer);
 		void Deserialize(SocketStreamReader& reader);
 
+		inline constexpr nox::uint32 GetId()const noexcept { return id_; }
 	protected:
 		virtual void OnSerialize(SocketStreamWriter&) {}
 		virtual void OnDeserialize(SocketStreamReader&) {}

@@ -7,6 +7,8 @@
 #include	"../os/windows.h"
 #endif // NOX_WIN64
 
+#include	"assertion.h"
+
 void	nox::memory::detail::ZeroMemImpl(void* ptr, size_t size)
 {
 #if NOX_WINDOWS
@@ -14,6 +16,11 @@ void	nox::memory::detail::ZeroMemImpl(void* ptr, size_t size)
 #else
 	std::memset(ptr, 0, size);
 #endif // NOX_WIN64
+}
+
+void	nox::memory::detail::CheckConstructAt(size_t type_size, size_t storage_size)noexcept
+{
+	NOX_ASSERT(type_size <= storage_size, u"ConstructAtのストレージサイズが不足しています");
 }
 
 nox::not_null<void*>	nox::memory::Copy(nox::not_null<void*> dest, nox::not_null<const void*> src, size_t size)

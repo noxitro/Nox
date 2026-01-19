@@ -14,8 +14,6 @@ namespace nox::dev::editor_ipc
 	public:
 		inline constexpr Response() noexcept {}
 		inline constexpr ~Response() noexcept override {}
-
-		inline constexpr virtual void Execute()const { }
 	};
 }
 #endif // NOX_DEVELOP

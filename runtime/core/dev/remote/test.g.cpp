@@ -9,10 +9,25 @@
 
 void nox::dev::editor_ipc::ConvertQuery::OnSerialize(SocketStreamWriter& writer)
 {
+	writer.Write(path_);
 
+	nox::Vector<nox::uint8> dummy_data;
+	writer.WriteLength(static_cast<nox::uint64>(dummy_data.size()));
+	for (const nox::uint8 b : dummy_data)
+	{
+		writer.Write(b);
+	}
 }
 
 void nox::dev::editor_ipc::ConvertQuery::OnDeserialize(SocketStreamReader& reader)
 {
+	reader.ReadString(path_);
+}
 
+nox::PlacementObject<nox::dev::editor_ipc::Response> nox::dev::editor_ipc::ConvertQuery::Execute(std::span<nox::uint8> buffer)const
+{
+	nox::dev::editor_ipc::ConvertResponse*const response = nox::memory::ConstructAt< nox::dev::editor_ipc::ConvertResponse>(buffer);
+
+
+	return response;
 }

@@ -8,8 +8,6 @@
 #include	"nox_string.h"
 #include	"nox_string_view.h"
 
-#include	"assertion.h"
-
 namespace nox::stack_walker
 {
 	/// @brief スタックフレーム情報
@@ -153,21 +151,9 @@ namespace nox::stack_walker
 
 			[[nodiscard]] inline	constexpr uint8 GetCollectLength()const noexcept { return collect_length_; }
 
-			[[nodiscard]] inline	const StackFrame& GetStack(const uint8 index)const {
-				NOX_ASSERT(index < collect_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
-				return stack_table_[index];
-			}
-
-			[[nodiscard]] inline	StackFrame& GetStack(const uint8 index){
-				NOX_ASSERT(index < collect_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
-				return stack_table_[index];
-			}
-
-			inline void SetCollectLength(const uint8 length)
-			{
-				NOX_ASSERT(length <= stack_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
-				collect_length_ = length;
-			}
+			[[nodiscard]] const StackFrame& GetStack(const uint8 index)const;
+			[[nodiscard]] StackFrame& GetStack(const uint8 index) ;
+			void SetCollectLength(const uint8 length);
 
 			/// @brief 有効なスタックリストを取得
 			[[nodiscard]] inline	std::span<const StackFrame> GetStackList()const noexcept { return std::span(stack_table_, stack_length_); }
@@ -250,21 +236,11 @@ namespace nox::stack_walker
 				is_collected_ = true;
 			}
 
-			inline void SetCollectLength(const uint8 length)
-			{
-				NOX_ASSERT(length <= stack_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
-				collect_length_ = length;
-			}
+			void SetCollectLength(const uint8 length);
 
-			[[nodiscard]] inline	const SlimStackFrame& GetStack(const uint8 index)const {
-				NOX_ASSERT(index < collect_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
-				return stack_table_[index];
-			}
+			[[nodiscard]] const SlimStackFrame& GetStack(const uint8 index)const;
 
-			[[nodiscard]] inline	SlimStackFrame& GetStack(const uint8 index) {
-				NOX_ASSERT(index < collect_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
-				return stack_table_[index];
-			}
+			[[nodiscard]] SlimStackFrame& GetStack(const uint8 index);
 
 			/// @brief 有効なスタックリストを取得
 			[[nodiscard]] inline	std::span<const SlimStackFrame> GetStackList()const noexcept { return std::span(stack_table_, collect_length_); }

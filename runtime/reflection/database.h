@@ -23,7 +23,7 @@ namespace nox::reflection
 	//	クラスの取得
 	const nox::reflection::ClassInfo* FindClassInfo(const nox::reflection::Type& type)noexcept;
 	const nox::reflection::ClassInfo* FindClassInfo(std::uint32_t namehash)noexcept;
-	inline const nox::reflection::ClassInfo* FindClassInfo(std::u32string_view fullName)noexcept { return nox::reflection::FindClassInfo(nox::util::Crc32(fullName)); }
+	inline const nox::reflection::ClassInfo* FindClassInfo(std::u8string_view fullName)noexcept { return nox::reflection::FindClassInfo(nox::util::Crc32(fullName)); }
 
 	template<nox::concepts::ClassOrUnion T>
 	inline const nox::reflection::ClassInfo* FindClassInfo()noexcept {
@@ -73,7 +73,7 @@ namespace nox::reflection
 	//	関数の取得
 	const nox::reflection::FunctionInfo* FindFunctionInfo(const nox::FunctionPointerId& id)noexcept;
 	const nox::reflection::FunctionInfo* FindFunctionInfoWithNameHash(const std::uint32_t name_hash)noexcept;
-	inline const nox::reflection::FunctionInfo* FindFunctionInfo(std::u32string_view full_name)noexcept
+	inline const nox::reflection::FunctionInfo* FindFunctionInfo(std::u8string_view full_name)noexcept
 	{
 		return nox::reflection::FindFunctionInfoWithNameHash(::nox::util::Crc32(full_name));
 	}
@@ -88,7 +88,7 @@ namespace nox::reflection
 	//	変数の取得
 	const nox::reflection::VariableInfo* FindVariableInfo(const nox::ObjectPointerId& id)noexcept;
 	const nox::reflection::VariableInfo* FindVariableInfoWithNameHash(const std::uint32_t name_hash)noexcept;
-	inline const nox::reflection::VariableInfo* FindVariableInfo(std::u32string_view full_name)noexcept
+	inline const nox::reflection::VariableInfo* FindVariableInfo(std::u8string_view full_name)noexcept
 	{
 		return nox::reflection::FindVariableInfoWithNameHash(nox::util::Crc32(full_name));
 	}
@@ -121,6 +121,18 @@ namespace nox::reflection
 		}
 
 		return IsBaseOf(*base, *derived);
+	}
+
+	inline bool IsBaseOf(const nox::reflection::ClassInfo& base, const nox::reflection::Type& derivedType)noexcept
+	{
+		const nox::reflection::ClassInfo* const derived = nox::reflection::FindClassInfo(derivedType);
+
+		if (derived == nullptr)
+		{
+			return false;
+		}
+
+		return IsBaseOf(base, *derived);
 	}
 
 	namespace detail
