@@ -32,12 +32,10 @@ namespace ReflectionGenerator.Generator
             /// </summary>
             public required string ArtifactName { get; init; }
 
-            public required bool IsModule { get; init; }
+            //  ソリューションディレクトリ以下のパス
+            public required string RelativePath { get; init; }
 
-            /// <summary>
-            /// 
-            /// </summary>
-            public required IReadOnlyList<string> IncludeHeaderList { get; init; } 
+			public required bool IsModule { get; init; }
 
             public override int GetHashCode()
             {
@@ -154,11 +152,11 @@ namespace ReflectionGenerator.Generator
 
                 if (_AdditionalModuleIncludeStr == string.Empty)
                 {
-					_AdditionalModuleIncludeStr = $"#include\t\"../../../../{moduleInfo.ArtifactName}/{moduleInfo.ArtifactName}.h\"";
+					_AdditionalModuleIncludeStr = $"#include\t\"../../../../{moduleInfo.RelativePath}\"";
 				}
 				else
                 {
-					_AdditionalModuleIncludeStr += $"\r\n#include\t\"../../../../{moduleInfo.ArtifactName}/{moduleInfo.ArtifactName}.h\"";
+					_AdditionalModuleIncludeStr += $"\r\n#include\t\"../../../../{moduleInfo.RelativePath}\"";
 				}
 			}
 
@@ -1739,13 +1737,16 @@ namespace ReflectionGenerator.Generator
                             ref readonly Parser2.FunctionDecl.ArgumentInfo argumentInfo = ref argumentList[argIndex];
                             int rawArgIndex = argIndex + (isStatic ? 0 : 1);
 
-                            if (argIndex == 0)
+                            string tmp = $"std::forward_like<{argumentInfo.TypeInfo.FullName}>(*static_cast<std::add_pointer_t<std::remove_reference_t<{argumentInfo.TypeInfo.FullName}>>>(args[{rawArgIndex.ToString()}]))";
+
+							if (argIndex == 0)
                             {
-                                s += $"*static_cast<std::add_pointer_t<std::remove_reference_t<{argumentInfo.TypeInfo.FullName}>>>(args[{rawArgIndex.ToString()}])";
-                            }
+                                s += tmp;
+
+							}
                             else
                             {
-                                s += $", *static_cast<std::add_pointer_t<std::remove_reference_t<{argumentInfo.TypeInfo.FullName}>>>(args[{rawArgIndex.ToString()}])";
+                                s += $", {tmp}";
                             }
                         }
 

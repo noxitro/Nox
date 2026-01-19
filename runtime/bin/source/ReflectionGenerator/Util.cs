@@ -27,7 +27,6 @@ namespace ReflectionGenerator
         {
             Trace.InfoLine(null, $"[{Tag}]{_Stopwatch.ElapsedMilliseconds.ToString()}ms");
 			_Stopwatch.Stop();
-
 		}
 	}
 

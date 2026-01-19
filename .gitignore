@@ -134,3 +134,5 @@
 /Editor/Nox/bin/Release
 /Editor/NoxUI/bin
 /Editor/Studio.Wpf/bin/Release/net10.0-windows
+/runtime/bin/ReflectionGenerator.pdb
+/runtime/bin/RuntimeTypeDB.pdb

@@ -97,10 +97,11 @@ namespace ReflectionGenerator
 			}
 			catch (System.Exception e)
 			{
-				System.Diagnostics.Debug.Assert(false, "カスタムタスクで収集したバイナリデータの読み込みに失敗しました");
+				System.Diagnostics.Debug.Assert(false, "カスタムタスクで収集したバイナリデータの読み込みに失敗しました\n{0}", e.Message);
 				return 1;
 			}
 
+			
 			//	
 			Dictionary<string, IReadOnlyList<string>> includeHeaderWithArtifactDict = new();
 			{
@@ -152,116 +153,45 @@ namespace ReflectionGenerator
 					Build = true,
 					ReBuild = false,
 					IsModule = false,
+					RelativePath = string.Empty,
 					ArtifactName = Define.UNKNOWN_MODULE_NAME,
-					IncludeHeaderList = []
 				});
 			}
 
-			//	ビルドタイムスタンプファイルを解析
-			//      List<string> allModuleNameList = new List<string>();
-			//		List<string> targetModuleNameList = new List<string>();
 			{
-				//	エンジン側のプロジェクトのビルドタイムスタンプファイルのディレクトリを取得
-				System.IO.DirectoryInfo? OutputDicretoryInfo = System.IO.Directory.GetParent(data.OutDir);
-				if (OutputDicretoryInfo == null)
-				{
-					Trace.ErrorLine(null, $"出力ディレクトリが見つかりません:{data.OutDir}");
-					return 1;
-				}
+				ReadOnlySpan<string> ignoreProjectList = [
+					"runtime"
+					];
 
-				string engineBuildTimeStampFileDirectory = $"{OutputDicretoryInfo.FullName}\\nox_build_time_stamp";
-				engineBuildTimeStampFileDirectory = System.IO.Path.GetFullPath(engineBuildTimeStampFileDirectory);
-
-				if (System.IO.Directory.Exists(engineBuildTimeStampFileDirectory) == false)
-				{
-					Trace.ErrorLine(null, $"ビルドタイムスタンプファイルのディレクトリが見つかりません:{engineBuildTimeStampFileDirectory}");
-					return 1;
-				}
-
-				//	   リフレクション生成のタイムスタンプファイルのディレクトリを取得
-				string reflectionGenTimeStampDirectory = $"{OutputDicretoryInfo.FullName}\\nox_parse_build_time_stamp";
-				reflectionGenTimeStampDirectory = System.IO.Path.GetFullPath(reflectionGenTimeStampDirectory);
-
-				if (System.IO.Directory.Exists(reflectionGenTimeStampDirectory) == false)
-				{
-					System.IO.Directory.CreateDirectory(reflectionGenTimeStampDirectory);
-				}
-
-				foreach (string engineTimeStampFileName in System.IO.Directory.GetFiles(engineBuildTimeStampFileDirectory))
-				{
-					bool build = false;
-					//                    allModuleNameList.Add(engineTimeStampFileName);
-
-					string fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(engineTimeStampFileName);
-
-					//	リフレクション生成のタイムスタンプファイルのパス
-					string reflectionGenTimeStampFilePath = $"{reflectionGenTimeStampDirectory}\\{System.IO.Path.GetFileName(engineTimeStampFileName)}";
-					if (System.IO.File.Exists(reflectionGenTimeStampFilePath) == true)
-					{
-						//	ファイル内のテキストは、
-						//	1:	エンジン側のビルドタイムスタンプ
-						//	2:	リビルドフラグ
-
-						//	タイムスタンプを比較
-						string engineTimeStamp = System.IO.File.ReadAllText(engineTimeStampFileName);
-						System.DateTime engineTimeStampDataTime = System.DateTime.Parse(engineTimeStamp);
-
-						string reflectionGenTimeStamp = System.IO.File.ReadAllText(reflectionGenTimeStampFilePath);
-						if (System.DateTime.TryParse(reflectionGenTimeStamp, out System.DateTime reflectionGenTimeStampDataTime) == true)
-						{
-							if (engineTimeStampDataTime > reflectionGenTimeStampDataTime)
-							{
-								build = true;
-								//                          targetModuleNameList.Add(fileNameWithoutExtension);
-							}
-						}
-						else
-						{
-							//	
-							Trace.Warning(null, "リフレクション生成のタイムスタンプファイルのフォーマットが不正です。");
-						}
-					}
-					else
-					{
-						build = true;
-						//                        targetModuleNameList.Add(fileNameWithoutExtension);
-					}
-
-					//IReadOnlyList<string> includeHeaderList;
-					//if (includeHeaderWithArtifactDict.TryGetValue(fileNameWithoutExtension, out IReadOnlyList<string>? tmpList) == true && tmpList != null)
-					//{
-					//	includeHeaderList = tmpList;
-					//}
-					//else
-					//{
-					//	includeHeaderList = [];
-					//}
-					System.IO.BinaryReader s;
-					System.
-
-					ReadOnlySpan<string> ignoreModuleList = [
+				ReadOnlySpan<string> ignoreModuleList = [
 						"unknown",
 						"kernel",
 						"core",
 						"reflection",
 						"reflection_generated",
 						];
-					
+
+				foreach (string projectPath in GetProjectPathsFromSlnx(data.SolutionPath))
+				{
+					string fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(projectPath);
+					if (ignoreProjectList.Contains(fileNameWithoutExtension))
+					{
+						continue;
+					}
+
+					//	ソリューションディレクトリからの相対パス
+					string relative = System.IO.Path.GetRelativePath(data.SolutionDir, projectPath);
+					relative = relative.Replace("vcxproj", "h");
+					relative = relative.Replace("\\", "/");
+
 					moduleInfoList.Add(new Generator.Generator.ARTIFACT_INFO()
 					{
-						Build = build,
+						Build = false,
 						ReBuild = false,
 						ArtifactName = fileNameWithoutExtension,
+						RelativePath = relative,
 						IsModule = !ignoreModuleList.Contains(fileNameWithoutExtension),
-						IncludeHeaderList = includeHeaderWithArtifactDict[fileNameWithoutExtension]
-					}
-					);
-
-					//	タイムスタンプを更新
-					using (System.IO.StreamWriter streamWriter = new System.IO.StreamWriter(reflectionGenTimeStampFilePath, false, System.Text.Encoding.UTF8))
-					{
-						streamWriter.WriteLine(System.DateTime.Now.ToString());
-					}
+					});
 				}
 			}
 
@@ -291,6 +221,40 @@ namespace ReflectionGenerator
 			}
 
 			return 0;
+		}
+
+		public static IReadOnlyList<string> GetProjectPathsFromSlnx(string slnxPath)
+		{
+			if (!File.Exists(slnxPath))
+			{
+				throw new FileNotFoundException("slnx file not found.", slnxPath);
+			}
+
+			System.Xml.Linq.XDocument doc = System.Xml.Linq.XDocument.Load(slnxPath);
+
+			System.Xml.Linq.XElement? solutionElem = doc.Root;
+			if (solutionElem is null || solutionElem.Name != "Solution")
+			{
+				throw new InvalidDataException("Invalid slnx format: root <Solution> not found.");
+			}
+
+			string slnxDir = Path.GetDirectoryName(Path.GetFullPath(slnxPath)) ?? string.Empty;
+
+			List<string> projectPaths = new();
+
+			foreach (System.Xml.Linq.XElement projectElem in solutionElem.Descendants("Project"))
+			{
+				string? rel = projectElem.Attribute("Path")?.Value;
+				if (string.IsNullOrWhiteSpace(rel))
+				{
+					continue;
+				}
+
+				string full = Path.GetFullPath(Path.Combine(slnxDir, rel));
+				projectPaths.Add(full);
+			}
+
+			return projectPaths;
 		}
 		#endregion
 	}

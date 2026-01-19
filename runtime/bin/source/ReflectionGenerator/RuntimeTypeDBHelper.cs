@@ -103,6 +103,7 @@ namespace ReflectionGenerator
 				{
 					TypeInfo = CreateTypeInfo(source.TypeInfo),
 					EnumeratorInfoList = enumeratorInfoList,
+					FixedUnderlyingType = source.FixedUnderlyingType,
 					Name = source.Name,
 					FullName = source.FullName,
 					AccessLevel = (RuntimeTypeDB.AccessLevel)source.AccessLevel,

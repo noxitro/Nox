@@ -11,21 +11,37 @@ namespace ReflectionGenerator
 		/// </summary>
 		protected uint _NestDepth = 0;
 
-        public readonly struct IndentScope : IDisposable
-        {
-            private readonly BaseCodeWriter _Writer;
-            public IndentScope(BaseCodeWriter w)
-            {
-                _Writer = w;
-                _Writer.Push();
-            }
-            void IDisposable.Dispose()
-            {
-                _Writer.Pop();
-            }
-        }
+		public readonly ref struct IndentScope : IDisposable
+		{
+			private readonly BaseCodeWriter _Writer;
+			private readonly ReadOnlySpan<char> _End;
 
-        public void Push()
+			public IndentScope(BaseCodeWriter w)
+			{
+				_Writer = w;
+				_Writer.Push();
+				_End = ReadOnlySpan<char>.Empty;
+			}
+
+			public IndentScope(BaseCodeWriter w, ReadOnlySpan<char> begin, ReadOnlySpan<char> end)
+			{
+				_Writer = w;
+				_Writer.WriteLine(begin);
+				_Writer.Push();
+				_End = end;
+			}
+
+			void IDisposable.Dispose()
+			{
+				if (_End.IsEmpty == false)
+				{
+					_Writer.WriteLine(_End);
+				}
+				_Writer.Pop();
+			}
+		}
+
+		public void Push()
 		{
 			++_NestDepth;
         }
@@ -36,8 +52,9 @@ namespace ReflectionGenerator
         }
 
         public IndentScope Indent() => new IndentScope(this);
+		public IndentScope Indent(ReadOnlySpan<char> begin, ReadOnlySpan<char> end) => new IndentScope(this, begin, end);
 
-        public abstract void Write(ReadOnlySpan<char> str);
+		public abstract void Write(ReadOnlySpan<char> str);
         public abstract void Write<T>(string str, params T[] args) where T : struct;
         public abstract void WriteLine(ReadOnlySpan<char> str);
         public abstract void WriteLine<T>(string str, T args0, params T[] args) where T : struct;

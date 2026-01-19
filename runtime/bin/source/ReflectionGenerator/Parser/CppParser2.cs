@@ -1377,6 +1377,7 @@ namespace ReflectionGenerator.Parser2
 			#endregion
 		}
 
+		public required bool FixedUnderlyingType { get; init; }
 		public required EnumTypeInfo TypeInfo { get; init; }
 		public required TypeInfo UnderlyingTypeInfo { get; init; }
 		public EnumeratorInfo[] EnumeratorInfoList { get; init; } = [];
@@ -1878,10 +1879,10 @@ namespace ReflectionGenerator.Parser2
 							container.RecordList.Add(declImpl);
 
 							//	NOTE:	テンプレートクラスの特殊化でprivate型が使われているかどうかを調べる
-							Util.Assert(declImpl.TypeInfo != null);
-							if (HasPrivateTypeWithTypeInfo(declImpl.TypeInfo) == true)
+						//	Util.Assert(declImpl.TypeInfo != null);
+						//	if (HasPrivateTypeWithTypeInfo(declImpl.TypeInfo) == true)
 							{
-								declImpl.ReflectionGenerateKind = ReflectionGenerateKind.IgnoreReflection;
+						//		declImpl.ReflectionGenerateKind = ReflectionGenerateKind.IgnoreReflection;
 							}
 
 							break;
@@ -1889,9 +1890,9 @@ namespace ReflectionGenerator.Parser2
 							container.FunctionList.Add(declImpl);
 
 							//	NOTE:	テンプレートクラスの特殊化でprivate型が使われているかどうかを調べる
-							if (HasPrivateTypeWithTypeInfo(declImpl.TypeInfo) == true)
+						//	if (HasPrivateTypeWithTypeInfo(declImpl.TypeInfo) == true)
 							{
-								declImpl.ReflectionGenerateKind = ReflectionGenerateKind.IgnoreReflection;
+						//		declImpl.ReflectionGenerateKind = ReflectionGenerateKind.IgnoreReflection;
 							}
 							break;
 						case VariableDecl declImpl:
@@ -2243,7 +2244,7 @@ namespace ReflectionGenerator.Parser2
 				return;
 			}
 
-			if (cursor.Spelling.CString.Contains("Application"))
+			if (cursor.Spelling.CString.Contains("GameObject"))
 			{
 				Util.BreakPoint();
 			}
@@ -2671,6 +2672,7 @@ namespace ReflectionGenerator.Parser2
 				ParentDeclHash = parentDeclHash,
 				ParentUniqueDeclKey = CreateUniqueDeclKey(parentCursor),
 				EnumeratorInfoList = enumeratorInfoList,
+				FixedUnderlyingType = cursor.EnumDecl_IntegerType.CanonicalType.kind != ClangSharp.Interop.CXTypeKind.CXType_Invalid,
 				AttributeList = CreateAttributeDeclList(cursor),
 				TypeInfo = GetOrCreateTypeInfo< EnumTypeInfo>(cursor.Type),
 				UnderlyingTypeInfo = GetOrCreateTypeInfo(cursor.EnumDecl_IntegerType),
@@ -2995,6 +2997,8 @@ namespace ReflectionGenerator.Parser2
 					break;
 			}
 
+
+
 			VariableDecl variableDecl = new ()
             {
 				Usr = usr,
@@ -3017,6 +3021,12 @@ namespace ReflectionGenerator.Parser2
 			};
 
 			AddDecl(variableDecl);
+
+			//	無名名前空間はリフレクション対象外
+			if (cursor.IsAnonymousStructOrUnion)
+			{
+				variableDecl.ReflectionGenerateKind = ReflectionGenerateKind.IgnoreReflection;
+			}
 		}
 
 		private void VisitCursor(in ClangSharp.Interop.CXCursor cursor)
@@ -3355,19 +3365,31 @@ namespace ReflectionGenerator.Parser2
 					break;
 
 				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Enum:
-					
-                    typeInfo = new EnumTypeInfo()
-                    {
-						TypeAttributeFlags = typeAttributeFlags,
-						Name = type.Declaration.Spelling.CString,
-                        FullName = type.GetFQN(),
-                        Namespace = type.GetNamespace(),
-						DeclHash = type.Declaration.Hash,
-						TypeKind = typeKind,
-						Size = type.SizeOf,
-						Alignment = type.AlignOf,
-						UnderlyingTypeInfo = GetOrCreateTypeInfo(type.UnderlyingType),
-					};
+					{
+						TypeInfo underlyingTypeInfo;
+						var integerType = type.Declaration.EnumDecl_IntegerType;
+						if (integerType.kind == ClangSharp.Interop.CXTypeKind.CXType_Invalid)
+						{
+							underlyingTypeInfo = InvalidTypeInfo.Invalid;
+						}
+						else
+						{
+							underlyingTypeInfo = GetOrCreateTypeInfo(integerType);
+						}
+
+						typeInfo = new EnumTypeInfo()
+						{
+							TypeAttributeFlags = typeAttributeFlags,
+							Name = type.Declaration.Spelling.CString,
+							FullName = type.GetFQN(),
+							Namespace = type.GetNamespace(),
+							DeclHash = type.Declaration.Hash,
+							TypeKind = typeKind,
+							Size = type.SizeOf,
+							Alignment = type.AlignOf,
+							UnderlyingTypeInfo = underlyingTypeInfo,
+						};
+					}
 					break;
 
                 case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_TemplateTypeParm:

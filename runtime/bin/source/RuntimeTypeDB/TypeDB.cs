@@ -237,6 +237,7 @@ namespace ReflectionGenerator.RuntimeTypeDB
 			public EnumeratorInfo() { }
 		}
 
+		public required bool FixedUnderlyingType { get; set; } = false;
 		public required TypeInfo TypeInfo { get; set; }
 		public EnumeratorInfo[] EnumeratorInfoList { get; set; } = [];
 	}
@@ -280,7 +281,7 @@ namespace ReflectionGenerator.RuntimeTypeDB
 			return System.IO.Path.GetFullPath(path);
 		}
 
-		private static ReadOnlySpan<char> GetPath2(Span<char> dest, ReadOnlySpan<char> platform, ReadOnlySpan<char> configuration)
+		public static ReadOnlySpan<char> GetPath2(Span<char> dest, ReadOnlySpan<char> platform, ReadOnlySpan<char> configuration)
 		{
 			// GetTempPath は string を返すのでここだけはヒープ確保
 			string directoryString = System.IO.Path.GetTempPath();
@@ -320,6 +321,12 @@ namespace ReflectionGenerator.RuntimeTypeDB
 			Span<char> pathBuffer = stackalloc char[MaxPathLength];
 
 			ReadOnlySpan<char> path = GetPath2(pathBuffer, platform, configuration);
+			if (System.IO.File.Exists(path.ToString()) == false)
+			{
+				System.Console.WriteLine($"TypeDB file not found: {path.ToString()}");
+				return null;
+			}
+
 			using (System.IO.FileStream fs = new System.IO.FileStream(path.ToString(), System.IO.FileMode.Open))
 			{
 				return MessagePack.MessagePackSerializer.Deserialize<TypeDB>(fs);

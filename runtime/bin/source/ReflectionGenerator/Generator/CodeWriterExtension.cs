@@ -105,11 +105,6 @@ namespace ReflectionGenerator.Generator
 			codeWriter.WriteLineIgnoreNest($"#pragma region {name}");
 		}
 
-		public static void WriteLineEndRegion(this BaseCodeWriter codeWriter)
-		{
-			codeWriter.WriteLineIgnoreNest("#pragma endregion");
-		}
-
 		public static void WriteLineEndRegion(this BaseCodeWriter codeWriter, ReadOnlySpan<char> comment)
 		{
 			codeWriter.WriteLineIgnoreNest($"#pragma endregion\t//\t{comment}");
