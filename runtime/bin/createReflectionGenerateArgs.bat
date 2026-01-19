@@ -1,7 +1,7 @@
 chcp 65001
 
 echo run %0
-echo off
+rem echo off
 setlocal
 
 rem ReflectionGeneraterで使用する情報を出力するためのbatファイル
