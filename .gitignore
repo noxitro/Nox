@@ -112,3 +112,16 @@
 /Editor/Core/obj
 /runtime/bin/source/CustomTask/obj
 /runtime/bin/source/RuntimeTypeDB/bin/Release/net9.0
+/runtime/.vs
+/runtime/bin/source/RuntimeTypeDB/bin
+/Editor/Module/Render/bin
+/Editor/Module/Render/obj
+/Editor/Nox/bin
+/Editor/NoxUI/bin
+/Editor/NoxUI/obj
+/Editor/Studio.Wpf/bin
+/Editor/Studio.Wpf/obj
+/Editor/Core/bin/Release
+/Editor/Core.UI/bin
+/Editor/Core.UI/obj
+/.vs
