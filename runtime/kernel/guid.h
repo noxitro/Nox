@@ -37,9 +37,9 @@ namespace nox
 		}
 
 		template<nox::concepts::Char T>
-		inline constexpr nox::BasicString<T> ToString()const
+		inline constexpr nox::StdBasicString<T> ToString()const
 		{
-			nox::BasicString<T> dest;
+			nox::StdBasicString<T> dest;
 			dest.resize(36);
 
 			return this->ToStringImpl<T>(std::span<T>{ dest });

@@ -13,7 +13,7 @@
 #include	"windows.h"
 #endif // NOX_WINDOWS
 
-nox::String	nox::os::file_system::GetCurrentPath()
+nox::U16String	nox::os::file_system::GetCurrentPath()
 {
 #if NOX_WINDOWS
 	std::array<wchar16, os::MAX_PATH_LENGTH> path_buffer;
@@ -22,7 +22,7 @@ nox::String	nox::os::file_system::GetCurrentPath()
 		NOX_ASSERT(false, u"");
 	}
 
-	return nox::String(unicode::ConvertString<nox::U16String>(path_buffer.data()));
+	return nox::U16String(unicode::ConvertString<nox::StdU16String>(path_buffer.data()));
 #else
 	static_assert(false);
 #endif

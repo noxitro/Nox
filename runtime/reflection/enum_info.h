@@ -14,8 +14,8 @@ namespace nox::reflection
 	public:
 		inline constexpr explicit EnumeratorInfo(
 			const std::int64_t value,
-			const ReflectionStringView name,
-			const ReflectionStringView fullname,
+			const std::u8string_view name,
+			const std::u8string_view fullname,
 			const std::reference_wrapper<const ReflectionObject>* attribute_list,
 			const std::uint8_t attribute_length
 		)noexcept :
@@ -27,8 +27,8 @@ namespace nox::reflection
 
 		inline constexpr explicit EnumeratorInfo(
 			const std::uint64_t value,
-			const ReflectionStringView name,
-			const ReflectionStringView fullname,
+			const std::u8string_view name,
+			const std::u8string_view fullname,
 			const std::reference_wrapper<const ReflectionObject>* attribute_list,
 			const std::uint8_t attribute_length
 		)noexcept :
@@ -40,11 +40,11 @@ namespace nox::reflection
 
 		/// @brief 名前を取得
 		/// @return 
-		[[nodiscard]] inline constexpr ReflectionStringView GetName()const noexcept { return name_; }
+		[[nodiscard]] inline constexpr std::u8string_view GetName()const noexcept { return name_; }
 
 		/// @brief フルネームを取得
 		/// @return 
-		[[nodiscard]] inline constexpr ReflectionStringView GetFullName()const noexcept { return fullname_; }
+		[[nodiscard]] inline constexpr std::u8string_view GetFullName()const noexcept { return fullname_; }
 		
 		/// @brief 整数型を指定して値を取得
 		template<std::integral T>
@@ -83,8 +83,8 @@ namespace nox::reflection
 		const std::reference_wrapper<const ReflectionObject>*const attribute_list_;
 
 		/// @brief 名前
-		ReflectionStringView name_;
-		ReflectionStringView fullname_;
+		std::u8string_view name_;
+		std::u8string_view fullname_;
 	};
 
 	/// @brief Enum情報
@@ -95,9 +95,9 @@ namespace nox::reflection
 	public:
 		inline consteval explicit EnumInfo(
 			const nox::reflection::Type& type,
-			ReflectionStringView name,
-			ReflectionStringView fullname,
-			ReflectionStringView _namespace,
+			std::u8string_view name,
+			std::u8string_view fullname,
+			std::u8string_view _namespace,
 			const nox::reflection::AccessLevel access_level,
 			const std::reference_wrapper<const ReflectionObject>*const attribute_list,
 			std::uint8_t attribute_length,
@@ -119,9 +119,9 @@ namespace nox::reflection
 		inline	constexpr	const nox::reflection::Type& GetType()const noexcept { return type_; }
 		inline	constexpr	const nox::reflection::Type& GetUnderlyingType()const noexcept { return type_.GetUnderlyingType(); }
 
-		inline	constexpr	ReflectionStringView	GetName()const noexcept { return name_; }
-		inline	constexpr	ReflectionStringView	GetFullName()const noexcept { return fullname_; }
-		inline	constexpr	ReflectionStringView	GetNamespace()const noexcept { return namespace_; }
+		inline	constexpr	std::u8string_view	GetName()const noexcept { return name_; }
+		inline	constexpr	std::u8string_view	GetFullName()const noexcept { return fullname_; }
+		inline	constexpr	std::u8string_view	GetNamespace()const noexcept { return namespace_; }
 
 		inline	constexpr	std::uint8_t	GetAttributeLength()const noexcept { return attribute_length_; }
 		inline	constexpr	std::span<const std::reference_wrapper<const ReflectionObject>> GetAttributeList()const noexcept { return std::span(attribute_list_, attribute_length_); }
@@ -193,12 +193,12 @@ namespace nox::reflection
 		const nox::reflection::Type& type_;
 
 		/// @brief 名前
-		const	ReflectionStringView	name_;
+		const	std::u8string_view	name_;
 
 		/// @brief 型名
-		const	ReflectionStringView	fullname_;
+		const	std::u8string_view	fullname_;
 
 		/// @brief 名前空間
-		const ReflectionStringView namespace_;
+		const std::u8string_view namespace_;
 	};
 }

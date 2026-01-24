@@ -17,10 +17,10 @@ namespace nox
 
 		/// @brief 文字列化　動的メモリ確保
 		/// @return 
-		nox::String	ToString()const;
+		nox::U8String	ToString()const;
 
 		/// @brief 文字列化　バッファ指定
-		virtual ::nox::StringView	ToString(std::span<::nox::char16> dest_buffer)const;
+		virtual ::nox::U8StringView	ToString(std::span<::nox::char8> dest_buffer)const;
 	protected:
 		inline	std::span<void(*)()> GetVTable()const noexcept { return ::nox::util::GetVTable(this); }
 		/*bool	IsOverride(const nox::uint64 function_id, std::span<void(*)()> vtable)const noexcept;

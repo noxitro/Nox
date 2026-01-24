@@ -18,7 +18,7 @@ namespace nox::reflection
 		 * @param type 型情報
 		*/
 		[[nodiscard]] inline constexpr explicit FunctionArgumentInfo(
-			const ReflectionStringView name,
+			const std::u8string_view name,
 			const std::reference_wrapper<const ReflectionObject>* attribute_list,
 			const std::uint8_t attribute_list_length,
 			const nox::reflection::Type& type,
@@ -36,7 +36,7 @@ namespace nox::reflection
 		inline constexpr ~FunctionArgumentInfo()noexcept = default;
 
 		/// @brief 引数名を取得
-		[[nodiscard]] inline	constexpr const ReflectionStringView GetName()const noexcept { return name_; }
+		[[nodiscard]] inline	constexpr const std::u8string_view GetName()const noexcept { return name_; }
 
 		/// @brief タイプ情報を取得
 		[[nodiscard]] inline	constexpr const Type& GetType()const noexcept { return underlying_type_; }
@@ -63,7 +63,7 @@ namespace nox::reflection
 		const reflection::Type& underlying_type_;
 	
 		/// @brief 引数名
-		const ReflectionStringView name_;
+		const std::u8string_view name_;
 
 		
 //		const std::span<std::reference_wrapper<const ReflectionObject>> attribute_list_;
@@ -80,9 +80,9 @@ namespace nox::reflection
 	{
 	public:
 		inline	constexpr	explicit FunctionInfo(
-			ReflectionStringView	name,
-			ReflectionStringView	fullname,
-			ReflectionStringView	_namespace,
+			std::u8string_view	name,
+			std::u8string_view	fullname,
+			std::u8string_view	_namespace,
 			const std::reference_wrapper<const ReflectionObject>* attribute_list,
 			const std::uint8_t attribute_list_length,
 			const nox::FunctionPointerId& function_id,
@@ -110,9 +110,9 @@ namespace nox::reflection
 	public:
 #pragma region アクセサ
 
-		[[nodiscard]] inline	constexpr	ReflectionStringView GetName()const noexcept { return name_; }
-		[[nodiscard]] inline	constexpr	ReflectionStringView GetFullName()const noexcept { return fullname_; }
-		[[nodiscard]] inline	constexpr	ReflectionStringView GetNamespace()const noexcept { return namespace_; }
+		[[nodiscard]] inline	constexpr	std::u8string_view GetName()const noexcept { return name_; }
+		[[nodiscard]] inline	constexpr	std::u8string_view GetFullName()const noexcept { return fullname_; }
+		[[nodiscard]] inline	constexpr	std::u8string_view GetNamespace()const noexcept { return namespace_; }
 		[[nodiscard]] inline	constexpr	nox::reflection::AccessLevel GetAccessLevel()const noexcept { return access_level_; }
 		[[nodiscard]] inline	constexpr	const nox::FunctionPointerId& GetFunctionId()const noexcept { return function_id_; }
 
@@ -270,13 +270,13 @@ namespace nox::reflection
 		std::uint8_t function_param_list_length_;
 
 		/// @brief 関数名
-		ReflectionStringView	name_;
+		std::u8string_view	name_;
 
 		/// @brief フルネーム
-		ReflectionStringView	fullname_;
+		std::u8string_view	fullname_;
 
 		/// @brief 名前空間
-		ReflectionStringView	namespace_;
+		std::u8string_view	namespace_;
 
 		/// @brief 関数のID
 		const nox::FunctionPointerId& function_id_;
@@ -310,9 +310,9 @@ namespace nox::reflection
 			inline constexpr FunctionInfoImpl(FunctionInfoImpl&&)noexcept = delete;
 
 			inline	constexpr	explicit	FunctionInfoImpl(
-				ReflectionStringView	name,
-				ReflectionStringView fullname,
-				ReflectionStringView	_namespace,
+				std::u8string_view	name,
+				std::u8string_view fullname,
+				std::u8string_view	_namespace,
 				const std::reference_wrapper<const ReflectionObject>* attribute_list,
 				const std::uint8_t attribute_list_length,
 				const nox::FunctionPointerId& function_id,
@@ -397,9 +397,9 @@ namespace nox::reflection
 		template<class RawFunction>
 		inline	constexpr	nox::reflection::detail::FunctionInfoImpl<nox::FunctionResultType<RawFunction>>	CreateFunctionInfo(
 			const nox::FunctionPointerId& function_id,
-			ReflectionStringView	name,
-			ReflectionStringView	fullname,
-			ReflectionStringView	_namespace,
+			std::u8string_view	name,
+			std::u8string_view	fullname,
+			std::u8string_view	_namespace,
 			AccessLevel access_level,
 			const std::reference_wrapper<const ReflectionObject>* attribute_list,
 			const std::uint8_t attribute_list_length,

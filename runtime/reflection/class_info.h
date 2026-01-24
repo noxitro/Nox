@@ -55,9 +55,9 @@ namespace nox::reflection
 	{
 	private:
 		const nox::reflection::Type& type_;
-		const ReflectionStringView name_;
-		const ReflectionStringView fullname_;
-		const ReflectionStringView namespace_;
+		const std::u8string_view name_;
+		const std::u8string_view fullname_;
+		const std::u8string_view namespace_;
 	};
 
 	/// @brief ユーザー定義の複合型情報
@@ -67,9 +67,9 @@ namespace nox::reflection
 	public:
 		inline constexpr explicit ClassInfo(
 			const nox::reflection::Type& type,
-			ReflectionStringView name,
-			ReflectionStringView fullname,
-			ReflectionStringView _namespace,
+			std::u8string_view name,
+			std::u8string_view fullname,
+			std::u8string_view _namespace,
 			const nox::reflection::Type& external_class_type,
 			const std::reference_wrapper<const nox::reflection::Type>* base_type_list,
 			const std::uint8_t base_type_length,
@@ -109,9 +109,9 @@ namespace nox::reflection
 		[[nodiscard]] inline	constexpr	const nox::reflection::Type& GetType()const noexcept { return type_; }
 		[[nodiscard]] inline	constexpr	bool	IsValid()const noexcept { return type_.IsValid(); }
 
-		[[nodiscard]] inline	constexpr	ReflectionStringView GetName()const noexcept { return name_; }
-		[[nodiscard]] inline	constexpr	ReflectionStringView GetFullName()const noexcept { return fullname_; }
-		[[nodiscard]] inline	constexpr	ReflectionStringView GetNamespace()const noexcept { return namespace_; }
+		[[nodiscard]] inline	constexpr	std::u8string_view GetName()const noexcept { return name_; }
+		[[nodiscard]] inline	constexpr	std::u8string_view GetFullName()const noexcept { return fullname_; }
+		[[nodiscard]] inline	constexpr	std::u8string_view GetNamespace()const noexcept { return namespace_; }
 
 		[[nodiscard]] inline	constexpr	const nox::reflection::Type& GetExternalType()const noexcept { return external_class_type_; }
 		[[nodiscard]] inline	const nox::reflection::ClassInfo& GetExternalUserDefinedCompoundTypeInfo()const noexcept { return nox::util::Deref(external_class_type_.GetUserDefinedCompoundTypeInfo()); }
@@ -230,13 +230,13 @@ namespace nox::reflection
 		const std::reference_wrapper<const class nox::reflection::EnumInfo>* enum_list_;
 
 		/// @brief 名前
-		ReflectionStringView name_;
+		std::u8string_view name_;
 
 		/// @brief フルネーム
-		ReflectionStringView fullname_;
+		std::u8string_view fullname_;
 
 		/// @brief 名前空間
-		ReflectionStringView namespace_;
+		std::u8string_view namespace_;
 	};
 
 	namespace detail
@@ -272,9 +272,9 @@ namespace nox::reflection
 
 	/*	template<class T> requires(std::is_class_v<T> || std::is_union_v<T>)
 		inline constexpr nox::reflection::ClassInfo CreateUserDefinedCompoundTypeInfo(
-			nox::reflection::ReflectionStringView name,
-			nox::reflection::ReflectionStringView fullname,
-			nox::reflection::ReflectionStringView _namespace,
+			nox::reflection::std::u8string_view name,
+			nox::reflection::std::u8string_view fullname,
+			nox::reflection::std::u8string_view _namespace,
 			const nox::reflection::ClassInfo& external_class_type,
 			const std::reference_wrapper<const nox::reflection::ClassInfo>* base_type_list,
 			std::uint8_t base_type_length,

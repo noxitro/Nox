@@ -67,9 +67,9 @@ namespace nox::reflection
 		/// @param setter_array_global_func 
 		/// @param getter_array_global_func 
 		inline	constexpr	explicit	VariableInfo(
-			const ReflectionStringView name,
-			const ReflectionStringView fullname,
-			const ReflectionStringView _namespace,
+			const std::u8string_view name,
+			const std::u8string_view fullname,
+			const std::u8string_view _namespace,
 			nox::reflection::AccessLevel access_level,
 			const std::int32_t bit_width,
 			const std::int32_t field_offset,
@@ -121,9 +121,9 @@ namespace nox::reflection
 		/// @param setter_array_global_func 
 		/// @param getter_array_global_func 
 		inline	constexpr	explicit	VariableInfo(
-			ReflectionStringView name,
-			ReflectionStringView fullname,
-			ReflectionStringView _namespace,
+			std::u8string_view name,
+			std::u8string_view fullname,
+			std::u8string_view _namespace,
 			nox::reflection::AccessLevel access_level,
 			const std::int32_t bit_width,
 			const std::int32_t field_offset,
@@ -159,13 +159,13 @@ namespace nox::reflection
 
 #pragma region アクセサ
 		/// @brief 名前
-		inline	constexpr	ReflectionStringView	GetName()const noexcept { return name_; }
+		inline	constexpr	std::u8string_view	GetName()const noexcept { return name_; }
 
 		/// @brief 完全な名前
-		inline	constexpr	ReflectionStringView	GetFullName()const noexcept { return fullname_; }
+		inline	constexpr	std::u8string_view	GetFullName()const noexcept { return fullname_; }
 
 		/// @brief 名前空間
-		inline	constexpr	ReflectionStringView	GetNamespace()const noexcept { return namespace_; }
+		inline	constexpr	std::u8string_view	GetNamespace()const noexcept { return namespace_; }
 
 		/// @brief 所属するクラス情報を取得する
 		const class nox::reflection::ClassInfo* GetContainingUserDefinedCompoundTypeInfo()const noexcept;
@@ -454,13 +454,13 @@ namespace nox::reflection
 		};
 
 		/// @brief 名前
-		const ReflectionStringView name_;
+		const std::u8string_view name_;
 
 		/// @brief 完全な名前
-		const ReflectionStringView fullname_;
+		const std::u8string_view fullname_;
 
 		/// @brief 名前空間
-		const ReflectionStringView namespace_;
+		const std::u8string_view namespace_;
 
 	};
 
@@ -625,9 +625,9 @@ namespace nox::reflection
 		inline constexpr nox::reflection::detail::VariableInfoImpl<R> CreateVariableInfoMemberRef(
 			const nox::reflection::Type& type,
 			const nox::reflection::Type& owner_type,
-			ReflectionStringView name,
-			ReflectionStringView fullname,
-			ReflectionStringView _namespace,
+			std::u8string_view name,
+			std::u8string_view fullname,
+			std::u8string_view _namespace,
 			nox::reflection::AccessLevel access_level,
 			const std::int32_t bit_width,
 			const std::int32_t field_offset,
@@ -668,9 +668,9 @@ namespace nox::reflection
 		template<class R>
 		inline constexpr nox::reflection::detail::VariableInfoImpl<R> CreateVariableInfoGlobalRef(
 			const nox::reflection::Type& type,
-			const ReflectionStringView name,
-			const ReflectionStringView fullname,
-			const ReflectionStringView _namespace,
+			const std::u8string_view name,
+			const std::u8string_view fullname,
+			const std::u8string_view _namespace,
 			const nox::reflection::AccessLevel access_level,
 			const std::int32_t bit_width,
 			const std::int32_t field_offset,
@@ -711,9 +711,9 @@ namespace nox::reflection
 		template<class R, auto object_pointer>
 		inline constexpr nox::reflection::detail::VariableInfoImpl<R> CreateVariableInfoMember(
 			const nox::ObjectPointerId& object_pointer_id,
-			ReflectionStringView name,
-			ReflectionStringView fullname,
-			ReflectionStringView _namespace,
+			std::u8string_view name,
+			std::u8string_view fullname,
+			std::u8string_view _namespace,
 			nox::reflection::AccessLevel access_level,
 			const std::int32_t bit_width,
 			const std::int32_t field_offset,
@@ -757,9 +757,9 @@ namespace nox::reflection
 		template<class R, auto object_pointer>
 		inline constexpr nox::reflection::detail::VariableInfoImpl<R> CreateVariableInfoGlobal(
 			const nox::ObjectPointerId& object_pointer_id,
-			const ReflectionStringView name,
-			const ReflectionStringView fullname,
-			const ReflectionStringView _namespace,
+			const std::u8string_view name,
+			const std::u8string_view fullname,
+			const std::u8string_view _namespace,
 			const nox::reflection::AccessLevel access_level,
 			const std::int32_t bit_width = -1,
 			const std::int32_t field_offset = -1,

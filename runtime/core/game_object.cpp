@@ -93,7 +93,7 @@ nox::GameObject::~GameObject()
 	//	nox::util::SafeDelete(transform_);
 }
 
-nox::IntrusivePtr<nox::GameObject> nox::GameObject::Create(nox::StringView name, const nox::Vec3& pos, const nox::Quat& rotation)
+nox::IntrusivePtr<nox::GameObject> nox::GameObject::Create(nox::U8StringView name, const nox::Vec3& pos, const nox::Quat& rotation)
 {
 	//nox::IntrusivePtr<Component> a;
 

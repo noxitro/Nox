@@ -41,7 +41,7 @@ namespace nox::dev::editor_ipc
 		}
 
 		std::u8string_view ReadString(std::span<nox::char8> dest);
-		nox::U8String ReadString();
+		nox::StdU8String ReadString();
 
 		/// @brief 受信済みサイズを取得
 		[[nodiscard]] inline constexpr nox::uint32 GetReceivedSize()const noexcept

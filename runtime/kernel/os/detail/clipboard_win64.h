@@ -13,11 +13,10 @@
 namespace nox::os::clipboard
 {
 	bool Clear();
-	bool SetText(const nox::StringView text);
 	bool SetText(const std::u8string_view text);
 
-	std::optional<nox::String> GetText();
-	std::optional<nox::StringView> GetText(std::span<nox::char32> dest_buffer);
+	std::optional<nox::U16String> GetText();
+	std::optional<nox::U16StringView> GetText(std::span<nox::char16> dest_buffer);
 }
 
 namespace nox::os::detail
@@ -30,7 +29,7 @@ namespace nox::os::detail
 		static bool Clear();
 
 
-		static bool SetText(const nox::StringView text);
+		static bool SetText(std::u8string_view text);
 	};
 }
 #endif

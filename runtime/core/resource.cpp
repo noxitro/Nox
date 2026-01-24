@@ -5,7 +5,7 @@
 #include	"stdafx.h"
 #include	"resource.h"
 
-void	nox::Resource::initialize(nox::StringView path)
+void	nox::Resource::initialize(nox::U8StringView path)
 {
 
 	//onInitialize(stream);

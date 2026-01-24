@@ -354,6 +354,9 @@
     <ClInclude Include="placement_object.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="ascii.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="basic_definition.cpp">
@@ -684,6 +687,9 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="placement_object.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="ascii.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

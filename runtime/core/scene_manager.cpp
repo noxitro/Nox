@@ -7,7 +7,7 @@
 
 #include	"scene.h"
 
-void	nox::SceneManager::Initialize(nox::StringView main_scene_path)
+void	nox::SceneManager::Initialize(nox::U8StringView main_scene_path)
 {
 	//	
 	

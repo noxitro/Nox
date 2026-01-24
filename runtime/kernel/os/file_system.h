@@ -7,5 +7,5 @@
 
 namespace nox::os::file_system
 {
-	nox::String	GetCurrentPath();
+	nox::U16String	GetCurrentPath();
 }

@@ -5,14 +5,14 @@
 #include	"stdafx.h"
 #include	"object.h"
 
-nox::String	nox::Object::ToString()const
+nox::U8String	nox::Object::ToString()const
 {
 	//	1024文字のバッファを確保
-	std::array<nox::char16, 1024> buffer = {U'\0'};
-	return ToString(buffer);
+	std::array<nox::char8, 1024> buffer = {U'\0'};
+	return this->ToString(buffer);
 }
 
-nox::StringView	nox::Object::ToString(std::span<nox::char16> dest_buffer)const
+nox::U8StringView	nox::Object::ToString(std::span<nox::char8> dest_buffer)const
 {
 	const nox::reflection::Type& type = this->GetType();
 	auto class_info = nox::reflection::FindClassInfo(type);
@@ -24,12 +24,5 @@ nox::StringView	nox::Object::ToString(std::span<nox::char16> dest_buffer)const
 //		return nox::unicode::ConvertU16String(type.GetTypeName(), dest_buffer);
 	}
 
-//	nox::util::StrCopy(class_info->GetFullName(), dest_buffer);
-//	return nox::StringView(dest_buffer);
 	return {};
 }
-//
-//bool	nox::Object::IsOverride(const nox::uint64 function_id, std::span<void(*)()> vtable)const noexcept
-//{
-//	return false;
-//}

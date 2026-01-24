@@ -6,7 +6,11 @@
     <Platform Name="x64" />
   </Configurations>
   <Folder Name="/modules/">
-    <Project Path="modules/render/render.vcxproj" Id="9f598188-078a-4394-8435-81fd3a1b893b" />
+    <Project Path="modules/render/render.vcxproj" Id="9f598188-078a-4394-8435-81fd3a1b893b">
+      <BuildDependency Project="core/core.vcxproj" />
+      <BuildDependency Project="kernel/kernel.vcxproj" />
+      <BuildDependency Project="reflection/reflection.vcxproj" />
+    </Project>
   </Folder>
   <Project Path="app/app.vcxproj" Id="e21d57c8-c4b7-4702-9f36-12c332b64433" />
   <Project Path="core/core.vcxproj" Id="0d108199-d079-4739-83ad-ce83c4d53332">

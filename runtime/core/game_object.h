@@ -33,7 +33,7 @@ namespace nox
 		/// @param pos 
 		/// @param rotation 
 		/// @return 
-		[[nodiscard]]	static nox::IntrusivePtr<GameObject> Create(nox::StringView name, const nox::Vec3& pos = nox::Vec3::Zero(), const nox::Quat& rotation = nox::Quat::Identity());
+		[[nodiscard]]	static nox::IntrusivePtr<GameObject> Create(nox::U8StringView name, const nox::Vec3& pos = nox::Vec3::Zero(), const nox::Quat& rotation = nox::Quat::Identity());
 		static void Destroy(GameObject& gameObject);
 
 		[[nodiscard]] Component* GetComponent(const nox::reflection::Type& type)noexcept;
@@ -73,6 +73,6 @@ namespace nox
 
 		// @brief 名前
 		NOX_ATTR_DECLARATION(nox::attr::DataMember())
-		nox::String name_;
+		nox::U8String name_;
 	};
 }

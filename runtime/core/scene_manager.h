@@ -13,7 +13,7 @@ namespace nox
 	{
 		NOX_DECLARE_OBJECT(SceneManager, nox::ISingleton<SceneManager>);
 	public:
-		void	Initialize(nox::StringView main_scene_path);
+		void	Initialize(nox::U8StringView main_scene_path);
 		void	Update();
 		void	Finalize();
 

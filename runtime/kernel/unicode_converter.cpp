@@ -7,6 +7,7 @@
 
 #include    <cuchar>
 
+#include	"memory/memory_util.h"
 #include    "assertion.h"
 
 #if NOX_WINDOWS
@@ -190,11 +191,11 @@ namespace
     }
 
 
-    inline nox::NString ToNString(const nox::wchar16* str, const size_t length, const nox::uint32 code_page)
+    inline nox::StdNString ToNString(const nox::wchar16* str, const size_t length, const nox::uint32 code_page)
     {
         if (length <= 0)
         {
-            return nox::NString();
+            return nox::StdNString();
         }
 
 #if NOX_WINDOWS
@@ -202,7 +203,7 @@ namespace
             str, static_cast<nox::int32>(length),
             nullptr, 0, nullptr, nullptr);
 
-        nox::NString result(requiredSize, '\0');
+        nox::StdNString result(requiredSize, '\0');
 
         ::WideCharToMultiByte(code_page, 0,
            str, static_cast<nox::int32>(length),
@@ -211,11 +212,11 @@ namespace
         return result;
 #else
 
-        return nox::NString(); 
+        return nox::StdNString(); 
 #endif
     }
 
-//    inline NString ToNString(const std::u32)
+//    inline StdNString ToNString(const std::u32)
 
     inline constexpr size_t GetUTF16Length(const nox::char32 str)noexcept
     {
@@ -405,43 +406,43 @@ namespace
 
 #pragma region char
 
-nox::NString	nox::unicode::ConvertNString(std::u8string_view str_view)
+nox::StdNString	nox::unicode::ConvertNString(std::u8string_view str_view)
 {
     NOX_ASSERT(false, u"");
-    return nox::NString();
+    return nox::StdNString();
 }
 
-nox::NString	nox::unicode::ConvertNString(std::u16string_view str_view)
+nox::StdNString	nox::unicode::ConvertNString(std::u16string_view str_view)
 {
     NOX_ASSERT(false, u"");
-    return nox::NString();
+    return nox::StdNString();
 }
 
-nox::NString	nox::unicode::ConvertNString(std::wstring_view str_view)
+nox::StdNString	nox::unicode::ConvertNString(std::wstring_view str_view)
 {
     NOX_ASSERT(false, u"");
-    return nox::NString();
+    return nox::StdNString();
 }
 
-nox::NString	nox::unicode::ConvertNString(std::u32string_view str_view)
+nox::StdNString	nox::unicode::ConvertNString(std::u32string_view str_view)
 {
     NOX_ASSERT(false, u"");
-    return nox::NString();
+    return nox::StdNString();
 }
 #pragma endregion
 
 #pragma region wchar16
-nox::WString	nox::unicode::ConvertWString(std::u8string_view str_view)
+nox::StdWString	nox::unicode::ConvertWString(std::u8string_view str_view)
 {
     const size_t length = GetUTF16Length(str_view);
-    nox::WString result(length, '0');
+    nox::StdWString result(length, '0');
     return result;
 }
 
-nox::WString	nox::unicode::ConvertWString(std::u32string_view str_view)
+nox::StdWString	nox::unicode::ConvertWString(std::u32string_view str_view)
 {
     const size_t length = GetUTF16Length(str_view);
-    nox::WString result(length, '0');
+    nox::StdWString result(length, '0');
     return result;
 }
 #pragma endregion
@@ -469,22 +470,22 @@ namespace
     }
 }
 
-nox::U8String	nox::unicode::ConvertU8String(std::string_view str_view)
+nox::StdU8String	nox::unicode::ConvertU8String(std::string_view str_view)
 {
     NOX_ASSERT(false, u"");
     return {};
 }
 
-nox::U8String	nox::unicode::ConvertU8String(std::u16string_view str_view)
+nox::StdU8String	nox::unicode::ConvertU8String(std::u16string_view str_view)
 {
     NOX_ASSERT(false, u"");
     return {};
 }
 
-nox::U8String	nox::unicode::ConvertU8String(std::u32string_view str_view)
+nox::StdU8String	nox::unicode::ConvertU8String(std::u32string_view str_view)
 {
     const size_t length = GetUTF8Length(str_view);
-    nox::U8String result(length, '0');
+    nox::StdU8String result(length, '0');
 
     ConvertU8StringImpl(str_view, length, result);
     return result;
@@ -557,26 +558,32 @@ std::u16string_view	nox::unicode::ConvertU16String(const std::u32string_view str
     return std::u16string_view(dest_buffer);
 }
 
-nox::U16String	nox::unicode::ConvertU16String(std::string_view str_view)
+std::u16string_view	nox::unicode::ConvertU16String(const std::wstring_view str_view, std::span<char16> dest_buffer)
+{
+    nox::memory::WideCopy(nox::util::CharCast<wchar16>(dest_buffer.data()), dest_buffer.size(), str_view.data(), str_view.size());
+    return std::u16string_view(dest_buffer);
+}
+
+nox::StdU16String	nox::unicode::ConvertU16String(std::string_view str_view)
 {
 	NOX_ASSERT(false, u"未実装");
     return {};
 }
 
-nox::U16String	nox::unicode::ConvertU16String(std::u8string_view str_view)
+nox::StdU16String	nox::unicode::ConvertU16String(std::u8string_view str_view)
 {
     const size_t length = GetUTF16Length(str_view);
-    nox::U16String result(length, '0');
+    nox::StdU16String result(length, '0');
 
     ConvertU16StringImpl(str_view, length, result);
 
     return result;
 }
 
-nox::U16String	nox::unicode::ConvertU16String(std::u32string_view str_view)
+nox::StdU16String	nox::unicode::ConvertU16String(std::u32string_view str_view)
 {
     const size_t length = GetUTF16Length(str_view);
-    nox::U16String result(length, '0');
+    nox::StdU16String result(length, '0');
 
     NOX_ASSERT(ConvertStringImpl(EncodeUTF16<char16>, str_view, length, std::span<char16>(result)) == true, u"");
 
@@ -637,20 +644,20 @@ std::u32string_view	nox::unicode::ConvertU32String(const std::u16string_view str
     return std::u32string_view(dest_buffer);
 }
 
-nox::U32String	nox::unicode::ConvertU32String(std::u8string_view str_view)
+nox::StdU32String	nox::unicode::ConvertU32String(std::u8string_view str_view)
 {
     const size_t length = GetUTF32Length(str_view);
-    nox::U32String result(length, '0');
+    nox::StdU32String result(length, '0');
 
     ::ConvertU32String(str_view, length, result);
 
     return result;
 }
 
-nox::U32String	nox::unicode::ConvertU32String(std::u16string_view str_view)
+nox::StdU32String	nox::unicode::ConvertU32String(std::u16string_view str_view)
 {
     const size_t length = GetUTF32Length(str_view);
-    nox::U32String result(length, '0');
+    nox::StdU32String result(length, '0');
 
     ::ConvertU32String(str_view, length, result);
 

@@ -235,9 +235,9 @@ void	nox::stack_walker::detail::WalkerBase::Trace()const
 	NOX_INFO_LINE(log_id::Kernel, U"===CallStackTrace終了===");
 }
 
-nox::String	nox::stack_walker::detail::WalkerBase::GetStackTraceString()const
+nox::U16String	nox::stack_walker::detail::WalkerBase::GetStackTraceString()const
 {
-	nox::String buffer;
+	nox::U16String buffer;
 
 	for (uint8 i = 0; i < stack_length_; ++i)
 	{

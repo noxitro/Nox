@@ -25,12 +25,12 @@ namespace nox
 	{
 		NOX_DECLARE_OBJECT(Resource, nox::ManagedObject);
 	public:
-		void initialize(nox::StringView path);
+		void initialize(nox::U8StringView path);
 
 	private:
 		virtual void onInitialize(const nox::io::Stream& stream) = 0;
 
 	private:
-		nox::String path_;
+//		nox::String path_;
 	};
 }

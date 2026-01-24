@@ -45,10 +45,10 @@ namespace nox::os
 		return GetCommandLineArgList()[index];
 	}
 
-	U16String	GetDirectoryUTF8();
+	StdU16String	GetDirectoryUTF8();
 
-	nox::String	GetDirectory();
-	nox::StringView	GetDirectory(std::span<nox::char16> dest_buffer);
+	nox::U16String	GetDirectory();
+	std::u16string_view	GetDirectory(std::span<nox::char16> dest_buffer);
 
 	ProcessMemoryInfo GetCurrentProcessMemoryInfo();
 

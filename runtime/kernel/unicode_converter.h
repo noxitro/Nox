@@ -5,15 +5,14 @@
 #pragma once
 
 #include	"convert_string.h"
-#include	"memory/memory_util.h"
 
 namespace nox::unicode
 {
 #pragma region cstring
-	nox::NString	ConvertNString(std::u8string_view str_view);
-	nox::NString	ConvertNString(std::u16string_view str_view);
-	nox::NString	ConvertNString(std::u32string_view str_view);
-	nox::NString	ConvertNString(std::wstring_view str_view);
+	nox::StdNString	ConvertNString(std::u8string_view str_view);
+	nox::StdNString	ConvertNString(std::u16string_view str_view);
+	nox::StdNString	ConvertNString(std::u32string_view str_view);
+	nox::StdNString	ConvertNString(std::wstring_view str_view);
 
 	template<std::same_as<char> To, class From>
 		requires(std::is_void_v<std::void_t<decltype(::nox::unicode::ConvertNString(std::declval<From>()))>>)
@@ -22,7 +21,7 @@ namespace nox::unicode
 		return ::nox::unicode::ConvertNString(str, dest_buffer);
 	}
 
-	template<std::same_as<::nox::NString> To, class From>
+	template<std::same_as<::nox::StdNString> To, class From>
 		requires(std::is_void_v<std::void_t<decltype(::nox::unicode::ConvertNString(std::declval<From>()))>>)
 	inline	To	ConvertString(From&& str)
 	{
@@ -32,10 +31,10 @@ namespace nox::unicode
 
 #pragma region char8
 
-	nox::U8String	ConvertU8String(std::string_view str_view);
-	nox::U8String	ConvertU8String(std::u16string_view str_view);
-	nox::U8String	ConvertU8String(std::u32string_view str_view);
-	inline nox::U8String	ConvertU8String(std::wstring_view str_view) 
+	nox::StdU8String	ConvertU8String(std::string_view str_view);
+	nox::StdU8String	ConvertU8String(std::u16string_view str_view);
+	nox::StdU8String	ConvertU8String(std::u32string_view str_view);
+	inline nox::StdU8String	ConvertU8String(std::wstring_view str_view) 
 	{
 		return ConvertU8String({ reinterpret_cast<const char16*>(str_view.data()), str_view.size() }); 
 	}
@@ -48,7 +47,7 @@ namespace nox::unicode
 		return ConvertU8String({ reinterpret_cast<const char16*>(str_view.data()), str_view.size() }, dest_buffer);
 	}
 
-	template<std::same_as<::nox::U8String> To, class From>
+	template<std::same_as<::nox::StdU8String> To, class From>
 		requires(std::is_void_v<std::void_t<decltype(unicode::ConvertU8String(std::declval<From>()))>>)
 	inline	To	ConvertString(From&& str)
 	{
@@ -63,27 +62,23 @@ namespace nox::unicode
 #pragma endregion
 
 #pragma region char16
-	nox::U16String	ConvertU16String(std::string_view str_view);
-	nox::U16String	ConvertU16String(std::u8string_view str_view);
-	nox::U16String	ConvertU16String(std::u32string_view str_view);
-	inline nox::U16String	ConvertU16String(std::wstring_view str_view)
+	nox::StdU16String	ConvertU16String(std::string_view str_view);
+	nox::StdU16String	ConvertU16String(std::u8string_view str_view);
+	nox::StdU16String	ConvertU16String(std::u32string_view str_view);
+	inline nox::StdU16String	ConvertU16String(std::wstring_view str_view)
 	{
-		return nox::U16String(reinterpret_cast<const char16*>(str_view.data()), str_view.size());
+		return nox::StdU16String(reinterpret_cast<const char16*>(str_view.data()), str_view.size());
 	}
 
 	std::u16string_view	ConvertU16String(const std::u8string_view str_view, std::span<char16> dest_buffer);
 	std::u16string_view	ConvertU16String(const std::u32string_view str_view, std::span<char16> dest_buffer);
-	inline std::u16string_view	ConvertU16String(const std::wstring_view str_view, std::span<char16> dest_buffer)
-	{
-		memory::WideCopy(util::CharCast<wchar16>(dest_buffer.data()), dest_buffer.size(), str_view.data(), str_view.size());
-		return std::u16string_view(dest_buffer);
-	}
+	std::u16string_view	ConvertU16String(const std::wstring_view str_view, std::span<char16> dest_buffer);
 	inline std::u16string_view	ConvertU16String(const std::string_view str_view, std::span<char16> dest_buffer)
 	{
 		return ConvertU16String({ reinterpret_cast<const char8*>(str_view.data()), str_view.size() }, dest_buffer);
 	}
 
-	template<std::same_as<nox::U16String> To, class From>
+	template<std::same_as<nox::StdU16String> To, class From>
 		requires(std::is_void_v<std::void_t<decltype(::nox::unicode::ConvertU16String(std::declval<From>()))>>)
 	inline	To	ConvertString(From&& str)
 	{
@@ -98,15 +93,15 @@ namespace nox::unicode
 #pragma endregion
 
 #pragma region wstring
-	nox::WString	ConvertWString(std::u8string_view str_view);
-	nox::WString	ConvertWString(std::u32string_view str_view);
-	inline nox::WString	ConvertWString(std::string_view str_view)
+	nox::StdWString	ConvertWString(std::u8string_view str_view);
+	nox::StdWString	ConvertWString(std::u32string_view str_view);
+	inline nox::StdWString	ConvertWString(std::string_view str_view)
 	{
 		return ConvertWString({ reinterpret_cast<const char8*>(str_view.data()), str_view.size() });
 	}
-	inline nox::WString	ConvertWString(std::u16string_view str_view)
+	inline nox::StdWString	ConvertWString(std::u16string_view str_view)
 	{
-		return nox::WString(util::CharCast<wchar16>(str_view.data()), str_view.length());
+		return nox::StdWString(util::CharCast<wchar16>(str_view.data()), str_view.length());
 	}
 
 	inline void	ConvertWString(const std::u8string_view str_view, std::span<wchar_t> dest_buffer)
@@ -126,7 +121,7 @@ namespace nox::unicode
 		ConvertU16String(str_view, buffer);
 	}
 
-	template<std::same_as<::nox::WString> To, class From>
+	template<std::same_as<::nox::StdWString> To, class From>
 		requires(std::is_void_v<std::void_t<decltype(::nox::unicode::ConvertWString(std::declval<From>()))>>)
 	inline	To	ConvertString(From&& str)
 	{
@@ -142,13 +137,13 @@ namespace nox::unicode
 #pragma endregion
 
 #pragma region char32
-	::nox::U32String	ConvertU32String(std::u8string_view str_view);
-	::nox::U32String	ConvertU32String(std::u16string_view str_view);
-	inline ::nox::U32String	ConvertU32String(std::string_view str_view)
+	::nox::StdU32String	ConvertU32String(std::u8string_view str_view);
+	::nox::StdU32String	ConvertU32String(std::u16string_view str_view);
+	inline ::nox::StdU32String	ConvertU32String(std::string_view str_view)
 	{
 		return ConvertU32String({ reinterpret_cast<const char8*>(str_view.data()), str_view.size() });
 	}
-	inline ::nox::U32String	ConvertU32String(std::wstring_view str_view)
+	inline ::nox::StdU32String	ConvertU32String(std::wstring_view str_view)
 	{
 		return ConvertU32String({ reinterpret_cast<const char16*>(str_view.data()), str_view.size() });
 	}
@@ -164,7 +159,7 @@ namespace nox::unicode
 		return ConvertU32String({ reinterpret_cast<const char16*>(str_view.data()), str_view.size() }, dest_buffer);
 	}
 
-	template<std::same_as<::nox::U32String> To, class From>
+	template<std::same_as<::nox::StdU32String> To, class From>
 		requires(std::is_void_v<std::void_t<decltype(unicode::ConvertU32String(std::declval<From>()))>>)
 	inline	To	ConvertString(From&& str)
 	{

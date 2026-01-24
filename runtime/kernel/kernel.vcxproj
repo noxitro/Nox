@@ -23,6 +23,10 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="any.h" />
+    <ClInclude Include="ascii.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="assertion.h" />
     <ClInclude Include="basic_definition.h" />
     <ClInclude Include="basic_type.h" />
@@ -273,6 +277,10 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="any.cpp" />
+    <ClCompile Include="ascii.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="assertion.cpp" />
     <ClCompile Include="basic_definition.cpp" />
     <ClCompile Include="basic_type.cpp" />

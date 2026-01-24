@@ -28,7 +28,7 @@ namespace nox::reflection
 	//	 * @param typeKind
 	//	 * @return 名前
 	//	*/
-	//[[nodiscard]] inline	constexpr ReflectionStringView GetTypeKindName(const TypeKind typeKind)noexcept
+	//[[nodiscard]] inline	constexpr std::u8string_view GetTypeKindName(const TypeKind typeKind)noexcept
 	//{
 	//	switch (typeKind)
 	//	{
@@ -65,7 +65,7 @@ namespace nox::reflection
 	// * @param name
 	// * @return タイプ識別
 	//*/
-	//[[nodiscard]] inline	constexpr TypeKind	GetTypeKind(const ReflectionStringView name)noexcept
+	//[[nodiscard]] inline	constexpr TypeKind	GetTypeKind(const std::u8string_view name)noexcept
 	//{
 	//	for (std::underlying_type_t<TypeKind> i = 0; i < nox::util::ToUnderlying(TypeKind::_Max); ++i)
 	//	{

@@ -9,35 +9,6 @@
 
 namespace nox::reflection
 {
-#if defined(NOX_REFLECTION_BUILD_CHAR)
-	/// @brief リフレクションシステムで扱う文字の型
-	using ReflectionCharType = char;
-#elif	defined(NOX_REFLECTION_BUILD_WCHAR)
-	/// @brief リフレクションシステムで扱う文字の型
-	using ReflectionCharType = wchar_t;
-#elif	defined(NOX_REFLECTION_BUILD_CHAR8)
-	/// @brief リフレクションシステムで扱う文字の型
-	using ReflectionCharType = char8_t;
-#elif	defined(NOX_REFLECTION_BUILD_CHAR16)
-	/// @brief リフレクションシステムで扱う文字の型
-	using ReflectionCharType = char16_t;
-#elif	defined(NOX_REFLECTION_BUILD_CHAR32)
-	/// @brief リフレクションシステムで扱う文字の型
-	using ReflectionCharType = char32_t;
-#else
-	/// @brief リフレクションシステムで扱う文字の型
-	using ReflectionCharType = char8_t;
-#endif // 
-
-#undef	NOX_REFLECTION_BUILD_CHAR
-#undef	NOX_REFLECTION_BUILD_WCHAR
-#undef	NOX_REFLECTION_BUILD_CHAR8
-#undef	NOX_REFLECTION_BUILD_CHAR16
-#undef	NOX_REFLECTION_BUILD_CHAR32
-
-	/// @brief リフレクションシステムで扱うstring_viewの型
-	using ReflectionStringView = std::basic_string_view<ReflectionCharType>;
-
 	/// @brief タイプ種別
 	enum class TypeKind : std::uint8_t
 	{

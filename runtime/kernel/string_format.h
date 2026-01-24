@@ -37,21 +37,21 @@ namespace nox::util
 			struct FormatStringHolder
 		{
 			template<class From> requires(!std::is_same_v< CharType, From>)
-				static inline nox::BasicString<CharType> Get(From&& arg)
+				static inline nox::StdBasicString<CharType> Get(From&& arg)
 			{
-				return nox::unicode::ConvertString<nox::BasicString<CharType>>(arg);
+				return nox::unicode::ConvertString<nox::StdBasicString<CharType>>(arg);
 			}
 
 			template<class From> requires(!std::is_same_v< CharType, From>)
-				static inline  nox::BasicString<CharType> Get(const nox::BasicString<From>& arg)
+				static inline  nox::StdBasicString<CharType> Get(const nox::StdBasicString<From>& arg)
 			{
-				return nox::unicode::ConvertString<nox::BasicString<CharType>>(arg);
+				return nox::unicode::ConvertString<nox::StdBasicString<CharType>>(arg);
 			}
 
 			template<class From> requires(!std::is_same_v< CharType, From>)
-				static inline  nox::BasicString<CharType> Get(std::basic_string_view<From> arg)
+				static inline  nox::StdBasicString<CharType> Get(std::basic_string_view<From> arg)
 			{
-				return nox::unicode::ConvertString<nox::BasicString<CharType>>(arg);
+				return nox::unicode::ConvertString<nox::StdBasicString<CharType>>(arg);
 			}
 
 			//	span ver
@@ -128,37 +128,37 @@ namespace nox::util
 	}
 
 	//template<class T, class... _Types>
-	//inline	nox::BasicString<T>	FormatImpl(const T* const fmt, _Types&&... args)
+	//inline	nox::StdBasicString<T>	FormatImpl(const T* const fmt, _Types&&... args)
 	//{
 	//	return util::detail::VFormat<T>(fmt, std::make_format_args<util::detail::BasicFormatContext<T>>(args...));
 	//}
 
 	//template<class... _Types>
-	//inline nox::WString Format(const wchar16* const fmt, _Types&&... _Args)
+	//inline nox::StdWString Format(const wchar16* const fmt, _Types&&... _Args)
 	//{
-	//	return util::FormatImpl(fmt, nox::util::detail::ToFormatArg<nox::WString>(_Args)...);
+	//	return util::FormatImpl(fmt, nox::util::detail::ToFormatArg<nox::StdWString>(_Args)...);
 	//}
 
 	//template<class... _Types>
-	//inline nox::U16String Format(const char16* const fmt, _Types&&... _Args)
+	//inline nox::StdU16String Format(const char16* const fmt, _Types&&... _Args)
 	//{
-	//	nox::WString from_str = util::Format(reinterpret_cast<const wchar_t*>(fmt), _Args...);
-	//	return nox::U16String(util::CharCast<const char16*>(from_str.c_str()), from_str.size());
+	//	nox::StdWString from_str = util::Format(reinterpret_cast<const wchar_t*>(fmt), _Args...);
+	//	return nox::StdU16String(util::CharCast<const char16*>(from_str.c_str()), from_str.size());
 	//}
 
 
 	namespace detail
 	{
 		template <typename Char, size_t SIZE>
-		[[nodiscard]] inline nox::BasicString<Char> FmtToString(const ::fmt::basic_memory_buffer<Char, SIZE>& buf)
+		[[nodiscard]] inline nox::StdBasicString<Char> FmtToString(const ::fmt::basic_memory_buffer<Char, SIZE>& buf)
 		{
 			auto size = buf.size();
 			::fmt::detail::assume(size < nox::util::detail::GetStringMaxSize<Char>());
-			return nox::BasicString<Char>(buf.data(), size);
+			return nox::StdBasicString<Char>(buf.data(), size);
 		}
 
 		template <typename Char>
-		inline nox::BasicString<Char> FmtVFormat(fmt::basic_string_view<Char> format_str,
+		inline nox::StdBasicString<Char> FmtVFormat(fmt::basic_string_view<Char> format_str,
 			typename fmt::detail::vformat_args<Char>::type args)
 		{
 			auto buf = fmt::basic_memory_buffer<Char>();
@@ -167,7 +167,7 @@ namespace nox::util
 		}
 
 		template <typename StrType, class... Args>
-		inline nox::BasicString<nox::StringCharType<StrType>> FormatImpl2(const StrType& format_str, const Args&... args)
+		inline nox::StdBasicString<nox::StringCharType<StrType>> FormatImpl2(const StrType& format_str, const Args&... args)
 		{
 			return nox::util::detail::FmtVFormat(
 				fmt::detail::to_string_view(format_str),
@@ -201,7 +201,7 @@ namespace nox::util
 	/// @param ...args 
 	/// @return 
 	template <typename StrType, class... Args>
-	inline nox::BasicString<nox::StringCharType<StrType>> Format(const StrType& format_str, Args&&... args)
+	inline nox::StdBasicString<nox::StringCharType<StrType>> Format(const StrType& format_str, Args&&... args)
 	{
 		return nox::util::detail::FormatImpl2(format_str, nox::util::detail::ToFormatArg< nox::StringCharType<StrType>>(std::forward<Args>(args))...);
 	}

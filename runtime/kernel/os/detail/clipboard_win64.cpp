@@ -34,13 +34,6 @@ bool nox::os::clipboard::Clear()
 	return true;
 }
 
-bool nox::os::clipboard::SetText(const nox::StringView text)
-{
-	std::array<nox::char8, 1024> buffer = { 0 };
-	NOX_ASSERT(text.size() < buffer.size(), nox::util::Format(u"buffer size over:{0}, max:{1}", text.size(), buffer.size()));
-	return nox::os::clipboard::SetText(nox::unicode::ConvertU8String(text, buffer));
-}
-
 bool nox::os::clipboard::SetText(const std::u8string_view text)
 {
 	if (::OpenClipboard(nullptr) == FALSE)
@@ -93,12 +86,12 @@ bool nox::os::clipboard::SetText(const std::u8string_view text)
 	return true;
 }
 
-std::optional<nox::String> nox::os::clipboard::GetText()
+std::optional<nox::U16String> nox::os::clipboard::GetText()
 {
 	return std::nullopt;
 }
 
-std::optional<nox::StringView> nox::os::clipboard::GetText(std::span<nox::char32> dest_buffer)
+std::optional<nox::U16StringView> nox::os::clipboard::GetText(std::span<nox::char16> dest_buffer)
 {
 	if (::OpenClipboard(nullptr) == FALSE)
 	{
@@ -131,7 +124,7 @@ bool nox::os::detail::ClipboardWin64::Clear()
 	return true;
 }
 
-bool nox::os::detail::ClipboardWin64::SetText(const nox::StringView text)
+bool nox::os::detail::ClipboardWin64::SetText(const std::u8string_view text)
 {
 	if (::OpenClipboard(nullptr) == FALSE)
 	{
@@ -144,7 +137,7 @@ bool nox::os::detail::ClipboardWin64::SetText(const nox::StringView text)
 		return false;
 	}
 
-	::HGLOBAL handle_mem = ::GlobalAlloc(GMEM_MOVEABLE, (text.size() + 1) * sizeof(nox::StringView::value_type));
+	::HGLOBAL handle_mem = ::GlobalAlloc(GMEM_MOVEABLE, (text.size() + 1) * sizeof(decltype(text)::value_type));
 	if (handle_mem == nullptr)
 	{
 		NOX_ERROR_LINE_OLD(U"GlobalAlloc failed.");
@@ -152,7 +145,7 @@ bool nox::os::detail::ClipboardWin64::SetText(const nox::StringView text)
 		return false;
 	}
 
-	::memcpy_s(::GlobalLock(handle_mem), (text.size() + 1) * sizeof(nox::StringView::value_type), text.data(), text.size() * sizeof(nox::StringView::value_type));
+	::memcpy_s(::GlobalLock(handle_mem), (text.size() + 1) * sizeof(decltype(text)::value_type), text.data(), text.size() * sizeof(decltype(text)::value_type));
 	::GlobalUnlock(handle_mem);
 	::SetClipboardData(CF_TEXT, handle_mem);
 

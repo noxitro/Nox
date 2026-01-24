@@ -140,7 +140,7 @@ namespace nox::stack_walker
 			void	Trace()const;
 
 			/// @brief スタックトレースを文字列で取得
-			nox::String	GetStackTraceString()const;
+			nox::U16String GetStackTraceString()const;
 
 			/// @brief スタックトレースを文字列で取得
 			std::span<char32>	GetStackTraceString(std::span<char32> dest_buffer)const;

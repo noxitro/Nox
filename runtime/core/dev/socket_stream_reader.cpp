@@ -111,10 +111,10 @@ std::u8string_view nox::dev::editor_ipc::SocketStreamReader::ReadString(std::spa
 	return std::u8string_view(dest.data(), static_cast<size_t>(length));
 }
 
-nox::U8String nox::dev::editor_ipc::SocketStreamReader::ReadString()
+nox::StdU8String nox::dev::editor_ipc::SocketStreamReader::ReadString()
 {
 	const nox::uint64 length = ReadLength();
-	nox::U8String result(static_cast<size_t>(length), u'0');
+	nox::StdU8String result(static_cast<size_t>(length), u'0');
 	this->Read(std::span<nox::uint8>(reinterpret_cast<nox::uint8*>(result.data()), static_cast<nox::uint32>(length)));
 	return result;
 }
