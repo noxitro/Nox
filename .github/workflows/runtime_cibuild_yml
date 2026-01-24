@@ -1,0 +1,106 @@
+name: CI Build (runtime)
+
+on:
+  # リポジトリに変更が入った際に実行
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - "**"
+
+  # 手動実行を可能にする
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build (${{ matrix.solution }} | ${{ matrix.configuration }} | ${{ matrix.platform }} | ${{ matrix.toolchain.name }})
+    runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        solution:
+          - runtime/runtime.slnx
+          - runtime/bin/source/ReflectionGenerator/ReflectionGenerator.slnx
+
+        # 利用可能な構成（ドキュメント準拠）
+        configuration:
+          - Debug
+          - Release
+          - Master
+
+        # x64 のみサポート
+        platform:
+          - x64
+
+        # msbuild と msbuild(clang) の2系統
+        toolchain:
+          - name: msvc
+            platformToolset: ""
+          - name: clang
+            platformToolset: "ClangCL"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # MSBuild を PATH に追加
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      # ログ出力用フォルダ（成果物として回収）
+      - name: Prepare logs directory
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          New-Item -ItemType Directory -Force -Path artifacts\msbuild-logs | Out-Null
+
+      # 実際のビルド
+      - name: Build with MSBuild
+        shell: pwsh
+        run: |
+          $solution = "${{ matrix.solution }}"
+          $configuration = "${{ matrix.configuration }}"
+          $platform = "${{ matrix.platform }}"
+          $toolchainName = "${{ matrix.toolchain.name }}"
+          $platformToolset = "${{ matrix.toolchain.platformToolset }}"
+
+          Write-Host "Solution: $solution"
+          Write-Host "Configuration: $configuration"
+          Write-Host "Platform: $platform"
+          Write-Host "Toolchain: $toolchainName"
+          Write-Host "PlatformToolset: $platformToolset"
+
+          $safeSolution = ($solution -replace '[\\/:*?"<>| ]', '_')
+          $binlog = "artifacts\msbuild-logs\${safeSolution}_${configuration}_${platform}_${toolchainName}.binlog"
+          $log = "artifacts\msbuild-logs\${safeSolution}_${configuration}_${platform}_${toolchainName}.log"
+
+          $args = @(
+            $solution,
+            "/m",
+            "/t:Build",
+            "/p:Configuration=$configuration",
+            "/p:Platform=$platform",
+            "/v:normal",
+            "/nologo",
+            "/bl:$binlog",
+            "/fl",
+            "/flp:LogFile=$log;Verbosity=diagnostic"
+          )
+
+          # clang 用の場合のみ PlatformToolset を指定（プロジェクト側が対応している前提）
+          if (-not [string]::IsNullOrWhiteSpace($platformToolset)) {
+            $args += "/p:PlatformToolset=$platformToolset"
+          }
+
+          & msbuild @args
+
+      # ログを常にアップロード（警告/エラー確認用）
+      - name: Upload MSBuild logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: msbuild-logs-${{ matrix.solution }}-${{ matrix.configuration }}-${{ matrix.platform }}-${{ matrix.toolchain.name }}
+          path: artifacts/msbuild-logs/
+          if-no-files-found: error
