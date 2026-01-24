@@ -1,5 +1,5 @@
 chcp 65001
-echo off
+rem echo off
 setlocal
 
 rem 引数の解析
