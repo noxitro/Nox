@@ -24,7 +24,7 @@ nox::CoreEntry::CoreEntry()
 nox::CoreEntry::~CoreEntry()
 {
 }
-#include	"dev/remote/test.g.h"
+
 void	nox::CoreEntry::Init()
 {
 	nox::GarbageCollector::CreateInstance();

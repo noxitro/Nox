@@ -55,30 +55,6 @@ namespace nox::util
 			signatureSize - (preSignatureSize + lastSignatureSize));
 
 		return contentsName;
-#if false
-		//	class や namespaceを除去
-		constexpr std::u8string_view lastColon = u8"::";
-		constexpr std::u8string_view lastSpace = u8" ";
-		constexpr auto lastColonIndex = contentsName.rfind(lastColon);
-		constexpr auto lastSpaceIndex =
-			std::is_class_v<T> || std::is_union_v<T> || std::is_enum_v<T> ?
-			contentsName.rfind(lastSpace) :
-			std::u8string_view::npos;
-
-		//	何もなければそのまま返す
-		if constexpr (lastColonIndex == std::u8string_view::npos &&
-			lastSpaceIndex == std::u8string_view::npos)
-		{
-			return contentsName;
-		}
-
-		auto lastIndex = std::max(
-			lastColonIndex == std::u8string_view::npos ? 0 : lastColonIndex + lastColon.size(),
-			lastSpaceIndex == std::u8string_view::npos ? 0 : lastSpaceIndex + lastSpace.size());
-
-		return std::u8string_view(contentsName.data() + lastIndex,
-			contentsName.size() - lastIndex);
-#endif
 	}
 #endif
 

@@ -475,7 +475,7 @@ namespace nox::reflection
 		};
 		
 		template<class T>
-		class CompileTimeTypeImpl : public Type
+		class TypeImpl : public Type
 		{
 			inline static consteval std::uint32_t SafeSizeof()noexcept
 			{
@@ -501,7 +501,7 @@ namespace nox::reflection
 				}
 			}
 		public:
-			inline constexpr explicit CompileTimeTypeImpl(
+			inline constexpr explicit TypeImpl(
 				const std::uint8_t argument_length = 0,
 				std::span<const std::reference_wrapper<const nox::reflection::Type>>(* const get_argument_type_list)(const nox::reflection::Type& self)noexcept = &Type::GetArgumentTypeListInvalid
 			)noexcept :
@@ -696,11 +696,11 @@ namespace nox::reflection
 		};
 
 		template<nox::concepts::FunctionSignatureType T>
-		class CompileTimeTypeFunction : public CompileTimeTypeImpl<T>
+		class CompileTimeTypeFunction : public TypeImpl<T>
 		{
 		public:
 			inline constexpr CompileTimeTypeFunction()noexcept :
-				CompileTimeTypeImpl<T>(nox::FunctionArgsLength<T>, &GetArgumentTypeList),
+				TypeImpl<T>(nox::FunctionArgsLength<T>, &GetArgumentTypeList),
 				argument_type_table_(nox::reflection::detail::GetArgumentTypeList<T>())
 			{
 			}
@@ -729,7 +729,7 @@ namespace nox::reflection
 		template<class T>
 		struct ReflectionTypeHolder
 		{
-			static constexpr nox::reflection::detail::CompileTimeTypeImpl<T> value{};
+			static constexpr nox::reflection::detail::TypeImpl<T> value{};
 
 			constexpr ReflectionTypeHolder() = delete;
 			constexpr ~ReflectionTypeHolder() = delete;

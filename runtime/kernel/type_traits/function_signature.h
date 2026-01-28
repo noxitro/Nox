@@ -7,7 +7,6 @@
 #pragma warning(disable:4624)
 namespace nox
 {
-	/// @brief 非公開
 	namespace detail
 	{
 		template<class _Result, class... Args>
