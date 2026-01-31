@@ -1,0 +1,12 @@
+<Solution>
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Master" />
+    <BuildType Name="Release" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="kernel/kernel.vcxproj" Id="ce18e5d8-faa4-48b4-a1d2-dab85fc1acbb" />
+  <Project Path="kernel/test/kernel_test.vcxproj" Id="b7f3c1a6-8e2d-4f5a-9c3b-1d4e5f6a7b8c">
+    <BuildDependency Project="kernel/kernel.vcxproj" />
+  </Project>
+</Solution>

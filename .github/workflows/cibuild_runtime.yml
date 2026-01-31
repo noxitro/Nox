@@ -22,6 +22,7 @@ jobs:
       matrix:
         solution:
           - runtime/runtime.slnx
+          - runtime/runtime_test.slnx
           - runtime/bin/source/ReflectionGenerator/ReflectionGenerator.slnx
 
         # 利用可能な構成（ドキュメント準拠）
@@ -45,6 +46,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # vcpkg をセットアップ（Google Test のため）
+      - name: Setup vcpkg
+        uses: microsoft/setup-vcpkg@v1
+        with:
+          vcpkg-version: 'latest'
+
       # MSBuild を PATH に追加
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
@@ -55,6 +62,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path artifacts | Out-Null
           New-Item -ItemType Directory -Force -Path artifacts\msbuild-logs | Out-Null
+          New-Item -ItemType Directory -Force -Path test-results | Out-Null
 
       # 実際のビルド
       - name: Build with MSBuild
@@ -95,6 +103,36 @@ jobs:
           }
 
           & msbuild @args
+
+      # kernel_test を実行（runtime_test.slnx のみ、かつ clang 以外）
+      - name: Run kernel tests
+        if: matrix.solution == 'runtime/runtime_test.slnx' && matrix.toolchain.name == 'msvc'
+        shell: pwsh
+        run: |
+          $configuration = "${{ matrix.configuration }}"
+          $platform = "${{ matrix.platform }}"
+          $testExe = "runtime\build\runtime_test\$platform\$configuration\kernel_test.exe"
+
+          if (Test-Path $testExe) {
+            Write-Host "Running kernel tests: $testExe"
+            & $testExe --gtest_output=xml:test-results\kernel_test_results.xml
+            if ($LASTEXITCODE -ne 0) {
+              Write-Error "Tests failed with exit code $LASTEXITCODE"
+              exit $LASTEXITCODE
+            }
+          } else {
+            Write-Host "Test executable not found: $testExe"
+            Write-Host "Skipping tests."
+          }
+
+      # テスト結果をアップロード
+      - name: Upload test results
+        if: always() && matrix.solution == 'runtime/runtime_test.slnx' && matrix.toolchain.name == 'msvc'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.configuration }}-${{ matrix.platform }}
+          path: test-results/
+          if-no-files-found: ignore
 
       # ログを常にアップロード（警告/エラー確認用）
       - name: Upload MSBuild logs
