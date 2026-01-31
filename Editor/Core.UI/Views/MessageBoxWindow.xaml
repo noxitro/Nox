@@ -4,5 +4,5 @@
 		xmlns:views="clr-namespace:Core.UI.Views"
         Title="Message" WindowStartupLocation="CenterOwner" SizeToContent="WidthAndHeight"
         ResizeMode="NoResize" ShowInTaskbar="False">
-    <views:MessageBoxView/>
+    <views:MessageBoxView DataContext="{Binding}"/>
 </Window>

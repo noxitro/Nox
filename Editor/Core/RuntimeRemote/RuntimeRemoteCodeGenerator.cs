@@ -18,7 +18,7 @@ namespace Core
 
 namespace Core.RuntimeRemote
 {
-	internal class RuntimeRemoteCodeGenerator
+	public class RuntimeRemoteCodeGenerator
 	{
 		#region 内部クラス定義
 		private readonly struct Data
@@ -35,22 +35,46 @@ namespace Core.RuntimeRemote
 		private enum PropertyTypeKind : byte
 		{
 			Invalid,
-			Primitive,
-			CustomPrimitive,// nox::vec3など
-			FixedArray,
-			Vector,
-			RuntimeWrapper,
+			RuntimeType,
+			EditorType
 		}
 
-		private readonly struct PropertyInfo
+		/// <summary>
+		/// runtime側でのプロパティ定義情報
+		/// </summary>
+		private readonly struct RuntimePropertyInfo
 		{
+			/// <summary>
+			/// 型名
+			/// </summary>
 			public readonly string TypeFQN;
-			public bool HasSetter { get; init; }
-			public bool HasGetter { get; init; }
-			public required string Name { get; init; }
+
+			/// <summary>
+			/// setter引数の型名
+			/// </summary>
+			public string SetterTypeFqn { get; init; } = string.Empty;
+
+			/// <summary>
+			/// getter戻り値の型名
+			/// </summary>
+			public string GetterTypeFqn { get; init; } = string.Empty;
+
+			/// <summary>
+			/// runtime側でのメンバ変数名
+			/// camel_case_
+			/// </summary>
+			public required string NameCamelCase { get; init; }
+
+			/// <summary>
+			/// runtime側での関数名用
+			/// </summary>
+			public required string NamePascalCase { get; init; }
+
+			public required System.Reflection.PropertyInfo RawPropertyInfo { get; init; }
+
 			public required PropertyTypeKind Kind { get; init; }
 
-			public PropertyInfo(string fqn)
+			public RuntimePropertyInfo(string fqn)
 			{
 				TypeFQN = fqn;
 			}
@@ -62,7 +86,7 @@ namespace Core.RuntimeRemote
 			public readonly System.Type Type;
 			public readonly bool IsQuery;
 
-			public readonly PropertyInfo[] PropertyList = [];
+			public readonly RuntimePropertyInfo[] PropertyList = [];
 
 			public RemoteTypeInfo(System.Type type, Core.RuntimeRemote.Attr.RuntimeRemoteCodeAttribute attr, bool isQuery)
 			{
@@ -114,28 +138,12 @@ namespace Core.RuntimeRemote
 					continue;
 				}
 
-				ReadOnlySpan<System.Reflection.PropertyInfo> srcPropList = type.GetProperties();
-				int propLength = srcPropList.Length;
-				PropertyInfo[] propList = new PropertyInfo[propLength];
-				for (int i = 0; i < propLength; ++i)
+				//	Serialize対象のプロパティ一覧を作成
+				ReadOnlySpan<System.Reflection.PropertyInfo> srcPropList = GetSerializeProperties(type);
+				RuntimePropertyInfo[] propList = new RuntimePropertyInfo[srcPropList.Length];
+				for (int i = 0, length = srcPropList.Length; i < length; ++i)
 				{
-					System.Reflection.PropertyInfo src = srcPropList[i];
-					System.Type propType = src.PropertyType;
-
-					string propFQN = CreateRuntimeTypeFQN(propType);
-					bool hasSetter = src.SetMethod != null;
-					bool hasGetter = src.GetMethod != null;
-
-					//	camel caseへ
-					//	末尾に"_"
-					string propName = src.Name;
-					string camelCaseName = char.ToLowerInvariant(propName[0]) + propName.Substring(1) + "_";
-
-					propList[i] = new PropertyInfo(propFQN)
-					{
-						Name = camelCaseName,
-						HasGetter = hasGetter, HasSetter = hasSetter, 
-					};
+					propList[i] = CreatePropertyInfo(srcPropList[i]);
 				}
 
 				string genPath = $"{solutionDir}/{attr.Path}";
@@ -156,6 +164,11 @@ namespace Core.RuntimeRemote
 		#endregion
 
 		#region 非公開メソッド
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="basePath">出力先ファイルパス（拡張子を除く）</param>
+		/// <param name="data"></param>
 		private void GenerateImpl(string basePath, in Data data)
 		{
 			string fileName = System.IO.Path.GetFileName(basePath);
@@ -191,6 +204,92 @@ namespace Core.RuntimeRemote
 						using (codeWriter.Indent("{", "};"))
 						{
 							codeWriter.WriteLine($"NOX_DECLARE_OBJECT(nox::dev::editor_ipc{typeName}, {baseTypeFullName})");
+
+							var propList = param.PropertyList;
+
+							//	editor側の型定義
+							{
+								bool first = true;
+
+								foreach (var prop in propList)
+								{
+									if (prop.Kind != PropertyTypeKind.EditorType)
+									{
+										continue;
+									}
+
+									if (first)
+									{
+										codeWriter.WriteLine("public:");
+										first = false;
+									}
+									else
+									{
+										codeWriter.WriteNewLine();
+									}
+
+									System.Type propType = prop.RawPropertyInfo.PropertyType;
+									if (propType.IsEnum)
+									{
+										ReadOnlySpan<char> underlyingTypeFqn = Core.RuntimeTypeUtil.GetPrimitiveTypeName(Type.GetTypeCode(propType.GetEnumUnderlyingType()));
+										codeWriter.WriteLine($"enum class {propType.Name} : {underlyingTypeFqn}");
+										using (codeWriter.Indent("{", "};"))
+										{
+											ReadOnlySpan<string> nameList = propType.GetEnumNames();
+											Array enumValues = propType.GetEnumValues();
+
+											for (int enumeratorIndex = 0, length = nameList.Length; enumeratorIndex < length; ++enumeratorIndex)
+											{
+												string enumName = nameList[enumeratorIndex];
+												var enumValue = Convert.ChangeType(enumValues.GetValue(enumeratorIndex), Enum.GetUnderlyingType(propType));
+												if (enumeratorIndex + 1 < length)
+												{
+													codeWriter.WriteLine($"{enumName} = {enumValue},");
+												}
+												else
+												{
+													codeWriter.WriteLine($"{enumName} = {enumValue}");
+												}
+											}
+										}
+									}
+									else if (propType.IsValueType)
+									{
+										codeWriter.WriteLine($"struct {propType.Name}");
+										using (codeWriter.Indent("{", "};"))
+										{
+											var structPropList = GetSerializeProperties(propType);
+											for (int structPropIndex = 0, structPropLength = structPropList.Length; structPropIndex < structPropLength; ++structPropIndex)
+											{
+												var structProp = structPropList[structPropIndex];
+												System.Type structPropType = structProp.PropertyType;
+												System.TypeCode structPropTypeCode = Type.GetTypeCode(structPropType);
+												string structPropTypeFqn;
+												if (structPropType.IsPrimitive)
+												{
+													structPropTypeFqn = Core.RuntimeTypeUtil.GetPrimitiveTypeName(structPropTypeCode).ToString();
+												}
+												else if (structPropTypeCode == TypeCode.String)
+												{
+													structPropTypeFqn = "nox::U8String";
+												}
+												else
+												{
+													Nox.Util.Assert(false, "unsupported editor type property:{0}", structPropType.FullName);
+													continue;
+												}
+												string structPropName = char.ToLowerInvariant(structProp.Name[0]) + structProp.Name.Substring(1) + "_;";
+												codeWriter.WriteLine($"{structPropTypeFqn} {structPropName}");
+											}
+										}
+									}
+									else
+									{
+										Nox.Util.Assert(false, "unsupported editor type property:{0}", propType.FullName);
+									}
+								} 
+							}
+
 							codeWriter.WriteLine("public:");
 							codeWriter.WriteLine($"{typeName}();");
 							codeWriter.WriteLine("void OnSerialize(nox::dev::editor_ipc::SocketStreamWriter& writer)override;");
@@ -208,12 +307,31 @@ namespace Core.RuntimeRemote
 								}
 							}
 
-							codeWriter.WriteLine("private:");
-							var propList = param.PropertyList;
+							//	プロパティsetter, getter書き込み
+							codeWriter.WriteNewLine();
 							for (int propIndex = 0, propLength = propList.Length; propIndex < propLength; ++propIndex)
 							{
 								ref readonly var prop = ref propList[propIndex];
-								codeWriter.WriteLine($"{prop.TypeFQN} {prop.Name};");
+								codeWriter.WriteLine($"inline {prop.GetterTypeFqn} Get{prop.NamePascalCase}()");
+								using (codeWriter.Indent("{", "}"))
+								{
+									codeWriter.WriteLine($"return {prop.NameCamelCase};");
+								}
+
+								codeWriter.WriteLine($"inline void Set{prop.NamePascalCase}({prop.SetterTypeFqn} value)");
+								using (codeWriter.Indent("{", "}"))
+								{
+									codeWriter.WriteLine($"{prop.NameCamelCase} = value;");
+								}
+							}
+
+							//	プロパティメンバ書き込み
+							codeWriter.WriteNewLine();
+							codeWriter.WriteLine("private:");
+							for (int propIndex = 0, propLength = propList.Length; propIndex < propLength; ++propIndex)
+							{
+								ref readonly var prop = ref propList[propIndex];
+								codeWriter.WriteLine($"{prop.TypeFQN} {prop.NameCamelCase};");
 							}
 						}
 					}
@@ -299,64 +417,6 @@ namespace Core.RuntimeRemote
 			}
 		}
 
-		private static string GetPrimitiveTypeName(TypeCode typeCode)
-		{
-			switch(typeCode)
-			{
-				case TypeCode.Boolean:	return "bool";
-				case TypeCode.SByte:	return "nox::int8";
-				case TypeCode.Byte:		return "nox::uint8";
-				case TypeCode.Int16: return "nox::int16";
-				case TypeCode.UInt16: return "nox::uint16";
-				case TypeCode.Int32: return "nox::int32";
-				case TypeCode.UInt32: return "nox::uint32";
-				case TypeCode.Int64: return "nox::int64";
-				case TypeCode.UInt64: return "nox::uint64";
-				case TypeCode.Single: return "float";
-				case TypeCode.Double: return "double";
-				case TypeCode.Char: return "nox::char16";
-			}
-
-			Nox.Util.Assert(false, "not found primitive type:{0}", typeCode.ToString());
-			return "";
-		}
-
-		public static (string, PropertyTypeKind) CreateRuntimeTypeFQN(System.Type type)
-		{
-			if (type.IsPrimitive)
-			{
-				return (GetPrimitiveTypeName(Type.GetTypeCode(type)), PropertyTypeKind.Primitive);
-			}
-
-			{
-				var propAttr = type.GetCustomAttribute<Core.RuntimeRemote.RuntimeRemoteCodeNativeFQNAttribute>();
-				if (propAttr != null)
-				{
-					return (propAttr.FQN, PropertyTypeKind.FixedArray);
-				}
-			}
-
-			//	rutnime wrapper
-			{
-				Core.Attributes.RuntimeWrapperAttribute? attr = type.GetCustomAttribute<Core.Attributes.RuntimeWrapperAttribute>();
-				if (attr != null)
-				{
-					return attr.FQN;
-				}
-			}
-
-			{
-				if (TryGetListElementType(type, out Type? elementType) == true && elementType != null)
-				{
-					return $"nox::Vector<{CreateRuntimeTypeFQN(elementType)}>";
-				}
-			}
-
-			//	不明な型
-			Nox.Util.Assert(false, "不明な型です: " + type.FullName);
-			return "";
-		}
-
 		private static bool TryGetListElementType(Type type, out Type? elementType)
 		{
 			elementType = null;
@@ -401,6 +461,126 @@ namespace Core.RuntimeRemote
 			}
 
 			return false;
+		}
+
+		/// <summary>
+		/// Serialize対象のプロパティ一覧を取得する
+		/// </summary>
+		/// <param name="type"></param>
+		/// <returns></returns>
+		private static ReadOnlySpan<System.Reflection.PropertyInfo> GetSerializeProperties(System.Type type)
+		{
+			ReadOnlySpan<System.Reflection.PropertyInfo> propList = type.GetProperties();
+			Span<System.Reflection.PropertyInfo> serializePropList = new System.Reflection.PropertyInfo[propList.Length];
+			int enabledCount = 0;
+			for (int i = 0, length = propList.Length; i < length; ++i)
+			{
+				var prop = propList[i];
+				if (prop.CanRead == false || prop.CanWrite == false)
+				{
+					continue;
+				}
+				serializePropList[i] = prop;
+				++enabledCount;
+			}
+
+			return serializePropList.Slice(0, enabledCount);
+		}
+
+		private static RuntimePropertyInfo CreatePropertyInfo(System.Reflection.PropertyInfo sourceProperty)
+		{
+			System.Type propertyType = sourceProperty.PropertyType;
+			System.TypeCode typeCode = Type.GetTypeCode(propertyType);
+			PropertyTypeKind propertyTypeKind = PropertyTypeKind.RuntimeType;
+
+			string typeFqn;
+			string setterTypeFqn;
+			string getterTypeFqn;
+
+			string propName = sourceProperty.Name;
+			string pascalCaseName = char.ToUpperInvariant(propName[0]) + propName.Substring(1);
+			string camelCaseName = char.ToLowerInvariant(propName[0]) + propName.Substring(1) + "_";
+
+			if (propertyType.IsPrimitive)
+			{
+				typeFqn = Core.RuntimeTypeUtil.GetPrimitiveTypeName(typeCode).ToString();
+				setterTypeFqn = getterTypeFqn = typeFqn;
+			}
+			else if (typeCode == TypeCode.String)
+			{
+				typeFqn = "nox::U8String";
+				getterTypeFqn = setterTypeFqn = "std::u8string_view";
+			}
+			//	fixed string
+			else
+			if (propertyType.GetCustomAttribute<Core.RuntimeRemote.Attr.FixedStringAttribute>() is var propAttr && propAttr != null)
+			{
+				typeFqn = $"nox::FixedString<{propAttr.Length}>";
+				getterTypeFqn = setterTypeFqn = "std::u8string_view";
+			}
+			//	runtime wrapper
+			else
+			if (propertyType.GetCustomAttribute<Core.Attributes.RuntimeWrapperAttribute>() is var wrapperAttr && wrapperAttr != null)
+			{
+				typeFqn = wrapperAttr.FQN;
+				setterTypeFqn = typeFqn;
+				getterTypeFqn = typeFqn;
+			}
+			//	other
+			else
+			{
+				//	runtime primitive
+				var runtimePrimitiveTypeFqn = GetRuntimePrimitiveType(propertyType);
+				if (runtimePrimitiveTypeFqn != string.Empty)
+				{
+					typeFqn = runtimePrimitiveTypeFqn;
+					setterTypeFqn = $"const {runtimePrimitiveTypeFqn}&";
+					getterTypeFqn = $"const {runtimePrimitiveTypeFqn}&";
+				}
+				//	ツール側の定義型
+				else
+				{
+					propertyTypeKind = PropertyTypeKind.EditorType;
+					if (propertyType.IsEnum)
+					{
+						typeFqn = propertyType.Name;
+						setterTypeFqn = getterTypeFqn = typeFqn;
+					}
+					else if (propertyType.IsValueType)
+					{
+						typeFqn = propertyType.Name;
+						setterTypeFqn = getterTypeFqn = $"const {typeFqn}&";
+					}
+					else
+					{
+						typeFqn = propertyType.Name;
+						setterTypeFqn = getterTypeFqn = typeFqn;
+						Nox.Util.Assert(false, "invalid property type:{0}", propertyType.FullName);
+					}
+				}
+			}
+
+			RuntimePropertyInfo propInfo = new RuntimePropertyInfo(typeFqn)
+			{
+				SetterTypeFqn = setterTypeFqn,
+				GetterTypeFqn = getterTypeFqn,
+				NameCamelCase = camelCaseName,
+				NamePascalCase = pascalCaseName,
+				Kind = propertyTypeKind,
+				RawPropertyInfo = sourceProperty
+			};
+
+			return propInfo;
+		}
+
+		private static string GetRuntimePrimitiveType(System.Type type)
+		{
+			if (type == typeof(Nox.Math.Vec3))
+			{
+				return "nox::Vec3";
+			}
+
+			return string.Empty;
 		}
 		#endregion
 	}

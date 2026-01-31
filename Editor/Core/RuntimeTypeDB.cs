@@ -6,10 +6,6 @@ using System.Text;
 
 namespace Core
 {
-	public static class RuntimeTypeUtil
-	{
-	}
-
 	public static class RuntimeTypeExtensions
 	{
 		public static bool IsIntegral(this Core.RuntimeTypeKind self)

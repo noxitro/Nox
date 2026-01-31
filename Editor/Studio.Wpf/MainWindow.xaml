@@ -5,10 +5,23 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Studio.Wpf"
         xmlns:views="clr-namespace:Core.UI.Views;assembly=Core.UI"
+        xmlns:vm="clr-namespace:Studio.Wpf.ViewModels"
+        xmlns:ad="clr-namespace:AvalonDock;assembly=AvalonDock"
+        xmlns:adLayout="clr-namespace:AvalonDock.Layout;assembly=AvalonDock"
         mc:Ignorable="d"
-        Title="Studio" Height="1080" Width="1920">
+        Title="Studio" Height="1080" Width="1920"
+        >
+
+    <Window.DataContext>
+        <vm:MainWindowViewModel />
+    </Window.DataContext>
+    
+ 
     <Grid>
         <Grid.RowDefinitions>
+            <!-- 上部タブ行 -->
+            <RowDefinition Height="32" />
+
             <!-- 上部ツールバー行 -->
             <RowDefinition Height="40"/>
             
@@ -19,8 +32,11 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
+        <!-- ====== 上部タブ ====== -->
+        <views:DocumentTabView Grid.Row="0" Height="32"/>
+
         <!-- ====== 上部ツールバー ====== -->
-        <ToolBarTray Grid.Row="0" Background="#FF2B2B2B">
+        <ToolBarTray Grid.Row="1" Background="#FF2B2B2B">
             <ToolBar>
                 <Button Content="File" />
                 <Button Content="Edit" />
@@ -30,13 +46,49 @@
         </ToolBarTray>
 
         <!-- ====== Runtime コントロールバー ====== -->
-        <views:RuntimeControlView Grid.Row="1" />
+        <views:RuntimeControlView Grid.Row="2" />
 
-        <!-- ====== ドッキング領域（将来のレイアウト用） ====== -->
-        <!--
-        <DockPanel Grid.Row="2">
-            ここに Hierarchy / Inspector / GameView などを配置
-        </DockPanel>
-        -->
+        <!-- ====== ドッキング領域（AvalonDock） ====== -->
+        <ad:DockingManager x:Name="DockManager"
+                           Grid.Row="3"
+                           DocumentsSource="{Binding ToolViewModelList}"
+                           AnchorablesSource="{Binding AssetViewModelList}"
+                           >
+            <ad:DockingManager.Resources>
+                <!-- 例: LayoutAnchorable のヘッダー色を変えるリソース -->
+                <SolidColorBrush x:Key="AnchorableHeaderBackground" Color="#FF2B2B2B" />
+                <Style TargetType="{x:Type adLayout:LayoutAnchorable}">
+                    <Setter Property="Title" Value="{Binding Title}" />
+                </Style>
+            </ad:DockingManager.Resources>
+
+            <!-- 既存レイアウト -->
+            <ad:DockingManager.Layout>
+                <adLayout:LayoutRoot>
+                    <adLayout:LayoutPanel Orientation="Horizontal">
+                        <adLayout:LayoutAnchorablePaneGroup DockWidth="250">
+                            <adLayout:LayoutAnchorablePane>
+                                <adLayout:LayoutAnchorable Title="Project" CanHide="False" />
+                                <adLayout:LayoutAnchorable Title="Hierarchy" />
+                            </adLayout:LayoutAnchorablePane>
+                        </adLayout:LayoutAnchorablePaneGroup>
+
+                        <adLayout:LayoutDocumentPaneGroup>
+                            <adLayout:LayoutDocumentPane>
+                                <adLayout:LayoutDocument Title="Views" />
+                                <adLayout:LayoutDocument Title="Develop" />
+                            </adLayout:LayoutDocumentPane>
+                        </adLayout:LayoutDocumentPaneGroup>
+
+                        <adLayout:LayoutAnchorablePaneGroup DockWidth="300">
+                            <adLayout:LayoutAnchorablePane>
+                                <adLayout:LayoutAnchorable Title="Inspector" />
+                                <adLayout:LayoutAnchorable Title="Console" />
+                            </adLayout:LayoutAnchorablePane>
+                        </adLayout:LayoutAnchorablePaneGroup>
+                    </adLayout:LayoutPanel>
+                </adLayout:LayoutRoot>
+            </ad:DockingManager.Layout>
+        </ad:DockingManager>
     </Grid>
 </Window>

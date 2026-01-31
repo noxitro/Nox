@@ -7,7 +7,7 @@ namespace Core.UI.ViewModels
 	/// <summary>
 	/// runtimeの再生ボタンなど
 	/// </summary>
-	public class RuntimeControlViewModel
+	public class RuntimeControlViewModel : NoxUI.ViewModelBase
 	{
 		#region 公開プロパティ
 		public NoxUI.ViewModelCommand RebootCommand => field ??= new(Reboot);

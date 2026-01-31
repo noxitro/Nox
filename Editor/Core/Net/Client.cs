@@ -186,7 +186,7 @@ namespace Core.Net
 
 						Span<byte> handShakeBuffer = stackalloc byte[HandShakeStr1.Length];
 						Encoding.ASCII.GetBytes(HandShakeStr1, handShakeBuffer);
-						if (this.Send(_Socket, handShakeBuffer).HasValue)
+						if (this.Send(handShakeBuffer).HasValue)
 						{
 							Nox.LogTrace.ErrorLine<Core.LogId.Net>("Handshake request send failed.");
 							break;
@@ -206,7 +206,7 @@ namespace Core.Net
 					}
 
 					Span<byte> recvBuffer = stackalloc byte[HandShakeStr2.Length];
-					if (this.Receive(_Socket, recvBuffer).HasValue)
+					if (this.Receive(recvBuffer).HasValue)
 					{
 						Nox.LogTrace.ErrorLine<Core.LogId.Net>("Handshake response receive failed.");
 						break;
@@ -233,7 +233,7 @@ namespace Core.Net
 
 						Span<byte> handShakeBuffer = stackalloc byte[HandShakeStr3.Length];
 						Encoding.ASCII.GetBytes(HandShakeStr3, handShakeBuffer);
-						if (this.Send(_Socket, handShakeBuffer).HasValue)
+						if (this.Send(handShakeBuffer).HasValue)
 						{
 							Nox.LogTrace.ErrorLine<Core.LogId.Net>("Handshake request send failed.");
 							break;

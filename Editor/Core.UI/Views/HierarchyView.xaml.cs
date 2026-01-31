@@ -14,15 +14,13 @@ using System.Windows.Shapes;
 namespace Core.UI.Views
 {
 	/// <summary>
-	/// RuntimeControlView.xaml の相互作用ロジック
+	/// HierarchyView.xaml の相互作用ロジック
 	/// </summary>
-	public partial class RuntimeControlView : System.Windows.Controls.UserControl
+	public partial class HierarchyView : UserControl
 	{
-		public RuntimeControlView()
+		public HierarchyView()
 		{
 			InitializeComponent();
-
-		//	DataContext = NoxUI.PrismHelper.ResolveDataContext<Core.UI.ViewModels.RuntimeControlViewModel>();
 		}
 	}
 }

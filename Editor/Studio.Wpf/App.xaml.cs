@@ -86,10 +86,9 @@ namespace Studio.Wpf
 				ex.InnerException?.Message ?? ex.Message,
 				type: Core.UI.ViewModels.MessageBoxType.Error);
 
-			var win = new Core.UI.Views.MessageBoxWindow
+			var win = new Core.UI.Views.MessageBoxWindow(vm)
 			{
 				Owner = Current.MainWindow,
-				DataContext = vm
 			};
 			win.ShowDialog();
 

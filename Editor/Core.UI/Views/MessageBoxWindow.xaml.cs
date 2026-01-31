@@ -5,25 +5,28 @@ namespace Core.UI.Views
 {
     public partial class MessageBoxWindow : Window
     {
-        public MessageBoxWindow()
-        {
-            InitializeComponent();
-
-            DataContext = NoxUI.PrismHelper.ResolveDataContext<MessageBoxViewModel>();
+		public MessageBoxWindow(ViewModels.MessageBoxViewModel viewModel)
+		{
+			InitializeComponent();
+			DataContext = viewModel;
+			Title = viewModel.Title;
 		}
 
-        protected override void OnContentRendered(System.EventArgs e)
-        {
-            base.OnContentRendered(e);
+		public ViewModels.MessageBoxResult Result { get; private set; } = ViewModels.MessageBoxResult.Close;
 
-            if (DataContext is MessageBoxViewModel vm)
-            {
-                vm.RequestClose += () =>
-                {
-                    DialogResult = true;
-                    Close();
-                };
-            }
-        }
+		protected override void OnContentRendered(System.EventArgs e)
+		{
+			base.OnContentRendered(e);
+
+			if (DataContext is MessageBoxViewModel vm)
+			{
+				vm.RequestClose += result =>
+				{
+					Result = result;
+					DialogResult = true;
+					Close();
+				};
+			}
+		}
     }
 }
