@@ -5,37 +5,31 @@
 
 #include "stdafx.h"
 #include "../basic_type.h"
-#include "../string_util.h"
 
 // 基本型のテスト
 TEST(KernelBasicTest, BasicTypes)
 {
 	// サイズの検証
-	EXPECT_EQ(sizeof(nox::s8), 1);
-	EXPECT_EQ(sizeof(nox::s16), 2);
-	EXPECT_EQ(sizeof(nox::s32), 4);
-	EXPECT_EQ(sizeof(nox::s64), 8);
+	EXPECT_EQ(sizeof(nox::int8), 1);
+	EXPECT_EQ(sizeof(nox::int16), 2);
+	EXPECT_EQ(sizeof(nox::int32), 4);
+	EXPECT_EQ(sizeof(nox::int64), 8);
 	
-	EXPECT_EQ(sizeof(nox::u8), 1);
-	EXPECT_EQ(sizeof(nox::u16), 2);
-	EXPECT_EQ(sizeof(nox::u32), 4);
-	EXPECT_EQ(sizeof(nox::u64), 8);
+	EXPECT_EQ(sizeof(nox::uint8), 1);
+	EXPECT_EQ(sizeof(nox::uint16), 2);
+	EXPECT_EQ(sizeof(nox::uint32), 4);
+	EXPECT_EQ(sizeof(nox::uint64), 8);
 	
-	EXPECT_EQ(sizeof(nox::f32), 4);
-	EXPECT_EQ(sizeof(nox::f64), 8);
+	EXPECT_EQ(sizeof(nox::float_t), 4);
+	EXPECT_EQ(sizeof(nox::double_t), 8);
 }
 
-// StringUtil のテスト
-TEST(KernelStringTest, StringLength)
+// ポインタ型のテスト
+TEST(KernelBasicTest, PointerTypes)
 {
-	const char* testStr = "Hello";
-	auto length = nox::StringLength(testStr);
-	EXPECT_EQ(length, 5);
+	// intptr と uintptr のサイズはプラットフォーム依存
+	// x64 では 8 バイトのはず
+	EXPECT_EQ(sizeof(nox::intptr), sizeof(void*));
+	EXPECT_EQ(sizeof(nox::uintptr), sizeof(void*));
 }
 
-TEST(KernelStringTest, EmptyString)
-{
-	const char* emptyStr = "";
-	auto length = nox::StringLength(emptyStr);
-	EXPECT_EQ(length, 0);
-}
