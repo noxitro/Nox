@@ -34,11 +34,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "reflection_generated", "ref
 		{E21D57C8-C4B7-4702-9F36-12C332B64433} = {E21D57C8-C4B7-4702-9F36-12C332B64433}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "kernel_test", "kernel\test\kernel_test.vcxproj", "{B7F3C1A6-8E2D-4F5A-9C3B-1D4E5F6A7B8C}"
-	ProjectSection(ProjectDependencies) = postProject
-		{CE18E5D8-FAA4-48B4-A1D2-DAB85FC1ACBB} = {CE18E5D8-FAA4-48B4-A1D2-DAB85FC1ACBB}
-	EndProjectSection
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -82,12 +77,6 @@ Global
 		{3FA8CE37-1F60-456C-996C-140C5F8A65ED}.Master|x64.Build.0 = Master|x64
 		{3FA8CE37-1F60-456C-996C-140C5F8A65ED}.Release|x64.ActiveCfg = Release|x64
 		{3FA8CE37-1F60-456C-996C-140C5F8A65ED}.Release|x64.Build.0 = Release|x64
-		{B7F3C1A6-8E2D-4F5A-9C3B-1D4E5F6A7B8C}.Debug|x64.ActiveCfg = Debug|x64
-		{B7F3C1A6-8E2D-4F5A-9C3B-1D4E5F6A7B8C}.Debug|x64.Build.0 = Debug|x64
-		{B7F3C1A6-8E2D-4F5A-9C3B-1D4E5F6A7B8C}.Master|x64.ActiveCfg = Master|x64
-		{B7F3C1A6-8E2D-4F5A-9C3B-1D4E5F6A7B8C}.Master|x64.Build.0 = Master|x64
-		{B7F3C1A6-8E2D-4F5A-9C3B-1D4E5F6A7B8C}.Release|x64.ActiveCfg = Release|x64
-		{B7F3C1A6-8E2D-4F5A-9C3B-1D4E5F6A7B8C}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

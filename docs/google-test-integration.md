@@ -4,6 +4,8 @@
 
 このPRでは、kernel.vcxproj プロジェクトに Google Test を導入し、GitHub Actions で自動テストを実行する CI を構築しました。
 
+**重要**: テストプロジェクトは通常のソリューションファイル（runtime.sln/runtime.slnx）には含まれていません。テスト専用の `runtime_test.slnx` を使用してビルドします。これにより、通常の開発作業時にテストプロジェクトの読み込みによる影響を避けることができます。
+
 ## 実装内容
 
 ### 1. 依存関係管理 (vcpkg)
@@ -28,10 +30,12 @@
 - `basic_test.cpp`: 基本型のサイズ検証、ポインタ型のテスト
 - `math_test.cpp`: Vec2/Vec3 のテスト（構築、演算）
 
-### 3. ソリューション統合
+### 3. テスト専用ソリューション
 
-- `runtime/runtime.sln`: kernel_test プロジェクトを追加
-- `runtime/runtime.slnx`: kernel_test プロジェクトを追加（新形式）
+- **`runtime/runtime_test.slnx`**: テスト専用のソリューションファイル（新規作成）
+  - kernel プロジェクトと kernel_test プロジェクトのみを含む
+  - 通常のソリューション（runtime.sln/runtime.slnx）には影響しない
+  - CI でのみ使用される
 
 ### 4. GitHub Actions CI
 
@@ -39,11 +43,14 @@
 
 **追加された機能**:
 1. vcpkg のセットアップ（Google Test のインストールのため）
-2. テスト実行ステップ
-   - runtime.slnx ビルド時のみ実行
+2. テスト専用ソリューション（runtime_test.slnx）をビルドマトリクスに追加
+3. テスト実行ステップ
+   - runtime_test.slnx ビルド時のみ実行
    - MSVC ツールチェーンのみ（clang は除外）
    - すべての構成（Debug, Release, Master）で実行
-3. テスト結果のアップロード（XML 形式）
+4. テスト結果のアップロード（XML 形式）
+
+**注意**: 通常のソリューション（runtime.slnx）はテストプロジェクトを含まないため、ビルドマトリクスに両方のソリューションが含まれています。
 
 ## トリガー
 
@@ -58,15 +65,15 @@ CI は以下の場合に自動実行されます：
 ### ローカルでの実行
 
 #### Visual Studio から
-1. `runtime/runtime.sln` を開く
+1. `runtime/runtime_test.slnx` を開く（**注意**: runtime.slnx ではありません）
 2. `kernel_test` プロジェクトをビルド
 3. 実行可能ファイルを直接実行、またはテストエクスプローラーから実行
 
 #### コマンドライン
 ```cmd
 cd runtime
-msbuild runtime.sln /p:Configuration=Debug /p:Platform=x64 /t:kernel_test
-runtime\build\runtime\x64\Debug\kernel_test.exe
+msbuild runtime_test.slnx /p:Configuration=Debug /p:Platform=x64
+runtime\build\runtime_test\x64\Debug\kernel_test.exe
 ```
 
 ### CI での実行

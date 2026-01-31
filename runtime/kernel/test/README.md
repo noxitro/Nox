@@ -2,6 +2,12 @@
 
 このディレクトリには、kernel ライブラリの単体テストが含まれています。
 
+## 重要事項
+
+**テストプロジェクトは通常のソリューション（runtime.sln/runtime.slnx）には含まれていません。**
+
+テスト専用の `runtime_test.slnx` を使用してビルドします。これにより、通常の開発作業時にテストプロジェクトの読み込みによる影響を避けることができます。
+
 ## テストフレームワーク
 
 Google Test を使用しています。依存関係は vcpkg を通じて管理されています。
@@ -10,7 +16,7 @@ Google Test を使用しています。依存関係は vcpkg を通じて管理�
 
 ### Visual Studio でのビルド
 
-1. `runtime/runtime.sln` を開く
+1. `runtime/runtime_test.slnx` を開く（**注意**: runtime.slnx ではありません）
 2. `kernel_test` プロジェクトを選択
 3. ビルド実行（vcpkg が自動的に Google Test をインストールします）
 
@@ -18,7 +24,7 @@ Google Test を使用しています。依存関係は vcpkg を通じて管理�
 
 ```cmd
 cd runtime
-msbuild runtime.sln /p:Configuration=Debug /p:Platform=x64 /t:kernel_test
+msbuild runtime_test.slnx /p:Configuration=Debug /p:Platform=x64
 ```
 
 ## テストの実行
@@ -30,7 +36,7 @@ msbuild runtime.sln /p:Configuration=Debug /p:Platform=x64 /t:kernel_test
 ### コマンドラインから実行
 
 ```cmd
-runtime\build\runtime\x64\Debug\kernel_test.exe
+runtime\build\runtime_test\x64\Debug\kernel_test.exe
 ```
 
 ### テストオプション
