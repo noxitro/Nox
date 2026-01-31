@@ -6,9 +6,14 @@ namespace NoxUI
 {
 	public static class PrismHelper
 	{
-		public static T ResolveDataContext<T>()
+		public static T? ResolveDataContext<T>() where T : class
 		{
-			var app = (Prism.Unity.PrismApplication)System.Windows.Application.Current;
+			var app = System.Windows.Application.Current as Prism.Unity.PrismApplication;
+			if (app == null)
+			{
+				return null;
+			}
+
 			IContainerProvider container = app.Container;
 
 			return container.Resolve<T>();

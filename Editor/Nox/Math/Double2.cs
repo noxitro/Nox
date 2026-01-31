@@ -4,17 +4,9 @@ using System.Text;
 
 namespace Nox.Math
 {
-	public struct Vec3
-	{
-		public float x;
-		public float y;
-		public float z;
-	}
-
-	public struct Vec3d
+	public struct Double2
 	{
 		public double x;
 		public double y;
-		public double z;
 	}
 }

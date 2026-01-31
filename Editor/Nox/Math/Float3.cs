@@ -4,17 +4,10 @@ using System.Text;
 
 namespace Nox.Math
 {
-	public struct Vec3
+	public struct Float3
 	{
 		public float x;
 		public float y;
 		public float z;
-	}
-
-	public struct Vec3d
-	{
-		public double x;
-		public double y;
-		public double z;
 	}
 }
