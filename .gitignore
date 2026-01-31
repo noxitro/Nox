@@ -125,3 +125,5 @@
 /Editor/Core.UI/bin
 /Editor/Core.UI/obj
 /.vs
+/runtime/bin/ReflectionGenerator.pdb
+/runtime/bin/RuntimeTypeDB.pdb
