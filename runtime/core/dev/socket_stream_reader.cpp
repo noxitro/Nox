@@ -101,7 +101,7 @@ void	nox::dev::editor_ipc::SocketStreamReader::Read(std::span<nox::uint8> dest)
 	read_pos_ = (read_pos_ + need) & (k_buffer_size - 1);
 }
 
-std::u8string_view nox::dev::editor_ipc::SocketStreamReader::ReadString(std::span<nox::char8> dest)
+std::u8string_view nox::dev::editor_ipc::SocketStreamReader::Read(std::span<nox::char8> dest)
 {
 	const nox::uint64 length = ReadLength();
 

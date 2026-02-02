@@ -35,22 +35,22 @@ std::span<const nox::char16* const> nox::os::GetCommandLineArgList() noexcept
 
 nox::StdU16String	nox::os::GetDirectoryUTF8()
 {
-	std::array<nox::wchar16, nox::os::MAX_PATH_LENGTH> buffer;
-	NOX_ASSERT(::GetCurrentDirectoryW(nox::os::MAX_PATH_LENGTH, buffer.data()) != NULL, u"GetCurrentDirectoryW failed");
+	std::array<nox::wchar16, nox::os::k_max_path_length> buffer;
+	NOX_ASSERT(::GetCurrentDirectoryW(nox::os::k_max_path_length, buffer.data()) != NULL, u"GetCurrentDirectoryW failed");
 
 	return nox::StdU16String(reinterpret_cast<const char16*>(buffer.data()));
 }
 
 nox::U16String	nox::os::GetDirectory()
 {
-	std::array<nox::char16, nox::os::MAX_PATH_LENGTH> buffer;
+	std::array<nox::char16, nox::os::k_max_path_length> buffer;
 	return nox::U16String(GetDirectory(buffer));
 }
 
 std::u16string_view	nox::os::GetDirectory(std::span<nox::char16> dest_buffer)
 {
-	std::array<nox::wchar16, nox::os::MAX_PATH_LENGTH> native_buffer;
-	NOX_ASSERT(::GetCurrentDirectoryW(nox::os::MAX_PATH_LENGTH, native_buffer.data()) != NULL, u"GetCurrentDirectoryW failed");
+	std::array<nox::wchar16, nox::os::k_max_path_length> native_buffer;
+	NOX_ASSERT(::GetCurrentDirectoryW(nox::os::k_max_path_length, native_buffer.data()) != NULL, u"GetCurrentDirectoryW failed");
 
 	nox::unicode::ConvertU16String(native_buffer.data(), dest_buffer);
 	return std::u16string_view(dest_buffer.data(), dest_buffer.size());

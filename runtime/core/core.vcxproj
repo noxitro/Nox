@@ -96,6 +96,7 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="dev\remote\system.g.h" />
     <ClInclude Include="dev\remote\test.g.h">
       <SubType>
       </SubType>
@@ -283,6 +284,8 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="dev\remote\system.cpp" />
+    <ClCompile Include="dev\remote\system.g.cpp" />
     <ClCompile Include="dev\remote\test.g.cpp">
       <SubType>
       </SubType>

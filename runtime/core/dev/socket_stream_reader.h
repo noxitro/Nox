@@ -40,7 +40,7 @@ namespace nox::dev::editor_ipc
 			return value;
 		}
 
-		std::u8string_view ReadString(std::span<nox::char8> dest);
+		std::u8string_view Read(std::span<nox::char8> dest);
 		nox::StdU8String ReadString();
 
 		/// @brief 受信済みサイズを取得

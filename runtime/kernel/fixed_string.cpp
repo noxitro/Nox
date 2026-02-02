@@ -4,7 +4,9 @@
 ///	@brief	fixed_string
 #include	"stdafx.h"
 #include	"fixed_string.h"
+#include    "assertion.h"
 
-namespace nox
+void nox::detail::CheckStringLength(std::size_t length, std::size_t maxLength)
 {
+	NOX_ASSERT(length <= maxLength,	u"OutOfRange");
 }

@@ -7,6 +7,7 @@
 
 #include	"editor_ipc_client.h"
 #include	"socket_stream_writer.h"
+#include	"socket_stream_reader.h"
 
 void nox::dev::editor_ipc::EditorIpcEntity::Serialize(const nox::uint32 id, SocketStreamWriter& writer)
 {
@@ -22,4 +23,6 @@ void nox::dev::editor_ipc::EditorIpcEntity::Serialize(const nox::uint32 id, Sock
 
 void nox::dev::editor_ipc::EditorIpcEntity::Deserialize(SocketStreamReader& reader)
 {
+	id_ = reader.Read<decltype(id_)>();
+	this->OnDeserialize(reader);
 }

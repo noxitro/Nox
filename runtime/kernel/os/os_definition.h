@@ -7,7 +7,8 @@
 
 namespace nox::os
 {
-	constexpr uint32 MAX_PATH_LENGTH = 256;
+	/// @brief ファイルパスの最大長
+	constexpr nox::uint16 k_max_path_length = 256;
 
 	/**
 	 * @brief オペレーションシステムタイプ
