@@ -52,6 +52,16 @@ namespace nox::math
 		return result;
 	}
 
+	template<std::integral T>
+	inline constexpr bool IsPow2(T value) noexcept
+	{
+		if (value <= 0)
+		{
+			return false;
+		}
+		return (value & (value - 1)) == 0;
+	}
+
 	/// @brief 0.0 ～ 1.0の間に収める
 	/// @tparam T 浮動小数点型
 	/// @param value 値
