@@ -20,4 +20,5 @@ namespace nox::attr
 	private:
 		const nox::int32 priority_;
 	};
+
 }

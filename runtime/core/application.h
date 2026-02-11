@@ -5,6 +5,7 @@
 #pragma once
 #include	"object.h"
 #include	"attribute_common.h"
+#include	"attribute_dev_common.h"
 
 #include	"module_entry_category.h"
 
@@ -15,7 +16,7 @@ namespace nox
 
 	/// @brief Coreの管理クラス
 	class 
-		NOX_ATTR_TYPE(::nox::attr::dev::Description(u"Application"), nox::attr::dev::DisplayName(u"アプリケーション"))
+		NOX_ATTR_TYPE(::nox::attr::dev::Description(u8"Application"), nox::attr::dev::DisplayName(u8"アプリケーション"))
 		Application : public nox::Object, public nox::ISingleton<Application>
 	{
 		NOX_DECLARE_OBJECT(Application, nox::Object);

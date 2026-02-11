@@ -13,5 +13,6 @@ namespace nox::attr
 		NOX_DECLARE_OBJECT(Attribute, Object);
 	public:
 		inline constexpr Attribute()noexcept {}
+		inline constexpr ~Attribute()override {}
 	};
 }
