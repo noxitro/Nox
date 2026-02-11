@@ -43,15 +43,16 @@ namespace nox::debug
 		void	TraceDirect(LogCategory log_category, const std::u16string_view category, const std::u32string_view message, bool isNewLine, const std::source_location& source_location);
 		void	TraceDirect(LogCategory log_category, const std::u16string_view category, const std::u16string_view message, bool isNewLine, const std::source_location& source_location);
 
-		template<class... Args>
-		void	TraceDirectArgs(LogCategory log_category, const std::u16string_view category, bool isNewLine, const std::source_location& source_location, const std::u32string_view message, Args&&...args)
-		{
-			//	動的メモリ確保を行わないように確保済みのバッファを使用
-			std::array<nox::char32, 5096> buffer = { 0 };
-			nox::util::Format(buffer, message.data(), std::forward<Args>(args)...);
+		//template<class... Args>
+		//void	TraceDirectArgs(LogCategory log_category, const std::u16string_view category, bool isNewLine, const std::source_location& source_location, const std::u32string_view message, Args&&...args)
+		//{
+		//	//	動的メモリ確保を行わないように確保済みのバッファを使用
+		//	std::array<nox::char32, 5096> buffer = { 0 };
+		//	nox::util::Format(buffer, message.data(), std::forward<Args>(args)...);
 
-			nox::debug::detail::TraceDirect(log_category, category, buffer.data(), isNewLine, source_location);
-		}
+		//	nox::debug::detail::TraceDirect(log_category, category, buffer.data(), isNewLine, source_location);
+		//}
+
 		template<class... Args>
 		void	TraceDirectArgs(LogCategory log_category, const std::u16string_view category, bool isNewLine, const std::source_location& source_location, const std::u16string_view message, Args&&...args)
 		{
@@ -71,21 +72,21 @@ namespace nox::debug
 		nox::debug::detail::TraceDirect(log_category, LogId()(), message, true, source_location);
 	}
 
-	/// @brief		ログ出力
-	/// @details	フォーマット処理を動的メモリ確保を行わないように確保済みのバッファを使用する
-	/// @tparam ...Args 
-	/// @tparam LogId 
-	/// @param log_category 
-	/// @param source_location 
-	/// @param message 
-	/// @param ...args 
-	template<std::derived_from<log_id::LogId> LogId, class... Args>
-		requires(std::is_polymorphic_v<LogId> == false && std::is_same_v<std::u16string_view, decltype(LogId()())>)
-	inline	void	LogTraceArgs(LogCategory log_category, const std::source_location& source_location, const std::u32string_view message, Args&&... args)
-	{
-		constexpr std::u16string_view log_tag = LogId()();
-		nox::debug::detail::TraceDirectArgs(log_category, log_tag, true, source_location, message, std::forward<Args>(args)...);
-	}
+	///// @brief		ログ出力
+	///// @details	フォーマット処理を動的メモリ確保を行わないように確保済みのバッファを使用する
+	///// @tparam ...Args 
+	///// @tparam LogId 
+	///// @param log_category 
+	///// @param source_location 
+	///// @param message 
+	///// @param ...args 
+	//template<std::derived_from<log_id::LogId> LogId, class... Args>
+	//	requires(std::is_polymorphic_v<LogId> == false && std::is_same_v<std::u16string_view, decltype(LogId()())>)
+	//inline	void	LogTraceArgs(LogCategory log_category, const std::source_location& source_location, const std::u32string_view message, Args&&... args)
+	//{
+	//	constexpr std::u16string_view log_tag = LogId()();
+	//	nox::debug::detail::TraceDirectArgs(log_category, log_tag, true, source_location, message, std::forward<Args>(args)...);
+	//}
 	template<std::derived_from<log_id::LogId> LogId, class... Args>
 		requires(std::is_polymorphic_v<LogId> == false && std::is_same_v<std::u16string_view, decltype(LogId()())>)
 	inline	void	LogTraceArgs(LogCategory log_category, const std::source_location& source_location, const std::u16string_view message, Args&&... args)

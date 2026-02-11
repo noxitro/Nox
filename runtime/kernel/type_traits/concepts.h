@@ -79,7 +79,7 @@ namespace nox::concepts
 	concept RuntimeDefaultNewable = std::is_constructible_v<T> && requires 
 	{
 		new T();
-		[]()constexpr noexcept->void {T* _ = new T(); }();
+		[]()constexpr noexcept->void {T* _ = new std::remove_cvref_t<T>(); }();
 	};
 }
 

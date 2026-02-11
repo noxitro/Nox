@@ -20,6 +20,21 @@ namespace nox
 	constexpr nox::NontypeTag<Value> Nontype{};
 
 
+	/// @brief new可能か
+	/// @tparam T 
+	template<class T>
+	inline constexpr bool IsNewableValue =
+		requires { new T(); };
+
+	/// @brief nothrow new可能か
+	/// @tparam T 
+	template<class T>
+	inline constexpr bool IsNothrowNewableValue =
+		requires { { new T() } noexcept; };
+
+	template<class T>
+	inline constexpr bool IsDeleteableValue =
+		requires(T * ptr) { delete ptr; };
 
 #pragma region ContainerElementType
 	namespace detail

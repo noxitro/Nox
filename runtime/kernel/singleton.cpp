@@ -14,7 +14,10 @@
 
 namespace nox
 {
-	nox::os::Mutex singleton_mutex_;
+	namespace
+	{
+		nox::os::Mutex singleton_mutex_;
+	}
 }
 
 void	nox::detail::SingletonManager::Register(nox::detail::ISingletonBase& obj)

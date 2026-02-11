@@ -8,7 +8,6 @@
 
 namespace nox::memory
 {
-
 	namespace detail
 	{
 		/// @brief		メモリセグメント指定開始
@@ -22,7 +21,7 @@ namespace nox::memory
 	}
 
 	/// @brief 初期化
-	void	Initialize(bool enabled_profile = false);
+	void	Initialize(std::size_t total_memory_size, bool enabled_profile = false);
 
 	/// @brief 終了処理
 	void	Finialize();
@@ -33,16 +32,17 @@ namespace nox::memory
 	/// @brief メモリリークチェック
 	void	CheckMemoryLeak();
 
-	/// <summary>
-	/// メモリ確保
-	/// </summary>
-	/// <param name="size"></param>
-	/// <param name="areaType"></param>
-	/// <returns></returns>
-	void* Allocate(const size_t size, size_t align_mask, const InstanceType areaType);
-	inline void* Allocate(const size_t size, const InstanceType areaType)
+	/// @brief メモリ確保
+	/// @param size 要求サイズ
+	/// @param alignment アライメント
+	/// @param areaType 要求者の識別
+	/// @return 確保したアドレス
+	void* Allocate(const std::size_t size, std::size_t alignment, const InstanceType instance_type);
+
+	/// @brief メモリ確保 (デフォルトアライメント16)
+	inline void* Allocate(const std::size_t size, const InstanceType instance_type)
 	{
-		return Allocate(size, 16, areaType);
+		return nox::memory::Allocate(size, 16, instance_type);
 	}
 
 	/// @brief メモリ解放

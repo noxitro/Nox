@@ -27,10 +27,18 @@ namespace nox::util
 
 	struct INewDeleteDisabled
 	{
-		static void* operator new(std::size_t) = delete;
+	/*	static void* operator new(std::size_t) = delete;
+		static void* operator new(std::size_t, const std::nothrow_t&) = delete;
+		static void* operator new(std::size_t, std::align_val_t) = delete;
+		static void* operator new(std::size_t, std::align_val_t, const std::nothrow_t&) = delete;
+
 		static void* operator new[](std::size_t) = delete;
+		static void* operator new[](std::size_t, const std::nothrow_t&) = delete;
+		static void* operator new[](std::size_t, std::align_val_t) = delete;
+		static void* operator new[](std::size_t, std::align_val_t, const std::nothrow_t&) = delete;
+								 
 		static void  operator delete(void*) = delete;
-		static void  operator delete[](void*) = delete;
+		static void  operator delete[](void*) = delete;*/
 	};
 
 	struct ICopyMoveDisabled

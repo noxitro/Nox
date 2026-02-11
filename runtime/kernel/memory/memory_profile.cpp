@@ -17,65 +17,73 @@
 
 namespace nox::memory::profile
 {
-	class Profiler
+	namespace
 	{
-	private:
-		
-	};
-
-	constinit Profiler* g_memory_profiler = nullptr;
-
-	/// @brief プロファイラが初期化済みかどうか
-	constinit bool g_is_enabled=false;
-
-	/// @brief 確保済みのプロファイルデータリスト
-	nox::Vector<ProfileData> g_profile_data_table;
-
-	/// @brief プロファイラハンドルの最大値
-	constexpr nox::uint16 k_max_handle = std::numeric_limits<nox::uint16>::max();
-
-	/// @brief プロファイラハンドルのカウンタ
-	constinit nox::int32 g_handle_counter = 0;
-
-	/// @brief		プロファイラハンドルスタック
-	/// @details	
-	nox::FixedStack<nox::uint16, k_max_handle> g_profile_handle_stack = []() {
-		nox::FixedStack<nox::uint16, k_max_handle> stack;
-		for (nox::uint16 i = k_max_handle-1; i > 0; --i)
+		class Profiler
 		{
-			stack.PushAsync(i);
+		private:
+
+		};
+
+		constinit Profiler* g_memory_profiler = nullptr;
+
+		/// @brief プロファイラが初期化済みかどうか
+		constinit bool g_is_enabled = false;
+
+		/// @brief 確保済みのプロファイルデータリスト
+		inline nox::Vector<ProfileData>& GetProfileDataTable()
+		{
+			static nox::Vector<ProfileData> profile_data_table;
+			return profile_data_table;
 		}
-		return stack;
-		}();
+//		nox::Vector<ProfileData> g_profile_data_table;
 
-	/// @brief ID発行
-	/// @return 
-	inline nox::uint16 IssueHandle()
-	{
-		nox::os::atomic::Increment(g_handle_counter);
-		const nox::uint16 handle = g_profile_handle_stack.PopAsync();
+		/// @brief プロファイラハンドルの最大値
+		constexpr nox::uint16 k_max_handle = std::numeric_limits<nox::uint16>::max();
 
-		//NOX_LOCAL_SCOPE(nox::memory::ScopeMemorySegment<nox::memory::SegmentType::Develop>);
-		//NOX_INFO_LINE(nox::log_id::Memory, nox::util::Format(U"MemoryProfileHandle Issue:{0}", handle));
-		return handle;
-	}
+		/// @brief プロファイラハンドルのカウンタ
+		constinit nox::int32 g_handle_counter = 0;
 
-	/// @brief ID返却
-	/// @param handle 
-	inline void ReleaseHandle(nox::uint16 handle)
-	{
-	//	NOX_LOCAL_SCOPE(nox::memory::ScopeMemorySegment<nox::memory::SegmentType::Develop>);
-	//	NOX_INFO_LINE(nox::log_id::Memory, U"MemoryProfileHandle Release:{0}", handle);
+		/// @brief		プロファイラハンドルスタック
+		/// @details	
+		nox::FixedStack<nox::uint16, k_max_handle> g_profile_handle_stack = []() {
+			nox::FixedStack<nox::uint16, k_max_handle> stack;
+			for (nox::uint16 i = k_max_handle - 1; i > 0; --i)
+			{
+				stack.PushAsync(i);
+			}
+			return stack;
+			}();
 
-		nox::os::atomic::Decrement(g_handle_counter);
-		g_profile_handle_stack.PushAsync(handle);
+		/// @brief ID発行
+		/// @return 
+		inline nox::uint16 IssueHandle()
+		{
+			nox::os::atomic::Increment(g_handle_counter);
+			const nox::uint16 handle = g_profile_handle_stack.PopAsync();
+
+			//NOX_LOCAL_SCOPE(nox::memory::ScopeMemorySegment<nox::memory::SegmentType::Develop>);
+			//NOX_INFO_LINE(nox::log_id::Memory, nox::util::Format(U"MemoryProfileHandle Issue:{0}", handle));
+			return handle;
+		}
+
+		/// @brief ID返却
+		/// @param handle 
+		inline void ReleaseHandle(nox::uint16 handle)
+		{
+			//	NOX_LOCAL_SCOPE(nox::memory::ScopeMemorySegment<nox::memory::SegmentType::Develop>);
+			//	NOX_INFO_LINE(nox::log_id::Memory, U"MemoryProfileHandle Release:{0}", handle);
+
+			nox::os::atomic::Decrement(g_handle_counter);
+			g_profile_handle_stack.PushAsync(handle);
+		}
 	}
 }
 
 nox::uint16 nox::memory::profile::Register(const nox::memory::HeapInfo& heap_info)
 {
 	const nox::uint16 handle = nox::memory::profile::IssueHandle();
-	nox::memory::profile::ProfileData& profile_data = g_profile_data_table.at(handle);
+	nox::memory::profile::ProfileData& profile_data = GetProfileDataTable().at(handle);
 	profile_data.handle = heap_info.profile_handle;
 
 
@@ -98,7 +106,7 @@ nox::uint16 nox::memory::profile::Register(const nox::memory::HeapInfo& heap_inf
 void nox::memory::profile::Unregister(const nox::memory::HeapInfo& heap_info)
 {
 	const nox::uint16 profiler_handle = heap_info.profile_handle;
-	nox::memory::profile::ProfileData& handle_data = g_profile_data_table.at(profiler_handle);
+	nox::memory::profile::ProfileData& handle_data = GetProfileDataTable().at(profiler_handle);
 	nox::memory::profile::ReleaseHandle(profiler_handle);
 	handle_data.handle = 0;	//	未使用にする
 }
@@ -108,12 +116,12 @@ void nox::memory::profile::EnableMemoryProfile()
 	g_is_enabled = true;
 
 	NOX_LOCAL_SCOPE(nox::memory::ScopeMemorySegment<nox::memory::SegmentType::Develop>{});
-	g_profile_data_table.resize(1024 * 1024);
+	GetProfileDataTable().resize(1024 * 1024);
 }
 
 void nox::memory::profile::DisableMemoryProfile()
 {
-	g_profile_data_table = {};
+	GetProfileDataTable() = {};
 	g_is_enabled = false;
 }
 
@@ -130,7 +138,7 @@ const nox::memory::profile::ProfileData& nox::memory::profile::FindProfileData(n
 const nox::memory::profile::ProfileData& nox::memory::profile::FindProfileData(nox::uint16 profiler_handle)
 {
 	//	線形検索
-	decltype(auto) handle_data = g_profile_data_table.at(profiler_handle);
+	decltype(auto) handle_data = GetProfileDataTable().at(profiler_handle);
 	if (handle_data.handle != 0)
 	{
 		return handle_data;

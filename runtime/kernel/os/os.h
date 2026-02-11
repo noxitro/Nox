@@ -8,7 +8,6 @@
 #include	"../nox_string.h"
 #include	"../nox_string_view.h"
 
-
 namespace nox::os
 {
 	struct ProcessMemoryInfo
@@ -32,6 +31,10 @@ namespace nox::os
 	/// @param args 引数
 	void	Initialize(const std::span<const char16* const> args);
 
+	/// @brief 
+	/// @return アプリケーション終了
+	bool	Update();
+
 	/// @brief 終了処理
 	void	Finalize();
 
@@ -40,7 +43,7 @@ namespace nox::os
 	/// @return 
 	std::span<const char16* const> GetCommandLineArgList()noexcept;
 
-	inline std::u16string_view GetCommandLineArg(uint32 index)
+	inline std::u16string_view GetCommandLineArg(nox::uint32 index)
 	{
 		return GetCommandLineArgList()[index];
 	}
@@ -52,5 +55,10 @@ namespace nox::os
 
 	ProcessMemoryInfo GetCurrentProcessMemoryInfo();
 
-	void Sleep(uint32 milliseconds);
+	void Sleep(nox::uint32 milliseconds);
+
+	namespace detail
+	{
+		void DispatchCreateNativeWindow(void(*func)(const void*), const void* arg);
+	}
 }

@@ -33,16 +33,16 @@ namespace nox
 		{
 			NOX_DECLARE_OBJECT(Resource, Attribute);
 		public:
-			inline constexpr explicit Resource(std::u8string_view extension, int32 version)noexcept:
+			inline constexpr explicit Resource(std::u8string_view extension, nox::uint32 version)noexcept:
 				extension_(extension),
 				version_(version)
 			{}
 
 		private:
 			std::u8string_view extension_;
-			int32 version_;
+			nox::uint32 version_;
 		};
-		
+
 		namespace dev
 		{
 			class DisplayName : public Attribute

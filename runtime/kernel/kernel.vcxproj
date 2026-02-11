@@ -102,6 +102,14 @@
     </ClInclude>
     <ClInclude Include="math\matrix3d.h" />
     <ClInclude Include="math\matrix4d.h" />
+    <ClInclude Include="memory\heap_memory_allocator.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="memory\virtual_memory_allocator.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="placement_object.h">
       <SubType>
       </SubType>
@@ -159,7 +167,7 @@
     <ClInclude Include="os\detail\fie_win64.h" />
     <ClInclude Include="os\detail\mutex_base.h" />
     <ClInclude Include="os\detail\mutex_win64.h" />
-    <ClInclude Include="os\detail\nox_winsock.h">
+    <ClInclude Include="os\detail\os_detail.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -359,6 +367,14 @@
     </ClCompile>
     <ClCompile Include="math\matrix3d.cpp" />
     <ClCompile Include="math\matrix4d.cpp" />
+    <ClCompile Include="memory\heap_memory_allocator.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="memory\virtual_memory_allocator.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="placement_object.cpp">
       <SubType>
       </SubType>
@@ -412,7 +428,7 @@
     <ClCompile Include="os\detail\fie_win64.cpp" />
     <ClCompile Include="os\detail\mutex_base.cpp" />
     <ClCompile Include="os\detail\mutex_win64.cpp" />
-    <ClCompile Include="os\detail\nox_winsock.cpp">
+    <ClCompile Include="os\detail\os_detail.cpp">
       <SubType>
       </SubType>
     </ClCompile>

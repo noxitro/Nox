@@ -1,8 +1,8 @@
 ﻿///	@file	intrusive_ptr.h
 ///	@brief	intrusive_ptr
 #pragma once
-#include	"assertion.h"
 #include	"type_traits/type_name.h"
+
 namespace nox
 {
 //	template<class T>
@@ -31,47 +31,30 @@ namespace nox
 
 		struct IntrusivePtrDownCastTag {};
 
-		class IntrusivePtrBase
-		{
-		protected:
-			inline constexpr IntrusivePtrBase()noexcept:
-				instance_(nullptr) {}
-
-			inline constexpr explicit IntrusivePtrBase(void*const ptr)noexcept :
-				instance_(ptr) {}
-
-			inline	constexpr	void	Move(IntrusivePtrBase& rhs)noexcept
-			{
-				instance_ = rhs.instance_;
-				rhs.instance_ = nullptr;
-			}
-
-		protected:
-			void* instance_;
-		};
+		void IntrusivePtrAbort();
 	}
 
 	/// @brief		侵入型スマートポインタ
 	/// @details	リソースカウンタアクセサ、解放メソッドは各自用意
 	template<class T>
-	class IntrusivePtr : public detail::IntrusivePtrBase
+	class IntrusivePtr final
 	{
 	public:
 		inline constexpr IntrusivePtr()noexcept :
-			detail::IntrusivePtrBase(nullptr) {}
+			instance_(nullptr) {}
 
-		inline explicit IntrusivePtr(T*const& instance)noexcept :
-			detail::IntrusivePtrBase(static_cast<void*>(instance))
+		inline IntrusivePtr(T*const& instance)noexcept :
+			instance_(instance)
 		{
 		}
 
 		inline constexpr IntrusivePtr(const IntrusivePtr& ths)noexcept :
-			detail::IntrusivePtrBase(ths.instance_)
+			instance_(ths.instance_)
 		{
 		}
 
 		inline constexpr IntrusivePtr(IntrusivePtr&& ths)noexcept :
-			detail::IntrusivePtrBase(ths.instance_)
+			instance_(ths.instance_)
 		{
 			ths.instance_ = nullptr;
 		}
@@ -90,7 +73,8 @@ namespace nox
 		template<std::derived_from<T> U>
 		inline constexpr IntrusivePtr(IntrusivePtr<U>&& rhs)noexcept
 		{
-			Move(rhs);
+			instance_ = rhs.instance_;
+			rhs.instance_ = nullptr;
 		}
 
 		template<class U> requires(std::is_base_of_v<T, U>)
@@ -104,15 +88,15 @@ namespace nox
 			}
 		}
 
-		/// @brief 親から子の型へのキャストmove
-		/// @tparam U 
-		/// @param rhs 
-		/// @param tag 
-		template<class U> requires(std::is_base_of_v<U, T>)
-			inline constexpr IntrusivePtr(IntrusivePtr<U>&& rhs, nox::detail::IntrusivePtrDownCastTag _)noexcept
-		{
-			Move(rhs);
-		}
+		///// @brief 親から子の型へのキャストmove
+		///// @tparam U 
+		///// @param rhs 
+		///// @param tag 
+		//template<class U> requires(std::is_base_of_v<U, T>)
+		//	inline constexpr IntrusivePtr(IntrusivePtr<U>&& rhs, nox::detail::IntrusivePtrDownCastTag _)noexcept:
+		//	IntrusivePtr(std::forward<reinterpret_cast<IntrusivePtr<T>>(rhs))
+		//{
+		//}
 
 		inline ~IntrusivePtr()
 		{
@@ -124,11 +108,12 @@ namespace nox
 			//static_assert(nox::detail::IntrusivePtrReleaseReferenceConcept<T> == true);
 			if constexpr (nox::detail::IntrusivePtrReleaseReferenceConcept<T> == true)
 			{
-				IntrusivePtrReleaseReference(*static_cast<T*>(instance_));
+				IntrusivePtrReleaseReference(*instance_);
 			}
 			else
 			{
-				NOX_ASSERT(false, u"ここには来ないはず");
+				//	ここには来ないはず
+				nox::detail::IntrusivePtrAbort();
 			}
 		}
 
@@ -137,7 +122,7 @@ namespace nox
 			instance_ = rhs.instance_;
 			if constexpr (nox::detail::IntrusivePtrReleaseReferenceConcept<T> == true)
 			{
-				IntrusivePtrReleaseReference(*static_cast<T*>(instance_));
+				IntrusivePtrReleaseReference(*instance_);
 			}
 
 			return *this;
@@ -151,18 +136,19 @@ namespace nox
 			return *this;
 		}
 
-		[[nodiscard]] inline constexpr T* Get()noexcept { return static_cast<T*>(instance_); }
-		[[nodiscard]] inline constexpr const T* Get()const noexcept { return static_cast<const T*>(instance_); }
+		[[nodiscard]] inline constexpr T* Get()noexcept { return instance_; }
+		[[nodiscard]] inline constexpr const T* Get()const noexcept { return instance_; }
 
-		[[nodiscard]] inline constexpr T& operator*()noexcept { return *static_cast<T*>(instance_); }
-		[[nodiscard]] inline constexpr const T& operator*()const noexcept { return *static_cast<const T*>(instance_); }
+		[[nodiscard]] inline constexpr T& operator*()noexcept { return *instance_; }
+		[[nodiscard]] inline constexpr const T& operator*()const noexcept { return *instance_; }
 
-		[[nodiscard]]	inline constexpr T* operator->()noexcept { return static_cast<T*>(instance_); }
-		[[nodiscard]]	inline constexpr const T* operator->()const noexcept { return static_cast<const T*>(instance_); }
+		[[nodiscard]]	inline constexpr T* operator->()noexcept { return instance_; }
+		[[nodiscard]]	inline constexpr const T* operator->()const noexcept { return instance_; }
 
-		[[nodiscard]] inline constexpr operator T* () const noexcept { return static_cast<T*>(instance_); }
+		[[nodiscard]] inline constexpr operator T* () noexcept { return instance_; }
+		[[nodiscard]] inline constexpr operator const T* () const noexcept { return instance_; }
 	private:
-		//T* instance_;
+		T* instance_;
 	};
 
 	template<class T, class U> requires(std::is_base_of_v<U, T>)

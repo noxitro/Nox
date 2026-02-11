@@ -10,11 +10,9 @@
 
 namespace nox::os
 {
-	/**
-	 * @brief 最大ThreadID
-	*/
-	constexpr uint8 MAX_THREAD_ID = 64;
-	static_assert(MAX_THREAD_ID < std::numeric_limits<uint8>::max());
+	/// @brief 最大ThreadID
+	constexpr nox::int8 MAX_THREAD_ID = 64;
+	static_assert(MAX_THREAD_ID < std::numeric_limits<nox::int8>::max());
 
 	///**
 	// * @brief スレッドプール
@@ -100,12 +98,9 @@ namespace nox::os
 			//	ThreadPool::Instance()->UnregisterHandle(T::GetThreadId());
 		}
 
-		/**
-			 * @brief CPUスレッド数を取得する
-			 * @return
-			*/
+		/// @brief CPUスレッド数を取得する
 		static inline int8 GetHardwareConcurrency()noexcept {
-			return os::GetHardwareConcurrency();
+			return nox::os::GetHardwareConcurrency();
 		}
 
 		inline constexpr explicit ThreadBase(const ThreadBase&)noexcept = delete;
@@ -125,35 +120,26 @@ namespace nox::os
 		}*/
 		static void	Sleep(nox::uint32 milliseccond);
 	protected:
+		/// @brief スレッドID
+		static constinit inline thread_local nox::int8 current_thread_id_ = -1;
 
-		/**
-		 * @brief スレッドID
-		*/
-		static constinit inline thread_local int8 current_thread_id_ = -1;
+		/// @brief 管理スレッド数
+		static constinit inline nox::int8 thread_counter_ = 0;
 
-		/**
-		 * @brief 管理スレッド数
-		*/
-		static constinit inline int8 thread_counter_ = 0;
+		/// @brief スレッド名
+		static inline constinit thread_local std::array<nox::char16, 256> thread_name_ = { 0 };
 
-		/**
-		 * @brief スレッド名
-		*/
-		static inline constinit thread_local std::array<char16, 256> thread_name_ = { 0 };
-
-		/**
-		 * @brief スレッドID
-		*/
-		int8 thread_id_;
+		/// @brief スレッドID
+		nox::int8 thread_id_;
 
 		/// @brief スレッド状態
-		ThreadState thread_state_;
+		nox::os::ThreadState thread_state_;
 
 		/// @brief 優先度
-		ThreadPriority thread_priority_;
+		nox::os::ThreadPriority thread_priority_;
 
 		/// @brief スタックサイズ
-		int32 stack_size_;
+		nox::int32 stack_size_;
 
 		/// @brief スレッド実行関数
 		std::function<void()> thread_func_;

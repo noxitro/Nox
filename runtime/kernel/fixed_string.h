@@ -14,12 +14,12 @@ namespace nox
         void CheckStringLength(std::size_t length, std::size_t maxLength);
     }
 
-    template<class T, size_t _Length> requires(_Length >= 1)
+    template<class T, std::size_t _Length> requires(_Length >= 1)
         struct BasicFixedString
     {
     public:
         using value_type = T;
-        static constexpr size_t Length = _Length;
+        static constexpr std::size_t Length = _Length;
 
         inline constexpr BasicFixedString() noexcept :
             array_{}

@@ -33,14 +33,18 @@ namespace nox::dev::editor_ipc
 		void AddReceiveBuffer(std::span<const nox::uint8> buffer);
 
 		template<typename T> requires(std::is_arithmetic_v<T>)
-		inline T Read()
+		inline void Read(T& out)
 		{
-			T value;
-			this->Read(std::span<nox::uint8>(static_cast<nox::uint8*>(&value), sizeof(T)));
-			return value;
+			this->Read(std::span<nox::uint8>(reinterpret_cast<nox::uint8*>(&out), sizeof(T)));
 		}
 
-		std::u8string_view Read(std::span<nox::char8> dest);
+		template<class T> requires(!std::is_arithmetic_v<T> && std::is_polymorphic_v<T> == false)
+		inline void Read(T& out)
+		{
+			this->Read(std::span<nox::uint8>(reinterpret_cast<nox::uint8*>(std::addressof(out)), sizeof(T)));
+		}
+
+		std::u8string_view ReadString(std::span<nox::char8> dest);
 		nox::StdU8String ReadString();
 
 		/// @brief 受信済みサイズを取得

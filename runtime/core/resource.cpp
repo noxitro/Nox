@@ -7,6 +7,4 @@
 
 void	nox::Resource::initialize(nox::U8StringView path)
 {
-
-	//onInitialize(stream);
 }

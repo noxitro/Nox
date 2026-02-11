@@ -5,6 +5,7 @@
 #pragma once
 #include "resource.h"
 #include "attribute_common.h"
+
 namespace nox
 {
 	/// @brief SceneResource

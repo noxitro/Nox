@@ -5,7 +5,9 @@
 //import std;
 #include	"stdafx.h"
 #include	"application.h"
+
 #include	"module_entry.h"
+#include	"scene_view.h"
 
 namespace
 {
@@ -14,55 +16,20 @@ namespace
 	}
 }
 
-namespace nox::os
-{
-	void Update()
-	{
-		::MSG msg;
-
-		while (true)
-		{
-			if (::PeekMessageW(&msg, nullptr, 0U, 0U, PM_NOREMOVE))
-			{
-				if (!::GetMessageW(&msg, nullptr, 0U, 0U))
-				{
-					break;
-				}
-				::TranslateMessage(&msg);
-				::DispatchMessageW(&msg);
-			}
-		}
-	}
-}
-
 nox::Application::Application()noexcept :
 	module_entry_bitset_{},
 	enabled_vsync_(false),
 	target_frame_rate_(60),
-	kill_(false),
-	window_(nullptr)
+	kill_(false)
 {
 }
 
 nox::Application::~Application()
 {
-	nox::util::SafeDelete(window_);
 }
 
 void	nox::Application::Init()
 {
-	//	windowを生成
-	{
-		nox::os::WindowSetupDesc desc;
-		desc.width = 1280;
-		desc.height = 720;
-		desc.window_style = nox::os::WindowStyle::Normal;
-		desc.title_ptr = u"NOX ENGINE Application";
-
-		window_ = &nox::os::Window::Create(desc);
-		window_->Show();
-	}
-
 	//	モジュールエントリクラス群を収集
 	nox::reflection::ForeachDerivedClassInfoList(nox::reflection::Typeof<nox::ModuleEntry>(),
 		[this](const nox::reflection::ClassInfo& class_info) {
@@ -106,7 +73,12 @@ void	nox::Application::Run()
 		}
 		});
 
-	nox::os::Update();
+	
+	while (nox::os::Update())
+	{
+		//	...
+	}
+
 	//	ここを抜けたらkill
 	kill_ = true;
 

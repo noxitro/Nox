@@ -5,6 +5,7 @@
 #pragma once
 #include	<string_view>
 #include	<span>
+#include	<memory>
 #include	"basic_type.h"
 #include	"reflection_type_utility.h"
 #include	"type_traits/function_signature.h"
@@ -106,6 +107,46 @@ namespace nox::reflection
 
 		template<class T>
 		inline constexpr const Type& GetOwnerType()noexcept;
+
+		template<class T> requires(std::is_default_constructible_v<T>&& requires{ []()constexpr noexcept->void {T* _ = new T(); }(); })
+			inline constexpr void* CreateObject() noexcept(noexcept(new T()))
+		{
+			return static_cast<void*>(const_cast<std::remove_extent_t<std::remove_cv_t<T>>*>(new T()));
+		}
+
+		template<class T>
+		inline constexpr void* CreateObject() noexcept
+		{
+			return nullptr;
+		}
+
+		template<class T> requires(
+			std::is_default_constructible_v<T>&& 
+			std::is_invocable_v<decltype(static_cast<T* (*)(T*)>(std::construct_at)), std::add_pointer_t<T>>&&
+			requires { []()constexpr noexcept -> void { T* _ = new(static_cast<void*>(nullptr)) T(); }(); })
+			inline constexpr void* ConstructAt(T* const storage)	noexcept(noexcept(std::construct_at(storage)))
+		{
+			return std::construct_at(storage);
+		}
+
+		// 生成不可能な型は nullptr を返す
+		template<class T>
+		inline constexpr void* ConstructAt(T* const)noexcept
+		{
+			return nullptr;
+		}
+
+		template<class T> requires(std::is_destructible_v<T> && requires(T* p) { std::destroy_at(p); })
+			inline constexpr void DestroyAt(T* const storage) noexcept(noexcept(std::destroy_at(storage)))
+		{
+			std::destroy_at(storage);
+		}
+
+		template<class T>
+		inline constexpr void DestroyAt(T* const storage)noexcept
+		{
+			return;
+		}
 	}
 
 	/// @brief 汎用型情報
@@ -356,10 +397,10 @@ namespace nox::reflection
 		const std::uint8_t argument_length_;
 
 		/// @brief 型の識別
-		const TypeKind kind_;
+		const nox::reflection::TypeKind kind_;
 
 		/// @brief 型属性
-		const TypeAttributeFlag attribute_flags_;
+		const nox::reflection::TypeAttributeFlag attribute_flags_;
 
 		/// @brief 配列の次元数
 		const std::uint16_t array_rank_;
@@ -395,36 +436,33 @@ namespace nox::reflection
 		bool (*is_convertible_functor_)(const nox::reflection::Type&, const nox::reflection::Type&);
 
 		/// @brief add_pointer_t
-		const Type& remove_pointer_type_;
+		const nox::reflection::Type& remove_pointer_type_;
 		/// @brief 関数の戻り値の型
-		const Type& result_type_;
+		const nox::reflection::Type& result_type_;
 		/// @brief 配列型から次元を除去した型
-		const Type& remove_element_type_;
+		const nox::reflection::Type& remove_element_type_;
 		/// @brief 配列型から全ての次元を除去した型
-		const Type& remove_all_element_type_;
+		const nox::reflection::Type& remove_all_element_type_;
 		/// @brief 基底型 enumの場合など
-		const Type& underlying_type_;
+		const nox::reflection::Type& underlying_type_;
 		/// @brief add_const_t
-		const Type& add_const_type_;
+		const nox::reflection::Type& add_const_type_;
 		/// @brief remove_const_t
-		const Type& remove_const_type_;
+		const nox::reflection::Type& remove_const_type_;
 		/// @brief add_volatile_t
-		const Type& add_volatile_type_;
+		const nox::reflection::Type& add_volatile_type_;
 		/// @brief remove_volatile_t
-		const Type& remove_volatile_type_;
+		const nox::reflection::Type& remove_volatile_type_;
 		/// @brief remove_reference_t
-		const Type& remove_reference_type_;
+		const nox::reflection::Type& remove_reference_type_;
 		/// @brief add_lvalue_reference_t
-		const Type& add_lvalue_reference_type_;
+		const nox::reflection::Type& add_lvalue_reference_type_;
 		/// @brief add_rvalue_reference_t
-		const Type& add_rvalue_reference_type_;
+		const nox::reflection::Type& add_rvalue_reference_type_;
 		/// @brief remove_all_modifiers_t
-		const Type& remove_all_modifiers_type_;
+		const nox::reflection::Type& remove_all_modifiers_type_;
 		/// @brief 関数のクラスの型
-		const Type& owner_type_;
-
-		//const Type* const* const argument_type_table_;
-
+		const nox::reflection::Type& owner_type_;
 	};
 
 	/// @brief nox::reflection::Typeの比較演算子
@@ -439,7 +477,7 @@ namespace nox::reflection
 		{
 		public:
 			inline constexpr CompileTimeInvalidType()noexcept :
-				Type(
+				nox::reflection::Type(
 					nox::reflection::detail::TypeDesc{
 						.id = 0,
 						.kind = TypeKind::Invalid,
@@ -505,7 +543,7 @@ namespace nox::reflection
 				const std::uint8_t argument_length = 0,
 				std::span<const std::reference_wrapper<const nox::reflection::Type>>(* const get_argument_type_list)(const nox::reflection::Type& self)noexcept = &Type::GetArgumentTypeListInvalid
 			)noexcept :
-				Type(
+				nox::reflection::Type(
 					nox::reflection::detail::TypeDesc{
 						.id = nox::util::GetUniqueTypeID<T>(),
 						.kind = nox::reflection::GetTypeKind<T>(),
@@ -516,8 +554,8 @@ namespace nox::reflection
 						.array_extent = std::extent_v<T>,
 						.name = nox::util::GetTypeName<T>(),
 						.create_object = &CreateObject,
-						.create_object_placement = &CreateObjectPlacement,
-						.destroy_at = &DestroyAt,
+						.create_object_placement = &TypeImpl::ConstructAt,
+						.destroy_at = &TypeImpl::DestroyAt,
 						.is_convertible_functor = &IsConvertibleImpl,
 						.argument_length = argument_length,
 						.get_argument_type_list = get_argument_type_list,
@@ -541,49 +579,18 @@ namespace nox::reflection
 		private:
 			[[nodiscard]] static inline constexpr void* CreateObject()
 			{
-				if constexpr (nox::concepts::RuntimeDefaultNewable<T> == true)
-				{
-					if constexpr (std::is_array_v<T> == true)
-					{
-						//TODO:	配列には未対応
-						return nullptr;
-					}
-					else 
-					{
-						return new std::remove_cvref_t<T>();
-					}
-				}
-				else
-				{
-					return nullptr;
-				}
+				return nox::reflection::detail::CreateObject<T>();
 			}
 
-			[[nodiscard]] static inline constexpr void* CreateObjectPlacement(void* buffer)
+			static inline constexpr void* ConstructAt(void* const storage)noexcept(noexcept(nox::reflection::detail::ConstructAt(static_cast<std::conditional_t<std::is_array_v<T>, std::decay_t<T>, std::add_pointer_t<T>>>(storage))))
 			{
-				if constexpr (nox::concepts::RuntimeDefaultNewable<T> == true)
-				{
-					if constexpr (std::is_array_v<T> == true)
-					{
-						return nullptr; //TODO: 配列には未対応
-					}
-					else 
-					{
-						return static_cast<void*>(std::construct_at(static_cast<std::remove_cvref_t<T>*>(buffer)));
-					}
-				}
-				else
-				{
-					return nullptr;
-				}
+				return nox::reflection::detail::ConstructAt(static_cast<std::conditional_t<std::is_array_v<T>, std::decay_t<T>, std::add_pointer_t<T>>>(storage));
 			}
 
-			static inline constexpr void DestroyAt(void* storage)
+			static inline constexpr void DestroyAt(void*const object)
+				noexcept(noexcept(nox::reflection::detail::DestroyAt(static_cast<std::conditional_t<std::is_array_v<T>, std::decay_t<T>, std::add_pointer_t<T>>>(object))))
 			{
-				if constexpr (std::is_destructible_v<std::remove_cvref_t<T>> == true)
-				{
-					std::destroy_at(static_cast<std::remove_cvref_t<T>*>(storage));
-				}
+				nox::reflection::detail::DestroyAt(static_cast<std::conditional_t<std::is_array_v<T>, std::decay_t<T>, std::add_pointer_t<T>>>(object));
 			}
 
 #pragma warning(push)
@@ -755,7 +762,7 @@ namespace nox::reflection
 	/// @tparam T 型
 	/// @return 型情報
 	template<class T>
-	[[nodiscard]] inline	constexpr const Type& Typeof()noexcept
+	[[nodiscard]] inline	constexpr const nox::reflection::Type& Typeof()noexcept
 	{
 		return reflection::detail::ReflectionTypeHolder<T>::value;
 	}

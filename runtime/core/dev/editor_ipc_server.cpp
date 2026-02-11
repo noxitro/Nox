@@ -80,7 +80,8 @@ void nox::dev::editor_ipc::EditorIpcServer::UpdateReceive()
 	while (reader_.GetReceivedSize() > 0)
 	{
 		//	entity名を読み取り
-		const std::u8string_view entity_full_name = reader_.Read(entity_name_buffer);
+		
+		const std::u8string_view entity_full_name = this->reader_.ReadString(entity_name_buffer);
 
 		const nox::reflection::ClassInfo*const class_info = nox::reflection::FindClassInfo(entity_full_name);
 		NOX_ASSERT(class_info != nullptr, u"不明なEntity:{0}", entity_full_name);

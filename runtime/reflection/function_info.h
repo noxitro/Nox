@@ -1,6 +1,7 @@
 ﻿///	@file	function.h
 ///	@brief	function
 #pragma once
+#include	<tuple>
 
 namespace nox::reflection
 {
@@ -166,7 +167,7 @@ namespace nox::reflection
 		inline	constexpr	ResultType	Invoke(Args&&... args)const
 		{
 			std::optional<ResultType> result = TryInvoke<ResultType>(std::forward<Args>(args)...);
-			NOX_ASSERT(result.has_value(), U"関数呼び出しに失敗しました");
+			NOX_ASSERT(result.has_value(), u"関数呼び出しに失敗しました");
 
 			if constexpr (std::is_void_v<ResultType>)
 			{
@@ -217,13 +218,13 @@ namespace nox::reflection
 #pragma endregion
 
 	protected:
-		inline constexpr virtual std::optional<std::monostate> InvokeImplNoReturn(std::span<void*> args)const = 0;
+		//inline constexpr virtual std::optional<std::monostate> InvokeImplNoReturn(std::span<void*> args)const = 0;
 
 	private:
 		template<class R, class... Args>
 		inline	constexpr	std::optional<std::conditional_t<std::is_void_v<R>, std::monostate, R>>	TryInvokeImpl(Args&&... args)const
 		{
-			const std::uint8_t need_param_length = GetNonDefaultParamLength() + (IsStatic() ? 0 : 1);
+			const std::uint8_t need_param_length = this->GetNonDefaultParamLength() + (IsStatic() ? 0 : 1);
 			if (sizeof...(Args) > need_param_length)
 			{
 				return std::nullopt;
@@ -244,7 +245,7 @@ namespace nox::reflection
 				for (std::uint8_t i = offset; i < sizeof...(Args) + offset; ++i)
 				{
 					const nox::reflection::Type& type = invoke_type_list[i];
-					if (type.IsConvertible(this->GetFunctionParam(i- offset).GetType()) == false)
+					if (type.IsConvertible(this->GetFunctionParam(i - offset).GetType()) == false)
 					{
 						return std::nullopt;
 					}
@@ -254,7 +255,7 @@ namespace nox::reflection
 			std::array<void*, sizeof...(Args)> invoke_args = { const_cast<void*>(static_cast<const void*>(&args))... };
 			if constexpr (std::is_void_v<R>)
 			{
-				return InvokeImplNoReturn(invoke_args);
+				return static_cast<const nox::reflection::detail::FunctionInfoImpl<R>&>(*this).InvokeImpl(invoke_args);
 			}
 			else
 			{
@@ -303,7 +304,7 @@ namespace nox::reflection
 	namespace detail
 	{
 		template<class ResultType>
-		class FunctionInfoImpl final : public FunctionInfo
+		class FunctionInfoImpl final : public nox::reflection::FunctionInfo
 		{
 		public:
 			inline constexpr FunctionInfoImpl(const FunctionInfoImpl&)noexcept = delete;
@@ -311,7 +312,7 @@ namespace nox::reflection
 
 			inline	constexpr	explicit	FunctionInfoImpl(
 				std::u8string_view	name,
-				std::u8string_view fullname,
+				std::u8string_view	fullname,
 				std::u8string_view	_namespace,
 				const std::reference_wrapper<const ReflectionObject>* attribute_list,
 				const std::uint8_t attribute_list_length,
@@ -325,7 +326,7 @@ namespace nox::reflection
 				const std::tuple<ResultType(*)(void**), std::uint8_t>* function_holder_table,
 				std::uint8_t function_holder_table_length
 			)noexcept :
-				FunctionInfo(
+				nox::reflection::FunctionInfo(
 					name,
 					fullname,
 					_namespace,
@@ -346,21 +347,21 @@ namespace nox::reflection
 		public:
 			inline constexpr std::optional<std::conditional_t<std::is_void_v<ResultType>, std::monostate, ResultType>> InvokeImpl(std::span<void*> args)const
 			{
-				return this->InvokeImpl<ResultType>(args);
+				return this->InvokeImplTemplate<ResultType>(args);
 			}
 
 		protected:
-			inline constexpr std::optional<std::monostate> InvokeImplNoReturn(std::span<void*> args)const override
+			/*inline constexpr std::optional<std::monostate> InvokeImplNoReturn(std::span<void*> args)const override
 			{
-				return this->InvokeImpl<void>(args);
-			}
+				return this->InvokeImplTemplate<void>(args);
+			}*/
 
 		private:
 			template<class R>
-			inline constexpr std::optional<std::conditional_t<std::is_void_v<R>, std::monostate, R>> InvokeImpl(std::span<void*> args)const
+			inline constexpr std::optional<std::conditional_t<std::is_void_v<R>, std::monostate, R>> InvokeImplTemplate(std::span<void*> args)const
 			{
 			//	const std::uint8_t raw_arg_length = static_cast<std::uint8_t>(args.size()) - (IsStatic() ? 0 : 1);
-				const std::optional<ResultType(*)(void**)> function_pointer_result = FindFunctionPointer(static_cast<std::uint8_t>(args.size()));
+				const std::optional<ResultType(*)(void**)> function_pointer_result = this->FindFunctionPointer(static_cast<std::uint8_t>(args.size()));
 				if (function_pointer_result.has_value() == false)
 				{
 					return std::nullopt;
@@ -368,7 +369,8 @@ namespace nox::reflection
 
 				if constexpr (std::is_void_v<R>)
 				{
-					std::invoke(*function_pointer_result, args.data());
+					(*function_pointer_result)(args.data());
+//					std::invoke(*function_pointer_result, args.data());
 					return std::monostate{};
 				}
 				else
@@ -381,9 +383,11 @@ namespace nox::reflection
 			{
 				for (std::uint8_t i = 0; i < function_holder_table_length_; ++i)
 				{
-					if (std::get<1>(function_holder_table_[i]) == arg_length)
+				 	const std::tuple<ResultType(*)(void**), std::uint8_t>& function_holder = function_holder_table_[i];
+
+					if (std::get<1>(function_holder) == arg_length)
 					{
-						return std::get<0>(function_holder_table_[i]);
+						return std::get<0>(function_holder);
 					}
 				}
 				return std::nullopt;

@@ -14,7 +14,7 @@ namespace nox::stack_walker
 	struct StackFrameInfo
 	{
 		/// @brief 行番号
-		uint16 line_;
+		nox::uint16 line_;
 
 		/// @brief モジュール名
 		std::array<nox::char16, nox::stack_walker::detail::kMaxModuleName> module_name_;

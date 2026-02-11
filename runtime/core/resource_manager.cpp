@@ -12,10 +12,10 @@ namespace nox::io
 	
 }
 
-nox::Resource* nox::ResourceManager::GetResourceImpl(std::u16string_view path)
+nox::Resource* nox::ResourceManager::GetResourceImpl(std::u8string_view path)
 {
 	//	拡張子を取得
-	std::filesystem::path file_path = std::filesystem::path(path);
+	//std::filesystem::path file_path = std::filesystem::path(path);
 
 	//const char16* n = file_path.extension().c_str();
 

@@ -23,6 +23,6 @@ void nox::dev::editor_ipc::EditorIpcEntity::Serialize(const nox::uint32 id, Sock
 
 void nox::dev::editor_ipc::EditorIpcEntity::Deserialize(SocketStreamReader& reader)
 {
-	id_ = reader.Read<decltype(id_)>();
+	reader.Read(id_);
 	this->OnDeserialize(reader);
 }

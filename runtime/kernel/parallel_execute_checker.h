@@ -3,61 +3,53 @@
 ///	@file	parallel_execute_checker.h
 ///	@brief	並列チェッカー
 #pragma once
-#include	"os/atomic.h"
-#include	"log_id.h"
+#include	<source_location>
+#include	"basic_definition.h"
+#include	"basic_type.h"
 
 namespace nox::util
 {
 #if !NOX_MASTER
+	class ParallelExecuteChecker;
+
+	/// @brief 並列実行チェック
+	class ParallelExecuteCheckScope
+	{
+	public:
+		enum class Option : nox::uint8
+		{
+			SourceLocation,
+			Callstack,
+		};
+
+	public:
+		ParallelExecuteCheckScope(nox::util::ParallelExecuteChecker& checker, Option option = Option::SourceLocation, const std::source_location location = std::source_location::current());
+		~ParallelExecuteCheckScope();
+
+		inline constexpr ParallelExecuteCheckScope(const ParallelExecuteCheckScope&)noexcept = delete;
+		inline constexpr ParallelExecuteCheckScope(ParallelExecuteCheckScope&&)noexcept = delete;
+
+		inline constexpr ParallelExecuteCheckScope& operator =(const ParallelExecuteCheckScope&)noexcept = delete;
+	private:
+		nox::util::ParallelExecuteChecker& checker_;
+	};
+
 	/// @brief 並列実行チェッカー
 	class ParallelExecuteChecker
 	{
 	public:
-		inline consteval ParallelExecuteChecker()noexcept :ref_counter_(0) {}
+		inline constexpr ParallelExecuteChecker()noexcept :ref_counter_(0) {}
 		inline ~ParallelExecuteChecker()noexcept {}
 
-		inline	consteval ParallelExecuteChecker(const ParallelExecuteChecker&)noexcept = delete;
-		inline	consteval	ParallelExecuteChecker(ParallelExecuteChecker&&)noexcept = delete;
+		inline	constexpr ParallelExecuteChecker(const ParallelExecuteChecker&)noexcept = delete;
+		inline	constexpr ParallelExecuteChecker(ParallelExecuteChecker&&)noexcept = delete;
 
-		inline consteval	ParallelExecuteChecker& operator =(const ParallelExecuteChecker&)noexcept = delete;
+		inline constexpr ParallelExecuteChecker& operator =(const ParallelExecuteChecker&)noexcept = delete;
 
-		inline	void Enter()
-		{
-			if (nox::os::atomic::Increment(ref_counter_) > 1)
-			{
-				NOX_ERROR_LINE(nox::log_id::Kernel, U"ParallelExecuteCheck failed.");
-			}
-		}
-
-		inline	void Exit()
-		{
-			nox::os::atomic::Decrement(ref_counter_);
-		}
+		void Enter(nox::util::ParallelExecuteCheckScope::Option option, const std::source_location& location);
+		void Exit();
 	private:
-		nox::int16 ref_counter_;
-	};
-
-	/// @brief 並列実行チェック
-	class ParallelExecuteCheck
-	{
-	public:
-		inline ParallelExecuteCheck(ParallelExecuteChecker& checker, const std::source_location location = std::source_location::current()) :
-			checker_(checker)
-		{
-			checker_.Enter();
-		}
-
-		inline ~ParallelExecuteCheck()
-		{
-			checker_.Exit();
-		}
-
-		inline constexpr ParallelExecuteCheck(const ParallelExecuteCheck&)noexcept = delete;
-		inline constexpr ParallelExecuteCheck(ParallelExecuteCheck&&)noexcept = delete;
-
-		inline constexpr ParallelExecuteCheck& operator =(const ParallelExecuteCheck&)noexcept = delete;
-	private:
-		ParallelExecuteChecker& checker_;
+		nox::int8 ref_counter_;
 	};
 
 #endif // !NOX_MASTER

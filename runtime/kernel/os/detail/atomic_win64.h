@@ -11,6 +11,12 @@ namespace nox::os
 	namespace atomic
 	{
 		//	increment
+		template<std::integral T> requires(sizeof(T) == sizeof(char))
+			inline T Increment(volatile T& value)
+		{
+			return static_cast<T>(::_InterlockedExchangeAdd8(
+				reinterpret_cast<volatile char*>(&value), 1) + 1);
+		}
 
 		template<std::integral T> requires(sizeof(T) == sizeof(long))
 			inline T Increment(volatile T& value)
@@ -31,6 +37,12 @@ namespace nox::os
 		}
 
 		//	decrement
+		template<std::integral T> requires(sizeof(T) == sizeof(char))
+			inline T Decrement(volatile T& value)
+		{
+			return static_cast<T>(::_InterlockedExchangeAdd8(
+				reinterpret_cast<volatile char*>(&value), -1) - 1);
+		}
 
 		template<std::integral T> requires(sizeof(T) == sizeof(long))
 			inline T Decrement(volatile T& value)

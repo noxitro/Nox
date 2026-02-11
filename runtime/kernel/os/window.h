@@ -6,8 +6,18 @@
 #include	<functional>
 #include	"../math/math.h"
 
+#include	"windows.h"
+
 namespace nox::os
 {
+#if NOX_WINDOWS
+	using WindowHandle = ::HWND;
+	using InstanceHandle = ::HINSTANCE;
+#else
+	using WindowHandle = void*;
+	using InstanceHandle = void*;
+#endif // NOX_WINDOWS
+
 	enum class WindowStyle : nox::uint8
 	{
 		/// @brief 通常ウィンドウ
@@ -17,16 +27,30 @@ namespace nox::os
 		/// @brief 枠なしウィンドウ
 		Boderless = 2,
 	};
+	
 
 	struct WindowCallbackArgs
 	{
+		union
+		{
+			struct
+			{
+				nox::int32 x;
+				nox::int32 y;
+			} move;
 
+			struct
+			{
+				nox::uint32 width;
+				nox::uint32 height;
+			} resize;
+		};
 	};
 
 	struct WindowSetupDesc
 	{
 		nox::uint32 width;
-		nox::uint16 height;
+		nox::uint32 height;
 		nox::os::WindowStyle window_style;
 		
 		const nox::char16* title_ptr;
@@ -40,33 +64,42 @@ namespace nox::os
 	/// @brief ウィンドウ
 	class Window
 	{
-	protected:
+	public:
 		static constexpr nox::uint16 k_max_title_length = 256;
 
 	public:
-		virtual ~Window();
-		/// @brief インスタンスを生成
-		/// @return 
-		static	Window& Create(const WindowSetupDesc& desc);
+		Window()noexcept;
+		~Window();
 
-		virtual void Show() = 0;
-		virtual void Destroy() = 0;
+		inline constexpr Window(const Window&)noexcept = delete;
+		inline constexpr Window(Window&&)noexcept = delete;
 
-		virtual void* GetNativeHandle()const = 0;
-//		virtual void SetWindowTitle(const StringView& s) = 0;
-		
+		void Create(const WindowSetupDesc& desc);
 
-		virtual void SetPos(const UInt2& pos) = 0;
-		virtual UInt2 GetPos()const noexcept = 0;
+		void Show();
+		void Dispose();
+
+		inline void* GetNativeHandle()const { return window_handle_; }
+
+		void SetPos(const nox::Int2& pos);
+		inline const nox::Int2& GetPos()const noexcept { return pos_; }
+
+		void SetSize(const nox::Int2& size);
+		inline const nox::Int2& GetSize()const noexcept { return size_; }
 
 		std::array<nox::char16, nox::os::Window::k_max_title_length> GetWindowTitle()const noexcept;
-	protected:
-		Window(const WindowSetupDesc& desc)noexcept;
-		
+	private:
+		static void	CreateNative(const void* self);
+		std::u16string_view GetWindowTitle(std::span<nox::char16> dest)const noexcept;
+		static inline ::LRESULT CALLBACK CallbackWindow(const ::HWND hWnd, const ::UINT message, const ::WPARAM wParam, ::LPARAM lParam);
+	private:
+		nox::Int2 pos_;
+		nox::Int2 size_;
+		bool is_visible_;
 
-		virtual void	Init() = 0;
-		virtual std::u16string_view GetWindowTitle(std::span<nox::char16> dest)const noexcept = 0;
-	protected:
+		nox::os::WindowHandle window_handle_;
+		nox::os::InstanceHandle instance_handle_;
 		std::function<void(const WindowCallbackArgs&)> callback_;
+
 	};
 }

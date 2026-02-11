@@ -6,13 +6,17 @@
 #include	"scene_view.h"
 
 #include	"scene.h"
-nox::SceneView::SceneView()noexcept:
+
+nox::SceneView::SceneView(const nox::os::WindowSetupDesc& window_desc)noexcept:
 	scene_(nullptr)
 {
-
 }
 
 nox::SceneView::~SceneView()
 {
+}
 
+void nox::SceneView::SetScene(Scene& scene) noexcept
+{
+	scene_ = &scene;
 }

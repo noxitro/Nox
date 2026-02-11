@@ -62,7 +62,7 @@ namespace nox
 		template<std::derived_from<Component> T> requires(std::is_abstract_v<T> == false)
 		inline IntrusivePtr<T> CreateComponent()
 		{
-			return nox::IntrusivePtrDynamicCast<T>(std::move(CreateComponent(nox::reflection::Typeof<T>())));
+			return nox::IntrusivePtr<T>(std::move(this->CreateComponent<T>()));
 		}
 
 		inline nox::Transform& Transform()const noexcept { return nox::util::Deref(transform_); }

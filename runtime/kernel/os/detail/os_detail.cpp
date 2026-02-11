@@ -1,6 +1,6 @@
 ﻿//	Copyright (c) 2026 NOX ENGINE All rights reserved.
 
-///	@file	nox_winsock.cpp
-///	@brief	nox_winsock
+///	@file	os_detail.cpp
+///	@brief	os_detail
 #include	"stdafx.h"
-#include	"nox_winsock.h"
+#include	"os_detail.h"

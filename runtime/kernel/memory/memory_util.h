@@ -16,6 +16,21 @@ namespace nox::memory
 		void	CheckConstructAt(size_t type_size, size_t storage_size)noexcept;
 	}
 
+	inline constexpr std::size_t ToByteFromKB(std::size_t kb_byte) noexcept
+	{
+		return kb_byte * 1024ULL;
+	}
+
+	inline constexpr std::size_t ToByteFromMB(std::size_t mb_byte) noexcept
+	{
+		return mb_byte * 1024ULL * 1024ULL;
+	}
+
+	inline constexpr std::size_t ToByteFromGB(std::size_t gb_byte) noexcept
+	{
+		return gb_byte * 1024ULL * 1024ULL * 1024ULL;
+	}
+
 	/*!********************************************************************
 		* @brief	メモリの0クリア
 		* @param [in] ptr アドレス

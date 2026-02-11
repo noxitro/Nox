@@ -4,6 +4,7 @@
 ///	@brief	thread_win64
 #pragma once
 #include	"thread_base.h"
+#include	"../../advanced_definition.h"
 
 #if NOX_WIN64
 #include	"../windows.h"
@@ -21,10 +22,8 @@ namespace nox::os::detail
 
 		~ThreadWin64()noexcept;
 
-		/**
-		 * @brief スレッド管理IDを取得
-		 * @return
-		*/
+		/// @brief スレッド管理IDを取得
+		/// @return 
 		static inline nox::int8	GetThreadId() {
 			//	まだアサインされていない
 			if (current_thread_id_ < 0)
@@ -45,23 +44,18 @@ namespace nox::os::detail
 		*/
 		void Dispatch(std::function<void()> func);
 
-		/**
-		 * @brief 停止
-		*/
+		/// @brief 停止
 		void	Wait();
 
-		/**
-		 * @brief スレッド情報を取得
-		 * @return スレッド情報
-		*/
+		/// @brief スレッド情報を取得
+		/// @return	
 		static ThreadInfo GetThreadInfo();
 
 		inline constexpr ::HANDLE GetNativeHandle()const noexcept { return native_thread_handle_; }
-		inline constexpr uint32 GetNativeThreadId()const noexcept { return native_thread_id_; }
+		inline constexpr nox::uint32 GetNativeThreadId()const noexcept { return native_thread_id_; }
+		static inline constexpr ThreadWin64& GetCurrentThread()noexcept { return nox::util::Deref(current_thread_); }
 	private:
-		/**
-		 * @brief スレッド管理IDを割り当てる
-		*/
+		/// @brief スレッド管理IDを割り当てる
 		static void	AssignThreadId();
 
 		/**
@@ -69,21 +63,18 @@ namespace nox::os::detail
 		 * @param argPtr ThreadHandleWin64のアドレス
 		 * @return エラーコード
 		*/
-		static inline uint32 CALLBACK ThreadProc(void* argPtr);
+		static inline nox::uint32 CALLBACK ThreadProc(void* argPtr);
 	private:
 		//	static u8	MakeThreadId();
 	private:
-		/**
-		 * @brief ネイティブスレッドハンドル
-		*/
+		/// @brief ネイティブスレッドハンドル
 		::HANDLE native_thread_handle_;
 
-		/**
-		 * @brief ネイティブスレッドID
-		*/
-		uint32 native_thread_id_;
+		/// @brief ネイティブスレッドID
+		nox::uint32 native_thread_id_;
 
-		static inline thread_local ThreadWin64* current_thread_ = nullptr;
+		/// @brief 現在のスレッド
+		static inline thread_local constinit ThreadWin64* current_thread_ = nullptr;
 	};
 }
 #endif

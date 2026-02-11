@@ -11,26 +11,69 @@
 #include	<Psapi.h>
 #endif // NOX_WINDOWS
 
+#include	"../parallel_execute_checker.h"
 
-namespace
+namespace nox::os
 {
-	/// @brief 引数
-	std::span<const nox::char16* const> command_line_args_;
+	namespace
+	{
+		/// @brief 引数
+		std::span<const nox::char16* const> command_line_args_;
+
+		/// @brief os関数を初期化したネイティブスレッドID
+		nox::FunctionResultType<decltype(&nox::os::Thread::GetNativeThreadId)> native_thread_id_ = {};
+
+		/// @brief 
+		void(*window_dispatch_function_)(const void*) = nullptr;
+		const void* window_dispatch_arg_ = nullptr;
+
+#if !NOX_MASTER
+		constinit nox::util::ParallelExecuteChecker parallel_execute_checker_ = {};
+#endif // !NOX_MASTER
+	}
 }
 
 void	nox::os::Initialize(const std::span<const nox::char16* const> args)
 {
-	command_line_args_ = args;
+	nox::os::command_line_args_ = args;
+	
+	native_thread_id_ = nox::os::Thread::GetCurrentThread().GetNativeThreadId();
+}
+
+bool	nox::os::Update()
+{
+	::MSG msg;
+
+	// キューにあるものだけ処理。空なら抜ける
+	while (::PeekMessageW(&msg, nullptr, 0U, 0U, PM_REMOVE))
+	{
+		if (msg.message == WM_QUIT)
+		{
+			return false; // アプリ終了
+		}
+		::TranslateMessage(&msg);
+		::DispatchMessageW(&msg);
+	}
+
+	// ディスパッチ要求があれば処理
+	if (window_dispatch_function_ != nullptr)
+	{
+		window_dispatch_function_(window_dispatch_arg_);
+		window_dispatch_function_ = nullptr;
+		window_dispatch_arg_ = nullptr;
+	}
+
+	return true;
 }
 
 void	nox::os::Finalize()
 {
-	command_line_args_ = {};
+	nox::os::command_line_args_ = {};
 }
 
 std::span<const nox::char16* const> nox::os::GetCommandLineArgList() noexcept
 {
-	return command_line_args_;
+	return nox::os::command_line_args_;
 }
 
 nox::StdU16String	nox::os::GetDirectoryUTF8()
@@ -95,4 +138,25 @@ void	nox::os::Sleep(const uint32 milliseconds)
 #else
 	static_assert(false);
 #endif // NOX_WINDOWS
+}
+
+void	nox::os::detail::DispatchCreateNativeWindow(void(*func)(const void*), const void* arg)
+{
+#if !NOX_MASTER
+	NOX_LOCAL_SCOPE(nox::util::ParallelExecuteCheckScope(nox::os::parallel_execute_checker_));
+#endif
+
+	while (nox::os::window_dispatch_function_ != nullptr)
+	{
+		nox::os::Thread::Sleep(1);
+	}
+
+	nox::os::window_dispatch_function_ = func;
+	nox::os::window_dispatch_arg_ = arg;
+
+	//	実行されるまで待つ？
+	while (nox::os::window_dispatch_function_ != nullptr)
+	{
+		nox::os::Thread::Sleep(1);
+	}
 }
