@@ -167,26 +167,6 @@ namespace nox::reflection
 	}
 #pragma endregion
 
-	///@brief	属性の特殊化用マクロ
-#define	NOX_ATTIRBUTE_SPECIALIZATION(TypeTraitsClass, ...) \
-	namespace nox::reflection { \
-		template<>	\
-		struct TypeTraitsClass<__VA_ARGS__> : std::true_type {};	\
-	}
-//	end define
-
-
-
-///@brief	型に対しての属性付与
-#define	NOX_ATTR_TYPE(...) \
-	alignas([]()constexpr noexcept -> int {return 0; static_assert(::nox::reflection::detail::CheckAttributes<decltype(std::make_tuple(__VA_ARGS__))>(), "failed attributes"); }())	\
-	NOX_ATTR(__VA_ARGS__)
-
-///@brief	変数や関数などの定義に対しての属性付与
-#define NOX_ATTR_DECLARATION(...)	\
-	static_assert(::nox::reflection::detail::CheckAttributes<decltype(std::make_tuple(__VA_ARGS__))>(), "failed attributes");	\
-	NOX_ATTR(__VA_ARGS__)
-
 	/// @brief 属性
 	namespace attr
 	{
@@ -215,3 +195,25 @@ namespace nox::reflection
 	template<>
 	struct IsOnlyAttribute<attr::Reflection> : std::true_type {};
 }
+
+///@brief	属性の特殊化用マクロ
+#define	NOX_ATTIRBUTE_SPECIALIZATION(TypeTraitsClass, ...) \
+	namespace nox::reflection { \
+		template<>	\
+		struct TypeTraitsClass<__VA_ARGS__> : std::true_type {};	\
+	}
+//	end define
+
+///@brief	型に対しての属性付与
+///@details	定義チェックあり
+#define	NOX_ATTR_TYPE(...) \
+	alignas([]()constexpr noexcept -> int {return 0; static_assert(::nox::reflection::detail::CheckAttributes<decltype(std::make_tuple(__VA_ARGS__))>(), "failed attributes"); }())	\
+	NOX_ATTR(__VA_ARGS__)
+//	end define
+
+///@brief	変数や関数などの定義に対しての属性付与
+///@details	定義チェックあり
+#define NOX_ATTR_DECLARATION(...)	\
+	static_assert(::nox::reflection::detail::CheckAttributes<decltype(std::make_tuple(__VA_ARGS__))>(), "failed attributes");	\
+	NOX_ATTR(__VA_ARGS__)
+//	end define

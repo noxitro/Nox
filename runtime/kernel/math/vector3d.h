@@ -7,6 +7,9 @@
 
 namespace nox
 {
+	template<class T> class BasicString;
+	using U8String = nox::BasicString<nox::char8>;
+
 	namespace detail
 	{
 		template<concepts::Arithmetic _ValueType>
@@ -59,6 +62,10 @@ namespace nox
 
 			//!<@brief	配列への変換
 			[[nodiscard]]	constexpr	inline	std::array<_ValueType, 3> ToArray()const { return std::array<_ValueType, 3>{x, y, z}; }
+
+			std::u8string_view ToString(std::span<nox::char8> dest)const noexcept;
+			nox::U8String ToString()const;
+			static Vector3D FromString(std::u8string_view str)noexcept;
 
 			//------------------------------------------------------
 			//	operator

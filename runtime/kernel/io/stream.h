@@ -18,21 +18,9 @@ namespace nox::io
 	class Stream
 	{
 	public:
-		
-	};
+		inline constexpr Stream()noexcept {}
+		inline constexpr virtual ~Stream()noexcept {}
 
-	class OutputStream : public Stream
-	{
-		virtual void Write(const std::span<nox::uint8> buffer);
-		void WriteLength(nox::uint64 length);
-
-	};
-
-	class InputStream : public Stream
-	{
-	};
-
-	class IOStream : public InputStream, public OutputStream
-	{
+		virtual void Flush() {}
 	};
 }

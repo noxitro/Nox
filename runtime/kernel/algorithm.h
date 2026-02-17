@@ -214,7 +214,7 @@ namespace nox::util
 	template<class T>
 	inline constexpr decltype(auto) At(T&& container, size_t length, size_t index)noexcept(false)
 	{
-		NOX_ASSERT(index < length, nox::assertion::id::OutOfRange{}, u"index over");
+		NOX_ASSERT_ID(index < length, nox::assertion::id::OutOfRange, u"index over");
 		return container[index];
 	}
 

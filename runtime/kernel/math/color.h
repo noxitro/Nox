@@ -8,10 +8,10 @@ namespace nox
 {
 	struct Color
 	{
-		uint8 r;
-		uint8 g;
-		uint8 b;
-		uint8 a;
+		nox::uint8 r;
+		nox::uint8 g;
+		nox::uint8 b;
+		nox::uint8 a;
 
 		[[nodiscard]]	inline constexpr Color()noexcept :
 			r(0U), g(0U), b(0U), a(0U) {}

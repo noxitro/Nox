@@ -39,6 +39,8 @@ namespace nox
 	template<class T>
 	class IntrusivePtr final
 	{
+		template<class U>
+		friend class IntrusivePtr;
 	public:
 		inline constexpr IntrusivePtr()noexcept :
 			instance_(nullptr) {}

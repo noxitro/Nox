@@ -217,7 +217,7 @@ namespace nox::reflection
 		inline constexpr R GetValue()const
 		{
 			std::optional<R> result = this->TryGetValue<R>();
-			NOX_ASSERT(result.has_value(), U"変数の取得に失敗しました");
+			NOX_ASSERT(result.has_value(), u"変数の取得に失敗しました");
 			return result.value();
 		}
 
@@ -225,7 +225,7 @@ namespace nox::reflection
 		inline constexpr R GetValue(_InstanceType&& owner_instance)const
 		{
 			std::optional<R> result = this->TryGetValue<R>(std::forward<_InstanceType>(owner_instance));
-			NOX_ASSERT(result.has_value(), U"変数の取得に失敗しました");
+			NOX_ASSERT(result.has_value(), u"変数の取得に失敗しました");
 			return result.value();
 		}
 

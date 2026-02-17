@@ -282,18 +282,18 @@ std::span<nox::char16>	nox::stack_walker::detail::WalkerBase::GetStackTraceU16St
 }
 
 const nox::stack_walker::StackFrame& nox::stack_walker::detail::WalkerBase::GetStack(const uint8 index)const {
-	NOX_ASSERT(index < collect_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
+	NOX_ASSERT_ID(index < collect_length_, nox::assertion::id::OutOfRange, u"コールスタックの取得に失敗");
 	return stack_table_[index];
 }
 
 nox::stack_walker::StackFrame& nox::stack_walker::detail::WalkerBase::GetStack(const uint8 index) {
-	NOX_ASSERT(index < collect_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
+	NOX_ASSERT_ID(index < collect_length_, nox::assertion::id::OutOfRange, u"コールスタックの取得に失敗");
 	return stack_table_[index];
 }
 
 void nox::stack_walker::detail::WalkerBase::SetCollectLength(const uint8 length)
 {
-	NOX_ASSERT(length <= stack_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
+	NOX_ASSERT_ID(length <= stack_length_, nox::assertion::id::OutOfRange, u"コールスタックの取得に失敗");
 	collect_length_ = length;
 }
 
@@ -427,17 +427,17 @@ void	nox::stack_walker::detail::WalkerSlimBase::Trace()const
 
 void nox::stack_walker::detail::WalkerSlimBase::SetCollectLength(const uint8 length)
 {
-	NOX_ASSERT(length <= stack_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
+	NOX_ASSERT_ID(length <= stack_length_, nox::assertion::id::OutOfRange, u"コールスタックの取得に失敗");
 	collect_length_ = length;
 }
 
 const nox::stack_walker::SlimStackFrame& nox::stack_walker::detail::WalkerSlimBase::GetStack(const uint8 index)const {
-	NOX_ASSERT(index < collect_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
+	NOX_ASSERT_ID(index < collect_length_, nox::assertion::id::OutOfRange, u"コールスタックの取得に失敗");
 	return stack_table_[index];
 }
 
 nox::stack_walker::SlimStackFrame& nox::stack_walker::detail::WalkerSlimBase::GetStack(const uint8 index) {
-	NOX_ASSERT(index < collect_length_, nox::assertion::id::OutOfRange{}, u"コールスタックの取得に失敗");
+	NOX_ASSERT_ID(index < collect_length_, nox::assertion::id::OutOfRange, u"コールスタックの取得に失敗");
 	return stack_table_[index];
 }
 

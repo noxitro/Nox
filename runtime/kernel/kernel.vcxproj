@@ -28,6 +28,14 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="assertion.h" />
+    <ClInclude Include="assertion_id.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="assertion_kernel.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="basic_definition.h" />
     <ClInclude Include="basic_type.h" />
     <ClInclude Include="bit_flag.h">
@@ -54,7 +62,27 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="io\binary_reader.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="io\binary_writer.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="io\file_stream_writer.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="io\stream.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="io\stream_reader.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="io\stream_writer.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -107,6 +135,10 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="memory\virtual_memory_allocator.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="parse.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -290,6 +322,14 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="assertion.cpp" />
+    <ClCompile Include="assertion_id.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="assertion_kernel.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="basic_definition.cpp" />
     <ClCompile Include="basic_type.cpp" />
     <ClCompile Include="bit_flag.cpp">
@@ -316,7 +356,27 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="io\binary_reader.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="io\binary_writer.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="io\file_stream_writer.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="io\stream.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="io\stream_reader.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="io\stream_writer.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -372,6 +432,10 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="memory\virtual_memory_allocator.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="parse.cpp">
       <SubType>
       </SubType>
     </ClCompile>
