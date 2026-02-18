@@ -17,12 +17,12 @@ namespace nox
 
 			_ValueType x, y, z;
 
-			//	コンストラクタ
-			[[nodiscard]] constexpr Point3D() noexcept : x(.0f), y(.0f), z(.0f) {}
-			[[nodiscard]] constexpr explicit Point3D(_ValueType _x, _ValueType _y, _ValueType _z)noexcept : x(_x), y(_y), z(_z) {}
-			[[nodiscard]] constexpr	explicit Point3D(const std::array<_ValueType, 3>& ary) :x(ary[0]), y(ary[1]), z(ary[2]) {}
-			[[nodiscard]] constexpr explicit Point3D(const _ValueType(&ary)[3])noexcept : x(ary[0]), y(ary[1]), z(ary[2]) {}
-			[[nodiscard]] constexpr	Point3D(const Point3D<_ValueType>& _v)noexcept : x(_v.x), y(_v.y), z(_v.z) {}
+			////	コンストラクタ
+			//[[nodiscard]] constexpr Point3D() noexcept : x(.0f), y(.0f), z(.0f) {}
+			//[[nodiscard]] constexpr explicit Point3D(_ValueType _x, _ValueType _y, _ValueType _z)noexcept : x(_x), y(_y), z(_z) {}
+			//[[nodiscard]] constexpr	explicit Point3D(const std::array<_ValueType, 3>& ary) :x(ary[0]), y(ary[1]), z(ary[2]) {}
+			//[[nodiscard]] constexpr explicit Point3D(const _ValueType(&ary)[3])noexcept : x(ary[0]), y(ary[1]), z(ary[2]) {}
+			//[[nodiscard]] constexpr	Point3D(const Point3D<_ValueType>& _v)noexcept : x(_v.x), y(_v.y), z(_v.z) {}
 
 			/// @brief Point2Dへのキャスト
 			inline	Point2D<_ValueType>& CastVec2()noexcept { return *reinterpret_cast<Point2D<_ValueType>*>(this); }
@@ -41,7 +41,7 @@ namespace nox
 			[[nodiscard]] constexpr inline bool operator == (const Point3D<_ValueType>& _v) const noexcept { return x == _v.x && y == _v.y && z == _v.z; }
 			[[nodiscard]] constexpr	inline bool operator != (const Point3D<_ValueType>& _v) const noexcept { return x != _v.x || y != _v.y || z != _v.z; }
 
-			constexpr inline Point3D<_ValueType>& operator = (const Point3D<_ValueType>& _v)noexcept { x = _v.x; y = _v.y; z = _v.z; return *this; }
+		//	constexpr inline Point3D<_ValueType>& operator = (const Point3D<_ValueType>& _v)noexcept { x = _v.x; y = _v.y; z = _v.z; return *this; }
 			constexpr inline Point3D<_ValueType>& operator += (const Point3D<_ValueType>& _v)noexcept { x += _v.x; y += _v.y; z += _v.z; return *this; }
 			constexpr inline Point3D<_ValueType>& operator -= (const Point3D<_ValueType>& _v)noexcept { x -= _v.x; y -= _v.y; z -= _v.z; return *this; }
 			constexpr inline Point3D<_ValueType>& operator *= (_ValueType _v)noexcept { x *= _v; y *= _v; z *= _v; return *this; }
