@@ -78,159 +78,149 @@ namespace nox::reflection
 	//	return TypeKind::Invalid;
 	//}
 
-	/**
-	 * @brief 型からタイプ識別を取得
-	 * @tparam T
-	 * @return タイプ識別
-	*/
+	namespace detail
+	{
+		template<class T>
+		struct TypeKindHolder;
+
+		template<nox::reflection::TypeKind _value>
+		struct ITypeKindHolder
+		{
+			static constexpr nox::reflection::TypeKind value = _value;
+		};
+
+		template<class T>
+		struct TypeKindHolder : ITypeKindHolder<nox::reflection::TypeKind::Unknown> {};
+
+		template<>
+		struct TypeKindHolder<void> : ITypeKindHolder<nox::reflection::TypeKind::Void> {};
+
+		template<>
+		struct TypeKindHolder<bool> : ITypeKindHolder<nox::reflection::TypeKind::Bool> {};
+
+		template<>
+		struct TypeKindHolder<char> : ITypeKindHolder<nox::reflection::TypeKind::Char> {};
+
+		template<>
+		struct TypeKindHolder<signed char> : ITypeKindHolder<nox::reflection::TypeKind::Int8> {};
+
+		template<>
+		struct TypeKindHolder<unsigned char> : ITypeKindHolder<nox::reflection::TypeKind::UInt8> {};
+
+		template<>
+		struct TypeKindHolder<char8_t> : ITypeKindHolder<nox::reflection::TypeKind::Char8> {};
+
+		template<>
+		struct TypeKindHolder<char16_t> : ITypeKindHolder<nox::reflection::TypeKind::Char16> {};
+
+		template<>
+		struct TypeKindHolder<char32_t> : ITypeKindHolder<nox::reflection::TypeKind::Char32> {};
+
+		template<>
+		struct TypeKindHolder<wchar_t> : ITypeKindHolder<nox::reflection::TypeKind::WideChar> {};
+
+		template<>
+		struct TypeKindHolder<std::int16_t> : ITypeKindHolder<nox::reflection::TypeKind::Int16> {};
+
+		template<>
+		struct TypeKindHolder<std::uint16_t> : ITypeKindHolder<nox::reflection::TypeKind::UInt16> {};
+
+		template<>
+		struct TypeKindHolder<std::int32_t> : ITypeKindHolder<nox::reflection::TypeKind::Int32> {};
+
+		template<>
+		struct TypeKindHolder<std::uint32_t> : ITypeKindHolder<nox::reflection::TypeKind::UInt32> {};
+
+		template<>
+		struct TypeKindHolder<std::int64_t> : ITypeKindHolder<nox::reflection::TypeKind::Int64> {};
+
+		template<>
+		struct TypeKindHolder<std::uint64_t> : ITypeKindHolder<nox::reflection::TypeKind::UInt64> {};
+
+//#if defined(__SIZEOF_INT128__)
+//		template<>
+//		struct TypeKindHolder<__int128> : ITypeKindHolder < nox::reflection::TypeKind::Int128> {};
+//
+//		template<>
+//		struct TypeKindHolder<unsigned __int128> : ITypeKindHolder<nox::reflection::TypeKind::UInt128> {};
+//
+//
+//#endif // defined(__SIZEOF_INT128__)
+
+
+		template<>
+		struct TypeKindHolder<std::float_t> : ITypeKindHolder<nox::reflection::TypeKind::Float> {};
+
+		template<>
+		struct TypeKindHolder<std::double_t> : ITypeKindHolder<nox::reflection::TypeKind::Double> {};
+
+		template<>
+		struct TypeKindHolder<long double> : ITypeKindHolder<nox::reflection::TypeKind::LongDouble> {};
+
+		template<>
+		struct TypeKindHolder<long> : ITypeKindHolder<nox::reflection::TypeKind::Long> {};
+
+		template<>
+		struct TypeKindHolder<unsigned long> : ITypeKindHolder<nox::reflection::TypeKind::UnsignedLong> {};
+
+		//	--- nullptr ---
+		template<>
+		struct TypeKindHolder<std::nullptr_t> : ITypeKindHolder<nox::reflection::TypeKind::Nullptr> {};
+
+		//	--- user defined categories ---
+		template<class T> requires(std::is_union_v<T>)
+			struct TypeKindHolder<T> : ITypeKindHolder<nox::reflection::TypeKind::Union> {};
+
+		template<class T> requires(std::is_class_v<T>)
+			struct TypeKindHolder<T> : ITypeKindHolder<nox::reflection::TypeKind::Class> {};
+
+		template<class T> requires(std::is_enum_v<T>&& nox::IsScopedEnumValue<T>)
+			struct TypeKindHolder<T> : ITypeKindHolder<nox::reflection::TypeKind::ScopedEnum> {};
+
+		template<class T> requires(std::is_enum_v<T> && !nox::IsScopedEnumValue<T>)
+			struct TypeKindHolder<T> : ITypeKindHolder<nox::reflection::TypeKind::Enum> {};
+
+		//	--- function ---
+		template<class T> requires(std::is_function_v<T>)
+			struct TypeKindHolder<T> : ITypeKindHolder<nox::reflection::TypeKind::Function> {};
+
+		template<class T> requires(std::is_member_function_pointer_v<T>)
+			struct TypeKindHolder<T> : ITypeKindHolder<nox::reflection::TypeKind::MemberFunctionPointer> {};
+
+		template<class T> requires(std::is_pointer_v<T>&& std::is_function_v<std::remove_pointer_t<T>>)
+			struct TypeKindHolder<T> : ITypeKindHolder<nox::reflection::TypeKind::FunctionPointer> {};
+
+		template<class T> requires(std::is_member_object_pointer_v<T>)
+			struct TypeKindHolder<T> : ITypeKindHolder<nox::reflection::TypeKind::MemberObjectPointer> {};
+
+		//	--- pointer / reference ---
+		template<class T>
+		struct TypeKindHolder<T*> : ITypeKindHolder<nox::reflection::TypeKind::Pointer> {};
+
+		template<class T>
+		struct TypeKindHolder<T&> : ITypeKindHolder<nox::reflection::TypeKind::LValueReference> {};
+
+		template<class T>
+		struct TypeKindHolder<T&&> : ITypeKindHolder<nox::reflection::TypeKind::RValueReference> {};
+
+		//	--- array ---
+		template<class T, std::size_t N>
+		struct TypeKindHolder<T[N]> : ITypeKindHolder<nox::reflection::TypeKind::Array> {};
+
+		template<class T>
+		struct TypeKindHolder<T[]> : ITypeKindHolder<nox::reflection::TypeKind::UnboundedArray> {};
+	}
+
+	/// @brief 型からタイプ識別を取得
+	/// @tparam T 
+	/// @return 
 	template<class T>
 	[[nodiscard]] constexpr nox::reflection::TypeKind	GetTypeKind()noexcept
 	{
-		if constexpr (std::is_same_v<T, void> == true)
-		{
-			return TypeKind::Void;
-		}
-		else if constexpr (std::is_null_pointer_v<T> == true)
-		{
-			return TypeKind::NullPtr;
-		}
-		else if constexpr (std::is_same_v<T, bool> == true)
-		{
-			return TypeKind::Bool;
-		}
-		else if constexpr (std::is_same_v<T, std::int8_t> == true)
-		{
-			return TypeKind::Int8;
-		}
-		else if constexpr (std::is_same_v<T, std::uint8_t> == true)
-		{
-			return TypeKind::Uint8;
-		}
-		else if constexpr (std::is_same_v<T, char8_t> == true)
-		{
-			return TypeKind::Char8;
-		}
-		else if constexpr (std::is_same_v<T, std::int16_t> == true)
-		{
-			return TypeKind::Int16;
-		}
-		else if constexpr (std::is_same_v<T, std::uint16_t> == true)
-		{
-			return TypeKind::Uint16;
-		}
-		else if constexpr (std::is_same_v<T, char> == true)
-		{
-			return TypeKind::Char;
-		}
-		else if constexpr (std::is_same_v<T, signed char> == true)
-		{
-			return TypeKind::SChar;
-		}
-		else if constexpr (std::is_same_v<T, unsigned char> == true)
-		{
-			return TypeKind::UChar;
-		}
-		else if constexpr (std::is_same_v<T, char16_t> == true)
-		{
-			return TypeKind::Char16;
-		}
-		else if constexpr (std::is_same_v<T, wchar_t> == true)
-		{
-			return TypeKind::Wchar16;
-		}
-		else if constexpr (std::is_same_v<T, std::int32_t> == true)
-		{
-			return TypeKind::Int32;
-		}
-		else if constexpr (std::is_same_v<T, std::uint32_t> == true)
-		{
-			return TypeKind::Uint32;
-		}
-		else if constexpr (std::is_same_v<T, std::int64_t> == true)
-		{
-			return TypeKind::Int64;
-		}
-		else if constexpr (std::is_same_v<T, std::uint64_t> == true)
-		{
-			return TypeKind::UInt64;
-		}
-		else if constexpr (std::is_same_v<T, std::float_t> == true)
-		{
-			return TypeKind::Float;
-		}
-		else if constexpr (std::is_same_v<T, std::double_t> == true)
-		{
-			return TypeKind::Double;
-		}
-		else if constexpr (std::is_same_v<T, char32_t> == true)
-		{
-			return TypeKind::Char32;
-		}
-		else if constexpr (std::is_enum_v<T> == true)
-		{
-			return TypeKind::Enum;
-		}
-		//	else if constexpr (std::is_scoped_enum_v<T> == true)
-		else if constexpr (IsScopedEnumValue<T> == true)
-		{
-			return TypeKind::ScopedEnum;
-		}
-		else if constexpr (std::is_union_v<T> == true)
-		{
-			return TypeKind::Union;
-		}
-		else if constexpr (std::is_class_v<T> == true)
-		{
-			return TypeKind::Class;
-		}
-		else if constexpr (std::is_function_v<T> == true)
-		{
-			return TypeKind::Function;
-		}
-		else if constexpr (std::is_member_function_pointer_v<T> == true)
-		{
-			return TypeKind::MemberFunction;
-		}
-		else if constexpr (std::is_array_v<T> == true)
-		{
-			return TypeKind::Array;
-		}
-		else if constexpr (std::is_unbounded_array_v<T> == true)
-		{
-			return TypeKind::UnboundedArray;
-		}
-		else if constexpr (std::is_pointer_v<T> == true)
-		{
-			return TypeKind::Pointer;
-		}
-		else if constexpr (std::is_lvalue_reference_v<T> == true)
-		{
-			return TypeKind::LvalueReference;
-		}
-		else if constexpr (std::is_rvalue_reference_v<T> == true)
-		{
-			return TypeKind::RvalueReference;
-		}
-		else
-		{
-			[]() {static_assert(false, "invalid type"); }();
-			//NOX_ASSERT(false, nox::util::Format(U"不明な型:{0}", nox::util::GetTypeName<T>()));
-			return TypeKind::Invalid;
-		}
+		using TT = std::remove_cv_t<T>;
+		return nox::reflection::detail::TypeKindHolder<TT>::value;
 	}
 
-	template<class T> requires(std::is_const_v<T> || std::is_volatile_v<T>)
-		[[nodiscard]] constexpr TypeKind	GetTypeKind()noexcept
-	{
-		return nox::reflection::GetTypeKind<std::remove_cv_t<T>>();
-	}
-
-
-	/**
-	 * @brief
-	 * @tparam T
-	 * @return
-	*/
 	template<class T>
 	[[nodiscard]] inline constexpr TypeAttributeFlag GetTypeAttributeFlags()noexcept
 	{

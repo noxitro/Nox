@@ -12,7 +12,7 @@ namespace nox::reflection
 	/// @brief タイプ種別
 	enum class TypeKind : std::uint8_t
 	{
-		Unknown,
+			Unknown,
 		Void,
 		Bool,
 		Char,
@@ -30,9 +30,20 @@ namespace nox::reflection
 		UInt32,
 		Int64,
 		UInt64,
+		//	compiler extension
+		Int128,
+		UInt128,
+		//	end compiler extension
 		Float,
 		Double,
 		LongDouble,
+		//	c++23
+		Float16,
+		BFloat16,
+		Float128,
+		//	end c++23
+		Long,
+		UnsignedLong,
 		Enum,
 		ScopedEnum,
 		Class,
@@ -47,7 +58,6 @@ namespace nox::reflection
 		Array,
 		UnboundedArray,
 		Nullptr,
-
 		_Max
 	};
 

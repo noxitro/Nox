@@ -60,17 +60,17 @@ namespace nox::reflection
 			return true;
 		}
 
-		if (a == TypeKind::Wchar16 && b == TypeKind::Wchar16)
+		if (a == TypeKind::WideChar && b == TypeKind::WideChar)
 		{
 			return true;
 		}
 
-		if (a == TypeKind::SChar && b == TypeKind::SChar)
+		if (a == TypeKind::Int8 && b == TypeKind::Int8)
 		{
 			return true;
 		}
 
-		if (a == TypeKind::UChar && b == TypeKind::UChar)
+		if (a == TypeKind::UInt8 && b == TypeKind::UInt8)
 		{
 			return true;
 		}

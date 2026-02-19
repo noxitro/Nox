@@ -61,7 +61,7 @@ namespace nox::dev::editor_ipc
 		nox::UnorderedMap<nox::int64, std::reference_wrapper<nox::Object>> remote_instance_dict_;
 
 		/// @brief リモートインスタンスIDを格納する辞書。Objectからint64へのマッピングを保持します。
-		nox::UnorderedMap<nox::Object, nox::int64> remote_instance_id_dict_;
+		nox::UnorderedMap<const nox::Object*, nox::int64> remote_instance_id_dict_;
 	};
 }
 #endif // NOX_DEVELOP

@@ -21,7 +21,7 @@ void nox::dev::editor_ipc::ConvertQuery::OnSerialize(SocketStreamWriter& writer)
 
 void nox::dev::editor_ipc::ConvertQuery::OnDeserialize(SocketStreamReader& reader)
 {
-	reader.Read(path_);
+//	reader.Read(path_);
 }
 
 nox::PlacementObject<nox::dev::editor_ipc::Response> nox::dev::editor_ipc::ConvertQuery::Execute(std::span<nox::uint8> buffer)const

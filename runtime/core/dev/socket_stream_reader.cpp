@@ -127,7 +127,7 @@ void nox::dev::editor_ipc::SocketStreamReader::Read(nox::reflection::ReflectionO
 	nox::int64 remote_instance_id;
 	this->Read(remote_instance_id);
 
-	const nox::reflection::ClassInfo* const class_info = nox::reflection::FindClassInfo(value.GetType());
+	const nox::reflection::ClassInfo* const class_info = nox::reflection::FindClassInfo(value->GetType());
 	if (class_info == nullptr)
 	{
 		NOX_ASSERT(false, u"SocketStreamReader::Read: クラス情報が見つかりませんでした");
@@ -162,7 +162,7 @@ void nox::dev::editor_ipc::SocketStreamReader::Read(nox::reflection::ReflectionO
 			variable_info.SetValue(value, v);
 		}
 		break;
-		case nox::reflection::TypeKind::Uint8:
+		case nox::reflection::TypeKind::UInt8:
 		{
 			nox::uint8 v;
 			this->Read(v);
@@ -176,7 +176,7 @@ void nox::dev::editor_ipc::SocketStreamReader::Read(nox::reflection::ReflectionO
 			variable_info.SetValue(value, v);
 		}
 		break;
-		case nox::reflection::TypeKind::Uint16:
+		case nox::reflection::TypeKind::UInt16:
 		{
 			nox::uint16 v;
 			this->Read(v);
@@ -190,7 +190,7 @@ void nox::dev::editor_ipc::SocketStreamReader::Read(nox::reflection::ReflectionO
 			variable_info.SetValue(value, v);
 		}
 		break;
-		case nox::reflection::TypeKind::Uint32:
+		case nox::reflection::TypeKind::UInt32:
 		{
 			nox::uint32 v;
 			this->Read(v);
@@ -255,5 +255,6 @@ void nox::dev::editor_ipc::SocketStreamReader::Read(nox::reflection::ReflectionO
 		default:
 			NOX_ASSERT(false, u"SocketStreamReader::Read: 対応していない型です");
 			break;
+		}
 	}
 }

@@ -372,8 +372,8 @@ namespace nox::reflection
 		[[nodiscard]] inline	constexpr	bool	IsConstQualified()const noexcept { return nox::util::IsBitAnd(attribute_flags_, TypeAttributeFlag::Const); }
 		[[nodiscard]] inline	constexpr	bool	IsPointer()const noexcept { return kind_ == TypeKind::Pointer; }
 		[[nodiscard]] inline	constexpr	bool	IsReference()const noexcept { return IsLValueReference() || IsRValueReference(); }
-		[[nodiscard]] inline	constexpr	bool	IsLValueReference()const noexcept { return kind_ == TypeKind::LvalueReference; }
-		[[nodiscard]] inline	constexpr	bool	IsRValueReference()const noexcept { return kind_ == TypeKind::RvalueReference; }
+		[[nodiscard]] inline	constexpr	bool	IsLValueReference()const noexcept { return kind_ == TypeKind::LValueReference; }
+		[[nodiscard]] inline	constexpr	bool	IsRValueReference()const noexcept { return kind_ == TypeKind::RValueReference; }
 		[[nodiscard]] inline	constexpr	bool	IsInterface()const noexcept { return nox::util::IsBitAnd(attribute_flags_, TypeAttributeFlag::Interface); }
 
 #pragma endregion
@@ -480,7 +480,7 @@ namespace nox::reflection
 				nox::reflection::Type(
 					nox::reflection::detail::TypeDesc{
 						.id = 0,
-						.kind = TypeKind::Invalid,
+						.kind = TypeKind::Unknown,
 						.attribute_flags = TypeAttributeFlag::None,
 						.size = 0,
 						.alignment = 0,
@@ -582,15 +582,16 @@ namespace nox::reflection
 				return nox::reflection::detail::CreateObject<T>();
 			}
 
-			static inline constexpr void* ConstructAt(void* const storage)noexcept(noexcept(nox::reflection::detail::ConstructAt(static_cast<std::conditional_t<std::is_array_v<T>, std::decay_t<T>, std::add_pointer_t<T>>>(storage))))
+			static inline constexpr void* ConstructAt(void* const)//noexcept(noexcept(nox::reflection::detail::ConstructAt(static_cast<std::conditional_t<std::is_array_v<T>, std::decay_t<T>, std::add_pointer_t<T>>>(storage))))
 			{
-				return nox::reflection::detail::ConstructAt(static_cast<std::conditional_t<std::is_array_v<T>, std::decay_t<T>, std::add_pointer_t<T>>>(storage));
+				return nullptr;
+//				return nox::reflection::detail::ConstructAt(static_cast<std::conditional_t<std::is_array_v<T>, std::decay_t<T>, std::add_pointer_t<T>>>(storage));
 			}
 
-			static inline constexpr void DestroyAt(void*const object)
-				noexcept(noexcept(nox::reflection::detail::DestroyAt(static_cast<std::conditional_t<std::is_array_v<T>, std::decay_t<T>, std::add_pointer_t<T>>>(object))))
+			static inline constexpr void DestroyAt(void*const)
+		//		noexcept(noexcept(nox::reflection::detail::DestroyAt(static_cast<std::conditional_t<std::is_array_v<T>, std::decay_t<T>, std::add_pointer_t<T>>>(object))))
 			{
-				nox::reflection::detail::DestroyAt(static_cast<std::conditional_t<std::is_array_v<T>, std::decay_t<T>, std::add_pointer_t<T>>>(object));
+//				nox::reflection::detail::DestroyAt(static_cast<std::conditional_t<std::is_array_v<T>, std::decay_t<T>, std::add_pointer_t<T>>>(object));
 			}
 
 #pragma warning(push)

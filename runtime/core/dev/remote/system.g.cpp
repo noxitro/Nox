@@ -15,19 +15,19 @@ void nox::dev::editor_ipc::ResourceConvertQuery::OnSerialize(nox::dev::editor_ip
 
 void nox::dev::editor_ipc::ResourceConvertQuery::OnDeserialize(nox::dev::editor_ipc::SocketStreamReader& reader)
 {
-	reader.Read(native_path_);
+//	reader.Read(native_path_);
 }
 void nox::dev::editor_ipc::SceneViewInfo::OnSerialize(nox::dev::editor_ipc::SocketStreamWriter& writer)
 {
 	writer.Write(main_window_handle_);
-	writer.Write(scene_view_);
+//	writer.Write(scene_view_);
 }
 
 void nox::dev::editor_ipc::SceneViewInfo::OnDeserialize(nox::dev::editor_ipc::SocketStreamReader& reader)
 {
 	const nox::IntrusivePtr<nox::reflection::ReflectionObject>& temp_scene_view = scene_view_;
 
-	main_window_handle_ = reader.Read(main_window_handle_);
+//	main_window_handle_ = reader.Read(main_window_handle_);
 
 
 	const nox::reflection::ReflectionObject* pp = scene_view_.Get();

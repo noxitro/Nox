@@ -64,7 +64,7 @@ namespace nox
 		template<std::derived_from<T> U>
 		inline constexpr IntrusivePtr(const IntrusivePtr<U>& rhs)noexcept
 		{
-			instance_ = static_cast<void*>(rhs.instance_);
+			instance_ = static_cast<T*>(rhs.instance_);
 
 			if constexpr (nox::detail::IntrusivePtrAddReferenceConcept<T> == true)
 			{
