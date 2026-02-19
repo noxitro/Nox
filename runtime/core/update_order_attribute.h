@@ -7,6 +7,7 @@
 
 namespace nox::attr
 {
+	/// @brief behaviorクラスで
 	class UpdateOrder : public nox::attr::Attribute
 	{
 		NOX_DECLARE_OBJECT(UpdateOrder, nox::attr::Attribute);

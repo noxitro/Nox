@@ -26,7 +26,7 @@ namespace nox::reflection
 			const bool hasDefaultValue = false
 		)noexcept :
 			name_(name),
-			underlying_type_(type),
+			type_(type),
 			attribute_list_(attribute_list),
 			attribute_list_length_(attribute_list_length),
 			has_default_value_(hasDefaultValue)
@@ -40,8 +40,8 @@ namespace nox::reflection
 		[[nodiscard]] inline	constexpr const std::u8string_view GetName()const noexcept { return name_; }
 
 		/// @brief タイプ情報を取得
-		[[nodiscard]] inline	constexpr const Type& GetType()const noexcept { return underlying_type_; }
-		[[nodiscard]] inline	constexpr const Type& GetUnderlyingType()const noexcept { return underlying_type_; }
+		[[nodiscard]] inline	constexpr const Type& GetType()const noexcept { return type_; }
+		[[nodiscard]] inline	constexpr const Type& GetUnderlyingType()const noexcept { return type_; }
 
 		/// @brief デフォルト値を持っているか
 		[[nodiscard]] inline	constexpr bool HasDefaultValue()const noexcept { return has_default_value_; }
@@ -61,7 +61,7 @@ namespace nox::reflection
 		const std::reference_wrapper<const ReflectionObject>* attribute_list_;
 		
 		/// @brief タイプ情報
-		const reflection::Type& underlying_type_;
+		const reflection::Type& type_;
 	
 		/// @brief 引数名
 		const std::u8string_view name_;

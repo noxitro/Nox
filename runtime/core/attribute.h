@@ -15,4 +15,27 @@ namespace nox::attr
 		inline constexpr Attribute()noexcept {}
 		inline constexpr ~Attribute()override {}
 	};
+
+	enum class AttributeTargets : nox::uint16
+	{
+		Class,
+		Union,
+		Function,
+		Variable,
+	};
+
+	/// @brief 属性の使用方法
+	class AttributeUsage : public nox::attr::Attribute
+	{
+	public:
+		inline constexpr explicit AttributeUsage(nox::attr::AttributeTargets targets)noexcept :
+			target_(targets)
+		{
+		}
+
+		inline constexpr nox::attr::AttributeTargets GetAttributeTarget()const noexcept { return target_; }
+
+	private:
+		const nox::attr::AttributeTargets target_;
+	};
 }

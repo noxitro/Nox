@@ -27,23 +27,26 @@ namespace nox::dev::editor_ipc
 		inline constexpr SocketStreamReader(SocketStreamReader&&) noexcept = delete;
 		inline constexpr ~SocketStreamReader() noexcept = default;
 
-		nox::uint64 ReadLength();
-		void Read(std::span<nox::uint8> dest);
-
 		void AddReceiveBuffer(std::span<const nox::uint8> buffer);
+		void ReadBytes(std::span<nox::uint8> dest);
 
+		
 		template<typename T> requires(std::is_arithmetic_v<T>)
 		inline void Read(T& out)
 		{
-			this->Read(std::span<nox::uint8>(reinterpret_cast<nox::uint8*>(&out), sizeof(T)));
+			this->ReadBytes(std::span<nox::uint8>(reinterpret_cast<nox::uint8*>(&out), sizeof(T)));
 		}
 
-		template<class T> requires(!std::is_arithmetic_v<T> && std::is_polymorphic_v<T> == false)
-		inline void Read(T& out)
+
+		void Read(nox::reflection::ReflectionObject* value);
+
+		/*template<class T> requires(!std::is_arithmetic_v<T>&& std::is_trivially_copyable_v<T> == false)
+			inline void Read(T& out)
 		{
-			this->Read(std::span<nox::uint8>(reinterpret_cast<nox::uint8*>(std::addressof(out)), sizeof(T)));
-		}
+			this->ReadBytes(std::span<nox::uint8>(reinterpret_cast<nox::uint8*>(std::addressof(out)), sizeof(T)));
+		}*/
 
+		nox::uint64 ReadLength();
 		std::u8string_view ReadString(std::span<nox::char8> dest);
 		nox::StdU8String ReadString();
 
@@ -53,7 +56,6 @@ namespace nox::dev::editor_ipc
 			return (recv_pos_ - read_pos_) & (k_buffer_size - 1);
 		}
 	private:
-		
 
 	private:
 		nox::dev::editor_ipc::EditorIpcServer& server_;

@@ -119,13 +119,13 @@ namespace nox
 
 			inline constexpr void Copy(std::span<nox::uint8> dest)const
 			{
-				NOX_ASSERT(dest.size() >= this->GetSelfCallableSize(), U"コピー先のサイズが不足しています");
+				NOX_ASSERT(dest.size() >= this->GetSelfCallableSize(), u"コピー先のサイズが不足しています");
 				desc_.copy(*this, dest);
 			}
 
 			inline constexpr void Move(std::span<nox::uint8> dest)
 			{
-				NOX_ASSERT(dest.size() >= this->GetSelfCallableSize(), U"コピー先のサイズが不足しています");
+				NOX_ASSERT(dest.size() >= this->GetSelfCallableSize(), u"コピー先のサイズが不足しています");
 				desc_.move(std::move(*this), dest);
 			}
 
@@ -415,7 +415,7 @@ namespace nox
 		private:
 			inline static constexpr nox::FunctionResultType<_FunctionType> Call(const CallableBase&, const nox::FunctionArgsTupleType<_FunctionType>& )noexcept
 			{
-				NOX_ASSERT(false, U"Delegate Bad Call");
+				NOX_ASSERT(false, u"Delegate Bad Call");
 
 				if constexpr (std::is_void_v<nox::FunctionResultType<_FunctionType>>)
 				{
@@ -430,7 +430,7 @@ namespace nox
 
 			inline static constexpr nox::FunctionResultType<_FunctionType> CallRef(CallableBase&&, const nox::FunctionArgsTupleType<_FunctionType>&)noexcept
 			{
-				NOX_ASSERT(false, U"Delegate Bad Call");
+				NOX_ASSERT(false, u"Delegate Bad Call");
 
 				if constexpr (std::is_void_v<nox::FunctionResultType<_FunctionType>>)
 				{
@@ -445,12 +445,12 @@ namespace nox
 
 			inline static constexpr void Copy(const CallableBase&, std::span<nox::uint8>)noexcept
 			{
-				NOX_ASSERT(false, U"Delegate Bad Call");
+				NOX_ASSERT(false, u"Delegate Bad Call");
 			}
 
 			inline static constexpr void Move(CallableBase&&, std::span<nox::uint8>)noexcept
 			{
-				NOX_ASSERT(false, U"Delegate Bad Call");
+				NOX_ASSERT(false, u"Delegate Bad Call");
 			}
 
 			inline static constexpr bool EqualFunc(const CallableBase&, const CallableBase&)noexcept
@@ -1247,7 +1247,7 @@ namespace nox
 		/// @brief 無効な呼び出し
 		inline static constexpr nox::FunctionResultType<_FunctionType> BadCall(void*, nox::FunctionArgsTupleType<_FunctionType>&&)noexcept(nox::IsFunctionNoexceptValue<_FunctionType>)
 		{
-			NOX_ASSERT(false, U"bad call");
+			NOX_ASSERT(false, u"bad call");
 			if constexpr (std::is_void_v<nox::FunctionResultType<_FunctionType>>)
 			{
 				return;
@@ -1344,7 +1344,7 @@ namespace nox
 		template<class... Args>
 		inline constexpr nox::FunctionResultType<_FunctionType> operator()(Args&&... args)const&noexcept(nox::IsFunctionNoexceptValue<_FunctionType>)
 		{
-			NOX_ASSERT(!delegate_list_.empty(), U"MulticastDelegate is empty");
+			NOX_ASSERT(!delegate_list_.empty(), u"MulticastDelegate is empty");
 
 			if constexpr (std::is_void_v<nox::FunctionResultType<_FunctionType>>)
 			{

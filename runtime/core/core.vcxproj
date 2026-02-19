@@ -100,6 +100,10 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="dev\remote\codegen_preamble.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="dev\remote\system.g.h" />
     <ClInclude Include="dev\remote\test.g.h">
       <SubType>

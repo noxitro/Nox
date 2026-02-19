@@ -33,7 +33,7 @@ namespace nox::reflection
 #define	NOX_DECLARE_REFLECTION(ClassType) \
 		friend struct ::nox::reflection::gen::ReflectionTypeActivator<ClassType>;	\
 	private:\
-		NOX_ATTR_DECLARATION(::nox::reflection::attr::IgnoreReflection())	\
+		NOX_ATTR_DECLARE(::nox::reflection::attr::IgnoreReflection())	\
 		inline constexpr void StaticAssertNoxDeclareReflection()noexcept{ \
 			static_assert(std::is_same_v<ClassType, std::remove_cvref_t<decltype(*this)>>); \
 		}\
@@ -44,7 +44,7 @@ namespace nox::reflection
 #define	NOX_DECLARE_REFLECTION_INNER(ClassType, RootExternalClassType) \
 	friend struct ::nox::reflection::gen::ReflectionTypeActivator<ClassType>;	\
 	private:\
-		NOX_ATTR_DECLARATION(::nox::reflection::attr::IgnoreReflection())	\
+		NOX_ATTR_DECLARE(::nox::reflection::attr::IgnoreReflection())	\
 		inline constexpr void StaticAssertNoxDeclareReflection()noexcept{ \
 			static_assert(std::is_same_v<ClassType, std::remove_cvref_t<decltype(*this)>>); \
 		}\
@@ -59,7 +59,7 @@ namespace nox::reflection
 #define	NOX_DECLARE_REFLECTION(ClassType) \
 	friend struct ::nox::reflection::gen::ReflectionTypeActivator<ClassType>;	\
 	private:\
-		NOX_ATTR_DECLARATION(::nox::reflection::attr::IgnoreReflection())	\
+		NOX_ATTR_DECLARE(::nox::reflection::attr::IgnoreReflection())	\
 		inline constexpr void StaticAssertNoxDeclareReflection()noexcept{ \
 			static_assert(std::is_same_v<ClassType, std::remove_cvref_t<decltype(*this)>>); \
 		}\
@@ -73,7 +73,7 @@ namespace nox::reflection
 #define	NOX_DECLARE_REFLECTION_INNER(ClassType, RootExternalClassType) \
 	friend struct ::nox::reflection::gen::ReflectionTypeActivator<ClassType>;	\
 	private:\
-		NOX_ATTR_DECLARATION(::nox::reflection::attr::IgnoreReflection())	\
+		NOX_ATTR_DECLARE(::nox::reflection::attr::IgnoreReflection())	\
 		inline constexpr void StaticAssertNoxDeclareReflection()noexcept{ \
 			static_assert(std::is_same_v<ClassType, std::remove_cvref_t<decltype(*this)>>); \
 		}\
@@ -87,10 +87,10 @@ namespace nox::reflection
 	/// @details	リフレクション対象となり、型情報を取得する関数が定義されます
 #define NOX_DECLARE_REFLECTION_OBJECT(ClassType)\
 	private:\
-		NOX_ATTR_DECLARATION(::nox::reflection::attr::IgnoreReflection())	\
+		NOX_ATTR_DECLARE(::nox::reflection::attr::IgnoreReflection())	\
 		inline consteval void StaticAssertNoxDeclareReflectionObject()noexcept{ static_assert(std::is_base_of_v<::nox::reflection::ReflectionObject, ClassType>, "is not base of ReflectionObject"); }\
 	public:\
-		NOX_ATTR_DECLARATION(::nox::reflection::attr::IgnoreReflection())	\
+		NOX_ATTR_DECLARE(::nox::reflection::attr::IgnoreReflection())	\
 		inline constexpr const ::nox::reflection::Type& GetType()const noexcept override { return ::nox::reflection::Typeof<ClassType>(); }\
 		NOX_DECLARE_REFLECTION(ClassType)
 //	end define

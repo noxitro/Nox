@@ -6,6 +6,7 @@
 #include	"socket_stream_reader.h"
 
 #include	"editor_ipc_server.h"
+#include	"attribute_common.h"
 
 nox::uint64 nox::dev::editor_ipc::SocketStreamReader::ReadLength()
 {
@@ -76,7 +77,7 @@ void nox::dev::editor_ipc::SocketStreamReader::AddReceiveBuffer(std::span<const 
 	recv_pos_ = received_pos;
 }
 
-void	nox::dev::editor_ipc::SocketStreamReader::Read(std::span<nox::uint8> dest)
+void	nox::dev::editor_ipc::SocketStreamReader::ReadBytes(std::span<nox::uint8> dest)
 {
 	const nox::uint32 need = static_cast<nox::uint32>(dest.size());
 	//	バッファチェック
@@ -107,7 +108,7 @@ std::u8string_view nox::dev::editor_ipc::SocketStreamReader::ReadString(std::spa
 
 	NOX_ASSERT(length <= static_cast<nox::uint64>(dest.size()), u"SocketStreamReader::ReadString: バッファサイズオーバー");
 
-	this->Read(std::span<nox::uint8>(reinterpret_cast<nox::uint8*>(dest.data()), static_cast<nox::uint32>(length)));
+	this->ReadBytes(std::span<nox::uint8>(reinterpret_cast<nox::uint8*>(dest.data()), static_cast<nox::uint32>(length)));
 	return std::u8string_view(dest.data(), static_cast<size_t>(length));
 }
 
@@ -115,6 +116,144 @@ nox::StdU8String nox::dev::editor_ipc::SocketStreamReader::ReadString()
 {
 	const nox::uint64 length = ReadLength();
 	nox::StdU8String result(static_cast<size_t>(length), u'0');
-	this->Read(std::span<nox::uint8>(reinterpret_cast<nox::uint8*>(result.data()), static_cast<nox::uint32>(length)));
+	this->ReadBytes(std::span<nox::uint8>(reinterpret_cast<nox::uint8*>(result.data()), static_cast<nox::uint32>(length)));
 	return result;
+}
+
+void nox::dev::editor_ipc::SocketStreamReader::Read(nox::reflection::ReflectionObject* value)
+{
+	const nox::dev::editor_ipc::EditorIpcServer& server = nox::dev::editor_ipc::EditorIpcServer::Instance();
+	//	remote instance idを読み取る
+	nox::int64 remote_instance_id;
+	this->Read(remote_instance_id);
+
+	const nox::reflection::ClassInfo* const class_info = nox::reflection::FindClassInfo(value.GetType());
+	if (class_info == nullptr)
+	{
+		NOX_ASSERT(false, u"SocketStreamReader::Read: クラス情報が見つかりませんでした");
+		return;
+	}
+
+	const auto variable_list = class_info->GetVariableList();
+
+	for (const nox::reflection::VariableInfo& variable_info : variable_list)
+	{
+		//	シリアライズ対象か
+		if (variable_info.GetAttribute<nox::attr::DataMember>() == nullptr &&
+			variable_info.GetAttribute<nox::attr::IgnoreDataMember>() == nullptr)
+		{
+			continue;
+		}
+
+		const nox::reflection::Type& variable_type = variable_info.GetType();
+		switch (variable_type.GetTypeKind())
+		{
+		case nox::reflection::TypeKind::Bool:
+		{
+			bool v;
+			this->Read(v);
+			variable_info.SetValue(value, v);
+		}
+		break;
+		case nox::reflection::TypeKind::Int8:
+		{
+			nox::int8 v;
+			this->Read(v);
+			variable_info.SetValue(value, v);
+		}
+		break;
+		case nox::reflection::TypeKind::Uint8:
+		{
+			nox::uint8 v;
+			this->Read(v);
+			variable_info.SetValue(value, v);
+		}
+		break;
+		case nox::reflection::TypeKind::Int16:
+		{
+			nox::int16 v;
+			this->Read(v);
+			variable_info.SetValue(value, v);
+		}
+		break;
+		case nox::reflection::TypeKind::Uint16:
+		{
+			nox::uint16 v;
+			this->Read(v);
+			variable_info.SetValue(value, v);
+		}
+		break;
+		case nox::reflection::TypeKind::Int32:
+		{
+			nox::int32 v;
+			this->Read(v);
+			variable_info.SetValue(value, v);
+		}
+		break;
+		case nox::reflection::TypeKind::Uint32:
+		{
+			nox::uint32 v;
+			this->Read(v);
+			variable_info.SetValue(value, v);
+		}
+		break;
+		case nox::reflection::TypeKind::Int64:
+		{
+			nox::int64 v;
+			this->Read(v);
+			variable_info.SetValue(value, v);
+		}
+		break;
+		case nox::reflection::TypeKind::UInt64:
+		{
+			nox::uint64 v;
+			this->Read(v);
+			variable_info.SetValue(value, v);
+		}
+		break;
+		case nox::reflection::TypeKind::Float:
+		{
+			nox::float_t v;
+			this->Read(v);
+			variable_info.SetValue(value, v);
+		}
+		break;
+		case nox::reflection::TypeKind::Double:
+		{
+			nox::double_t v;
+			this->Read(v);
+			variable_info.SetValue(value, v);
+		}
+		break;
+		case nox::reflection::TypeKind::Class:
+		{
+			const nox::reflection::ClassInfo* const variable_type_class_info = variable_type.GetUserDefinedCompoundTypeInfo();
+			if (variable_type_class_info != nullptr)
+			{
+				if (variable_type_class_info->IsBaseOf(nox::reflection::Typeof<nox::reflection::ReflectionObject>()) == true)
+				{
+					NOX_ASSERT(false, u"未実装");
+					//	ReflectionObjectを継承したクラスか？
+				}
+				else if (variable_type.IsTypeAttributeFlag(nox::reflection::TypeAttributeFlag::TrivialCopyable))
+				{
+					//	トリビアルなクラス
+					NOX_ASSERT(false, u"未実装");
+				}
+				else
+				{
+					NOX_ASSERT(false, u"SocketStreamReader::Read: クラス型ですがリフレクション非対応の型です");
+				}
+			}
+			else
+			{
+				NOX_ASSERT(false, u"SocketStreamReader::Read: クラス型ですがリフレクション非対応の型です");
+			}
+		}
+		break;
+
+		default:
+			NOX_ASSERT(false, u"SocketStreamReader::Read: 対応していない型です");
+			break;
+	}
 }

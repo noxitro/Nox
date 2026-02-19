@@ -172,7 +172,7 @@ namespace nox::reflection
 			result_type_(desc.result_type),
 			remove_element_type_(desc.remove_element_type),
 			remove_all_element_type_(desc.remove_all_element_type),
-			underlying_type_(desc.underlying_type),
+			type_(desc.underlying_type),
 			add_const_type_(desc.add_const_type),
 			remove_const_type_(desc.remove_const_type),
 			add_volatile_type_(desc.add_volatile_type),
@@ -217,7 +217,7 @@ namespace nox::reflection
 		[[nodiscard]] inline	constexpr TypeKind	GetTypeKind()const noexcept { return kind_; }
 
 		/// @brief タイプ属性を取得
-		[[nodiscard]] inline	constexpr TypeAttributeFlag GetTypeAttributeFlags()const noexcept { return attribute_flags_; }
+		[[nodiscard]] inline	constexpr nox::reflection::TypeAttributeFlag GetTypeAttributeFlags()const noexcept { return attribute_flags_; }
 
 		/// @brief 配列の次元数を取得
 		[[nodiscard]] inline constexpr std::uint16_t GetArrayRank()const noexcept { return array_rank_; }
@@ -228,7 +228,7 @@ namespace nox::reflection
 		/// @brief タイプ属性を保持しているかチェック
 		/// @param flag タイプ属性
 		/// @return 保持しているかどうか
-		[[nodiscard]] inline	constexpr bool	IsTypeAttributeFlag(const TypeAttributeFlag flag)const noexcept { return util::IsBitAnd(attribute_flags_, flag); }
+		[[nodiscard]] inline	constexpr bool	IsTypeAttributeFlag(const nox::reflection::TypeAttributeFlag flag)const noexcept { return util::IsBitAnd(attribute_flags_, flag); }
 
 		/// @brief ポインタ型を取り除いた型を取得
 		[[nodiscard]] inline constexpr const Type& GetRemovePointerType()const noexcept { return remove_pointer_type_; }
@@ -254,7 +254,7 @@ namespace nox::reflection
 		[[nodiscard]] inline constexpr const Type& GetRemoveAllExtentType()const noexcept { return remove_all_element_type_; }
 
 		/// @brief 基底型を取得
-		[[nodiscard]] inline constexpr const Type& GetUnderlyingType()const noexcept { return underlying_type_; }
+		[[nodiscard]] inline constexpr const Type& GetUnderlyingType()const noexcept { return type_; }
 
 		/// @brief const修飾した型を取得
 		[[nodiscard]] inline constexpr const Type& GetAddConstType()const noexcept { return add_const_type_; }
@@ -444,7 +444,7 @@ namespace nox::reflection
 		/// @brief 配列型から全ての次元を除去した型
 		const nox::reflection::Type& remove_all_element_type_;
 		/// @brief 基底型 enumの場合など
-		const nox::reflection::Type& underlying_type_;
+		const nox::reflection::Type& type_;
 		/// @brief add_const_t
 		const nox::reflection::Type& add_const_type_;
 		/// @brief remove_const_t

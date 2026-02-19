@@ -52,11 +52,11 @@ namespace nox::dev::net
 
 		inline constexpr nox::dev::net::raw_socket_t GetSocket()const noexcept { return socket_; }
 	protected:
-		void Connected(const nox::dev::net::ConnectionContext& context);
-		virtual void OnConnected(const nox::dev::net::ConnectionContext& context) {}
+		void Connected([[maybe_unused]] const nox::dev::net::ConnectionContext& context);
+		virtual void OnConnected([[maybe_unused]] const nox::dev::net::ConnectionContext& context) {}
 
-		void Disconnected(const nox::dev::net::ConnectionContext& context);
-		virtual void OnDisconnected(const nox::dev::net::ConnectionContext& context) {}
+		void Disconnected([[maybe_unused]] const nox::dev::net::ConnectionContext& context);
+		virtual void OnDisconnected([[maybe_unused]] const nox::dev::net::ConnectionContext& context) {}
 
 		inline const nox::Vector<PeerContext>& GetClientList()const noexcept { return client_list_; }
 	private:

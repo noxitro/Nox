@@ -12,112 +12,41 @@ namespace nox::reflection
 	/// @brief タイプ種別
 	enum class TypeKind : std::uint8_t
 	{
-		/// @brief 
-		Invalid,
-
-		/// @brief 
+		Unknown,
 		Void,
-
-		/// @brief nullptr_t
-		NullPtr,
-
-		/// @brief 
 		Bool,
-
-		/**
-		 * @brief 8ビット符号付き整数
-		*/
-		Int8,
-
-		/// @brief 8ビット符号なし整数
-		Uint8,
-
-		/// @brief 文字
 		Char,
-
-		/// @brief 符号付き文字
-		SChar,
-
-		/// @brief 符号なし文字
-		UChar,
-
-		/// @brief 8ビット符号付き整数
+		//	SignedChar = Int8,
+		//	UnsignedChar = Uint8,
 		Char8,
-
-		/// @brief 16ビット符号付き整数
-		Int16,
-
-		/**
-		 * @brief 16ビット符号なし整数
-		*/
-		Uint16,
-
-		/// @brief 
-		Int64,
-
-		/// @brief 
-		UInt64,
-
-		/// @brief 
 		Char16,
-
-		/// @brief 
-		Wchar16,
-
-		/// @brief 32ビット符号付き整数
-		Int32,
-
-		/// @brief  32ビット符号なし整数
-		Uint32,
-
-
-		/// @brief 
 		Char32,
-
-		/// @brief 半精度浮動小数点数
+		WideChar,
+		Int8,
+		UInt8,
+		Int16,
+		UInt16,
+		Int32,
+		UInt32,
+		Int64,
+		UInt64,
 		Float,
-
-		/// @brief 倍精度浮動小数点数
 		Double,
-
-		/// @brief 列挙型
+		LongDouble,
 		Enum,
-
-		/// @brief スコープを持つ列挙型
 		ScopedEnum,
-
-		/// @brief クラス
 		Class,
-
-		/// @brief 共用体
 		Union,
-
-		/// @brief 関数
-		Delegate,
-
-		/// @brief メンバ関数
-		MemberFunction,
-
-		/// @brief ラムダ式
-		Lambda,
-
-		/// @brief キャプチャありラムダ式
-		CaptureLambda,
-
-		/// @brief 配列
-		Array,
-
-		/// @brief 要素数が判明していない配列
-		UnboundedArray,
-
-		/// @brief ポインタ
+		Function,
+		FunctionPointer,
+		MemberFunctionPointer,
+		MemberObjectPointer,
 		Pointer,
-
-		/// @brief 左辺参照
-		LvalueReference,
-
-		/// @brief 右辺参照
-		RvalueReference,
+		LValueReference,
+		RValueReference,
+		Array,
+		UnboundedArray,
+		Nullptr,
 
 		_Max
 	};
@@ -148,7 +77,7 @@ namespace nox::reflection
 	};
 
 	/// @brief 型修飾子
-	enum class TypeAttributeFlag : std::uint16_t
+	enum class TypeAttributeFlag : std::uint64_t
 	{
 		None = 0,
 
@@ -192,6 +121,8 @@ namespace nox::reflection
 
 		/// @brief インターフェースクラス nox::Interfaceを継承している
 		Interface = 1 << 14,
+
+		TrivialCopyable = 1 << 15,
 	};
 
 	///// @brief 型修飾子

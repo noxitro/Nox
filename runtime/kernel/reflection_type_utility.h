@@ -84,7 +84,7 @@ namespace nox::reflection
 	 * @return タイプ識別
 	*/
 	template<class T>
-	[[nodiscard]] constexpr TypeKind	GetTypeKind()noexcept
+	[[nodiscard]] constexpr nox::reflection::TypeKind	GetTypeKind()noexcept
 	{
 		if constexpr (std::is_same_v<T, void> == true)
 		{
@@ -185,7 +185,7 @@ namespace nox::reflection
 		}
 		else if constexpr (std::is_function_v<T> == true)
 		{
-			return TypeKind::Delegate;
+			return TypeKind::Function;
 		}
 		else if constexpr (std::is_member_function_pointer_v<T> == true)
 		{
@@ -243,6 +243,7 @@ namespace nox::reflection
 		type_attr_flags = nox::util::BitOrConditional<std::is_unsigned_v<T>, TypeAttributeFlag::Unsigned>(type_attr_flags);
 		type_attr_flags = nox::util::BitOrConditional<std::is_polymorphic_v<T>, TypeAttributeFlag::Polymorphic>(type_attr_flags);
 		type_attr_flags = nox::util::BitOrConditional<std::is_base_of_v<nox::Interface, T>, TypeAttributeFlag::Interface>(type_attr_flags);
+		type_attr_flags = nox::util::BitOrConditional<std::is_trivially_copyable_v<T>, TypeAttributeFlag::TrivialCopyable>(type_attr_flags);
 
 		return type_attr_flags;
 	}

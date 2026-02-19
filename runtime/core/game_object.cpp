@@ -67,14 +67,14 @@ namespace nox
 
 		inline IteratorForward& operator++()noexcept
 		{
-			NOX_ASSERT(IteratorBaseType::node_ != nullptr, U"nullptrです");
+			NOX_ASSERT(IteratorBaseType::node_ != nullptr, u"nullptrです");
 			IncrementFunc(DerefNode(IteratorBaseType::node_));
 			return *this;
 		}
 
 		inline BaseType operator*()const noexcept
 		{
-			NOX_ASSERT(IteratorBaseType::node_ != nullptr, U"nullptrです");
+			NOX_ASSERT(IteratorBaseType::node_ != nullptr, u"nullptrです");
 			return DerefNode(IteratorBaseType::node_);
 		}
 	};

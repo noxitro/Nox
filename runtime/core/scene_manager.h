@@ -23,6 +23,7 @@ namespace nox
 
 		inline nox::Scene& GetMainScene() noexcept { return *main_scene_; }
 		inline nox::SceneView& GetMainSceneView() noexcept { return *main_scene_view_; }
+		inline const nox::SceneView& GetMainSceneView()const noexcept { return *main_scene_view_; }
 
 	private:
 		nox::Scene* main_scene_;

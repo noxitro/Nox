@@ -9,8 +9,6 @@
 
 namespace nox::dev::editor_ipc
 {
-	
-
 	class SocketStreamWriter;
 	class SocketStreamReader;
 
@@ -32,5 +30,10 @@ namespace nox::dev::editor_ipc
 	private:
 		nox::uint32 id_;
 	};
+
+	namespace detail
+	{
+		struct ISendFromRuntimeTag { };
+	}
 }
 #endif

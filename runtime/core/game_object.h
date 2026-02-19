@@ -72,7 +72,7 @@ namespace nox
 		class nox::Transform* transform_;
 
 		// @brief 名前
-		NOX_ATTR_DECLARATION(nox::attr::DataMember())
+		NOX_ATTR_DECLARE(nox::attr::DataMember())
 		nox::U8String name_;
 	};
 }

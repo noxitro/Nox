@@ -213,7 +213,7 @@ namespace nox::reflection
 
 ///@brief	変数や関数などの定義に対しての属性付与
 ///@details	定義チェックあり
-#define NOX_ATTR_DECLARATION(...)	\
+#define NOX_ATTR_DECLARE(...)	\
 	static_assert(::nox::reflection::detail::CheckAttributes<decltype(std::make_tuple(__VA_ARGS__))>(), "failed attributes");	\
 	NOX_ATTR(__VA_ARGS__)
 //	end define

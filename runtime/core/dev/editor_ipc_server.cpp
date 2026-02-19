@@ -73,7 +73,7 @@ void nox::dev::editor_ipc::EditorIpcServer::UpdateReceive()
 
 	alignas(alignof(nox::dev::editor_ipc::EditorIpcEntity)) std::array<nox::uint8, 1024> entity_buffer{ 0 };
 	alignas(alignof(nox::dev::editor_ipc::Response)) std::array<nox::uint8, 1024> receive_buffer{ 0 };
-	std::array<nox::char8, 512> entity_name_buffer;
+	std::array<nox::char8, 256> entity_name_buffer;
 
 	NOX_LOCAL_SCOPE(nox::os::ScopedLock(mutex_writer_));
 
@@ -141,7 +141,7 @@ void nox::dev::editor_ipc::EditorIpcServer::OnReceive()
 		//	切断
 		if (receive_size == 0)
 		{
-
+			break;
 		}
 		else
 		{

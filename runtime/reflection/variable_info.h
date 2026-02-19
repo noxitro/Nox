@@ -94,7 +94,7 @@ namespace nox::reflection
 			attribute_list_length_(attribute_list_length),
 			object_id_(object_id),
 			field_attribute_flgas_(field_attribute_flgas),
-			underlying_type_(type),
+			type_(type),
 			containing_type_(owner_class_type),
 			setter_member_func_(setter_member_func),
 			getter_address_member_func_(getter_address_member_func),
@@ -148,7 +148,7 @@ namespace nox::reflection
 			attribute_list_length_(attribute_list_length),
 			object_id_(object_id),
 			field_attribute_flgas_(field_attribute_flgas),
-			underlying_type_(type),
+			type_(type),
 			containing_type_(owner_class_type),
 			setter_global_func_(setter_global_func),
 			getter_address_global_func_(getter_address_global_func),
@@ -170,7 +170,7 @@ namespace nox::reflection
 		/// @brief 所属するクラス情報を取得する
 		const class nox::reflection::ClassInfo* GetContainingUserDefinedCompoundTypeInfo()const noexcept;
 
-		inline	constexpr	const nox::reflection::Type& GetUnderlyingType()const noexcept { return underlying_type_; }
+		inline	constexpr	const nox::reflection::Type& GetType()const noexcept { return type_; }
 		inline	constexpr	nox::reflection::AccessLevel	GetAccessLevel()const noexcept { return access_level_; }
 
 		inline	constexpr	const nox::ObjectPointerId& GetObjectPointerId()const noexcept { return object_id_; }
@@ -179,6 +179,12 @@ namespace nox::reflection
 		inline	constexpr	std::span<const std::reference_wrapper< const class nox::reflection::ReflectionObject>>	GetAttributeList()const noexcept { return std::span(attribute_list_, attribute_list_length_); }
 		inline	constexpr	std::uint8_t	GetAttributeListLength()const noexcept { return attribute_list_length_; }
 		inline	constexpr	const class nox::reflection::ReflectionObject& GetAttribute(const std::uint8_t index)const noexcept { return util::At(attribute_list_, attribute_list_length_, index); }
+		const class nox::reflection::ReflectionObject* GetAttribute(const nox::reflection::Type& type)const noexcept;
+		template<class T>
+		inline	constexpr	const class nox::reflection::ReflectionObject* GetAttribute()const noexcept
+		{
+			return this->GetAttribute(nox::reflection::Typeof<T>());
+		}
 
 		inline constexpr	bool	IsFieldAttributeFlag(const VariableAttributeFlag flag)const noexcept { return util::IsBitAnd(field_attribute_flgas_, flag); }
 
@@ -186,7 +192,7 @@ namespace nox::reflection
 		inline	constexpr	bool	IsStatic()const noexcept { return IsFieldAttributeFlag(VariableAttributeFlag::Static); }
 
 		/// @brief 読み取り専用
-		inline	constexpr	bool	IsReadOnly()const noexcept { return underlying_type_.IsConstQualified(); }
+		inline	constexpr	bool	IsReadOnly()const noexcept { return type_.IsConstQualified(); }
 #pragma endregion
 
 #pragma region 変数の設定
@@ -209,6 +215,14 @@ namespace nox::reflection
 				nox::reflection::Typeof<TValueType>()
 			);
 		}
+
+		template<class TInstanceType, class TValueType>
+		inline constexpr void SetValue(TInstanceType&& instance, TValueType&& value)const noexcept(false)
+		{
+			bool success = TrySetValue<TInstanceType, TValueType>(std::forward<TInstanceType>(instance), std::forward<TValueType>(value));
+			NOX_ASSERT(success, u"変数の設定に失敗しました");
+		}
+
 #pragma endregion
 
 
@@ -221,7 +235,7 @@ namespace nox::reflection
 			return result.value();
 		}
 
-		template<class R, concepts::ClassOrUnion _InstanceType>
+		template<class R, class _InstanceType>
 		inline constexpr R GetValue(_InstanceType&& owner_instance)const
 		{
 			std::optional<R> result = this->TryGetValue<R>(std::forward<_InstanceType>(owner_instance));
@@ -243,7 +257,12 @@ namespace nox::reflection
 				return std::nullopt;
 			}
 
-			if (underlying_type_.IsConvertible(nox::reflection::Typeof<R>()) == false)
+			if (type_.IsConvertible(nox::reflection::Typeof<R>()) == false)
+			{
+				return std::nullopt;
+			}
+
+			if (this->containing_type_.IsConvertible(nox::reflection::Typeof<_InstanceType>()) == false)
 			{
 				return std::nullopt;
 			}
@@ -265,7 +284,7 @@ namespace nox::reflection
 				return std::nullopt;
 			}
 
-			if (underlying_type_.IsConvertible(nox::reflection::Typeof<R>()) == false)
+			if (type_.IsConvertible(nox::reflection::Typeof<R>()) == false)
 			{
 				return std::nullopt;
 			}
@@ -277,12 +296,37 @@ namespace nox::reflection
 			});
 		}
 
+		template<class _InstanceType>
+		inline void* TryGetValueAddress(_InstanceType&& owner_instance)const
+		{
+			if (IsStatic() == false)
+			{
+				return nullptr;
+			}
+
+			if (type_.IsConvertible(nox::reflection::Typeof<std::remove_const_t<void*>>()) == false)
+			{
+				return nullptr;
+			}
+
+			if (this->containing_type_.IsConvertible(nox::reflection::Typeof<_InstanceType>()) == false)
+			{
+				return nullptr;
+			}
+
+			if (getter_address_member_func_ == nullptr)
+			{
+				return nullptr;
+			}
+
+			return getter_address_member_func_(const_cast<void*>(static_cast<const void*>(&owner_instance)));
+		}
 #pragma endregion
 	private:
 		template<class R, class F, class... Args>
 		inline	constexpr	nox::reflection::ReflectionOptional<R> InvokeImpl(F&& f, Args&&... args)const
 		{
-			if (underlying_type_ == nox::reflection::Typeof<R>())
+			if (type_ == nox::reflection::Typeof<R>())
 			{
 				return f.template operator() < R > (*this, std::forward<Args>(args)...);
 			}
@@ -301,7 +345,7 @@ namespace nox::reflection
 				return false;
 			}
 
-			if (underlying_type_.IsConvertible(out_type) == false)
+			if (type_.IsConvertible(out_type) == false)
 			{
 				return false;
 			}
@@ -321,7 +365,7 @@ namespace nox::reflection
 				return false;
 			}
 
-			if (underlying_type_.IsConvertible(return_type) == false)
+			if (type_.IsConvertible(return_type) == false)
 			{
 				return false;
 			}
@@ -354,12 +398,12 @@ namespace nox::reflection
 			}
 
 			// const メンバは書き込み禁止
-			if (underlying_type_.IsConstQualified())
+			if (type_.IsConstQualified())
 			{
 				return false;
 			}
 
-			if (underlying_type_.IsConvertible(value_type) == false)
+			if (type_.IsConvertible(value_type) == false)
 			{
 				return false;
 			}
@@ -382,12 +426,12 @@ namespace nox::reflection
 			}
 
 			// const グローバルは書き込み禁止
-			if (underlying_type_.IsConstQualified())
+			if (type_.IsConstQualified())
 			{
 				return false;
 			}
 
-			if (value_type.IsConvertible(underlying_type_) == false)
+			if (value_type.IsConvertible(type_) == false)
 			{
 				return false;
 			}
@@ -418,7 +462,7 @@ namespace nox::reflection
 		const std::reference_wrapper<const class nox::reflection::ReflectionObject>* attribute_list_;
 
 		/// @brief 自身のタイプ情報
-		const nox::reflection::Type& underlying_type_;
+		const nox::reflection::Type& type_;
 
 		/// @brief 保持クラスのタイプ情報
 		const nox::reflection::Type& containing_type_;
