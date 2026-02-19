@@ -1,17 +1,17 @@
 ﻿//	Copyright (C) 2025 NOX ENGINE All rights reserved.
 
-///	@file	editor_ipc_query.h
-///	@brief	editor_ipc_query
+///	@file	editor_remote_query.h
+///	@brief	editor_remote_query
 #pragma once
 #if NOX_DEVELOP
-#include	"editor_ipc_entity.h"
+#include	"editor_remote_entity.h"
 
-namespace nox::dev::editor_ipc
+namespace nox::dev::editor_remote
 {
 	class Response;
-	class Query : public nox::dev::editor_ipc::EditorIpcEntity
+	class Query : public nox::dev::editor_remote::EditorRemoteEntity
 	{
-		NOX_DECLARE_OBJECT(nox::dev::editor_ipc::Query, nox::dev::editor_ipc::EditorIpcEntity);
+		NOX_DECLARE_OBJECT(nox::dev::editor_remote::Query, nox::dev::editor_remote::EditorRemoteEntity);
 	public:
 		inline constexpr Query()noexcept {}
 		inline constexpr ~Query() noexcept override {}

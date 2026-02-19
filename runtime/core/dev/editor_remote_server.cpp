@@ -3,19 +3,19 @@
 ///	@file	remote_host.cpp
 ///	@brief	remote_host
 #include	"stdafx.h"
-#include	"editor_ipc_server.h"
+#include	"editor_remote_server.h"
 
 #if NOX_DEVELOP
-#include	"editor_ipc_response.h"
-#include	"editor_ipc_query.h"
+#include	"editor_remote_response.h"
+#include	"editor_remote_query.h"
 #include	"net/dev_net_api.h"
 
-namespace nox::dev::editor_ipc
+namespace nox::dev::editor_remote
 {
 	
 }
 
-nox::dev::editor_ipc::EditorIpcServer::EditorIpcServer():
+nox::dev::editor_remote::EditorRemoteServer::EditorRemoteServer():
 	query_id_counter_(0),
 	response_dict_{},
 	main_client_{},
@@ -28,12 +28,12 @@ nox::dev::editor_ipc::EditorIpcServer::EditorIpcServer():
 		});
 }
 
-nox::dev::editor_ipc::EditorIpcServer::~EditorIpcServer()
+nox::dev::editor_remote::EditorRemoteServer::~EditorRemoteServer()
 {
 
 }
 
-void	nox::dev::editor_ipc::EditorIpcServer::SendQuery(nox::dev::editor_ipc::Query& query, std::function<void(const nox::dev::editor_ipc::Response&)> callback)
+void	nox::dev::editor_remote::EditorRemoteServer::SendQuery(nox::dev::editor_remote::Query& query, std::function<void(const nox::dev::editor_remote::Response&)> callback)
 {
 	const nox::uint32 query_id = nox::os::atomic::Increment(query_id_counter_);
 
@@ -48,7 +48,7 @@ void	nox::dev::editor_ipc::EditorIpcServer::SendQuery(nox::dev::editor_ipc::Quer
 	writer_.Flush();
 }
 
-void	nox::dev::editor_ipc::EditorIpcServer::SendBuffer(std::span<const nox::uint8> buffer)
+void	nox::dev::editor_remote::EditorRemoteServer::SendBuffer(std::span<const nox::uint8> buffer)
 {
 	if (main_client_.socket != nox::dev::net::k_raw_invalid_socket)
 	{
@@ -56,7 +56,7 @@ void	nox::dev::editor_ipc::EditorIpcServer::SendBuffer(std::span<const nox::uint
 	}
 }
 
-void	nox::dev::editor_ipc::EditorIpcServer::Update()
+void	nox::dev::editor_remote::EditorRemoteServer::Update()
 {
 	if (main_client_.socket != nox::dev::net::k_raw_invalid_socket)
 	{
@@ -64,15 +64,15 @@ void	nox::dev::editor_ipc::EditorIpcServer::Update()
 	}
 }
 
-void nox::dev::editor_ipc::EditorIpcServer::UpdateReceive()
+void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive()
 {
 	if (reader_.GetReceivedSize() <= 0)
 	{
 		return;
 	}
 
-	alignas(alignof(nox::dev::editor_ipc::EditorIpcEntity)) std::array<nox::uint8, 1024> entity_buffer{ 0 };
-	alignas(alignof(nox::dev::editor_ipc::Response)) std::array<nox::uint8, 1024> receive_buffer{ 0 };
+	alignas(alignof(nox::dev::editor_remote::EditorRemoteEntity)) std::array<nox::uint8, 1024> entity_buffer{ 0 };
+	alignas(alignof(nox::dev::editor_remote::Response)) std::array<nox::uint8, 1024> receive_buffer{ 0 };
 	std::array<nox::char8, 256> entity_name_buffer;
 
 	NOX_LOCAL_SCOPE(nox::os::ScopedLock(mutex_writer_));
@@ -86,18 +86,18 @@ void nox::dev::editor_ipc::EditorIpcServer::UpdateReceive()
 		const nox::reflection::ClassInfo*const class_info = nox::reflection::FindClassInfo(entity_full_name);
 		NOX_ASSERT(class_info != nullptr, u"不明なEntity:{0}", entity_full_name);
 
-		nox::dev::editor_ipc::EditorIpcEntity*const entity = static_cast<nox::dev::editor_ipc::EditorIpcEntity*>(class_info->GetType().CreateObject(entity_buffer));
+		nox::dev::editor_remote::EditorRemoteEntity*const entity = static_cast<nox::dev::editor_remote::EditorRemoteEntity*>(class_info->GetType().CreateObject(entity_buffer));
 		NOX_ASSERT(entity != nullptr, u"EditorIpcEntityの生成に失敗:{0}", entity_full_name);
 
 		//	query
-		if (class_info->IsBaseOf<nox::dev::editor_ipc::Query>())
+		if (class_info->IsBaseOf<nox::dev::editor_remote::Query>())
 		{
-			nox::dev::editor_ipc::Query& query = static_cast<nox::dev::editor_ipc::Query&>(*entity);
+			nox::dev::editor_remote::Query& query = static_cast<nox::dev::editor_remote::Query&>(*entity);
 			query.Deserialize(reader_);
 
 			//	レスポンス生成
 			{
-				nox::PlacementObject<nox::dev::editor_ipc::Response> response = query.Execute(receive_buffer);
+				nox::PlacementObject<nox::dev::editor_remote::Response> response = query.Execute(receive_buffer);
 				if (response != nullptr)
 				{
 					response->Serialize(query.GetId(), writer_);
@@ -105,9 +105,9 @@ void nox::dev::editor_ipc::EditorIpcServer::UpdateReceive()
 				}
 			}
 		}
-		else if (class_info->IsBaseOf<nox::dev::editor_ipc::Response>())
+		else if (class_info->IsBaseOf<nox::dev::editor_remote::Response>())
 		{
-			nox::dev::editor_ipc::Response& response = static_cast<nox::dev::editor_ipc::Response&>(*entity);
+			nox::dev::editor_remote::Response& response = static_cast<nox::dev::editor_remote::Response&>(*entity);
 
 			response.Deserialize(reader_);
 
@@ -127,7 +127,7 @@ void nox::dev::editor_ipc::EditorIpcServer::UpdateReceive()
 	}
 }
 
-void nox::dev::editor_ipc::EditorIpcServer::OnReceive()
+void nox::dev::editor_remote::EditorRemoteServer::OnReceive()
 {
 	//	受信バッファ 未初期化でOK
 	std::array<nox::uint8, 1024> receive_buffer;
@@ -153,12 +153,12 @@ void nox::dev::editor_ipc::EditorIpcServer::OnReceive()
 	reader_.AddReceiveBuffer(std::span(receive_buffer.data(), received_size));
 }
 
-void	nox::dev::editor_ipc::EditorIpcServer::OnConnected(const nox::dev::net::ConnectionContext& context)
+void	nox::dev::editor_remote::EditorRemoteServer::OnConnected(const nox::dev::net::ConnectionContext& context)
 {
 	main_client_ = context;
 }
 
-void	nox::dev::editor_ipc::EditorIpcServer::OnDisconnected(const nox::dev::net::ConnectionContext& context)
+void	nox::dev::editor_remote::EditorRemoteServer::OnDisconnected(const nox::dev::net::ConnectionContext& context)
 {
 	main_client_.socket = nox::dev::net::k_raw_invalid_socket;
 }

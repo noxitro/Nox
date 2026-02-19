@@ -69,7 +69,7 @@
     <ClInclude Include="core_entry.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="dev\editor_ipc_entity.h">
+    <ClInclude Include="dev\editor_remote_entity.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="test\test_behavior.h">
@@ -111,10 +111,10 @@
     <ClInclude Include="dev\net\server.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="dev\editor_ipc_server.h">
+    <ClInclude Include="dev\editor_remote_server.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="dev\editor_ipc_client.h">
+    <ClInclude Include="dev\editor_remote_client.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="dev\net\socket_scheduler.h">
@@ -138,10 +138,10 @@
     <ClInclude Include="attribute.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="dev\editor_ipc_query.h">
+    <ClInclude Include="dev\editor_remote_query.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="dev\editor_ipc_response.h">
+    <ClInclude Include="dev\editor_remote_response.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="dev\net\dev_net_api.h">
@@ -221,7 +221,7 @@
     <ClCompile Include="core_entry.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="dev\editor_ipc_entity.cpp">
+    <ClCompile Include="dev\editor_remote_entity.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="test\test_behavior.cpp">
@@ -263,10 +263,10 @@
     <ClCompile Include="dev\net\server.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="dev\editor_ipc_server.cpp">
+    <ClCompile Include="dev\editor_remote_server.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="dev\editor_ipc_client.cpp">
+    <ClCompile Include="dev\editor_remote_client.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="dev\net\socket_scheduler.cpp">
@@ -290,10 +290,10 @@
     <ClCompile Include="attribute.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="dev\editor_ipc_query.cpp">
+    <ClCompile Include="dev\editor_remote_query.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="dev\editor_ipc_response.cpp">
+    <ClCompile Include="dev\editor_remote_response.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="dev\net\dev_net_api.cpp">

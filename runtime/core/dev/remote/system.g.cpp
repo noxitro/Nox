@@ -8,22 +8,22 @@
 #include	"../socket_stream_reader.h"
 #include	"../../scene_view.h"
 
-void nox::dev::editor_ipc::ResourceConvertQuery::OnSerialize(nox::dev::editor_ipc::SocketStreamWriter& writer)
+void nox::dev::editor_remote::ResourceConvertQuery::OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)
 {
 	writer.Write(native_path_);
 }
 
-void nox::dev::editor_ipc::ResourceConvertQuery::OnDeserialize(nox::dev::editor_ipc::SocketStreamReader& reader)
+void nox::dev::editor_remote::ResourceConvertQuery::OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)
 {
 //	reader.Read(native_path_);
 }
-void nox::dev::editor_ipc::SceneViewInfo::OnSerialize(nox::dev::editor_ipc::SocketStreamWriter& writer)
+void nox::dev::editor_remote::SceneViewInfo::OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)
 {
 	writer.Write(main_window_handle_);
 //	writer.Write(scene_view_);
 }
 
-void nox::dev::editor_ipc::SceneViewInfo::OnDeserialize(nox::dev::editor_ipc::SocketStreamReader& reader)
+void nox::dev::editor_remote::SceneViewInfo::OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)
 {
 	const nox::IntrusivePtr<nox::reflection::ReflectionObject>& temp_scene_view = scene_view_;
 

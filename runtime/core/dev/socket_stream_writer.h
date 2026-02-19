@@ -4,16 +4,16 @@
 ///	@brief	socket_stream_writer
 #pragma once
 
-namespace nox::dev::editor_ipc
+namespace nox::dev::editor_remote
 {
-	class EditorIpcServer;
+	class EditorRemoteServer;
 
 	class SocketStreamWriter 
 	{
 	private:
 		static constexpr nox::uint32 k_buffer_size = 5096;
 	public:
-		inline constexpr explicit SocketStreamWriter(nox::dev::editor_ipc::EditorIpcServer& server) noexcept :
+		inline constexpr explicit SocketStreamWriter(nox::dev::editor_remote::EditorRemoteServer& server) noexcept :
 			server_(server),
 			buffer_{ 0 },
 			position_(0)
@@ -53,7 +53,7 @@ namespace nox::dev::editor_ipc
 
 		void WriteReflection(const void* obj, const nox::reflection::Type& type);
 	private:
-		nox::dev::editor_ipc::EditorIpcServer& server_;
+		nox::dev::editor_remote::EditorRemoteServer& server_;
 		nox::uint32 position_;
 		std::array<nox::uint8, k_buffer_size> buffer_;
 	};

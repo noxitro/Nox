@@ -10,7 +10,7 @@
 
 #if NOX_DEVELOP
 #include	"dev/net/socket_scheduler.h"
-#include	"dev/editor_ipc_server.h"
+#include	"dev/editor_remote_server.h"
 #endif // NOX_DEVELOP
 
 nox::CoreEntry::CoreEntry()
@@ -32,14 +32,14 @@ void	nox::CoreEntry::Init()
 	nox::dev::net::SocketScheduler::CreateInstance();
 	nox::dev::net::SocketScheduler::Instance().Initialize();
 
-	nox::dev::editor_ipc::EditorIpcServer& editor_ipc_server = nox::dev::editor_ipc::EditorIpcServer::CreateInstance();
+	nox::dev::editor_remote::EditorRemoteServer& editor_remote_server = nox::dev::editor_remote::EditorRemoteServer::CreateInstance();
 #endif // NOX_DEVELOP
 }
 
 void	nox::CoreEntry::Finalize()
 {
 #if NOX_DEVELOP
-	nox::dev::editor_ipc::EditorIpcServer::DeleteInstance();
+	nox::dev::editor_remote::EditorRemoteServer::DeleteInstance();
 	nox::dev::net::SocketScheduler::Instance().Finalize();
 	nox::dev::net::SocketScheduler::DeleteInstance();
 #endif // NOX_DEVELOP
@@ -52,7 +52,7 @@ void	nox::CoreEntry::Finalize()
 void	nox::CoreEntry::SocketUpdate()
 {
 #if NOX_DEVELOP
-	nox::dev::editor_ipc::EditorIpcServer::Instance().Update();
+	nox::dev::editor_remote::EditorRemoteServer::Instance().Update();
 #endif // NOX_DEVELOP
 
 }

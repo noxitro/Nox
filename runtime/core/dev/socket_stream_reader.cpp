@@ -5,10 +5,10 @@
 #include	"stdafx.h"
 #include	"socket_stream_reader.h"
 
-#include	"editor_ipc_server.h"
+#include	"editor_remote_server.h"
 #include	"attribute_common.h"
 
-nox::uint64 nox::dev::editor_ipc::SocketStreamReader::ReadLength()
+nox::uint64 nox::dev::editor_remote::SocketStreamReader::ReadLength()
 {
 	// LEB128（unsigned）をデコードして uint64 を返す。
 // 注意: 呼び出し側は事前に十分なバイトがバッファにあることを保証するか、
@@ -44,7 +44,7 @@ nox::uint64 nox::dev::editor_ipc::SocketStreamReader::ReadLength()
 	return 0;
 }
 
-void nox::dev::editor_ipc::SocketStreamReader::AddReceiveBuffer(std::span<const nox::uint8> buffer)
+void nox::dev::editor_remote::SocketStreamReader::AddReceiveBuffer(std::span<const nox::uint8> buffer)
 {
 	//	readとAddReceiveBufferはマルチスレッドで呼ばれるので、書き込み順に気を付ける
 	//	排他制御はしない方針
@@ -77,7 +77,7 @@ void nox::dev::editor_ipc::SocketStreamReader::AddReceiveBuffer(std::span<const 
 	recv_pos_ = received_pos;
 }
 
-void	nox::dev::editor_ipc::SocketStreamReader::ReadBytes(std::span<nox::uint8> dest)
+void	nox::dev::editor_remote::SocketStreamReader::ReadBytes(std::span<nox::uint8> dest)
 {
 	const nox::uint32 need = static_cast<nox::uint32>(dest.size());
 	//	バッファチェック
@@ -102,7 +102,7 @@ void	nox::dev::editor_ipc::SocketStreamReader::ReadBytes(std::span<nox::uint8> d
 	read_pos_ = (read_pos_ + need) & (k_buffer_size - 1);
 }
 
-std::u8string_view nox::dev::editor_ipc::SocketStreamReader::ReadString(std::span<nox::char8> dest)
+std::u8string_view nox::dev::editor_remote::SocketStreamReader::ReadString(std::span<nox::char8> dest)
 {
 	const nox::uint64 length = ReadLength();
 
@@ -112,7 +112,7 @@ std::u8string_view nox::dev::editor_ipc::SocketStreamReader::ReadString(std::spa
 	return std::u8string_view(dest.data(), static_cast<size_t>(length));
 }
 
-nox::StdU8String nox::dev::editor_ipc::SocketStreamReader::ReadString()
+nox::StdU8String nox::dev::editor_remote::SocketStreamReader::ReadString()
 {
 	const nox::uint64 length = ReadLength();
 	nox::StdU8String result(static_cast<size_t>(length), u'0');
@@ -120,9 +120,9 @@ nox::StdU8String nox::dev::editor_ipc::SocketStreamReader::ReadString()
 	return result;
 }
 
-void nox::dev::editor_ipc::SocketStreamReader::Read(nox::reflection::ReflectionObject* value)
+void nox::dev::editor_remote::SocketStreamReader::Read(nox::reflection::ReflectionObject* value)
 {
-	const nox::dev::editor_ipc::EditorIpcServer& server = nox::dev::editor_ipc::EditorIpcServer::Instance();
+	const nox::dev::editor_remote::EditorRemoteServer& server = nox::dev::editor_remote::EditorRemoteServer::Instance();
 	//	remote instance idを読み取る
 	nox::int64 remote_instance_id;
 	this->Read(remote_instance_id);

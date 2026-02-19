@@ -4,9 +4,9 @@
 ///	@brief	socket_stream_reader
 #pragma once
 
-namespace nox::dev::editor_ipc
+namespace nox::dev::editor_remote
 {
-	class EditorIpcServer;
+	class EditorRemoteServer;
 
 	class SocketStreamReader
 	{
@@ -15,7 +15,7 @@ namespace nox::dev::editor_ipc
 		/// @details	リングバッファとして使用するバッファのサイズ（2^n必須）
 		static constexpr nox::uint32 k_buffer_size = nox::math::Pow(2, 11);
 	public:
-		inline constexpr explicit SocketStreamReader(nox::dev::editor_ipc::EditorIpcServer& server)noexcept :
+		inline constexpr explicit SocketStreamReader(nox::dev::editor_remote::EditorRemoteServer& server)noexcept :
 			server_(server),
 			buffer_{ 0 },
 			recv_pos_(0),
@@ -58,7 +58,7 @@ namespace nox::dev::editor_ipc
 	private:
 
 	private:
-		nox::dev::editor_ipc::EditorIpcServer& server_;
+		nox::dev::editor_remote::EditorRemoteServer& server_;
 		/// @brief 受信バッファ
 		std::array<nox::uint8, k_buffer_size> buffer_;
 		/// @brief 受信済み位置

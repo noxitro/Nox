@@ -7,17 +7,17 @@
 #if NOX_DEVELOP
 #include	"../object.h"
 
-namespace nox::dev::editor_ipc
+namespace nox::dev::editor_remote
 {
 	class SocketStreamWriter;
 	class SocketStreamReader;
 
-	class EditorIpcEntity : public nox::Object
+	class EditorRemoteEntity : public nox::Object
 	{
-		NOX_DECLARE_OBJECT(nox::dev::editor_ipc::EditorIpcEntity, nox::Object);
+		NOX_DECLARE_OBJECT(nox::dev::editor_remote::EditorRemoteEntity, nox::Object);
 	public:
-		inline constexpr EditorIpcEntity() noexcept : id_(0) {}
-		inline constexpr ~EditorIpcEntity() noexcept override {}
+		inline constexpr EditorRemoteEntity() noexcept : id_(0) {}
+		inline constexpr ~EditorRemoteEntity() noexcept override {}
 
 		void Serialize(nox::uint32 id, SocketStreamWriter& writer);
 		void Deserialize(SocketStreamReader& reader);
@@ -36,4 +36,4 @@ namespace nox::dev::editor_ipc
 		struct ISendFromRuntimeTag { };
 	}
 }
-#endif
+#endif // NOX_DEVELOP

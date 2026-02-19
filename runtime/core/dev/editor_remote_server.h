@@ -10,7 +10,7 @@
 #include	"socket_stream_writer.h"
 #include	"socket_stream_reader.h"
 
-namespace nox::dev::editor_ipc
+namespace nox::dev::editor_remote
 {
 	class Query;
 	class Response;
@@ -26,14 +26,14 @@ namespace nox::dev::editor_ipc
 		TwoWay
 	};
 
-	class EditorIpcServer : public nox::dev::net::Server, public nox::ISingleton<EditorIpcServer>
+	class EditorRemoteServer : public nox::dev::net::Server, public nox::ISingleton<EditorRemoteServer>
 	{
-		NOX_DECLARE_OBJECT(nox::dev::editor_ipc::EditorIpcServer, nox::dev::net::Server);
+		NOX_DECLARE_OBJECT(nox::dev::editor_remote::EditorRemoteServer, nox::dev::net::Server);
 	public:
-		EditorIpcServer();
-		~EditorIpcServer()override;
+		EditorRemoteServer();
+		~EditorRemoteServer()override;
 
-		void	SendQuery(nox::dev::editor_ipc::Query& query, std::function<void(const nox::dev::editor_ipc::Response&)> callback = nullptr);
+		void	SendQuery(nox::dev::editor_remote::Query& query, std::function<void(const nox::dev::editor_remote::Response&)> callback = nullptr);
 		void	SendBuffer(std::span<const nox::uint8> buffer);
 
 		/// @brief main threadから呼び出される更新処理
@@ -47,9 +47,9 @@ namespace nox::dev::editor_ipc
 		void OnReceive();
 	private:
 		nox::uint32 query_id_counter_;
-		nox::UnorderedMap<nox::uint32, std::function<void(const nox::dev::editor_ipc::Response&)>> response_dict_;
-		nox::dev::editor_ipc::SocketStreamWriter writer_;
-		nox::dev::editor_ipc::SocketStreamReader reader_;
+		nox::UnorderedMap<nox::uint32, std::function<void(const nox::dev::editor_remote::Response&)>> response_dict_;
+		nox::dev::editor_remote::SocketStreamWriter writer_;
+		nox::dev::editor_remote::SocketStreamReader reader_;
 
 		/// @brief TODO:	現状は1つだけ対応
 		nox::dev::net::ConnectionContext main_client_;

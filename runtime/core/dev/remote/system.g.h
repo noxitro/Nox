@@ -7,20 +7,20 @@
 namespace nox { class SceneView; }
 // end forward declaration
 
-#include	"../editor_ipc_query.h"
-#include	"../editor_ipc_response.h"
+#include	"../editor_remote_query.h"
+#include	"../editor_remote_response.h"
 
-namespace nox::dev::editor_ipc
+namespace nox::dev::editor_remote
 {
 	/// @brief リソースコンバートリクエスト
-	class ResourceConvertQuery final : public nox::dev::editor_ipc::Query
+	class ResourceConvertQuery final : public nox::dev::editor_remote::Query
 	{
-		NOX_DECLARE_OBJECT(nox::dev::editor_ipc::ResourceConvertQuery, nox::dev::editor_ipc::Query);
+		NOX_DECLARE_OBJECT(nox::dev::editor_remote::ResourceConvertQuery, nox::dev::editor_remote::Query);
 	public:
 		ResourceConvertQuery(){}
-		void OnSerialize(nox::dev::editor_ipc::SocketStreamWriter& writer)override;
-		void OnDeserialize(nox::dev::editor_ipc::SocketStreamReader& reader)override;
-		nox::PlacementObject<nox::dev::editor_ipc::Response> Execute(std::span<nox::uint8> storage)const override;
+		void OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)override;
+		void OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)override;
+		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(std::span<nox::uint8> storage)const override;
 
 		inline std::u8string_view GetNativePath()noexcept
 		{
@@ -36,24 +36,24 @@ namespace nox::dev::editor_ipc
 	};
 
 	/// @brief MainSceneViewを取得する
-	class GetMainSceneView final : public nox::dev::editor_ipc::Query
+	class GetMainSceneView final : public nox::dev::editor_remote::Query
 	{
-		NOX_DECLARE_OBJECT(nox::dev::editor_ipc::GetMainSceneView, nox::dev::editor_ipc::Query);
+		NOX_DECLARE_OBJECT(nox::dev::editor_remote::GetMainSceneView, nox::dev::editor_remote::Query);
 	public:
 		GetMainSceneView()noexcept{}
-		inline constexpr void OnSerialize(nox::dev::editor_ipc::SocketStreamWriter&)override {}
-		inline constexpr void OnDeserialize(nox::dev::editor_ipc::SocketStreamReader&)override {}
-		nox::PlacementObject<nox::dev::editor_ipc::Response> Execute(std::span<nox::uint8> storage)const override;
+		inline constexpr void OnSerialize(nox::dev::editor_remote::SocketStreamWriter&)override {}
+		inline constexpr void OnDeserialize(nox::dev::editor_remote::SocketStreamReader&)override {}
+		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(std::span<nox::uint8> storage)const override;
 	};
 
 	/// @brief SceneView情報
-	class SceneViewInfo final : public nox::dev::editor_ipc::Response
+	class SceneViewInfo final : public nox::dev::editor_remote::Response
 	{
-		NOX_DECLARE_OBJECT(nox::dev::editor_ipc::SceneViewInfo, nox::dev::editor_ipc::Response);
+		NOX_DECLARE_OBJECT(nox::dev::editor_remote::SceneViewInfo, nox::dev::editor_remote::Response);
 	public:
 		SceneViewInfo(){}
-		void OnSerialize(nox::dev::editor_ipc::SocketStreamWriter& writer)override;
-		void OnDeserialize(nox::dev::editor_ipc::SocketStreamReader& reader)override;
+		void OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)override;
+		void OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)override;
 
 		inline nox::int64 GetMainWindowHandle()noexcept
 		{

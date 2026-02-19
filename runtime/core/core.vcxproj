@@ -55,11 +55,11 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="dev\editor_ipc_query.h">
+    <ClInclude Include="dev\editor_remote_query.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="dev\editor_ipc_response.h">
+    <ClInclude Include="dev\editor_remote_response.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -80,15 +80,15 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="dev\editor_ipc_client.h">
+    <ClInclude Include="dev\editor_remote_client.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="dev\editor_ipc_entity.h">
+    <ClInclude Include="dev\editor_remote_entity.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="dev\editor_ipc_server.h">
+    <ClInclude Include="dev\editor_remote_server.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -251,11 +251,11 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="dev\editor_ipc_query.cpp">
+    <ClCompile Include="dev\editor_remote_query.cpp">
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="dev\editor_ipc_response.cpp">
+    <ClCompile Include="dev\editor_remote_response.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -276,15 +276,15 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="dev\editor_ipc_client.cpp">
+    <ClCompile Include="dev\editor_remote_client.cpp">
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="dev\editor_ipc_entity.cpp">
+    <ClCompile Include="dev\editor_remote_entity.cpp">
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="dev\editor_ipc_server.cpp">
+    <ClCompile Include="dev\editor_remote_server.cpp">
       <SubType>
       </SubType>
     </ClCompile>

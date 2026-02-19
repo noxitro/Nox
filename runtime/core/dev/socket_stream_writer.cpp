@@ -5,7 +5,7 @@
 #include	"stdafx.h"
 #include	"socket_stream_writer.h"
 
-#include	"editor_ipc_server.h"
+#include	"editor_remote_server.h"
 
 namespace nox::util
 {
@@ -44,7 +44,7 @@ namespace nox::util
 }
 
 
-void nox::dev::editor_ipc::SocketStreamWriter::WriteLength(nox::uint64 length)
+void nox::dev::editor_remote::SocketStreamWriter::WriteLength(nox::uint64 length)
 {
 	//	LEB128 (unsigned)
 	//	https://ja.wikipedia.org/wiki/LEB128
@@ -65,7 +65,7 @@ void nox::dev::editor_ipc::SocketStreamWriter::WriteLength(nox::uint64 length)
 	} while (length != 0);
 }
 
-void nox::dev::editor_ipc::SocketStreamWriter::Write(std::span<const nox::uint8> data)
+void nox::dev::editor_remote::SocketStreamWriter::Write(std::span<const nox::uint8> data)
 {
 	//	書き込みバッファはリングバッファではないので、そのまま書き込む
 	std::size_t offset = 0;
@@ -88,7 +88,7 @@ void nox::dev::editor_ipc::SocketStreamWriter::Write(std::span<const nox::uint8>
 	}
 }
 
-void nox::dev::editor_ipc::SocketStreamWriter::Flush()
+void nox::dev::editor_remote::SocketStreamWriter::Flush()
 {
 	if (position_ <= 0)
 	{
@@ -98,12 +98,12 @@ void nox::dev::editor_ipc::SocketStreamWriter::Flush()
 	Clear();
 }
 
-void nox::dev::editor_ipc::SocketStreamWriter::Clear()
+void nox::dev::editor_remote::SocketStreamWriter::Clear()
 {
 	position_ = 0;
 }
 
-void nox::dev::editor_ipc::SocketStreamWriter::WriteReflection(const void* obj, const nox::reflection::Type& type)
+void nox::dev::editor_remote::SocketStreamWriter::WriteReflection(const void* obj, const nox::reflection::Type& type)
 {
 	const auto class_info = nox::reflection::FindClassInfo(type);
 	if (class_info == nullptr)

@@ -3,16 +3,16 @@
 ///	@file	test.h
 ///	@brief	test
 #pragma once
-#include	"../editor_ipc_query.h"
-#include	"../editor_ipc_response.h"
+#include	"../editor_remote_query.h"
+#include	"../editor_remote_response.h"
 
 #if NOX_DEVELOP
 
-namespace nox::dev::editor_ipc
+namespace nox::dev::editor_remote
 {
-	class ConvertQuery : public nox::dev::editor_ipc::Query
+	class ConvertQuery : public nox::dev::editor_remote::Query
 	{
-		NOX_DECLARE_OBJECT(nox::dev::editor_ipc::ConvertQuery, nox::dev::editor_ipc::Query);
+		NOX_DECLARE_OBJECT(nox::dev::editor_remote::ConvertQuery, nox::dev::editor_remote::Query);
 	public:
 		inline constexpr ConvertQuery() {}
 		void OnSerialize(SocketStreamWriter&)override;
@@ -27,9 +27,9 @@ namespace nox::dev::editor_ipc
 		nox::BasicFixedString<nox::char8, 256> path_;
 	};
 
-	class ConvertResponse : public nox::dev::editor_ipc::Response
+	class ConvertResponse : public nox::dev::editor_remote::Response
 	{
-		NOX_DECLARE_OBJECT(nox::dev::editor_ipc::ConvertResponse, nox::dev::editor_ipc::Response);
+		NOX_DECLARE_OBJECT(nox::dev::editor_remote::ConvertResponse, nox::dev::editor_remote::Response);
 	public:
 		inline constexpr void OnSerialize(SocketStreamWriter&)override {}
 		inline constexpr void OnDeserialize(SocketStreamReader&)override {}
