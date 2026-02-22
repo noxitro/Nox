@@ -7,10 +7,15 @@
 
 namespace nox::attr::dev
 {
-	/// @brief edtorでの表示名
-	class DisplayName : public nox::attr::Attribute
+	class DevelopAttribute : public nox::attr::Attribute
 	{
-		NOX_DECLARE_OBJECT(DisplayName, nox::attr::Attribute);
+		NOX_DECLARE_OBJECT(DevelopAttribute, nox::attr::Attribute);
+	};
+
+	/// @brief edtorでの表示名
+	class DisplayName : public nox::attr::dev::DevelopAttribute
+	{
+		NOX_DECLARE_OBJECT(DisplayName, nox::attr::dev::DevelopAttribute);
 	private:
 
 	public:
@@ -22,9 +27,21 @@ namespace nox::attr::dev
 		const std::u8string_view display_name_;
 	};
 
-	class Description : public nox::attr::Attribute
+	class DynamicDisplayName : public nox::attr::dev::DevelopAttribute
 	{
-		NOX_DECLARE_OBJECT(Description, nox::attr::Attribute);
+		NOX_DECLARE_OBJECT(DynamicDisplayName, nox::attr::dev::DevelopAttribute);
+	public:
+		inline	constexpr explicit DynamicDisplayName(const std::u8string_view member_name)noexcept :
+			member_name_(member_name) {
+		}
+
+	private:
+		const std::u8string_view member_name_;
+	};
+
+	class Description : public nox::attr::dev::DevelopAttribute
+	{
+		NOX_DECLARE_OBJECT(Description, nox::attr::dev::DevelopAttribute);
 	public:
 
 		inline	constexpr explicit Description(const std::u8string_view description)noexcept :
@@ -35,19 +52,37 @@ namespace nox::attr::dev
 		const std::u8string_view description_;
 	};
 
-	/// @brief インスペクタへ非公開にする属性
-	class Hide : public nox::attr::Attribute
+	class ReadOnly : public nox::attr::dev::DevelopAttribute
 	{
-		NOX_DECLARE_OBJECT(Hide, nox::attr::Attribute);
+		NOX_DECLARE_OBJECT(ReadOnly, nox::attr::dev::DevelopAttribute);
+	};
+
+	/// @brief インスペクタへ非公開にする属性
+	class Hide : public nox::attr::dev::DevelopAttribute
+	{
+		NOX_DECLARE_OBJECT(Hide, nox::attr::dev::DevelopAttribute);
+	};
+
+	/// @brief インスペクタでのカテゴリ
+	class Category : public nox::attr::dev::DevelopAttribute
+	{
+		NOX_DECLARE_OBJECT(Category, nox::attr::dev::DevelopAttribute);
+	public:
+		inline	constexpr explicit Category(const std::u8string_view category)noexcept :
+			category_(category) {
+		}
+
+	private:
+		const std::u8string_view category_;
 	};
 
 	/// @brief		c++関数をeditorでc#プロパティとして扱うことを表明する属性
 	/// @details	property_name_を空文字列で渡した場合、Set, Get, Isを除去したメンバ変数を探しに行きます
 	class 
 		NOX_ATTR_TYPE(::nox::attr::AttributeUsage(nox::attr::AttributeTargets::Function))
-		PropertySetter : public nox::attr::Attribute
+		PropertySetter : public nox::attr::dev::DevelopAttribute
 	{
-		NOX_DECLARE_OBJECT(PropertySetter, nox::attr::Attribute);
+		NOX_DECLARE_OBJECT(PropertySetter, nox::attr::dev::DevelopAttribute);
 	public:
 		inline constexpr PropertySetter()noexcept:
 			property_name_(u8"") {
@@ -65,9 +100,9 @@ namespace nox::attr::dev
 	/// @details	property_name_を空文字列で渡した場合、Set, Get, Isを除去したメンバ変数を探しに行きます
 	class
 		NOX_ATTR_TYPE(::nox::attr::AttributeUsage(nox::attr::AttributeTargets::Function))
-		PropertyGetter : public nox::attr::Attribute
+		PropertyGetter : public nox::attr::dev::DevelopAttribute
 	{
-		NOX_DECLARE_OBJECT(PropertyGetter, nox::attr::Attribute);
+		NOX_DECLARE_OBJECT(PropertyGetter, nox::attr::dev::DevelopAttribute);
 	public:
 		inline constexpr PropertyGetter()noexcept :
 			property_name_(u8"") {
@@ -81,9 +116,9 @@ namespace nox::attr::dev
 		const std::u8string_view property_name_;
 	};
 
-	class Property : public nox::attr::Attribute
+	class Property : public nox::attr::dev::DevelopAttribute
 	{
-		NOX_DECLARE_OBJECT(Property, nox::attr::Attribute);
+		NOX_DECLARE_OBJECT(Property, nox::attr::dev::DevelopAttribute);
 	public:
 
 	};

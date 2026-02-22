@@ -33,6 +33,7 @@ namespace nox::dev::editor_remote
 
 	namespace detail
 	{
+		/// @brief runtimeから送信されることを示すタグ
 		struct ISendFromRuntimeTag { };
 	}
 }

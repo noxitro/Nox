@@ -35,13 +35,8 @@ namespace nox::os::detail
 			return current_thread_id_;
 		}
 
-		/**
-		 * @brief スレッドの実行
-		 * @tparam FuncType 実行する関数の型
-		 * @tparam ...Args 関数の引数群の型
-		 * @param func
-		 * @param ...args
-		*/
+		/// @brief スレッドの実行
+		/// @param func 
 		void Dispatch(std::function<void()> func);
 
 		/// @brief 停止
@@ -54,16 +49,25 @@ namespace nox::os::detail
 		inline constexpr ::HANDLE GetNativeHandle()const noexcept { return native_thread_handle_; }
 		inline constexpr nox::uint32 GetNativeThreadId()const noexcept { return native_thread_id_; }
 		static inline constexpr ThreadWin64& GetCurrentThread()noexcept { return nox::util::Deref(current_thread_); }
+
+		static inline nox::uint32 GetThisThreadNativeThreadId()
+		{
+			if (local_native_thread_id_ == 0)
+			{
+				AssignThisNativeThreadId();
+			}
+			return local_native_thread_id_;
+		}
 	private:
 		/// @brief スレッド管理IDを割り当てる
 		static void	AssignThreadId();
 
-		/**
-		 * @brief スレッドに登録するコールバック関数
-		 * @param argPtr ThreadHandleWin64のアドレス
-		 * @return エラーコード
-		*/
+		/// @brief スレッドに登録するコールバック関数
+		/// @param argPtr ThreadHandleWin64のアドレス 
+		/// @return エラーコード
 		static inline nox::uint32 CALLBACK ThreadProc(void* argPtr);
+
+		static void AssignThisNativeThreadId();
 	private:
 		//	static u8	MakeThreadId();
 	private:
@@ -75,6 +79,8 @@ namespace nox::os::detail
 
 		/// @brief 現在のスレッド
 		static inline thread_local constinit ThreadWin64* current_thread_ = nullptr;
+
+		static inline thread_local constinit nox::uint32 local_native_thread_id_ = 0;
 	};
 }
 #endif

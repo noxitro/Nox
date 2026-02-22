@@ -4,6 +4,11 @@
 ///	@brief	socket_stream_writer
 #pragma once
 
+namespace nox
+{
+	class Object;
+}
+
 namespace nox::dev::editor_remote
 {
 	class EditorRemoteServer;
@@ -28,18 +33,18 @@ namespace nox::dev::editor_remote
 		void Flush();
 
 		void WriteLength(nox::uint64 length);
-		void Write(std::span<const nox::uint8> data);
+		void WriteBytes(std::span<const nox::uint8> data);
 
 		template<typename T> requires(std::is_arithmetic_v<T>)
 		inline void Write(T value)
 		{
-			this->Write(std::span<const nox::uint8>(reinterpret_cast<const nox::uint8*>(&value), sizeof(T)));
+			this->WriteBytes(std::span<const nox::uint8>(reinterpret_cast<const nox::uint8*>(&value), sizeof(T)));
 		}
 
 		inline void Write(std::u8string_view str)
 		{
 			this->WriteLength(static_cast<nox::uint64>(str.size()));
-			this->Write(std::span(reinterpret_cast<const nox::uint8*>(str.data()), str.size()));
+			this->WriteBytes(std::span(reinterpret_cast<const nox::uint8*>(str.data()), str.size()));
 		}
 
 		/// @brief bitblockで値を書き込む
@@ -48,10 +53,10 @@ namespace nox::dev::editor_remote
 		template<class T>
 		inline void WriteValue(const T& value)
 		{
-			this->Write(std::span(static_cast<const nox::uint8*>(std::addressof(value)), sizeof(T)));
+			this->WriteBytes(std::span(static_cast<const nox::uint8*>(std::addressof(value)), sizeof(T)));
 		}
 
-		void WriteReflection(const void* obj, const nox::reflection::Type& type);
+		void Write(const nox::reflection::ReflectionObject* value);
 	private:
 		nox::dev::editor_remote::EditorRemoteServer& server_;
 		nox::uint32 position_;

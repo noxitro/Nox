@@ -13,7 +13,7 @@ namespace nox
 	{
 		NOX_DECLARE_OBJECT(nox::SceneView, nox::ManagedObject);
 	public:
-		SceneView(const nox::os::WindowSetupDesc& window_desc)noexcept;
+		SceneView()noexcept;
 		~SceneView()override;
 
 		inline const nox::IntrusivePtr<class Scene>& GetScene()const noexcept { return scene_; }
@@ -21,6 +21,8 @@ namespace nox
 		inline constexpr const nox::os::Window& GetWindow()const noexcept { return window_; }
 
 		void SetScene(class nox::Scene& scene) noexcept;
+
+		void MakeWindow(const nox::os::WindowSetupDesc& window_desc);
 	private:
 		class nox::Scene* scene_;
 		nox::os::Window window_;

@@ -37,7 +37,7 @@ void	nox::os::detail::ThreadWin64::Dispatch( std::function<void()> func)
 
 	//	終了していなければ待つ
 	Wait();
-
+	
 	native_thread_handle_ = reinterpret_cast<::HANDLE>(::_beginthreadex(
 		nullptr,	//	
 		stack_size_,	//	0の場合、標準のスタックサイズを使用する
@@ -75,6 +75,8 @@ void	nox::os::detail::ThreadWin64::Dispatch( std::function<void()> func)
 		native_thread_handle_,
 		reinterpret_cast<const wchar16*>(thread_name_.data())
 	);
+
+	NOX_ASSERT(FAILED(threadDescriptionResult) == false, u"ネイティブthread名の設定に失敗");
 
 	thread_state_ = ThreadState::Work;
 }
@@ -189,6 +191,12 @@ inline nox::uint32 CALLBACK nox::os::detail::ThreadWin64::ThreadProc(void* argPt
 	}
 
 	return 0;
+}
+
+void nox::os::detail::ThreadWin64::AssignThisNativeThreadId()
+{
+	local_native_thread_id_ = ::GetCurrentThreadId();
+	NOX_ASSERT(local_native_thread_id_ != 0, u"ネイティブスレッドIDの取得に失敗しました");
 }
 
 #endif // _WIN64

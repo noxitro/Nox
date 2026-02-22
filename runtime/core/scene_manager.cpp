@@ -32,7 +32,8 @@ void	nox::SceneManager::Initialize(nox::U8StringView main_scene_path)
 		desc.window_style = nox::os::WindowStyle::Normal;
 		desc.title_ptr = u"runtime";
 
-		main_scene_view_ = new nox::SceneView(desc);
+		main_scene_view_ = new nox::SceneView();
+		main_scene_view_->MakeWindow(desc);
 		//main_scene_view_->GetWindow().Show();
 	}
 }

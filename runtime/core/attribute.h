@@ -18,10 +18,11 @@ namespace nox::attr
 
 	enum class AttributeTargets : nox::uint16
 	{
-		Class,
-		Union,
-		Function,
-		Variable,
+		Class = 1 << 0,
+		Union = 1 << 1,
+		Function = 1 << 2,
+		Variable = 1 << 3,
+		All = 0xFFFF
 	};
 
 	/// @brief 属性の使用方法

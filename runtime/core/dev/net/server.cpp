@@ -253,6 +253,10 @@ void	nox::dev::net::Server::Connection(::fd_set& fds)
 
 			client_list_.emplace_back(PeerContext{ .socket = client_socket });
 			NOX_INFO_LINE(nox::dev::net::log_id::DevNet, u"接続完了");
+
+			OnConnected(ConnectionContext{
+				.socket = client_socket,
+				});
 		}
 	}
 }

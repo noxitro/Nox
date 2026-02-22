@@ -42,22 +42,21 @@ void	nox::Application::Init()
 void	nox::Application::Run()
 {
 	this->Init();
-
-	for (const ModuleEntryInfo& entry_info : module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Init)])
-	{
-		entry_info.func(*entry_info.entry);
-	}
-
-	for (const ModuleEntryInfo& entry_info : module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Start)])
-	{
-		entry_info.func(*entry_info.entry);
-	}
-
 	stop_watch_.Start();
 
 	nox::os::Thread game_thread;
 	game_thread.SetThreadName(u"Game");
 	game_thread.Dispatch([this]() {
+
+		for (const ModuleEntryInfo& entry_info : module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Init)])
+		{
+			entry_info.func(*entry_info.entry);
+		}
+
+		for (const ModuleEntryInfo& entry_info : module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Start)])
+		{
+			entry_info.func(*entry_info.entry);
+		}
 
 		while (!this->kill_)
 		{

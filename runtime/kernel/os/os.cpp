@@ -18,14 +18,14 @@ namespace nox::os
 	namespace
 	{
 		/// @brief 引数
-		std::span<const nox::char16* const> command_line_args_;
+		constinit std::span<const nox::char16* const> command_line_args_;
 
 		/// @brief os関数を初期化したネイティブスレッドID
-		nox::FunctionResultType<decltype(&nox::os::Thread::GetNativeThreadId)> native_thread_id_ = {};
+		constinit nox::FunctionResultType<decltype(&nox::os::Thread::GetNativeThreadId)> native_thread_id_ = {};
 
 		/// @brief 
-		void(*window_dispatch_function_)(const void*) = nullptr;
-		const void* window_dispatch_arg_ = nullptr;
+		constinit void(*window_dispatch_function_)(const void*) = nullptr;
+		constinit const void* window_dispatch_arg_ = nullptr;
 
 #if !NOX_MASTER
 		constinit nox::util::ParallelExecuteChecker parallel_execute_checker_ = {};
@@ -37,7 +37,7 @@ void	nox::os::Initialize(const std::span<const nox::char16* const> args)
 {
 	nox::os::command_line_args_ = args;
 	
-	native_thread_id_ = nox::os::Thread::GetCurrentThread().GetNativeThreadId();
+	native_thread_id_ = nox::os::Thread::GetThisThreadNativeThreadId();
 }
 
 bool	nox::os::Update()
@@ -151,8 +151,8 @@ void	nox::os::detail::DispatchCreateNativeWindow(void(*func)(const void*), const
 		nox::os::Thread::Sleep(1);
 	}
 
-	nox::os::window_dispatch_function_ = func;
 	nox::os::window_dispatch_arg_ = arg;
+	nox::os::window_dispatch_function_ = func;
 
 	//	実行されるまで待つ？
 	while (nox::os::window_dispatch_function_ != nullptr)

@@ -7,6 +7,7 @@
 
 #include	"garbage_collector.h"
 #include	"resource_manager.h"
+#include	"scene_manager.h"
 
 #if NOX_DEVELOP
 #include	"dev/net/socket_scheduler.h"
@@ -28,6 +29,8 @@ nox::CoreEntry::~CoreEntry()
 void	nox::CoreEntry::Init()
 {
 	nox::GarbageCollector::CreateInstance();
+	auto& scene_manager = nox::SceneManager::CreateInstance();
+	scene_manager.Initialize(u8"main_scene.scn.json");
 #if NOX_DEVELOP
 	nox::dev::net::SocketScheduler::CreateInstance();
 	nox::dev::net::SocketScheduler::Instance().Initialize();
@@ -44,7 +47,7 @@ void	nox::CoreEntry::Finalize()
 	nox::dev::net::SocketScheduler::DeleteInstance();
 #endif // NOX_DEVELOP
 
-
+	nox::SceneManager::DeleteInstance();
 	nox::GarbageCollector::Instance().FrameGC();
 	nox::GarbageCollector::DeleteInstance();
 }

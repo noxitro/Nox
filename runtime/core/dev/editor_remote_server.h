@@ -18,11 +18,11 @@ namespace nox::dev::editor_remote
 	/// @brief 同期モード
 	enum class SyncMode : nox::uint8
 	{
-		/// @brief RemoteObjectをObjectへ反映
+		/// @brief RemoteObjectをEditorObjectへ反映
 		OneWay,
-		/// @brief ObjectをRemoteObjectへ反映
+		/// @brief EditorObjectをRemoteObjectへ反映
 		OneWaySource,
-		/// @brief RemoteObjectとObjectを双方向で反映
+		/// @brief RemoteObjectとEditorObjectを双方向で反映
 		TwoWay
 	};
 
@@ -39,7 +39,10 @@ namespace nox::dev::editor_remote
 		/// @brief main threadから呼び出される更新処理
 		void	Update();
 
-		
+		void	RegisterRemoteInstance(nox::Object& object, nox::int64 instance_id = 0);
+
+		nox::int64 FindRemoteInstanceId(const nox::Object& object)const noexcept;
+		nox::Object* FindRemoteInstance(nox::int64 instance_id)const noexcept;
 	private:
 		void	OnConnected(const nox::dev::net::ConnectionContext& context)override;
 		void	OnDisconnected(const nox::dev::net::ConnectionContext& context)override;
@@ -47,6 +50,7 @@ namespace nox::dev::editor_remote
 		void OnReceive();
 	private:
 		nox::uint32 query_id_counter_;
+		nox::int64 instance_id_counter_;
 		nox::UnorderedMap<nox::uint32, std::function<void(const nox::dev::editor_remote::Response&)>> response_dict_;
 		nox::dev::editor_remote::SocketStreamWriter writer_;
 		nox::dev::editor_remote::SocketStreamReader reader_;

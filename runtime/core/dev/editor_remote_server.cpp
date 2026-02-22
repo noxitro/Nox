@@ -162,4 +162,34 @@ void	nox::dev::editor_remote::EditorRemoteServer::OnDisconnected(const nox::dev:
 {
 	main_client_.socket = nox::dev::net::k_raw_invalid_socket;
 }
+
+void	nox::dev::editor_remote::EditorRemoteServer::RegisterRemoteInstance(nox::Object& object, nox::int64 instance_id)
+{
+	if (instance_id == 0)
+	{
+		instance_id = nox::os::atomic::Increment(instance_id_counter_);
+	}
+
+
+}
+
+nox::int64 nox::dev::editor_remote::EditorRemoteServer::FindRemoteInstanceId(const nox::Object& object)const noexcept
+{
+	const auto it = remote_instance_id_dict_.find(&object);
+	if (it != remote_instance_id_dict_.end())
+	{
+		return it->second;
+	}
+	return 0;
+}
+
+nox::Object* nox::dev::editor_remote::EditorRemoteServer::FindRemoteInstance(nox::int64 instance_id)const noexcept
+{
+	const auto it = remote_instance_dict_.find(instance_id);
+	if (it != remote_instance_dict_.end())
+	{
+		return &it->second.get();
+	}
+	return nullptr;
+}
 #endif // NOX_DEVELOP

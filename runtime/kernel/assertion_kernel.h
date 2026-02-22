@@ -3,7 +3,7 @@
 ///	@file	assertion_kernel.h
 ///	@brief	軽量なアサーションヘッダ
 ///			assertion.hのインクルードチェーンは複雑なため、kernelでは極力こちらを使用する
-///			制約としてフォーマット処理が使えません
+///			制約としてfmtフォーマット処理が使えません
 #pragma once
 #include	<source_location>
 #include	"basic_definition.h"

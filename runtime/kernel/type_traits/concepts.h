@@ -34,6 +34,9 @@ namespace nox::concepts
 	concept ClassOrUnion = std::is_class_v<T> || std::is_union_v<T>;
 
 	template<class T>
+	concept Record = std::is_class_v<T> || std::is_union_v<T>;
+
+	template<class T>
 	concept Array = std::is_array_v<T>;
 
 	template<class T>

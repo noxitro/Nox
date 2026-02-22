@@ -7,9 +7,10 @@
 
 #include	"scene.h"
 
-nox::SceneView::SceneView(const nox::os::WindowSetupDesc& window_desc)noexcept:
+nox::SceneView::SceneView()noexcept:
 	scene_(nullptr)
 {
+
 }
 
 nox::SceneView::~SceneView()
@@ -19,4 +20,10 @@ nox::SceneView::~SceneView()
 void nox::SceneView::SetScene(Scene& scene) noexcept
 {
 	scene_ = &scene;
+}
+
+void nox::SceneView::MakeWindow(const nox::os::WindowSetupDesc& window_desc)
+{
+	window_.Create(window_desc);
+	window_.Show();
 }

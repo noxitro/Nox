@@ -61,11 +61,11 @@ void nox::dev::editor_remote::SocketStreamWriter::WriteLength(nox::uint64 length
 		}
 		// ここでは Writer が提供するバイナリ書き込み関数を利用する想定:
 		// void Write(const void* data, size_t size);
-		Write(std::span(&byte, 1));
+		WriteBytes(std::span(&byte, 1));
 	} while (length != 0);
 }
 
-void nox::dev::editor_remote::SocketStreamWriter::Write(std::span<const nox::uint8> data)
+void nox::dev::editor_remote::SocketStreamWriter::WriteBytes(std::span<const nox::uint8> data)
 {
 	//	書き込みバッファはリングバッファではないので、そのまま書き込む
 	std::size_t offset = 0;
@@ -103,19 +103,23 @@ void nox::dev::editor_remote::SocketStreamWriter::Clear()
 	position_ = 0;
 }
 
-void nox::dev::editor_remote::SocketStreamWriter::WriteReflection(const void* obj, const nox::reflection::Type& type)
+void nox::dev::editor_remote::SocketStreamWriter::Write(const nox::reflection::ReflectionObject*const value)
 {
-	const auto class_info = nox::reflection::FindClassInfo(type);
-	if (class_info == nullptr)
+	if (value == nullptr)
 	{
-		// 未対応型
-		NOX_ASSERT(false, u"SocketStreamWriter::WriteReflection: 未対応型");
+		Write(0);
 		return;
 	}
 
-	const auto variable_list = class_info->GetVariableList();
-
-	for (const nox::reflection::VariableInfo& variable_info : variable_list)
+	//	型情報の取得
+	const nox::reflection::ClassInfo& class_info = nox::util::Deref(nox::reflection::FindClassInfo(value->GetType()));
+	
+	//	メンバ変数
+	for (const nox::reflection::VariableInfo& variable_info : class_info.GetVariableList())
 	{
+		const nox::reflection::Type& type = variable_info.GetType();
+		//switch(type.)
 	}
+
+	//	メンバ関数(プロパティ)
 }
