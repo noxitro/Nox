@@ -33,11 +33,11 @@ namespace Nox
 
 			void IDisposable.Dispose()
 			{
+				_Writer.Pop();
 				if (_End.IsEmpty == false)
 				{
 					_Writer.WriteLine(_End);
 				}
-				_Writer.Pop();
 			}
 		}
 
@@ -58,6 +58,17 @@ namespace Nox
 
 		public IndentScope Indent() => new IndentScope(this);
 		public IndentScope Indent(ReadOnlySpan<char> begin, ReadOnlySpan<char> end) => new IndentScope(this, begin, end);
+
+		public void WriteLineOutdent(ReadOnlySpan<char> str, uint levels)
+		{
+			if (_NestDepth < levels)
+			{
+				levels = _NestDepth;
+			}
+			_NestDepth -= levels;
+			WriteLine(str);
+			_NestDepth += levels;
+		}
 
 		public abstract void Write(ReadOnlySpan<char> str);
 		public abstract void Write<T>(string str, params T[] args) where T : struct;

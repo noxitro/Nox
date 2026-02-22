@@ -35,16 +35,6 @@
         <!-- ====== 上部タブ ====== -->
         <views:DocumentTabView Grid.Row="0" Height="32"/>
 
-        <!-- ====== 上部ツールバー ====== -->
-        <ToolBarTray Grid.Row="1" Background="#FF2B2B2B">
-            <ToolBar>
-                <Button Content="File" />
-                <Button Content="Edit" />
-                <Button Content="View" />
-                <!-- 必要に応じてメニュー的なボタンを追加 -->
-            </ToolBar>
-        </ToolBarTray>
-
         <!-- ====== Runtime コントロールバー ====== -->
         <views:RuntimeControlView Grid.Row="2" />
 
@@ -75,8 +65,9 @@
 
                         <adLayout:LayoutDocumentPaneGroup>
                             <adLayout:LayoutDocumentPane>
-                                <adLayout:LayoutDocument Title="Views" />
-                                <adLayout:LayoutDocument Title="Develop" />
+                                <adLayout:LayoutDocument Title="Runtime" CanClose="False" CanFloat="False">
+                                    <views:RuntimeView />
+                                </adLayout:LayoutDocument>
                             </adLayout:LayoutDocumentPane>
                         </adLayout:LayoutDocumentPaneGroup>
 

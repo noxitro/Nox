@@ -21,7 +21,8 @@ namespace Core.Threading.Tasks
 				}
 				catch (Exception ex)
 				{
-					MessageServiceProvider.Current.ShowMessage(ex.ToString(), "例外が発生しました", MessageLevel.Error);
+					//Core.UI.MessageBox.Show(ex.ToString(), "例外が発生しました", MessageBoxLevel.Error);
+					Nox.Util.Assert(false, "例外が発生しました: {0}", ex.ToString());
 					throw;
 				}
 			};

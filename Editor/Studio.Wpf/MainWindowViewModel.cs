@@ -19,8 +19,8 @@ namespace Studio.Wpf.ViewModels
 		#endregion
 
 		#region 公開プロパティ
-		public ReadOnlySpan<Core.UI.ViewModels.ToolViewModel> ToolViewModelList => _ToolViewModelList;
-		public ReadOnlySpan<Core.UI.ViewModels.AssetViewModel> AssetViewModelList => _AssetViewModelList;
+		public IReadOnlyList<Core.UI.ViewModels.ToolViewModel> ToolViewModelList => _ToolViewModelList;
+		public IReadOnlyList<Core.UI.ViewModels.AssetViewModel> AssetViewModelList => _AssetViewModelList;
 		#endregion
 
 		#region 公開メソッド

@@ -241,6 +241,8 @@ namespace Core.Net
 
 						_ConnectionState = ConnectionState.Connected;
 						Nox.LogTrace.InfoLine<Core.LogId.Net>("Connected to {0}:{1}", _InitContext.Hostname, _InitContext.Port);
+
+						OnConneced();
 					}
 					break;
 
@@ -312,6 +314,14 @@ namespace Core.Net
 		#endregion
 
 		#region 非公開メソッド
+		/// <summary>
+		/// 接続確立
+		/// </summary>
+		protected virtual void OnConneced()
+		{
+
+		}
+
 		// 接続待ち（非ブロッキング＋Poll）
 		private static bool ConnectWithTimeout(System.Net.Sockets.Socket socket, System.Net.EndPoint endPoint, int timeoutMs, out System.Net.Sockets.SocketError socketError)
 		{

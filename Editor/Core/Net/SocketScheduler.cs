@@ -36,7 +36,7 @@ namespace Core.Net
 
 		public SocketScheduler()
 		{
-			var task = Task.Run(Update);
+			var task = Nox.Threading.Tasks.Task.Run(Update);
 		}
 
 		public void RegisterClient(Core.Net.Client client)

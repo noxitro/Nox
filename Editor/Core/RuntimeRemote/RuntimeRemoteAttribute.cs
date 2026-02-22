@@ -10,10 +10,11 @@ namespace Core.RuntimeRemote.Attr
 	[System.AttributeUsage(AttributeTargets.Class)]
 	public sealed class RuntimeRemoteCodeAttribute : System.Attribute
 	{
-		public RuntimeRemoteCodeAttribute(string path, bool execute = true)
+		public RuntimeRemoteCodeAttribute(string path, bool execute = true, string comment = "")
 		{
 			Path = path;
 			EnabledExecute = execute;
+			Comment = comment;
 		}
 
 		/// <summary>
@@ -24,8 +25,14 @@ namespace Core.RuntimeRemote.Attr
 
 		/// <summary>
 		/// execute関数をcpp側で実装するか
+		/// Queryの場合のみ有効
 		/// </summary>
 		public bool EnabledExecute { get; init; }
+
+		/// <summary>
+		/// c++側でのコメント
+		/// </summary>
+		public string Comment { get; init; }
 	}
 
 	[System.AttributeUsage(AttributeTargets.Property)]

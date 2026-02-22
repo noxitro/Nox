@@ -7,11 +7,15 @@ using System.Text;
 using System.Runtime.InteropServices;
 namespace Core
 {
-	public class Runtime : Nox.ISingleton<Runtime>
+	public class Runtime : Nox.ISingleton<Runtime>, System.IDisposable
 	{
 		#region 非公開フィールド
 
 		private System.Diagnostics.Process? _Process = default;
+		private EventHandler? _ProcessChanged;
+		private Nox.DelegateHandle _HandleRuntimeConnected=default;
+
+		private Core.RuntimeWrapper.SceneView? MainSceneView = null;
 		#endregion
 
 		#region 公開プロパティ
@@ -19,6 +23,13 @@ namespace Core
 		public PlatformType Platform { get; set; } = PlatformType.X64;
 		public ConfigurationType ConfigurationType { get; set; } = ConfigurationType.Debug;
 		public RuntimeTypeDB TypeDB { get; set; } = new RuntimeTypeDB();
+
+		public System.Diagnostics.Process? Process => _Process;
+		public event EventHandler? ProcessChanged
+		{
+			add => _ProcessChanged += value;
+			remove => _ProcessChanged -= value;
+		}
 		#endregion
 
 		#region 公開メソッド
@@ -28,12 +39,24 @@ namespace Core
 		}
 		public static void DeleteInstance()
 		{
+			((System.IDisposable)Instance).Dispose();
 			Nox.ISingleton<Runtime>.DeleteInstance();
 		}
 
 		public Runtime()
 		{
 			Initialize();
+		}
+
+		void IDisposable.Dispose()
+		{
+			_HandleRuntimeConnected.Dispose();
+
+			if (_Process != null)
+			{
+				_Process.Kill();
+				_Process = null;
+			}
 		}
 
 		public void Reboot()
@@ -44,6 +67,7 @@ namespace Core
 				{
 					_Process.Kill();
 					_Process = null;
+					_ProcessChanged?.Invoke(this, EventArgs.Empty);
 				}
 
 				string runtimeExePath = $"runtime\\build\\runtime\\{Platform.GetName()}\\{ConfigurationType.GetName()}\\runtime.exe";
@@ -68,7 +92,7 @@ namespace Core
 						}
 
 						// パスが一致するものだけ殺す
-						if (!string.IsNullOrEmpty(path) && string.Equals(path, runtimeExePath, StringComparison.OrdinalIgnoreCase))
+						if (!string.IsNullOrEmpty(path) && string.Equals(path, runtimeExeFullPath, StringComparison.OrdinalIgnoreCase))
 						{
 							p.Kill();
 							p.WaitForExit(2000);
@@ -80,10 +104,21 @@ namespace Core
 					}
 				}
 
-				string args = "-Studio";
-				_Process = System.Diagnostics.Process.Start(runtimeExeFullPath, args);
+				System.Diagnostics.ProcessStartInfo psi = new()
+				{
+					FileName = runtimeExeFullPath,
+					Arguments = "-Studio",
+					WorkingDirectory = System.IO.Path.GetDirectoryName(runtimeExeFullPath) ?? Environment.CurrentDirectory,
+					UseShellExecute = true,
+				};
 
-				Nox.Util.VisualStudioAttachToProcess(_Process.Id, "D:\\github\\Nox\\runtime\\runtime.slnx");
+				_Process = System.Diagnostics.Process.Start(psi);
+					
+				Nox.Util.Assert(_Process != null, "Runtime.exeの起動に失敗しました:{0}", runtimeExeFullPath);
+
+				// 子ウィンドウとしてドッキングできるよう、メインウィンドウが初期化されるまで待つ
+				try { _Process.WaitForInputIdle(5000); } catch { /* 無視 */ }
+				_ProcessChanged?.Invoke(this, EventArgs.Empty);
 
 				StartTcpConnection();
 			}
@@ -97,7 +132,9 @@ namespace Core
 		public void StartTcpConnection()
 		{
 			//	runtimeへ接続
-			Core.Net.RuntimeIpcClient.Instance.Startup(new Net.Client.InitializeContext()
+			_HandleRuntimeConnected.Dispose();
+			_HandleRuntimeConnected = Core.Net.RuntimeRemoteClient.Instance.RegisterRuntimeConnectedEvent(RuntimeConnected);
+			Core.Net.RuntimeRemoteClient.Instance.Startup(new Net.Client.InitializeContext()
 			{
 				Hostname = "127.0.0.1",
 				Port = 86
@@ -117,10 +154,10 @@ namespace Core
 
 			//	RuntimeWrapper型にDTIを設定する
 			System.Type runtimeObjectType = typeof(RuntimeObject);
-			System.Type runtimeObjectInterfaceType = typeof(IRuntimeObject<>);
-			string runtimeObjectInterfaceTypeFullName = runtimeObjectInterfaceType.FullName ?? string.Empty;
+			//System.Type runtimeObjectInterfaceType = typeof(IRuntimeObject<>);
+			//string runtimeObjectInterfaceTypeFullName = runtimeObjectInterfaceType.FullName ?? string.Empty;
 
-			string propName = "_" + nameof(IRuntimeObject<>.RuntimeRecordDecl);
+			string propName = nameof(IRuntimeObject<>.StaticRuntimeRecordDecl);
 
 			foreach (System.Type type in Core.TypeDB.AllTypeList)
 			{
@@ -134,18 +171,18 @@ namespace Core
 					continue;
 				}
 
-				Type? interfaceType = type.GetInterface(runtimeObjectInterfaceTypeFullName);
-				if (interfaceType == null)
-				{
-					continue;
-				}
+				//Type? interfaceType = type.GetInterface(runtimeObjectInterfaceTypeFullName);
+				//if (interfaceType == null)
+				//{
+				//	continue;
+				//}
 
-				var property = interfaceType.GetProperty(propName);
+				var property = type.GetProperty(propName);
 				if (property == null)
 				{
 					continue;
 				}
-				
+
 				Core.Attributes.RuntimeWrapperAttribute? attr = type.GetCustomAttribute<Core.Attributes.RuntimeWrapperAttribute>();
 				if (attr == null)
 				{
@@ -167,6 +204,22 @@ namespace Core
 		{
 			TypeDB = new RuntimeTypeDB();
 			TypeDB.Build(Platform, ConfigurationType);
+		}
+
+		private void RuntimeConnected()
+		{
+			Core.Net.RuntimeRemoteClient.Instance.SendQuery(new Core.RuntimeRemote.GetMainSceneView(), 
+				(Core.RuntimeRemote.Response respose) =>
+				{
+					//var sceneViewInfo = respose as Core.RuntimeRemote.SceneViewInfo;
+					RuntimeRemote.SceneViewInfo sceneViewInfo = Nox.Util.Cast<Core.RuntimeRemote.SceneViewInfo>(respose);
+					//Nox.Util.Assert(sceneViewInfo != null, "SceneViewInfoの取得に失敗しました");
+					Nox.Util.Assert(sceneViewInfo.SceneView != null, "SceneViewの取得に失敗しました");
+
+					MainSceneView = sceneViewInfo.SceneView;
+					MainSceneView.WindowHandle = (System.IntPtr)sceneViewInfo.MainWindowHandle;
+				}
+				);
 		}
 		#endregion
 	}

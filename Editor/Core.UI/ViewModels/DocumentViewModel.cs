@@ -13,7 +13,7 @@ namespace Core.UI.ViewModels
 		public string Title
 		{
 			get => field;
-			set => SetProperty(ref field, value);
+			init => SetProperty(ref field, value);
 		} = string.Empty;
 
 		public virtual bool CanClose { get; } = true;

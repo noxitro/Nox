@@ -13,11 +13,49 @@ namespace Core
 		{
 			return fqn.Replace(".", "::");
 		}
+
+		/// <summary>
+		/// runtime fqnからnamespace部分を取得する
+		/// </summary>
+		public static string GetNamespaceFromRuntimeFQN(ReadOnlySpan<char> fqn)
+		{
+			int lastSepIndex = fqn.LastIndexOf("::");
+			if (lastSepIndex >= 0)
+			{
+				return fqn.Slice(0, lastSepIndex).ToString();
+			}
+			else
+			{
+				return string.Empty;
+			}
+		}
+
+		public static string GetNameFromRuntimeFQN(ReadOnlySpan<char> fqn)
+		{
+			int lastSepIndex = fqn.LastIndexOf("::");
+			if (lastSepIndex >= 0)
+			{
+				return fqn.Slice(lastSepIndex + 2).ToString();
+			}
+			else
+			{
+				return fqn.ToString();
+			}
+		}
 	}
 }
 
 namespace Core.RuntimeRemote
 {
+	namespace LogId
+	{
+		file readonly struct RuntimeRemote : Nox.LogId.ILogId<RuntimeRemote>
+		{
+			public RuntimeRemote() { }
+			string Nox.LogId.ILogId<RuntimeRemote>.Tag { get; } = "Runtime";
+		}
+	}
+
 	public class RuntimeRemoteCodeGenerator
 	{
 		#region 内部クラス定義
@@ -35,8 +73,11 @@ namespace Core.RuntimeRemote
 		private enum PropertyTypeKind : byte
 		{
 			Invalid,
-			RuntimeType,
-			EditorType
+			PrimitiveType,
+			RuntimeObject,
+			RuntimeManagedObject,
+			String,
+			EditorType,
 		}
 
 		/// <summary>
@@ -46,6 +87,7 @@ namespace Core.RuntimeRemote
 		{
 			/// <summary>
 			/// 型名
+			/// runtime fqn
 			/// </summary>
 			public readonly string TypeFQN;
 
@@ -60,10 +102,15 @@ namespace Core.RuntimeRemote
 			public string GetterTypeFqn { get; init; } = string.Empty;
 
 			/// <summary>
-			/// runtime側でのメンバ変数名
-			/// camel_case_
+			/// メンバ変数として定義する際の型名
 			/// </summary>
-			public required string NameCamelCase { get; init; }
+			public required string MemberDeclTypeName { get; init; }
+
+			/// <summary>
+			/// runtime側でのメンバ変数名
+			/// snake_case_
+			/// </summary>
+			public required string NameSnakeCase { get; init; }
 
 			/// <summary>
 			/// runtime側での関数名用
@@ -88,11 +135,12 @@ namespace Core.RuntimeRemote
 
 			public readonly RuntimePropertyInfo[] PropertyList = [];
 
-			public RemoteTypeInfo(System.Type type, Core.RuntimeRemote.Attr.RuntimeRemoteCodeAttribute attr, bool isQuery)
+			public RemoteTypeInfo(System.Type type, Core.RuntimeRemote.Attr.RuntimeRemoteCodeAttribute attr, bool isQuery, RuntimePropertyInfo[] propertyList)
 			{
 				Type = type;
 				Attr = attr;
 				IsQuery = isQuery;
+				PropertyList = propertyList;
 			}
 		}
 		#endregion
@@ -119,11 +167,11 @@ namespace Core.RuntimeRemote
 				}
 
 				bool isQuery = false;
-				if (type.IsAssignableFrom(queryType))
+				if (queryType.IsAssignableFrom(type))
 				{
 					isQuery = true;
 				}
-				else if (type.IsAssignableFrom(responseType))
+				else if (responseType.IsAssignableFrom(type))
 				{
 					isQuery = false;
 				}
@@ -135,6 +183,7 @@ namespace Core.RuntimeRemote
 				Core.RuntimeRemote.Attr.RuntimeRemoteCodeAttribute? attr = type.GetCustomAttribute<Core.RuntimeRemote.Attr.RuntimeRemoteCodeAttribute>();
 				if (attr == null)
 				{
+					Nox.LogTrace.ErrorLine<Core.RuntimeRemote.LogId.RuntimeRemote>("Type '{0}' is missing RuntimeRemoteCodeAttribute.", type.FullName ?? "invalid");
 					continue;
 				}
 
@@ -153,7 +202,7 @@ namespace Core.RuntimeRemote
 					dict.Add(genPath, data = new(coreEntry));
 				}
 
-				data.TypeInfoList.Add(new (type, attr, isQuery));
+				data.TypeInfoList.Add(new RemoteTypeInfo (type, attr, isQuery, propList));
 			}
 
 			foreach (var v in dict)
@@ -176,11 +225,53 @@ namespace Core.RuntimeRemote
 			//	h
 			using (Nox.CodeWriter codeWriter = new CodeWriter($"{basePath}.g.h"))
 			{
+				Nox.LogTrace.InfoLine<Core.RuntimeRemote.LogId.RuntimeRemote>("Generating remote code to '{0}.g.h' and '{0}.g.cpp'", basePath);
+
 				codeWriter.WriteLineHeader("RuntimeRemoteCodeGenerator");
 				codeWriter.WriteNewLine();
 
-				codeWriter.WriteLinePragmaOnce();
 				codeWriter.WriteLinePPIf("NOX_DEVELOP");
+
+				//	メンバの前方宣言
+				{
+					HashSet<System.Type> runtimeWrawpperTypeHashSet = new HashSet<Type>();
+
+					foreach (var param in data.TypeInfoList)
+					{
+						foreach (var prop in param.PropertyList)
+						{
+							switch (prop.Kind)
+							{
+								case PropertyTypeKind.RuntimeObject:
+								case PropertyTypeKind.RuntimeManagedObject:
+									break;
+								//	runtime wrapper以外は前方宣言不要
+								default:
+									continue;
+							}
+
+							System.Type runtimeWrapperType = prop.RawPropertyInfo.PropertyType;
+							if (runtimeWrawpperTypeHashSet.Contains(runtimeWrapperType) == true)
+							{
+								continue;
+							}
+							if (runtimeWrawpperTypeHashSet.Count == 0)
+							{
+								codeWriter.WriteLine("// forward declaration for runtime wrapper types");
+							}
+							runtimeWrawpperTypeHashSet.Add(runtimeWrapperType);
+
+							string namespaceStr = Util.GetNamespaceFromRuntimeFQN(prop.TypeFQN);
+							codeWriter.WriteLine($"namespace {namespaceStr} {{ class {Util.GetNameFromRuntimeFQN(prop.TypeFQN)}; }}");
+						}
+					}
+
+					if (runtimeWrawpperTypeHashSet.Count > 0)
+					{
+						codeWriter.WriteLine("// end forward declaration");
+						codeWriter.WriteNewLine();
+					}
+				}
 
 				if (data.IsCoreEntry)
 				{
@@ -188,6 +279,7 @@ namespace Core.RuntimeRemote
 					codeWriter.WriteLineInclude("../editor_ipc_response.h");
 				}
 
+				codeWriter.WriteNewLine();
 				codeWriter.WriteNamespace("nox::dev::editor_ipc");
 				using (codeWriter.Indent("{", "}"))
 				{
@@ -196,16 +288,19 @@ namespace Core.RuntimeRemote
 						ReadOnlySpan<char> typeName = param.Type.Name;
 
 						ReadOnlySpan<char> baseTypeFullName = param.IsQuery ? "nox::dev::editor_ipc::Query" : "nox::dev::editor_ipc::Response";
-						if (param.IsQuery)
+						
+						if (param.Attr.Comment != string.Empty)
 						{
-							codeWriter.WriteLine($"class {typeName} : public {baseTypeFullName}");
+							codeWriter.WriteLine($"/// @brief {param.Attr.Comment}");
 						}
+						codeWriter.WriteLine($"class {typeName} final : public {baseTypeFullName}");
 
 						using (codeWriter.Indent("{", "};"))
 						{
-							codeWriter.WriteLine($"NOX_DECLARE_OBJECT(nox::dev::editor_ipc{typeName}, {baseTypeFullName})");
+							codeWriter.WriteLine($"NOX_DECLARE_OBJECT(nox::dev::editor_ipc::{typeName}, {baseTypeFullName});");
 
 							var propList = param.PropertyList;
+							int propertyLength = propList.Length;
 
 							//	editor側の型定義
 							{
@@ -220,7 +315,7 @@ namespace Core.RuntimeRemote
 
 									if (first)
 									{
-										codeWriter.WriteLine("public:");
+										codeWriter.WriteLineOutdent("public:", 1);
 										first = false;
 									}
 									else
@@ -290,50 +385,76 @@ namespace Core.RuntimeRemote
 								} 
 							}
 
-							codeWriter.WriteLine("public:");
-							codeWriter.WriteLine($"{typeName}();");
-							codeWriter.WriteLine("void OnSerialize(nox::dev::editor_ipc::SocketStreamWriter& writer)override;");
-							codeWriter.WriteLine("void OnDeserialize(nox::dev::editor_ipc::SocketStreamReader& reader)override;");
+							codeWriter.WriteLineOutdent("public:", 1);
+
+							if (propertyLength == 0)
+							{
+								//	メンバが無い場合はnoexcept指定してデフォルトコンストラクタを生成しておく
+								codeWriter.WriteLine($"{typeName}()noexcept{{}}");
+							}
+							else
+							{
+								codeWriter.WriteLine($"{typeName}(){{}}");
+							}
+
+							//	メンバが無い場合は仮にSerialize/Deserialize関数をinlineで空実装しておく
+							if (propertyLength == 0)
+							{
+								codeWriter.WriteLine("inline constexpr void OnSerialize(nox::dev::editor_ipc::SocketStreamWriter&)override {}");
+								codeWriter.WriteLine("inline constexpr void OnDeserialize(nox::dev::editor_ipc::SocketStreamReader&)override {}");
+							}
+							else
+							{
+								codeWriter.WriteLine("void OnSerialize(nox::dev::editor_ipc::SocketStreamWriter& writer)override;");
+								codeWriter.WriteLine("void OnDeserialize(nox::dev::editor_ipc::SocketStreamReader& reader)override;");
+							}
 
 							if (param.IsQuery)
 							{
 								if (param.Attr.EnabledExecute)
 								{
-									codeWriter.WriteLine("nox::PlacementObject<nox::dev::editor_ipc::Respose> Execute(std::span<nox::uint8> storage)const override;");
+									codeWriter.WriteLine("nox::PlacementObject<nox::dev::editor_ipc::Response> Execute(std::span<nox::uint8> storage)const override;");
 								}
 								else
 								{
-									codeWriter.WriteLine("inline constexpr nox::PlacementObject<nox::dev::editor_ipc::Respose> Execute(std::span<nox::uint8>)const override { return nullptr; }");
+									codeWriter.WriteLine("inline constexpr nox::PlacementObject<nox::dev::editor_ipc::Response> Execute(std::span<nox::uint8>)const override { return nullptr; }");
 								}
 							}
 
 							//	プロパティsetter, getter書き込み
-							codeWriter.WriteNewLine();
-							for (int propIndex = 0, propLength = propList.Length; propIndex < propLength; ++propIndex)
+							int propLength = propList.Length;
+							if (propLength > 0)
 							{
-								ref readonly var prop = ref propList[propIndex];
-								codeWriter.WriteLine($"inline {prop.GetterTypeFqn} Get{prop.NamePascalCase}()");
-								using (codeWriter.Indent("{", "}"))
+								codeWriter.WriteNewLine();
+								for (int propIndex = 0; propIndex < propLength; ++propIndex)
 								{
-									codeWriter.WriteLine($"return {prop.NameCamelCase};");
+									ref readonly var prop = ref propList[propIndex];
+
+									codeWriter.WriteLine($"inline {prop.GetterTypeFqn} Get{prop.NamePascalCase}()noexcept");
+									using (codeWriter.Indent("{", "}"))
+									{
+										codeWriter.WriteLine($"return {prop.NameSnakeCase};");
+									}
+
+									codeWriter.WriteLine($"inline void Set{prop.NamePascalCase}({prop.SetterTypeFqn} value)");
+									using (codeWriter.Indent("{", "}"))
+									{
+										codeWriter.WriteLine($"{prop.NameSnakeCase} = value;");
+									}
 								}
 
-								codeWriter.WriteLine($"inline void Set{prop.NamePascalCase}({prop.SetterTypeFqn} value)");
-								using (codeWriter.Indent("{", "}"))
+								//	プロパティメンバ書き込み
+								codeWriter.WriteNewLine();
+								codeWriter.WriteLineOutdent("private:", 1);
+								for (int propIndex = 0; propIndex < propLength; ++propIndex)
 								{
-									codeWriter.WriteLine($"{prop.NameCamelCase} = value;");
+									ref readonly var prop = ref propList[propIndex];
+									codeWriter.WriteLine($"{prop.MemberDeclTypeName} {prop.NameSnakeCase} {{}};");
 								}
-							}
-
-							//	プロパティメンバ書き込み
-							codeWriter.WriteNewLine();
-							codeWriter.WriteLine("private:");
-							for (int propIndex = 0, propLength = propList.Length; propIndex < propLength; ++propIndex)
-							{
-								ref readonly var prop = ref propList[propIndex];
-								codeWriter.WriteLine($"{prop.TypeFQN} {prop.NameCamelCase};");
 							}
 						}
+
+						codeWriter.WriteNewLine();
 					}
 				}
 
@@ -349,28 +470,57 @@ namespace Core.RuntimeRemote
 				codeWriter.WriteIncludeStdafx();
 
 				codeWriter.WriteLineInclude($"{fileName}.g.h");
-				if (data.IsCoreEntry)
+
+				//	codegen_preamble.hがあれば、includeしておく
 				{
-					codeWriter.WriteLineInclude("../socket_stream_writer.h");
-					codeWriter.WriteLineInclude("../socket_stream_reader.h");
+					string preamblePath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(basePath) ?? string.Empty, "codegen_preamble.h");
+					if (System.IO.File.Exists(preamblePath))
+					{
+						codeWriter.WriteLineInclude("codegen_preamble.h");
+						codeWriter.WriteNewLine();
+					}
 				}
 
 				codeWriter.WriteNewLine();
 
 				foreach (var param in data.TypeInfoList)
 				{
-					codeWriter.WriteLine($"void nox::dev::editor_ipc::{param.Type}::OnSerialize(nox::dev::editor_ipc::SocketStreamWriter& writer)");
-					using(codeWriter.Indent("(", ")"))
+					string runtimeTypeFQN = Util.ToRuntimeFQN(param.Type.Name ?? string.Empty);
+					int propertyLength = param.PropertyList.Length;
+
+					if (propertyLength > 0)
 					{
+						codeWriter.WriteLine($"void nox::dev::editor_ipc::{runtimeTypeFQN}::OnSerialize(nox::dev::editor_ipc::SocketStreamWriter& writer)");
+						using (codeWriter.Indent("{", "}"))
+						{
+							for (int propIndex = 0; propIndex < propertyLength; ++propIndex)
+							{
+								ref readonly RuntimePropertyInfo propInfo = ref param.PropertyList[propIndex];
 
-					}
+								codeWriter.WriteLine($"writer.Write({propInfo.NameSnakeCase});");
+							}
+						}
 
-					codeWriter.WriteNewLine();
+						codeWriter.WriteNewLine();
 
-					codeWriter.WriteLine($"void nox::dev::editor_ipc::{param.Type}::OnDeserialize(nox::dev::editor_ipc::SocketStreamReader& reader)");
-					using (codeWriter.Indent("(", ")"))
-					{
-						
+						codeWriter.WriteLine($"void nox::dev::editor_ipc::{runtimeTypeFQN}::OnDeserialize(nox::dev::editor_ipc::SocketStreamReader& reader)");
+						using (codeWriter.Indent("{", "}"))
+						{
+							for (int propIndex = 0; propIndex < propertyLength; ++propIndex)
+							{
+								ref readonly RuntimePropertyInfo propInfo = ref param.PropertyList[propIndex];
+
+								switch (propInfo.Kind)
+								{
+									case PropertyTypeKind.String:
+										codeWriter.WriteLine($"reader.Read({propInfo.NameSnakeCase});");
+										break;
+									default:
+										codeWriter.WriteLine($"reader.Read(decltype({propInfo.NameSnakeCase}));");
+										break;
+								}
+							}
+						}
 					}
 				}
 			}
@@ -381,11 +531,13 @@ namespace Core.RuntimeRemote
 			{
 				using (Nox.CodeWriter codeWriter = new CodeWriter(userSourcePath))
 				{
+					Nox.LogTrace.InfoLine<Core.RuntimeRemote.LogId.RuntimeRemote>("Generating remote user code to '{0}.cpp'", basePath);
+
 					codeWriter.WriteLineCopyRight();
 					codeWriter.WriteNewLine();
 					codeWriter.WriteIncludeStdafx();
 					codeWriter.WriteLineInclude($"{fileName}.g.h");
-
+					
 					var dataList = data.TypeInfoList;
 					foreach (var param in data.TypeInfoList)
 					{
@@ -394,11 +546,13 @@ namespace Core.RuntimeRemote
 							continue;
 						}
 
+						string runtimeTypeFQN = Util.ToRuntimeFQN(param.Type.Name??string.Empty);
+
 						codeWriter.WriteNewLine();
 
 						if (param.IsQuery)
 						{
-							codeWriter.WriteLine("nox::dev::editor_ipc::Response* nox::dev::editor_ipc::{param.Type}::Execute()const");
+							codeWriter.WriteLine($"nox::PlacementObject<nox::dev::editor_ipc::Response> nox::dev::editor_ipc::{runtimeTypeFQN}::Execute(std::span<nox::uint8> storage)const");
 							using (codeWriter.Indent("{", "}"))
 							{
 								codeWriter.WriteLine("return nullptr;");
@@ -406,7 +560,7 @@ namespace Core.RuntimeRemote
 						}
 						else
 						{
-							codeWriter.WriteLine("void nox::dev::editor_ipc::{param.Type}::Execute()const");
+							codeWriter.WriteLine($"void nox::dev::editor_ipc::{param.Type}::Execute()const");
 							using (codeWriter.Indent("{", "}"))
 							{
 								codeWriter.WriteNewLine();
@@ -476,6 +630,7 @@ namespace Core.RuntimeRemote
 			for (int i = 0, length = propList.Length; i < length; ++i)
 			{
 				var prop = propList[i];
+				
 				if (prop.CanRead == false || prop.CanWrite == false)
 				{
 					continue;
@@ -489,53 +644,91 @@ namespace Core.RuntimeRemote
 
 		private static RuntimePropertyInfo CreatePropertyInfo(System.Reflection.PropertyInfo sourceProperty)
 		{
+			System.Type managedObjectType = typeof(Core.RuntimeWrapper.ManagedObject);
+
 			System.Type propertyType = sourceProperty.PropertyType;
 			System.TypeCode typeCode = Type.GetTypeCode(propertyType);
-			PropertyTypeKind propertyTypeKind = PropertyTypeKind.RuntimeType;
+			PropertyTypeKind propertyTypeKind;
 
 			string typeFqn;
 			string setterTypeFqn;
 			string getterTypeFqn;
+			string memberDeclTypeName;
 
 			string propName = sourceProperty.Name;
 			string pascalCaseName = char.ToUpperInvariant(propName[0]) + propName.Substring(1);
-			string camelCaseName = char.ToLowerInvariant(propName[0]) + propName.Substring(1) + "_";
+			//string snakeCaseName = char.ToLowerInvariant(propName[0]) + propName.Substring(1) + "_";
+			string snakeCaseName;
+			{
+				StringBuilder sb = new StringBuilder();
+				for (int i = 0, length = propName.Length; i < length; ++i)
+				{
+					char c = propName[i];
+					if (char.IsUpper(c) && i > 0)
+					{
+						sb.Append('_');
+					}
+					sb.Append(char.ToLowerInvariant(c));
+				}
+				sb.Append('_');
+				snakeCaseName = sb.ToString();
+			}
 
 			if (propertyType.IsPrimitive)
 			{
 				typeFqn = Core.RuntimeTypeUtil.GetPrimitiveTypeName(typeCode).ToString();
+				memberDeclTypeName = typeFqn;
 				setterTypeFqn = getterTypeFqn = typeFqn;
+				propertyTypeKind = PropertyTypeKind.PrimitiveType;
 			}
 			else if (typeCode == TypeCode.String)
 			{
 				typeFqn = "nox::U8String";
+				memberDeclTypeName = typeFqn;
 				getterTypeFqn = setterTypeFqn = "std::u8string_view";
+				propertyTypeKind = PropertyTypeKind.String;
 			}
 			//	fixed string
-			else
-			if (propertyType.GetCustomAttribute<Core.RuntimeRemote.Attr.FixedStringAttribute>() is var propAttr && propAttr != null)
+			else if (sourceProperty.GetCustomAttribute<Core.RuntimeRemote.Attr.FixedStringAttribute>() is var propAttr && propAttr != null)
 			{
-				typeFqn = $"nox::FixedString<{propAttr.Length}>";
+				typeFqn = $"nox::U8FixedString<{propAttr.Length}>";
+				memberDeclTypeName = typeFqn;
 				getterTypeFqn = setterTypeFqn = "std::u8string_view";
+				propertyTypeKind = PropertyTypeKind.String;
 			}
 			//	runtime wrapper
-			else
-			if (propertyType.GetCustomAttribute<Core.Attributes.RuntimeWrapperAttribute>() is var wrapperAttr && wrapperAttr != null)
+			else if (propertyType.GetCustomAttribute<Core.Attributes.RuntimeWrapperAttribute>() is var wrapperAttr && wrapperAttr != null)
 			{
 				typeFqn = wrapperAttr.FQN;
-				setterTypeFqn = typeFqn;
-				getterTypeFqn = typeFqn;
+				setterTypeFqn = $"{typeFqn}*";
+
+				if (managedObjectType.IsAssignableFrom(propertyType))
+				{
+					propertyTypeKind = PropertyTypeKind.RuntimeObject;
+					getterTypeFqn = $"const nox::IntrusivePtr<{typeFqn}>&";
+					memberDeclTypeName = $"nox::IntrusivePtr<{typeFqn}>";
+				}
+				else
+				{
+					propertyTypeKind = PropertyTypeKind.RuntimeManagedObject;
+					getterTypeFqn = $"{typeFqn}*";
+					memberDeclTypeName = $"{typeFqn}*";
+				}
 			}
 			//	other
 			else
 			{
 				//	runtime primitive
+				//	vec3など
 				var runtimePrimitiveTypeFqn = GetRuntimePrimitiveType(propertyType);
 				if (runtimePrimitiveTypeFqn != string.Empty)
 				{
 					typeFqn = runtimePrimitiveTypeFqn;
+					memberDeclTypeName = typeFqn;
 					setterTypeFqn = $"const {runtimePrimitiveTypeFqn}&";
 					getterTypeFqn = $"const {runtimePrimitiveTypeFqn}&";
+
+					propertyTypeKind = PropertyTypeKind.PrimitiveType;
 				}
 				//	ツール側の定義型
 				else
@@ -557,6 +750,7 @@ namespace Core.RuntimeRemote
 						setterTypeFqn = getterTypeFqn = typeFqn;
 						Nox.Util.Assert(false, "invalid property type:{0}", propertyType.FullName);
 					}
+					memberDeclTypeName = typeFqn;
 				}
 			}
 
@@ -564,7 +758,8 @@ namespace Core.RuntimeRemote
 			{
 				SetterTypeFqn = setterTypeFqn,
 				GetterTypeFqn = getterTypeFqn,
-				NameCamelCase = camelCaseName,
+				MemberDeclTypeName = memberDeclTypeName,
+				NameSnakeCase = snakeCaseName,
 				NamePascalCase = pascalCaseName,
 				Kind = propertyTypeKind,
 				RawPropertyInfo = sourceProperty

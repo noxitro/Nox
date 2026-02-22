@@ -15,13 +15,14 @@ namespace Core.UI
 	{
 		public Entry()
 		{
-			Core.MessageServiceProvider.Register(new Core.UI.WpfMessageService());
+			Core.UI.MessageServiceProvider.Register(new Core.UI.WpfMessageService());
 		}
 
 		public override void RegisterTypes(IContainerRegistry containerRegistry)
 		{
 			containerRegistry.Register<Core.UI.ViewModels.RuntimeControlViewModel>();
-			containerRegistry.Register<Core.UI.ViewModels.MessageBoxViewModel>();
+			containerRegistry.Register<Core.UI.ViewModels.MessageBoxWindowViewModel>();
+			containerRegistry.Register<Core.UI.ViewModels.RuntimeViewModel>();
 		}
 
 		void IDisposable.Dispose()

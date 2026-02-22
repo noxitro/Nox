@@ -1,22 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace Core.UI.Views
 {
 	/// <summary>
 	/// DocumentTabView.xaml の相互作用ロジック
 	/// </summary>
-	public partial class DocumentTabView : UserControl
+	public partial class DocumentTabView : System.Windows.Controls.UserControl
 	{
 		private bool _initialized;
 
@@ -26,7 +17,7 @@ namespace Core.UI.Views
 			DataContext = new ViewModels.DocumentTabViewModel();
 		}
 
-		private void TabControl_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+		private void TabControl_OnSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
 		{
 			if (!_initialized)
 			{
@@ -46,9 +37,9 @@ namespace Core.UI.Views
 			}
 		}
 
-		private void TabItem_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+		private void TabItem_OnPreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
 		{
-			if (sender is not TabItem tabItem)
+			if (sender is not System.Windows.Controls.TabItem tabItem)
 			{
 				return;
 			}
@@ -56,7 +47,7 @@ namespace Core.UI.Views
 			// すでに選択されているタブを再クリックしたら閉じる
 			if (tabItem.IsSelected && tabItem.DataContext is ViewModels.DocumentTabViewModel.DocumentTabItem { HasChildren: false })
 			{
-				if (ItemsControl.ItemsControlFromItemContainer(tabItem) is TabControl tabControl)
+				if (System.Windows.Controls.ItemsControl.ItemsControlFromItemContainer(tabItem) is System.Windows.Controls.TabControl tabControl)
 				{
 					tabControl.SelectedIndex = -1;
 					e.Handled = true;

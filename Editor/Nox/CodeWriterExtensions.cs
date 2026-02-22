@@ -56,7 +56,7 @@ namespace Nox
 
 		public static void WriteLineCopyRight(this BaseCodeWriter codeWriter)
 		{
-			codeWriter.WriteLine("//\tCopyright (c) 2025 NOX ENGINE All rights reserved.");
+			codeWriter.WriteLine($"//\tCopyright (c) {DateTime.Now.Year.ToString()} NOX ENGINE All rights reserved.");
 		}
 
 		public static void WriteIncludeStdafx(this BaseCodeWriter codeWriter)

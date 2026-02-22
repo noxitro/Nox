@@ -1,7 +1,10 @@
 ﻿using Core.RuntimeWrapper;
 using Nox;
+using Nox.Extensions;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 
 namespace Core
@@ -53,31 +56,160 @@ namespace Core
 
 	file static class Local
 	{
-		private static readonly System.Attribute _UnknownRuntimeAttribute = new UnknownRuntimeAttribute();
 
 		public static Core.RuntimeTypeKind Convert(ReflectionGenerator.RuntimeTypeDB.RuntimeTypeKind value)
 		{
 			return (Core.RuntimeTypeKind)(byte)value;
 		}
-
-		public static System.Attribute CreateAttribute(in ReflectionGenerator.RuntimeTypeDB.AttributeDecl attributeDecl)
+		/// <summary>
+		/// annotate文字列を型名(FQN)と引数リストに分解する。
+		/// 例: "nox::attr::Resource(u8"ext", 1)" → ("nox::attr::Resource", ["ext", 1])
+		/// </summary>
+		public static ReadOnlySpan<char> ParseAnnotate(ReadOnlySpan<char> annotate, out object[] outArgs)
 		{
-			switch(attributeDecl.Kind)
+			int parenStart = annotate.IndexOf('(');
+			if (parenStart < 0 || annotate[^1] != ')')
 			{
-				case ReflectionGenerator.RuntimeTypeDB.AttributeKind.Annotate:
-					ReadOnlySpan<char> annotate = attributeDecl.Value;
-					
-					switch (annotate)
-					{
-						case "nox::attr::DataMember()":
-							return new System.Runtime.Serialization.DataMemberAttribute();
-						case "nox::attr::IgnoreDataMember()":
-							return new System.Runtime.Serialization.IgnoreDataMemberAttribute();
-					}
-					break;
+				outArgs = [];
+				return annotate;
 			}
 
-			return _UnknownRuntimeAttribute;
+			ReadOnlySpan<char> fqn = annotate[..parenStart];
+			// C++のグローバルスコープ修飾子 (先頭 "::") を除去
+			if (fqn.StartsWith("::"))
+			{
+				fqn = fqn[2..];
+			}
+
+			ReadOnlySpan<char> body = annotate[(parenStart + 1)..^1];
+
+			if (body.IsEmpty || body.IsWhiteSpace())
+			{
+				outArgs = []	;
+				return fqn;
+			}
+
+			List<object> args = [];
+			int pos = 0;
+
+			while (pos < body.Length)
+			{
+				SkipWhiteSpace(body, ref pos);
+				if (pos >= body.Length) break;
+
+				if (TryParseStringLiteral(body, ref pos, out string? strValue))
+				{
+					args.Add(strValue);
+				}
+				else
+				{
+					int start = pos;
+					while (pos < body.Length && body[pos] != ',') pos++;
+					ReadOnlySpan<char> token = body[start..pos].Trim();
+					args.Add(ParseLiteral(token));
+				}
+
+				SkipWhiteSpace(body, ref pos);
+				if (pos < body.Length && body[pos] == ',') pos++;
+			}
+
+			outArgs = args.ToArray();
+			return fqn;
+		}
+
+		private static void SkipWhiteSpace(ReadOnlySpan<char> span, ref int pos)
+		{
+			while (pos < span.Length && char.IsWhiteSpace(span[pos])) pos++;
+		}
+
+		/// <summary>
+		/// C++文字列リテラル（u8"...", u"...", U"...", L"...", "..."）を解析する。
+		/// </summary>
+		private static bool TryParseStringLiteral(ReadOnlySpan<char> span, ref int pos, out string value)
+		{
+			int saved = pos;
+
+			// C++文字列プレフィックスをスキップ: u8, u, U, L
+			if (pos < span.Length)
+			{
+				if (span[pos] == 'u')
+				{
+					pos++;
+					if (pos < span.Length && span[pos] == '8') pos++;
+				}
+				else if (span[pos] is 'U' or 'L')
+				{
+					pos++;
+				}
+			}
+
+			if (pos >= span.Length || span[pos] != '"')
+			{
+				pos = saved;
+				value = string.Empty;
+				return false;
+			}
+
+			pos++; // 開き " をスキップ
+			var sb = new StringBuilder();
+			while (pos < span.Length && span[pos] != '"')
+			{
+				if (span[pos] == '\\' && pos + 1 < span.Length)
+				{
+					sb.Append(span[pos + 1] switch
+					{
+						'n' => '\n',
+						't' => '\t',
+						'r' => '\r',
+						'\\' => '\\',
+						'"' => '"',
+						'0' => '\0',
+						char c => c,
+					});
+					pos += 2;
+				}
+				else
+				{
+					sb.Append(span[pos]);
+					pos++;
+				}
+			}
+
+			if (pos < span.Length) pos++; // 閉じ " をスキップ
+			value = sb.ToString();
+			return true;
+		}
+
+		/// <summary>
+		/// 数値・boolリテラルを解析する。C++の型サフィックス (f, u, l 等) にも対応。
+		/// </summary>
+		private static object ParseLiteral(ReadOnlySpan<char> token)
+		{
+			if (token.Equals("true", StringComparison.Ordinal)) return true;
+			if (token.Equals("false", StringComparison.Ordinal)) return false;
+
+			// C++数値サフィックスを除去 (f, F, u, U, l, L, ll, LL, ul, ull 等)
+			ReadOnlySpan<char> numeric = StripNumericSuffix(token);
+
+			if (int.TryParse(numeric, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int intVal))
+				return intVal;
+			if (long.TryParse(numeric, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out long longVal))
+				return longVal;
+			if (double.TryParse(numeric, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double doubleVal))
+				return doubleVal;
+
+			// フォールバック: 文字列として返す
+			return token.ToString();
+		}
+
+		private static ReadOnlySpan<char> StripNumericSuffix(ReadOnlySpan<char> token)
+		{
+			int end = token.Length;
+			while (end > 0 && token[end - 1] is 'f' or 'F' or 'u' or 'U' or 'l' or 'L')
+			{
+				end--;
+			}
+			return end > 0 ? token[..end] : token;
 		}
 	}
 
@@ -94,9 +226,33 @@ namespace Core
 
 		private readonly List<RuntimeRecordDecl> _RecordDeclList = new();
 		private readonly Dictionary<string, RuntimeRecordDecl> _RecordDeclDictWithFQN = new();
+
+		private static readonly System.Attribute _UnknownRuntimeAttribute = new UnknownRuntimeAttribute();
+
+		private readonly IReadOnlyDictionary<string, System.Type> _RuntimeAttributeTypeDictWithRuntimeFQN ;
 		#endregion
 
 		#region 公開メソッド
+		public RuntimeTypeDB()
+		{
+			Dictionary<string, System.Type> dict = new();
+			_RuntimeAttributeTypeDictWithRuntimeFQN = dict;
+
+			//	runtime attributeを収集
+			IReadOnlyList<System.Type> runtimeAttributeTypeList = Core.TypeDB.GetSubClassList<Core.RuntimeAttributes.RuntimeAttribute>();
+
+			foreach (var runtimeAttributeType in runtimeAttributeTypeList)
+			{
+				Core.RuntimeAttributes.RuntimeAttributeAttachAttribute? attachAttr = runtimeAttributeType.GetCustomAttribute<Core.RuntimeAttributes.RuntimeAttributeAttachAttribute>();
+				Nox.Util.Assert(attachAttr != null, "RuntimeAttributeを継承したクラスにはRuntimeWrapperAttributeを付与する必要があります。Type={0}", runtimeAttributeType.GetFullName());
+
+				if (dict.TryAdd(attachAttr.FQN, runtimeAttributeType) == false)
+				{
+					Nox.LogTrace.ErrorLine<Core.LogId.Runtime>("同じFQNのRuntimeAttributeが既に登録されています。FQN={0}, Type1={1}, Type2={2}", attachAttr.FQN, runtimeAttributeType.FullName, _RuntimeAttributeTypeDictWithRuntimeFQN[attachAttr.FQN].FullName);
+				}
+			}
+		}
+
 		public void Build(PlatformType platform, ConfigurationType configuration)
 		{
 			ReflectionGenerator.RuntimeTypeDB.TypeDB? typeDB;
@@ -115,11 +271,6 @@ namespace Core
 			{
 				_NamespaceDeclList = CreateNamespaceDeclList(typeDB.NamespaceList);
 			}
-		}
-
-		public static Core.RuntimeRecordDecl? GetRuntimeRecordDecl<T>() where T : Core.RuntimeObject, IRuntimeObject<T>
-		{
-			return IRuntimeObject<T>.RuntimeRecordDecl;
 		}
 
 		public Core.RuntimeTypeInfo? FindType(ReadOnlySpan<char> fqn)
@@ -187,6 +338,11 @@ namespace Core
 			{
 				var source = sourceList[i];
 
+				if (source.FullName == "nox::SceneResource")
+				{
+					Nox.Util.BreakPoint();
+				}
+
 				var typeInfo = GetCreateRuntimeTypeInfo(source.TypeInfo, source);
 				declList[i] = new RuntimeRecordDecl()
 				{
@@ -203,8 +359,7 @@ namespace Core
 					TypeInfo = typeInfo,
 				};
 				typeInfo.Decl = declList[i];
-
-
+				
 				AddDeclWithFQN(declList[i]);
 			}
 			return declList;
@@ -312,7 +467,7 @@ namespace Core
 			System.Attribute[] attributeList = new System.Attribute[sourceList.Length];
 			for (int i = 0; i < sourceList.Length; i++)
 			{
-				attributeList[i] = Local.CreateAttribute(sourceList[i]);
+				attributeList[i] = CreateAttribute(sourceList[i]);
 			}
 			return attributeList;
 		}
@@ -380,6 +535,108 @@ namespace Core
 		{
 		//	Nox.Util.Assert(_DeclDictWithFQN.ContainsKey(decl.FullName) == false, "同じFQNのDeclが既に登録されています。FQN={0}", decl.FullName);
 		//	_DeclDictWithFQN[decl.FullName] = decl;
+		}
+
+
+		public System.Attribute CreateAttribute(in ReflectionGenerator.RuntimeTypeDB.AttributeDecl attributeDecl)
+		{
+			switch (attributeDecl.Kind)
+			{
+				case ReflectionGenerator.RuntimeTypeDB.AttributeKind.Standard:
+					return _UnknownRuntimeAttribute;
+
+				case ReflectionGenerator.RuntimeTypeDB.AttributeKind.EngineAnnotate:
+					ReadOnlySpan<char> annotate = attributeDecl.Value;
+
+					//	アノテーション属性の文字列を解析して、型名(FQN)と引数リストに分解する
+					ReadOnlySpan<char> fqn = Local.ParseAnnotate(annotate, out object[] args);
+
+					switch (fqn)
+					{
+						case "nox::attr::DataMember":
+							return new System.Runtime.Serialization.DataMemberAttribute();
+						case "nox::attr::IgnoreDataMember":
+							return new System.Runtime.Serialization.IgnoreDataMemberAttribute();
+						case "nox::attr::dev::DisplayName":
+							{
+								if (args.Length != 1 || args[0] is not string)
+								{
+									Nox.LogTrace.WarningLine<Core.LogId.Runtime>($"DisplayName属性の引数が不正です。FQN={fqn}, Args={string.Join(", ", args)}");
+									break;
+								}
+
+								return new System.ComponentModel.DisplayNameAttribute((string)args[0]);
+							}
+
+						case "nox::attr::dev::Description":
+							{
+								if (args.Length != 1 || args[0] is not string)
+								{
+									Nox.LogTrace.WarningLine<Core.LogId.Runtime>($"Description属性の引数が不正です。FQN={fqn}, Args={string.Join(", ", args)}");
+									break;
+								}
+								return new System.ComponentModel.DescriptionAttribute((string)args[0]);
+							}
+
+						case "nox::attr::dev::Category":
+							{
+								if (args.Length != 1 || args[0] is not string)
+								{
+									Nox.LogTrace.WarningLine<Core.LogId.Runtime>($"Category属性の引数が不正です。FQN={fqn}, Args={string.Join(", ", args)}");
+									break;
+								}
+								return new System.ComponentModel.CategoryAttribute((string)args[0]);
+							}
+
+						case "nox::attr::dev::ReadOnly":
+							return new System.ComponentModel.ReadOnlyAttribute(true);
+
+						default:
+							{
+								//	RuntimeAttribute継承属性を探す
+								//	例：nox::attr::Resource(u8"ext", 1)、nox::attr::dev::PropertySetter()など
+
+								if (_RuntimeAttributeTypeDictWithRuntimeFQN.TryGetValue(fqn.ToString(), out System.Type? wrapperAttrType) == false)
+								{
+									Nox.LogTrace.WarningLine<Core.LogId.Runtime>($"RuntimeAttributeの生成に失敗しました。RuntimeAttributeのFQN={fqn}に対応するRuntimeWrapperAttributeが見つかりませんでした。");
+									break;
+								}
+
+								ReadOnlySpan<System.Reflection.ConstructorInfo> constructors = wrapperAttrType.GetConstructors();
+								foreach (var constructor in constructors)
+								{
+									ReadOnlySpan<ParameterInfo> parameters = constructor.GetParameters();
+
+									if (parameters.Length != args.Length)
+									{
+										continue;
+									}
+
+									for (int argIndex = 0; argIndex < parameters.Length; argIndex++)
+									{
+										var paramType = parameters[argIndex].ParameterType;
+										if (args[argIndex] is not null && args[argIndex].GetType() != paramType)
+										{
+											args[argIndex] = System.Convert.ChangeType(args[argIndex], paramType, System.Globalization.CultureInfo.InvariantCulture);
+										}
+									}
+
+									var attr = constructor.Invoke(args);
+									Nox.Util.Assert(attr != null, "runtimeWrapper属性の生成に失敗しました:{0}", wrapperAttrType.GetFullName());
+
+									var attrImpl = attr as Core.RuntimeAttributes.RuntimeAttribute;
+									Nox.Util.Assert(attrImpl != null, $"RuntimeWrapperAttributeを継承したクラスはCore.RuntimeAttributes.RuntimeAttributeも継承する必要があります。Type={wrapperAttrType.GetFullName()}");
+									return attrImpl;
+								}
+
+								Nox.Util.Assert(false, $"RuntimeWrapperAttributeのコンストラクタが見つかりませんでした。Type={wrapperAttrType.GetFullName()}, FQN={fqn}");
+								throw new NotImplementedException();
+							}
+					}
+					break;
+			}
+
+			return _UnknownRuntimeAttribute;
 		}
 		#endregion
 	}

@@ -35,11 +35,11 @@ namespace Studio.Wpf
 
 		protected override void OnStartup(StartupEventArgs e)
 		{
-			base.OnStartup(e);
-
 			System.Threading.Tasks.TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
 			Core.EntryManager.Instance.InvokeStart();
+
+			base.OnStartup(e);
 		}
 
 		protected override void OnExit(ExitEventArgs e)
@@ -63,7 +63,6 @@ namespace Studio.Wpf
 
 		}
 
-		[System.Runtime.Versioning.SupportedOSPlatform("windows10.0")]
 		protected override void RegisterTypes(IContainerRegistry containerRegistry)
 		{
 			foreach(var entry in UIEntryList)
@@ -72,6 +71,7 @@ namespace Studio.Wpf
 			}
 		}
 
+		[System.Runtime.Versioning.SupportedOSPlatform("windows10.0")]
 		private void OnUnobservedTaskException(object? sender, System.Threading.Tasks.UnobservedTaskExceptionEventArgs e)
 		{
 			
@@ -82,15 +82,13 @@ namespace Studio.Wpf
 				"Unobserved Task exception: {0}", ex);
 
 			// ここで自作 MessageBox を表示したり、Runtime へ流したりできる
-			var vm = new Core.UI.ViewModels.MessageBoxViewModel(
-				ex.InnerException?.Message ?? ex.Message,
-				type: Core.UI.ViewModels.MessageBoxType.Error);
 
-			var win = new Core.UI.Views.MessageBoxWindow(vm)
-			{
-				Owner = Current.MainWindow,
-			};
-			win.ShowDialog();
+
+			//var win = new Core.UI.Views.MessageBoxWindow(vm)
+			//{
+			//	Owner = Current.MainWindow,
+			//};
+			//win.ShowDialog();
 
 			// 例外を「処理済み」にしてプロセス終了を防ぐ
 			e.SetObserved();

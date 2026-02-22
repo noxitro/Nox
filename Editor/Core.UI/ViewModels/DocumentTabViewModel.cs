@@ -83,15 +83,24 @@ namespace Core.UI.ViewModels
 		#region 非公開メソッド
 		private void GenerateRemoteCode()
 		{
-			var result = Core.UI.MessageBox.Show(
+			var result = Core.UI.MessageBox.ShowDialog(
 				"RemoteCodeを出力しますか？",
 				"確認",
-				ViewModels.MessageBoxType.Info,
-				ViewModels.MessageBoxStyle.YesNo);
+				System.Windows.MessageBoxImage.Information,
+				System.Windows.MessageBoxButton.YesNo
+				);
 
-			if (result == ViewModels.MessageBoxResult.Yes)
+			if (result == System.Windows.MessageBoxResult.Yes)
 			{
-			//	var generator = new RuntimeRemote.RuntimeRemoteCodeGenerator();
+				Core.RuntimeRemote.RuntimeRemoteCodeGenerator generator = new();
+				generator.GenerateCode();
+
+				Core.UI.MessageBox.ShowDialog(
+					"RemoteCodeの出力が完了しました。",
+					"情報",
+					System.Windows.MessageBoxImage.Information,
+					System.Windows.MessageBoxButton.OK
+					);
 			}
 		}
 

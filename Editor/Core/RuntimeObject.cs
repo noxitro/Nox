@@ -1,34 +1,38 @@
 ﻿using Core.Attributes;
-using System.Runtime.CompilerServices;
+using Nox.Extensions;
 
 namespace Core
 {
 
 	[Core.Attributes.RuntimeWrapper("nox::Object")]
-	public class RuntimeObject
+	public abstract class RuntimeObject
 	{
 		#region フィールド
+		private long _RemoteInstanceId = 0;
+
 		/// <summary>
 		/// メンバ変数リスト
 		/// </summary>
-		private readonly object[] _VariableList;
+		private readonly object?[] _VariableList;
 		private readonly bool[] _VariableDirtyList;
 
 		/// <summary>
-		/// メンバ関数リスト
-		/// get,set
+		/// c++の関数だが、プロパティとして扱うもののリスト
 		/// </summary>
 		private readonly object[] _PropertyFunctionList;
+
 		#endregion
 
 		#region 公開プロパティ
 		public Core.RuntimeRecordDecl RuntimeRecordDecl { get; init; }
+		protected abstract RuntimeRecordDecl GetRuntimeRecordDecl();
 		#endregion
 
 		#region 公開メソッド
-		protected RuntimeObject(Core.RuntimeRecordDecl runtimeRecordDecl)
+		protected RuntimeObject()
 		{
-			RuntimeRecordDecl = runtimeRecordDecl;
+			//
+			RuntimeRecordDecl = GetRuntimeRecordDecl();
 
 			_PropertyFunctionList = [];
 
@@ -37,11 +41,40 @@ namespace Core
 			_VariableList = new object[variableListLength];
 			_VariableDirtyList = new bool[variableListLength];
 
+
 			for (int i = 0; i < variableListLength; ++i)
 			{
 				_VariableList[i] = CreateRuntimeVariable(variableList[i]);
 				_VariableDirtyList[i] = false;
 			}
+
+			//	プロパティとして扱う関数の収集
+			ReadOnlySpan<RuntimeFunctionDecl> functionList = RuntimeRecordDecl.FunctionList;
+			foreach (var function in functionList)
+			{
+			}
+		}
+
+		public object? GetValue(string name)
+		{
+			var index = RuntimeRecordDecl.VariableList.FindIndex(x => x.Name == name);
+			if (index <= -1)
+			{
+				Nox.Util.Assert(false, $"変数 '{name}' は存在しません。");
+			}
+
+			return _VariableList[index];
+		}
+
+		public void SetValue(string name, object? value)
+		{
+			var index = RuntimeRecordDecl.VariableList.FindIndex(x => x.Name == name);
+			if (index <= -1)
+			{
+				Nox.Util.Assert(false, $"変数 '{name}' は存在しません。");
+			}
+			_VariableList[index] = value;
+			_VariableDirtyList[index] = true;
 		}
 		#endregion
 
@@ -95,19 +128,28 @@ namespace Core
 
 			return null!;
 		}
+
+		protected T Get<T>([System.Runtime.CompilerServices.CallerMemberName] string propertyName = "")
+		{
+			object? value = GetValue(propertyName);
+			Nox.Util.Assert	(value is T, $"プロパティ '{propertyName}' の型が '{typeof(T).FullName}' ではありません。");
+			return (T)value;
+		}
+
+		protected void Set<T>(T value, [System.Runtime.CompilerServices.CallerMemberName] string propertyName = "")
+		{
+			SetValue(propertyName, value);
+		}
 		#endregion
 	}
 
+	/// <summary>
+	/// 型情報を保持するためのインターフェース
+	/// </summary>
+	/// <typeparam name="T"></typeparam>
 	public interface IRuntimeObject<T> where T : Core.RuntimeObject, IRuntimeObject<T> 
 	{
-		private static RuntimeRecordDecl? _RuntimeRecordDecl = null;
-		public static RuntimeRecordDecl RuntimeRecordDecl
-		{
-			get
-			{
-				Nox.Util.Assert(_RuntimeRecordDecl != null, "_RuntimeRecordDecl is null");
-				return _RuntimeRecordDecl;
-			}
-		}
+		static abstract RuntimeRecordDecl StaticRuntimeRecordDecl { get; set; }
+		static RuntimeRecordDecl GetRuntimeRecordDecl() => T.StaticRuntimeRecordDecl;
 	}
 }
