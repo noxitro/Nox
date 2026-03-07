@@ -23,14 +23,19 @@ namespace nox
 		virtual	void	Loaded() { return; }
 		virtual void	UnLoaded() { return; }
 
+		inline	void	SetComponentChain(Component*const chain)noexcept { chain_ = chain; }
+		inline	Component* GetComponentChain()const noexcept { return chain_; }
+
 		/// @brief 有効かどうか
 		inline bool IsValid()const noexcept { return owner_ != nullptr; }
 	protected:
 		inline	Component()noexcept :
-			owner_(nullptr)
+			owner_(nullptr),
+			chain_(nullptr)
 		{}
 
 	private:
-		class nox::GameObject* owner_;
+		class GameObject* owner_;
+		Component* chain_;
 	};
 }
