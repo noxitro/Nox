@@ -18,7 +18,7 @@ namespace
 
 nox::Application::Application()noexcept :
 	module_entry_bitset_{},
-	enabled_vsync_(false),
+	enabled_vsync_(true),
 	target_frame_rate_(60),
 	kill_(false)
 {
@@ -37,6 +37,7 @@ void	nox::Application::Init()
 			nox::ModuleEntry* module_entry = static_cast<nox::ModuleEntry*>(class_info.GetType().CreateObject());
 			module_entry_list_.emplace_back(*module_entry);
 		});
+
 }
 
 void	nox::Application::Run()
@@ -144,7 +145,7 @@ void	nox::Application::Exit()
 	module_entry_list_.shrink_to_fit();
 }
 
-constexpr nox::Application::UpdateCategory	nox::Application::ToUpdateCategory(nox::ModuleEntryCategory category)noexcept
+inline constexpr nox::Application::UpdateCategory	nox::Application::ToUpdateCategory(nox::ModuleEntryCategory category)noexcept
 {
 	if (category < nox::ModuleEntryCategory::_Setup)
 	{

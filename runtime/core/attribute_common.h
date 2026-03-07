@@ -33,6 +33,9 @@ namespace nox::attr
 		{
 		}
 
+		inline constexpr std::u8string_view GetExtension()const noexcept { return extension_; }
+		inline constexpr nox::uint32 GetVersion()const noexcept { return version_; }
+
 	private:
 		/// @brief 拡張子
 		std::u8string_view extension_;

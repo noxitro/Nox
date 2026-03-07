@@ -4,6 +4,12 @@
 ///	@brief	socket_stream_reader
 #pragma once
 
+namespace nox
+{
+	class Object;
+	class ManagedObject;
+}
+
 namespace nox::dev::editor_remote
 {
 	class EditorRemoteServer;
@@ -30,31 +36,40 @@ namespace nox::dev::editor_remote
 		void AddReceiveBuffer(std::span<const nox::uint8> buffer);
 		void ReadBytes(std::span<nox::uint8> dest);
 
-		
+		/// @brief 文字列読み込み
+		/// @param dest 
+		std::u8string_view Read(std::span<nox::char8> dest);
+
 		template<typename T> requires(std::is_arithmetic_v<T>)
 		inline void Read(T& out)
 		{
 			this->ReadBytes(std::span<nox::uint8>(reinterpret_cast<nox::uint8*>(&out), sizeof(T)));
 		}
 
-
-		void Read(nox::reflection::ReflectionObject* value);
-
-		/*template<class T> requires(!std::is_arithmetic_v<T>&& std::is_trivially_copyable_v<T> == false)
-			inline void Read(T& out)
+		template<nox::concepts::Enum T>
+		inline void Read(T& value)
 		{
-			this->ReadBytes(std::span<nox::uint8>(reinterpret_cast<nox::uint8*>(std::addressof(out)), sizeof(T)));
-		}*/
+			this->ReadBytes(std::span<nox::uint8>(reinterpret_cast<nox::uint8*>(&value), sizeof(T)));
+		}
+
+		void Read(nox::IntrusivePtr<nox::ManagedObject>& value);
 
 		nox::uint64 ReadLength();
-		std::u8string_view ReadString(std::span<nox::char8> dest);
-		nox::StdU8String ReadString();
+		
+		nox::StlU8String ReadString();
 
 		/// @brief 受信済みサイズを取得
 		[[nodiscard]] inline constexpr nox::uint32 GetReceivedSize()const noexcept
 		{
 			return (recv_pos_ - read_pos_) & (k_buffer_size - 1);
 		}
+
+		/// @brief 次のパケットを読み取ることができるかどうかを判定します。
+		/// @return 次のパケットを読み取ることができる場合は true、そうでない場合は false。
+		[[nodiscard]] bool CanReadBody()const noexcept;
+
+		/// @brief ヘッダ部分を空読み
+		void SkipHeader();
 	private:
 
 	private:

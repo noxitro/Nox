@@ -159,6 +159,11 @@ namespace nox::reflection
 		}
 
 		[[nodiscard]] bool	IsSubclassOf(const nox::reflection::Type& base)const noexcept;
+		template<class T> requires(std::is_class_v<T> || std::is_union_v<T>)
+		[[nodiscard]] bool	IsSubclassOf()const noexcept
+		{
+			return this->IsSubclassOf(nox::reflection::Typeof<T>());
+		}
 
 		const nox::reflection::FunctionInfo* GetCopyConstructor()const noexcept;
 		const nox::reflection::FunctionInfo* GetMoveConstructor()const noexcept;

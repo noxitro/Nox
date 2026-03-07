@@ -6,14 +6,10 @@
 #include	"type_traits/type_traits.h"
 #include	"memory/memory_util.h"
 #include    "math/math_algorithm.h"
+#include    "assertion_kernel.h"
 
 namespace nox
 {
-    namespace detail
-    {
-        void CheckStringLength(std::size_t length, std::size_t maxLength);
-    }
-
     template<class T, std::size_t _Length> requires(_Length >= 1)
         struct BasicFixedString
     {
@@ -31,7 +27,7 @@ namespace nox
         {
             if (s.length() > _Length)
             {
-                nox::detail::CheckStringLength(s.length(), _Length);
+                NOX_ASSERT_KERNEL_ID(false, nox::assertion::id::OutOfRange, u"OutOfRange");
             }
             std::ranges::copy_n(s.data(), s.length(), array_.begin());
         }

@@ -7,6 +7,7 @@
 namespace nox
 {
 	class Object;
+	class ManagedObject;
 }
 
 namespace nox::dev::editor_remote
@@ -18,12 +19,7 @@ namespace nox::dev::editor_remote
 	private:
 		static constexpr nox::uint32 k_buffer_size = 5096;
 	public:
-		inline constexpr explicit SocketStreamWriter(nox::dev::editor_remote::EditorRemoteServer& server) noexcept :
-			server_(server),
-			buffer_{ 0 },
-			position_(0)
-		{
-		}
+		explicit SocketStreamWriter(nox::dev::editor_remote::EditorRemoteServer& server) noexcept;
 
 		inline constexpr SocketStreamWriter(const SocketStreamWriter&) = delete;
 		inline constexpr SocketStreamWriter(SocketStreamWriter&&) noexcept = delete;
@@ -41,6 +37,12 @@ namespace nox::dev::editor_remote
 			this->WriteBytes(std::span<const nox::uint8>(reinterpret_cast<const nox::uint8*>(&value), sizeof(T)));
 		}
 
+		template<nox::concepts::Enum T>
+		inline void Write(T value)
+		{
+			this->Write(nox::util::ToUnderlying(value));
+		}
+
 		inline void Write(std::u8string_view str)
 		{
 			this->WriteLength(static_cast<nox::uint64>(str.size()));
@@ -56,7 +58,10 @@ namespace nox::dev::editor_remote
 			this->WriteBytes(std::span(static_cast<const nox::uint8*>(std::addressof(value)), sizeof(T)));
 		}
 
-		void Write(const nox::reflection::ReflectionObject* value);
+		void Write(nox::IntrusivePtr<nox::ManagedObject>& value);
+	private:
+		nox::uint32 WriteLeb128ToEnd(nox::uint64 length);
+
 	private:
 		nox::dev::editor_remote::EditorRemoteServer& server_;
 		nox::uint32 position_;

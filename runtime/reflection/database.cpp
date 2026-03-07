@@ -37,124 +37,127 @@ namespace nox::util
 
 namespace nox::reflection
 {
-	/// @brief クラスデータ
-	struct ClassNode
+	namespace
 	{
-		std::reference_wrapper<const nox::reflection::Type> type;
-		//	ノード構築時に不明な場合があるのでポインタで保持
-		//	子を登録する時、親が登録されていないことがあるため
-		const nox::reflection::ClassInfo* class_info;
-		ClassNode* next_ptr;
-		const ClassNode* prev_ptr;
-		ClassNode* child_ptr;
-
-		inline const nox::reflection::ClassInfo& getClassInfo()const noexcept
+		/// @brief クラスデータ
+		struct ClassNode
 		{
-			NOX_ASSERT(class_info != nullptr, u"ClassInfo is null");
-			return *class_info;
+			std::reference_wrapper<const nox::reflection::Type> type;
+			//	ノード構築時に不明な場合があるのでポインタで保持
+			//	子を登録する時、親が登録されていないことがあるため
+			const nox::reflection::ClassInfo* class_info;
+			ClassNode* next_ptr;
+			const ClassNode* prev_ptr;
+			ClassNode* child_ptr;
+
+			inline const nox::reflection::ClassInfo& getClassInfo()const noexcept
+			{
+				NOX_ASSERT(class_info != nullptr, u"ClassInfo is null");
+				return *class_info;
+			}
+
+			inline constexpr explicit ClassNode(const nox::reflection::Type& _type)noexcept :
+				type(_type),
+				class_info(nullptr),
+				next_ptr(nullptr),
+				prev_ptr(nullptr),
+				child_ptr(nullptr)
+			{
+			}
+
+			inline constexpr explicit ClassNode(const nox::reflection::ClassInfo& _class_info)noexcept :
+				type(_class_info.GetType()),
+				class_info(&_class_info),
+				next_ptr(nullptr),
+				prev_ptr(nullptr),
+				child_ptr(nullptr)
+			{
+			}
+
+			inline constexpr ClassNode(const ClassNode& rhs)noexcept :
+				type(rhs.type),
+				class_info(rhs.class_info),
+				next_ptr(rhs.next_ptr),
+				prev_ptr(rhs.prev_ptr),
+				child_ptr(rhs.child_ptr)
+			{
+			}
+
+			inline ClassNode(const ClassNode&&)noexcept = delete;
+
+			inline ClassNode& operator =(const ClassNode& rhs)noexcept
+			{
+				type = rhs.type;
+				class_info = rhs.class_info;
+				next_ptr = rhs.next_ptr;
+				prev_ptr = rhs.prev_ptr;
+				child_ptr = rhs.child_ptr;
+				return *this;
+			}
+
+			inline ClassNode& operator =(ClassNode&& rts)noexcept = delete;
+		};
+
+		struct DB
+		{
+			//	DB
+		// //	型情報をキーとした検索用
+			struct
+			{
+				nox::UnorderedMap<const nox::reflection::Type*, ClassNode> class_node_map;
+				nox::UnorderedMap<const nox::reflection::Type*, std::reference_wrapper<const nox::reflection::ClassInfo>> union_map;
+				nox::UnorderedMap<const nox::ObjectPointerId*, std::reference_wrapper<const nox::reflection::VariableInfo>> variable_map;
+				nox::UnorderedMap<const nox::FunctionPointerId*, std::reference_wrapper<const nox::reflection::FunctionInfo>> function_map;
+				nox::UnorderedMap<const nox::reflection::Type*, std::reference_wrapper<const nox::reflection::EnumInfo>> enum_map;
+			}chunk_with_type_id;
+
+			//	名前のハッシュをキーとした検索用
+			struct
+			{
+				nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const ClassNode>> class_node_map;
+				nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::ClassInfo>> union_map;
+				nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::VariableInfo>> variable_map;
+				nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::FunctionInfo>> function_map;
+				nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::EnumInfo>> enum_map;
+			}chunk_with_name_hash;
+			/// @brief 全ての翻訳単位の情報を格納するマップ
+
+			nox::HashSet<const nox::reflection::Type*> all_type_hash_set_;
+			nox::Vector<std::reference_wrapper<const nox::reflection::Type>> all_type_list_;
+		};
+
+		constinit nox::reflection::DB* database = nullptr;
+		inline constexpr nox::reflection::DB& GetDB()noexcept
+		{
+			return *database;
 		}
 
-		inline constexpr explicit ClassNode(const nox::reflection::Type& _type)noexcept :
-			type(_type),
-			class_info(nullptr),
-			next_ptr(nullptr),
-			prev_ptr(nullptr),
-			child_ptr(nullptr)
+		inline	const nox::reflection::ClassNode& GetRootClassNode()noexcept
+		{
+			auto r = GetDB().chunk_with_type_id.class_node_map.find(&nox::reflection::Typeof<nox::reflection::ReflectionObject>());
+			NOX_ASSERT(r != GetDB().chunk_with_type_id.class_node_map.end(), u"ReflectionObject class node not found");
+			return r->second;
+		}
+
+		inline	void RegisterTypeIdMap(const nox::reflection::Type&)
 		{
 		}
 
-		inline constexpr explicit ClassNode(const nox::reflection::ClassInfo& _class_info)noexcept :
-			type(_class_info.GetType()),
-			class_info(&_class_info),
-			next_ptr(nullptr),
-			prev_ptr(nullptr),
-			child_ptr(nullptr)
+		inline	void UnregisterTypeIdMap(const nox::reflection::Type&)
 		{
 		}
 
-		inline constexpr ClassNode(const ClassNode& rhs)noexcept :
-			type(rhs.type),
-			class_info(rhs.class_info),
-			next_ptr(rhs.next_ptr),
-			prev_ptr(rhs.prev_ptr),
-			child_ptr(rhs.child_ptr)
+		inline const ClassNode* FindClassNode(const nox::reflection::Type& type)
 		{
+			const auto& class_node_map = GetDB().chunk_with_type_id.class_node_map;
+
+			auto it = class_node_map.find(&type);
+			if (it != class_node_map.end())
+			{
+				return &it->second;
+			}
+			return nullptr;
 		}
-
-		inline ClassNode(const ClassNode&&)noexcept = delete;
-
-		inline ClassNode& operator =(const ClassNode& rhs)noexcept
-		{
-			type = rhs.type;
-			class_info = rhs.class_info;
-			next_ptr = rhs.next_ptr;
-			prev_ptr = rhs.prev_ptr;
-			child_ptr = rhs.child_ptr;
-			return *this;
-		}
-
-		inline ClassNode& operator =(ClassNode&& rts)noexcept = delete;
-	};
-
-	struct DB
-	{
-		//	DB
-	// //	型情報をキーとした検索用
-		struct
-		{
-			nox::UnorderedMap<const nox::reflection::Type*, ClassNode> class_node_map;
-			nox::UnorderedMap<const nox::reflection::Type*, std::reference_wrapper<const nox::reflection::ClassInfo>> union_map;
-			nox::UnorderedMap<const nox::ObjectPointerId*, std::reference_wrapper<const nox::reflection::VariableInfo>> variable_map;
-			nox::UnorderedMap<const nox::FunctionPointerId*, std::reference_wrapper<const nox::reflection::FunctionInfo>> function_map;
-			nox::UnorderedMap<const nox::reflection::Type*, std::reference_wrapper<const nox::reflection::EnumInfo>> enum_map;
-		}chunk_with_type_id;
-
-		//	名前のハッシュをキーとした検索用
-		struct
-		{
-			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const ClassNode>> class_node_map;
-			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::ClassInfo>> union_map;
-			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::VariableInfo>> variable_map;
-			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::FunctionInfo>> function_map;
-			nox::UnorderedMap<std::uint32_t, std::reference_wrapper<const nox::reflection::EnumInfo>> enum_map;
-		}chunk_with_name_hash;
-		/// @brief 全ての翻訳単位の情報を格納するマップ
-
-		nox::HashSet<const nox::reflection::Type*> all_type_hash_set_;
-		nox::Vector<std::reference_wrapper<const nox::reflection::Type>> all_type_list_;
-	};
-
-	DB* database = nullptr;
-	inline constexpr DB& GetDB()noexcept
-	{
-		return *database;
-	}
-
-	inline	const nox::reflection::ClassNode& GetRootClassNode()noexcept
-	{
-		auto r = GetDB().chunk_with_type_id.class_node_map.find(&nox::reflection::Typeof<nox::reflection::ReflectionObject>());
-		NOX_ASSERT(r != GetDB().chunk_with_type_id.class_node_map.end(), u"ReflectionObject class node not found");
-		return r->second;
-	}
-
-	inline	void RegisterTypeIdMap(const nox::reflection::Type&)
-	{
-	}
-
-	inline	void UnregisterTypeIdMap(const nox::reflection::Type&)
-	{
-	}
-	
-	inline const ClassNode* FindClassNode(const nox::reflection::Type& type)
-	{
-		const auto& class_node_map = GetDB().chunk_with_type_id.class_node_map;
-
-		auto it = class_node_map.find(&type);
-		if (it != class_node_map.end())
-		{
-			return &it->second;
-		}
-		return nullptr;
 	}
 }
 
@@ -427,7 +430,7 @@ bool nox::reflection::IsBaseOf(const nox::reflection::ClassInfo& base, const nox
 			return true;
 		}
 
-		if (IsBaseOf(base_type, tmp_base_type) == true)
+		if (nox::reflection::IsBaseOf(base_type, tmp_base_type) == true)
 		{
 			return true;
 		}
@@ -465,8 +468,8 @@ void	nox::reflection::Register(const nox::reflection::ClassInfo& data)
 				NOX_ASSERT(node.class_info == nullptr, u"already registered class info:{}", data.GetFullName());
 				node.class_info = &data;
 
-				const auto r = GetDB().chunk_with_name_hash.class_node_map.emplace(nox::util::Crc32(data.GetFullName()), node);
-				NOX_ASSERT(r.second, u"class already registered with name hash:{}", data.GetFullName());
+				const auto r2 = GetDB().chunk_with_name_hash.class_node_map.emplace(nox::util::Crc32(data.GetFullName()), node);
+				NOX_ASSERT(r2.second, u"class already registered with name hash:{}", data.GetFullName());
 				return node;
 			}
 			else
@@ -617,4 +620,23 @@ void nox::reflection::Unregister(const nox::reflection::FunctionInfo& data)
 {
 	GetDB().chunk_with_type_id.function_map.erase(&data.GetFunctionId());
 	GetDB().chunk_with_name_hash.function_map.erase(nox::util::Crc32(data.GetFullName()));
+}
+
+std::u8string_view nox::reflection::GetEnumFullName(const nox::reflection::Type& type, nox::uint64 value)noexcept
+{
+	const nox::reflection::EnumInfo*const enum_info = FindEnumInfo(type);
+	if (enum_info == nullptr)
+	{
+		return u8"";
+	}
+
+	const auto value_list = enum_info->GetVariableList();
+	for (const nox::reflection::EnumeratorInfo& variable : value_list)
+	{
+		if (variable.GetValue<uint64>() == value)
+		{
+			return variable.GetFullName();
+		}
+	}
+	return u8"";
 }

@@ -189,7 +189,7 @@ void	nox::os::Window::CreateNative(const void* args_ptr)
 
 	if (self.window_handle_ == nullptr)
 	{
-		NOX_ASSERT(false, u"ウィンドウの生成に失敗しました");
+		NOX_ASSERT(false, u8"ウィンドウの生成に失敗しました");
 		return;
 	}
 #endif // NOX_WINDOWS
@@ -198,7 +198,7 @@ void	nox::os::Window::CreateNative(const void* args_ptr)
 
 void nox::os::Window::Show()
 {
-	NOX_ASSERT(window_handle_ != nullptr, u"ウィンドウハンドルが不正です");
+	NOX_ASSERT(window_handle_ != nullptr, u8"ウィンドウハンドルが不正です");
 	::ShowWindow(window_handle_, SW_SHOW);
 	::UpdateWindow(window_handle_);
 }
@@ -207,7 +207,6 @@ void nox::os::Window::Dispose()
 {
 	if (window_handle_ != nullptr)
 	{
-		::CloseHandle(window_handle_);
 		::DestroyWindow(window_handle_);
 		window_handle_ = nullptr;
 	}

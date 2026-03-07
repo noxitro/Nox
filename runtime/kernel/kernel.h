@@ -15,6 +15,7 @@
 #include	"singleton.h"
 #include	"memory/nox_memory.h"
 #include	"memory/memory_util.h"
+#include	"memory/pmr_buffer.h"
 
 //	os
 #include	"os/os.h"
@@ -23,6 +24,7 @@
 #include	"os/thread.h"
 #include	"os/clipboard.h"
 #include	"os/window.h"
+//	end os
 
 #include	"function.h"
 #include	"log_trace.h"
@@ -59,3 +61,9 @@
 #include	"scope_profile.h"
 #include	"placement_object.h"
 #include	"fixed_string.h"
+#include	"path.h"
+#include	"fixed_vector.h"
+
+//	diagnostics
+#include	"parallel_execute_checker.h"
+//	end diagnostics

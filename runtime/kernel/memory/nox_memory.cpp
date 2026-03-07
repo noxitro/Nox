@@ -174,7 +174,7 @@ namespace nox::memory
 
 void    nox::memory::Initialize(std::size_t total_memory_sizse, bool enabled_profile)
 {
-    g_memory_storage = static_cast<nox::uint8*>(::VirtualAlloc(nullptr, total_memory_sizse, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
+//    g_memory_storage = static_cast<nox::uint8*>(::VirtualAlloc(nullptr, total_memory_sizse, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
 
 	//  stack_walker::Initialize();
     nox::stack_walker::Initialize();

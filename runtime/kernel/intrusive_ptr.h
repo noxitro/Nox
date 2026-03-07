@@ -2,6 +2,7 @@
 ///	@brief	intrusive_ptr
 #pragma once
 #include	"type_traits/type_name.h"
+#include	"utility.h"
 
 namespace nox
 {
@@ -32,6 +33,49 @@ namespace nox
 		struct IntrusivePtrDownCastTag {};
 
 		void IntrusivePtrAbort();
+
+		template<class T>
+		inline void IntrusivePtrAddReferenceWrapper(T* ptr)
+		{
+			if constexpr (IntrusivePtrAddReferenceConcept<T>)
+			{
+				if constexpr (std::is_const_v<T>)
+				{
+					IntrusivePtrAddReference(*const_cast<std::remove_const_t<T>*>(ptr));
+				}
+				else
+				{
+					IntrusivePtrAddReference(*ptr);
+				}
+			}
+			else
+			{
+				//	ここには来ないはず
+				nox::detail::IntrusivePtrAbort();
+			}
+		}
+
+		template<class T>
+		inline void IntrusivePtrReleaseReferenceWrapper(T* ptr)
+		{
+			if constexpr (IntrusivePtrReleaseReferenceConcept<T>)
+			{
+				if constexpr (std::is_const_v<T>)
+				{
+					IntrusivePtrReleaseReference(*const_cast<std::remove_const_t<T>*>(ptr));
+				}
+				else
+				{
+					IntrusivePtrReleaseReference(*ptr);
+				}
+			}
+			else
+			{
+				//	ここには来ないはず
+				nox::detail::IntrusivePtrAbort();
+			}
+		}
+
 	}
 
 	/// @brief		侵入型スマートポインタ
@@ -61,33 +105,32 @@ namespace nox
 			ths.instance_ = nullptr;
 		}
 
-		template<std::derived_from<T> U>
-		inline constexpr IntrusivePtr(const IntrusivePtr<U>& rhs)noexcept
-		{
-			instance_ = static_cast<T*>(rhs.instance_);
 
-			if constexpr (nox::detail::IntrusivePtrAddReferenceConcept<T> == true)
-			{
-				IntrusivePtrAddReference(*static_cast<T*>(instance_));
-			}
+		template<std::derived_from<T> U>
+		inline constexpr IntrusivePtr(U*const& instance)noexcept :
+			instance_(static_cast<U*>(instance))
+		{
 		}
 
 		template<std::derived_from<T> U>
-		inline constexpr IntrusivePtr(IntrusivePtr<U>&& rhs)noexcept
+		inline constexpr IntrusivePtr(const IntrusivePtr<U>& rhs):
+			instance_(static_cast<T*>(rhs.instance_))
 		{
-			instance_ = rhs.instance_;
+			nox::detail::IntrusivePtrAddReferenceWrapper(instance_);
+		}
+
+		template<std::derived_from<T> U>
+		inline constexpr IntrusivePtr(IntrusivePtr<U>&& rhs)noexcept:
+			instance_(static_cast<T*>(rhs.instance_))
+		{
 			rhs.instance_ = nullptr;
 		}
 
 		template<class U> requires(std::is_base_of_v<T, U>)
-		inline constexpr IntrusivePtr(const IntrusivePtr<U>& rhs, nox::detail::IntrusivePtrDownCastTag tag)noexcept
+			inline constexpr IntrusivePtr(const IntrusivePtr<U>& rhs, nox::detail::IntrusivePtrDownCastTag tag):
+			instance_(static_cast<T*>(rhs.instance_))
 		{
-			instance_ = rhs.instance_;
-
-			if constexpr (nox::detail::IntrusivePtrAddReferenceConcept<T> == true)
-			{
-				IntrusivePtrAddReference(*static_cast<T*>(instance_));
-			}
+			nox::detail::IntrusivePtrAddReferenceWrapper(instance_);
 		}
 
 		///// @brief 親から子の型へのキャストmove
@@ -107,24 +150,43 @@ namespace nox
 				return;
 			}
 
-			//static_assert(nox::detail::IntrusivePtrReleaseReferenceConcept<T> == true);
-			if constexpr (nox::detail::IntrusivePtrReleaseReferenceConcept<T> == true)
+			nox::detail::IntrusivePtrReleaseReferenceWrapper(instance_);
+		}
+
+		inline void Reset()
+		{
+			if (instance_ == nullptr)
 			{
-				IntrusivePtrReleaseReference(*instance_);
+				return;
 			}
-			else
+			nox::detail::IntrusivePtrReleaseReferenceWrapper(instance_);
+
+			instance_ = nullptr;
+		}
+
+		inline void Reset(T* const instance)
+		{
+			this->Reset();
+			instance_ = instance;
+			if (instance_ != nullptr)
 			{
-				//	ここには来ないはず
-				nox::detail::IntrusivePtrAbort();
+				nox::detail::IntrusivePtrAddReferenceWrapper(instance_);
 			}
 		}
 
-		inline constexpr IntrusivePtr& operator=(const IntrusivePtr& rhs)noexcept
+		inline constexpr bool operator==(std::nullptr_t)const noexcept
+		{
+			return instance_ == nullptr;
+		}
+
+		inline constexpr IntrusivePtr& operator=(const IntrusivePtr& rhs)
 		{
 			instance_ = rhs.instance_;
-			if constexpr (nox::detail::IntrusivePtrReleaseReferenceConcept<T> == true)
+
+			// 新しいインスタンスの参照カウントを増やす
+			if (instance_ != nullptr)
 			{
-				IntrusivePtrReleaseReference(*instance_);
+				nox::detail::IntrusivePtrAddReferenceWrapper(instance_);
 			}
 
 			return *this;
@@ -138,17 +200,55 @@ namespace nox
 			return *this;
 		}
 
-		[[nodiscard]] inline constexpr T* Get()noexcept { return instance_; }
-		[[nodiscard]] inline constexpr const T* Get()const noexcept { return instance_; }
+		template<std::derived_from<T> U>
+		inline constexpr IntrusivePtr& operator=(const IntrusivePtr<U>& rhs)
+		{
+			instance_ = static_cast<T*>(rhs.instance_);
+			// 新しいインスタンスの参照カウントを増やす
+			if (instance_ != nullptr)
+			{
+				nox::detail::IntrusivePtrAddReferenceWrapper(instance_);
+			}
+			return *this;
+		}
 
-		[[nodiscard]] inline constexpr T& operator*()noexcept { return *instance_; }
-		[[nodiscard]] inline constexpr const T& operator*()const noexcept { return *instance_; }
+		template<std::derived_from<T> U>
+		inline constexpr IntrusivePtr& operator=(IntrusivePtr<U>&& rhs)noexcept
+		{
+			instance_ = static_cast<T*>(rhs.instance_);
+			rhs.instance_ = nullptr;
+			return *this;
+		}
 
-		[[nodiscard]]	inline constexpr T* operator->()noexcept { return instance_; }
-		[[nodiscard]]	inline constexpr const T* operator->()const noexcept { return instance_; }
+	/*	template<std::derived_from<T> U>
+		inline constexpr IntrusivePtr& operator=(U* const& instance)
+		{
+			this->Reset(static_cast<T*>(instance));
+			return *this;
+		}*/
 
-		[[nodiscard]] inline constexpr operator T* () noexcept { return instance_; }
-		[[nodiscard]] inline constexpr operator const T* () const noexcept { return instance_; }
+		[[nodiscard]] inline constexpr T* Get()const noexcept { return instance_; }
+		[[nodiscard]] inline constexpr T** GetAddressOf()noexcept { return std::addressof(instance_); }
+		[[nodiscard]] inline constexpr T*const* GetAddressOf()const noexcept { return std::addressof(instance_); }
+
+		[[nodiscard]] inline constexpr T& operator*()const noexcept { return *instance_; }
+
+		[[nodiscard]]	inline constexpr T* operator->()const noexcept { return instance_; }
+
+		[[nodiscard]] inline constexpr operator T* () const noexcept { return instance_; }
+
+		[[nodiscard]] inline constexpr operator bool()const noexcept { return instance_ != nullptr; }
+	private:
+		inline constexpr void AddRef()
+		{
+
+		}
+
+		inline constexpr void Release()
+		{
+		
+		}
+
 	private:
 		T* instance_;
 	};

@@ -4,7 +4,6 @@
 ///	@brief	nox_string_view
 #pragma once
 #include	"advanced_type.h"
-#include	"unicode_converter.h"
 #include	"ascii.h"
 
 namespace nox
@@ -153,6 +152,16 @@ namespace nox
 			return nox::BasicStringView<To>(converted.value());
 		}
 #pragma endregion
+
+#pragma region convert utf
+		inline std::u8string_view ToUTF8(std::span<nox::char8> buffer) const requires(!std::is_same_v<T, nox::char8>)
+		{
+			return this->ToUTF8Impl(buffer);
+		}
+#pragma endregion
+
+	private:
+		std::u8string_view ToUTF8Impl(std::span<nox::char8> buffer) const;
 
 
 	private:

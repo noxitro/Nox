@@ -15,3 +15,11 @@
 #include	"application.h"
 #include	"module_entry.h"
 #include	"core_entry.h"
+
+//	edotor_remote
+#include	"dev/remote/system.g.h"
+#include	"dev/remote/log.g.h"
+#include	"dev/socket_stream_writer.h"
+#include	"dev/socket_stream_reader.h"
+#include	"dev/editor_remote_server.h"
+//	end editor_remote

@@ -151,15 +151,26 @@ namespace nox::reflection
 		return static_cast<T*>(&from);
 	}
 
-	template<class T>
-		requires(std::derived_from<T, nox::reflection::ReflectionObject>)
-	inline const T* AsCast(const nox::reflection::ReflectionObject& from) noexcept
+	template<class T> requires (std::is_pointer_v<T>)
+		inline T AsCast(nox::reflection::ReflectionObject* from) noexcept
 	{
-		if (nox::reflection::detail::IsBaseOf(nox::reflection::Typeof<T>(), from) == false)
+		if (from == nullptr)
 		{
 			return nullptr;
 		}
-		return static_cast<const T*>(&from);
+
+		if (nox::reflection::detail::IsBaseOf(nox::reflection::Typeof<T>(), *from) == false)
+		{
+			return nullptr;
+		}
+		return reinterpret_cast<T>(from);
+	}
+
+	std::u8string_view GetEnumFullName(const nox::reflection::Type& type, nox::uint64 value)noexcept;
+	template<nox::concepts::Enum T>
+	inline std::u8string_view GetEnumFullName(T value)noexcept
+	{
+		return nox::reflection::GetEnumFullName(nox::reflection::Typeof<T>(), static_cast<nox::uint64>(value));
 	}
 #pragma endregion
 }

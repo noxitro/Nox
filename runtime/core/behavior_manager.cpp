@@ -44,7 +44,7 @@ void nox::BehaviorManager::Register(nox::Behavior& behavior)
 {
 	nox::int32 priority = 0;
 	{
-		nox::attr::UpdateOrder* update_order = nox::reflection::AsCast<nox::attr::UpdateOrder>(behavior);
+		nox::attr::UpdateOrder* update_order = nox::reflection::AsCast<nox::attr::UpdateOrder*>(&behavior);
 		if (update_order != nullptr)
 		{
 			priority = update_order->GetPriority();

@@ -4,9 +4,8 @@
 
 #include	"stdafx.h"
 #include	"system.g.h"
-#include	"../socket_stream_writer.h"
-#include	"../socket_stream_reader.h"
-#include	"../../scene_view.h"
+#include	"codegen_preamble.h"
+
 
 void nox::dev::editor_remote::ResourceConvertQuery::OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)
 {
@@ -15,21 +14,16 @@ void nox::dev::editor_remote::ResourceConvertQuery::OnSerialize(nox::dev::editor
 
 void nox::dev::editor_remote::ResourceConvertQuery::OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)
 {
-//	reader.Read(native_path_);
+	reader.Read(native_path_);
 }
 void nox::dev::editor_remote::SceneViewInfo::OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)
 {
 	writer.Write(main_window_handle_);
-//	writer.Write(scene_view_);
+	writer.Write(scene_view_);
 }
 
 void nox::dev::editor_remote::SceneViewInfo::OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)
 {
-	const nox::IntrusivePtr<nox::reflection::ReflectionObject>& temp_scene_view = scene_view_;
-
-//	main_window_handle_ = reader.Read(main_window_handle_);
-
-
-	const nox::reflection::ReflectionObject* pp = scene_view_.Get();
+	reader.Read(main_window_handle_);
 	reader.Read(scene_view_);
 }

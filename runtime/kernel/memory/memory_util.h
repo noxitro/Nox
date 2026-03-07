@@ -40,7 +40,7 @@ namespace nox::memory
 	template<class T> requires(std::is_pointer_v<T> && !std::is_const_v<T> && !std::is_polymorphic_v<T>)
 		inline void	ZeroMem(T ptr, size_t size) 
 	{
-		detail::ZeroMemImpl(ptr, size);
+		nox::memory::detail::ZeroMemImpl(ptr, size);
 	}
 
 	not_null<void*>	Copy(not_null<void*> dest, not_null<const void*> src, size_t size);

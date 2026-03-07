@@ -38,9 +38,19 @@ namespace nox::debug
 		_Max
 	};
 
+	struct LogHandlerArgs
+	{
+		nox::uint32 column;
+		std::u8string_view message;
+		std::u8string_view callstack;
+	};
+
+	void AttachLogHandler(void(*callback)(const LogHandlerArgs&));
+	void DetachLogHandler();
+
 	namespace detail
 	{
-		void	TraceDirect(LogCategory log_category, const std::u16string_view category, const std::u32string_view message, bool isNewLine, const std::source_location& source_location);
+		void	TraceDirect(LogCategory log_category, const std::u16string_view category, const std::u8string_view message, bool isNewLine, const std::source_location& source_location);
 		void	TraceDirect(LogCategory log_category, const std::u16string_view category, const std::u16string_view message, bool isNewLine, const std::source_location& source_location);
 
 		//template<class... Args>
@@ -54,6 +64,16 @@ namespace nox::debug
 		//}
 
 		template<class... Args>
+		void	TraceDirectArgs(LogCategory log_category, const std::u16string_view category, bool isNewLine, const std::source_location& source_location, const std::u8string_view message, Args&&...args)
+		{
+			//	動的メモリ確保を行わないように確保済みのバッファを使用
+			std::array<nox::char8, 5096> buffer = { 0 };
+			nox::util::Format(buffer, message.data(), std::forward<Args>(args)...);
+
+			nox::debug::detail::TraceDirect(log_category, category, buffer.data(), isNewLine, source_location);
+		}
+
+		template<class... Args>
 		void	TraceDirectArgs(LogCategory log_category, const std::u16string_view category, bool isNewLine, const std::source_location& source_location, const std::u16string_view message, Args&&...args)
 		{
 			//	動的メモリ確保を行わないように確保済みのバッファを使用
@@ -65,11 +85,19 @@ namespace nox::debug
 
 	}
 
-	template<std::derived_from<log_id::LogId> LogId> 
-		requires(std::is_same_v<std::u16string_view, decltype(LogId()())>)
-	inline	void	LogTrace(LogCategory log_category, const std::u32string_view message, const std::source_location source_location = std::source_location::current())
+	//template<std::derived_from<log_id::LogId> LogId> 
+	//	requires(std::is_same_v<std::u16string_view, decltype(LogId()())>)
+	//inline	void	LogTrace(LogCategory log_category, const std::u32string_view message, const std::source_location source_location = std::source_location::current())
+	//{
+	//	nox::debug::detail::TraceDirect(log_category, LogId()(), message, true, source_location);
+	//}
+
+	template<std::derived_from<log_id::LogId> LogId, class... Args>
+		requires(std::is_polymorphic_v<LogId> == false && std::is_same_v<std::u16string_view, decltype(LogId()())>)
+	inline	void	LogTraceArgs(LogCategory log_category, const std::source_location& source_location, const std::u8string_view message, Args&&... args)
 	{
-		nox::debug::detail::TraceDirect(log_category, LogId()(), message, true, source_location);
+		constexpr std::u16string_view log_tag = LogId()();
+		nox::debug::detail::TraceDirectArgs(log_category, log_tag, true, source_location, message, std::forward<Args>(args)...);
 	}
 
 	///// @brief		ログ出力
@@ -93,15 +121,6 @@ namespace nox::debug
 	{
 		constexpr std::u16string_view log_tag = LogId()();
 		nox::debug::detail::TraceDirectArgs(log_category, log_tag, true, source_location, message, std::forward<Args>(args)...);
-	}
-
-	/// @brief 削除予定
-	/// @param log_category 
-	/// @param message 
-	/// @param source_location 
-	inline	void	LogTrace(LogCategory log_category, const std::u32string_view message, const std::source_location source_location = std::source_location::current())
-	{
-		nox::debug::LogTrace<log_id::Invalid>(log_category, message, source_location);
 	}
 }
 

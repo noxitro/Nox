@@ -20,7 +20,7 @@ void	nox::memory::detail::ZeroMemImpl(void* ptr, size_t size)
 
 void	nox::memory::detail::CheckConstructAt(size_t type_size, size_t storage_size)noexcept
 {
-	NOX_ASSERT(type_size <= storage_size, u"ConstructAtのストレージサイズが不足しています");
+	NOX_ASSERT(type_size <= storage_size, u8"ConstructAtのストレージサイズが不足しています");
 }
 
 nox::not_null<void*>	nox::memory::Copy(nox::not_null<void*> dest, nox::not_null<const void*> src, size_t size)

@@ -57,7 +57,7 @@ namespace nox
 		inline	void	Init();
 		inline	void	Update();
 		inline	void	Exit();
-		inline static constexpr UpdateCategory	ToUpdateCategory(nox::ModuleEntryCategory category)noexcept;
+		static constexpr UpdateCategory	ToUpdateCategory(nox::ModuleEntryCategory category)noexcept;
 		inline	void	InvokeModuleEntry(const UpdateCategory category);
 	private:
 		bool kill_;

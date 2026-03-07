@@ -11,19 +11,22 @@ namespace nox::util
 {
 #if !NOX_MASTER
 	class ParallelExecuteChecker;
+	class RWParallelExecuteChecker;
+
+	namespace detail
+	{
+		enum class ParallelExecuteCheckOption : nox::uint8
+		{
+			SourceLocation,
+			StackTrace,
+		};
+	}
 
 	/// @brief 並列実行チェック
 	class ParallelExecuteCheckScope
 	{
 	public:
-		enum class Option : nox::uint8
-		{
-			SourceLocation,
-			Callstack,
-		};
-
-	public:
-		ParallelExecuteCheckScope(nox::util::ParallelExecuteChecker& checker, Option option = Option::SourceLocation, const std::source_location location = std::source_location::current());
+		ParallelExecuteCheckScope(nox::util::ParallelExecuteChecker& checker, nox::util::detail::ParallelExecuteCheckOption option = nox::util::detail::ParallelExecuteCheckOption::SourceLocation, const std::source_location location = std::source_location::current());
 		~ParallelExecuteCheckScope();
 
 		inline constexpr ParallelExecuteCheckScope(const ParallelExecuteCheckScope&)noexcept = delete;
@@ -32,6 +35,30 @@ namespace nox::util
 		inline constexpr ParallelExecuteCheckScope& operator =(const ParallelExecuteCheckScope&)noexcept = delete;
 	private:
 		nox::util::ParallelExecuteChecker& checker_;
+	};
+
+	class ReadParallelExecuteCheckScope
+	{
+	public:
+		ReadParallelExecuteCheckScope(nox::util::RWParallelExecuteChecker& checker, nox::util::detail::ParallelExecuteCheckOption option = nox::util::detail::ParallelExecuteCheckOption::SourceLocation, const std::source_location location = std::source_location::current());
+		~ReadParallelExecuteCheckScope();
+		inline constexpr ReadParallelExecuteCheckScope(const ReadParallelExecuteCheckScope&)noexcept = delete;
+		inline constexpr ReadParallelExecuteCheckScope(ReadParallelExecuteCheckScope&&)noexcept = delete;
+		inline constexpr ReadParallelExecuteCheckScope& operator =(const ReadParallelExecuteCheckScope&)noexcept = delete;
+	private:
+		nox::util::RWParallelExecuteChecker& checker_;
+	};
+
+	class WriteParallelExecuteCheckScope
+	{
+	public:
+		WriteParallelExecuteCheckScope(nox::util::RWParallelExecuteChecker& checker, nox::util::detail::ParallelExecuteCheckOption option = nox::util::detail::ParallelExecuteCheckOption::SourceLocation, const std::source_location location = std::source_location::current());
+		~WriteParallelExecuteCheckScope();
+		inline constexpr WriteParallelExecuteCheckScope(const WriteParallelExecuteCheckScope&)noexcept = delete;
+		inline constexpr WriteParallelExecuteCheckScope(WriteParallelExecuteCheckScope&&)noexcept = delete;
+		inline constexpr WriteParallelExecuteCheckScope& operator =(const WriteParallelExecuteCheckScope&)noexcept = delete;
+	private:
+		nox::util::RWParallelExecuteChecker& checker_;
 	};
 
 	/// @brief 並列実行チェッカー
@@ -46,8 +73,24 @@ namespace nox::util
 
 		inline constexpr ParallelExecuteChecker& operator =(const ParallelExecuteChecker&)noexcept = delete;
 
-		void Enter(nox::util::ParallelExecuteCheckScope::Option option, const std::source_location& location);
+		void Enter(nox::util::detail::ParallelExecuteCheckOption option, const std::source_location& location);
 		void Exit();
+	private:
+		nox::int8 ref_counter_;
+	};
+
+	/// @brief Read/Write 並列実行チェッカー
+	class RWParallelExecuteChecker
+	{
+	public:
+		inline constexpr RWParallelExecuteChecker()noexcept :ref_counter_(0) {}
+		inline ~RWParallelExecuteChecker()noexcept {}
+		inline constexpr RWParallelExecuteChecker(const RWParallelExecuteChecker&)noexcept = delete;
+		inline constexpr RWParallelExecuteChecker(RWParallelExecuteChecker&&)noexcept = delete;
+		inline constexpr RWParallelExecuteChecker& operator =(const RWParallelExecuteChecker&)noexcept = delete;
+		void Enter(nox::util::detail::ParallelExecuteCheckOption option, const std::source_location& location);
+		void Exit();
+
 	private:
 		nox::int8 ref_counter_;
 	};

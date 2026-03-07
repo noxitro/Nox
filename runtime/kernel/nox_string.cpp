@@ -13,17 +13,17 @@
 //
 //}
 //
-//nox::StdNString nox::String::ToNString()const
+//nox::StlNString nox::String::ToNString()const
 //{
 //	return nox::unicode::ConvertNString(string_);
 //}
 //
-//nox::StdWString nox::String::ToWString()const
+//nox::StlWString nox::String::ToWString()const
 //{
 //	return nox::unicode::ConvertWString(string_);
 //}
 //
-//nox::StdU32String	nox::String::ToU32String()const
+//nox::StlU32String	nox::String::ToU32String()const
 //{
 //	return nox::unicode::ConvertU32String(string_);
 //}

@@ -48,7 +48,7 @@ namespace nox::os
 		return GetCommandLineArgList()[index];
 	}
 
-	StdU16String	GetDirectoryUTF8();
+	StlU16String	GetDirectoryUTF8();
 
 	nox::U16String	GetDirectory();
 	std::u16string_view	GetDirectory(std::span<nox::char16> dest_buffer);

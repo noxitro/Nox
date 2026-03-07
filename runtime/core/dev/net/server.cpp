@@ -26,7 +26,7 @@ nox::dev::net::Server::Server() :
 
 nox::dev::net::Server::~Server()
 {
-	nox::dev::net::SocketScheduler::Instance().UnregisterEntity(*this);
+	this->Shutdown();
 }
 
 bool nox::dev::net::Server::Startup(const InitializeContext& context)
@@ -251,33 +251,114 @@ void	nox::dev::net::Server::Connection(::fd_set& fds)
 			//	接続確立
 			success = true;
 
-			client_list_.emplace_back(PeerContext{ .socket = client_socket });
-			NOX_INFO_LINE(nox::dev::net::log_id::DevNet, u"接続完了");
 
-			OnConnected(ConnectionContext{
-				.socket = client_socket,
-				});
+			ConnectionContext connection_context;
+			{
+				connection_context.socket = client_socket;
+				connection_context.port = ::ntohs(addr.sin_port);
+
+				nox::memory::Copy(connection_context.address.data(), &addr.sin_addr, sizeof(addr.sin_addr));
+
+				// IPアドレスの文字列表現を生成
+				{
+					nox::char_t ip_str_buffer[INET_ADDRSTRLEN] = {};
+					::inet_ntop(AF_INET, &addr.sin_addr, ip_str_buffer, sizeof(ip_str_buffer));
+					connection_context.peername = nox::util::CharCast<nox::char8>(ip_str_buffer);
+				}
+
+				// ポート番号の文字列表現を生成
+				{
+					nox::char_t port_str_buffer[6] = {};
+					::snprintf(port_str_buffer, sizeof(port_str_buffer), "%u", connection_context.port);
+					connection_context.portname = nox::util::CharCast<nox::char8>(port_str_buffer);
+				}
+
+				connection_context.ip_family = IpFamily::IPv4;
+			}
+			client_list_.emplace_back(PeerContext{ .socket = client_socket });
+			NOX_INFO_LINE(nox::dev::net::log_id::DevNet, u"接続完了 name:{0}, port{1}", connection_context.peername, connection_context.portname);
+
+			OnConnected(connection_context);
 		}
 	}
 }
 
-void nox::dev::net::Server::Update(::fd_set& fds)
+void nox::dev::net::Server::Update()
 {
 	if (IsStartup() == false)
 	{
 		return;
 	}
 
-	//	受信処理
-	if (nox::os::file_descriptor::IsSet(this->socket_, fds) == true)
+	if (client_list_.empty() == true)
 	{
+		return;
+	}
+
+	::fd_set read_fds;
+	nox::os::file_descriptor::Zero(read_fds);
+
+	for (const auto& peer : client_list_)
+	{
+		nox::os::file_descriptor::Set(peer.socket, read_fds);
+	}
+
+	constexpr ::timeval timeout{ .tv_sec = 0, .tv_usec = 0 };
+	const auto result = ::select(0, &read_fds, nullptr, nullptr, &timeout);
+	if (result <= 0)
+	{
+		return;
+	}
+
+	for (auto it = client_list_.begin(); it != client_list_.end(); )
+	{
+		if (nox::os::file_descriptor::IsSet(it->socket, read_fds) == false)
+		{
+			++it;
+			continue;
+		}
+
+		nox::char_t peek;
+		const nox::int32 n = nox::dev::net::Receive(it->socket, &peek, sizeof(peek), MSG_PEEK);
+
+		if (n == 0)
+		{
+			Disconnect(it->socket);
+			it = client_list_.begin();
+			continue;
+		}
+
+		if (n < 0 && ::WSAGetLastError() != WSAEWOULDBLOCK)
+		{
+			const auto s = it->socket;
+			Disconnect(s);
+			it = client_list_.begin();
+			continue;
+		}
+
 		OnReceive();
+		++it;
 	}
 }
 
 void nox::dev::net::Server::Shutdown()
 {
+	if (is_startup_ == false)
+	{
+		return;
+	}
+
+	//	全てのクライアントを切断
+	while (client_list_.empty() == false)
+	{
+		this->Disconnect(client_list_.back().socket);
+	}
+
 	nox::dev::net::Shutdown(socket_, SD_BOTH);
+	nox::dev::net::CloseSocket(socket_);
+	socket_ = nox::dev::net::k_raw_invalid_socket;
+
+	nox::dev::net::SocketScheduler::Instance().UnregisterEntity(*this);
 }
 
 void nox::dev::net::Server::Connected(const nox::dev::net::ConnectionContext& context)
@@ -293,4 +374,27 @@ void nox::dev::net::Server::Connected(const nox::dev::net::ConnectionContext& co
 void nox::dev::net::Server::Disconnected(const nox::dev::net::ConnectionContext& context)
 {
 
+}
+
+void nox::dev::net::Server::Disconnect(const nox::dev::net::raw_socket_t socket)
+{
+	nox::dev::net::Shutdown(socket, SD_BOTH);
+	nox::dev::net::CloseSocket(socket);
+
+	NOX_LOCAL_SCOPE(nox::util::ParallelExecuteCheckScope(pe_checker_clients_));
+
+	auto it = std::find_if(client_list_.begin(), client_list_.end(), [socket](const PeerContext& context) {
+		return context.socket == socket;
+		});
+
+	if (it != client_list_.end())
+	{
+		NOX_INFO_LINE(nox::dev::net::log_id::DevNet, u"切断完了 name:{0}, port:{1}", it->connection.peername, it->connection.portname);
+		OnDisconnected(it->connection);
+		client_list_.erase(it);
+	}
+	else
+	{
+		NOX_ASSERT(false, u8"切断するクライアントが見つかりませんでした");
+	}
 }

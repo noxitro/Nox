@@ -16,30 +16,35 @@
 
 namespace nox
 {
-	inline constexpr std::u16string_view GetLogCategoryName(nox::debug::LogCategory log_category)noexcept
+	namespace
 	{
-		constexpr std::array<std::u16string_view, nox::util::ToUnderlying(nox::debug::LogCategory::_Max)> table =
+		inline constexpr std::u16string_view GetLogCategoryName(nox::debug::LogCategory log_category)noexcept
 		{
-			u"Info",
-			u"Warning",
-			u"Error",
-		};
+			constexpr std::array<std::u16string_view, nox::util::ToUnderlying(nox::debug::LogCategory::_Max)> table =
+			{
+				u"Info",
+				u"Warning",
+				u"Error",
+			};
 
-		return table.at(nox::util::ToUnderlying(log_category));
+			return table.at(nox::util::ToUnderlying(log_category));
+		}
+
+		constinit void(*g_log_handler)(const nox::debug::LogHandlerArgs&) = nullptr;
 	}
-
-//	constinit std::array<nox::char32, 64> log_buffer_table 
-
-	struct ThreadData
-	{
-		std::array<nox::char16, 5016> log_buffer_table = { 0 };
-	};
-
-	/// @brief スレッド分のログバッファ
-	constinit std::array<ThreadData, nox::os::MAX_THREAD_ID> thread_data_table = { 0 };
 }
 
-void nox::debug::detail::TraceDirect(nox::debug::LogCategory log_category, const std::u16string_view category, const std::u32string_view message, bool isNewLine, const std::source_location& source_location)
+void nox::debug::AttachLogHandler(void(*handler)(const nox::debug::LogHandlerArgs&))
+{
+	g_log_handler = handler;
+}
+
+void nox::debug::DetachLogHandler()
+{
+	g_log_handler = nullptr;
+}
+
+void nox::debug::detail::TraceDirect(nox::debug::LogCategory log_category, const std::u16string_view category, const std::u8string_view message, bool isNewLine, const std::source_location& source_location)
 {
 	std::array<char16, 2048> buffer = { 0 };
 	//source_location;
@@ -61,6 +66,14 @@ void nox::debug::detail::TraceDirect(nox::debug::LogCategory log_category, const
 #endif // NOX_WIN64
 
 	std::wcout << converted_str ;
+
+	if (g_log_handler != nullptr)
+	{
+		const nox::debug::LogHandlerArgs args{
+			.column = source_location.column(),
+		};
+		g_log_handler(args);
+	}
 }
 
 void nox::debug::detail::TraceDirect(nox::debug::LogCategory log_category, const std::u16string_view category, const std::u16string_view message, bool isNewLine, const std::source_location& source_location)
@@ -85,4 +98,12 @@ void nox::debug::detail::TraceDirect(nox::debug::LogCategory log_category, const
 #endif // NOX_WIN64
 
 	std::wcout << converted_str ;
+
+	if (g_log_handler != nullptr)
+	{
+		const nox::debug::LogHandlerArgs args{
+			.column = source_location.column(),
+		};
+		g_log_handler(args);
+	}
 }

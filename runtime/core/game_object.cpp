@@ -100,7 +100,8 @@ nox::IntrusivePtr<nox::GameObject> nox::GameObject::Create(nox::U8StringView nam
 	nox::GameObject* const gameObject = new nox::GameObject();
 	gameObject->AddRef();
 
-	gameObject->transform_ = gameObject->CreateComponent<nox::Transform>().Get();
+	constexpr auto nse = std::derived_from< nox::Transform, nox::Component>;
+	gameObject->transform_ = gameObject->CreateComponent<nox::Transform>();
 	gameObject->transform_->AddRef();
 
 	return nox::IntrusivePtr<nox::GameObject>(gameObject);
@@ -111,7 +112,7 @@ void nox::GameObject::Destroy(nox::GameObject& gameObject)
 	gameObject.ReleaseRef();
 }
 
-nox::Component* nox::GameObject::GetComponent(const nox::reflection::Type& type)noexcept
+nox::Component* nox::GameObject::GetComponent(const nox::reflection::Type& type)const noexcept
 {
 	const nox::reflection::ClassInfo* const class_info = type.GetUserDefinedCompoundTypeInfo();
 	if (class_info == nullptr)
@@ -129,7 +130,7 @@ nox::Component* nox::GameObject::GetComponent(const nox::reflection::Type& type)
 	return nullptr;
 }
 
-nox::Component* nox::GameObject::GetSameComponent(const nox::reflection::Type& type)noexcept
+nox::Component* nox::GameObject::GetSameComponent(const nox::reflection::Type& type)const noexcept
 {
 	for (Component* component = transform_; component != nullptr; component = component->GetComponentChain())
 	{
@@ -142,7 +143,7 @@ nox::Component* nox::GameObject::GetSameComponent(const nox::reflection::Type& t
 	return nullptr;
 }
 
-nox::IntrusivePtr<nox::Component> nox::GameObject::CreateComponent(const nox::reflection::Type& type)
+nox::Component* nox::GameObject::CreateComponent(const nox::reflection::Type& type)
 {
 	nox::Component*const component = static_cast<nox::Component*>(type.CreateObject());
 	if (component == nullptr)

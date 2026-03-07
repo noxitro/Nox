@@ -48,7 +48,11 @@ namespace nox::dev::net
 		void	Connection(::fd_set& fds);
 
 		/// @brief SocketSchedulerから呼び出される更新処理
-		void Update(::fd_set& fds);
+		void Update();
+
+		/// @brief clientを切断
+		/// @param socket 切断するclientのソケット
+		void Disconnect(const nox::dev::net::raw_socket_t socket);
 
 		inline constexpr nox::dev::net::raw_socket_t GetSocket()const noexcept { return socket_; }
 	protected:
@@ -68,5 +72,9 @@ namespace nox::dev::net
 		nox::dev::net::raw_socket_t socket_;
 
 		bool is_startup_:1;
+
+#if !NOX_MASTER
+		nox::util::ParallelExecuteChecker pe_checker_clients_;
+#endif // !NOX_MASTER
 	};
 }

@@ -55,13 +55,13 @@ namespace nox
 	using HashSet = std::unordered_set<Key, Hasher, Keyeq, nox::memory::StlAllocateAdapter<Key>>;
 
 	template<class ValueType>
-	using StdBasicString = std::basic_string< ValueType, std::char_traits<ValueType>, memory::StlAllocateAdapter<ValueType>>;
+	using StlBasicString = std::basic_string< ValueType, std::char_traits<ValueType>, memory::StlAllocateAdapter<ValueType>>;
 
-	using StdCString = StdBasicString<char>;
-	using StdNString = StdBasicString<char>;
-	using StdWString = StdBasicString<wchar_t>;
-	using StdU8String = StdBasicString<char8>;
-	using StdU16String = StdBasicString<char16>;
-	using StdU32String = StdBasicString<char32>;
+	using StlCString = StlBasicString<char>;
+	using StlNString = StlBasicString<char>;
+	using StlWString = StlBasicString<wchar_t>;
+	using StlU8String = StlBasicString<char8>;
+	using StlU16String = StlBasicString<char16>;
+	using StlU32String = StlBasicString<char32>;
 
 }

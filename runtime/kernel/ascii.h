@@ -42,9 +42,9 @@ namespace nox::encoding::ascii
 	}
 
 	template<typename To, typename From> requires(std::is_same_v<To, From> == false)
-		inline constexpr nox::StdBasicString<To> ConvertString(std::basic_string_view<From> str)
+		inline constexpr nox::StlBasicString<To> ConvertString(std::basic_string_view<From> str)
 	{
-		nox::StdBasicString<To> result;
+		nox::StlBasicString<To> result;
 		result.resize(str.size());
 
 		nox::encoding::ascii::ConvertString<To, From>(str, std::span<To>(result.data(), result.size()));

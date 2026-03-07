@@ -104,12 +104,17 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="dev\remote\log.g.h" />
     <ClInclude Include="dev\remote\system.g.h" />
     <ClInclude Include="dev\remote\test.g.h">
       <SubType>
       </SubType>
     </ClInclude>
     <ClInclude Include="dev\socket_stream_reader.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="dev\socket_stream_utility.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -296,6 +301,8 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="dev\remote\log.cpp" />
+    <ClCompile Include="dev\remote\log.g.cpp" />
     <ClCompile Include="dev\remote\system.cpp" />
     <ClCompile Include="dev\remote\system.g.cpp" />
     <ClCompile Include="dev\remote\test.g.cpp">
@@ -303,6 +310,10 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="dev\socket_stream_reader.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="dev\socket_stream_utility.cpp">
       <SubType>
       </SubType>
     </ClCompile>

@@ -119,7 +119,13 @@ namespace nox::reflection
 
 		[[nodiscard]] inline	constexpr	std::span<const std::reference_wrapper<const nox::reflection::ReflectionObject>> GetAttributeList()const noexcept { return std::span(attribute_list_, attribute_list_length_); }
 		[[nodiscard]] inline	constexpr	std::uint8_t GetAttributeListLength()const noexcept { return attribute_list_length_; }
+		const class nox::reflection::ReflectionObject* GetAttribute(const nox::reflection::Type& type)const noexcept;
 		[[nodiscard]] inline	constexpr	const nox::reflection::ReflectionObject& GetAttribute(std::uint8_t index)const noexcept { return nox::util::At(attribute_list_, attribute_list_length_, index); }
+		template<class T>
+		[[nodiscard]] inline	constexpr	const class nox::reflection::ReflectionObject* GetAttribute()const noexcept
+		{
+			return this->GetAttribute(nox::reflection::Typeof<T>());
+		}
 
 		[[nodiscard]] inline	constexpr	std::span<const std::reference_wrapper<const FunctionArgumentInfo>> GetFunctionParamList()const noexcept { return std::span(function_param_list_, function_param_list_length_); }
 		[[nodiscard]] inline	constexpr	std::uint8_t GetFunctionParamLength()const noexcept { return function_param_list_length_; }

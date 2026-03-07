@@ -76,12 +76,12 @@ std::span<const nox::char16* const> nox::os::GetCommandLineArgList() noexcept
 	return nox::os::command_line_args_;
 }
 
-nox::StdU16String	nox::os::GetDirectoryUTF8()
+nox::StlU16String	nox::os::GetDirectoryUTF8()
 {
 	std::array<nox::wchar16, nox::os::k_max_path_length> buffer;
 	NOX_ASSERT(::GetCurrentDirectoryW(nox::os::k_max_path_length, buffer.data()) != NULL, u"GetCurrentDirectoryW failed");
 
-	return nox::StdU16String(reinterpret_cast<const char16*>(buffer.data()));
+	return nox::StlU16String(reinterpret_cast<const char16*>(buffer.data()));
 }
 
 nox::U16String	nox::os::GetDirectory()

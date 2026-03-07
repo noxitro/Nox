@@ -22,10 +22,11 @@ namespace nox::dev::editor_remote
 		void OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)override;
 		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(std::span<nox::uint8> storage)const override;
 
-		inline std::u8string_view GetNativePath()noexcept
+		inline std::u8string_view GetNativePath()const noexcept
 		{
 			return native_path_;
 		}
+
 		inline void SetNativePath(std::u8string_view value)
 		{
 			native_path_ = value;
@@ -55,26 +56,29 @@ namespace nox::dev::editor_remote
 		void OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)override;
 		void OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)override;
 
-		inline nox::int64 GetMainWindowHandle()noexcept
+		inline nox::int64 GetMainWindowHandle()const noexcept
 		{
 			return main_window_handle_;
 		}
+
 		inline void SetMainWindowHandle(nox::int64 value)
 		{
 			main_window_handle_ = value;
 		}
-		inline const nox::IntrusivePtr<nox::SceneView>& GetSceneView()noexcept
+
+		inline nox::SceneView* GetSceneView()const noexcept
 		{
-			return scene_view_;
+			return reinterpret_cast<nox::SceneView*>(scene_view_.Get());
 		}
+
 		inline void SetSceneView(nox::SceneView* value)
 		{
-			scene_view_ = value;
+			scene_view_ = reinterpret_cast<nox::ManagedObject*>(value);
 		}
 
 	private:
 		nox::int64 main_window_handle_ {};
-		nox::IntrusivePtr<nox::SceneView> scene_view_ {};
+		nox::IntrusivePtr<nox::ManagedObject> scene_view_ {};
 	};
 
 }

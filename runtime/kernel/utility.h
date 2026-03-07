@@ -4,9 +4,11 @@
 ///	@brief	utility
 #pragma once
 #include <functional>
+#include <type_traits>
 
 namespace nox::util
 {
+
 	class ScopeExit
 	{
 	public:

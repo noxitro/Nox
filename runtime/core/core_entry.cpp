@@ -47,6 +47,7 @@ void	nox::CoreEntry::Finalize()
 	nox::dev::net::SocketScheduler::DeleteInstance();
 #endif // NOX_DEVELOP
 
+	nox::SceneManager::Instance().Finalize();
 	nox::SceneManager::DeleteInstance();
 	nox::GarbageCollector::Instance().FrameGC();
 	nox::GarbageCollector::DeleteInstance();

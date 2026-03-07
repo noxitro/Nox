@@ -12,9 +12,9 @@ namespace nox
 	class Component;
 	class Transform;
 
-	class GameObject final: public ManagedObject
+	class GameObject final: public nox::ManagedObject
 	{
-		NOX_DECLARE_MANAGED_OBJECT(GameObject, ManagedObject);
+		NOX_DECLARE_MANAGED_OBJECT(GameObject, nox::ManagedObject);
 	private:
 
 	public:
@@ -36,33 +36,33 @@ namespace nox
 		[[nodiscard]]	static nox::IntrusivePtr<GameObject> Create(nox::U8StringView name, const nox::Vec3& pos = nox::Vec3::Zero(), const nox::Quat& rotation = nox::Quat::Identity());
 		static void Destroy(GameObject& gameObject);
 
-		[[nodiscard]] Component* GetComponent(const nox::reflection::Type& type)noexcept;
-		[[nodiscard]] Component* GetSameComponent(const nox::reflection::Type& type)noexcept;
+		[[nodiscard]] nox::Component* GetComponent(const nox::reflection::Type& type)const noexcept;
+		[[nodiscard]] nox::Component* GetSameComponent(const nox::reflection::Type& type)const noexcept;
 
-		template<std::derived_from<Component> T> requires(std::is_final_v<T> == false)
-		inline T* GetComponent()noexcept
+		template<std::derived_from<nox::Component> T> requires(std::is_final_v<T> == false)
+		inline T* GetComponent()const noexcept
 		{
-			return GetComponent(nox::reflection::Typeof<T>());
+			return static_cast<T*>(GetComponent(nox::reflection::Typeof<T>()));
 		}
 
-		template<std::derived_from<Component> T>
-		inline T* GetSameComponent()noexcept
+		template<std::derived_from<nox::Component> T>
+		inline T* GetSameComponent()const noexcept
 		{
-			return GetComponent(nox::reflection::Typeof<T>());
+			return static_cast<T*>(GetSameComponent(nox::reflection::Typeof<T>()));
 		}
 
 		/// @brief 
 		/// @param type 
 		/// @return 
-		IntrusivePtr<Component> CreateComponent(const nox::reflection::Type& type);
+		nox::Component* CreateComponent(const nox::reflection::Type& type);
 
 		/// @brief 
 		/// @tparam T 
 		/// @return 
-		template<std::derived_from<Component> T> requires(std::is_abstract_v<T> == false)
-		inline IntrusivePtr<T> CreateComponent()
+		template<std::derived_from<nox::Component> T> requires(std::is_abstract_v<T> == false)
+		inline T* CreateComponent()
 		{
-			return nox::IntrusivePtr<T>(std::move(this->CreateComponent<T>()));
+			return static_cast<T*>(this->CreateComponent(nox::reflection::Typeof<T>()));
 		}
 
 		inline nox::Transform& Transform()const noexcept { return nox::util::Deref(transform_); }

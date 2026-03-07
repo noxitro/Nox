@@ -15,7 +15,7 @@ namespace nox
 	class BasicString
 	{
 	public:
-		using string_type = nox::StdBasicString<T>;
+		using string_type = nox::StlBasicString<T>;
 		using traits_type = typename string_type::traits_type;
 		using allocator_type = typename string_type::allocator_type;
 		using value_type = typename string_type::value_type;
@@ -173,7 +173,7 @@ namespace nox
 //	}
 //	
 //	/// @brief String
-//	class String : public nox::detail::StringBase<nox::StdU16String>
+//	class String : public nox::detail::StringBase<nox::StlU16String>
 //	{
 //	public:
 //		inline constexpr	String() noexcept :
@@ -185,7 +185,7 @@ namespace nox
 //		inline constexpr String(String&& other)noexcept :
 //			string_(std::move(other.string_)) {}
 //
-//		inline constexpr String(nox::StdBasicString<value_type>&& other)noexcept :
+//		inline constexpr String(nox::StlBasicString<value_type>&& other)noexcept :
 //			string_(std::move(other)) {}
 //
 //		String(class nox::StringView other)noexcept;
@@ -262,7 +262,7 @@ namespace nox
 //			return *this;
 //		}
 //
-//		inline String& operator +=(const nox::StdBasicString<value_type>& s)
+//		inline String& operator +=(const nox::StlBasicString<value_type>& s)
 //		{
 //			Append(s);
 //			return *this;
@@ -286,17 +286,17 @@ namespace nox
 //			return *this;
 //		}
 //
-//		[[nodiscard]] inline constexpr operator nox::StdU16String& () noexcept { return string_; }
-//		[[nodiscard]] inline constexpr operator const nox::StdU16String& ()const noexcept { return string_; }
+//		[[nodiscard]] inline constexpr operator nox::StlU16String& () noexcept { return string_; }
+//		[[nodiscard]] inline constexpr operator const nox::StlU16String& ()const noexcept { return string_; }
 //#pragma endregion
 //
 //
 //#pragma region 変換
-//		nox::StdNString ToNString()const;
+//		nox::StlNString ToNString()const;
 //
-//		nox::StdWString ToWString()const;
+//		nox::StlWString ToWString()const;
 //
-//		nox::StdU32String	ToU32String()const;
+//		nox::StlU32String	ToU32String()const;
 //#pragma endregion
 //	private:
 //		string_type string_;

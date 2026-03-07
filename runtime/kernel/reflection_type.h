@@ -582,10 +582,9 @@ namespace nox::reflection
 				return nox::reflection::detail::CreateObject<T>();
 			}
 
-			static inline constexpr void* ConstructAt(void* const)//noexcept(noexcept(nox::reflection::detail::ConstructAt(static_cast<std::conditional_t<std::is_array_v<T>, std::decay_t<T>, std::add_pointer_t<T>>>(storage))))
+			static inline constexpr void* ConstructAt(void* const storage)//noexcept(noexcept(nox::reflection::detail::ConstructAt(static_cast<std::conditional_t<std::is_array_v<T>, std::decay_t<T>, std::add_pointer_t<T>>>(storage))))
 			{
-				return nullptr;
-//				return nox::reflection::detail::ConstructAt(static_cast<std::conditional_t<std::is_array_v<T>, std::decay_t<T>, std::add_pointer_t<T>>>(storage));
+				return nox::reflection::detail::ConstructAt(static_cast<std::conditional_t<std::is_array_v<T>, std::decay_t<T>, std::add_pointer_t<T>>>(storage));
 			}
 
 			static inline constexpr void DestroyAt(void*const)

@@ -355,7 +355,10 @@ namespace nox::stack_walker
 
 		if (::SymGetLineFromAddrW64(processHandle, nativeAddr, &dwDisplacement, &line) == FALSE)
 		{
-			return false;
+			//	[Symbol名]([ライン])
+			NOX_INFO_LINE(log_id::Kernel, u"{0} (invalid)", std::u16string_view(u32_symbol_name.data(), symbol->NameLen));
+			return true;
+//			return false;
 		}
 
 		std::array<nox::char16, 1024> u32_file_name = { 0 };
@@ -387,10 +390,7 @@ void	nox::stack_walker::detail::WalkerSlimBase::Trace()const
 	}
 
 	::HANDLE const processHandle = ::GetCurrentProcess();
-	if (processHandle == nullptr)
-	{
-		return;
-	}
+	NOX_ASSERT(FAILED(processHandle), u8"processHandle is failed");
 
 	/* シンボル情報サイズを算出 */
 	constexpr size_t SymbolInfoSize = sizeof(::SYMBOL_INFOW) + ((k_max_name_size + 1) * sizeof(nox::wchar16));
@@ -459,12 +459,12 @@ void	nox::stack_walker::Finalize()
 void nox::stack_walker::Trace(std::span<const size_t> address_list)
 {
 	nox::stack_walker::StackWalkerSlim walker;
-	walker.SetCollectLength(address_list.size());
+	walker.SetCollectLength(static_cast<nox::uint8>(address_list.size()));
 	walker.Collected();
 
 	for (int32 i = 0; i < address_list.size(); ++i)
 	{
-		walker.GetStack(i).SetAddress(address_list[i]);
+		walker.GetStack(static_cast<nox::uint8>(i)).SetAddress(address_list[i]);
 	}
 
 	walker.Trace();

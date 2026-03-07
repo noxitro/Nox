@@ -18,7 +18,7 @@ nox::int32 nox::EntryPoint(const std::span<const char16* const> args)
 	//	メモリリークチェック
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
-	nox::memory::Initialize(true);
+	nox::memory::Initialize(std::numeric_limits<nox::int32>::max(), true);
 
 	nox::reflection::Initialize();
 

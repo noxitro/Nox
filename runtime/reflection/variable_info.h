@@ -249,7 +249,7 @@ namespace nox::reflection
 		/// @param out_value 
 		/// @param owner_instance 
 		/// @return 
-		template<class R, concepts::ClassOrUnion _InstanceType>
+		template<class R, class _InstanceType>
 		inline	constexpr	nox::reflection::ReflectionOptional<R>	TryGetValue(_InstanceType&& owner_instance)const
 		{
 			if (IsStatic() == true)

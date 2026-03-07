@@ -12,7 +12,7 @@ namespace nox::reflection
 	/// @brief タイプ種別
 	enum class TypeKind : std::uint8_t
 	{
-			Unknown,
+		Unknown,
 		Void,
 		Bool,
 		Char,
@@ -64,25 +64,9 @@ namespace nox::reflection
 	/// @brief タイプ情報種別
 	enum class TypeInfoKind : std::uint8_t
 	{
-		/**
-		 * @brief 不明
-		*/
 		Invalid,
-
-		/**
-		 * @brief クラス
-		*/
 		Class,
-
-		/**
-		 * @brief 列挙隊
-		*/
 		Enum,
-
-		/**
-		 * @brief	グローバル
-		 * @details	関数、変数
-		*/
 		Global,
 	};
 
@@ -134,21 +118,6 @@ namespace nox::reflection
 
 		TrivialCopyable = 1 << 15,
 	};
-
-	///// @brief 型修飾子
-	//enum class TypeQualifierFlag : std::uint8_t
-	//{
-	//	None = 0,
-
-	//	/// @brief const 修飾子
-	//	Const = 1 << 0,
-
-	//	/// @brief volatile 修飾子
-	//	Volatile = 1 << 1,
-
-	//	/// @brief 参照　修飾子
-	//	Reference = 1 << 2
-	//};
 
 	/// @brief アクセスレベル
 	enum class AccessLevel : std::uint8_t
@@ -259,4 +228,8 @@ namespace nox::reflection
 		/// @brief annotation
 		Annotate,
 	};
+
+	/// @brief		完全修飾名の最大長
+	/// @note		現状小さめに設定しているので、templateクラスだと1024にしないと足らないかも
+	constexpr nox::uint16 k_max_fqn_length = 256;
 }

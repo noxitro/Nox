@@ -59,10 +59,11 @@ namespace nox::dev::net
 	constexpr raw_socket_t k_raw_invalid_socket = INVALID_SOCKET;
 	constexpr nox::int32 k_raw_error_socket = SOCKET_ERROR;
 
+	/// @brief IPアドレス情報(バイナリ)
 	struct address_t
 	{
-		constexpr nox::uint8* data() noexcept { return buffer; }
-		inline constexpr const nox::uint8* data()const noexcept { return buffer; }
+		constexpr std::span<nox::uint8> data() noexcept { return buffer; }
+		inline constexpr std::span<const nox::uint8> data()const noexcept { return buffer; }
 
 	private:
 		nox::uint8 buffer[64];
@@ -70,8 +71,8 @@ namespace nox::dev::net
 
 	struct peer_name_t
 	{
-		constexpr nox::uint8* data() noexcept { return buffer; }
-		inline constexpr const nox::uint8* data()const noexcept { return buffer; }
+		constexpr std::span<nox::uint8> data() noexcept { return buffer; }
+		inline constexpr std::span<const nox::uint8> data()const noexcept { return buffer; }
 
 	private:
 		nox::uint8 buffer[64];
@@ -83,11 +84,20 @@ namespace nox::dev::net
 	struct ConnectionContext
 	{
 		nox::uint32 unique_id;
-		address_t address;
-		port_t port;
-		peer_name_t peername;
-		port_name_t portname;
-		raw_socket_t socket;
+		/// @brief IPv4/IPv6
+		nox::dev::net::IpFamily ip_family;
+
+		/// @brief ネットワークポートを表す変数。接続元のポート番号
+		nox::dev::net::port_t port;
+		
+		/// @brief 接続元のIPアドレス(バイナリ)
+		std::array<nox::uint8, 16> address;
+
+		/// @brief IPアドレスの文字列表現 (例: "192.168.0.1")
+		nox::U8FixedString<46> peername;
+		/// @brief ポート番号の文字列表現 (例: "8080")
+		nox::U8FixedString<6> portname;
+		nox::dev::net::raw_socket_t socket;
 	};
 	using DisconnectionContext = ConnectionContext;
 

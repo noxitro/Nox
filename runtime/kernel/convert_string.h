@@ -185,7 +185,7 @@ namespace nox::util
 	///// @param object 
 	///// @return 
 	//template<class To, class From> requires(nox::IsStringClassValue<To>&& nox::IsCharTypeValue<From>)
-	//inline To ConvertStringSafe(const nox::StdBasicString<From>& object) { 
+	//inline To ConvertStringSafe(const nox::StlBasicString<From>& object) { 
 	//	return nox::util::ConvertString<To>(object); 
 	//}
 

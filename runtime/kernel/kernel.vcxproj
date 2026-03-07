@@ -50,6 +50,10 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="fixed_vector.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="guid.h">
       <SubType>
       </SubType>
@@ -71,6 +75,10 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="io\file_stream_writer.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="io\memory_stream.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -134,7 +142,23 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="memory\pmr.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="memory\pmr_buffer.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="memory\virtual_memory_allocator.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="os\file.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="path.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -344,6 +368,10 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="fixed_vector.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="guid.cpp">
       <SubType>
       </SubType>
@@ -365,6 +393,10 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="io\file_stream_writer.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="io\memory_stream.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -431,7 +463,23 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="memory\pmr.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="memory\pmr_buffer.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="memory\virtual_memory_allocator.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="os\file.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="path.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -455,7 +503,6 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="math\vector2d.cpp" />
-    <ClCompile Include="math\vector2d.ixx" />
     <ClCompile Include="math\vector3d.cpp" />
     <ClCompile Include="math\vector4d.cpp" />
     <ClCompile Include="math\vector_util.cpp" />

@@ -10,6 +10,10 @@
 #include	"socket_stream_writer.h"
 #include	"socket_stream_reader.h"
 
+namespace nox
+{
+}
+
 namespace nox::dev::editor_remote
 {
 	class Query;

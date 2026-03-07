@@ -9,14 +9,13 @@
 #include	"client.h"
 #include	"application.h"
 #include	"dev_net_log_id.h"
-namespace nox
-{
-
-	
-}
 
 namespace nox::dev::net
 {
+	namespace
+	{
+		
+	}
 }
 
 nox::dev::net::SocketScheduler::SocketScheduler()
@@ -55,14 +54,10 @@ void	nox::dev::net::SocketScheduler::Finalize()
 
 void	nox::dev::net::SocketScheduler::UpdateTask()
 {
-	while (true)
+	while (nox::Application::Instance().IsKill()==false)
 	{
-		if (nox::Application::Instance().IsKill())
-		{
-			break;
-		}
-
 		//	保留リストから本リストへ移動
+		if (pending_server_list_.empty() == false)
 		{
 			NOX_LOCAL_SCOPE(nox::os::ScopedLock(mutex_server_list_));
 
@@ -85,15 +80,18 @@ void	nox::dev::net::SocketScheduler::UpdateTask()
 					}
 				}
 			}
+
+			pending_server_list_.clear();
 		}
 
-		//	
+		//	サーバーリストがない場合は1ms待機
 		if (server_list_.empty())
 		{
-			nox::os::Sleep(1);
+			nox::os::Sleep(10);
 			continue;
 		}
 
+		//	リッスンsocketの新規接続を監視
 		{
 			::fd_set fds;
 			nox::os::file_descriptor::Zero(fds);
@@ -108,17 +106,12 @@ void	nox::dev::net::SocketScheduler::UpdateTask()
 			constexpr ::timeval timeout
 			{
 				.tv_sec = 0,
-				.tv_usec = 5	//	1ms
+				.tv_usec = 1000	//	1ms
 			};
 
 			//MEMO:	selectの第一引数はwindowsでは無視される
 			const auto select_result = ::select(0, &fds, nullptr, nullptr, &timeout);
-			if (select_result == 0)
-			{
-				nox::os::Sleep(1);
-				continue;
-			}
-			
+		
 			if (select_result == SOCKET_ERROR)
 			{
 				const int err = ::WSAGetLastError();
@@ -134,11 +127,14 @@ void	nox::dev::net::SocketScheduler::UpdateTask()
 
 			for (nox::dev::net::Server& server : server_list_)
 			{
-				//	接続待ち更新
-				server.Connection(fds);
+				//	新規接続（リッスンソケットにイベントがあった場合のみ）
+				if (select_result > 0)
+				{
+					server.Connection(fds);
+				}
 
 				//	受け付け処理
-				server.Update(fds);
+				server.Update();
 			}
 		}
 	}
