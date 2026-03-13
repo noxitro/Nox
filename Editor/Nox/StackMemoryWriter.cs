@@ -3,6 +3,7 @@ using System.Buffers.Binary;
 
 namespace Nox
 {
+
 	public ref struct StackMemoryWriter
 	{
 		#region 非公開フィールド
