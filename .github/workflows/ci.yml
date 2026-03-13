@@ -1,0 +1,63 @@
+name: CI Build (Runtime)
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-runtime:
+    name: Runtime Debug x64
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build
+        id: build
+        run: |
+          msbuild runtime/runtime.sln `
+            /p:Configuration=Debug `
+            /p:Platform=x64 `
+            /m `
+            /v:minimal `
+            /flp:logfile=build.log;verbosity=normal
+
+      - name: Write job summary
+        if: always()
+        shell: pwsh
+        run: |
+          $outcome = "${{ steps.build.outcome }}"
+          if ($outcome -eq "success") {
+            $icon   = ":white_check_mark:"
+            $status = "Build succeeded"
+          } else {
+            $icon   = ":x:"
+            $status = "Build failed"
+          }
+
+          @"
+          ## $icon CI Build Result
+
+          | Item       | Value          |
+          |------------|----------------|
+          | Solution   | runtime.sln    |
+          | Config     | Debug \| x64   |
+          | Commit     | ${{ github.sha }} |
+          | Result     | **$status**    |
+          "@ >> $env:GITHUB_STEP_SUMMARY
+
+          if ($outcome -ne "success" -and (Test-Path build.log)) {
+            $errors = Select-String -Path build.log -Pattern " error " | Select-Object -Last 20
+            if ($errors) {
+              "`n### Build Errors (last 20 lines)" >> $env:GITHUB_STEP_SUMMARY
+              '```' >> $env:GITHUB_STEP_SUMMARY
+              $errors.Line >> $env:GITHUB_STEP_SUMMARY
+              '```' >> $env:GITHUB_STEP_SUMMARY
+            }
+          }
