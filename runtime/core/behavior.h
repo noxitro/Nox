@@ -9,9 +9,9 @@ namespace nox
 {
 	class Behavior : public nox::Component
 	{
-		NOX_DECLARE_MANAGED_OBJECT(Behavior, Component);
+		NOX_DECLARE_MANAGED_OBJECT(Behavior, nox::Component);
 	private:
-		enum class FunctionType : uint8
+		enum class FunctionType : nox::uint8
 		{
 			NONE = 0,
 			Awake = 1 << 0,
