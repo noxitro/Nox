@@ -26,7 +26,7 @@ jobs:
             /p:Platform=x64 `
             /m `
             /v:minimal `
-            /flp:logfile=build.log;verbosity=normal
+            "/flp:logfile=build.log;verbosity=normal"
 
       - name: Write job summary
         if: always()
