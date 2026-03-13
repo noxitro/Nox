@@ -15,4 +15,10 @@ namespace Core.LogId
 		public Net() { }
 		string Nox.LogId.ILogId<Net>.Tag { get; } = "Develop.Net";
 	}
+
+	public readonly struct RuntimeRemote : Nox.LogId.ILogId<RuntimeRemote>
+	{
+		public RuntimeRemote() { }
+		string Nox.LogId.ILogId<RuntimeRemote>.Tag { get; } = "RuntimeRemote";
+	}
 }

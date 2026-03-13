@@ -11,7 +11,7 @@ namespace Core.Net
 		private readonly List<(Core.Net.Client Client, bool isAdd)> _ReqClientList = new();
 		private readonly Nox.LockObject _LockClientList = new();
 
-		private bool _IsStopped;
+		private bool _IsStopped = false;
 		#endregion
 
 		#region 公開プロパティ
@@ -60,20 +60,25 @@ namespace Core.Net
 
 		private void Update()
 		{
-			while (true)
+			while (_IsStopped == false)
 			{
-				lock (_LockClientList)
+				if (_ReqClientList.Count > 0)
 				{
-					foreach(var req in _ReqClientList)
+					lock (_LockClientList)
 					{
-						if (req.isAdd)
+						foreach (var req in _ReqClientList)
 						{
-							_ClientList.Add(req.Client);
+							if (req.isAdd)
+							{
+								_ClientList.Add(req.Client);
+							}
+							else
+							{
+								_ClientList.Remove(req.Client);
+							}
 						}
-						else
-						{
-							_ClientList.Remove(req.Client);
-						}
+
+						_ReqClientList.Clear();
 					}
 				}
 
@@ -83,6 +88,7 @@ namespace Core.Net
 					client.Update();
 				}
 
+				Thread.Sleep(1);
 			}
 		}
 		#endregion

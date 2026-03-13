@@ -2,19 +2,20 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Core.RuntimeRemote.Attr
+namespace Core.RuntimeRemote.Attributes
 {
 	/// <summary>
 	/// runtimeパス下に出力します
 	/// </summary>
 	[System.AttributeUsage(AttributeTargets.Class)]
-	public sealed class RuntimeRemoteCodeAttribute : System.Attribute
+	public class RuntimeRemoteCodeAttribute : System.Attribute
 	{
-		public RuntimeRemoteCodeAttribute(string path, bool execute = true, string comment = "")
+		public RuntimeRemoteCodeAttribute(string path, string namespaceStr = "nox::dev::editor_remote", bool execute = true, string comment = "")
 		{
 			Path = path;
 			EnabledExecute = execute;
 			Comment = comment;
+			NamespaceStr = namespaceStr;
 		}
 
 		/// <summary>
@@ -22,6 +23,8 @@ namespace Core.RuntimeRemote.Attr
 		/// ソリューションディレクトリからの相対パス
 		/// </summary>
 		public string Path { get; init; }
+
+		public string NamespaceStr { get; init; }
 
 		/// <summary>
 		/// execute関数をcpp側で実装するか
@@ -35,10 +38,18 @@ namespace Core.RuntimeRemote.Attr
 		public string Comment { get; init; }
 	}
 
-	[System.AttributeUsage(AttributeTargets.Property)]
-	public sealed class RuntimeRemoteCodeNativeFQNAttribute : System.Attribute
+	internal sealed class CoreRuntimeRemoteCodeAttribute : RuntimeRemoteCodeAttribute
 	{
-		public RuntimeRemoteCodeNativeFQNAttribute(string fqn)
+		public CoreRuntimeRemoteCodeAttribute(string filename, bool execute = true, string comment = "")
+			: base($"core/dev/remote/{filename}", "nox::dev::editor_remote", execute, comment)
+		{
+		}
+	}
+
+	[System.AttributeUsage(AttributeTargets.Property)]
+	public sealed class NativeRuntimeFQNAttribute : System.Attribute
+	{
+		public NativeRuntimeFQNAttribute(string fqn)
 		{
 			FQN = fqn;
 		}
@@ -58,5 +69,13 @@ namespace Core.RuntimeRemote.Attr
 		}
 
 		public uint Length { get; init; }
+	}
+
+	/// <summary>
+	/// std::u8string_viewとして扱う
+	/// </summary>
+	[System.AttributeUsage(System.AttributeTargets.Property)]
+	public sealed class StringViewAttribute : System.Attribute
+	{
 	}
 }

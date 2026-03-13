@@ -11,6 +11,9 @@ namespace Core.Net
         private readonly RuntimeRemoteClient _Client;
         private readonly byte[] _Buffer;
         private int _Position;
+
+		// LEB128(uint64)の最大バイト数。先頭に予約しておく
+		private const int HeaderReservedBytes = 10;
 		#endregion
 
 		#region 公開プロパティ
@@ -31,7 +34,8 @@ namespace Core.Net
             Nox.Util.Assert(Nox.Util.IsPowOf(capacity, 2), "capacity must be power of 2.");
             _Client = client;
             _Buffer = new byte[capacity];
-        }
+			_Position = HeaderReservedBytes; // 先頭に LEB128 の最大バイト数分を予約
+		}
 		#endregion
 
 		#region 公開メソッド
@@ -54,18 +58,25 @@ namespace Core.Net
 		/// バッファの内容をソケットに送信
 		/// </summary>
 		public override void Flush()
-        {
-            if (_Position > 0)
-            {
-                _Client.Send(_Buffer.AsSpan(0, _Position));
-                _Position = 0;
-            }
-        }
+		{
+			int payloadSize = _Position - HeaderReservedBytes;
+			if (payloadSize <= 0)
+			{
+				return;
+			}
 
-        /// <summary>
-        /// バッファをクリア（送信せずに破棄）
-        /// </summary>
-        public void Clear()
+			// LEB128 を予約領域の末尾から逆方向に書く（右詰め）
+			int headerBytes = WriteLeb128ToEnd(HeaderReservedBytes, (uint)payloadSize);
+			int sendStart = HeaderReservedBytes - headerBytes;
+
+			_Client.Send(_Buffer.AsSpan(sendStart, headerBytes + payloadSize));
+			_Position = HeaderReservedBytes;
+		}
+
+		/// <summary>
+		/// バッファをクリア（送信せずに破棄）
+		/// </summary>
+		public void Clear()
         {
            _Position = 0;
         }
@@ -79,7 +90,7 @@ namespace Core.Net
 		#endregion
 
 		#region 非公開メソッド
-		private void WriteLength(uint value)
+		private void WriteLength(ulong value)
         {
 			do
 			{
@@ -100,10 +111,33 @@ namespace Core.Net
 
 			} while (value != 0);
 		}
-        #endregion
 
-        #region 未サポート操作
-        public override int Read(byte[] buffer, int offset, int count)
+		/// <summary>
+		/// LEB128 を予約領域に右詰めで書き込む
+		/// </summary>
+		/// <returns>書き込んだバイト数</returns>
+		private int WriteLeb128ToEnd(int reservedEnd, ulong value)
+		{
+			// 正順（LSB ファースト）で一時バッファに書く
+			Span<byte> temp = stackalloc byte[HeaderReservedBytes];
+			int count = 0;
+			do
+			{
+				byte b = (byte)(value & 0x7F);
+				value >>= 7;
+				if (value != 0) b |= 0x80;
+				temp[count++] = b;
+			} while (value != 0);
+
+			// 予約領域の末尾に右詰めでコピー
+			int startPos = reservedEnd - count;
+			temp.Slice(0, count).CopyTo(_Buffer.AsSpan(startPos, count));
+			return count;
+		}
+		#endregion
+
+		#region 未サポート操作
+		public override int Read(byte[] buffer, int offset, int count)
             => throw new NotSupportedException("Read not supported");
 
         public override long Seek(long offset, SeekOrigin origin)

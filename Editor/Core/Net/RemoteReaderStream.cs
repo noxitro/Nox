@@ -51,31 +51,65 @@ namespace Core.Net
 
 		#region 公開メソッド
 
-		/// <summary>
-		/// ソケットからデータを受信してリングバッファに追加
-		/// </summary>
-		public int Fill()
+		public void AddBuffer(ReadOnlySpan<byte> buffer)
 		{
-			if (FreeBytes == 0) return 0;
+			//	bufferをリングバッファに追加
+			Nox.Util.Assert(buffer.Length <= FreeBytes, "Buffer overflow: not enough free space in ring buffer.");
 
-			// リングバッファの空き領域に直接受信
-			int totalReceived = 0;
+			// Tail からバッファ末尾までの連続領域
+			int firstPart = Math.Min(buffer.Length, _Buffer.Length - _Tail);
+			buffer.Slice(0, firstPart).CopyTo(_Buffer.AsSpan(_Tail, firstPart));
 
-			// Tail から末尾までの連続領域
-			int firstPart = Math.Min(FreeBytes, _Buffer.Length - _Tail);
-			if (firstPart > 0)
+			// 折り返し部分
+			int secondPart = buffer.Length - firstPart;
+			if (secondPart > 0)
 			{
-				var error = _Client.Receive(_Buffer.AsSpan(_Tail, firstPart));
-				if (error.HasValue)
-				{
-					Nox.LogTrace.ErrorLine<Core.LogId.Net>("Receive failed in Fill (first part)");
-					return totalReceived;
-				}
-				totalReceived += firstPart;
-				_Tail = (_Tail + firstPart) & _Mask;
+				buffer.Slice(firstPart, secondPart).CopyTo(_Buffer.AsSpan(0, secondPart));
 			}
 
-			return totalReceived;
+			_Tail = (_Tail + buffer.Length) & _Mask;
+
+		}
+
+		/// <summary>
+		/// 指定オフセットのバイトを消費せずに覗き見る
+		/// </summary>
+		private byte PeekByte(int offset)
+		{
+			return _Buffer[(_Head + offset) & _Mask];
+		}
+
+		/// <summary>
+		/// 1packet 読み取れるか 
+		/// </summary>
+		/// <returns></returns>
+		public bool CanReadBody()
+		{
+			long packetSize = 0;
+			int headerBytes = 0;
+			int shift = 0;
+
+			// LEB128 for uint64 は最大 10 バイト
+			for (int i = 0; i < 10; ++i)
+			{
+				if (i >= Available)
+				{
+					return false; // LEB128 ヘッダが揃っていない
+				}
+
+				byte b = PeekByte(i);
+				packetSize |= (long)(b & 0x7F) << shift;
+				shift += 7;
+				++headerBytes;
+
+				if ((b & 0x80) == 0)
+				{
+					// ヘッダ + パケット全体が揃っているか
+					return Available >= headerBytes + (int)packetSize;
+				}
+			}
+
+			return false; // 不正な LEB128
 		}
 
 		/// <summary>

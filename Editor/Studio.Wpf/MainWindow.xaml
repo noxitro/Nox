@@ -55,26 +55,36 @@
             <!-- 既存レイアウト -->
             <ad:DockingManager.Layout>
                 <adLayout:LayoutRoot>
-                    <adLayout:LayoutPanel Orientation="Horizontal">
-                        <adLayout:LayoutAnchorablePaneGroup DockWidth="250">
-                            <adLayout:LayoutAnchorablePane>
-                                <adLayout:LayoutAnchorable Title="Project" CanHide="False" />
-                                <adLayout:LayoutAnchorable Title="Hierarchy" />
-                            </adLayout:LayoutAnchorablePane>
-                        </adLayout:LayoutAnchorablePaneGroup>
+                    <adLayout:LayoutPanel Orientation="Vertical">
+                        <adLayout:LayoutPanel Orientation="Horizontal">
+                            <adLayout:LayoutAnchorablePaneGroup DockWidth="250">
+                                <adLayout:LayoutAnchorablePane>
+                                    <adLayout:LayoutAnchorable Title="Project" CanHide="False" />
+                                    <adLayout:LayoutAnchorable Title="Hierarchy" />
+                                </adLayout:LayoutAnchorablePane>
+                            </adLayout:LayoutAnchorablePaneGroup>
 
-                        <adLayout:LayoutDocumentPaneGroup>
-                            <adLayout:LayoutDocumentPane>
-                                <adLayout:LayoutDocument Title="Runtime" CanClose="False" CanFloat="False">
-                                    <views:RuntimeView />
-                                </adLayout:LayoutDocument>
-                            </adLayout:LayoutDocumentPane>
-                        </adLayout:LayoutDocumentPaneGroup>
+                            <adLayout:LayoutDocumentPaneGroup>
+                                <adLayout:LayoutDocumentPane>
+                                    <adLayout:LayoutDocument Title="Runtime" CanClose="False" CanFloat="False">
+                                        <views:RuntimeView />
+                                    </adLayout:LayoutDocument>
+                                </adLayout:LayoutDocumentPane>
+                            </adLayout:LayoutDocumentPaneGroup>
 
-                        <adLayout:LayoutAnchorablePaneGroup DockWidth="300">
+                            <adLayout:LayoutAnchorablePaneGroup DockWidth="300">
+                                <adLayout:LayoutAnchorablePane>
+                                    <adLayout:LayoutAnchorable Title="Inspector" />
+                                    <adLayout:LayoutAnchorable Title="Console" />
+                                </adLayout:LayoutAnchorablePane>
+                            </adLayout:LayoutAnchorablePaneGroup>
+                        </adLayout:LayoutPanel>
+
+                        <adLayout:LayoutAnchorablePaneGroup DockHeight="200">
                             <adLayout:LayoutAnchorablePane>
-                                <adLayout:LayoutAnchorable Title="Inspector" />
-                                <adLayout:LayoutAnchorable Title="Console" />
+                                <adLayout:LayoutAnchorable Title="Log" CanHide="False" CanClose="False">
+                                    <views:LogView />
+                                </adLayout:LayoutAnchorable>
                             </adLayout:LayoutAnchorablePane>
                         </adLayout:LayoutAnchorablePaneGroup>
                     </adLayout:LayoutPanel>

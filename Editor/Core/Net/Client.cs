@@ -186,7 +186,7 @@ namespace Core.Net
 
 						Span<byte> handShakeBuffer = stackalloc byte[HandShakeStr1.Length];
 						Encoding.ASCII.GetBytes(HandShakeStr1, handShakeBuffer);
-						if (this.Send(handShakeBuffer).HasValue)
+						if (this.Send(handShakeBuffer) == false)
 						{
 							Nox.LogTrace.ErrorLine<Core.LogId.Net>("Handshake request send failed.");
 							break;
@@ -206,7 +206,7 @@ namespace Core.Net
 					}
 
 					Span<byte> recvBuffer = stackalloc byte[HandShakeStr2.Length];
-					if (this.Receive(recvBuffer).HasValue)
+					if (this.ReceiveAll(recvBuffer) == false)
 					{
 						Nox.LogTrace.ErrorLine<Core.LogId.Net>("Handshake response receive failed.");
 						break;
@@ -233,7 +233,7 @@ namespace Core.Net
 
 						Span<byte> handShakeBuffer = stackalloc byte[HandShakeStr3.Length];
 						Encoding.ASCII.GetBytes(HandShakeStr3, handShakeBuffer);
-						if (this.Send(handShakeBuffer).HasValue)
+						if (this.Send(handShakeBuffer) == false)
 						{
 							Nox.LogTrace.ErrorLine<Core.LogId.Net>("Handshake request send failed.");
 							break;
@@ -255,11 +255,34 @@ namespace Core.Net
 			{
 				case ConnectionState.Connected:
 					Nox.Util.Assert(_Socket != null, "Socket is null in Connected state");
-					//	受信処理
-					if (IsRecvReadable(_Socket, TimeSpan.FromMicroseconds(10)))
+
+					//	切断検知: Poll(SelectRead) が true かつ Available==0 → 相手側が切断
+					try
 					{
-						OnReceive();
+						if (_Socket.Poll(0, System.Net.Sockets.SelectMode.SelectRead) && _Socket.Available == 0)
+						{
+							Nox.LogTrace.InfoLine<Core.LogId.Net>("Remote peer disconnected. {0}:{1}", _InitContext.Hostname, _InitContext.Port);
+							HandleDisconnect();
+							break;
+						}
 					}
+					catch (System.Net.Sockets.SocketException ex)
+					{
+						Nox.LogTrace.ErrorLine<Core.LogId.Net>("Socket error during disconnect check: {0}", ex.SocketErrorCode);
+						HandleDisconnect();
+						break;
+					}
+					catch (ObjectDisposedException)
+					{
+						HandleDisconnect();
+						break;
+					}
+
+					////	受信処理
+					//if (IsRecvReadable(_Socket, TimeSpan.FromMicroseconds(10)))
+					//{
+					//	OnReceive();
+					//}
 					break;
 			}
 		}
@@ -274,6 +297,8 @@ namespace Core.Net
 			{
 				return;
 			}
+
+			Nox.LogTrace.InfoLine<Core.LogId.Net>("shutdown開始");
 
 			try
 			{
@@ -322,6 +347,10 @@ namespace Core.Net
 
 		}
 
+		protected virtual void OnDisconnected()
+		{
+		}
+
 		// 接続待ち（非ブロッキング＋Poll）
 		private static bool ConnectWithTimeout(System.Net.Sockets.Socket socket, System.Net.EndPoint endPoint, int timeoutMs, out System.Net.Sockets.SocketError socketError)
 		{
@@ -363,6 +392,25 @@ namespace Core.Net
 			finally
 			{
 				try { socket.Blocking = originalBlocking; } catch { }
+			}
+		}
+
+		/// <summary>
+		/// 切断処理の共通ハンドラ
+		/// </summary>
+		private void HandleDisconnect()
+		{
+			if (_ConnectionState == ConnectionState.Disconnect)
+			{
+				return;
+			}
+
+			ConnectionState prevState = _ConnectionState;
+			Shutdown();
+
+			if (prevState == ConnectionState.Connected)
+			{
+				OnDisconnected();
 			}
 		}
 		#endregion

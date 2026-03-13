@@ -564,7 +564,6 @@ namespace Core
 									Nox.LogTrace.WarningLine<Core.LogId.Runtime>($"DisplayName属性の引数が不正です。FQN={fqn}, Args={string.Join(", ", args)}");
 									break;
 								}
-
 								return new System.ComponentModel.DisplayNameAttribute((string)args[0]);
 							}
 

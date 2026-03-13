@@ -16,9 +16,9 @@ namespace Core.UI.Views
 	/// <summary>
 	/// LogTraceView.xaml の相互作用ロジック
 	/// </summary>
-	public partial class LogTraceView : System.Windows.Controls.UserControl
+	public partial class LogView : System.Windows.Controls.UserControl
 	{
-		public LogTraceView()
+		public LogView()
 		{
 			InitializeComponent();
 		}

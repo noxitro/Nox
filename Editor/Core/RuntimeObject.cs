@@ -8,12 +8,10 @@ namespace Core
 	public abstract class RuntimeObject
 	{
 		#region フィールド
-		private long _RemoteInstanceId = 0;
-
 		/// <summary>
 		/// メンバ変数リスト
 		/// </summary>
-		private readonly object?[] _VariableList;
+		private readonly object[] _VariableList;
 		private readonly bool[] _VariableDirtyList;
 
 		/// <summary>
@@ -26,6 +24,10 @@ namespace Core
 		#region 公開プロパティ
 		public Core.RuntimeRecordDecl RuntimeRecordDecl { get; init; }
 		protected abstract RuntimeRecordDecl GetRuntimeRecordDecl();
+		public long RemoteInstanceId { get; set; } = 0;
+		public ReadOnlySpan<object> VariableList => _VariableList;
+
+		public Span<object> RefVariableList => _VariableList;
 		#endregion
 
 		#region 公開メソッド

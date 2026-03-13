@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Core.RuntimeRemote
 {
-	[Core.RuntimeRemote.Attr.RuntimeRemoteCode("core/dev/remote/system", comment: "リソースコンバートリクエスト")]
+	[Core.RuntimeRemote.Attributes.CoreRuntimeRemoteCode("system", comment: "リソースコンバートリクエスト")]
 	public sealed class ResourceConvertQuery : Core.RuntimeRemote.Query
 	{
 		public ResourceConvertQuery(string path)
@@ -18,17 +18,17 @@ namespace Core.RuntimeRemote
 
 		private const uint NativePathSize = 256;
 
-		[Core.RuntimeRemote.Attr.FixedString(NativePathSize)]
+		[Core.RuntimeRemote.Attributes.FixedString(NativePathSize)]
 		public string NativePath { get; set; } = string.Empty;
 	}
 
-	[Core.RuntimeRemote.Attr.RuntimeRemoteCode("core/dev/remote/system", comment: "MainSceneViewを取得する")]
+	[Core.RuntimeRemote.Attributes.CoreRuntimeRemoteCode("system", comment: "MainSceneViewを取得する")]
 	public class GetMainSceneView : Core.RuntimeRemote.Query
 	{
 		
 	}
 
-	[Core.RuntimeRemote.Attr.RuntimeRemoteCode("core/dev/remote/system", comment: "SceneView情報")]
+	[Core.RuntimeRemote.Attributes.CoreRuntimeRemoteCode("system", comment: "SceneView情報")]
 	public class SceneViewInfo : Core.RuntimeRemote.Response
 	{
 		public long MainWindowHandle { get; set; } = 0;

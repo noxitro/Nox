@@ -3,8 +3,58 @@ using System.Collections.Generic;
 
 namespace Nox
 {
+	
+
 	public static partial class Util
 	{
+		#region 内部クラス定義
+		/// <summary>
+		/// Assert 用 Interpolated String Handler。
+		/// condition=true のとき文字列を一切構築しない。
+		/// </summary>
+		[System.Runtime.CompilerServices.InterpolatedStringHandler]
+		public ref struct AssertInterpolatedStringHandler
+		{
+			private System.Runtime.CompilerServices.DefaultInterpolatedStringHandler _inner;
+			private readonly bool _enabled;
+
+			public AssertInterpolatedStringHandler(
+				int literalLength,
+				int formattedCount,
+				bool condition,
+				out bool shouldAppend)
+			{
+				_enabled = !condition;
+				shouldAppend = _enabled;
+				if (_enabled)
+					_inner = new System.Runtime.CompilerServices.DefaultInterpolatedStringHandler(literalLength, formattedCount);
+			}
+
+			public void AppendLiteral(string s)
+			{
+				if (_enabled) _inner.AppendLiteral(s);
+			}
+
+			public void AppendFormatted<T>(T value)
+			{
+				if (_enabled) _inner.AppendFormatted(value);
+			}
+
+			public void AppendFormatted<T>(T value, string? format)
+			{
+				if (_enabled) _inner.AppendFormatted(value, format);
+			}
+
+			// ⭐ ReadOnlySpan<char> 専用オーバーロード（ref struct はジェネリクス不可）
+			public void AppendFormatted(ReadOnlySpan<char> value)
+			{
+				if (_enabled) _inner.AppendFormatted(value);
+			}
+
+			internal readonly string GetText() => _enabled ? _inner.ToStringAndClear() : string.Empty;
+		}
+		#endregion
+
 		[System.Diagnostics.Conditional("DEBUG")]
 		public static void BreakPoint() { }
 
@@ -18,6 +68,21 @@ namespace Nox
 
 			System.Diagnostics.Debug.Assert(condition, string.Format(message, args));
 		}
+
+		/// <summary>補間文字列オーバーロード（condition=true のとき文字列構築しない）</summary>
+		[System.Diagnostics.Conditional("DEBUG")]
+		public static void Assert(
+			[System.Diagnostics.CodeAnalysis.DoesNotReturnIf(false)] bool condition,
+			[System.Runtime.CompilerServices.InterpolatedStringHandlerArgument(nameof(condition))]
+			scoped ref AssertInterpolatedStringHandler message)
+		{
+			if (condition)
+			{
+				return;
+			}
+			System.Diagnostics.Debug.Assert(false, message.GetText());
+		}
+
 
 		public static T Cast<T>(object obj) where T : class //where U : class
 		{

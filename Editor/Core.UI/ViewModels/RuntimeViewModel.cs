@@ -11,7 +11,11 @@ namespace Core.UI.ViewModels
 	public class RuntimeViewModel : ToolViewModel
 	{
 		#region 公開プロパティ
-		public Core.RuntimeWrapper.SceneView? MainView { get; set; } = null;
+		public Core.RuntimeWrapper.SceneView? MainView
+		{
+			get => field;
+			set => SetProperty(ref field, value);
+		}
 		#endregion
 
 		public RuntimeViewModel()
