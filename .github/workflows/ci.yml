@@ -24,6 +24,7 @@ jobs:
           msbuild runtime/runtime.sln `
             /p:Configuration=Debug `
             /p:Platform=x64 `
+            /p:PlatformToolset=v143 `
             /m `
             /v:minimal `
             "/flp:logfile=build.log;verbosity=normal"
