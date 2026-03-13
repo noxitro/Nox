@@ -6,7 +6,7 @@
 #include	"managed_object.h"
 
 #include	"garbage_collector.h"
-
+#include	"log_id.h"
 namespace
 {
 	
@@ -39,6 +39,7 @@ void	nox::ManagedObject::ReleaseRef()
 		break;
 
 	case -2:
+		NOX_INFO_LINE(nox::log_id::CoreCommon, u8"delete this:{0}", GetType().GetTypeName());
 		delete this;
 		break;
 	}

@@ -924,6 +924,16 @@ namespace ReflectionGenerator.Generator
 				}
 			}
 
+			//  setter, getterの有無
+			bool noSetter =
+				variableInfo.Type.TypeKind == Parser2.TypeKind.BoundedArray || variableInfo.Type.TypeKind == Parser2.TypeKind.UnboundedArray ||
+				variableInfo.Type.TypeAttributeFlags.IsOn(Parser2.TypeAttributeFlag.Const) == true
+                ;
+
+            bool noGetter =
+				variableInfo.Type.TypeKind == Parser2.TypeKind.BoundedArray || variableInfo.Type.TypeKind == Parser2.TypeKind.UnboundedArray
+				;
+
 			//  アドレスを取得できない変数かどうか
 			bool noAddressOf = 
                 variableInfo.Type.TypeAttributeFlags.IsAnyOn(Parser2.TypeAttributeFlag.LValueReference | Parser2.TypeAttributeFlag.RValueReference) ||
@@ -1071,58 +1081,65 @@ namespace ReflectionGenerator.Generator
                     {
                         codeWriter.WriteLine("//\tsetter");
 
-                        if (variableInfo.Type.TypeAttributeFlags.IsOn(Parser2.TypeAttributeFlag.Const) == true)
+                        if (noSetter)
                         {
-                            codeWriter.WriteLine("nullptr,");
-                        }
+							codeWriter.WriteLine("nullptr,");
+						}
+						else
+						{
+							codeWriter.WriteLine("+[](void* instance, void* value)->void");
+							codeWriter.WriteLine("{");
+							using (codeWriter.Indent())
+							{
+								codeWriter.WriteLine(variableTypeDeclStr);
+								codeWriter.WriteLine(classTypeDeclStr);
+
+								codeWriter.WriteLine("if constexpr(nox::concepts::Assignable<VariableType, VariableType>)");
+								codeWriter.WriteLine("{");
+								using (codeWriter.Indent())
+								{
+									codeWriter.WriteLine($"static_cast<ClassType*>(instance)->{variableInfo.FullName} = *static_cast <const std::remove_reference_t<VariableType>*> (value);");
+								}
+								codeWriter.WriteLine("}");
+							}
+							codeWriter.WriteLine("},");
+						}
+					}
+
+                    // getter
+                    {
+                        codeWriter.WriteLine("//\tgetter");
+
+                        if (noGetter)
+                        {
+							codeWriter.WriteLine("nullptr,");
+						}
                         else
                         {
-                            codeWriter.WriteLine("+[](void* instance, void* value)->void");
+                            codeWriter.WriteLine($"+[](void* instance)->nox::reflection::ReflectionOptional<decltype({variableInfo.FullName})>");
                             codeWriter.WriteLine("{");
                             using (codeWriter.Indent())
                             {
                                 codeWriter.WriteLine(variableTypeDeclStr);
                                 codeWriter.WriteLine(classTypeDeclStr);
 
-                                codeWriter.WriteLine("if constexpr(nox::concepts::Assignable<VariableType, VariableType>)");
+                                codeWriter.WriteLine("if constexpr (nox::concepts::Assignable<VariableType, std::remove_const_t<VariableType>>)");
                                 codeWriter.WriteLine("{");
                                 using (codeWriter.Indent())
                                 {
-                                    codeWriter.WriteLine($"static_cast<ClassType*>(instance)->{variableInfo.FullName} = *static_cast <const std::remove_reference_t<VariableType>*> (value);");
+                                    codeWriter.WriteLine($"return static_cast <const ClassType*> (instance)->{variableInfo.FullName};");
+                                }
+                                codeWriter.WriteLine("}");
+                                codeWriter.WriteLine("else");
+                                codeWriter.WriteLine("{");
+                                using (codeWriter.Indent())
+                                {
+                                    codeWriter.WriteLine("return std::nullopt;");
                                 }
                                 codeWriter.WriteLine("}");
                             }
                             codeWriter.WriteLine("},");
                         }
-                    }
-
-                    // getter
-                    {
-                        codeWriter.WriteLine("//\tgetter");
-
-                        codeWriter.WriteLine($"+[](void* instance)->nox::reflection::ReflectionOptional<decltype({variableInfo.FullName})>");
-                        codeWriter.WriteLine("{");
-                        using (codeWriter.Indent())
-                        {
-                            codeWriter.WriteLine(variableTypeDeclStr);
-                            codeWriter.WriteLine(classTypeDeclStr);
-
-                            codeWriter.WriteLine("if constexpr (nox::concepts::Assignable<VariableType, std::remove_const_t<VariableType>>)");
-                            codeWriter.WriteLine("{");
-                            using (codeWriter.Indent())
-                            {
-                                codeWriter.WriteLine($"return static_cast <const ClassType*> (instance)->{variableInfo.FullName};");
-                            }
-                            codeWriter.WriteLine("}");
-                            codeWriter.WriteLine("else");
-                            codeWriter.WriteLine("{");
-                            using (codeWriter.Indent())
-                            {
-                                codeWriter.WriteLine("return std::nullopt;");
-                            }
-                            codeWriter.WriteLine("}");
-                        }
-                        codeWriter.WriteLine("},");
                     }
 
                     // getter address
@@ -1323,7 +1340,7 @@ namespace ReflectionGenerator.Generator
                     {
                         codeWriter.WriteLine("//\tsetter");
 
-                        if (variableInfo.Type.TypeAttributeFlags.IsOn(Parser2.TypeAttributeFlag.Const) == true)
+                        if (noSetter)
                         {
                             codeWriter.WriteLine("nullptr,");
                         }
@@ -1351,28 +1368,35 @@ namespace ReflectionGenerator.Generator
                     {
                         codeWriter.WriteLine("//\tgetter");
 
-                        codeWriter.WriteLine($"+[]()->nox::reflection::ReflectionOptional<decltype({variableInfo.FullName})>");
-                        codeWriter.WriteLine("{");
-                        using (codeWriter.Indent())
+                        if (noGetter)
                         {
-                            codeWriter.WriteLine(variableTypeDeclStr);
+							codeWriter.WriteLine("nullptr,");
+						}
+                        else
+                        {
+                            codeWriter.WriteLine($"+[]()->nox::reflection::ReflectionOptional<decltype({variableInfo.FullName})>");
+                            codeWriter.WriteLine("{");
+                            using (codeWriter.Indent())
+                            {
+                                codeWriter.WriteLine(variableTypeDeclStr);
 
-                            codeWriter.WriteLine("if constexpr (nox::concepts::Assignable<VariableType, std::remove_const_t<VariableType>>)");
-                            codeWriter.WriteLine("{");
-                            using (codeWriter.Indent())
-                            {
-                                codeWriter.WriteLine($"return {variableInfo.FullName};");
+                                codeWriter.WriteLine("if constexpr (nox::concepts::Assignable<VariableType, std::remove_const_t<VariableType>>)");
+                                codeWriter.WriteLine("{");
+                                using (codeWriter.Indent())
+                                {
+                                    codeWriter.WriteLine($"return {variableInfo.FullName};");
+                                }
+                                codeWriter.WriteLine("}");
+                                codeWriter.WriteLine("else");
+                                codeWriter.WriteLine("{");
+                                using (codeWriter.Indent())
+                                {
+                                    codeWriter.WriteLine("return std::nullopt;");
+                                }
+                                codeWriter.WriteLine("}");
                             }
-                            codeWriter.WriteLine("}");
-                            codeWriter.WriteLine("else");
-                            codeWriter.WriteLine("{");
-                            using (codeWriter.Indent())
-                            {
-                                codeWriter.WriteLine("return std::nullopt;");
-                            }
-                            codeWriter.WriteLine("}");
+                            codeWriter.WriteLine("},");
                         }
-                        codeWriter.WriteLine("},");
                     }
 
                     // getter address
@@ -1569,10 +1593,10 @@ namespace ReflectionGenerator.Generator
                 return false;
 			}
 
-			if (functionInfo.FullName.Contains("nox::memory::StlAllocateAdapter<nox::Application::ModuleEntryInfo>::allocate"))
-            {
-                Util.BreakPoint();
-            }
+			if (functionInfo.FullName.Contains("Typeof"))
+			{
+				Util.BreakPoint();
+			}
 
 			//TODO:  コンストラクタ、デストラクタは未対応
 			if (functionInfo.FunctionAttributeFlags.IsAnyOn(

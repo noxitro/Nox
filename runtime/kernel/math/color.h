@@ -1,8 +1,8 @@
 ﻿///	@file	color.h
 ///	@brief	color
 #pragma once
-#include	"../basic_type.h"
 #include	<array>
+#include	"../basic_type.h"
 
 namespace nox
 {

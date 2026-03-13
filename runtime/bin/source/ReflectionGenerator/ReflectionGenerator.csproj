@@ -27,11 +27,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ClangSharp" Version="20.1.2.4" />
-    <PackageReference Include="ClangSharp.Interop" Version="20.1.2.4" />
-    <PackageReference Include="libclang.runtime.win-x64" Version="20.1.2" />
-    <PackageReference Include="libClangSharp.runtime.win-x64" Version="20.1.2" />
-    <PackageReference Include="Microsoft.Build" Version="17.14.28" />
+    <PackageReference Include="ClangSharp" Version="21.1.8.2" />
+    <PackageReference Include="ClangSharp.Interop" Version="21.1.8.2" />
+    <PackageReference Include="libclang.runtime.win-x64" Version="21.1.8" />
+    <PackageReference Include="libClangSharp.runtime.win-x64" Version="21.1.8.2" />
+    <PackageReference Include="Microsoft.Build" Version="18.0.2" />
   </ItemGroup>
 
   <ItemGroup>

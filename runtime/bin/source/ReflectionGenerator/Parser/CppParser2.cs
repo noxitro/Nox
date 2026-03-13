@@ -87,12 +87,6 @@ namespace ReflectionGenerator.Parser2
 				cursor = cursor.SemanticParent;
 			}
 
-
-			if (fqn.Contains("nox::reflection::detail::CompileTimeTypeImpl<nox::Behavior"))
-			{
-				Util.BreakPoint();
-			}
-
 			return fqn;
 		}
 
@@ -171,6 +165,19 @@ namespace ReflectionGenerator.Parser2
 					}
 					return name;
 
+				case ClangSharp.Interop.CXTemplateArgumentKind.CXTemplateArgumentKind_Template:
+					{
+						ClangSharp.Interop.CX_TemplateName asTemplate = templateArgument.AsTemplate;
+						ClangSharp.Interop.CXCursor templateDecl = asTemplate.AsTemplateDecl;
+						if (!templateDecl.IsNull)
+						{
+							return templateDecl.GetFQN();
+						}
+						// AsTemplateDecl が取れない場合（依存名など）はスペルにフォールバック
+						Trace.ErrorLine(null, $"AsTemplateDeclが取得できませんでした");
+						return string.Empty;
+					}
+
 				default:
 					Util.Assert(false);
 					break;
@@ -205,7 +212,7 @@ namespace ReflectionGenerator.Parser2
 				rootSpecializedCursorTemplate = tmp;
 			}
 
-			Util.Assert(rootSpecializedCursorTemplate.TemplatedDecl.IsNull == false, "TemplatedDecl is null");
+		//	Util.Assert(rootSpecializedCursorTemplate.TemplatedDecl.IsNull == false, "TemplatedDecl is null");
 			string name = $"{cursor.Spelling.CString}<";
 			for (uint i = 0; i < numTemplateArgument; ++i)
 			{
@@ -229,7 +236,14 @@ namespace ReflectionGenerator.Parser2
 				case ClangSharp.Interop.CXCursorKind.CXCursor_FunctionDecl:
 				case ClangSharp.Interop.CXCursorKind.CXCursor_FunctionTemplate:
 				case ClangSharp.Interop.CXCursorKind.CXCursor_CXXMethod:
-					return cursor.Spelling.CString;
+					if (cursor.TemplateSpecializationKind == ClangSharp.Interop.CX_TemplateSpecializationKind.CX_TSK_ImplicitInstantiation)
+					{
+						return GetNameWithTemplateSpecialization(cursor);
+					}
+					else
+					{
+						return cursor.Spelling.CString;
+					}
 			}
 
 			switch (cursor.DeclKind)
@@ -940,6 +954,7 @@ namespace ReflectionGenerator.Parser2
 				Integral,
 				Declaration,
 				Pack,
+				Template,
 			}
 
 			public required Kind ArgumentKind { get; init; }
@@ -971,6 +986,12 @@ namespace ReflectionGenerator.Parser2
 			public ReadOnlySpan<TemplateArgument> PackElementSpan => PackElementList;
 		}
 
+		public class TemplateTemplateArgument : TemplateArgument
+		{
+			public required string Name { get; init; }
+			public required TemplateArgument[] TemplateArgumentList { private get; init; }
+			public ReadOnlySpan<TemplateArgument> TemplateArgumentSpan => TemplateArgumentList;
+		}
 	}
 
 	public sealed class PrimitiveTypeInfo : TypeInfo
@@ -1869,10 +1890,11 @@ namespace ReflectionGenerator.Parser2
 				}
 				else
 				{
-					IDeclarationContainer container = (IDeclarationContainer)parentDecl;
+					IDeclarationContainer? container = parentDecl as IDeclarationContainer;
+					Util.Assert(container != null, "親宣言がDeclarationContainerではありません:{0}", parentDecl.ToString());
+
 					RecordDecl? containerRecord = container as RecordDecl;
-
-
+					
 					switch (decl)
 					{
 						case RecordDecl declImpl:
@@ -2187,6 +2209,19 @@ namespace ReflectionGenerator.Parser2
 					{
 						ArgumentKind = TemplateRecordTypeInfo.TemplateArgument.Kind.Null
 					};
+
+				case ClangSharp.Interop.CXTemplateArgumentKind.CXTemplateArgumentKind_Template:
+					{
+						ClangSharp.Interop.CX_TemplateName asTemplate = cursorTemplateArgument.AsTemplate;
+						ClangSharp.Interop.CXCursor templateDecl = asTemplate.AsTemplateDecl;
+						string name = !templateDecl.IsNull ? templateDecl.GetFQN() : string.Empty;
+						return new TemplateRecordTypeInfo.TemplateTemplateArgument()
+						{
+							ArgumentKind = TemplateRecordTypeInfo.TemplateArgument.Kind.Template,
+							Name = name,
+							TemplateArgumentList = [],
+						};
+					}
 
 				default:
 					Util.Assert(false);
@@ -2649,6 +2684,13 @@ namespace ReflectionGenerator.Parser2
 		//		return;
 			}
 
+			//	using
+			if (cursor.DeclKind == ClangSharp.Interop.CX_DeclKind.CX_DeclKind_UsingEnum)
+			{
+				ParseAliasDecl(cursor);
+				return;
+			}
+
 			string usr = cursor.GetNormalizedUsr();
 			uint hash = cursor.Hash;
 			if (ContainsDecl(hash) == true)
@@ -2657,6 +2699,7 @@ namespace ReflectionGenerator.Parser2
 			}
 
 			int numEnumerator = cursor.NumEnumerators;
+			Util.Assert(numEnumerator >= 0, "numEnumerator は0以上である必要があります");
 			EnumDecl.EnumeratorInfo[] enumeratorInfoList = new EnumDecl.EnumeratorInfo[numEnumerator];
 
 			ClangSharp.Interop.CXCursor parentCursor = GetParentDeclCursor(cursor);
@@ -2796,6 +2839,12 @@ namespace ReflectionGenerator.Parser2
 			{
 				//  関数内定義の変数はスキップ
 				return;
+			}
+
+			if (cursor.GetFQN().Contains("Typeof"))
+			{
+				Util.BreakPoint();
+				cursor.GetFQN();
 			}
 
 			ClangSharp.Interop.CXCursor parentCursor = GetParentDeclCursor(cursor);
@@ -3071,7 +3120,7 @@ namespace ReflectionGenerator.Parser2
 					break;
 
                 case ClangSharp.Interop.CXCursorKind.CXCursor_CXXMethod:
-                case ClangSharp.Interop.CXCursorKind.CXCursor_FunctionDecl:
+                case ClangSharp.Interop.CXCursorKind.CXCursor_FunctionDecl:					
                     ParseFunctionDecl(cursor);
 					break;
 

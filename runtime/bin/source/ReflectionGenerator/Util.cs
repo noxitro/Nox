@@ -78,6 +78,17 @@ namespace ReflectionGenerator
 		public static void Assert([System.Diagnostics.CodeAnalysis.DoesNotReturnIf(false)] bool condition, [System.Runtime.CompilerServices.CallerArgumentExpression(nameof(condition))] string? message = null) =>
 			System.Diagnostics.Debug.Assert(condition, message);
 
+		[System.Diagnostics.Conditional("DEBUG")]
+		public static void Assert([System.Diagnostics.CodeAnalysis.DoesNotReturnIf(false)] bool condition, string message, params object[] args)
+		{
+			if (condition == true)
+			{
+				return;
+			}
+
+			System.Diagnostics.Debug.Assert(condition, string.Format(message, args));
+		}
+
 		private static int getNumMaxThreads()
         {
             System.Threading.ThreadPool.GetMaxThreads(out int maxThreads, out int completionPortThreads);
