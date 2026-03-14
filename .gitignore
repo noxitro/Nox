@@ -127,3 +127,5 @@
 /.vs
 /runtime/bin/ReflectionGenerator.pdb
 /runtime/bin/RuntimeTypeDB.pdb
+/runtime/bin/source/RuntimeTypeDB/.vs/RuntimeTypeDB.slnx
+
