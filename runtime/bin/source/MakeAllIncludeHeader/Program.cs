@@ -23,8 +23,11 @@ namespace MakeAllIncludeHeader
 			string outputDirectory = projectDir;
 			string projectFilePath = System.IO.Path.GetFullPath($"{projectDir}/{projectName}.vcxproj");
 
+			Console.WriteLine($"projectFilePath:{projectFilePath}");
+			Console.WriteLine($"outputDirectory:{outputDirectory}");
+
 			XmlDocument doc = new XmlDocument();
-			doc.Load(projectFilePath); // ここにあなたの.vcxprojファイルのパスを入力してください
+			doc.Load(projectFilePath);
 
 			XmlNamespaceManager manager = new XmlNamespaceManager(doc.NameTable);
 			manager.AddNamespace("ns", "http://schemas.microsoft.com/developer/msbuild/2003");

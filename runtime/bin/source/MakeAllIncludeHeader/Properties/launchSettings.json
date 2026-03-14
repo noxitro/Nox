@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "MakeAllIncludeHeader": {
+      "commandName": "Project",
+      "commandLineArgs": "D:\\github\\Nox\\runtime\\app\\ app"
+    }
+  }
+}
