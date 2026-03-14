@@ -1,34 +1,50 @@
+# ============================================================
+# CI Build (Runtime)
+#
+# 目的  : runtime/runtime.sln を Debug/x64 でビルドし、
+#         回帰ビルドエラーを早期検知する。
+# 実行  : master への push、または GitHub UI からの手動実行。
+# 結果  : Actions の Summary タブに結果テーブルを表示。
+#         失敗時は build.log からエラー行(最大20件)も表示。
+# ============================================================
+
 name: CI Build (Runtime)
 
 on:
   push:
     branches:
-      - master
-  workflow_dispatch:
+      - master   # master への push で自動実行
+  workflow_dispatch: # GitHub UI の「Run workflow」から手動実行も可能
 
 jobs:
   build-runtime:
     name: Runtime Debug x64
-    runs-on: windows-latest
+    runs-on: windows-latest  # MSBuild が必要なため Windows ランナーを使用
 
     steps:
+      # ソースコードをランナーにクローン
       - name: Checkout
         uses: actions/checkout@v4
 
+      # msbuild コマンドを PATH に追加する Microsoft 公式アクション
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
+      # メインビルド
+      # id を付けることで後続ステップから steps.build.outcome を参照できる
       - name: Build
         id: build
         run: |
           msbuild runtime/runtime.sln `
             /p:Configuration=Debug `
             /p:Platform=x64 `
-            /p:PlatformToolset=v143 `
-            /m `
-            /v:minimal `
-            "/flp:logfile=build.log;verbosity=normal"
+            /p:PlatformToolset=v143 `  # VS2022 ツールセットを明示。windows-latest の VS バージョン差異を吸収するため固定
+            /m `                        # 並列ビルド（CPUコア数分のプロセスを使用）
+            /v:minimal `               # コンソール出力を最小限に抑える
+            "/flp:logfile=build.log;verbosity=normal"  # エラー解析用の詳細ログをファイルに書き出す
 
+      # ビルド成否に関わらず Summary タブへ結果を書き込む
+      # if: always() により Build ステップが失敗しても必ず実行される
       - name: Write job summary
         if: always()
         shell: pwsh
@@ -42,6 +58,7 @@ jobs:
             $status = "Build failed"
           }
 
+          # Summary タブに結果テーブルを出力
           @"
           ## $icon CI Build Result
 
@@ -53,6 +70,7 @@ jobs:
           | Result     | **$status**    |
           "@ >> $env:GITHUB_STEP_SUMMARY
 
+          # 失敗時のみ build.log からエラー行を最大20件抽出して追記
           if ($outcome -ne "success" -and (Test-Path build.log)) {
             $errors = Select-String -Path build.log -Pattern " error " | Select-Object -Last 20
             if ($errors) {
