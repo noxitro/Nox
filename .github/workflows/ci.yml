@@ -3,7 +3,9 @@
 #
 # 目的  : runtime/runtime.sln を Debug/x64 でビルドし、
 #         回帰ビルドエラーを早期検知する。
-# 実行  : master への push、または GitHub UI からの手動実行。
+# 実行  : 毎日 JST 10:00 (UTC 01:00) に定期実行。
+#         直近 24 時間にコミットがなければビルドをスキップ。
+#         GitHub UI からの手動実行も可能。
 # 結果  : Actions の Summary タブに結果テーブルを表示。
 #         失敗時は build.log からエラー行(最大20件)も表示。
 # コンパイラ: MSVC (v143) と ClangCL の2ジョブを並列実行。
@@ -13,13 +15,46 @@
 name: CI Build (Runtime)
 
 on:
-  push:
-    branches:
-      - master   # master への push で自動実行
-  workflow_dispatch: # GitHub UI の「Run workflow」から手動実行も可能
+  schedule:
+    - cron: '0 1 * * *'  # 毎日 UTC 01:00 = JST 10:00 に実行
+  workflow_dispatch:      # GitHub UI の「Run workflow」から手動実行も可能
 
 jobs:
+  # -------------------------------------------------------
+  # 事前チェック: 直近 24 時間にコミットがあるか確認
+  # ubuntu-latest を使用（Windows より高速・安価）
+  # -------------------------------------------------------
+  check-changes:
+    name: Check for recent commits
+    runs-on: ubuntu-latest
+    outputs:
+      has_changes: ${{ steps.check.outputs.has_changes }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 全履歴を取得（git log --since が正確に動作するために必要）
+
+      - name: Check commits in last 24h
+        id: check
+        run: |
+          COUNT=$(git log --oneline --since="24 hours ago" | wc -l)
+          echo "直近 24h のコミット数: $COUNT"
+          if [ "$COUNT" -gt 0 ]; then
+            echo "has_changes=true"  >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+  # -------------------------------------------------------
+  # メインビルド: check-changes でコミットありの場合のみ実行
+  # -------------------------------------------------------
   build-runtime:
+    needs: check-changes
+    # has_changes=false の場合はスキップ（手動実行時は常に実行）
+    if: needs.check-changes.outputs.has_changes == 'true' || github.event_name == 'workflow_dispatch'
+
     # matrix により MSVC / ClangCL の2ジョブが並列実行される
     strategy:
       fail-fast: false  # 一方が失敗しても、もう一方のジョブを継続する
