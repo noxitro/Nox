@@ -13,12 +13,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Nox\Nox.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Reference Include="RuntimeTypeDB">
       <HintPath>..\..\runtime\bin\source\RuntimeTypeDB\bin\Release\net10.0\RuntimeTypeDB.dll</HintPath>
     </Reference>
+
   </ItemGroup>
 
 </Project>

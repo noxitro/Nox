@@ -6,6 +6,8 @@
 # 実行  : master への push、または GitHub UI からの手動実行。
 # 結果  : Actions の Summary タブに結果テーブルを表示。
 #         失敗時は build.log からエラー行(最大20件)も表示。
+# コンパイラ: MSVC (v143) と ClangCL の2ジョブを並列実行。
+#             ClangCL は VS2022 に同梱の clang-cl を使用。
 # ============================================================
 
 name: CI Build (Runtime)
@@ -18,7 +20,17 @@ on:
 
 jobs:
   build-runtime:
-    name: Runtime Debug x64
+    # matrix により MSVC / ClangCL の2ジョブが並列実行される
+    strategy:
+      fail-fast: false  # 一方が失敗しても、もう一方のジョブを継続する
+      matrix:
+        include:
+          - compiler: MSVC
+            toolset: v143      # Visual Studio 2022 の MSVC ツールセット
+          - compiler: ClangCL
+            toolset: ClangCL   # VS2022 に同梱の clang-cl（MSBuild 経由で使用）
+
+    name: Runtime Debug x64 (${{ matrix.compiler }})
     runs-on: windows-latest  # MSBuild が必要なため Windows ランナーを使用
 
     steps:
@@ -38,10 +50,10 @@ jobs:
           msbuild runtime/runtime.sln `
             /p:Configuration=Debug `
             /p:Platform=x64 `
-            /p:PlatformToolset=v143 `  # VS2022 ツールセットを明示。windows-latest の VS バージョン差異を吸収するため固定
-            /m `                        # 並列ビルド（CPUコア数分のプロセスを使用）
-            /v:minimal `               # コンソール出力を最小限に抑える
-            "/flp:logfile=build.log;verbosity=normal"  # エラー解析用の詳細ログをファイルに書き出す
+            /p:PlatformToolset=${{ matrix.toolset }} `  # matrix で MSVC/ClangCL を切り替え
+            /m `                                         # 並列ビルド（CPUコア数分のプロセスを使用）
+            /v:minimal `                                 # コンソール出力を最小限に抑える
+            "/flp:logfile=build.log;verbosity=normal"   # エラー解析用の詳細ログをファイルに書き出す
 
       # ビルド成否に関わらず Summary タブへ結果を書き込む
       # if: always() により Build ステップが失敗しても必ず実行される
@@ -60,14 +72,16 @@ jobs:
 
           # Summary タブに結果テーブルを出力
           @"
-          ## $icon CI Build Result
+          ## $icon CI Build Result (${{ matrix.compiler }})
 
-          | Item       | Value          |
-          |------------|----------------|
-          | Solution   | runtime.sln    |
-          | Config     | Debug \| x64   |
-          | Commit     | ${{ github.sha }} |
-          | Result     | **$status**    |
+          | Item       | Value                      |
+          |------------|----------------------------|
+          | Solution   | runtime.sln                |
+          | Compiler   | ${{ matrix.compiler }}     |
+          | Toolset    | ${{ matrix.toolset }}      |
+          | Config     | Debug \| x64               |
+          | Commit     | ${{ github.sha }}          |
+          | Result     | **$status**                |
           "@ >> $env:GITHUB_STEP_SUMMARY
 
           # 失敗時のみ build.log からエラー行を最大20件抽出して追記

@@ -18,6 +18,7 @@
 
 	  <!--BinaryFormatterを使えるようにする-->
 	<EnableUnsafeBinaryFormatterSerialization>true</EnableUnsafeBinaryFormatterSerialization>
+	<PublishAot>True</PublishAot>
   </PropertyGroup>
 
   <ItemGroup>
