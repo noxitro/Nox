@@ -12,9 +12,6 @@ namespace nox
 	class Component : public nox::ManagedObject
 	{
 		NOX_DECLARE_MANAGED_OBJECT(Component, nox::ManagedObject);
-
-	public:
-		
 	public:
 		inline class nox::GameObject& GameObject()noexcept { return nox::util::Deref(owner_); }
 		inline const class nox::GameObject& GameObject()const noexcept { return nox::util::Deref(owner_); }
@@ -23,8 +20,8 @@ namespace nox
 		virtual	void	Loaded() { return; }
 		virtual void	UnLoaded() { return; }
 
-		inline	void	SetComponentChain(Component*const chain)noexcept { chain_ = chain; }
-		inline	Component* GetComponentChain()const noexcept { return chain_; }
+		inline	void	SetComponentChain(nox::Component*const chain)noexcept { chain_ = chain; }
+		inline	nox::Component* GetComponentChain()const noexcept { return chain_; }
 
 		/// @brief 有効かどうか
 		inline bool IsValid()const noexcept { return owner_ != nullptr; }
@@ -35,7 +32,7 @@ namespace nox
 		{}
 
 	private:
-		class GameObject* owner_;
-		Component* chain_;
+		class nox::GameObject* owner_;
+		nox::Component* chain_;
 	};
 }
