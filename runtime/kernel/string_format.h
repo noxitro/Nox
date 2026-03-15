@@ -20,6 +20,7 @@
 //#pragma warning(disable:4710)
 //#pragma warning(disable:4820)
 //#pragma warning(disable:5027)
+#define FMT_HEADER_ONLY
 #include	"third_party/fmt/format.h"
 #include	"third_party/fmt/xchar.h"
 #pragma warning(pop)
@@ -159,10 +160,11 @@ namespace nox::util
 
 		template <typename Char>
 		inline nox::StlBasicString<Char> FmtVFormat(fmt::basic_string_view<Char> format_str,
-			typename fmt::detail::vformat_args<Char>::type args)
+			::fmt::basic_format_args<::fmt::buffered_context<Char>> args)
 		{
-			auto buf = fmt::basic_memory_buffer<Char>();
-			fmt::detail::vformat_to(buf, format_str, args);
+			
+			auto buf = ::fmt::basic_memory_buffer<Char>();
+			::fmt::detail::vformat_to(buf, format_str, args);
 			return nox::util::detail::FmtToString(buf);
 		}
 
