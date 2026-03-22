@@ -107,18 +107,28 @@ namespace ReflectionGenerator.Parser2
 			return r;
 		}
 
+		private static string NormalizeTypeFqn(string fqn)
+		{
+			if (fqn.Contains("std::span<", StringComparison.Ordinal) == false)
+			{
+				return fqn;
+			}
+
+			return fqn.Replace(", -1>", ">", StringComparison.Ordinal);
+		}
+
 		public static string GetFQN(this in ClangSharp.Interop.CXType type)
 		{
 			switch (type.TypeClass)
 			{
 				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Builtin:
-					return type.Spelling.CString;
+					return NormalizeTypeFqn(type.Spelling.CString);
 
 				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Enum:
 				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Record:
-					return QualifyFqn(type.Declaration.GetFQN(), type.IsConstQualified, type.IsVolatileQualified);
+					return NormalizeTypeFqn(QualifyFqn(type.Declaration.GetFQN(), type.IsConstQualified, type.IsVolatileQualified));
 				default:
-					return type.CanonicalType.Spelling.CString;
+					return NormalizeTypeFqn(type.CanonicalType.Spelling.CString);
 			}
 		}
 
@@ -2040,20 +2050,20 @@ namespace ReflectionGenerator.Parser2
 			}
 
 			return;
-			bool HasPrivateTypeWithTypeInfo(TypeInfo typeInfo)
-			{
-				if (typeInfo is ITemplateTypeInfo templateTypeInfo)
-				{
-					foreach (var templateArgument in templateTypeInfo.TemplateArgumentSpan)
-					{
-						if (HasPrivateType(templateArgument) == true)
-						{
-							return true;
-						}
-					}
-				}
-				return false;
-			}
+			//bool HasPrivateTypeWithTypeInfo(TypeInfo typeInfo)
+			//{
+			//	if (typeInfo is ITemplateTypeInfo templateTypeInfo)
+			//	{
+			//		foreach (var templateArgument in templateTypeInfo.TemplateArgumentSpan)
+			//		{
+			//			if (HasPrivateType(templateArgument) == true)
+			//			{
+			//				return true;
+			//			}
+			//		}
+			//	}
+			//	return false;
+			//}
 
 			bool HasPrivateType(TemplateRecordTypeInfo.TemplateArgument templateArgument)
 			{

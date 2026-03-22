@@ -18,13 +18,15 @@
 
 	  <!--BinaryFormatterを使えるようにする-->
 	<EnableUnsafeBinaryFormatterSerialization>true</EnableUnsafeBinaryFormatterSerialization>
-	<PublishAot>True</PublishAot>
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Remove="ClangSharpPInvokeGenerator\**" />
+    <Compile Remove="Info\**" />
     <EmbeddedResource Remove="ClangSharpPInvokeGenerator\**" />
+    <EmbeddedResource Remove="Info\**" />
     <None Remove="ClangSharpPInvokeGenerator\**" />
+    <None Remove="Info\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -41,12 +43,8 @@
 
   <ItemGroup>
     <Reference Include="CustomTask">
-      <HintPath>..\CustomTask\bin\x64\Release\netstandard2.0\CustomTask.dll</HintPath>
+      <HintPath>..\..\CustomTask.dll</HintPath>
     </Reference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Info\" />
   </ItemGroup>
 
 </Project>

@@ -50,8 +50,6 @@ namespace ReflectionGenerator
 
         public List<RuntimeType> RuntimeValueList { get; } = new List<RuntimeType>();
 
-        private RuntimeAttribute _AttributeFlags = RuntimeAttribute.Invalid;
-
         public required ClangSharp.Interop.CXTypeKind TypeKind { private get; init; }
 
         public bool IsArray => TypeKind == ClangSharp.Interop.CXTypeKind.CXType_ConstantArray;

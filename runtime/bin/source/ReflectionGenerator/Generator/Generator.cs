@@ -1047,7 +1047,7 @@ namespace ReflectionGenerator.Generator
                 //  getter, setterの記述
                 //  reflection_generatedプロジェクトのsupport_functionsにあるマクロを使用する
                 ReadOnlySpan<char> variableTypeDeclStr = $"using VariableType = decltype({variableInfo.FullName});";
-                ReadOnlySpan<char> elementTypeDeclStr = "using ElementType = nox::ContainerElementType<VariableType>;";
+             //   ReadOnlySpan<char> elementTypeDeclStr = "using ElementType = nox::ContainerElementType<VariableType>;";
 
                 if (variableInfo.VariableAttributeFlags.IsOn(Parser2.VariableAttributeFlag.Static) == false)
                 {
@@ -1094,7 +1094,7 @@ namespace ReflectionGenerator.Generator
 								codeWriter.WriteLine(variableTypeDeclStr);
 								codeWriter.WriteLine(classTypeDeclStr);
 
-								codeWriter.WriteLine("if constexpr(nox::concepts::Assignable<VariableType, VariableType>)");
+								codeWriter.WriteLine("if constexpr(std::is_assignable_v<VariableType&, const std::remove_reference_t<VariableType>&>)");
 								codeWriter.WriteLine("{");
 								using (codeWriter.Indent())
 								{
@@ -1123,7 +1123,8 @@ namespace ReflectionGenerator.Generator
                                 codeWriter.WriteLine(variableTypeDeclStr);
                                 codeWriter.WriteLine(classTypeDeclStr);
 
-                                codeWriter.WriteLine("if constexpr (nox::concepts::Assignable<VariableType, std::remove_const_t<VariableType>>)");
+                                codeWriter.WriteLine("using OptionalValueType = typename nox::reflection::ReflectionOptional<VariableType>::value_type;");
+                                codeWriter.WriteLine("if constexpr (std::is_copy_constructible_v<OptionalValueType>)");
                                 codeWriter.WriteLine("{");
                                 using (codeWriter.Indent())
                                 {
@@ -1159,29 +1160,7 @@ namespace ReflectionGenerator.Generator
                                 codeWriter.WriteLine(variableTypeDeclStr);
                                 codeWriter.WriteLine(classTypeDeclStr);
 
-                                codeWriter.WriteLine("if constexpr(nox::concepts::Assignable<VariableType, std::remove_const_t<VariableType>>)");
-                                codeWriter.WriteLine("{");
-                                using (codeWriter.Indent())
-                                {
-                                    codeWriter.WriteLine("if constexpr (std::is_convertible_v<VariableType, const void*>)");
-                                    using (codeWriter.Indent())
-                                    {
-                                        codeWriter.WriteLine($"return const_cast<void*>(static_cast<const void*>(&static_cast<const ClassType*>(instance)->{variableInfo.FullName}));");
-                                    }
-                                    codeWriter.WriteLine("else");
-                                    using (codeWriter.Indent())
-                                    {
-                                        codeWriter.WriteLine($"return const_cast<void*>(static_cast<const volatile void*>(&static_cast<const ClassType*>(instance)->{variableInfo.FullName}));");
-                                    }
-                                }
-                                codeWriter.WriteLine("}");
-                                codeWriter.WriteLine("else");
-                                codeWriter.WriteLine("{");
-                                using (codeWriter.Indent())
-                                {
-                                    codeWriter.WriteLine("return nullptr;");
-                                }
-                                codeWriter.WriteLine("}");
+                                codeWriter.WriteLine($"return const_cast<void*>(static_cast<const volatile void*>(std::addressof(static_cast<const ClassType*>(instance)->{variableInfo.FullName})));");
                             }
                             codeWriter.WriteLine("},");
                         }
@@ -1352,7 +1331,7 @@ namespace ReflectionGenerator.Generator
                             {
                                 codeWriter.WriteLine(variableTypeDeclStr);
 
-                                codeWriter.WriteLine("if constexpr (nox::concepts::Assignable<VariableType, VariableType>)");
+                                codeWriter.WriteLine("if constexpr (std::is_assignable_v<VariableType&, const std::remove_reference_t<VariableType>&>)");
                                 codeWriter.WriteLine("{");
                                 using (codeWriter.Indent())
                                 {
@@ -1380,7 +1359,8 @@ namespace ReflectionGenerator.Generator
                             {
                                 codeWriter.WriteLine(variableTypeDeclStr);
 
-                                codeWriter.WriteLine("if constexpr (nox::concepts::Assignable<VariableType, std::remove_const_t<VariableType>>)");
+                                codeWriter.WriteLine("using OptionalValueType = typename nox::reflection::ReflectionOptional<VariableType>::value_type;");
+                                codeWriter.WriteLine("if constexpr (std::is_copy_constructible_v<OptionalValueType>)");
                                 codeWriter.WriteLine("{");
                                 using (codeWriter.Indent())
                                 {
@@ -1409,29 +1389,7 @@ namespace ReflectionGenerator.Generator
                         {
                             codeWriter.WriteLine(variableTypeDeclStr);
 
-                            codeWriter.WriteLine("if constexpr (nox::concepts::Assignable<VariableType, std::remove_const_t<VariableType>>)");
-                            codeWriter.WriteLine("{");
-                            using (codeWriter.Indent())
-                            {
-                                codeWriter.WriteLine("if constexpr (std::is_convertible_v<VariableType, const void*>)");
-                                using (codeWriter.Indent())
-                                {
-                                    codeWriter.WriteLine($"return const_cast<void*>(static_cast<const void*>(&{variableInfo.FullName}));");
-                                }
-                                codeWriter.WriteLine("else");
-                                using (codeWriter.Indent())
-                                {
-                                    codeWriter.WriteLine($"return const_cast<void*>(static_cast<const volatile void*>(&{variableInfo.FullName}));");
-                                }
-                            }
-                            codeWriter.WriteLine("}");
-                            codeWriter.WriteLine("else");
-                            codeWriter.WriteLine("{");
-                            using (codeWriter.Indent())
-                            {
-                                codeWriter.WriteLine("return nullptr;");
-                            }
-                            codeWriter.WriteLine("}");
+                            codeWriter.WriteLine($"return const_cast<void*>(static_cast<const volatile void*>(std::addressof({variableInfo.FullName})));");
                         }
                         codeWriter.WriteLine("},");
                     }
@@ -1840,7 +1798,7 @@ namespace ReflectionGenerator.Generator
                 {
                     List<string> attributeStrList = new();
 
-                    foreach (Parser2.FunctionAttributeFlag flag in EnumUtil<Parser2.FunctionAttributeFlag>.ValueList)
+                    foreach (Parser2.FunctionAttributeFlag flag in EnumUtility<Parser2.FunctionAttributeFlag>.ValueList)
                     {
                         if (functionInfo.FunctionAttributeFlags.IsOn(flag) == false)
                         {

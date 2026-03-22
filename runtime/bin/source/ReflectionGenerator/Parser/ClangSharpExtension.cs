@@ -643,7 +643,7 @@ namespace ReflectionGenerator.Parser
             }
 
             System.Type type = instance.GetType();
-            IReadOnlyList<System.Reflection.FieldInfo> fieldInfoList = type.GetFields((System.Reflection.BindingFlags)~0);
+            ReadOnlySpan<System.Reflection.FieldInfo> fieldInfoList = type.GetFields((System.Reflection.BindingFlags)~0);
             foreach (System.Reflection.FieldInfo field in fieldInfoList)
             {
                 //     Trace.Info(null, $"Field:{field.Name}");
@@ -655,7 +655,7 @@ namespace ReflectionGenerator.Parser
                 list.Add((field.Name, field.FieldType, value, string.Empty));
             }
 
-            IReadOnlyList<System.Reflection.PropertyInfo> propertyInfoList = type.GetProperties((System.Reflection.BindingFlags)~0);
+			ReadOnlySpan<System.Reflection.PropertyInfo> propertyInfoList = type.GetProperties((System.Reflection.BindingFlags)~0);
             foreach (System.Reflection.PropertyInfo propertyInfo in propertyInfoList)
             {
                 if (IgnorePropertyNameList.Contains(propertyInfo.Name) == true)

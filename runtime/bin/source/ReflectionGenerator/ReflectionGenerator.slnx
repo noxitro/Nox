@@ -1,0 +1,11 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="../RuntimeTypeDB/RuntimeTypeDB.csproj" />
+  <Project Path="ReflectionGenerator.csproj">
+    <BuildDependency Project="Sample/Sample.vcxproj" />
+  </Project>
+  <Project Path="Sample/Sample.vcxproj" Id="5c508910-27f7-4c00-95c3-41962b2f935a" />
+</Solution>
