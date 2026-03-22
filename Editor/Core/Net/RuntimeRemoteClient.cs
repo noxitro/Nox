@@ -7,7 +7,10 @@ using System.Text;
 
 namespace Core.Net
 {
-	public enum AutoSyncType : byte
+	/// <summary>
+	/// runtime-editor間の同期方法
+	/// </summary>
+	public enum SyncMode : byte
 	{
 		OneWay,
 		OneWaySource,
@@ -196,6 +199,8 @@ namespace Core.Net
 
 		public void RegisterRemoteObject(Core.RuntimeObject obj)
 		{
+			Nox.Util.Assert(obj.RemoteInstanceId != 0, "registered remote object");
+
 			long instanceId = System.Threading.Interlocked.Increment(ref _RemoteInstanceIdCounter);
 			RegisterRemoteObject(obj, instanceId);
 		}

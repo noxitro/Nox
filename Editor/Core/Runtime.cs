@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using System.Runtime.InteropServices;
+using Nox.Extensions;
 namespace Core
 {
 	public class Runtime : Nox.ISingleton<Runtime>, System.IDisposable
@@ -16,6 +17,8 @@ namespace Core
 		private Nox.DelegateHandle _HandleRuntimeConnected=default;
 
 		private Core.RuntimeWrapper.SceneView? MainSceneView = null;
+
+		private readonly IReadOnlyDictionary<int, Func<Core.RuntimeObject>> _RuntimeObjectActivatorDict;
 		#endregion
 
 		#region 公開プロパティ
@@ -45,7 +48,67 @@ namespace Core
 
 		public Runtime()
 		{
-			Initialize();
+			BuildTypeDB();
+
+			Dictionary<int, Func<Core.RuntimeObject>> activatorDict = new();
+			_RuntimeObjectActivatorDict = activatorDict;
+
+			//	RuntimeWrapper型にDTIを設定する
+			System.Type runtimeObjectType = typeof(RuntimeObject);
+			string propName = nameof(IRuntimeObject<>.StaticRuntimeRecordDecl);
+
+			foreach (System.Type type in Core.TypeDB.AllTypeList)
+			{
+				if (runtimeObjectType.IsAssignableFrom(type) == false)
+				{
+					continue;
+				}
+
+				if (runtimeObjectType == type)
+				{
+					continue;
+				}
+
+				var property = type.GetProperty(propName);
+				if (property == null)
+				{
+					continue;
+				}
+
+				Core.Attributes.RuntimeWrapperAttribute? attr = type.GetCustomAttribute<Core.Attributes.RuntimeWrapperAttribute>();
+				if (attr == null)
+				{
+					continue;
+				}
+
+				ReadOnlySpan<char> runtimeFQN = attr.RuntimeFQN;
+				var runtimeType = TypeDB.FindType(runtimeFQN);
+				if (runtimeType == null)
+				{
+					Nox.LogTrace.ErrorLine<Core.LogId.Runtime>($"RuntimeWrapperAttributeで指定された型がTypeDBに存在しません:{runtimeFQN}");
+					continue;
+				}
+
+				property.SetValue(null, (RuntimeRecordDecl)runtimeType.Decl);
+
+				// ⭐ string 生成なしでハッシュ計算
+				int hash = runtimeFQN.GetHashCode(StringComparison.Ordinal);
+				Nox.Util.Assert(activatorDict.ContainsKey(hash) == false, $"RuntimeFQNのハッシュ値が重複しています:{runtimeFQN}");
+
+				var ctor = type.GetConstructor(Type.EmptyTypes);
+				if (ctor == null)
+				{
+					Nox.LogTrace.WarningLine<Core.LogId.RuntimeRemote>($"型 {type.FullName} にデフォルトコンストラクタがありません。");
+					continue;
+				}
+
+				var factory = System.Linq.Expressions.Expression
+											.Lambda<Func<Core.RuntimeObject>>(
+												System.Linq.Expressions.Expression.New(ctor))
+											.Compile();
+
+				activatorDict.Add(hash, factory);
+			}
 		}
 
 		void IDisposable.Dispose()
@@ -145,60 +208,24 @@ namespace Core
 		{
 
 		}
+
+		/// <summary>
+		/// RuntimeFQNからRuntimeObjectを生成します
+		/// </summary>
+		/// <param name="runtimeFQN"></param>
+		/// <returns></returns>
+		public Core.RuntimeObject? CreateRuntimeObject(ReadOnlySpan<char> runtimeFQN)
+		{
+			if (_RuntimeObjectActivatorDict.TryGetValue(runtimeFQN.GetHashCode(StringComparison.Ordinal), out var factory) == false)
+			{
+				return null;
+			}
+
+			return factory();
+		}
 		#endregion
 
 		#region 非公開メソッド
-		private void Initialize()
-		{
-			BuildTypeDB();
-
-			//	RuntimeWrapper型にDTIを設定する
-			System.Type runtimeObjectType = typeof(RuntimeObject);
-			//System.Type runtimeObjectInterfaceType = typeof(IRuntimeObject<>);
-			//string runtimeObjectInterfaceTypeFullName = runtimeObjectInterfaceType.FullName ?? string.Empty;
-
-			string propName = nameof(IRuntimeObject<>.StaticRuntimeRecordDecl);
-
-			foreach (System.Type type in Core.TypeDB.AllTypeList)
-			{
-				if (runtimeObjectType.IsAssignableFrom(type) == false)
-				{
-					continue;
-				}
-
-				if (runtimeObjectType == type)
-				{
-					continue;
-				}
-
-				//Type? interfaceType = type.GetInterface(runtimeObjectInterfaceTypeFullName);
-				//if (interfaceType == null)
-				//{
-				//	continue;
-				//}
-
-				var property = type.GetProperty(propName);
-				if (property == null)
-				{
-					continue;
-				}
-
-				Core.Attributes.RuntimeWrapperAttribute? attr = type.GetCustomAttribute<Core.Attributes.RuntimeWrapperAttribute>();
-				if (attr == null)
-				{
-					continue;
-				}
-
-				var runtimeType = TypeDB.FindType(attr.FQN);
-				if (runtimeType == null)
-				{
-					Nox.LogTrace.ErrorLine<Core.LogId.Runtime>("RuntimeWrapperAttributeで指定された型がTypeDBに存在しません:{0}", attr.FQN);
-					continue;
-				}
-
-				property.SetValue(null, (RuntimeRecordDecl)runtimeType.Decl);
-			}
-		}
 
 		private void BuildTypeDB()
 		{

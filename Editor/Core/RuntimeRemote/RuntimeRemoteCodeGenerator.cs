@@ -802,7 +802,7 @@ namespace Core.RuntimeRemote
 			//	runtime wrapper
 			else if (propertyType.GetCustomAttribute<Core.Attributes.RuntimeWrapperAttribute>() is var wrapperAttr && wrapperAttr != null)
 			{
-				typeFqn = wrapperAttr.FQN;
+				typeFqn = wrapperAttr.RuntimeFQN;
 				setterTypeFqn = $"{typeFqn}*";
 				getterTypeFqn = $"{typeFqn}*";
 

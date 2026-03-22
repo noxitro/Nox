@@ -134,7 +134,7 @@ void nox::dev::editor_remote::SocketStreamWriter::Write(nox::IntrusivePtr<nox::M
 	auto& value_ref = *value.Get();
 
 	nox::dev::editor_remote::EditorRemoteServer& server = nox::dev::editor_remote::EditorRemoteServer::Instance();
-	const auto instance_id = server.FindRemoteInstanceId(value_ref);
+	const nox::int64 instance_id = server.FindRemoteInstanceId(value_ref);
 
 	if (instance_id != 0)
 	{
@@ -142,12 +142,16 @@ void nox::dev::editor_remote::SocketStreamWriter::Write(nox::IntrusivePtr<nox::M
 		return;
 	}
 
+	//	リモートインスタンスとして登録して、FQNとプロパティバッファを書き込む
 	server.RegisterRemoteInstance(value_ref, instance_id);
 
 	//	型情報の取得
 	const nox::reflection::ClassInfo& class_info = nox::util::Deref(nox::reflection::FindClassInfo(value->GetType()));
 	
-	//	メンバ変数
+	//	FQNを書き込む
+	Write(class_info.GetFullName());
+
+	//	プロパティバッファを書き込む
 	for (const nox::reflection::VariableInfo& variable_info : class_info.GetVariableList())
 	{
 		if (nox::dev::editor_remote::IsRemoteVariable(variable_info) == false)
@@ -208,7 +212,10 @@ void nox::dev::editor_remote::SocketStreamWriter::Write(nox::IntrusivePtr<nox::M
 			break;
 
 		case nox::reflection::TypeKind::Class:
-			//Write(variable_info.GetValue<nox::IntrusivePtr<nox::ManagedObject>>(value_ref));
+			Write(0);
+			//	子オブジェクトを再帰的に書き込むことはしない
+			//	remote instance idのみを書き込む
+			
 			break;
 		}
 	}

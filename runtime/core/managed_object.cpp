@@ -39,7 +39,8 @@ void	nox::ManagedObject::ReleaseRef()
 		break;
 
 	case -2:
-		NOX_INFO_LINE(nox::log_id::CoreCommon, u8"delete this:{0}", GetType().GetTypeName());
+		auto name = GetType().GetTypeName();
+		NOX_INFO_LINE(nox::log_id::CoreCommon, u8"delete this:{0}", name);
 		delete this;
 		break;
 	}

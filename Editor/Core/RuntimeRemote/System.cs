@@ -34,4 +34,12 @@ namespace Core.RuntimeRemote
 		public long MainWindowHandle { get; set; } = 0;
 		public Core.RuntimeWrapper.SceneView? SceneView { get; set; } = null;
 	}
+
+	[Core.RuntimeRemote.Attributes.CoreRuntimeRemoteCode("system", comment: "nox::Objectの同期Query")]
+	public class SyncQuery : Core.RuntimeRemote.Query
+	{
+		public long RemoteInstanceId { get; init; } = 0;
+		public string FQN { get; init; } = string.Empty;
+		public byte[] PropertyByteBuffer { get; init; } = [];
+	}
 }

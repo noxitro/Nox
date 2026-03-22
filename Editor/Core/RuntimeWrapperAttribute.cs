@@ -11,11 +11,14 @@ namespace Core.Attributes
 	[System.AttributeUsage(AttributeTargets.Class)]
 	public class RuntimeWrapperAttribute : System.Attribute
 	{
-		public string FQN { get; init; }
+		/// <summary>
+		/// RuntimeFqn
+		/// </summary>
+		public required string RuntimeFQN { get; init; }
 
 		public RuntimeWrapperAttribute(string fqn)
 		{
-			FQN = fqn;
+			RuntimeFQN = fqn;
 		}
 	}
 }

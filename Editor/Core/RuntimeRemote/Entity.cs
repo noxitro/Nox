@@ -22,6 +22,8 @@ namespace Core.RuntimeRemote
 			//	id
 			writer.Write(Id);
 
+			System.Type runtimeObjectType = typeof(Core.RuntimeObject);
+
 			//	properties
 			IReadOnlyList<PropertyInfo> propList = GetRemotePropertyInfoList(type);
 			foreach (var prop in propList)
@@ -48,6 +50,15 @@ namespace Core.RuntimeRemote
 				{
 					writer.Write((string)value);
 				}
+				else if (propType.IsSubclassOf(runtimeObjectType) || propType == runtimeObjectType)
+				{
+					long instanceId = ((Core.RuntimeObject)value).RemoteInstanceId;
+					//	送信時は既にRuntimeObjectは生成されている前提（RemoteInstanceIdが付与されている前提）
+					//	syncobjectを事前に呼んでおくべき
+					Nox.Util.Assert(instanceId != 0, $"RemoteInstanceIdが0です:{prop.Name} 事前にSyncQueryを実行してください");
+
+					writer.Write(instanceId);
+				}
 				else
 				{
 					Nox.LogTrace.WarningLine<Core.LogId.RuntimeRemote>(
@@ -59,6 +70,58 @@ namespace Core.RuntimeRemote
 		public void Deserialize(BinaryReader reader)
 		{
 			Id = reader.ReadUInt32();
+
+			Type type = GetType();
+			System.Type runtimeObjectType = typeof(Core.RuntimeObject);
+			IReadOnlyList<PropertyInfo> propList = GetRemotePropertyInfoList(type);
+			foreach (var prop in propList)
+			{
+				Type propType = prop.PropertyType;
+				object value;
+
+				if (propType.IsPrimitive)
+				{
+					value = ReadPrimitive(reader, Type.GetTypeCode(propType));
+				}
+				else if (propType.IsEnum)
+				{
+					Type underlyingType = Enum.GetUnderlyingType(propType);
+					object raw = ReadPrimitive(reader, Type.GetTypeCode(underlyingType));
+					value = Enum.ToObject(propType, raw);
+				}
+				else if (propType == typeof(string))
+				{
+					value = reader.ReadString();
+				}
+				else if (propType.IsSubclassOf(runtimeObjectType) || propType == runtimeObjectType)
+				{
+					long instanceId = reader.ReadInt64();
+					Nox.Util.Assert(instanceId != 0, $"RemoteInstanceIdが0です:{prop.Name}");
+
+					Core.RuntimeObject? obj = Core.Net.RuntimeRemoteClient.Instance.FindRemoteInstance(instanceId);
+					if (obj == null)
+					{
+						//	fqnを取得
+						ReadOnlySpan<char> runtimeFqn = reader.ReadString();
+						RuntimeObject? runtimeObject = Runtime.Instance.CreateRuntimeObject(runtimeFqn);
+						Nox.Util.Assert(runtimeObject != null, $"RuntimeObjectの生成に失敗しました。fqn={runtimeFqn}");
+
+						//	プロパティバッファを受信
+						int propBufferLength = reader.ReadInt32();
+						ReadOnlySpan<byte> propBuffer = reader.ReadBytes(propBufferLength);
+					}
+					
+					value = obj;
+				}
+				else
+				{
+					Nox.LogTrace.WarningLine<Core.LogId.RuntimeRemote>(
+						$"Unsupported property type. type:{propType.FullName}");
+					continue;
+				}
+
+				prop.SetValue(this, value);
+			}
 		}
 		#endregion
 
@@ -97,6 +160,25 @@ namespace Core.RuntimeRemote
 						$"Unsupported TypeCode: {typeCode}");
 					break;
 			}
+		}
+
+		private static object ReadPrimitive(BinaryReader reader, TypeCode typeCode)
+		{
+			return typeCode switch
+			{
+				TypeCode.Boolean => reader.ReadBoolean(),
+				TypeCode.SByte   => reader.ReadSByte(),
+				TypeCode.Byte    => reader.ReadByte(),
+				TypeCode.Int16   => reader.ReadInt16(),
+				TypeCode.UInt16  => reader.ReadUInt16(),
+				TypeCode.Int32   => reader.ReadInt32(),
+				TypeCode.UInt32  => reader.ReadUInt32(),
+				TypeCode.Int64   => reader.ReadInt64(),
+				TypeCode.UInt64  => reader.ReadUInt64(),
+				TypeCode.Single  => reader.ReadSingle(),
+				TypeCode.Double  => reader.ReadDouble(),
+				_ => throw new NotSupportedException($"Unsupported TypeCode: {typeCode}"),
+			};
 		}
 
 		/// <summary>

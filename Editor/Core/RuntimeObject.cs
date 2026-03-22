@@ -78,6 +78,15 @@ namespace Core
 			_VariableList[index] = value;
 			_VariableDirtyList[index] = true;
 		}
+
+		public virtual void Sync(Core.Net.SyncMode syncMode, Action? callback = null)
+		{
+			if (RemoteInstanceId == 0)
+			{
+				Core.Net.RuntimeRemoteClient.Instance.RegisterRemoteObject(this);
+			}
+
+		}
 		#endregion
 
 		#region 非公開メソッド
