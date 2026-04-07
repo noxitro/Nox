@@ -10,7 +10,9 @@
 
 #pragma warning(push, 0)
 #pragma warning(disable: 26498)
-#pragma warning(disable: 4702)
+#pragma warning(disable: 26495)	//	メンバの未初期化
+#pragma warning(disable: 4702)	//	到達不能コード
+#pragma warning(disable: 6294)	//	forループの条件式が常に真または常に偽
 //#pragma warning(disable:4365)
 //#pragma warning(disable:4514)
 //#pragma warning(disable:4582)

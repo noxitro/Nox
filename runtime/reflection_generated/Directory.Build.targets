@@ -3,7 +3,7 @@
 	<!-- vcxproj と同じディレクトリにあるMyCustomTask.dll のタスクを使用 -->
   <UsingTask
     TaskName="Nox.CustomTask.Task"
-    AssemblyFile="D:\github\Nox\runtime\bin\CustomTask.dll" />
+    AssemblyFile="$(SolutionDir)bin\CustomTask.dll" />
 
 	<!--変数定義-->
 	<!--Debug構成-->
@@ -65,12 +65,12 @@
 
 	  <!-- ReflectionGenerator.exe 呼び出し -->
 	  <Exec
-		Condition="Exists('D:\github\Nox\runtime\bin\ReflectionGenerator.exe')"
-		Command="&quot;D:\github\Nox\runtime\bin\ReflectionGenerator.exe&quot; -project &quot;$(ProjectPath)&quot; -solution &quot;$(SolutionPath)&quot; -config &quot;$(Configuration)&quot; -platform &quot;$(Platform)&quot; -out &quot;$(ProjectDir)gen&quot;" />
+		Condition="Exists('$(SolutionDir)bin\ReflectionGenerator.exe')"
+		Command="&quot;$(SolutionDir)bin\ReflectionGenerator.exe&quot; -project &quot;$(ProjectPath)&quot; -solution &quot;$(SolutionPath)&quot; -config &quot;$(Configuration)&quot; -platform &quot;$(Platform)&quot; -out &quot;$(ProjectDir)gen&quot;" />
 
 	  <!-- 無い場合の警告 -->
-	  <Warning Condition="!Exists('D:\github\Nox\runtime\bin\ReflectionGenerator.exe')"
-			   Text="ReflectionGenerator.exe が見つかりません: D:\github\Nox\runtime\bin\ReflectionGenerator.exe" />
+	  <Warning Condition="!Exists('$(SolutionDir)bin\ReflectionGenerator.exe')"
+			   Text="ReflectionGenerator.exe が見つかりません: $(SolutionDir)bin\ReflectionGenerator.exe" />
 
   </Target>
 </Project>
