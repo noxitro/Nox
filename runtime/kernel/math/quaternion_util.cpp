@@ -2,5 +2,5 @@
 
 ///	@file	quaternion_util.cpp
 ///	@brief	quaternion_util
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"quaternion_util.h"

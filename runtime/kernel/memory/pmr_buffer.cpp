@@ -2,5 +2,5 @@
 
 ///	@file	pmr_buffer.cpp
 ///	@brief	pmr_buffer
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"pmr_buffer.h"

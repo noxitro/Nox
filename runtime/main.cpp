@@ -1,5 +1,5 @@
 ﻿
-#include	"stdafx.h"
+#include	"pch.h"
 
 //	必須
 #include	"kernel/kernel.h"

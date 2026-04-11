@@ -2,7 +2,7 @@
 
 ///	@file	os_utility.cpp
 ///	@brief	os_utility
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"os_utility.h"
 
 #include	"../basic_definition.h"

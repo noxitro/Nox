@@ -1,6 +1,6 @@
 ﻿//	Copyright (c) 2025 NOX ENGINE All rights reserved.
 
-#include	"stdafx.h"
+#include	"pch.h"
 #if NOX_DEVELOP
 #include	"system.g.h"
 #include	"../../application.h"

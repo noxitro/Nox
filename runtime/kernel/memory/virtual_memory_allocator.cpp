@@ -2,7 +2,7 @@
 
 ///	@file	virtual_memory_allocator.cpp
 ///	@brief	virtual_memory_allocator
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"virtual_memory_allocator.h"
 
 namespace nox::memory::virtual_memory_allocator 

@@ -2,7 +2,7 @@
 
 ///	@file	window.cpp
 ///	@brief	window
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"window.h"
 
 #include	<filesystem>

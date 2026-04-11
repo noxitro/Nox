@@ -2,5 +2,5 @@
 
 ///	@file	math_definition.cpp
 ///	@brief	math_definition
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"math_definition.h"

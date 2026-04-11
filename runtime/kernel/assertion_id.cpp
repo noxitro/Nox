@@ -2,5 +2,5 @@
 
 ///	@file	assertion_id.cpp
 ///	@brief	assertion_id
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"assertion_id.h"

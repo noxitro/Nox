@@ -2,7 +2,7 @@
 
 ///	@file	memory_profile.cpp
 ///	@brief	memory_profile
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"memory_profile.h"
 
 #include	"nox_memory.h"

@@ -2,5 +2,5 @@
 
 ///	@file	stack_trace_definition.cpp
 ///	@brief	stack_trace_definition
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"stack_trace_definition.h"

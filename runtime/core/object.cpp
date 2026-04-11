@@ -2,7 +2,7 @@
 
 ///	@file	object.cpp
 ///	@brief	object
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"object.h"
 
 nox::U8String	nox::Object::ToString()const

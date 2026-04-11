@@ -2,7 +2,7 @@
 
 ///	@file	guid.cpp
 ///	@brief	guid
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"guid.h"
 
 #if NOX_WINDOWS

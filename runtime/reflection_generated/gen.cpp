@@ -2,6 +2,6 @@
 
 ///	@file	gen.cpp
 ///	@brief	gen
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"gen.h"
  

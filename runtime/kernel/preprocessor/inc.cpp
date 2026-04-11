@@ -2,5 +2,5 @@
 
 ///	@file	inc.cpp
 ///	@brief	inc
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"inc.h"

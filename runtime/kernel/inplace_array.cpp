@@ -2,5 +2,5 @@
 
 ///	@file	inplace_array.cpp
 ///	@brief	inplace_array
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"inplace_array.h"

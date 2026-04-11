@@ -2,5 +2,5 @@
 
 ///	@file	placement_object.cpp
 ///	@brief	placement_object
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"placement_object.h"

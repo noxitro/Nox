@@ -2,5 +2,5 @@
 
 ///	@file	ring_buffer.cpp
 ///	@brief	ring_buffer
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"ring_buffer.h"

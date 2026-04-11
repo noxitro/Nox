@@ -2,5 +2,5 @@
 
 ///	@file	ascii.cpp
 ///	@brief	ascii
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"ascii.h"

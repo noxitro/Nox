@@ -2,7 +2,7 @@
 
 ///	@file	nox_string_view.cpp
 ///	@brief	nox_string_view
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"nox_string_view.h"
 #include	"unicode_converter.h"
 

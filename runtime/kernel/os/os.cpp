@@ -1,6 +1,6 @@
 ﻿///	@file	os.cpp
 ///	@brief	os
-#include	"stdafx.h"
+#include	"pch.h"
 
 #include	"os.h"
 #include	"atomic.h"

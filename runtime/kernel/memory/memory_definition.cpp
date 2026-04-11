@@ -1,4 +1,4 @@
-﻿#include	"stdafx.h"
+﻿#include	"pch.h"
 #include	"memory_definition.h"
 
 namespace nox::memory

@@ -2,5 +2,5 @@
 
 ///	@file	kernel.cpp
 ///	@brief	kernel
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"kernel.h"

@@ -1,4 +1,4 @@
 ﻿///	@file	math.cpp
 ///	@brief	math
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"math.h"

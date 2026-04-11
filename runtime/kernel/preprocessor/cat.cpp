@@ -2,5 +2,5 @@
 
 ///	@file	cat.cpp
 ///	@brief	cat
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"cat.h"

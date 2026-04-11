@@ -1,4 +1,4 @@
 ﻿///	@file	concepts.cpp
 ///	@brief	concepts
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"concepts.h"

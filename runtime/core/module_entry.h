@@ -8,6 +8,14 @@
 
 namespace nox
 {
+	class ModuleEntry;
+	struct ModulePhase
+	{
+		std::u8string_view name;
+		void(*func)(nox::ModuleEntry&);
+		std::span<std::reference_wrapper<const ModulePhase>> dependencies;
+	};
+
 	/// @brief		モジュールエントリ基底クラス
 	///	@details	nox::Applicationで収集され、各フェーズで呼び出される関数を登録するための基底クラス
 	class ModuleEntry : public nox::Object

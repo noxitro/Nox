@@ -2,7 +2,7 @@
 
 ///	@file	render_context.cpp
 ///	@brief	render_context
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"render_context.h"
 
 namespace nox::render

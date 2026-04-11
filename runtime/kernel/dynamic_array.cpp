@@ -2,5 +2,5 @@
 
 ///	@file	dynamic_array.cpp
 ///	@brief	dynamic_array
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"dynamic_array.h"

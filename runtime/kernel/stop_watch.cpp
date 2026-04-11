@@ -2,5 +2,5 @@
 
 ///	@file	stop_watch.cpp
 ///	@brief	stop_watch
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"stop_watch.h"

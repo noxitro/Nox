@@ -2,7 +2,7 @@
 
 ///	@file	test.cpp
 ///	@brief	test
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"test.h"
 
 #include	"test_reflection.h"

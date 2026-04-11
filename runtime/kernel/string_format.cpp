@@ -2,7 +2,7 @@
 
 ///	@file	string_format.cpp
 ///	@brief	string_format
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"string_format.h"
 
 namespace nox

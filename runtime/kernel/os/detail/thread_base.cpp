@@ -2,7 +2,7 @@
 
 ///	@file	thread_base.cpp
 ///	@brief	thread_base
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"thread_base.h"
 
 #include	"../os.h"

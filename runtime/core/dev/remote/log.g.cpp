@@ -2,7 +2,7 @@
 //	do not edit
 //	written from RuntimeRemoteCodeGenerator
 
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"log.g.h"
 #include	"codegen_preamble.h"
 

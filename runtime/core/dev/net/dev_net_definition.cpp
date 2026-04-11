@@ -2,5 +2,5 @@
 
 ///	@file	dev_net_definition.cpp
 ///	@brief	dev_net_definition
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"dev_net_definition.h"

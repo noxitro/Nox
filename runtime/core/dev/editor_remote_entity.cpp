@@ -2,7 +2,7 @@
 
 ///	@file	editor_remote_entity.cpp
 ///	@brief	editor_remote_entity
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"editor_remote_entity.h"
 
 #include	"editor_remote_client.h"

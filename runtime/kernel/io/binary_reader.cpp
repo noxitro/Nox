@@ -2,5 +2,5 @@
 
 ///	@file	binary_reader.cpp
 ///	@brief	binary_reader
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"binary_reader.h"

@@ -2,5 +2,5 @@
 
 ///	@file	va_length.cpp
 ///	@brief	va_length
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"va_length.h"

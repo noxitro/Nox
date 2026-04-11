@@ -2,7 +2,7 @@
 
 ///	@file	pmr.cpp
 ///	@brief	pmr
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"pmr.h"
 #include    "nox_memory.h"
 

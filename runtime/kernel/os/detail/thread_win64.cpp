@@ -2,7 +2,7 @@
 
 ///	@file	thread_win64.cpp
 ///	@brief	thread_win64
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"thread_win64.h"
 
 #if NOX_WIN64

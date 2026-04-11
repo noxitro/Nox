@@ -166,7 +166,7 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="stdafx.h">
+    <ClInclude Include="pch.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -365,7 +365,7 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="stdafx.cpp">
+    <ClCompile Include="pch.cpp">
       <SubType>
       </SubType>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

@@ -2,5 +2,5 @@
 
 ///	@file	easing.cpp
 ///	@brief	easing
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"easing.h"

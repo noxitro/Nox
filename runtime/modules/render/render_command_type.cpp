@@ -2,5 +2,5 @@
 
 ///	@file	render_command_type.cpp
 ///	@brief	render_command_type
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"render_command_type.h"

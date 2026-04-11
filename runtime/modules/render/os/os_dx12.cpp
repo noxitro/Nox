@@ -2,5 +2,5 @@
 
 ///	@file	os_dx12.cpp
 ///	@brief	os_dx12
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"os_dx12.h"

@@ -2,7 +2,7 @@
 
 ///	@file	binary_writer.cpp
 ///	@brief	binary_writer
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"binary_writer.h"
 #include	"stream_writer.h"
 

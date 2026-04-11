@@ -2,5 +2,5 @@
 
 ///	@file	os_detail.cpp
 ///	@brief	os_detail
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"os_detail.h"

@@ -1,4 +1,4 @@
 ﻿///	@file	quaternion.cpp
 ///	@brief	quaternion
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"quaternion.h"

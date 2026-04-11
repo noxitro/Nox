@@ -2,7 +2,7 @@
 
 ///	@file	garbage_collector.cpp
 ///	@brief	garbage_collector
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"garbage_collector.h"
 
 #include	"managed_object.h"

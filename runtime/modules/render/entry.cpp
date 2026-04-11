@@ -2,7 +2,7 @@
 
 ///	@file	entry.cpp
 ///	@brief	entry
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"entry.h"
 
 nox::render::RenderEntry::RenderEntry()

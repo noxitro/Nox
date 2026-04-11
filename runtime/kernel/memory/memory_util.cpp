@@ -1,6 +1,6 @@
 ﻿///	@file	memory_util.cpp
 ///	@brief	memory_util
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"memory_util.h"
 
 #if NOX_WINDOWS

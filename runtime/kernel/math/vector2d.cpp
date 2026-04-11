@@ -1,4 +1,4 @@
 ﻿///	@file	vector2d.cpp
 ///	@brief	vector2d
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"vector2d.h"

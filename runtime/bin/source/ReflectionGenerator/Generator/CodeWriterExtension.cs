@@ -65,9 +65,9 @@ namespace ReflectionGenerator.Generator
             codeWriter.WriteLine("//\tCopyright (C) 2025 NOX ENGINE All rights reserved.");
         }
 
-        public static void WriteIncludeStdafx(this BaseCodeWriter codeWriter)
+        public static void WriteIncludePch(this BaseCodeWriter codeWriter)
         {
-            codeWriter.WriteLine("#include\t\"stdafx.h\"");
+            codeWriter.WriteLine("#include\t\"pch.h\"");
         }
 
         public static void WriteLineInclude(this BaseCodeWriter codeWriter, ReadOnlySpan<char> includePath)

@@ -2,7 +2,7 @@
 
 ///	@file	client.cpp
 ///	@brief	client
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"client.h"
 
 void nox::dev::net::Client::Initialize(const InitializeContext& context)

@@ -2,5 +2,5 @@
 
 ///	@file	interface_class.cpp
 ///	@brief	interface_class
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"interface_class.h"

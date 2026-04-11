@@ -2,7 +2,7 @@
 
 ///	@file	new_delete.cpp
 ///	@brief	new_delete
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"new_delete.h"
 
 //void* __CRTDECL operator new(std::size_t _Size)

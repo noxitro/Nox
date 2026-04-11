@@ -2,5 +2,5 @@
 
 ///	@file	multicast_delegate.cpp
 ///	@brief	multicast_delegate
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"multicast_delegate.h"

@@ -2,7 +2,7 @@
 
 ///	@file	database.cpp
 ///	@brief	database
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"database.h"
 
 #include	"class_info.h"

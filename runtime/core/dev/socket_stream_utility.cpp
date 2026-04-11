@@ -2,7 +2,7 @@
 
 ///	@file	socket_stream_utility.cpp
 ///	@brief	socket_stream_utility
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"socket_stream_utility.h"
 #include	"../attribute_common.h"
 

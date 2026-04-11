@@ -1,7 +1,7 @@
 ﻿///	@file	function_signature.cpp
 ///	@brief		関数の特殊化のサンプルコード
 /// @details	static_assertで関数の特殊化をチェックする
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"function_signature.h"
 
 namespace

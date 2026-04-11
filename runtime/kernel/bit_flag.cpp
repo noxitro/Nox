@@ -2,5 +2,5 @@
 
 ///	@file	bit_flag.cpp
 ///	@brief	bit_flag
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"bit_flag.h"

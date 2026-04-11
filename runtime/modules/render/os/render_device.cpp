@@ -2,5 +2,5 @@
 
 ///	@file	render_device.cpp
 ///	@brief	render_device
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"render_device.h"

@@ -2,7 +2,7 @@
 
 ///	@file	scene_resource.cpp
 ///	@brief	scene_resource
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"scene_resource.h"
 
 namespace nox

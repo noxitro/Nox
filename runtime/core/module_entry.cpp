@@ -2,7 +2,7 @@
 
 ///	@file	module_entry.cpp
 ///	@brief	module_entry
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"module_entry.h"
 
 #include	"application.h"

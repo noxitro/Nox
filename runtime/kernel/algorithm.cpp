@@ -1,4 +1,4 @@
 ﻿///	@file	algorithm.cpp
 ///	@brief	algorithm
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"algorithm.h"

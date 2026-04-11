@@ -2,7 +2,7 @@
 
 ///	@file	string.cpp
 ///	@brief	string
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"nox_string.h"
 
 #include	"unicode_converter.h"

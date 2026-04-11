@@ -1,7 +1,7 @@
 ﻿///	@file	assertion.cpp
 ///	@brief	assertion
 #include	"assertion.h"
-#include	"stdafx.h"
+#include	"pch.h"
 
 #include	<cassert>
 #include	<stacktrace>

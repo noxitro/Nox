@@ -2,5 +2,5 @@
 
 ///	@file	transform.cpp
 ///	@brief	transform
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"transform.h"

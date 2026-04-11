@@ -2,5 +2,5 @@
 
 ///	@file	fixed_string.cpp
 ///	@brief	fixed_string
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"fixed_string.h"

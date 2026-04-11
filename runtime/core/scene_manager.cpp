@@ -2,7 +2,7 @@
 
 ///	@file	scene_manager.cpp
 ///	@brief	scene_manager
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"scene_manager.h"
 
 #include	"scene.h"

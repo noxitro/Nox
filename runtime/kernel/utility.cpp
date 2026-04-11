@@ -2,6 +2,6 @@
 
 ///	@file	utility.cpp
 ///	@brief	特に依存関係が存在しないUtility
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"utility.h"
 

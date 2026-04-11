@@ -2,5 +2,5 @@
 
 ///	@file	attribute_common.cpp
 ///	@brief	attribute_common
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"attribute_common.h"

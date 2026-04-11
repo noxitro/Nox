@@ -2,7 +2,7 @@
 
 ///	@file	register.cpp
 ///	@brief	register
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"register.h"
 
 #include	"gen.h"

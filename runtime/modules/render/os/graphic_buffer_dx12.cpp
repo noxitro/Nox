@@ -2,5 +2,5 @@
 
 ///	@file	graphic_buffer_dx12.cpp
 ///	@brief	graphic_buffer_dx12
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"graphic_buffer_dx12.h"

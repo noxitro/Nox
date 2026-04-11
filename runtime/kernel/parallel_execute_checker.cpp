@@ -2,7 +2,7 @@
 
 ///	@file	parallel_execute_checker.cpp
 ///	@brief	parallel_execute_checker
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"parallel_execute_checker.h"
 
 #if !NOX_MASTER

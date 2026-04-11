@@ -2,7 +2,7 @@
 
 ///	@file	renderer.cpp
 ///	@brief	renderer
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"renderer.h"
 
 #include	"os/device_dx12.h"

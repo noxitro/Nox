@@ -2,5 +2,5 @@
 
 ///	@file	editor_remote_response.cpp
 ///	@brief	editor_remote_response
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"editor_remote_response.h"

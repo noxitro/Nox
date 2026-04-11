@@ -3,7 +3,7 @@
 ///	@file	application.cpp
 ///	@brief	application
 //import std;
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"application.h"
 
 #include	"module_entry.h"

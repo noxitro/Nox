@@ -2,7 +2,7 @@
 
 ///	@file	scene.cpp
 ///	@brief	scene
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"scene.h"
 
 #include	"scene_resource.h"

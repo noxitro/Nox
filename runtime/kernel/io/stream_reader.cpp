@@ -2,5 +2,5 @@
 
 ///	@file	stream_reader.cpp
 ///	@brief	stream_reader
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"stream_reader.h"

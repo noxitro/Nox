@@ -2,7 +2,7 @@
 
 ///	@file	type.cpp
 ///	@brief	type
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"reflection_type.h"
 
 namespace nox

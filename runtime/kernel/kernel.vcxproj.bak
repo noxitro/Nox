@@ -259,7 +259,7 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="stdafx.h">
+    <ClInclude Include="pch.h">
       <SubType>
       </SubType>
     </ClInclude>

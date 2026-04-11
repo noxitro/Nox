@@ -2,5 +2,5 @@
 
 ///	@file	reflection_attribute.cpp
 ///	@brief	reflection_attribute
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"reflection_attribute.h"

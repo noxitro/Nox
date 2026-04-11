@@ -1,4 +1,4 @@
 ﻿///	@file	delegate.cpp
 ///	@brief	delegate
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"delegate.h"

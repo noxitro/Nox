@@ -2,7 +2,7 @@
 
 ///	@file	debug_break.cpp
 ///	@brief	debug_break
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"debug_break.h"
 
 #include	"basic_definition.h"

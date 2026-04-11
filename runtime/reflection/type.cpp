@@ -1,6 +1,6 @@
 ﻿///	@file	type.cpp
 ///	@brief	type
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"type.h"
 
 #include	"database.h"

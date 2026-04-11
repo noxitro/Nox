@@ -2,7 +2,7 @@
 
 ///	@file	managed_object.cpp
 ///	@brief	managed_object
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"managed_object.h"
 
 #include	"garbage_collector.h"

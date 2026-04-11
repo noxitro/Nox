@@ -2,7 +2,7 @@
 
 ///	@file	cpp_test0.cpp
 ///	@brief	cpp_test0
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"type_id_test.h"
 namespace
 {

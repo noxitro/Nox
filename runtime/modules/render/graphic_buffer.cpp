@@ -2,6 +2,6 @@
 
 ///	@file	graphic_buffer.cpp
 ///	@brief	graphic_buffer
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"graphic_buffer.h"
 

@@ -2,7 +2,7 @@
 
 ///	@file	resource.cpp
 ///	@brief	resource
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"resource.h"
 
 void	nox::Resource::initialize(nox::U8StringView path)

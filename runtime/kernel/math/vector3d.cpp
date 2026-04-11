@@ -1,6 +1,6 @@
 ﻿///	@file	vector3d.cpp
 ///	@brief	vector3d
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"vector3d.h"
 
 #include	"../string_format.h"

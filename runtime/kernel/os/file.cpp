@@ -2,5 +2,5 @@
 
 ///	@file	file.cpp
 ///	@brief	file
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"file.h"

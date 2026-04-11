@@ -2,6 +2,6 @@
 
 ///	@file	render_command.cpp
 ///	@brief	render_command
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"render_command.h"
 

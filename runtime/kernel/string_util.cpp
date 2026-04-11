@@ -2,5 +2,5 @@
 
 ///	@file	string_util.cpp
 ///	@brief	string_util
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"string_util.h"

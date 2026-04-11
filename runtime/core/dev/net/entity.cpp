@@ -2,7 +2,7 @@
 
 ///	@file	entity.cpp
 ///	@brief	entity
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"entity.h"
 
 #include	"dev_net_api.h"

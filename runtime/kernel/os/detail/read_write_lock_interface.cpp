@@ -2,5 +2,5 @@
 
 ///	@file	read_write_lock_interface.cpp
 ///	@brief	read_write_lock_interface
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"read_write_lock_interface.h"

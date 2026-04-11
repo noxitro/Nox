@@ -126,7 +126,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="all_include.cpp" />
-    <ClCompile Include="stdafx.cpp">
+    <ClCompile Include="pch.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -141,7 +141,7 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="stdafx.h">
+    <ClInclude Include="pch.h">
       <SubType>
       </SubType>
     </ClInclude>

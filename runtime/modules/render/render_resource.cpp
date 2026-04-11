@@ -2,7 +2,7 @@
 
 ///	@file	render_resource.cpp
 ///	@brief	render_resource
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"render_resource.h"
 
 void nox::render::RenderResource::AddRef()

@@ -2,6 +2,6 @@
 
 ///	@file	stream.cpp
 ///	@brief	stream
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"stream.h"
 

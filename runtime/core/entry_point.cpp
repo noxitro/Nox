@@ -2,7 +2,7 @@
 
 ///	@file	entry_point.cpp
 ///	@brief	entry_point
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"entry_point.h"
 
 #include	"application.h"

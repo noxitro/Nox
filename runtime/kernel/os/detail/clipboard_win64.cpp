@@ -2,7 +2,7 @@
 
 ///	@file	clipboard_win64.cpp
 ///	@brief	clipboard_win64
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"clipboard_win64.h"
 
 #include	"log_trace.h"

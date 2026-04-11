@@ -1,4 +1,4 @@
 ﻿///	@file	point3d.cpp
 ///	@brief	point3d
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"point3d.h"

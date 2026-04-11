@@ -2,5 +2,5 @@
 
 ///	@file	type_id.cpp
 ///	@brief	type_id
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"type_id.h"

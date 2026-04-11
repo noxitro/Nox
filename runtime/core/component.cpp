@@ -2,7 +2,7 @@
 
 ///	@file	component.cpp
 ///	@brief	component
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"component.h"
 
 #include	"game_object.h"

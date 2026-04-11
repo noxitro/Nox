@@ -2,5 +2,5 @@
 
 ///	@file	render.cpp
 ///	@brief	render
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"render.h"

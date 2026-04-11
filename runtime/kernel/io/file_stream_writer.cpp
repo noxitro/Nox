@@ -2,7 +2,7 @@
 
 ///	@file	file_stream_writer.cpp
 ///	@brief	file_stream_writer
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"file_stream_writer.h"
 //#include	<filesystem>
 #include	"../os/windows.h"

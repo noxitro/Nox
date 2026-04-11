@@ -2,5 +2,5 @@
 
 ///	@file	attribute_decl.cpp
 ///	@brief	attribute_decl
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"attribute_decl.h"

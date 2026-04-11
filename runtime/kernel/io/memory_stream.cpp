@@ -2,5 +2,5 @@
 
 ///	@file	memory_stream.cpp
 ///	@brief	memory_stream
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"memory_stream.h"

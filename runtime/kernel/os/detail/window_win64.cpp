@@ -2,5 +2,5 @@
 
 ///	@file	window_win64.cpp
 ///	@brief	window_win64
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"window_win64.h"

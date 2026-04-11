@@ -2,7 +2,7 @@
 
 ///	@file	scope_profile.cpp
 ///	@brief	scope_profile
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"scope_profile.h"
 
 #include	"advanced_type.h"

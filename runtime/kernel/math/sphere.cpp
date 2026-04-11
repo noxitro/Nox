@@ -2,5 +2,5 @@
 
 ///	@file	sphere.cpp
 ///	@brief	sphere
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"sphere.h"

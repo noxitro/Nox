@@ -2,5 +2,5 @@
 
 ///	@file	log_id.cpp
 ///	@brief	log_id
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"log_id.h"

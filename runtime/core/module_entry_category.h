@@ -6,6 +6,18 @@
 
 namespace nox
 {
+	enum class ModulePhaseType : nox::uint8
+	{
+		Init = 0,
+		Setup,
+		Start,
+		Update,
+		Terminal,
+		Finalize,
+		 /// @brief 最大値
+		_Max
+	};
+
 	/// @brief モジュールエントリカテゴリ
 	enum class ModuleEntryCategory : nox::uint8
 	{

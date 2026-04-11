@@ -1,6 +1,6 @@
 ﻿///	@file	function.cpp
 ///	@brief	function
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"function_info.h"
 
 #include	"class_info.h"

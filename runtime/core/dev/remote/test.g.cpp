@@ -2,7 +2,7 @@
 
 ///	@file	test.cpp
 ///	@brief	test
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"test.g.h"
 #include	"../socket_stream_writer.h"
 #include	"../socket_stream_reader.h"

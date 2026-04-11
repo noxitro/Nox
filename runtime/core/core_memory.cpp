@@ -2,7 +2,7 @@
 
 ///	@file	core_memory.cpp
 ///	@brief	core_memory
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"core_memory.h"
 
 namespace nox

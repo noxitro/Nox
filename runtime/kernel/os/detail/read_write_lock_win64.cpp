@@ -2,5 +2,5 @@
 
 ///	@file	read_write_lock_win64.cpp
 ///	@brief	read_write_lock_win64
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"read_write_lock_win64.h"

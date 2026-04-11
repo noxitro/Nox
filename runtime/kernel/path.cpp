@@ -2,7 +2,7 @@
 
 ///	@file	path.cpp
 ///	@brief	path
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"path.h"
 
 std::span<nox::U8StringView> nox::io::Path::GetExtensions()const noexcept

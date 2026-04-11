@@ -2,7 +2,7 @@
 
 ///	@file	remote_host.cpp
 ///	@brief	remote_host
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"editor_remote_server.h"
 
 #if NOX_DEVELOP

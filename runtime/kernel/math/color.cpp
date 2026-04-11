@@ -1,4 +1,4 @@
 ﻿///	@file	color.cpp
 ///	@brief	color
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"color.h"

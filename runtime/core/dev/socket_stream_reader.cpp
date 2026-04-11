@@ -2,7 +2,7 @@
 
 ///	@file	socket_stream_reader.cpp
 ///	@brief	socket_stream_reader
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"socket_stream_reader.h"
 
 #include	"editor_remote_server.h"

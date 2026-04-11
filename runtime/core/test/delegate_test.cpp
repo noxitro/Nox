@@ -2,5 +2,5 @@
 
 ///	@file	delegate_test.cpp
 ///	@brief	delegate_test
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"delegate_test.h"

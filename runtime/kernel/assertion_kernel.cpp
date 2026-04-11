@@ -2,7 +2,7 @@
 
 ///	@file	assertion_kernel.cpp
 ///	@brief	assertion_kernel
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"assertion_kernel.h"
 
 #include	"assertion.h"

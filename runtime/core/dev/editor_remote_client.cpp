@@ -2,5 +2,5 @@
 
 ///	@file	editor_remote_client.cpp
 ///	@brief	editor_remote_client
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"editor_remote_client.h"

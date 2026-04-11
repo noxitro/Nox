@@ -1,4 +1,4 @@
-﻿#include	"stdafx.h"
+﻿#include	"pch.h"
 #include	"nox_memory.h"
 
 #include	"../algorithm.h"

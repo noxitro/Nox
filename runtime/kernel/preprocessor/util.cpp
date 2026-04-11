@@ -2,5 +2,5 @@
 
 ///	@file	util.cpp
 ///	@brief	util
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"util.h"

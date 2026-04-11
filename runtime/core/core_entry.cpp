@@ -2,7 +2,7 @@
 
 ///	@file	core_entry.cpp
 ///	@brief	core_entry
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"core_entry.h"
 
 #include	"garbage_collector.h"

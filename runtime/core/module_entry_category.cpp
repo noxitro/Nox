@@ -2,5 +2,5 @@
 
 ///	@file	module_entry_category.cpp
 ///	@brief	module_entry_category
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"module_entry_category.h"

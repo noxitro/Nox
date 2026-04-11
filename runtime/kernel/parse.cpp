@@ -2,5 +2,5 @@
 
 ///	@file	parse.cpp
 ///	@brief	parse
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"parse.h"

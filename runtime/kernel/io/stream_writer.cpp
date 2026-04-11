@@ -2,5 +2,5 @@
 
 ///	@file	stream_writer.cpp
 ///	@brief	stream_writer
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"stream_writer.h"

@@ -2,7 +2,7 @@
 
 ///	@file	reflect.cpp
 ///	@brief	リフレクション解析対象のファイル
-//#include	"stdafx.h"
+//#include	"pch.h"
 #include	"reflect.h"
 
 #include	"../kernel/kernel.h"

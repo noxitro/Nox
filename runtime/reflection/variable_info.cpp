@@ -1,6 +1,6 @@
 ﻿///	@file	field_info.cpp
 ///	@brief	field_info
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"variable_info.h"
 
 #include	"class_info.h"

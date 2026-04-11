@@ -2,5 +2,5 @@
 
 ///	@file	window_base.cpp
 ///	@brief	window_base
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"window_base.h"

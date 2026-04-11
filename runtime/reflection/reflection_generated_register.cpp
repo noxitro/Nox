@@ -2,5 +2,5 @@
 
 ///	@file	reflection_generated_register.cpp
 ///	@brief	reflection_generated_register
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"reflection_generated_register.h"

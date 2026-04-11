@@ -2,5 +2,5 @@
 
 ///	@file	format_float.cpp
 ///	@brief	format_float
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"format_float.h"

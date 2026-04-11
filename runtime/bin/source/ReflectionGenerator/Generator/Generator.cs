@@ -210,7 +210,7 @@ namespace ReflectionGenerator.Generator
                     codeWriter.WriteLineSource();
                     codeWriter.WriteNewLine();
 
-					codeWriter.WriteIncludeStdafx();
+					codeWriter.WriteIncludePch();
                     codeWriter.WriteLineInclude($"gen.h");
 
                     codeWriter.WriteNewLine();
@@ -496,7 +496,7 @@ namespace ReflectionGenerator.Generator
 
 						codeWriter.WriteLineSource();
 						codeWriter.WriteNewLine();
-						codeWriter.WriteIncludeStdafx();
+						codeWriter.WriteIncludePch();
 						codeWriter.WriteLineInclude(baseHeaderFilePath);
                         codeWriter.WriteLine(_AdditionalModuleIncludeStr);
 

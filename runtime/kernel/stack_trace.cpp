@@ -2,7 +2,7 @@
 
 ///	@file	stack_trace.cpp
 ///	@brief	stack_trace
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"stack_trace.h"
 #include	"basic_definition.h"
 

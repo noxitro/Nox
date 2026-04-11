@@ -2,5 +2,5 @@
 
 ///	@file	heap_memory_allocator.cpp
 ///	@brief	heap_memory_allocator
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"heap_memory_allocator.h"

@@ -1,3 +1,3 @@
-﻿#include	"stdafx.h"
+﻿#include	"pch.h"
 #include	"basic_type.h"
 

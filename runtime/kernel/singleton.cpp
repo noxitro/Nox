@@ -2,7 +2,7 @@
 
 ///	@file	singleton.cpp
 ///	@brief	singleton
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"singleton.h"
 
 #include	"assertion.h"

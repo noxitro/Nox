@@ -2,6 +2,6 @@
 
 ///	@file	os_definition.cpp
 ///	@brief	os_definition
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"os_definition.h"
 

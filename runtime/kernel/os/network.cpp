@@ -2,7 +2,7 @@
 
 ///	@file	network.cpp
 ///	@brief	network
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"network.h"
 
 #include    "windows.h"

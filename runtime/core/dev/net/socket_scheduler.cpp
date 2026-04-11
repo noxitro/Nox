@@ -2,7 +2,7 @@
 
 ///	@file	socket_scheduler.cpp
 ///	@brief	socket_scheduler
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"socket_scheduler.h"
 
 #include	"server.h"

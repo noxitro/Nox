@@ -2,5 +2,5 @@
 
 ///	@file	definition_dx12.cpp
 ///	@brief	definition_dx12
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"definition_dx12.h"

@@ -2,5 +2,5 @@
 
 ///	@file	stack.cpp
 ///	@brief	stack
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"stack.h"

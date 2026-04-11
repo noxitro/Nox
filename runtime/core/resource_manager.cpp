@@ -2,7 +2,7 @@
 
 ///	@file	resource_manager.cpp
 ///	@brief	resource_manager
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"resource_manager.h"
 
 #include	<filesystem>

@@ -1,6 +1,6 @@
 ﻿///	@file	advanced_definition.cpp
 ///	@brief	advanced_definition
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"advanced_definition.h"
 #include	"assertion.h"
 #include	"string_format.h"

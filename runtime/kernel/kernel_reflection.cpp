@@ -2,5 +2,5 @@
 
 ///	@file	kernel_reflection.cpp
 ///	@brief	kernel_reflection
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"kernel_reflection.h"

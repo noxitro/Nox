@@ -1,4 +1,4 @@
-﻿#include	"stdafx.h"
+﻿#include	"pch.h"
 
 //	build insightsで上位に表示されていたヘッダをpch化
 #include	"type_traits/type_traits.h"

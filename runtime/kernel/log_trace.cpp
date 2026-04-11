@@ -1,6 +1,6 @@
 ﻿///	@file	log_trace.cpp
 ///	@brief	log_trace
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"log_trace.h"
 #include	"algorithm.h"
 #include	"memory/stl_allocate_adapter.h"

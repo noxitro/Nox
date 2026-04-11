@@ -2,6 +2,6 @@
 
 ///	@file	algorithm_lite.cpp
 ///	@brief	algorithm_lite
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"algorithm_lite.h"
 

@@ -2,5 +2,5 @@
 
 ///	@file	math_algorithm.cpp
 ///	@brief	math_algorithm
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"math_algorithm.h"

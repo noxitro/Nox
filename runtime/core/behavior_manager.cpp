@@ -2,7 +2,7 @@
 
 ///	@file	behavior_manager.cpp
 ///	@brief	behavior_manager
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"behavior_manager.h"
 
 #include	"behavior.h"

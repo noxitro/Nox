@@ -2,5 +2,5 @@
 
 ///	@file	type_info.cpp
 ///	@brief	type_info
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"type_info.h"

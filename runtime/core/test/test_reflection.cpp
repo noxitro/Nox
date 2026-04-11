@@ -2,7 +2,7 @@
 
 ///	@file	test_reflection.cpp
 ///	@brief	test_reflection
-#include	"stdafx.h"
+#include	"pch.h"
 #include	"test_reflection.h"
 
 #include	"game_object.h"

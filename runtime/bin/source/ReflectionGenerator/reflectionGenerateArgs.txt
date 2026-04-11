@@ -1,9 +1,9 @@
 -SolutionDir
-"D:\github\Nox\runtime\bin\source\ReflectionGenerator\"
+"E:\github\Nox\runtime\bin\source\ReflectionGenerator\"
 -ProjectPath
-"D:\github\Nox\runtime\bin\source\ReflectionGenerator\Sample\Sample.vcxproj"
+"E:\github\Nox\runtime\bin\source\ReflectionGenerator\Sample\Sample.vcxproj"
 -SourceFilePath
-"D:\github\Nox\runtime\bin\source\ReflectionGenerator\Sample\main.cpp"
+"E:\github\Nox\runtime\bin\source\ReflectionGenerator\Sample\main.cpp"
 -Configuration
 "Release"
 -Platform
