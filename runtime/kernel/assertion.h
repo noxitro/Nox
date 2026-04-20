@@ -26,7 +26,7 @@ namespace nox::assertion
 		if constexpr (sizeof...(Args) > 0)
 		{
 			//	動的メモリ確保を行わないように確保済みのバッファを使用
-			std::array<nox::char16, 5096> buffer = { 0 };
+			std::array<nox::char8, 5096> buffer = { 0 };
 			nox::util::Format(buffer, message.data(), std::forward<Args>(args)...);
 
 			nox::assertion::detail::Assert(Id()(), buffer.data(), file_name, location);
