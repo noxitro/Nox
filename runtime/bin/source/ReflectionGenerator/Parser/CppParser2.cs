@@ -157,7 +157,15 @@ namespace ReflectionGenerator.Parser2
 					return GetFQN(templateArgument.AsType.CanonicalType);
 
 				case ClangSharp.Interop.CXTemplateArgumentKind.CXTemplateArgumentKind_Integral:
-					return templateArgument.AsIntegral.ToString();
+					{
+						var integralType = templateArgument.IntegralType;
+						if (integralType.kind == ClangSharp.Interop.CXTypeKind.CXType_Enum)
+						{
+							string enumFqn = GetFQN(integralType);
+							return $"static_cast<{enumFqn}>({templateArgument.AsIntegral})";
+						}
+						return templateArgument.AsIntegral.ToString();
+					}
 
 				case ClangSharp.Interop.CXTemplateArgumentKind.CXTemplateArgumentKind_Declaration:
 					return templateArgument.AsType.CanonicalType.Spelling.CString;
@@ -982,12 +990,16 @@ namespace ReflectionGenerator.Parser2
 		public class TemplateIntegralArgument : TemplateArgument
 		{
 			public required string Value { get; init; }
+			/// <summary>enum 型の場合の型情報。enum 以外の場合は null</summary>
+			public EnumTypeInfo? EnumTypeInfo { get; init; }
 		}
 
 		public class TemplateDeclarationArgument : TemplateArgument
 		{
-			public required TemplateArgument[] TemplateArgumentList { private get; init; }
-			public ReadOnlySpan<TemplateArgument> TemplateArgumentSpan => TemplateArgumentList;
+			/// <summary>参照している宣言の完全修飾名 (例: Ns::SomeFunc)</summary>
+			public required string DeclFullName { get; init; }
+			/// <summary>非型テンプレートパラメータの型情報</summary>
+			public required TypeInfo ParamTypeInfo { get; init; }
 		}
 
 		public class TemplatePackArgument : TemplateArgument
@@ -1338,8 +1350,8 @@ namespace ReflectionGenerator.Parser2
 		public required bool IsVirtualBase { get; init; }
     }
 
-	public class TemplateClassDecl : RecordDecl
-	{
+	public class TemplateClassDecl : TypeDecl, IDeclarationContainer
+    {
 		public struct TemplateArgumentInfo
 		{
 			public required string Name { get; init; }
@@ -1351,7 +1363,22 @@ namespace ReflectionGenerator.Parser2
 			public required bool IsDefault { get; init; }
 		}
 
-		public required TemplateArgumentInfo[] TemplateArgumentList { private get; init; }
+        public RecordTypeInfo? TypeInfo { get; init; }
+        public List<RecordDecl> RecordList { get; } = new List<RecordDecl>();
+        public List<FunctionDecl> FunctionList { get; } = new List<FunctionDecl>();
+        public List<VariableDecl> VariableList { get; } = new List<VariableDecl>();
+        public List<EnumDecl> EnumList { get; } = new List<EnumDecl>();
+        public List<TypeAliasDecl> TypeAliasList { get; } = [];
+        public List<FriendDecl> FriendList { get; } = [];
+        public required BaseSpecifierDecl[] BaseList { get; init; } = [];
+        public ReadOnlySpan<BaseSpecifierDecl> BaseSpan => BaseList;
+        public RecordDecl? ParentRecordDecl { get; set; } = null;
+        public required RecordAttributeFlag RecordAttributeFlags { get; init; }
+        public bool IsReflectionClass { get; set; }
+        public required bool IsNoxObject { get; init; }
+        public required bool IsDefinition { get; init; }
+
+        public required TemplateArgumentInfo[] TemplateArgumentList { private get; init; }
 		public ReadOnlySpan<TemplateArgumentInfo> TemplateArgumentSpan => TemplateArgumentList;
 		public required int NumDefaultArgument { get; init; }
 	}
@@ -2186,19 +2213,35 @@ namespace ReflectionGenerator.Parser2
 					};
 
 				case ClangSharp.Interop.CXTemplateArgumentKind.CXTemplateArgumentKind_Integral:
-					return new TemplateRecordTypeInfo.TemplateIntegralArgument()
 					{
-						ArgumentKind = TemplateRecordTypeInfo.TemplateArgument.Kind.Integral,
-						Value = cursorTemplateArgument.AsIntegral.ToString(),
-					};
+						var integralType = cursorTemplateArgument.IntegralType;
+						EnumTypeInfo? enumTypeInfo = null;
+						if (integralType.kind == ClangSharp.Interop.CXTypeKind.CXType_Enum)
+						{
+							enumTypeInfo = GetOrCreateTypeInfo<EnumTypeInfo>(integralType);
+						}
+						return new TemplateRecordTypeInfo.TemplateIntegralArgument()
+						{
+							ArgumentKind = TemplateRecordTypeInfo.TemplateArgument.Kind.Integral,
+							Value = cursorTemplateArgument.AsIntegral.ToString(),
+							EnumTypeInfo = enumTypeInfo,
+						};
+					}
 
 				case ClangSharp.Interop.CXTemplateArgumentKind.CXTemplateArgumentKind_Declaration:
-					Util.Assert(false);
-					return new TemplateRecordTypeInfo.TemplateTypeArgument()
 					{
-						ArgumentKind = TemplateRecordTypeInfo.TemplateArgument.Kind.Type,
-						TypeInfo = GetOrCreateTypeInfo(cursorTemplateArgument.AsType.CanonicalType),
-					};
+						// 非型テンプレート引数として宣言(関数・変数・メンバ等)が渡されたケース
+						// 例: template<auto* P> struct Foo {}; Foo<&someGlobalVar> f;
+						ClangSharp.Interop.CXCursor declCursor = cursorTemplateArgument.AsDecl;
+						string declFullName = declCursor.IsNull ? string.Empty : declCursor.GetFQN();
+						TypeInfo paramTypeInfo = GetOrCreateTypeInfo(cursorTemplateArgument.ParamTypeForDecl.CanonicalType);
+						return new TemplateRecordTypeInfo.TemplateDeclarationArgument()
+						{
+							ArgumentKind = TemplateRecordTypeInfo.TemplateArgument.Kind.Declaration,
+							DeclFullName = declFullName,
+							ParamTypeInfo = paramTypeInfo,
+						};
+					}
 
 				case ClangSharp.Interop.CXTemplateArgumentKind.CXTemplateArgumentKind_Pack:
 					int numPackElements = cursorTemplateArgument.NumPackElements;
@@ -2288,12 +2331,6 @@ namespace ReflectionGenerator.Parser2
 			{
 				return;
 			}
-
-			if (cursor.Spelling.CString.Contains("GameObject"))
-			{
-				Util.BreakPoint();
-			}
-
 		//	Util.Assert(cursor.GetDeclCategory() == DeclCategory.Definition);
 
 			Util.Assert(usr != string.Empty);
@@ -2345,7 +2382,13 @@ namespace ReflectionGenerator.Parser2
 
             string fqn = cursor.GetFQN();
 
-			RecordDecl classDecl = new()
+			if (fqn.Contains("PhaseDeclareImpl"))
+			{
+				Util.BreakPoint();
+				fqn = cursor.GetFQN();
+			}
+
+            RecordDecl classDecl = new()
 			{
 				Usr = usr,
 				Name = cursor.Spelling.CString,
@@ -2450,11 +2493,18 @@ namespace ReflectionGenerator.Parser2
 
 			//RecordTypeInfo typeInfo = GetOrCreateTypeInfo<RecordTypeInfo>(cursor.InjectedSpecializationType);
 
-			TemplateClassDecl classDecl = new()
+			string fqn = cursor.GetFQN();
+
+            if (fqn.Contains("PhaseDeclareImpl<_PhaseType"))
+            {
+                Util.BreakPoint();
+            }
+
+            TemplateClassDecl classDecl = new()
 			{
 				Usr = usr,
 				Name = cursor.Spelling.CString,
-				FullName = cursor.GetFQN(),
+				FullName = fqn,
 				Namespace = cursor.GetNamespace(),
 				DeclHash = hash,
 				ParentDeclHash = parentCursor.Hash,
@@ -3780,6 +3830,10 @@ namespace ReflectionGenerator.Parser2
 						tmpBaseDecl = GetDecl<TypeDecl>(tmpTypeAliasDecl.GetPointeeMeta().UniqueDeclKey);
 					}
 					else if (tmpBaseDecl is NoFoundDecl)
+					{
+						break;
+					}
+					else if (tmpBaseDecl is TemplateClassDecl)
 					{
 						break;
 					}

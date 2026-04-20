@@ -30,11 +30,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ClangSharp" Version="21.1.8.2" />
-    <PackageReference Include="ClangSharp.Interop" Version="21.1.8.2" />
+    <PackageReference Include="ClangSharp" Version="21.1.8.3" />
+    <PackageReference Include="ClangSharp.Interop" Version="21.1.8.3" />
     <PackageReference Include="libclang.runtime.win-x64" Version="21.1.8" />
     <PackageReference Include="libClangSharp.runtime.win-x64" Version="21.1.8.2" />
-    <PackageReference Include="Microsoft.Build" Version="18.0.2" />
+    <PackageReference Include="Microsoft.Build" Version="18.4.0" />
   </ItemGroup>
 
   <ItemGroup>
