@@ -131,3 +131,6 @@
 /runtime/bin/source/RuntimeTypeDB/.vs/RuntimeTypeDB.slnx
 
 
+/runtime/kernel/build/x64/Debug
+/runtime/reflection/build/x64/Debug
+/runtime/core/build/x64/Debug

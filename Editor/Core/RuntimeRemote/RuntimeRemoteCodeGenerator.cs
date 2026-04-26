@@ -489,11 +489,11 @@ namespace Core.RuntimeRemote
 							{
 								if (param.Attr.EnabledExecute)
 								{
-									codeWriter.WriteLine("nox::PlacementObject<nox::dev::editor_remote::Response> Execute(std::span<nox::uint8> storage)const override;");
+									codeWriter.WriteLine("nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::Application&, std::span<nox::uint8> storage)const override;");
 								}
 								else
 								{
-									codeWriter.WriteLine("inline constexpr nox::PlacementObject<nox::dev::editor_remote::Response> Execute(std::span<nox::uint8>)const override { return nullptr; }");
+									codeWriter.WriteLine("inline constexpr nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::Application&, std::span<nox::uint8>)const override { return nullptr; }");
 								}
 							}
 
@@ -645,7 +645,7 @@ namespace Core.RuntimeRemote
 
 						if (param.IsQuery)
 						{
-							codeWriter.WriteLine($"nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::{runtimeTypeFQN}::Execute(std::span<nox::uint8> storage)const");
+							codeWriter.WriteLine($"nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::{runtimeTypeFQN}::Execute(nox::Application&, std::span<nox::uint8> storage)const");
 							using (codeWriter.Indent("{", "}"))
 							{
 								codeWriter.WriteLine("return nullptr;");
@@ -876,7 +876,7 @@ namespace Core.RuntimeRemote
 
 		private static string GetRuntimePrimitiveType(System.Type type)
 		{
-			if (type == typeof(Nox.Math.Vec3))
+			if (type == typeof(System.Numerics.Vector3))
 			{
 				return "nox::Vec3";
 			}

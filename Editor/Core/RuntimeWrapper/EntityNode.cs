@@ -4,15 +4,16 @@ using System.Text;
 
 namespace Core.RuntimeWrapper
 {
-	[Core.Attributes.RuntimeWrapper("nox::ManagedObject")]
-	public abstract class ManagedObject : Core.RuntimeObject
+	[Core.Attributes.RuntimeWrapper("nox::EntityNode")]
+	public class EntityNode : ManagedObject
 	{
-		#region 非公開プロパティ
+		#region 非公開メソッド
 		#endregion
 
 		#region 公開メソッド
-		protected ManagedObject() 
+		public EntityNode()
 		{
+
 		}
 		#endregion
 	}

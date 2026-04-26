@@ -5,16 +5,12 @@ using System.Text;
 namespace Core.RuntimeWrapper
 {
 	[Core.Attributes.RuntimeWrapper("nox::SceneView")]
-	public class SceneView : ManagedObject, Core.IRuntimeObject<SceneView>
+	public class SceneView : ManagedObject
 	{
-		#region 非公開フィールド
-		public static new RuntimeRecordDecl StaticRuntimeRecordDecl { get; set; } = null!;
-		#endregion
-
 		#region 公開プロパティ
-		public Scene? Scene
+		public SceneNode? Scene
 		{
-			get => Get<Scene>();
+			get => Get<SceneNode>();
 			set => Set(value);
 		}
 
@@ -37,7 +33,6 @@ namespace Core.RuntimeWrapper
 		#endregion
 
 		#region 非公開メソッド
-		protected override RuntimeRecordDecl GetRuntimeRecordDecl() => StaticRuntimeRecordDecl;
 		private void UpdateWindowHandle(IntPtr windowHandle)
 		{
 

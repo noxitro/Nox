@@ -6,12 +6,16 @@ namespace Core
 
 	[Core.Attributes.RuntimeWrapper("nox::Object")]
 	public abstract class RuntimeObject
-	{
-		#region フィールド
-		/// <summary>
-		/// メンバ変数リスト
-		/// </summary>
-		private readonly object[] _VariableList;
+    {
+        internal static class RuntimeRecordDeclHolder<T> where T : RuntimeObject
+        {
+            public static RuntimeRecordDecl Value = null!;
+        }
+        #region フィールド
+        /// <summary>
+        /// メンバ変数リスト
+        /// </summary>
+        private readonly object[] _VariableList;
 		private readonly bool[] _VariableDirtyList;
 
 		/// <summary>
@@ -23,7 +27,6 @@ namespace Core
 
 		#region 公開プロパティ
 		public Core.RuntimeRecordDecl RuntimeRecordDecl { get; init; }
-		protected abstract RuntimeRecordDecl GetRuntimeRecordDecl();
 		public long RemoteInstanceId { get; set; } = 0;
 		public ReadOnlySpan<object> VariableList => _VariableList;
 
@@ -33,10 +36,16 @@ namespace Core
 		#region 公開メソッド
 		protected RuntimeObject()
 		{
-			//
-			RuntimeRecordDecl = GetRuntimeRecordDecl();
+			{
+				var holderType = typeof(RuntimeRecordDeclHolder<>).MakeGenericType(GetType());
+				var decl = holderType.GetField("Value")!.GetValue(null) as Core.RuntimeRecordDecl;
+				Nox.Util.Assert(decl != null,
+					$"型 '{GetType().FullName}' の RuntimeRecordDecl が設定されていません。" +
+					$"RuntimeWrapperAttribute が付与されているか確認してください。");
+				RuntimeRecordDecl = decl;
+			}
 
-			_PropertyFunctionList = [];
+            _PropertyFunctionList = [];
 
 			ReadOnlySpan<RuntimeVariableDecl> variableList = RuntimeRecordDecl.VariableList;
 			int variableListLength = variableList.Length;
@@ -87,10 +96,18 @@ namespace Core
 			}
 
 		}
-		#endregion
 
-		#region 非公開メソッド
-		private static object CreateRuntimeVariable(RuntimeTypeKind kind)
+        /// <summary>
+        /// 型のRuntimeRecordDeclを取得する
+        /// </summary>
+        public static RuntimeRecordDecl GetRuntimeRecrodDecl<T>() where T : RuntimeObject
+        {
+            return RuntimeRecordDeclHolder<T>.Value;
+        }
+        #endregion
+
+        #region 非公開メソッド
+        private static object CreateRuntimeVariable(RuntimeTypeKind kind)
 		{
 			switch (kind)
 			{
@@ -151,16 +168,6 @@ namespace Core
 		{
 			SetValue(propertyName, value);
 		}
-		#endregion
-	}
-
-	/// <summary>
-	/// 型情報を保持するためのインターフェース
-	/// </summary>
-	/// <typeparam name="T"></typeparam>
-	public interface IRuntimeObject<T> where T : Core.RuntimeObject, IRuntimeObject<T> 
-	{
-		static abstract RuntimeRecordDecl StaticRuntimeRecordDecl { get; set; }
-		static RuntimeRecordDecl GetRuntimeRecordDecl() => T.StaticRuntimeRecordDecl;
-	}
+        #endregion
+    }
 }

@@ -14,7 +14,7 @@ namespace Core.Attributes
 		/// <summary>
 		/// RuntimeFqn
 		/// </summary>
-		public required string RuntimeFQN { get; init; }
+		public string RuntimeFQN { get; init; }
 
 		public RuntimeWrapperAttribute(string fqn)
 		{

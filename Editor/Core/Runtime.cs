@@ -18,7 +18,19 @@ namespace Core
 
 		private Core.RuntimeWrapper.SceneView? MainSceneView = null;
 
-		private readonly IReadOnlyDictionary<int, Func<Core.RuntimeObject>> _RuntimeObjectActivatorDict;
+        /// <summary>
+        /// RuntimeObjectのコンストラクタ辞書
+        /// key: RuntimeFQNのハッシュ値(StringComparison.Ordinal)
+		/// value: RuntimeObjectのインスタンスを生成するFunc
+        /// </summary>
+        private readonly IReadOnlyDictionary<int, Func<Core.RuntimeObject>> _RuntimeObjectActivatorDict;
+
+        /// <summary>
+        /// RuntimeTypeDeclの辞書
+        /// key:RuntimeWrappwerのType
+        /// value:Core.RuntimeTypeDecl
+        /// </summary>
+        private readonly IReadOnlyDictionary<System.Type, Core.RuntimeTypeDecl> _RuntimeRecordDeclDict;
 		#endregion
 
 		#region 公開プロパティ
@@ -53,9 +65,11 @@ namespace Core
 			Dictionary<int, Func<Core.RuntimeObject>> activatorDict = new();
 			_RuntimeObjectActivatorDict = activatorDict;
 
+			Dictionary<System.Type, Core.RuntimeTypeDecl> runtimeTypeDeclDict = new();
+			_RuntimeRecordDeclDict = runtimeTypeDeclDict;
+
 			//	RuntimeWrapper型にDTIを設定する
 			System.Type runtimeObjectType = typeof(RuntimeObject);
-			string propName = nameof(IRuntimeObject<>.StaticRuntimeRecordDecl);
 
 			foreach (System.Type type in Core.TypeDB.AllTypeList)
 			{
@@ -65,12 +79,6 @@ namespace Core
 				}
 
 				if (runtimeObjectType == type)
-				{
-					continue;
-				}
-
-				var property = type.GetProperty(propName);
-				if (property == null)
 				{
 					continue;
 				}
@@ -89,7 +97,9 @@ namespace Core
 					continue;
 				}
 
-				property.SetValue(null, (RuntimeRecordDecl)runtimeType.Decl);
+				RuntimeRecordDecl runtimeRecordDecl = (RuntimeRecordDecl)runtimeType.Decl;
+				var holderType = typeof(Core.RuntimeObject.RuntimeRecordDeclHolder<>).MakeGenericType(type);
+				holderType.GetField("Value")!.SetValue(null, runtimeRecordDecl);
 
 				// ⭐ string 生成なしでハッシュ計算
 				int hash = runtimeFQN.GetHashCode(StringComparison.Ordinal);
