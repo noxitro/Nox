@@ -2026,6 +2026,11 @@ namespace ReflectionGenerator.Generator
                                 continue;
                             }
 
+                            if (type.ReflectionGenerateKind == Parser2.ReflectionGenerateKind.IgnoreReflection)
+                            {
+                                continue;
+                            }
+
                             enabledIndexList[internalClassInfoListLength++] = i;
 
                             codeWriter.WriteLine($"static constexpr const nox::reflection::Type& internal_type_{classInfo.Hash}_{i.ToString()} = nox::reflection::Typeof<{type.FullName}>();");

@@ -2382,12 +2382,6 @@ namespace ReflectionGenerator.Parser2
 
             string fqn = cursor.GetFQN();
 
-			if (fqn.Contains("PhaseDeclareImpl"))
-			{
-				Util.BreakPoint();
-				fqn = cursor.GetFQN();
-			}
-
             RecordDecl classDecl = new()
 			{
 				Usr = usr,
