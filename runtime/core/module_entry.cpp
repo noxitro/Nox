@@ -4,10 +4,3 @@
 ///	@brief	module_entry
 #include	"pch.h"
 #include	"module_entry.h"
-
-#include	"application.h"
-
-void nox::ModuleEntry::RegisterImpl(void(*func)(nox::ModuleEntry&), const nox::ModuleEntryCategory type)
-{
-	Application::Instance().RegisterModuleEntry(func, *this, type);
-}

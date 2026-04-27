@@ -20,7 +20,7 @@ namespace nox::dev::editor_remote
 		ResourceConvertQuery(){}
 		void OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)override;
 		void OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)override;
-		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(std::span<nox::uint8> storage)const override;
+		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::Application&, std::span<nox::uint8> storage)const override;
 
 		inline std::u8string_view GetNativePath()const noexcept
 		{
@@ -44,7 +44,7 @@ namespace nox::dev::editor_remote
 		GetMainSceneView()noexcept{}
 		inline constexpr void OnSerialize(nox::dev::editor_remote::SocketStreamWriter&)override {}
 		inline constexpr void OnDeserialize(nox::dev::editor_remote::SocketStreamReader&)override {}
-		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(std::span<nox::uint8> storage)const override;
+		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::Application&, std::span<nox::uint8> storage)const override;
 	};
 
 	/// @brief SceneView情報

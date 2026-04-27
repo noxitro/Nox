@@ -4,13 +4,13 @@
 ///	@brief	core
 #pragma once
 
-#include	"game_object.h"
+#include	"entity_node.h"
 #include	"behavior.h"
 #include	"entry_point.h"
 
 #include	"scene_view.h"
 #include	"transform.h"
-#include	"scene.h"
+#include	"scene_node.h"
 #include	"scene_resource.h"
 #include	"application.h"
 #include	"module_entry.h"

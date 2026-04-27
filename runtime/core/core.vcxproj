@@ -122,11 +122,15 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="entry_point.h">
+    <ClInclude Include="engine_system.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="game_object.h">
+    <ClInclude Include="entity_node.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="entry_point.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -135,6 +139,10 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="managed_object.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="node.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -155,6 +163,10 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="scene_manager.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="scene_node.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -182,7 +194,7 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="scene.h">
+    <ClInclude Include="system_phase.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -321,11 +333,15 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="entry_point.cpp">
+    <ClCompile Include="engine_system.cpp">
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="game_object.cpp">
+    <ClCompile Include="entity_node.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="entry_point.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -334,6 +350,10 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="managed_object.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="node.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -354,6 +374,10 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="scene_manager.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="scene_node.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -384,7 +408,7 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="scene.cpp">
+    <ClCompile Include="system_phase.cpp">
       <SubType>
       </SubType>
     </ClCompile>

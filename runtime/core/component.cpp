@@ -5,9 +5,9 @@
 #include	"pch.h"
 #include	"component.h"
 
-#include	"game_object.h"
+#include	"entity_node.h"
 
-void	nox::Component::SetOwner(nox::GameObject& owner)noexcept
+void	nox::Component::SetOwner(nox::EntityNode& owner)noexcept
 {
 	NOX_ASSERT(owner_ == nullptr, u"既にGameObjectをアタッチ済みです");
 	owner_ = &owner;

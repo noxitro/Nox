@@ -63,7 +63,7 @@
 #include	"fixed_string.h"
 #include	"path.h"
 #include	"fixed_vector.h"
-
+#include	"nameof.h"
 //	diagnostics
 #include	"parallel_execute_checker.h"
 //	end diagnostics

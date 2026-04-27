@@ -24,11 +24,10 @@ nox::int32 nox::EntryPoint(const std::span<const char16* const> args)
 
 	nox::os::Initialize(args);
 
-	nox::Application::CreateInstance();
-
-	nox::Application::Instance().Run();
-
-	nox::Application::DeleteInstance();
+	{
+		nox::Application application;
+		application.Run();
+	}
 
 	nox::os::Finalize();
 

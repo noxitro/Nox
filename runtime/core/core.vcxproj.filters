@@ -33,9 +33,6 @@
     <ClInclude Include="managed_object.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="game_object.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="transform.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -79,9 +76,6 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="test\utility.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="scene.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="test\type_id_test.h">
@@ -174,6 +168,21 @@
     <ClInclude Include="dev\socket_stream_utility.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="node.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="entity_node.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="engine_system.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="system_phase.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="scene_node.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -192,9 +201,6 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="managed_object.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="game_object.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="transform.cpp">
@@ -237,9 +243,6 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="test\utility.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="scene.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="test\type_id_test.cpp">
@@ -333,6 +336,21 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="dev\socket_stream_utility.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="node.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="entity_node.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="engine_system.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="system_phase.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="scene_node.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

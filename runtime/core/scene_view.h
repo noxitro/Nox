@@ -7,7 +7,7 @@
 
 namespace nox
 {
-	class Scene;
+	class SceneNode;
 
 	/// @brief		シーンビュー
 	/// @details	シーン情報とウィンドウを管理する
@@ -18,15 +18,15 @@ namespace nox
 		SceneView()noexcept;
 		~SceneView()override;
 
-		inline const nox::Scene* GetScene()const noexcept { return scene_; }
+		inline const nox::SceneNode* GetScene()const noexcept { return scene_; }
 		inline constexpr nox::os::Window& GetWindow() noexcept { return window_; }
 		inline constexpr const nox::os::Window& GetWindow()const noexcept { return window_; }
 
-		void SetScene(nox::Scene& scene) noexcept;
+		void SetScene(nox::SceneNode& scene) noexcept;
 
 		void MakeWindow(const nox::os::WindowSetupDesc& window_desc);
 	private:
-		nox::Scene* scene_;
+		nox::SceneNode* scene_;
 		nox::os::Window window_;
 	};
 }

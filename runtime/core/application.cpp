@@ -8,16 +8,19 @@
 
 #include	"module_entry.h"
 #include	"scene_view.h"
+#include	"engine_system.h"
 
-namespace
+namespace nox
 {
-	inline	void HookException(nox::uint32 code, ::_EXCEPTION_POINTERS* const exception_ptr)
+	namespace
 	{
+		inline	void HookException(nox::uint32 code, ::_EXCEPTION_POINTERS* const exception_ptr)
+		{
+		}
 	}
 }
 
 nox::Application::Application()noexcept :
-	module_entry_bitset_{},
 	enabled_vsync_(true),
 	target_frame_rate_(60),
 	kill_(false)
@@ -26,18 +29,133 @@ nox::Application::Application()noexcept :
 
 nox::Application::~Application()
 {
+
 }
 
-void	nox::Application::Init()
+inline	void	nox::Application::Init()
 {
+	RegisterEngineSystem(*this);
+
 	//	モジュールエントリクラス群を収集
 	nox::reflection::ForeachDerivedClassInfoList(nox::reflection::Typeof<nox::ModuleEntry>(),
 		[this](const nox::reflection::ClassInfo& class_info) {
 
-			nox::ModuleEntry* module_entry = static_cast<nox::ModuleEntry*>(class_info.GetType().CreateObject());
+			nox::ModuleEntry*const module_entry = static_cast<nox::ModuleEntry*>(class_info.GetType().CreateObject());
 			module_entry_list_.emplace_back(*module_entry);
 		});
 
+	nox::FixedVector<nox::EngineSystem*, 128> engine_system_list;
+	{
+		nox::FixedPmrArena<sizeof(nox::EngineSystem*) * 32> engine_system_dest_buffer_arena;
+		auto dest_buffer = engine_system_dest_buffer_arena.MakeVector<nox::EngineSystem*>();
+
+		for (const nox::ModuleEntry& entry : module_entry_list_)
+		{
+			entry.CreateEngineSystems(dest_buffer);
+
+			for (nox::EngineSystem* engine_system : dest_buffer)
+			{
+				const nox::reflection::Type& type = engine_system->GetType();
+				if (engine_system_map_.contains(&type) == true)
+				{
+					NOX_ASSERT(false, u8"");
+					continue;
+				}
+
+				RegisterEngineSystem(*engine_system);
+				engine_system_list.PushBack(engine_system);
+			}
+			dest_buffer.clear();
+		}
+	}
+
+	//	フェーズ実行ノード構築
+	BuildExecuteNodeList(engine_system_list);
+}
+
+void nox::Application::BuildExecuteNodeList(std::span<nox::EngineSystem*> system_list)
+{
+	struct Node
+	{
+		std::reference_wrapper<nox::EngineSystem> instance;
+		std::reference_wrapper<const nox::EngineSystem::SystemPhase> phase;
+		std::span<const std::reference_wrapper<const nox::EngineSystem::SystemPhase>> dependencies;
+	};
+
+	for (nox::uint8 phase_index = 0; phase_index < nox::util::ToUnderlying(nox::SystemPhaseType::_Max); ++phase_index)
+	{
+		const auto current_phase_type = static_cast<nox::SystemPhaseType>(phase_index);
+
+		//	当該フェーズタイプのノードを収集
+		nox::Vector<Node> nodes;
+		for (nox::EngineSystem* system : system_list)
+		{
+			for (const nox::EngineSystem::PhaseRegister& reg : system->GetPhaseRegisterList())
+			{
+				if (reg.GetPhase().type != current_phase_type)
+				{
+					continue;
+				}
+				nodes.push_back(Node{
+					*system,
+					reg.GetPhase(),
+					reg.GetDependencies()
+					});
+			}
+		}
+
+		if (nodes.empty())
+		{
+			continue;
+		}
+
+		//	依存先（SystemPhase*）→ ノードインデックスのマップ
+		nox::UnorderedMap<const nox::EngineSystem::SystemPhase*, nox::uint32> phase_to_index;
+		phase_to_index.reserve(nodes.size());
+		for (nox::uint32 i = 0; i < nodes.size(); ++i)
+		{
+			phase_to_index.emplace(&nodes[i].phase.get(), i);
+		}
+
+		auto& dest = system_phase_table_[phase_index];
+		dest.reserve(nodes.size());
+
+		//	0=未訪問, 1=訪問中, 2=確定
+		nox::Vector<nox::uint8> states(nodes.size(), 0);
+		nox::Vector<nox::uint32> layer_indices(nodes.size(), 0);
+
+		auto visit = [&](nox::uint32 idx, auto& self) -> void {
+			if (states[idx] == 2)
+			{
+				return;
+			}
+			if (states[idx] == 1)
+			{
+				NOX_ASSERT(false, u8"Phase依存に循環があります: {0}", nodes[idx].phase.get().name);
+				return;
+			}
+			states[idx] = 1;
+			nox::uint32 max_dep_layer = 0;
+			for (const std::reference_wrapper<const nox::EngineSystem::SystemPhase>& dep_ref : nodes[idx].dependencies)
+			{
+				auto it = phase_to_index.find(&dep_ref.get());
+				if (it == phase_to_index.end())
+				{
+					continue;
+				}
+				self(it->second, self);
+				max_dep_layer = std::max(max_dep_layer, layer_indices[it->second] + 1);
+			}
+			states[idx] = 2;
+			layer_indices[idx] = max_dep_layer;
+			dest.push_back(ExecuteNode{ nodes[idx].instance, nodes[idx].phase, max_dep_layer });
+			};
+
+		for (nox::uint32 i = 0; i < nodes.size(); ++i)
+		{
+			visit(i, visit);
+		}
+	}
 }
 
 void	nox::Application::Run()
@@ -49,15 +167,8 @@ void	nox::Application::Run()
 	game_thread.SetThreadName(u"Game");
 	game_thread.Dispatch([this]() {
 
-		for (const ModuleEntryInfo& entry_info : module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Init)])
-		{
-			entry_info.func(*entry_info.entry);
-		}
-
-		for (const ModuleEntryInfo& entry_info : module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Start)])
-		{
-			entry_info.func(*entry_info.entry);
-		}
+		ExecutePhase(nox::SystemPhaseType::Init);
+		ExecutePhase(nox::SystemPhaseType::Start);
 
 		while (!this->kill_)
 		{
@@ -71,9 +182,11 @@ void	nox::Application::Run()
 				break;
 			}
 		}
+
+		ExecutePhase(nox::SystemPhaseType::Terminate);
 		});
 
-	
+
 	while (nox::os::Update())
 	{
 		//	...
@@ -84,22 +197,7 @@ void	nox::Application::Run()
 
 	game_thread.Wait();
 
-	for (const ModuleEntryInfo& entry_info : module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Terminal)])
-	{
-		entry_info.func(*entry_info.entry);
-	}
-
-	for (const ModuleEntryInfo& entry_info : module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Finalize)])
-	{
-		entry_info.func(*entry_info.entry);
-	}
-
 	Exit();
-}
-
-void	nox::Application::InvokeModuleEntry(const UpdateCategory category)
-{
-
 }
 
 void nox::Application::SetVSync(bool flag)noexcept
@@ -107,7 +205,7 @@ void nox::Application::SetVSync(bool flag)noexcept
 	enabled_vsync_ = flag;
 }
 
-void	nox::Application::Update()
+inline	void	nox::Application::Update()
 {
 	elapsed_milli_seconds_ = stop_watch_.ElapsedMilliseconds();
 	if (enabled_vsync_)
@@ -119,11 +217,7 @@ void	nox::Application::Update()
 		}
 	}
 
-	for (const ModuleEntryInfo& entry_info : module_entry_info_list_table_[nox::util::ToUnderlying(UpdateCategory::Update)])
-	{
-		entry_info.func(*entry_info.entry);
-	}
-
+	ExecutePhase(nox::SystemPhaseType::Update);
 	++frame_counter_;
 
 	//	次のフレーム更新時間
@@ -132,9 +226,27 @@ void	nox::Application::Update()
 	stop_watch_.Restart();
 }
 
-void	nox::Application::Exit()
+inline	void	nox::Application::Exit()
 {
 	kill_ = true;
+
+	for (const auto& [type, system] : engine_system_map_)
+	{
+		if (*type == GetType())
+		{
+			continue;
+		}
+
+		delete system;
+	}
+
+	engine_system_map_.clear();
+	for (auto& layer : system_phase_table_)
+	{
+		layer.clear();
+		layer.shrink_to_fit();
+	}
+
 	for (nox::uint32 i = 0; i < module_entry_list_.size(); ++i)
 	{
 		nox::ModuleEntry& entry = module_entry_list_[i];
@@ -145,38 +257,49 @@ void	nox::Application::Exit()
 	module_entry_list_.shrink_to_fit();
 }
 
-inline constexpr nox::Application::UpdateCategory	nox::Application::ToUpdateCategory(nox::ModuleEntryCategory category)noexcept
+nox::EngineSystem* nox::Application::FindSystem(const nox::reflection::Type& type)const noexcept
 {
-	if (category < nox::ModuleEntryCategory::_Setup)
+	auto it = engine_system_map_.find(&type);
+	if (it == engine_system_map_.end())
 	{
-		return UpdateCategory::Init;
+		return nullptr;
 	}
-	if (category < nox::ModuleEntryCategory::_Start)
-	{
-		return UpdateCategory::Setup;
-	}
-	if (category < nox::ModuleEntryCategory::_Update)
-	{
-		return UpdateCategory::Start;
-	}
-	if (category < nox::ModuleEntryCategory::_Terminal)
-	{
-		return UpdateCategory::Update;
-	}
-	if (category < nox::ModuleEntryCategory::_Finalize)
-	{
-		return UpdateCategory::Terminal;
-	}
-	return UpdateCategory::Finalize;
+	return it->second;
 }
 
-void	nox::Application::RegisterModuleEntry(void(*func)(nox::ModuleEntry&), nox::ModuleEntry& entry, const nox::ModuleEntryCategory type)
+nox::EngineSystem& nox::Application::GetSystem(const nox::reflection::Type& type)const
 {
-	nox::Vector<ModuleEntryInfo>& vector = module_entry_info_list_table_[nox::util::ToUnderlying(ToUpdateCategory(type))];
-	vector.emplace_back(ModuleEntryInfo{ .priority = type, .func = func, .entry = &entry});
+	auto* const system = FindSystem(type);
+	if (system == nullptr)
+	{
+		NOX_ASSERT(false, u8"システムが見つかりませんでした: {0}", type.GetTypeName());
+		throw std::runtime_error("System not found");
+	}
+	return *system;
+}
 
-	//	重複チェック
+void nox::Application::ExecutePhase(const nox::SystemPhaseType phase_type)
+{
+	const nox::Vector<ExecuteNode>& layers = system_phase_table_[nox::util::ToUnderlying(phase_type)];
+	for (const ExecuteNode& layer : layers)
+	{
+		std::invoke(layer.phase.get().func, &layer.instance.get(), *this);
+	}
+}
 
-	NOX_ASSERT(module_entry_bitset_.test(nox::util::ToUnderlying(type)) == false, u"重複エントリ:{0}", (int)type);
-	module_entry_bitset_.set(nox::util::ToUnderlying(type));
+void nox::Application::RegisterEngineSystem(nox::EngineSystem& engine_system)
+{
+	const nox::reflection::Type& type = engine_system.GetType();
+	if (engine_system_map_.contains(&type) == true)
+	{
+		NOX_ASSERT(false, u8"登録済み: {0}", type.GetTypeName());
+		return;
+	}
+
+	engine_system_map_.emplace(&type, &engine_system);
+}
+
+std::span<const nox::EngineSystem::PhaseRegister> nox::Application::GetPhaseRegisterList()const noexcept
+{
+	return {};
 }

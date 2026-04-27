@@ -5,13 +5,14 @@
 #pragma once
 #if NOX_DEVELOP
 #include	"net/server.h"
-#include	"../object.h"
+#include	"../engine_system.h"
 
 #include	"socket_stream_writer.h"
 #include	"socket_stream_reader.h"
 
 namespace nox
 {
+	class Application;
 }
 
 namespace nox::dev::editor_remote
@@ -30,28 +31,30 @@ namespace nox::dev::editor_remote
 		TwoWay
 	};
 
-	class EditorRemoteServer : public nox::dev::net::Server, public nox::ISingleton<EditorRemoteServer>
+	class EditorRemoteServer : public nox::dev::net::Server
 	{
 		NOX_DECLARE_OBJECT(nox::dev::editor_remote::EditorRemoteServer, nox::dev::net::Server);
+		friend class EditorRemoteServerSystem;
 	public:
 		EditorRemoteServer();
 		~EditorRemoteServer()override;
 
 		void	SendQuery(nox::dev::editor_remote::Query& query, std::function<void(const nox::dev::editor_remote::Response&)> callback = nullptr);
 		void	SendBuffer(std::span<const nox::uint8> buffer);
-
-		/// @brief main threadから呼び出される更新処理
-		void	Update();
-
+		
 		void	RegisterRemoteInstance(nox::Object& object, nox::int64 instance_id = 0);
 
 		nox::int64 FindRemoteInstanceId(const nox::Object& object)const noexcept;
 		nox::Object* FindRemoteInstance(nox::int64 instance_id)const noexcept;
 	private:
+		/// @brief main threadから呼び出される更新処理
+		void	Start(nox::Application& application);
+		void	Update(nox::Application& application);
+
 		void	OnConnected(const nox::dev::net::ConnectionContext& context)override;
 		void	OnDisconnected(const nox::dev::net::ConnectionContext& context)override;
-		void UpdateReceive();
-		void OnReceive();
+		void UpdateReceive(nox::Application& application);
+		void OnReceive(nox::Application& application);
 	private:
 		nox::uint32 query_id_counter_;
 		nox::int64 instance_id_counter_;
@@ -70,6 +73,49 @@ namespace nox::dev::editor_remote
 
 		/// @brief リモートインスタンスIDを格納する辞書。Objectからint64へのマッピングを保持します。
 		nox::UnorderedMap<const nox::Object*, nox::int64> remote_instance_id_dict_;
+	};
+
+	/// @brief 一時的なEditorRemoteServerのラッパー　EngineSystemとして登録するためのクラス
+	///		@details 将来的にはEditorRemoteServer自体をEngineSystemとして実装する
+	class EditorRemoteServerSystem : public nox::EngineSystem
+	{
+		NOX_DECLARE_OBJECT(nox::dev::editor_remote::EditorRemoteServerSystem, nox::EngineSystem);
+	public:
+		EditorRemoteServerSystem()noexcept :
+			server_(new EditorRemoteServer()) {
+		}
+		
+		~EditorRemoteServerSystem()override {
+			delete server_;
+		}
+
+		inline EditorRemoteServer& GetServer()const noexcept { return *this->server_; }
+
+		std::span<const nox::EngineSystem::PhaseRegister> GetPhaseRegisterList()const noexcept override;
+	private:
+		inline void Initialize(nox::Application& application)
+		{
+			server_->Start(application);
+		}
+
+		inline void Update(nox::Application& application)
+		{
+			this->server_->Update(application);
+		}
+
+	public:
+		static constexpr SystemPhaseInit k_phase_init{
+			&EditorRemoteServerSystem::Initialize,
+			NOX_U8_NAMEOF_FUNCTION(&EditorRemoteServerSystem::Initialize)
+		};
+
+		static constexpr SystemPhaseUpdate k_phase_update{
+			&EditorRemoteServerSystem::Update,
+			NOX_U8_NAMEOF_FUNCTION(&EditorRemoteServerSystem::Update)
+		};
+
+	private:
+		EditorRemoteServer* server_;
 	};
 }
 #endif // NOX_DEVELOP

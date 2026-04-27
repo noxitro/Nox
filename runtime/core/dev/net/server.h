@@ -5,6 +5,11 @@
 #pragma once
 #include	"entity.h"
 
+namespace nox
+{
+	class Application;
+}
+
 namespace nox::dev::net
 {
 	class Server : public nox::dev::net::Entity
@@ -48,7 +53,7 @@ namespace nox::dev::net
 		void	Connection(::fd_set& fds);
 
 		/// @brief SocketSchedulerから呼び出される更新処理
-		void Update();
+		void Update(nox::Application& application);
 
 		/// @brief clientを切断
 		/// @param socket 切断するclientのソケット

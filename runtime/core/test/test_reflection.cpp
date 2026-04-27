@@ -5,7 +5,7 @@
 #include	"pch.h"
 #include	"test_reflection.h"
 
-#include	"game_object.h"
+#include	"entity_node.h"
 #include	"test_behavior.h"
 #include	"transform.h"
 

@@ -15,10 +15,7 @@ namespace nox
 		CoreEntry();
 		~CoreEntry()override;
 
-	private:
-		void	Init();
-		void	Finalize();
-		void	SocketUpdate();
-		void	GCUpdate();
+		void CreateEngineSystems(nox::PmrVector<nox::EngineSystem*>& out)const override;
+	public:
 	};
 }

@@ -5,7 +5,7 @@
 #include	"pch.h"
 #include	"scene_manager.h"
 
-#include	"scene.h"
+#include	"scene_node.h"
 #include	"scene_view.h"
 
 nox::SceneManager::SceneManager()noexcept:
@@ -20,9 +20,9 @@ nox::SceneManager::~SceneManager()
 
 }
 
-void	nox::SceneManager::Initialize(nox::U8StringView main_scene_path)
+void	nox::SceneManager::Initialize(nox::Application& application)
 {
-	main_scene_ = new Scene();
+	main_scene_ = new SceneNode();
 
 	//	windowを生成
 	{
@@ -38,13 +38,23 @@ void	nox::SceneManager::Initialize(nox::U8StringView main_scene_path)
 	}
 }
 
-void	nox::SceneManager::Update()
+void	nox::SceneManager::Update(nox::Application& application)
 {
 
 }
 
-void	nox::SceneManager::Finalize()
+void	nox::SceneManager::Finalize(nox::Application& application)
 {
 	nox::util::SafeDelete(main_scene_);
 	nox::util::SafeDelete(main_scene_view_);
+}
+
+std::span<const nox::EngineSystem::PhaseRegister> nox::SceneManager::GetPhaseRegisterList()const noexcept
+{
+	static constexpr auto table = {
+		PhaseRegister(k_phase_init),
+		PhaseRegister(k_phase_update),
+		PhaseRegister(k_phase_terminal)
+	};
+	return table;
 }

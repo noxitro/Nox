@@ -6,6 +6,11 @@
 #if NOX_DEVELOP
 #include	"editor_remote_entity.h"
 
+namespace nox
+{
+	class Application;
+}
+
 namespace nox::dev::editor_remote
 {
 	class Response;
@@ -17,9 +22,10 @@ namespace nox::dev::editor_remote
 		inline constexpr ~Query() noexcept override {}
 
 		/// @brief Queryを受信した時に実行される
+		/// @param application アプリケーションインスタンス
 		/// @param buffer Responseを作成するためのバッファ　配置newを使用してResponseを作成すること
 		/// @return 
-		inline constexpr virtual nox::PlacementObject<Response> Execute([[maybe_unused]] std::span<nox::uint8> buffer)const { return nullptr; }
+		inline constexpr virtual nox::PlacementObject<Response> Execute(nox::Application&, [[maybe_unused]] std::span<nox::uint8> buffer)const { return nullptr; }
 	};
 }
 #endif // NOX_DEVELOP

@@ -3,11 +3,10 @@
 ///	@file	application.h
 ///	@brief	application
 #pragma once
-#include	"object.h"
 #include	"attribute_common.h"
 #include	"attribute_dev_common.h"
 
-#include	"module_entry_category.h"
+#include	"engine_system.h"
 
 namespace nox
 {
@@ -17,35 +16,22 @@ namespace nox
 	/// @brief Coreの管理クラス
 	class 
 		NOX_ATTR_TYPE(::nox::attr::dev::Description(u8"Application"), nox::attr::dev::DisplayName(u8"アプリケーション"))
-		Application : public nox::Object, public nox::ISingleton<Application>
+		Application : public nox::EngineSystem
 	{
 		NOX_DECLARE_OBJECT(Application, nox::Object);
 	private:
-		enum class UpdateCategory : uint8
+		/// @brief 実行ノード
+		struct ExecuteNode
 		{
-			Init,
-			Setup,
-			Start,
-			Update,
-			Terminal,
-			Finalize,
-			_Max
+			std::reference_wrapper<nox::EngineSystem> instance;
+			std::reference_wrapper<const nox::EngineSystem::SystemPhase> phase;
+			nox::uint32 layer_index;	///< 小さいほど先に実行。同一レイヤーは並列実行可能
 		};
-
-		struct ModuleEntryInfo
-		{
-			nox::ModuleEntryCategory priority;
-			void(*func)(nox::ModuleEntry&);
-			nox::not_null<nox::ModuleEntry*> entry;
-		};
-
 	public:
 		Application()noexcept;
 		~Application()override;
 		
 		void	Run();
-
-		void	RegisterModuleEntry(void(*func)(nox::ModuleEntry&), nox::ModuleEntry& entry,const nox::ModuleEntryCategory type);
 
 		inline	constexpr nox::uint32 GetFrameCount()const noexcept { return frame_counter_; }
 		inline	constexpr nox::uint16 GetTargetFrameRate()const noexcept { return target_frame_rate_; }
@@ -53,12 +39,33 @@ namespace nox
 		void SetVSync(bool flag)noexcept;
 
 		inline	constexpr bool IsKill()const noexcept { return kill_; }
+
+		nox::EngineSystem* FindSystem(const nox::reflection::Type& type)const noexcept;
+
+		template<std::derived_from<nox::EngineSystem> T>
+		inline T* FindSystem()const noexcept
+		{
+			return static_cast<T*>(FindSystem(nox::reflection::Typeof<T>()));
+		}
+
+		nox::EngineSystem& GetSystem(const nox::reflection::Type& type)const;
+
+		template<std::derived_from<nox::EngineSystem> T>
+		inline T& GetSystem()const
+		{
+			return static_cast<T&>(GetSystem(nox::reflection::Typeof<T>()));
+		}
+
 	private:
-		inline	void	Init();
-		inline	void	Update();
-		inline	void	Exit();
-		static constexpr UpdateCategory	ToUpdateCategory(nox::ModuleEntryCategory category)noexcept;
-		inline	void	InvokeModuleEntry(const UpdateCategory category);
+		void	Init();
+		void	Update();
+		void	Exit();
+
+		void BuildExecuteNodeList(std::span<nox::EngineSystem*> system_list);
+		void ExecutePhase(const nox::SystemPhaseType phase_type);
+		void RegisterEngineSystem(nox::EngineSystem& engine_system);
+
+		std::span<const nox::EngineSystem::PhaseRegister> GetPhaseRegisterList()const noexcept override;
 	private:
 		bool kill_;
 		nox::uint16 target_frame_rate_;
@@ -69,11 +76,9 @@ namespace nox
 		nox::float_t elapsed_milli_seconds_;
 		nox::float_t next_elapsed_milli_seconds_;
 
-		std::array<nox::Vector<ModuleEntryInfo>, nox::util::ToUnderlying(UpdateCategory::_Max)> module_entry_info_list_table_;
-
 		nox::Vector<std::reference_wrapper<nox::ModuleEntry>> module_entry_list_;
 
-		/// @brief モジュールエントリ重複チェック用ビットセット
-		std::bitset<nox::util::ToUnderlying(nox::ModuleEntryCategory::_Max)> module_entry_bitset_;
+		nox::UnorderedMap<const nox::reflection::Type*, nox::EngineSystem*> engine_system_map_;
+		std::array<nox::Vector<ExecuteNode>, nox::util::ToUnderlying(nox::SystemPhaseType::_Max)> system_phase_table_;
 	};
 }

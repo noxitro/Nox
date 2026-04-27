@@ -10,12 +10,29 @@
 #include	"application.h"
 #include	"dev_net_log_id.h"
 
+namespace nox
+{
+
+}
+
 namespace nox::dev::net
 {
 	namespace
 	{
-		
 	}
+
+
+}
+
+std::span<const nox::EngineSystem::PhaseRegister> nox::dev::net::SocketScheduler::GetPhaseRegisterList()const noexcept
+{
+	static constexpr auto table = std::array{
+		PhaseRegister(k_phase_init),
+		PhaseRegister(k_phase_socket_update),
+		PhaseRegister(k_phase_terminate)
+	};
+
+	return table;
 }
 
 nox::dev::net::SocketScheduler::SocketScheduler()
@@ -27,7 +44,7 @@ nox::dev::net::SocketScheduler::~SocketScheduler()
 {
 }
 
-void	nox::dev::net::SocketScheduler::Initialize()
+void	nox::dev::net::SocketScheduler::Initialize(nox::Application& application)
 {
 #if NOX_WINDOWS
 	::WSADATA wsaData;
@@ -38,12 +55,12 @@ void	nox::dev::net::SocketScheduler::Initialize()
 
 	thread_.SetThreadName(u"SocketScheduler");
 	thread_.SetThreadPriority(nox::os::ThreadPriority::Lowest);
-	thread_.Dispatch([this]() {
-		this->UpdateTask();
+	thread_.Dispatch([this, &application]() {
+		this->UpdateTask(application);
 		});
 }
 
-void	nox::dev::net::SocketScheduler::Finalize()
+void	nox::dev::net::SocketScheduler::Finalize(nox::Application& application)
 {
 #if NOX_WINDOWS
 	const nox::int32 error_code = ::WSACleanup();
@@ -52,9 +69,9 @@ void	nox::dev::net::SocketScheduler::Finalize()
 
 }
 
-void	nox::dev::net::SocketScheduler::UpdateTask()
+void	nox::dev::net::SocketScheduler::UpdateTask(nox::Application& application)
 {
-	while (nox::Application::Instance().IsKill()==false)
+	while (application.IsKill()==false)
 	{
 		//	保留リストから本リストへ移動
 		if (pending_server_list_.empty() == false)
@@ -134,7 +151,7 @@ void	nox::dev::net::SocketScheduler::UpdateTask()
 				}
 
 				//	受け付け処理
-				server.Update();
+				server.Update(application);
 			}
 		}
 	}

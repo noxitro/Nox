@@ -8,15 +8,15 @@
 
 namespace nox
 {
-	class GameObject;
+	class EntityNode;
 	class Component : public nox::ManagedObject
 	{
 		NOX_DECLARE_MANAGED_OBJECT(Component, nox::ManagedObject);
 	public:
-		inline class nox::GameObject& GameObject()noexcept { return nox::util::Deref(owner_); }
-		inline const class nox::GameObject& GameObject()const noexcept { return nox::util::Deref(owner_); }
+		inline class nox::EntityNode& EntityNode()noexcept { return nox::util::Deref(owner_); }
+		inline const class nox::EntityNode& EntityNode()const noexcept { return nox::util::Deref(owner_); }
 
-		void	SetOwner(class nox::GameObject& owner)noexcept;
+		void	SetOwner(class nox::EntityNode& owner)noexcept;
 		virtual	void	Loaded() { return; }
 		virtual void	UnLoaded() { return; }
 
@@ -32,7 +32,7 @@ namespace nox
 		{}
 
 	private:
-		class nox::GameObject* owner_;
+		class nox::EntityNode* owner_;
 		nox::Component* chain_;
 	};
 }

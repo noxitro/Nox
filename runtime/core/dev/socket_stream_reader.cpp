@@ -123,7 +123,6 @@ nox::StlU8String nox::dev::editor_remote::SocketStreamReader::ReadString()
 
 void nox::dev::editor_remote::SocketStreamReader::Read(nox::IntrusivePtr<nox::ManagedObject>& value)
 {
-	const nox::dev::editor_remote::EditorRemoteServer& server = nox::dev::editor_remote::EditorRemoteServer::Instance();
 	//	remote instance idを読み取る
 	nox::int64 remote_instance_id;
 	this->Read(remote_instance_id);
@@ -131,7 +130,7 @@ void nox::dev::editor_remote::SocketStreamReader::Read(nox::IntrusivePtr<nox::Ma
 	if (remote_instance_id != 0)
 	{
 		//	remote instance idが0でないなら、リモートインスタンスを探して返す
-		nox::Object* remote_instance = server.FindRemoteInstance(remote_instance_id);
+		nox::Object* remote_instance = server_.FindRemoteInstance(remote_instance_id);
 		NOX_ASSERT(remote_instance != nullptr, u"リモートインスタンスが見つかりませんでした remote_instance_id:{0}", remote_instance_id);
 		nox::ManagedObject* obj = nox::reflection::AsCast<nox::ManagedObject*>(remote_instance);
 		NOX_ASSERT(obj != nullptr, u"リモートインスタンスはManagedObjectを継承している必要があります remote_instance_id:{0}", remote_instance_id);

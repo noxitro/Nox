@@ -21,3 +21,8 @@ nox::Resource* nox::ResourceManager::GetResourceImpl(std::u8string_view path)
 
 	return nullptr;
 }
+
+std::span<const nox::EngineSystem::PhaseRegister> nox::ResourceManager::GetPhaseRegisterList()const noexcept
+{
+	return {};
+}

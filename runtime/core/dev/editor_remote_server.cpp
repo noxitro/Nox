@@ -11,6 +11,7 @@
 #include	"net/dev_net_api.h"
 #include	"net/dev_net_log_id.h"
 #include	"../application.h"
+#include	"net/socket_scheduler.h"
 
 namespace nox::dev::editor_remote
 {
@@ -25,10 +26,7 @@ nox::dev::editor_remote::EditorRemoteServer::EditorRemoteServer():
 	writer_(*this),
 	reader_(*this)
 {
-	this->Startup(InitializeContext{
-		.max_connection = 1,
-		.port = 86,
-		});
+	
 }
 
 nox::dev::editor_remote::EditorRemoteServer::~EditorRemoteServer()
@@ -59,15 +57,23 @@ void	nox::dev::editor_remote::EditorRemoteServer::SendBuffer(std::span<const nox
 	}
 }
 
-void	nox::dev::editor_remote::EditorRemoteServer::Update()
+void	nox::dev::editor_remote::EditorRemoteServer::Start(nox::Application& application)
+{
+	this->Startup(InitializeContext{
+		.max_connection = 1,
+		.port = 86,
+		});
+}
+
+void	nox::dev::editor_remote::EditorRemoteServer::Update(nox::Application& application)
 {
 	if (main_client_.socket != nox::dev::net::k_raw_invalid_socket)
 	{
-		UpdateReceive();
+		UpdateReceive(application);
 	}
 }
 
-void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive()
+void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive(nox::Application& application)
 {
 	if (reader_.GetReceivedSize() <= 0)
 	{
@@ -108,7 +114,7 @@ void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive()
 
 			//	レスポンス生成
 			{
-				nox::PlacementObject<nox::dev::editor_remote::Response> response = query.Execute(receive_buffer);
+				nox::PlacementObject<nox::dev::editor_remote::Response> response = query.Execute(application, receive_buffer);
 				if (response != nullptr)
 				{
 					response->Serialize(query.GetId(), writer_);
@@ -138,7 +144,7 @@ void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive()
 	}
 }
 
-void nox::dev::editor_remote::EditorRemoteServer::OnReceive()
+void nox::dev::editor_remote::EditorRemoteServer::OnReceive(nox::Application& application)
 {
 	//	受信バッファ 未初期化でOK
 	std::array<nox::uint8, 2048> receive_buffer;
@@ -146,9 +152,9 @@ void nox::dev::editor_remote::EditorRemoteServer::OnReceive()
 	nox::int32 received_size = 0;	
 
 	//	受信できるだけする
-	while (nox::Application::Instance().IsKill() == false)
+	while (application.IsKill() == false)
 	{
-		if (nox::Application::Instance().IsKill())
+		if (application.IsKill())
 		{
 			return;
 		}
@@ -224,5 +230,15 @@ nox::Object* nox::dev::editor_remote::EditorRemoteServer::FindRemoteInstance(nox
 		return &it->second.get();
 	}
 	return nullptr;
+}
+
+std::span<const nox::EngineSystem::PhaseRegister> nox::dev::editor_remote::EditorRemoteServerSystem::GetPhaseRegisterList()const noexcept
+{
+	static constexpr auto table = std::to_array({
+		PhaseRegister(k_phase_init, nox::dev::net::SocketScheduler::k_phase_init),
+		PhaseRegister(k_phase_update, nox::dev::net::SocketScheduler::k_phase_socket_update)
+	});
+
+	return table;
 }
 #endif // NOX_DEVELOP

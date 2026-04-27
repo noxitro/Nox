@@ -35,11 +35,28 @@ namespace nox
 			other.length_ = 0;
 		}
 
-		template <class... _Valty>
-		inline void EmplaceBack(_Valty&&... value)
+		inline constexpr FixedVector& operator=(FixedVector&& other)noexcept
 		{
-			NOX_ASSERT_KERNEL(length_ < Size, u"FixedVectorのサイズがオーバーフローしました");
-		//	storage_[length_++] = std::forward<_Valty>(value);
+			if (this != &other)
+			{
+				storage_ = std::move(other.storage_);
+				length_ = other.length_;
+				other.storage_ = {};
+				other.length_ = 0;
+			}
+			return *this;
+		}
+
+		inline constexpr void PushBack(const T& value)
+		{
+			CheckOverflow();
+			storage_[length_++] = value;
+		}
+
+		inline constexpr void PushBack(T&& value)
+		{
+			CheckOverflow();
+			storage_[length_++] = std::move(value);
 		}
 
 		inline void Assign(std::span<T> v)
@@ -71,6 +88,10 @@ namespace nox
 			return result;
 		}
 
+		inline void CheckOverflow()const
+		{
+			NOX_ASSERT_KERNEL(length_ <= Size, u"FixedVectorのサイズがオーバーフローしました");
+		}
 	private:
 		std::array<T, _Size> storage_;
 		nox::uint32 length_;

@@ -73,7 +73,7 @@ bool nox::dev::net::Server::Startup(const InitializeContext& context)
 	}
 
 	is_startup_ = true;
-	nox::dev::net::SocketScheduler::Instance().RegisterEntity(*this);
+	//nox::dev::net::SocketScheduler::Instance().RegisterEntity(*this);
 	return true;
 }
 
@@ -283,7 +283,7 @@ void	nox::dev::net::Server::Connection(::fd_set& fds)
 	}
 }
 
-void nox::dev::net::Server::Update()
+void nox::dev::net::Server::Update(nox::Application& application)
 {
 	if (IsStartup() == false)
 	{
@@ -336,7 +336,7 @@ void nox::dev::net::Server::Update()
 			continue;
 		}
 
-		OnReceive();
+		OnReceive(application);
 		++it;
 	}
 }
@@ -358,7 +358,7 @@ void nox::dev::net::Server::Shutdown()
 	nox::dev::net::CloseSocket(socket_);
 	socket_ = nox::dev::net::k_raw_invalid_socket;
 
-	nox::dev::net::SocketScheduler::Instance().UnregisterEntity(*this);
+	//nox::dev::net::SocketScheduler::Instance().UnregisterEntity(*this);
 }
 
 void nox::dev::net::Server::Connected(const nox::dev::net::ConnectionContext& context)

@@ -3,7 +3,7 @@
 #include	"pch.h"
 #include	"log.g.h"
 
-nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::SendLog::Execute(std::span<nox::uint8> storage)const
+nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::SendLog::Execute(nox::Application&, std::span<nox::uint8> storage)const
 {
 	return nullptr;
 }

@@ -138,6 +138,10 @@
     </ClInclude>
     <ClInclude Include="math\matrix3d.h" />
     <ClInclude Include="math\matrix4d.h" />
+    <ClInclude Include="math\position.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="memory\heap_memory_allocator.h">
       <SubType>
       </SubType>
@@ -459,6 +463,10 @@
     </ClCompile>
     <ClCompile Include="math\matrix3d.cpp" />
     <ClCompile Include="math\matrix4d.cpp" />
+    <ClCompile Include="math\position.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="memory\heap_memory_allocator.cpp">
       <SubType>
       </SubType>

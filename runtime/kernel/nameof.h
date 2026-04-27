@@ -5,19 +5,17 @@
 #pragma once
 #include	"type_traits/type_name.h"
 
-namespace nox::detail
-{
-	template<class T>
-	inline constexpr bool IsVariable(T&& val)noexcept
-	{
-		return true;
-	}
-}
+#define NOX_U8_NAMEOF_TYPE(type) \
+	[]<typename = type>()constexpr noexcept -> decltype(auto) { \
+		return NOX_PP_CAT_I(u8, #type);\
+	}()
 
-///@brief	変数名を取得する
-#define	NOX_NAMEOF_VARIABLE(val) \
-	[]()constexpr noexcept{\
-		static_assert(::nox::detail::IsVariable(val));\
-		return #val;\
-	}();
-//end define
+#define NOX_U8_NAMEOF_FUNCTION(func) \
+	[]<typename T = decltype(func)>()constexpr noexcept -> decltype(auto) { \
+		return NOX_PP_CAT_I(u8, #func);\
+	}()
+
+#define NOX_U8_NAMEOF_VARIABLE(var) \
+	[]<typename T = decltype(var)>()constexpr noexcept -> decltype(auto) { \
+		return NOX_PP_CAT_I(u8, #var);\
+	}()

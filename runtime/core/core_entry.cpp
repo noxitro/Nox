@@ -16,52 +16,19 @@
 
 nox::CoreEntry::CoreEntry()
 {
-	Register<&nox::CoreEntry::Init>(ModuleEntryCategory::CoreInit);
-	Register<&nox::CoreEntry::GCUpdate>(ModuleEntryCategory::GCUpdate);
-	Register<&nox::CoreEntry::Finalize>(ModuleEntryCategory::CoreFinalize);
-	Register<&nox::CoreEntry::SocketUpdate>(ModuleEntryCategory::SocketUpdate);
 }
 
 nox::CoreEntry::~CoreEntry()
 {
 }
 
-void	nox::CoreEntry::Init()
+void nox::CoreEntry::CreateEngineSystems(nox::PmrVector<nox::EngineSystem*>& out)const
 {
-	nox::GarbageCollector::CreateInstance();
-	auto& scene_manager = nox::SceneManager::CreateInstance();
-	scene_manager.Initialize(u8"main_scene.scn.json");
+	out.emplace_back(new nox::SceneManager());
+	out.emplace_back(new nox::ResourceManager());
+	out.emplace_back(new nox::GarbageCollector());
 #if NOX_DEVELOP
-	nox::dev::net::SocketScheduler::CreateInstance();
-	nox::dev::net::SocketScheduler::Instance().Initialize();
-
-	nox::dev::editor_remote::EditorRemoteServer& editor_remote_server = nox::dev::editor_remote::EditorRemoteServer::CreateInstance();
+	out.emplace_back(new nox::dev::net::SocketScheduler());
+	out.emplace_back(new nox::dev::editor_remote::EditorRemoteServerSystem());
 #endif // NOX_DEVELOP
-}
-
-void	nox::CoreEntry::Finalize()
-{
-#if NOX_DEVELOP
-	nox::dev::editor_remote::EditorRemoteServer::DeleteInstance();
-	nox::dev::net::SocketScheduler::Instance().Finalize();
-	nox::dev::net::SocketScheduler::DeleteInstance();
-#endif // NOX_DEVELOP
-
-	nox::SceneManager::Instance().Finalize();
-	nox::SceneManager::DeleteInstance();
-	nox::GarbageCollector::Instance().FrameGC();
-	nox::GarbageCollector::DeleteInstance();
-}
-
-void	nox::CoreEntry::SocketUpdate()
-{
-#if NOX_DEVELOP
-	nox::dev::editor_remote::EditorRemoteServer::Instance().Update();
-#endif // NOX_DEVELOP
-
-}
-
-void	nox::CoreEntry::GCUpdate()
-{
-	nox::GarbageCollector::Instance().FrameGC();
 }

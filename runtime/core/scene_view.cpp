@@ -5,7 +5,7 @@
 #include	"pch.h"
 #include	"scene_view.h"
 
-#include	"scene.h"
+#include	"scene_node.h"
 
 nox::SceneView::SceneView()noexcept:
 	scene_(nullptr)
@@ -17,7 +17,7 @@ nox::SceneView::~SceneView()
 {
 }
 
-void nox::SceneView::SetScene(Scene& scene) noexcept
+void nox::SceneView::SetScene(SceneNode& scene) noexcept
 {
 	scene_ = &scene;
 }

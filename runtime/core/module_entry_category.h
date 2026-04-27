@@ -6,46 +6,16 @@
 
 namespace nox
 {
-	enum class ModulePhaseType : nox::uint8
+	enum class SystemPhaseType : nox::uint8
 	{
+		/// @brief 他のシステムに依存しない初期化処理
 		Init = 0,
-		Setup,
+		/// @brief 更新の前に一度だけ呼び出される処理
 		Start,
+		/// @brief 毎フレーム呼び出される処理
 		Update,
-		Terminal,
-		Finalize,
-		 /// @brief 最大値
-		_Max
-	};
-
-	/// @brief モジュールエントリカテゴリ
-	enum class ModuleEntryCategory : nox::uint8
-	{
-		//	init
-		_Init = 0,
-
-		CoreInit,
-
-		//	setup
-		_Setup,
-
-		//	start
-		_Start,
-
-		//	update
-		_Update,
-
-		SocketUpdate,
-		GCUpdate,
-
-		//	terminal
-		_Terminal,
-
-		//	finalize
-		_Finalize,
-		CoreFinalize,
-
-		/// @brief 最大値
+		/// @brief 終了処理
+		Terminate,
 		_Max
 	};
 }

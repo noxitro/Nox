@@ -35,7 +35,7 @@ void	nox::ManagedObject::ReleaseRef()
 	switch (ref_count)
 	{
 	case -1:
-		nox::GarbageCollector::Instance().Register(*this);
+		nox::GarbageCollector::Register(*this);
 		break;
 
 	case -2:
