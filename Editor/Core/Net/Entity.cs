@@ -107,9 +107,9 @@ namespace Core.Net
 					return 0;
 				}
 
-				// バッファサイズと Available の小さい方で受信
-				Nox.Util.Assert(available <= buffer.Length, "Available bytes exceed buffer size.");
-				int receivedSize = _Socket.Receive(buffer.Slice(0, available));
+              // バッファサイズと Available の小さい方で受信
+				int receiveSize = Math.Min(available, buffer.Length);
+				int receivedSize = _Socket.Receive(buffer.Slice(0, receiveSize));
 
 				if (receivedSize == 0)
 				{

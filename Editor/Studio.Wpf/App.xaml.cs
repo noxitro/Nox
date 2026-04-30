@@ -33,9 +33,39 @@ namespace Studio.Wpf
 			}
 		}
 
-		protected override void OnStartup(StartupEventArgs e)
+        private static Dictionary<string, string> ParseArguments(ReadOnlySpan<string> args)
+        {
+            Dictionary<string, string> result = new(StringComparer.OrdinalIgnoreCase);
+
+            foreach (string arg in args)
+            {
+                if (!arg.StartsWith("--", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                int separatorIndex = arg.IndexOf('=');
+                if (separatorIndex < 0)
+                {
+                    result[arg[2..]] = "true";
+                    continue;
+                }
+
+                string key = arg[2..separatorIndex];
+                string value = arg[(separatorIndex + 1)..].Trim('"');
+                result[key] = value;
+            }
+
+            return result;
+        }
+
+        protected override void OnStartup(StartupEventArgs e)
 		{
-			System.Threading.Tasks.TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+			var args = ParseArguments(e.Args);
+			string engineRootDir = args.TryGetValue("EngineRootDir", out string? engineRoot) ? engineRoot : ".";
+			engineRootDir = System.IO.Path.GetFullPath(engineRootDir);
+
+            System.Threading.Tasks.TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
 			Core.EntryManager.Instance.InvokeStart();
 
@@ -65,13 +95,16 @@ namespace Studio.Wpf
 
 		protected override void RegisterTypes(IContainerRegistry containerRegistry)
 		{
+			//	テーマサービス（シングルトン）
+			containerRegistry.RegisterSingleton<Studio.Wpf.Themes.IThemeService, Studio.Wpf.Themes.ThemeService>();
+
 			foreach(var entry in UIEntryList)
 			{
 				entry.RegisterTypes(containerRegistry);
 			}
 		}
 
-		[System.Runtime.Versioning.SupportedOSPlatform("windows10.0")]
+	//	[System.Runtime.Versioning.SupportedOSPlatform("windows10.0")]
 		private void OnUnobservedTaskException(object? sender, System.Threading.Tasks.UnobservedTaskExceptionEventArgs e)
 		{
 			

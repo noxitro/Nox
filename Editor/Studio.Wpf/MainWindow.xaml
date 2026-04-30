@@ -5,86 +5,84 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Studio.Wpf"
         xmlns:views="clr-namespace:Core.UI.Views;assembly=Core.UI"
-        xmlns:vm="clr-namespace:Studio.Wpf.ViewModels"
         xmlns:ad="clr-namespace:AvalonDock;assembly=AvalonDock"
         xmlns:adLayout="clr-namespace:AvalonDock.Layout;assembly=AvalonDock"
         mc:Ignorable="d"
         Title="Studio" Height="1080" Width="1920"
         >
 
-    <Window.DataContext>
-        <vm:MainWindowViewModel />
-    </Window.DataContext>
-    
- 
-    <Grid>
+    <Grid Background="#FF171A1F">
         <Grid.RowDefinitions>
             <!-- 上部タブ行 -->
-            <RowDefinition Height="32" />
+            <RowDefinition Height="36" />
 
-            <!-- 上部ツールバー行 -->
-            <RowDefinition Height="40"/>
-            
-            <!-- runtime 再生ボタン行 -->
-            <RowDefinition Height="40" />
+            <!-- 上部コマンドバー行 -->
+            <RowDefinition Height="64" />
 
             <!-- ドッキング領域 -->
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <!-- ====== 上部タブ ====== -->
-        <views:DocumentTabView Grid.Row="0" Height="32"/>
+        <views:DocumentTabView Grid.Row="0" />
 
         <!-- ====== Runtime コントロールバー ====== -->
-        <views:RuntimeControlView Grid.Row="2" />
+        <views:RuntimeControlView Grid.Row="1" />
 
         <!-- ====== ドッキング領域（AvalonDock） ====== -->
         <ad:DockingManager x:Name="DockManager"
-                           Grid.Row="3"
+                           Grid.Row="2"
+                           Theme="{Binding Theme.CurrentTheme}"
                            DocumentsSource="{Binding ToolViewModelList}"
                            AnchorablesSource="{Binding AssetViewModelList}"
                            >
             <ad:DockingManager.Resources>
                 <!-- 例: LayoutAnchorable のヘッダー色を変えるリソース -->
                 <SolidColorBrush x:Key="AnchorableHeaderBackground" Color="#FF2B2B2B" />
-                <Style TargetType="{x:Type adLayout:LayoutAnchorable}">
-                    <Setter Property="Title" Value="{Binding Title}" />
-                </Style>
             </ad:DockingManager.Resources>
 
-            <!-- 既存レイアウト -->
+            <!-- Unreal Engine 風レイアウト
+                 ┌────────────────────────────────┬──────────────┐
+                 │                                │  Outliner    │
+                 │           Viewport             ├──────────────┤
+                 │          (Runtime)             │  Details     │
+                 │                                │ (Inspector)  │
+                 ├────────────────────────────────┴──────────────┤
+                 │  Content Browser (Project) | Output Log       │
+                 └───────────────────────────────────────────────┘ -->
             <ad:DockingManager.Layout>
                 <adLayout:LayoutRoot>
                     <adLayout:LayoutPanel Orientation="Vertical">
+                        <!-- 上段: Viewport + 右サイド (Outliner / Details) -->
                         <adLayout:LayoutPanel Orientation="Horizontal">
-                            <adLayout:LayoutAnchorablePaneGroup DockWidth="250">
-                                <adLayout:LayoutAnchorablePane>
-                                    <adLayout:LayoutAnchorable Title="Project" CanHide="False" />
-                                    <adLayout:LayoutAnchorable Title="Hierarchy" />
-                                </adLayout:LayoutAnchorablePane>
-                            </adLayout:LayoutAnchorablePaneGroup>
-
+                            <!-- 中央: Viewport (Runtime) -->
                             <adLayout:LayoutDocumentPaneGroup>
                                 <adLayout:LayoutDocumentPane>
-                                    <adLayout:LayoutDocument Title="Runtime" CanClose="False" CanFloat="False">
+                                    <adLayout:LayoutDocument Title="Viewport" CanClose="False" CanFloat="False">
                                         <views:RuntimeView />
                                     </adLayout:LayoutDocument>
                                 </adLayout:LayoutDocumentPane>
                             </adLayout:LayoutDocumentPaneGroup>
 
-                            <adLayout:LayoutAnchorablePaneGroup DockWidth="300">
-                                <adLayout:LayoutAnchorablePane>
-                                    <adLayout:LayoutAnchorable Title="Inspector" />
-                                    <adLayout:LayoutAnchorable Title="Console" />
+                            <!-- 右側: 縦方向に Outliner / Details -->
+                            <adLayout:LayoutAnchorablePaneGroup Orientation="Vertical" DockWidth="340">
+                                <adLayout:LayoutAnchorablePane DockHeight="*">
+                                    <adLayout:LayoutAnchorable Title="Outliner" ContentId="Hierarchy" />
+                                </adLayout:LayoutAnchorablePane>
+                                <adLayout:LayoutAnchorablePane DockHeight="2*">
+                                    <adLayout:LayoutAnchorable Title="Details" ContentId="Inspector" />
                                 </adLayout:LayoutAnchorablePane>
                             </adLayout:LayoutAnchorablePaneGroup>
                         </adLayout:LayoutPanel>
 
-                        <adLayout:LayoutAnchorablePaneGroup DockHeight="200">
+                        <!-- 下段: Content Browser / Output Log をタブで集約 -->
+                        <adLayout:LayoutAnchorablePaneGroup DockHeight="260">
                             <adLayout:LayoutAnchorablePane>
-                                <adLayout:LayoutAnchorable Title="Log" CanHide="False" CanClose="False">
+                                <adLayout:LayoutAnchorable Title="Content Browser" ContentId="Project" CanHide="False" />
+                                <adLayout:LayoutAnchorable Title="Output Log" ContentId="Log" CanHide="False" CanClose="False">
                                     <views:LogView />
                                 </adLayout:LayoutAnchorable>
+                                <adLayout:LayoutAnchorable Title="Cmd" ContentId="Console" />
                             </adLayout:LayoutAnchorablePane>
                         </adLayout:LayoutAnchorablePaneGroup>
                     </adLayout:LayoutPanel>

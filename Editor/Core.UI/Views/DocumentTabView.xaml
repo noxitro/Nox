@@ -4,19 +4,40 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d">
-    <Grid>
+    <Grid Background="#FF111419">
         <Grid.Resources>
+            <Style TargetType="MenuItem">
+                <Setter Property="Foreground" Value="#FFE7EAEE" />
+                <Setter Property="Padding" Value="12,7" />
+                <Setter Property="FontSize" Value="13" />
+            </Style>
+
             <Style TargetType="TabItem">
                 <EventSetter Event="PreviewMouseLeftButtonDown" Handler="TabItem_OnPreviewMouseLeftButtonDown" />
                 <Setter Property="ToolTip" Value="{Binding Tooltip}" />
+                <Setter Property="Foreground" Value="#FFD4DAE4" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderBrush" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Padding" Value="14,0" />
+                <Setter Property="Height" Value="30" />
+                <Setter Property="Margin" Value="2,3" />
                 <Setter Property="ContextMenu">
                     <Setter.Value>
-                        <ContextMenu ItemsSource="{Binding Children}">
+                        <ContextMenu ItemsSource="{Binding Children}"
+                                     Background="#FF1B2028"
+                                     BorderBrush="#FF3B4554"
+                                     BorderThickness="1"
+                                     Padding="4">
                             <ContextMenu.ItemContainerStyle>
                                 <Style TargetType="MenuItem">
                                     <Setter Property="Header" Value="{Binding Header}" />
                                     <Setter Property="Command" Value="{Binding Command}" />
                                     <Setter Property="ToolTip" Value="{Binding Tooltip}" />
+                                    <Setter Property="Foreground" Value="#FFE7EAEE" />
+                                    <Setter Property="Background" Value="#FF1B2028" />
+                                    <Setter Property="Padding" Value="12,7" />
+                                    <Setter Property="FontSize" Value="13" />
                                     <Setter Property="Icon">
                                         <Setter.Value>
                                             <TextBlock Text="{Binding Glyph}" FontFamily="Segoe MDL2 Assets" FontSize="14" Width="18" TextAlignment="Center" />
@@ -28,11 +49,39 @@
                         </ContextMenu>
                     </Setter.Value>
                 </Setter>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="TabItem">
+                            <Border x:Name="TabChrome"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="8"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter ContentSource="Header"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  RecognizesAccessKey="True" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="TabChrome" Property="Background" Value="#FF242B35" />
+                                    <Setter TargetName="TabChrome" Property="BorderBrush" Value="#FF374456" />
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="TabChrome" Property="Background" Value="#FF2B3440" />
+                                    <Setter TargetName="TabChrome" Property="BorderBrush" Value="#FF46566A" />
+                                    <Setter Property="Foreground" Value="#FFFFFFFF" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
         </Grid.Resources>
         <!-- 上部タブ -->
-        <TabControl Height="32"
-                    Background="#FF2B2B2B"
+        <TabControl Height="36"
+                    Background="#FF111419"
                     BorderThickness="0"
                     Padding="0"
                     ItemsSource="{Binding TabTable}"
@@ -41,19 +90,23 @@
                 <ControlTemplate TargetType="TabControl">
                     <Grid Background="{TemplateBinding Background}">
                         <TabPanel IsItemsHost="True"
-                                  Background="{TemplateBinding Background}"
-                                  Margin="4,0,4,0" />
+                                   Background="{TemplateBinding Background}"
+                                   Margin="10,0,4,0" />
                     </Grid>
                 </ControlTemplate>
             </TabControl.Template>
             <TabControl.ItemTemplate>
                 <DataTemplate>
-                    <StackPanel Orientation="Horizontal" Margin="8,0">
-                        <TextBlock Text="{Binding Header}" />
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Header}"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" />
                         <TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="10" Margin="4,0,0,0">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Visibility" Value="Collapsed" />
+                                    <Setter Property="Foreground" Value="#FF98A2B3" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding HasChildren}" Value="True">
                                             <Setter Property="Visibility" Value="Visible" />

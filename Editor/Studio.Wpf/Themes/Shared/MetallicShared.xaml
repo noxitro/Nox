@@ -1,0 +1,61 @@
+<!--
+  メタリックテーマ共通リソース。
+  色は各バリアント XAML で定義された Color キーを DynamicResource で参照することで、
+  テーマ切替時にも自動で再描画される。
+
+  必須カラー キー（バリアント側で必ず定義すること）:
+    Metallic.HighlightColor / Metallic.LightColor / Metallic.MidColor /
+    Metallic.DarkColor / Metallic.AccentColor /
+    Metallic.TextColor / Metallic.TextDimColor / Metallic.BorderColor
+-->
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- AvalonDock VS2013 Dark をベースとしてマージ（未定義キーで落ちないように） -->
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary
+            Source="pack://application:,,,/AvalonDock.Themes.VS2013;component/DarkTheme.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <!-- ============ メタリックグラデーション（縦方向 上明→下暗） ============ -->
+    <LinearGradientBrush x:Key="Metallic.PanelBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="{DynamicResource Metallic.LightColor}" Offset="0.0" />
+        <GradientStop Color="{DynamicResource Metallic.MidColor}"   Offset="0.5" />
+        <GradientStop Color="{DynamicResource Metallic.DarkColor}"  Offset="1.0" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="Metallic.HeaderBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="{DynamicResource Metallic.HighlightColor}" Offset="0.0" />
+        <GradientStop Color="{DynamicResource Metallic.LightColor}"     Offset="0.45" />
+        <GradientStop Color="{DynamicResource Metallic.MidColor}"       Offset="1.0" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="Metallic.HeaderActiveBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="{DynamicResource Metallic.HighlightColor}" Offset="0.0" />
+        <GradientStop Color="{DynamicResource Metallic.AccentColor}"    Offset="0.55" />
+        <GradientStop Color="{DynamicResource Metallic.DarkColor}"      Offset="1.0" />
+    </LinearGradientBrush>
+
+    <SolidColorBrush x:Key="Metallic.BorderBrush"  Color="{DynamicResource Metallic.BorderColor}" />
+    <SolidColorBrush x:Key="Metallic.AccentBrush"  Color="{DynamicResource Metallic.AccentColor}" />
+    <SolidColorBrush x:Key="Metallic.TextBrush"    Color="{DynamicResource Metallic.TextColor}" />
+    <SolidColorBrush x:Key="Metallic.TextDimBrush" Color="{DynamicResource Metallic.TextDimColor}" />
+
+    <!-- ============ AvalonDock キー上書き（VS2013 Dark のキーに合わせる） ============ -->
+    <SolidColorBrush x:Key="AvalonDock_BaseColor4" Color="{DynamicResource Metallic.MidColor}" />
+    <SolidColorBrush x:Key="AvalonDock_BaseColor5" Color="{DynamicResource Metallic.DarkColor}" />
+
+    <StaticResource x:Key="AnchorableHeaderBackground"        ResourceKey="Metallic.HeaderBrush" />
+    <StaticResource x:Key="AnchorableHeaderActiveBackground"  ResourceKey="Metallic.HeaderActiveBrush" />
+    <StaticResource x:Key="AnchorableTitleForeground"         ResourceKey="Metallic.TextBrush" />
+    <StaticResource x:Key="DocumentHeaderBackground"          ResourceKey="Metallic.HeaderBrush" />
+    <StaticResource x:Key="DocumentHeaderForeground"          ResourceKey="Metallic.TextBrush" />
+    <StaticResource x:Key="DocumentHeaderForegroundActive"    ResourceKey="Metallic.TextBrush" />
+
+    <StaticResource x:Key="PaneBackground"   ResourceKey="Metallic.PanelBrush" />
+    <StaticResource x:Key="PaneBorderBrush"  ResourceKey="Metallic.BorderBrush" />
+
+    <StaticResource x:Key="AccentBaseColorBrush" ResourceKey="Metallic.AccentBrush" />
+
+</ResourceDictionary>

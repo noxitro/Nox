@@ -11,8 +11,19 @@ namespace Core.RuntimeRemote
 	public abstract class Entity
 	{
 		public uint Id { get; private set; }
+		public Core.Net.RuntimeRemoteClient? RemoteClient { get; private set; }
 
 		#region 公開メソッド
+		public void SetId(uint id)
+		{
+			Id = id;
+		}
+
+		public void SetRemoteClient(Core.Net.RuntimeRemoteClient remoteClient)
+		{
+			RemoteClient = remoteClient;
+		}
+
 		public void Serialize(BinaryWriter writer)
 		{
 			//	runtimeの型名へ変換
@@ -98,17 +109,24 @@ namespace Core.RuntimeRemote
 					long instanceId = reader.ReadInt64();
 					Nox.Util.Assert(instanceId != 0, $"RemoteInstanceIdが0です:{prop.Name}");
 
-					Core.RuntimeObject? obj = Core.Net.RuntimeRemoteClient.Instance.FindRemoteInstance(instanceId);
+					Nox.Util.Assert(RemoteClient != null, "RuntimeRemoteClient is not set.");
+					Core.Net.RuntimeRemoteClient remoteClient = RemoteClient!;
+					Core.RuntimeObject? obj = remoteClient.FindRemoteInstance(instanceId);
 					if (obj == null)
 					{
 						//	fqnを取得
 						ReadOnlySpan<char> runtimeFqn = reader.ReadString();
 						RuntimeObject? runtimeObject = Runtime.Instance.CreateRuntimeObject(runtimeFqn);
 						Nox.Util.Assert(runtimeObject != null, $"RuntimeObjectの生成に失敗しました。fqn={runtimeFqn}");
+						if (runtimeObject == null) continue;
+
+						remoteClient.RegisterRemoteObject(runtimeObject, instanceId);
 
 						//	プロパティバッファを受信
 						int propBufferLength = reader.ReadInt32();
 						ReadOnlySpan<byte> propBuffer = reader.ReadBytes(propBufferLength);
+						Core.RuntimeRemote.Util.SetPropertiesFromBytes(propBuffer, runtimeObject);
+						obj = runtimeObject;
 					}
 					
 					value = obj;

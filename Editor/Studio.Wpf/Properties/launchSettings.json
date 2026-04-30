@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Studio.Wpf": {
+      "commandName": "Project",
+      "commandLineArgs": "--EngineRootDir=\"$(SolutionDir)../\""
+    }
+  }
+}

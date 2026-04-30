@@ -61,14 +61,12 @@ namespace Core
 		{
 			Core.StudioManager.CreateInstance();
 			Core.Net.SocketScheduler.CreateInstance();
-			Core.Net.RuntimeRemoteClient.CreateInstance();
 			Core.Runtime.CreateInstance();
 		}
 
 		public void Dispose()
 		{
 			Core.Runtime.DeleteInstance();
-			Core.Net.RuntimeRemoteClient.DeleteInstance();
 			Core.Net.SocketScheduler.DeleteInstance();
 			Core.StudioManager.DeleteInstance();
 		}

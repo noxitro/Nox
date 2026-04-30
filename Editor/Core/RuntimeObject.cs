@@ -28,6 +28,7 @@ namespace Core
 		#region 公開プロパティ
 		public Core.RuntimeRecordDecl RuntimeRecordDecl { get; init; }
 		public long RemoteInstanceId { get; set; } = 0;
+		public Core.Net.RuntimeRemoteClient? RemoteClient { get; private set; }
 		public ReadOnlySpan<object> VariableList => _VariableList;
 
 		public Span<object> RefVariableList => _VariableList;
@@ -92,9 +93,21 @@ namespace Core
 		{
 			if (RemoteInstanceId == 0)
 			{
-				Core.Net.RuntimeRemoteClient.Instance.RegisterRemoteObject(this);
+				Core.Net.RuntimeRemoteClient remoteClient =
+					RemoteClient ?? Core.StudioManager.Instance.Workspace.RuntimeSessions.GetActiveOrMainSession().RemoteClient;
+				remoteClient.RegisterRemoteObject(this);
 			}
 
+		}
+
+		internal void SetRemoteClient(Core.Net.RuntimeRemoteClient remoteClient)
+		{
+			if (RemoteClient != null && ReferenceEquals(RemoteClient, remoteClient) == false)
+			{
+				Nox.Util.Assert(false, "RuntimeObject is already registered to another RuntimeRemoteClient.");
+			}
+
+			RemoteClient = remoteClient;
 		}
 
         /// <summary>

@@ -1,0 +1,22 @@
+<!-- Gunmetal: 標準的な暗灰メタル＋ブルーアクセント -->
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- パレット定義（必須キー） -->
+    <Color x:Key="Metallic.HighlightColor">#FF6E7479</Color>
+    <Color x:Key="Metallic.LightColor">#FF4A5055</Color>
+    <Color x:Key="Metallic.MidColor">#FF35393D</Color>
+    <Color x:Key="Metallic.DarkColor">#FF1F2225</Color>
+    <Color x:Key="Metallic.AccentColor">#FF2E8BC0</Color>
+    <Color x:Key="Metallic.TextColor">#FFE6E8EA</Color>
+    <Color x:Key="Metallic.TextDimColor">#FF9AA0A6</Color>
+    <Color x:Key="Metallic.BorderColor">#FF101214</Color>
+
+    <!-- 共通 gradient / style をマージ -->
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary
+            Source="/Studio.Wpf;component/Themes/Shared/MetallicShared.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+</ResourceDictionary>

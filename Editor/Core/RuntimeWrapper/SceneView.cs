@@ -8,6 +8,8 @@ namespace Core.RuntimeWrapper
 	public class SceneView : ManagedObject
 	{
 		#region 公開プロパティ
+		public event EventHandler? WindowHandleChanged;
+
 		public SceneNode? Scene
 		{
 			get => Get<SceneNode>();
@@ -19,8 +21,13 @@ namespace Core.RuntimeWrapper
 			get;
 			set
 			{
+				if (field == value)
+				{
+					return;
+				}
+
 				field = value;
-				UpdateWindowHandle(value);
+				UpdateWindowHandle();
 			}
 		}
 		#endregion
@@ -33,9 +40,9 @@ namespace Core.RuntimeWrapper
 		#endregion
 
 		#region 非公開メソッド
-		private void UpdateWindowHandle(IntPtr windowHandle)
+		private void UpdateWindowHandle()
 		{
-
+			WindowHandleChanged?.Invoke(this, EventArgs.Empty);
 		}
 		#endregion
 	}

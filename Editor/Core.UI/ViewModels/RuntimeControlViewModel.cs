@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Core.UI.ViewModels
+﻿namespace Core.UI.ViewModels
 {
 	/// <summary>
 	/// runtimeの再生ボタンなど
@@ -19,12 +15,13 @@ namespace Core.UI.ViewModels
 		#region 非公開メソッド
 		private void Reboot()
 		{
-			Core.Runtime.Instance.Reboot();
+			Core.RuntimeSession runtimeSession = Core.StudioManager.Instance.Workspace.RuntimeSessions.GetActiveOrMainSession();
+			runtimeSession.Reboot();
 		}
 
 		private void StartConnection()
 		{
-			Core.Runtime.Instance.StartTcpConnection();
+			Core.StudioManager.Instance.Workspace.RuntimeSessions.GetActiveOrMainSession().StartTcpConnection();
 		}
 
 		private void Play()

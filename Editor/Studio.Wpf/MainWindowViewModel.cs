@@ -7,7 +7,13 @@ namespace Studio.Wpf.ViewModels
 	public class MainWindowViewModel : NoxUI.ViewModelBase
 	{
 		public MainWindowViewModel()
+			: this(Prism.Ioc.ContainerLocator.Container.Resolve<Studio.Wpf.Themes.IThemeService>())
 		{
+		}
+
+		public MainWindowViewModel(Studio.Wpf.Themes.IThemeService themeService)
+		{
+			Theme = themeService;
 		}
 
 		#region 非公開フィールド
@@ -21,6 +27,9 @@ namespace Studio.Wpf.ViewModels
 		#region 公開プロパティ
 		public IReadOnlyList<Core.UI.ViewModels.ToolViewModel> ToolViewModelList => _ToolViewModelList;
 		public IReadOnlyList<Core.UI.ViewModels.AssetViewModel> AssetViewModelList => _AssetViewModelList;
+
+		/// <summary>テーマサービス。<c>Theme.CurrentTheme</c> を AvalonDock にバインドする。</summary>
+		public Studio.Wpf.Themes.IThemeService Theme { get; }
 		#endregion
 
 		#region 公開メソッド

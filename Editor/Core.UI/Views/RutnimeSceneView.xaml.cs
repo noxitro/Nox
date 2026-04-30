@@ -48,13 +48,45 @@ namespace Core.UI.Views
 		#region 非公開メソッド
 		private static void ChangeSceneViewProperty(RutnimeSceneView owner, in DependencyPropertyChangedEventArgs e)
 		{
-			if (e.NewValue is Core.RuntimeWrapper.SceneView sceneView && sceneView.WindowHandle != IntPtr.Zero)
+			if (e.OldValue is Core.RuntimeWrapper.SceneView oldSceneView)
 			{
-				owner._SceneViewPanel.Attach(sceneView.WindowHandle);
+				oldSceneView.WindowHandleChanged -= owner.OnSceneViewWindowHandleChanged;
+			}
+
+			if (e.NewValue is Core.RuntimeWrapper.SceneView sceneView)
+			{
+				sceneView.WindowHandleChanged += owner.OnSceneViewWindowHandleChanged;
+				owner.AttachSceneView(sceneView);
 			}
 			else
 			{
 				owner._SceneViewPanel.Detach();
+			}
+		}
+
+		private void OnSceneViewWindowHandleChanged(object? sender, EventArgs e)
+		{
+			if (Dispatcher.CheckAccess() == false)
+			{
+				Dispatcher.BeginInvoke((Action)(() => OnSceneViewWindowHandleChanged(sender, e)));
+				return;
+			}
+
+			if (sender is Core.RuntimeWrapper.SceneView sceneView)
+			{
+				AttachSceneView(sceneView);
+			}
+		}
+
+		private void AttachSceneView(Core.RuntimeWrapper.SceneView sceneView)
+		{
+			if (sceneView.WindowHandle != IntPtr.Zero)
+			{
+				_SceneViewPanel.Attach(sceneView.WindowHandle);
+			}
+			else
+			{
+				_SceneViewPanel.Detach();
 			}
 		}
 		#endregion

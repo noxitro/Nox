@@ -20,7 +20,7 @@ namespace Core.Net
 	/// <summary>
 	/// runtimeプロセスとのIPCクライアント
 	/// </summary>
-	public class RuntimeRemoteClient : Core.Net.Client, Nox.ISingleton<RuntimeRemoteClient>, IDisposable
+	public class RuntimeRemoteClient : Core.Net.Client, IDisposable
 	{
 		#region 内部型定義
 		#endregion
@@ -62,22 +62,13 @@ namespace Core.Net
 		#endregion
 
 		#region 公開プロパティ
-		public static RuntimeRemoteClient Instance => Nox.ISingleton<RuntimeRemoteClient>.Instance;
-		public static bool HasInstance => Nox.ISingleton<RuntimeRemoteClient>.HasInstance;
+		public RuntimeSession Session { get; }
 		#endregion
 
 		#region 公開メソッド
-		public static void CreateInstance()
+		public RuntimeRemoteClient(RuntimeSession session)
 		{
-			Nox.ISingleton<RuntimeRemoteClient>.CreateInstance();
-		}
-		public static void DeleteInstance()
-		{
-			Nox.ISingleton<RuntimeRemoteClient>.DeleteInstance();
-		}
-
-		public RuntimeRemoteClient()
-		{
+			Session = session;
 			_WriterStream = new RemoteWriterStream(this);
 			_ReaderStream = new RemoteReaderStream(this);
 
@@ -139,6 +130,8 @@ namespace Core.Net
 
 		void IDisposable.Dispose()
 		{
+			Shutdown();
+			StopWorkerThreads();
 			_EventRuntimeConnected.Dispose();
 			_WriterStream.Dispose();
 			_ReaderStream.Dispose();
@@ -183,9 +176,11 @@ namespace Core.Net
 		public void SendQuery<T>(T query, Action<Core.RuntimeRemote.Response>? response) where T : Core.RuntimeRemote.Query
 		{
 			uint queryId = System.Threading.Interlocked.Increment(ref _QueryIdCounter);
+			query.SetRemoteClient(this);
 
 			lock (_LockQueryList)
 			{
+             query.SetId(queryId);
 				_QueryQueue.Enqueue(query);
 
 				if (response != null)
@@ -199,7 +194,7 @@ namespace Core.Net
 
 		public void RegisterRemoteObject(Core.RuntimeObject obj)
 		{
-			Nox.Util.Assert(obj.RemoteInstanceId != 0, "registered remote object");
+			Nox.Util.Assert(obj.RemoteInstanceId == 0, "registered remote object");
 
 			long instanceId = System.Threading.Interlocked.Increment(ref _RemoteInstanceIdCounter);
 			RegisterRemoteObject(obj, instanceId);
@@ -216,6 +211,7 @@ namespace Core.Net
 			}
 
 			obj.RemoteInstanceId = instanceId;
+			obj.SetRemoteClient(this);
 		}
 
 		public Core.RuntimeObject? FindRemoteInstance(long instanceId)
@@ -254,6 +250,11 @@ namespace Core.Net
 		{
 			base.OnDisconnected();
 
+			StopWorkerThreads();
+		}
+
+		private void StopWorkerThreads()
+		{
 			if (_SendThread != null)
 			{
 				_SendSignal.Set();
@@ -291,10 +292,11 @@ namespace Core.Net
 				lock (_LockQueryList)
 				{
 					bool failed = false;
-					using (var binaryWriter = new System.IO.BinaryWriter(_WriterStream))
+                    using (var binaryWriter = new System.IO.BinaryWriter(_WriterStream, System.Text.Encoding.UTF8, leaveOpen: true))
 					{
-						foreach (var query in _QueryQueue)
+                      while (_QueryQueue.Count > 0)
 						{
+							var query = _QueryQueue.Dequeue();
 							
 							//	データの送信
 							try
@@ -366,7 +368,7 @@ namespace Core.Net
 					}
 					else
 					{
-						continue;
+                       break;
 					}
 
 					if (IsRecvReadable(0) == false)
@@ -407,6 +409,7 @@ namespace Core.Net
 					}
 
 					Core.RuntimeRemote.Entity entity = factory();
+					entity.SetRemoteClient(this);
 
 					if (entity is Core.RuntimeRemote.Query query)
 					{
@@ -421,7 +424,16 @@ namespace Core.Net
 						if (response == null) continue;
 						response.Deserialize(binaryReader);
 
-						if (_ResponseDict.TryGetValue(response.Id, out var callback))
+                       Action<Core.RuntimeRemote.Response>? callback = null;
+						lock (_LockQueryList)
+						{
+							if (_ResponseDict.TryGetValue(response.Id, out callback))
+							{
+								_ResponseDict.Remove(response.Id);
+							}
+						}
+
+						if (callback != null)
 						{
 							callback.Invoke(response);
 						}

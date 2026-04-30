@@ -69,7 +69,10 @@ namespace Core.Net
 			int headerBytes = WriteLeb128ToEnd(HeaderReservedBytes, (uint)payloadSize);
 			int sendStart = HeaderReservedBytes - headerBytes;
 
-			_Client.Send(_Buffer.AsSpan(sendStart, headerBytes + payloadSize));
+         if (_Client.Send(_Buffer.AsSpan(sendStart, headerBytes + payloadSize)) == false)
+			{
+				throw new InvalidOperationException("Socket send failed");
+			}
 			_Position = HeaderReservedBytes;
 		}
 
@@ -78,7 +81,7 @@ namespace Core.Net
 		/// </summary>
 		public void Clear()
         {
-           _Position = 0;
+          _Position = HeaderReservedBytes;
         }
 
 		public override void Write(byte[] buffer, int offset, int count)

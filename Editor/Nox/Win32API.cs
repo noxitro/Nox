@@ -70,6 +70,7 @@ namespace Nox
 			MAXIMIZE   = 0x01000000,
 			SYSMENU    = 0x00080000,
 			BORDER     = 0x00800000,
+			POPUP      = unchecked((int)0x80000000),
 
 		}
 		public const int WS_CHILD      = unchecked((int)0x40000000);
@@ -80,6 +81,7 @@ namespace Nox
 		public const int WS_MAXIMIZE   = 0x01000000;
 		public const int WS_SYSMENU    = 0x00080000;
 		public const int WS_BORDER     = 0x00800000;
+		public const int WS_POPUP      = unchecked((int)0x80000000);
 		#endregion
 
 		#region Constants - ShowWindow commands
