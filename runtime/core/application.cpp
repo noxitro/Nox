@@ -6,7 +6,7 @@
 #include	"pch.h"
 #include	"application.h"
 
-#include	"module_entry.h"
+#include	"engine_module.h"
 #include	"scene_view.h"
 #include	"engine_system.h"
 #include	"log_id.h"
@@ -24,7 +24,8 @@ namespace nox
 nox::Application::Application()noexcept :
 	enabled_vsync_(true),
 	target_frame_rate_(60),
-	kill_(false)
+	kill_(false),
+	studio_mode_(nox::os::ContainsCommandLineArgKey(u"--stduio"))
 {
 }
 

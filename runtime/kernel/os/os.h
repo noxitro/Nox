@@ -48,6 +48,14 @@ namespace nox::os
 		return GetCommandLineArgList()[index];
 	}
 
+	/// @brief		コマンドライン引数本体、または=で区切られたコマンドライン引数のキーが存在するか
+	/// @details	例：コマンドライン引数が「--foo=bar」の場合、ContainsCommandLineArgKey(u"--foo")はtrueを返す
+	bool ContainsCommandLineArgKey(std::u16string_view arg)noexcept;
+
+	/// @brief =で区切られたコマンドライン引数を取得します
+	/// @param key
+	std::optional<std::u16string_view> GetCommandLineArgValue(std::u16string_view key)noexcept;
+
 	StlU16String	GetDirectoryUTF8();
 
 	nox::U16String	GetDirectory();

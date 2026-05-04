@@ -14,7 +14,7 @@
 #include	"scene_node.h"
 #include	"scene_resource.h"
 #include	"application.h"
-#include	"module_entry.h"
+#include	"engine_module.h"
 #include	"core_entry.h"
 
 //	edotor_remote

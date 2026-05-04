@@ -17,7 +17,7 @@ namespace nox::os
 {
 	namespace
 	{
-		/// @brief 引数
+		/// @brief 起動時引数リスト
 		constinit std::span<const nox::char16* const> command_line_args_;
 
 		/// @brief os関数を初期化したネイティブスレッドID
@@ -74,6 +74,32 @@ void	nox::os::Finalize()
 std::span<const nox::char16* const> nox::os::GetCommandLineArgList() noexcept
 {
 	return nox::os::command_line_args_;
+}
+
+bool nox::os::ContainsCommandLineArgKey(std::u16string_view arg)noexcept
+{
+	for (const nox::char16* const& command_line_arg : nox::os::command_line_args_)
+	{
+		const std::u16string_view command_line_arg_view(command_line_arg);
+		if (command_line_arg_view.starts_with(arg) == true)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+std::optional<std::u16string_view> nox::os::GetCommandLineArgValue(std::u16string_view key)noexcept
+{
+	for (const nox::char16* const& command_line_arg : nox::os::command_line_args_)
+	{
+		const std::u16string_view command_line_arg_view(command_line_arg);
+		if (command_line_arg_view.starts_with(key) == true)
+		{
+			return command_line_arg_view.substr(key.size());
+		}
+	}
+	return std::nullopt;
 }
 
 nox::StlU16String	nox::os::GetDirectoryUTF8()

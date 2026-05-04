@@ -18,7 +18,7 @@ namespace nox
 		NOX_ATTR_TYPE(::nox::attr::dev::Description(u8"Application"), nox::attr::dev::DisplayName(u8"アプリケーション"))
 		Application : public nox::EngineSystem
 	{
-		NOX_DECLARE_OBJECT(Application, nox::Object);
+		NOX_DECLARE_OBJECT(Application, nox::EngineSystem);
 	private:
 		/// @brief 実行ノード
 		struct ExecuteNode
@@ -56,6 +56,7 @@ namespace nox
 			return static_cast<T&>(GetSystem(nox::reflection::Typeof<T>()));
 		}
 
+		inline bool IsStudioMode()const noexcept { return studio_mode_; }
 	private:
 		void	Init();
 		void	Update();
@@ -65,8 +66,10 @@ namespace nox
 		void ExecutePhase(const nox::SystemPhaseType phase_type);
 		void RegisterEngineSystem(nox::EngineSystem& engine_system);
 
+#if !NOX_MASTER
 		/// @brief 依存関係を含めた実行ノードリストを出力
 		void TraceExecuteNodeList()const;
+#endif // !NOX_MASTER
 
 		std::span<const nox::EngineSystem::PhaseRegister> GetPhaseRegisterList()const noexcept override;
 	private:
@@ -83,5 +86,8 @@ namespace nox
 
 		nox::UnorderedMap<const nox::reflection::Type*, nox::EngineSystem*> engine_system_map_;
 		std::array<nox::Vector<ExecuteNode>, nox::util::ToUnderlying(nox::SystemPhaseType::_Max)> system_phase_table_;
+
+		/// @brief Studioから起動されたか
+		const bool studio_mode_;
 	};
 }

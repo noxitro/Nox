@@ -28,6 +28,7 @@ namespace nox::attr
 	/// @brief 属性の使用方法
 	class AttributeUsage : public nox::attr::Attribute
 	{
+		NOX_DECLARE_OBJECT(AttributeUsage, nox::attr::Attribute);
 	public:
 		inline constexpr explicit AttributeUsage(nox::attr::AttributeTargets targets)noexcept :
 			target_(targets)

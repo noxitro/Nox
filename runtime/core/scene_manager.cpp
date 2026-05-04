@@ -5,6 +5,7 @@
 #include	"pch.h"
 #include	"scene_manager.h"
 
+#include	"application.h"
 #include	"scene_node.h"
 #include	"scene_view.h"
 
@@ -34,7 +35,12 @@ void	nox::SceneManager::Initialize(nox::Application& application)
 
 		main_scene_view_ = new nox::SceneView();
 		main_scene_view_->MakeWindow(desc);
-		//main_scene_view_->GetWindow().Show();
+
+		//	studio modeならウィンドウを表示しない
+		if (!application.IsStudioMode())
+		{
+			main_scene_view_->GetWindow().Show();
+		}
 	}
 }
 

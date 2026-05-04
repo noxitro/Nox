@@ -5,7 +5,7 @@
 #include	"pch.h"
 #include	"test_behavior.h"
 
-#include	"module_entry.h"
+#include	"engine_module.h"
 #include	"application.h"
 
 void	nox::test::TestBehavior::Awake()

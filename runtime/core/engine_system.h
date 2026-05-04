@@ -4,7 +4,7 @@
 /// @brief	engine_system
 #pragma once
 #include	"object.h"
-#include	"module_entry_category.h"
+#include	"system_phase_type.h"
 
 namespace nox
 {

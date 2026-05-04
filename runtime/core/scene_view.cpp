@@ -25,5 +25,4 @@ void nox::SceneView::SetScene(SceneNode& scene) noexcept
 void nox::SceneView::MakeWindow(const nox::os::WindowSetupDesc& window_desc)
 {
 	window_.Create(window_desc);
-	window_.Show();
 }

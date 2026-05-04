@@ -8,5 +8,5 @@ namespace nox
 {
 	/// @brief エントリポイント
 	/// @param args 引数
-	int32 EntryPoint(const std::span<const char16* const> args);
+	nox::int32 EntryPoint(const std::span<const nox::char16* const> args);
 }

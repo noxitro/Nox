@@ -4,7 +4,7 @@
 ///	@brief	core_entry
 #pragma once
 
-#include	"module_entry.h"
+#include	"engine_module.h"
 
 namespace nox
 {

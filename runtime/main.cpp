@@ -46,8 +46,15 @@
 int WINAPI wWinMain(_In_ ::HINSTANCE /*hInstance*/, _In_opt_ ::HINSTANCE, _In_ LPWSTR /*lpCmdLine*/, _In_ int /*nCmdShow*/)
 {
 	nox::int32 arg_num;
-	const nox::char16*const* argv = reinterpret_cast<const nox::char16*const*>(::CommandLineToArgvW(::GetCommandLineW(), &arg_num));
-	nox::EntryPoint({ argv, static_cast<size_t>(arg_num) });
-	
+	auto argv_raw = ::CommandLineToArgvW(::GetCommandLineW(), &arg_num);
+	if (argv_raw == nullptr)
+	{
+		NOX_ASSERT(false, u8"コマンドライン引数の取得に失敗");
+		return -1;
+	}
+
+	const nox::char16* const*const argv = reinterpret_cast<const nox::char16* const*>(argv_raw);
+	nox::EntryPoint({ argv, static_cast<std::size_t>(arg_num) });
+	::LocalFree(argv_raw);
 	return 0;
 }
