@@ -8,67 +8,88 @@ namespace ReflectionGenerator
 {
     public static class Trace
     {
-        public static void LogLine(ConsoleColor color, string log)
+        private enum LogLevel : byte
         {
+            Info,
+            Warning,
+            Error
+        }
+
+        private static string GetLogLevelTag(LogLevel level)
+        {
+            return level switch
+            {
+                LogLevel.Info => "[Info]",
+                LogLevel.Warning => "[Warning]",
+                LogLevel.Error => "[Error]",
+                _ => string.Empty
+            };
+        }
+
+        private static void LogLine(LogLevel logLevel, object? obj, ReadOnlySpan<char> log)
+        {
+            string tag = obj == null ? string.Empty : $"[{obj.ToString()}]";
+
             var temp = Console.ForegroundColor;
-            Console.ForegroundColor = color;
-            Console.WriteLine(log);
+            Console.ForegroundColor = logLevel switch
+            {
+                LogLevel.Info => ConsoleColor.White,
+                LogLevel.Warning => ConsoleColor.Yellow,
+                LogLevel.Error => ConsoleColor.Red,
+                _ => ConsoleColor.White
+            };
+            Console.WriteLine($"{GetLogLevelTag(logLevel)} {log}");
             Console.ForegroundColor = temp;
         }
 
-        public static void Log(ConsoleColor color, ReadOnlySpan<char> log)
+        private static void Log(LogLevel logLevel, object? obj, ReadOnlySpan<char> log)
         {
+            string tag = obj == null ? string.Empty : $"[{obj.ToString()}]";
             var temp = Console.ForegroundColor;
-            Console.ForegroundColor = color;
+            Console.ForegroundColor = logLevel switch
+            {
+                LogLevel.Info => ConsoleColor.White,
+                LogLevel.Warning => ConsoleColor.Yellow,
+                LogLevel.Error => ConsoleColor.Red,
+                _ => ConsoleColor.White
+            };
             Console.Write(log.ToString());
             Console.ForegroundColor = temp;
         }
 
-        public static void Log(ConsoleColor color, object? obj, ReadOnlySpan<char> log)
-        {
-            string tag = obj == null ? string.Empty : $"[{obj.ToString()}]";
-            Log(color, $"{tag}{log}");
-        }
-
-        public static void LogLine(ConsoleColor color, object? obj, string log)
-        {
-            string tag = obj == null ? string.Empty : $"[{obj.ToString()}]";
-            LogLine(color, $"{tag}{log}");
-        }
-
         public static void InfoLine(object? obj, string log)
         {
-            LogLine(ConsoleColor.White,obj, log);
+            LogLine(LogLevel.Info, obj, log);
         }
 
         public static void ErrorLine(object? obj, string log)
         {
-            LogLine(ConsoleColor.Red, obj, log);
+            LogLine(LogLevel.Error, obj, log);
         }
 
         public static void WarningLine(object? obj, string log)
         {
-            LogLine(ConsoleColor.Yellow, obj, log);
+            LogLine(LogLevel.Warning, obj, log);
         }
 
         public static void Info(object? obj, string log)
         {
-            Log(ConsoleColor.White, obj, log);
+            Log(LogLevel.Info, obj, log);
         }
 
 		public static void Info(object? obj, ReadOnlySpan<char> log)
 		{
-			Log(ConsoleColor.White, obj, log);
+			Log(LogLevel.Info, obj, log);
 		}
 
 		public static void Error(object? obj, string log)
         {
-            Log(ConsoleColor.Red, obj, log);
+            Log(LogLevel.Error, obj, log);
         }
 
         public static void Warning(object? obj, string log)
         {
-            Log(ConsoleColor.Yellow, obj, log);
+            Log(LogLevel.Warning, obj, log);
         }
     }
 }

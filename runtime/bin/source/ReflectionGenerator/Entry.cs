@@ -140,7 +140,7 @@ namespace ReflectionGenerator
 
 			}) == false)
 			{
-				Trace.Error(null, "解析に失敗しました。");
+				Trace.Error(null, "解析に失敗しました");
 				return 1;
 			}
 
@@ -227,7 +227,12 @@ namespace ReflectionGenerator
 		{
 			if (!File.Exists(slnxPath))
 			{
-				throw new FileNotFoundException("slnx file not found.", slnxPath);
+				throw new FileNotFoundException("solution file not found.", slnxPath);
+			}
+
+			if (string.Equals(Path.GetExtension(slnxPath), ".sln", StringComparison.OrdinalIgnoreCase))
+			{
+				return ExtractVCXProjectFile.ExtractBuildOrderProjectPathList(slnxPath);
 			}
 
 			System.Xml.Linq.XDocument doc = System.Xml.Linq.XDocument.Load(slnxPath);

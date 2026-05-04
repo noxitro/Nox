@@ -1966,12 +1966,6 @@ namespace ReflectionGenerator.Generator
 
         private void GenerateClassInfo(BaseCodeWriter codeWriter, Parser2.RecordDecl classInfo, Parser2.RecordDecl rootDeclarationTypeInfo, List<string> registerDeclNameList, Parser2.RecordDecl? declarationTypeInfo)
         {
-            //  template classはスキップ
-            if (classInfo is Parser2.TemplateClassDecl)
-            {
-                return;
-            }
-
             //  無名クラスはスキップ
             if (classInfo.RecordAttributeFlags.IsOn(Parser2.RecordAttributeFlag.Anonymous))
             {
@@ -1983,7 +1977,6 @@ namespace ReflectionGenerator.Generator
             codeWriter.WriteLine($"//\t{classInfo.Meta.SourceLocation}");
 
             //  内部クラスは、ReflectionGeneratedHolder化しない
-            //  private reflectionの場合は要件等
 
             if (declarationTypeInfo == null)
             {
@@ -1998,6 +1991,15 @@ namespace ReflectionGenerator.Generator
 
             using (codeWriter.Indent())
             {
+                //  コンパイル時assert
+                if (classInfo.IsNoxObject)
+                {
+                    //  実際の継承型と、NOX_DECRARE_OBJECTの指定が同じかどうかのassert
+                    if (classInfo.ParentRecordDecl != null)
+                    {
+                        codeWriter.WriteLine($"static_assert(std::is_same_v<{classInfo.FullName}::Base, {classInfo.ParentRecordDecl.FullName}>, not same type);");
+                    }
+                }
 
                 //  クラス内クラス情報の生成
                 int internalClassInfoListLength = 0;

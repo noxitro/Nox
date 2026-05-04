@@ -1805,12 +1805,15 @@ namespace ReflectionGenerator.Parser2
 					}
 				}
 
-				ParseUnit(translationUnit);
+				if (ParseUnit(translationUnit) == false)
+				{
+					return false;
+				}
 				return true;
 			}
 		}
 
-        public void ParseUnit(in ClangSharp.Interop.CXTranslationUnit translationUnit)
+        public bool ParseUnit(in ClangSharp.Interop.CXTranslationUnit translationUnit)
         {
             ClangSharp.Interop.CXCursor cursor = translationUnit.Cursor;
             uint hash = cursor.Hash;
@@ -1881,12 +1884,19 @@ namespace ReflectionGenerator.Parser2
 
 			using (new ScopeProfiler() { Tag = "PostProcess" })
             {
-                PostProcess();
+                if (PostProcess() == false)
+				{
+					Trace.Error(this, "PostProcessに失敗しました");
+					return false;
+                }
             }
+
+			return true;
         }
 
-        private void PostProcess()
+        private bool PostProcess()
         {
+			bool success = true;
 			//	ノードの構築
 			foreach (DeclBase decl in _DeclWithHashDict.Values)
 			{
@@ -1935,6 +1945,7 @@ namespace ReflectionGenerator.Parser2
 					switch (decl)
 					{
 						case RecordDecl declImpl:
+							
 							container.RecordList.Add(declImpl);
 
 							//	NOTE:	テンプレートクラスの特殊化でprivate型が使われているかどうかを調べる
@@ -1981,58 +1992,84 @@ namespace ReflectionGenerator.Parser2
 				}
 			}
 
-			void VerifyReflectionGenerateKind(NamedDecl namedDecl, NamedDecl? parentDecl)
-			{
-				if (parentDecl == null)
-				{
-					return;
-				}
-
-				if (namedDecl.AccessLevel == AccessLevel.Public)
-				{
-					switch(parentDecl.ReflectionGenerateKind)
-					{
-						case ReflectionGenerateKind.ImplicitReflection:
-						case ReflectionGenerateKind.Reflection:
-						case ReflectionGenerateKind.PrivateReflection:
-							//	明示的リフレクションが指定されていないなら、暗黙的リフレクションにする
-							if (namedDecl.ReflectionGenerateKind == ReflectionGenerateKind.None)
-							{
-								namedDecl.ReflectionGenerateKind = ReflectionGenerateKind.ImplicitReflection;
-							}
-							break;
-
-						case ReflectionGenerateKind.IgnoreReflection:
-							namedDecl.ReflectionGenerateKind = ReflectionGenerateKind.IgnoreReflection;
-							break;
-					}
-				}
-				//	自身が非公開の場合、親がprivate reflectionでなければリフレクション無視
-				else
-				{
-					switch(parentDecl.ReflectionGenerateKind)
-					{
-						case ReflectionGenerateKind.PrivateReflection:
-							//	明示的リフレクションが指定されていないなら、暗黙的リフレクションにする
-							if (namedDecl.ReflectionGenerateKind == ReflectionGenerateKind.None)
-							{
-								namedDecl.ReflectionGenerateKind = ReflectionGenerateKind.ImplicitReflection;
-							}
-							break;
-
-						default:
-							namedDecl.ReflectionGenerateKind = ReflectionGenerateKind.IgnoreReflection;
-
-							break;
-					}
-				}
-			}
-
 			//	リフレクション
 			NamespaceDecl rootNamespaceDecl = RootNamespaceDecl;
 			VerifyReflectionGenerateKind_Namespace(RootNamespaceDecl, null);
 
-			void VerifyReflectionGenerateKind_Namespace(NamespaceDecl namespaceDecl, NamedDecl? parentDecl)
+			//	post process2
+			foreach (DeclBase decl in _DeclWithHashDict.Values)
+			{
+				if (decl.ParentDeclHash == 0)
+				{
+					continue;
+				}
+
+                switch (decl)
+				{
+					case RecordDecl declImpl:
+						//	NOX_DECLARE_OBJECTの定義漏れチェック
+						if (declImpl.IsNoxObject == true && declImpl.FullName != "nox::Object")
+						{
+							if (declImpl.FunctionList.Exists(x => x.Name == "StaticAssertNoxDeclareObject") == false)
+							{
+								Trace.ErrorLine(null, $"{declImpl.FullName}\tNOX_DECLARE_OBJECTが宣言されていません");
+                                success = false;
+							}
+						}
+						break;
+                }
+            }
+
+            return success;
+
+            void VerifyReflectionGenerateKind(NamedDecl namedDecl, NamedDecl? parentDecl)
+            {
+                if (parentDecl == null)
+                {
+                    return;
+                }
+
+                if (namedDecl.AccessLevel == AccessLevel.Public)
+                {
+                    switch (parentDecl.ReflectionGenerateKind)
+                    {
+                        case ReflectionGenerateKind.ImplicitReflection:
+                        case ReflectionGenerateKind.Reflection:
+                        case ReflectionGenerateKind.PrivateReflection:
+                            //	明示的リフレクションが指定されていないなら、暗黙的リフレクションにする
+                            if (namedDecl.ReflectionGenerateKind == ReflectionGenerateKind.None)
+                            {
+                                namedDecl.ReflectionGenerateKind = ReflectionGenerateKind.ImplicitReflection;
+                            }
+                            break;
+
+                        case ReflectionGenerateKind.IgnoreReflection:
+                            namedDecl.ReflectionGenerateKind = ReflectionGenerateKind.IgnoreReflection;
+                            break;
+                    }
+                }
+                //	自身が非公開の場合、親がprivate reflectionでなければリフレクション無視
+                else
+                {
+                    switch (parentDecl.ReflectionGenerateKind)
+                    {
+                        case ReflectionGenerateKind.PrivateReflection:
+                            //	明示的リフレクションが指定されていないなら、暗黙的リフレクションにする
+                            if (namedDecl.ReflectionGenerateKind == ReflectionGenerateKind.None)
+                            {
+                                namedDecl.ReflectionGenerateKind = ReflectionGenerateKind.ImplicitReflection;
+                            }
+                            break;
+
+                        default:
+                            namedDecl.ReflectionGenerateKind = ReflectionGenerateKind.IgnoreReflection;
+
+                            break;
+                    }
+                }
+            }
+
+            void VerifyReflectionGenerateKind_Namespace(NamespaceDecl namespaceDecl, NamedDecl? parentDecl)
 			{
 				VerifyReflectionGenerateKind(namespaceDecl, parentDecl);
 
@@ -2048,11 +2085,6 @@ namespace ReflectionGenerator.Parser2
 
 			void VerifyReflectionGenerateKind_Record(RecordDecl recordDecl, NamedDecl? parentDecl)
 			{
-				if (recordDecl.Name == "Application")
-				{
-					Util.BreakPoint();
-				}
-
 				VerifyReflectionGenerateKind(recordDecl, parentDecl);
 
 				foreach (var d in recordDecl.RecordList)
@@ -2075,8 +2107,6 @@ namespace ReflectionGenerator.Parser2
 					VerifyReflectionGenerateKind(d, recordDecl);
 				}
 			}
-
-			return;
 			//bool HasPrivateTypeWithTypeInfo(TypeInfo typeInfo)
 			//{
 			//	if (typeInfo is ITemplateTypeInfo templateTypeInfo)
@@ -2893,12 +2923,6 @@ namespace ReflectionGenerator.Parser2
 			{
 				//  関数内定義の変数はスキップ
 				return;
-			}
-
-			if (cursor.GetFQN().Contains("Typeof"))
-			{
-				Util.BreakPoint();
-				cursor.GetFQN();
 			}
 
 			ClangSharp.Interop.CXCursor parentCursor = GetParentDeclCursor(cursor);
