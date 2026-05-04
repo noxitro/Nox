@@ -57,10 +57,10 @@
     <ClInclude Include="test\test.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="module_entry.h">
+    <ClInclude Include="engine_module.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="module_entry_category.h">
+    <ClInclude Include="system_phase_type.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="core_entry.h">
@@ -227,10 +227,10 @@
     <ClCompile Include="test\test.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="module_entry.cpp">
+    <ClCompile Include="engine_module.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="module_entry_category.cpp">
+    <ClCompile Include="system_phase_type.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="core_entry.cpp">

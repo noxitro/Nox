@@ -8,12 +8,12 @@
 
 namespace nox
 {
-	class CoreEntry : public nox::ModuleEntry
+	class CoreModule : public nox::EngineModule
 	{
-		NOX_DECLARE_OBJECT(nox::CoreEntry, nox::ModuleEntry);
+		NOX_DECLARE_OBJECT(nox::CoreModule, nox::EngineModule);
 	public:
-		CoreEntry();
-		~CoreEntry()override;
+		CoreModule();
+		~CoreModule()override;
 
 		void CreateEngineSystems(nox::PmrVector<nox::EngineSystem*>& out)const override;
 	public:

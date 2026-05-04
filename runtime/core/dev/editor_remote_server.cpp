@@ -6,12 +6,12 @@
 #include	"editor_remote_server.h"
 
 #if NOX_DEVELOP
+#include	"net/socket_scheduler.h"
 #include	"editor_remote_response.h"
 #include	"editor_remote_query.h"
 #include	"net/dev_net_api.h"
 #include	"net/dev_net_log_id.h"
 #include	"../application.h"
-#include	"net/socket_scheduler.h"
 
 namespace nox::dev::editor_remote
 {
@@ -22,16 +22,21 @@ nox::dev::editor_remote::EditorRemoteServer::EditorRemoteServer():
 	query_id_counter_(0),
 	instance_id_counter_(0),
 	response_dict_{},
-	main_client_{},
 	writer_(*this),
-	reader_(*this)
+   reader_(*this),
+	socket_scheduler_(nullptr),
+	main_client_{}
 {
 	
 }
 
 nox::dev::editor_remote::EditorRemoteServer::~EditorRemoteServer()
 {
-
+	if (socket_scheduler_ != nullptr)
+	{
+		socket_scheduler_->UnregisterEntity(*this);
+		socket_scheduler_ = nullptr;
+	}
 }
 
 void	nox::dev::editor_remote::EditorRemoteServer::SendQuery(nox::dev::editor_remote::Query& query, std::function<void(const nox::dev::editor_remote::Response&)> callback)
@@ -53,16 +58,30 @@ void	nox::dev::editor_remote::EditorRemoteServer::SendBuffer(std::span<const nox
 {
 	if (main_client_.socket != nox::dev::net::k_raw_invalid_socket)
 	{
-		this->Send(main_client_.socket, static_cast<const void*>(buffer.data()), static_cast<nox::int32>(buffer.size()));
+		const auto send_result = this->Send(main_client_.socket, static_cast<const void*>(buffer.data()), static_cast<nox::int32>(buffer.size()));
+		if (send_result.has_value() == false)
+		{
+			NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u8"送信エラー size={0}", buffer.size());
+		}
 	}
 }
 
 void	nox::dev::editor_remote::EditorRemoteServer::Start(nox::Application& application)
 {
-	this->Startup(InitializeContext{
+    const bool started = this->Startup(InitializeContext{
 		.max_connection = 1,
 		.port = 86,
 		});
+
+	if (started && socket_scheduler_ == nullptr)
+	{
+		socket_scheduler_ = application.FindSystem<nox::dev::net::SocketScheduler>();
+		NOX_ASSERT(socket_scheduler_ != nullptr, u"SocketSchedulerが登録されていません");
+		if (socket_scheduler_ != nullptr)
+		{
+			socket_scheduler_->RegisterEntity(*this);
+		}
+	}
 }
 
 void	nox::dev::editor_remote::EditorRemoteServer::Update(nox::Application& application)
@@ -82,9 +101,9 @@ void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive(nox::Application
 
 	alignas(alignof(std::max_align_t)) std::array<nox::uint8, 1024> entity_buffer{ 0 };
 	alignas(alignof(std::max_align_t)) std::array<nox::uint8, 1024> receive_buffer{ 0 };
-	std::array<nox::char8, 256> entity_name_buffer;
+		std::array<nox::char8, 256> entity_name_buffer{};
 
-	NOX_LOCAL_SCOPE(nox::os::ScopedLock(mutex_writer_));
+    NOX_LOCAL_SCOPE(nox::os::ScopedLock(mutex_reader_));
 
 	//	1パケット分が読み取れる限りループ
 	while (reader_.CanReadBody())
@@ -93,8 +112,11 @@ void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive(nox::Application
 		reader_.SkipHeader();
 
 		//	entity名を読み取り
-		this->reader_.Read(entity_name_buffer);
-		const std::u8string_view entity_full_name(entity_name_buffer.data());
+		std::u8string_view entity_full_name = this->reader_.Read(entity_name_buffer);
+		if (entity_full_name.empty() == false && entity_full_name.back() == u8'\0')
+		{
+			entity_full_name.remove_suffix(1);
+		}
 
 		const nox::reflection::ClassInfo*const class_info = nox::reflection::FindClassInfo(entity_full_name);
 		NOX_ASSERT(class_info != nullptr, u"不明なEntity:{0}", entity_full_name);
@@ -117,6 +139,7 @@ void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive(nox::Application
 				nox::PlacementObject<nox::dev::editor_remote::Response> response = query.Execute(application, receive_buffer);
 				if (response != nullptr)
 				{
+                    NOX_LOCAL_SCOPE(nox::os::ScopedLock(mutex_writer_));
 					response->Serialize(query.GetId(), writer_);
 					writer_.Flush();
 				}
@@ -148,49 +171,34 @@ void nox::dev::editor_remote::EditorRemoteServer::OnReceive(nox::Application& ap
 {
 	//	受信バッファ 未初期化でOK
 	std::array<nox::uint8, 2048> receive_buffer;
-	//	送受信サイズ
-	nox::int32 received_size = 0;	
 
-	//	受信できるだけする
-	while (application.IsKill() == false)
+	if (application.IsKill())
 	{
-		if (application.IsKill())
-		{
-			return;
-		}
-
-		const nox::int32 receive_size = nox::dev::net::Receive(main_client_.socket, static_cast<char*>(static_cast<void*>(receive_buffer.data())), static_cast<nox::int32>(receive_buffer.size()));
-		if (receive_size > 0)
-		{
-			received_size += receive_size;
-		}
-		else if (receive_size == 0)
-		{
-			//	接続が切断された
-			break;
-		}
-		else
-		{
-			//	エラー
-			const int err = ::WSAGetLastError();
-			switch (err)
-			{
-				case WSAEWOULDBLOCK:
-				//	受信できるデータがない
-				break;
-				default:
-					
-					NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u8"受信エラー err={0}", err);
-					break;
-			}
-			break;
-		}
+		return;
 	}
 
-	//	読み取りストリームに受信バッファを追加
-	if (received_size > 0)
+	const nox::int32 receive_size = nox::dev::net::Receive(main_client_.socket, static_cast<char*>(static_cast<void*>(receive_buffer.data())), static_cast<nox::int32>(receive_buffer.size()));
+	if (receive_size > 0)
 	{
-		reader_.AddReceiveBuffer(std::span(receive_buffer.data(), received_size));
+		{
+			NOX_LOCAL_SCOPE(nox::os::ScopedLock(mutex_reader_));
+			reader_.AddReceiveBuffer(std::span(receive_buffer.data(), static_cast<std::size_t>(receive_size)));
+		}
+		UpdateReceive(application);
+	}
+	else if (receive_size < 0)
+	{
+		//	エラー
+		const int err = ::WSAGetLastError();
+		switch (err)
+		{
+			case WSAEWOULDBLOCK:
+			//	受信できるデータがない
+			break;
+			default:
+				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u8"受信エラー err={0}", err);
+				break;
+		}
 	}
 }
 
@@ -206,10 +214,19 @@ void	nox::dev::editor_remote::EditorRemoteServer::OnDisconnected(const nox::dev:
 
 void	nox::dev::editor_remote::EditorRemoteServer::RegisterRemoteInstance(nox::Object& object, nox::int64 instance_id)
 {
+   const auto registered_it = remote_instance_id_dict_.find(&object);
+	if (registered_it != remote_instance_id_dict_.end())
+	{
+       return;
+	}
+
 	if (instance_id == 0)
 	{
-		instance_id = nox::os::atomic::Increment(instance_id_counter_);
+       instance_id = -nox::os::atomic::Increment(instance_id_counter_);
 	}
+
+	remote_instance_dict_.emplace(instance_id, std::ref(object));
+	remote_instance_id_dict_.emplace(&object, instance_id);
 }
 
 nox::int64 nox::dev::editor_remote::EditorRemoteServer::FindRemoteInstanceId(const nox::Object& object)const noexcept
@@ -236,7 +253,11 @@ std::span<const nox::EngineSystem::PhaseRegister> nox::dev::editor_remote::Edito
 {
 	static constexpr auto table = std::to_array({
 		PhaseRegister(k_phase_init, nox::dev::net::SocketScheduler::k_phase_init),
-		PhaseRegister(k_phase_update, nox::dev::net::SocketScheduler::k_phase_socket_update)
+		PhaseRegister(k_phase_update, 
+			{nox::dev::net::SocketScheduler::k_phase_socket_update},
+			{nox::dev::net::SocketScheduler::k_phase_socket_update}
+			),
+		PhaseRegister(k_phase_terminate)
 	});
 
 	return table;

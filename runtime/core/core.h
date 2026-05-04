@@ -23,4 +23,5 @@
 #include	"dev/socket_stream_writer.h"
 #include	"dev/socket_stream_reader.h"
 #include	"dev/editor_remote_server.h"
+#include	"dev/net/socket_scheduler.h"
 //	end editor_remote

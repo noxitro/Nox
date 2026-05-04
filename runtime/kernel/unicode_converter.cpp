@@ -308,6 +308,23 @@ namespace
         return result;
     }
 
+    inline constexpr size_t GetUTF8Length(const std::u16string_view str_view)noexcept
+    {
+        size_t length = 0;
+
+        const nox::char16* pSrc = str_view.data();
+        const nox::char16* const pSrcEnd = pSrc + str_view.size();
+
+        while (pSrc != pSrcEnd)
+        {
+            const OffsetPoint offset_point = DecodeUTF16(std::u16string_view{ pSrc, pSrcEnd });
+            length += GetUTF8Length(offset_point.codePoint);
+            pSrc += offset_point.offset;
+        }
+
+        return length;
+    }
+
     inline constexpr void EncodeUTF8(nox::char8*& s, const nox::char32 code_point)noexcept
     {
         if (code_point < 0x80) // 0x00 - 0x7F
@@ -404,26 +421,59 @@ namespace
 
 nox::StlNString	nox::unicode::ConvertNString(std::u8string_view str_view)
 {
-    NOX_ASSERT(false, u"");
-    return nox::StlNString();
+ return nox::StlNString(reinterpret_cast<const char*>(str_view.data()), str_view.size());
 }
 
 nox::StlNString	nox::unicode::ConvertNString(std::u16string_view str_view)
 {
-    NOX_ASSERT(false, u"");
-    return nox::StlNString();
+ const nox::StlU8String u8String = ConvertU8String(str_view);
+    return nox::StlNString(reinterpret_cast<const char*>(u8String.data()), u8String.size());
 }
 
 nox::StlNString	nox::unicode::ConvertNString(std::wstring_view str_view)
 {
-    NOX_ASSERT(false, u"");
-    return nox::StlNString();
+ const nox::StlU8String u8String = ConvertU8String(str_view);
+    return nox::StlNString(reinterpret_cast<const char*>(u8String.data()), u8String.size());
 }
 
 nox::StlNString	nox::unicode::ConvertNString(std::u32string_view str_view)
 {
-    NOX_ASSERT(false, u"");
-    return nox::StlNString();
+ const nox::StlU8String u8String = ConvertU8String(str_view);
+    return nox::StlNString(reinterpret_cast<const char*>(u8String.data()), u8String.size());
+}
+
+std::string_view	nox::unicode::ConvertNString(std::u8string_view str_view, std::span<char> dest_buffer)
+{
+    NOX_ASSERT(dest_buffer.size() >= str_view.size(), u"buffer size over");
+
+    char* dest_ptr = dest_buffer.data();
+    for (const nox::char8 c : str_view)
+    {
+        *(dest_ptr++) = static_cast<char>(c);
+    }
+
+    return std::string_view(dest_buffer.data(), str_view.size());
+}
+
+std::string_view	nox::unicode::ConvertNString(std::u16string_view str_view, std::span<char> dest_buffer)
+{
+    std::span<nox::char8> u8Buffer(nox::util::CharCast<nox::char8>(dest_buffer.data()), dest_buffer.size());
+    const std::u8string_view result = ConvertU8String(str_view, u8Buffer);
+    return std::string_view(reinterpret_cast<const char*>(result.data()), result.size());
+}
+
+std::string_view	nox::unicode::ConvertNString(std::wstring_view str_view, std::span<char> dest_buffer)
+{
+    std::span<nox::char8> u8Buffer(nox::util::CharCast<nox::char8>(dest_buffer.data()), dest_buffer.size());
+    const std::u8string_view result = ConvertU8String(str_view, u8Buffer);
+    return std::string_view(reinterpret_cast<const char*>(result.data()), result.size());
+}
+
+std::string_view	nox::unicode::ConvertNString(std::u32string_view str_view, std::span<char> dest_buffer)
+{
+    std::span<nox::char8> u8Buffer(nox::util::CharCast<nox::char8>(dest_buffer.data()), dest_buffer.size());
+    const std::u8string_view result = ConvertU8String(str_view, u8Buffer);
+    return std::string_view(reinterpret_cast<const char*>(result.data()), result.size());
 }
 #pragma endregion
 
@@ -464,18 +514,38 @@ namespace
 
         return true;
     }
+
+    inline bool ConvertU8StringImpl(const std::u16string_view str_view, const size_t str_view_utf8_length, std::span<nox::char8> dest_buffer)
+    {
+        NOX_ASSERT(dest_buffer.size() >= str_view_utf8_length, u"buffer size over");
+
+        const nox::char16* pSrc = str_view.data();
+        const nox::char16* const pSrcEnd = pSrc + str_view.size();
+        nox::char8* dest_ptr = dest_buffer.data();
+
+        while (pSrc != pSrcEnd)
+        {
+            const OffsetPoint offset_point = DecodeUTF16(std::u16string_view{ pSrc, pSrcEnd });
+            EncodeUTF8(dest_ptr, offset_point.codePoint);
+            pSrc += offset_point.offset;
+        }
+
+        return true;
+    }
 }
 
 nox::StlU8String	nox::unicode::ConvertU8String(std::string_view str_view)
 {
-    NOX_ASSERT(false, u"");
-    return {};
+ return nox::StlU8String(reinterpret_cast<const nox::char8*>(str_view.data()), str_view.size());
 }
 
 nox::StlU8String	nox::unicode::ConvertU8String(std::u16string_view str_view)
 {
-    NOX_ASSERT(false, u"");
-    return {};
+ const size_t length = GetUTF8Length(str_view);
+    nox::StlU8String result(length, '0');
+
+    ConvertU8StringImpl(str_view, length, result);
+    return result;
 }
 
 nox::StlU8String	nox::unicode::ConvertU8String(std::u32string_view str_view)
@@ -489,12 +559,22 @@ nox::StlU8String	nox::unicode::ConvertU8String(std::u32string_view str_view)
 
 std::u8string_view	nox::unicode::ConvertU8String(std::string_view str_view, std::span<nox::char8> dest_buffer)
 {
-    return {};
+  NOX_ASSERT(dest_buffer.size() >= str_view.size(), u"buffer size over");
+
+    nox::char8* dest_ptr = dest_buffer.data();
+    for (const char c : str_view)
+    {
+        *(dest_ptr++) = static_cast<nox::char8>(c);
+    }
+
+    return std::u8string_view(dest_buffer.data(), str_view.size());
 }
 
 std::u8string_view	nox::unicode::ConvertU8String(std::u16string_view str_view, std::span<nox::char8> dest_buffer)
 {
-    return {};
+  const size_t length = GetUTF8Length(str_view);
+    ConvertU8StringImpl(str_view, length, dest_buffer);
+    return { dest_buffer.data(), length };
 }
 
 std::u8string_view	nox::unicode::ConvertU8String(std::u32string_view str_view, std::span<nox::char8> dest_buffer)

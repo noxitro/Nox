@@ -104,7 +104,13 @@ namespace nox::util
 			return arg;
 		}
 
-		template<nox::concepts::Char To, class From> //requires(fmt::is_formattable<From, To>::value || std::is_convertible_v<From, std::basic_string_view<To>>)
+		template<nox::concepts::Char To, class From> requires(std::is_enum_v<std::remove_cvref_t<From>> && !IsFormatterValue<From, To>)
+		inline auto ToFormatArg(From&& arg)
+		{
+			return static_cast<std::underlying_type_t<std::remove_cvref_t<From>>>(arg);
+		}
+
+       template<nox::concepts::Char To, class From> requires(!IsFormatterValue<From, To> && !std::is_enum_v<std::remove_cvref_t<From>>)
 		inline decltype(auto) ToFormatArg(From&& arg)
 		{
 			return FormatStringHolder<To>::Get(arg);
@@ -122,7 +128,13 @@ namespace nox::util
 			return arg;
 		}
 
-		template<nox::concepts::Char To, class From> requires(!IsFormatterValue<From, To>)
+		template<nox::concepts::Char To, class From> requires(std::is_enum_v<std::remove_cvref_t<From>> && !IsFormatterValue<From, To>)
+			inline auto ToFormatArg(From&& arg, std::span<To>)
+		{
+			return static_cast<std::underlying_type_t<std::remove_cvref_t<From>>>(arg);
+		}
+
+      template<nox::concepts::Char To, class From> requires(!IsFormatterValue<From, To> && !std::is_enum_v<std::remove_cvref_t<From>>)
 			inline auto ToFormatArg(From&& arg, std::span<To> dest_buffer)
 		{
 			FormatStringHolder<To>::Get(arg, dest_buffer);

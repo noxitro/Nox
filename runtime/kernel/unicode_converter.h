@@ -14,6 +14,11 @@ namespace nox::unicode
 	nox::StlNString	ConvertNString(std::u32string_view str_view);
 	nox::StlNString	ConvertNString(std::wstring_view str_view);
 
+	std::string_view	ConvertNString(std::u8string_view str_view, std::span<char> dest_buffer);
+	std::string_view	ConvertNString(std::u16string_view str_view, std::span<char> dest_buffer);
+	std::string_view	ConvertNString(std::u32string_view str_view, std::span<char> dest_buffer);
+	std::string_view	ConvertNString(std::wstring_view str_view, std::span<char> dest_buffer);
+
 	template<std::same_as<char> To, class From>
 		requires(std::is_void_v<std::void_t<decltype(::nox::unicode::ConvertNString(std::declval<From>()))>>)
 	inline	auto	ConvertString(From&& str, std::span<To> dest_buffer)

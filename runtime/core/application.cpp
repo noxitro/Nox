@@ -9,6 +9,7 @@
 #include	"module_entry.h"
 #include	"scene_view.h"
 #include	"engine_system.h"
+#include	"log_id.h"
 
 namespace nox
 {
@@ -37,10 +38,10 @@ inline	void	nox::Application::Init()
 	RegisterEngineSystem(*this);
 
 	//	モジュールエントリクラス群を収集
-	nox::reflection::ForeachDerivedClassInfoList(nox::reflection::Typeof<nox::ModuleEntry>(),
+	nox::reflection::ForeachDerivedClassInfoList(nox::reflection::Typeof<nox::EngineModule>(),
 		[this](const nox::reflection::ClassInfo& class_info) {
 
-			nox::ModuleEntry*const module_entry = static_cast<nox::ModuleEntry*>(class_info.GetType().CreateObject());
+			nox::EngineModule*const module_entry = static_cast<nox::EngineModule*>(class_info.GetType().CreateObject());
 			module_entry_list_.emplace_back(*module_entry);
 		});
 
@@ -49,7 +50,7 @@ inline	void	nox::Application::Init()
 		nox::FixedPmrArena<sizeof(nox::EngineSystem*) * 32> engine_system_dest_buffer_arena;
 		auto dest_buffer = engine_system_dest_buffer_arena.MakeVector<nox::EngineSystem*>();
 
-		for (const nox::ModuleEntry& entry : module_entry_list_)
+		for (const nox::EngineModule& entry : module_entry_list_)
 		{
 			entry.CreateEngineSystems(dest_buffer);
 
@@ -71,6 +72,11 @@ inline	void	nox::Application::Init()
 
 	//	フェーズ実行ノード構築
 	BuildExecuteNodeList(engine_system_list);
+
+#if !NOX_MASTER
+	TraceExecuteNodeList();
+#endif // !NOX_MASTER
+
 }
 
 void nox::Application::BuildExecuteNodeList(std::span<nox::EngineSystem*> system_list)
@@ -80,6 +86,7 @@ void nox::Application::BuildExecuteNodeList(std::span<nox::EngineSystem*> system
 		std::reference_wrapper<nox::EngineSystem> instance;
 		std::reference_wrapper<const nox::EngineSystem::SystemPhase> phase;
 		std::span<const std::reference_wrapper<const nox::EngineSystem::SystemPhase>> dependencies;
+      std::span<const std::reference_wrapper<const nox::EngineSystem::SystemPhase>> depended;
 	};
 
 	for (nox::uint8 phase_index = 0; phase_index < nox::util::ToUnderlying(nox::SystemPhaseType::_Max); ++phase_index)
@@ -99,7 +106,8 @@ void nox::Application::BuildExecuteNodeList(std::span<nox::EngineSystem*> system
 				nodes.push_back(Node{
 					*system,
 					reg.GetPhase(),
-					reg.GetDependencies()
+                   reg.GetDependencies(),
+					reg.GetDepended()
 					});
 			}
 		}
@@ -120,9 +128,35 @@ void nox::Application::BuildExecuteNodeList(std::span<nox::EngineSystem*> system
 		auto& dest = system_phase_table_[phase_index];
 		dest.reserve(nodes.size());
 
+      //	dependencies / depended から実行ノード間の依存関係を構築
+		nox::Vector<nox::Vector<nox::uint32>> dependency_indices(nodes.size());
+		for (nox::uint32 i = 0; i < nodes.size(); ++i)
+		{
+			for (const std::reference_wrapper<const nox::EngineSystem::SystemPhase>& dep_ref : nodes[i].dependencies)
+			{
+				auto it = phase_to_index.find(&dep_ref.get());
+				if (it == phase_to_index.end())
+				{
+					continue;
+				}
+				dependency_indices[i].push_back(it->second);
+			}
+
+			for (const std::reference_wrapper<const nox::EngineSystem::SystemPhase>& depended_ref : nodes[i].depended)
+			{
+				auto it = phase_to_index.find(&depended_ref.get());
+				if (it == phase_to_index.end())
+				{
+					continue;
+				}
+				dependency_indices[it->second].push_back(i);
+			}
+		}
+
 		//	0=未訪問, 1=訪問中, 2=確定
 		nox::Vector<nox::uint8> states(nodes.size(), 0);
 		nox::Vector<nox::uint32> layer_indices(nodes.size(), 0);
+		nox::uint32 max_layer_index = 0;
 
 		auto visit = [&](nox::uint32 idx, auto& self) -> void {
 			if (states[idx] == 2)
@@ -136,24 +170,32 @@ void nox::Application::BuildExecuteNodeList(std::span<nox::EngineSystem*> system
 			}
 			states[idx] = 1;
 			nox::uint32 max_dep_layer = 0;
-			for (const std::reference_wrapper<const nox::EngineSystem::SystemPhase>& dep_ref : nodes[idx].dependencies)
+            for (const nox::uint32 dep_index : dependency_indices[idx])
 			{
-				auto it = phase_to_index.find(&dep_ref.get());
-				if (it == phase_to_index.end())
-				{
-					continue;
-				}
-				self(it->second, self);
-				max_dep_layer = std::max(max_dep_layer, layer_indices[it->second] + 1);
+                self(dep_index, self);
+				max_dep_layer = std::max(max_dep_layer, layer_indices[dep_index] + 1);
 			}
 			states[idx] = 2;
 			layer_indices[idx] = max_dep_layer;
-			dest.push_back(ExecuteNode{ nodes[idx].instance, nodes[idx].phase, max_dep_layer });
+            max_layer_index = std::max(max_layer_index, max_dep_layer);
 			};
 
 		for (nox::uint32 i = 0; i < nodes.size(); ++i)
 		{
 			visit(i, visit);
+		}
+
+		for (nox::uint32 layer_index = 0; layer_index <= max_layer_index; ++layer_index)
+		{
+			for (nox::uint32 i = 0; i < nodes.size(); ++i)
+			{
+				if (layer_indices[i] != layer_index)
+				{
+					continue;
+				}
+
+				dest.push_back(ExecuteNode{ nodes[i].instance, nodes[i].phase, layer_index });
+			}
 		}
 	}
 }
@@ -249,7 +291,7 @@ inline	void	nox::Application::Exit()
 
 	for (nox::uint32 i = 0; i < module_entry_list_.size(); ++i)
 	{
-		nox::ModuleEntry& entry = module_entry_list_[i];
+		nox::EngineModule& entry = module_entry_list_[i];
 		delete (&entry);
 	}
 
@@ -298,7 +340,28 @@ void nox::Application::RegisterEngineSystem(nox::EngineSystem& engine_system)
 
 	engine_system_map_.emplace(&type, &engine_system);
 }
+#if !NOX_MASTER
+void nox::Application::TraceExecuteNodeList()const
+{
 
+	for (nox::uint8 phase_index = 0; phase_index < nox::util::ToUnderlying(nox::SystemPhaseType::_Max); ++phase_index)
+	{
+		const auto current_phase_type = static_cast<nox::SystemPhaseType>(phase_index);
+		const auto& layers = system_phase_table_[phase_index];
+		if (layers.empty())
+		{
+			continue;
+		}
+
+		NOX_INFO_LINE(nox::log_id::CoreCommon, u"Phase: {0}", current_phase_type);
+		for (const ExecuteNode& node : layers)
+		{
+			NOX_INFO_LINE(nox::log_id::CoreCommon, u"  Layer {0}: {1}", node.layer_index, node.phase.get().name);
+		}
+	}
+
+}
+#endif // !NOX_MASTER
 std::span<const nox::EngineSystem::PhaseRegister> nox::Application::GetPhaseRegisterList()const noexcept
 {
 	return {};

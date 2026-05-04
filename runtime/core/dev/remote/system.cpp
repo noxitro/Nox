@@ -20,7 +20,6 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 	auto& scene_view = scene_manager.GetMainSceneView();
 	auto window_handle = scene_view.GetWindow().GetNativeHandle();
 
-	scene_view_info->SetSceneView(&scene_view);
 	scene_view_info->SetMainWindowHandle(reinterpret_cast<nox::intptr>(window_handle));
 	return scene_view_info;
 }

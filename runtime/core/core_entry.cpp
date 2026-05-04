@@ -14,15 +14,15 @@
 #include	"dev/editor_remote_server.h"
 #endif // NOX_DEVELOP
 
-nox::CoreEntry::CoreEntry()
+nox::CoreModule::CoreModule()
 {
 }
 
-nox::CoreEntry::~CoreEntry()
+nox::CoreModule::~CoreModule()
 {
 }
 
-void nox::CoreEntry::CreateEngineSystems(nox::PmrVector<nox::EngineSystem*>& out)const
+void nox::CoreModule::CreateEngineSystems(nox::PmrVector<nox::EngineSystem*>& out)const
 {
 	out.emplace_back(new nox::SceneManager());
 	out.emplace_back(new nox::ResourceManager());

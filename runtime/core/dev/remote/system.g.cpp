@@ -19,11 +19,9 @@ void nox::dev::editor_remote::ResourceConvertQuery::OnDeserialize(nox::dev::edit
 void nox::dev::editor_remote::SceneViewInfo::OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)
 {
 	writer.Write(main_window_handle_);
-	writer.Write(scene_view_);
 }
 
 void nox::dev::editor_remote::SceneViewInfo::OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)
 {
 	reader.Read(main_window_handle_);
-	reader.Read(scene_view_);
 }

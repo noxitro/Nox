@@ -6,9 +6,9 @@
 
 namespace nox::render
 {
-	class RenderEntry : public nox::ModuleEntry
+	class RenderEntry : public nox::EngineModule
 	{
-		NOX_DECLARE_OBJECT(nox::render::RenderEntry, nox::ModuleEntry);
+		NOX_DECLARE_OBJECT(nox::render::RenderEntry, nox::EngineModule);
 	public:
 		RenderEntry();
 		~RenderEntry()noexcept = default;

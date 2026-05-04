@@ -141,8 +141,11 @@ void nox::dev::editor_remote::SocketStreamWriter::Write(nox::IntrusivePtr<nox::M
 		return;
 	}
 
-	//	リモートインスタンスとして登録して、FQNとプロパティバッファを書き込む
-	server_.RegisterRemoteInstance(value_ref, instance_id);
+ //	リモートインスタンスとして登録して、ID/FQN/プロパティバッファを書き込む
+   server_.RegisterRemoteInstance(value_ref, instance_id);
+	const nox::int64 registered_instance_id = server_.FindRemoteInstanceId(value_ref);
+	NOX_ASSERT(registered_instance_id != 0, u"リモートインスタンスIDの登録に失敗しました");
+	Write(registered_instance_id);
 
 	//	型情報の取得
 	const nox::reflection::ClassInfo& class_info = nox::util::Deref(nox::reflection::FindClassInfo(value->GetType()));
@@ -150,74 +153,10 @@ void nox::dev::editor_remote::SocketStreamWriter::Write(nox::IntrusivePtr<nox::M
 	//	FQNを書き込む
 	Write(class_info.GetFullName());
 
-	//	プロパティバッファを書き込む
-	for (const nox::reflection::VariableInfo& variable_info : class_info.GetVariableList())
-	{
-		if (nox::dev::editor_remote::IsRemoteVariable(variable_info) == false)
-		{
-			continue;
-		}
-
-		const nox::reflection::Type& type = variable_info.GetType();
-
-		switch (type.GetTypeKind())
-		{
-		case nox::reflection::TypeKind::Bool:
-			Write(variable_info.GetValue<bool>(value_ref));
-			break;
-
-		case nox::reflection::TypeKind::Char:
-			Write(variable_info.GetValue<char>(value_ref));
-			break;
-
-		case nox::reflection::TypeKind::Int8:
-			Write(variable_info.GetValue<nox::int8>(value_ref));
-			break;
-
-		case nox::reflection::TypeKind::UInt8:
-			Write(variable_info.GetValue<nox::uint8>(value_ref));
-			break;
-
-		case nox::reflection::TypeKind::Int16:
-			Write(variable_info.GetValue<nox::int16>(value_ref));
-			break;
-
-		case nox::reflection::TypeKind::UInt16:
-			Write(variable_info.GetValue<nox::uint16>(value_ref));
-			break;
-
-		case nox::reflection::TypeKind::Int32:
-			Write(variable_info.GetValue<nox::int32>(value_ref));
-			break;
-
-		case nox::reflection::TypeKind::UInt32:
-			Write(variable_info.GetValue<nox::uint32>(value_ref));
-			break;
-
-		case nox::reflection::TypeKind::Int64:
-			Write(variable_info.GetValue<nox::int64>(value_ref));
-			break;
-
-		case nox::reflection::TypeKind::UInt64:
-			Write(variable_info.GetValue<nox::uint64>(value_ref));
-			break;
-
-		case nox::reflection::TypeKind::Float:
-			Write(variable_info.GetValue<nox::float_t>(value_ref));
-			break;
-
-		case nox::reflection::TypeKind::Double:
-			Write(variable_info.GetValue<nox::double_t>(value_ref));
-			break;
-
-		case nox::reflection::TypeKind::Class:
-			Write(0);
-			//	子オブジェクトを再帰的に書き込むことはしない
-			//	remote instance idのみを書き込む
-			
-			break;
-		}
-	}
+	std::array<nox::uint8, 1024> property_buffer{};
+	const std::span<nox::uint8> property_bytes = nox::dev::editor_remote::GetPropertiesBytes(property_buffer, value_ref);
+	Write(static_cast<nox::int32>(property_bytes.size()));
+	WriteBytes(property_bytes);
 }
 
 nox::uint32 nox::dev::editor_remote::SocketStreamWriter::WriteLeb128ToEnd(nox::uint64 length)

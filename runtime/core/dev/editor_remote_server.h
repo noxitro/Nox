@@ -5,6 +5,7 @@
 #pragma once
 #if NOX_DEVELOP
 #include	"net/server.h"
+#include	"net/client.h"
 #include	"../engine_system.h"
 
 #include	"socket_stream_writer.h"
@@ -13,6 +14,11 @@
 namespace nox
 {
 	class Application;
+}
+
+namespace nox::dev::net
+{
+	class SocketScheduler;
 }
 
 namespace nox::dev::editor_remote
@@ -42,7 +48,7 @@ namespace nox::dev::editor_remote
 		void	SendQuery(nox::dev::editor_remote::Query& query, std::function<void(const nox::dev::editor_remote::Response&)> callback = nullptr);
 		void	SendBuffer(std::span<const nox::uint8> buffer);
 		
-		void	RegisterRemoteInstance(nox::Object& object, nox::int64 instance_id = 0);
+     void	RegisterRemoteInstance(nox::Object& object, nox::int64 instance_id = 0);
 
 		nox::int64 FindRemoteInstanceId(const nox::Object& object)const noexcept;
 		nox::Object* FindRemoteInstance(nox::int64 instance_id)const noexcept;
@@ -61,11 +67,13 @@ namespace nox::dev::editor_remote
 		nox::UnorderedMap<nox::uint32, std::function<void(const nox::dev::editor_remote::Response&)>> response_dict_;
 		nox::dev::editor_remote::SocketStreamWriter writer_;
 		nox::dev::editor_remote::SocketStreamReader reader_;
+		nox::dev::net::SocketScheduler* socket_scheduler_;
 
 		/// @brief TODO:	現状は1つだけ対応
 		nox::dev::net::ConnectionContext main_client_;
 
 		nox::os::Mutex mutex_writer_;
+		nox::os::Mutex mutex_reader_;
 
 		/// @brief リモートインスタンス連想配列
 		///	key:インスタンスID	正:エディタ側のインスタンス、負:Runtime側のインスタンス
@@ -86,7 +94,7 @@ namespace nox::dev::editor_remote
 		}
 		
 		~EditorRemoteServerSystem()override {
-			delete server_;
+			
 		}
 
 		inline EditorRemoteServer& GetServer()const noexcept { return *this->server_; }
@@ -103,6 +111,12 @@ namespace nox::dev::editor_remote
 			this->server_->Update(application);
 		}
 
+		inline void Terminate(nox::Application&)
+		{
+			delete server_;
+			server_ = nullptr;
+		}
+
 	public:
 		static constexpr SystemPhaseInit k_phase_init{
 			&EditorRemoteServerSystem::Initialize,
@@ -112,6 +126,11 @@ namespace nox::dev::editor_remote
 		static constexpr SystemPhaseUpdate k_phase_update{
 			&EditorRemoteServerSystem::Update,
 			NOX_U8_NAMEOF_FUNCTION(&EditorRemoteServerSystem::Update)
+		};
+
+		static constexpr SystemPhaseTerminate k_phase_terminate{
+			&EditorRemoteServerSystem::Terminate,
+			NOX_U8_NAMEOF_FUNCTION(&EditorRemoteServerSystem::Terminate)
 		};
 
 	private:

@@ -54,7 +54,7 @@ void nox::dev::editor_remote::SocketStreamReader::AddReceiveBuffer(std::span<con
 	const nox::uint32 write_size = static_cast<nox::uint32>(buffer.size());
 
 	//	書き込み可能サイズ
-	const nox::uint32 free_size = k_buffer_size - GetReceivedSize();
+    const nox::uint32 free_size = k_buffer_size - GetReceivedSize() - 1;
 
 	//	バッファオーバーチェック
 	NOX_ASSERT(write_size <= free_size, u"SocketStreamReaderの受信バッファがオーバーフローしました");
@@ -299,7 +299,7 @@ bool nox::dev::editor_remote::SocketStreamReader::CanReadBody()const noexcept
 		if ((byte & 0x80u) == 0)
 		{
 			// ヘッダ + パケット全体が揃っているか
-			return GetReceivedSize() >= header_bytes + static_cast<nox::uint32>(packet_size);
+           return packet_size <= k_buffer_size && GetReceivedSize() >= header_bytes + static_cast<nox::uint32>(packet_size);
 		}
 	}
 	return false;

@@ -59,6 +59,11 @@ bool nox::dev::net::Server::Startup(const InitializeContext& context)
 	//	遅延を減らす
 	nox::dev::net::SetNoDelay(this->socket_, true);
 
+	{
+		int reuse_address = 1;
+		::setsockopt(this->socket_, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&reuse_address), sizeof(reuse_address));
+	}
+
 	//TODO:	ネットワークレイテンシの向上
 #endif // NOX_WINDOWS
 
@@ -91,8 +96,8 @@ void	nox::dev::net::Server::Connection(::fd_set& fds)
 
 	constexpr ::timeval timeout
 	{
-		.tv_sec = 0,
-		.tv_usec = 10000
+		.tv_sec = 5,
+		.tv_usec = 0
 	};
 
 	while (true)
@@ -275,7 +280,7 @@ void	nox::dev::net::Server::Connection(::fd_set& fds)
 
 				connection_context.ip_family = IpFamily::IPv4;
 			}
-			client_list_.emplace_back(PeerContext{ .socket = client_socket });
+          client_list_.emplace_back(PeerContext{ .connection = connection_context, .socket = client_socket });
 			NOX_INFO_LINE(nox::dev::net::log_id::DevNet, u"接続完了 name:{0}, port{1}", connection_context.peername, connection_context.portname);
 
 			OnConnected(connection_context);
@@ -310,34 +315,42 @@ void nox::dev::net::Server::Update(nox::Application& application)
 		return;
 	}
 
-	for (auto it = client_list_.begin(); it != client_list_.end(); )
+	nox::Vector<nox::dev::net::raw_socket_t> readable_sockets;
+	readable_sockets.reserve(client_list_.size());
+	for (const auto& peer : client_list_)
 	{
-		if (nox::os::file_descriptor::IsSet(it->socket, read_fds) == false)
+		if (nox::os::file_descriptor::IsSet(peer.socket, read_fds))
 		{
-			++it;
+			readable_sockets.emplace_back(peer.socket);
+		}
+	}
+
+	for (const auto socket : readable_sockets)
+	{
+		const auto current_it = std::find_if(client_list_.begin(), client_list_.end(), [socket](const PeerContext& context) {
+			return context.socket == socket;
+			});
+		if (current_it == client_list_.end())
+		{
 			continue;
 		}
-
+		
 		nox::char_t peek;
-		const nox::int32 n = nox::dev::net::Receive(it->socket, &peek, sizeof(peek), MSG_PEEK);
+		const nox::int32 n = nox::dev::net::Receive(socket, &peek, sizeof(peek), MSG_PEEK);
 
 		if (n == 0)
 		{
-			Disconnect(it->socket);
-			it = client_list_.begin();
+			Disconnect(socket);
 			continue;
 		}
 
 		if (n < 0 && ::WSAGetLastError() != WSAEWOULDBLOCK)
 		{
-			const auto s = it->socket;
-			Disconnect(s);
-			it = client_list_.begin();
+			Disconnect(socket);
 			continue;
 		}
 
 		OnReceive(application);
-		++it;
 	}
 }
 
@@ -378,23 +391,22 @@ void nox::dev::net::Server::Disconnected(const nox::dev::net::ConnectionContext&
 
 void nox::dev::net::Server::Disconnect(const nox::dev::net::raw_socket_t socket)
 {
-	nox::dev::net::Shutdown(socket, SD_BOTH);
-	nox::dev::net::CloseSocket(socket);
-
 	NOX_LOCAL_SCOPE(nox::util::ParallelExecuteCheckScope(pe_checker_clients_));
 
 	auto it = std::find_if(client_list_.begin(), client_list_.end(), [socket](const PeerContext& context) {
 		return context.socket == socket;
 		});
 
-	if (it != client_list_.end())
+	if (it == client_list_.end())
 	{
-		NOX_INFO_LINE(nox::dev::net::log_id::DevNet, u"切断完了 name:{0}, port:{1}", it->connection.peername, it->connection.portname);
-		OnDisconnected(it->connection);
-		client_list_.erase(it);
+		NOX_WARNING_LINE(nox::dev::net::log_id::DevNet, u8"切断するクライアントが見つかりませんでした socket={0}", socket);
+		return;
 	}
-	else
-	{
-		NOX_ASSERT(false, u8"切断するクライアントが見つかりませんでした");
-	}
+
+	nox::dev::net::Shutdown(socket, SD_BOTH);
+	nox::dev::net::CloseSocket(socket);
+
+	NOX_INFO_LINE(nox::dev::net::log_id::DevNet, u"切断完了 name:{0}, port:{1}", it->connection.peername, it->connection.portname);
+	OnDisconnected(it->connection);
+	client_list_.erase(it);
 }

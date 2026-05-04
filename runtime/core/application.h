@@ -10,7 +10,7 @@
 
 namespace nox
 {
-	class ModuleEntry;
+	class EngineModule;
 	class SceneView;
 
 	/// @brief Coreの管理クラス
@@ -65,6 +65,9 @@ namespace nox
 		void ExecutePhase(const nox::SystemPhaseType phase_type);
 		void RegisterEngineSystem(nox::EngineSystem& engine_system);
 
+		/// @brief 依存関係を含めた実行ノードリストを出力
+		void TraceExecuteNodeList()const;
+
 		std::span<const nox::EngineSystem::PhaseRegister> GetPhaseRegisterList()const noexcept override;
 	private:
 		bool kill_;
@@ -76,7 +79,7 @@ namespace nox
 		nox::float_t elapsed_milli_seconds_;
 		nox::float_t next_elapsed_milli_seconds_;
 
-		nox::Vector<std::reference_wrapper<nox::ModuleEntry>> module_entry_list_;
+		nox::Vector<std::reference_wrapper<nox::EngineModule>> module_entry_list_;
 
 		nox::UnorderedMap<const nox::reflection::Type*, nox::EngineSystem*> engine_system_map_;
 		std::array<nox::Vector<ExecuteNode>, nox::util::ToUnderlying(nox::SystemPhaseType::_Max)> system_phase_table_;

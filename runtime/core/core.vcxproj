@@ -186,11 +186,11 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="module_entry.h">
+    <ClInclude Include="engine_module.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="module_entry_category.h">
+    <ClInclude Include="system_phase_type.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -404,11 +404,11 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Master|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="module_entry.cpp">
+    <ClCompile Include="engine_module.cpp">
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="module_entry_category.cpp">
+    <ClCompile Include="system_phase_type.cpp">
       <SubType>
       </SubType>
     </ClCompile>

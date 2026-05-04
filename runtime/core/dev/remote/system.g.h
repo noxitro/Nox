@@ -3,10 +3,6 @@
 //	written from RuntimeRemoteCodeGenerator
 
 #if	NOX_DEVELOP
-// forward declaration for runtime wrapper types
-namespace nox { class SceneView; }
-// end forward declaration
-
 #include	"../editor_remote_query.h"
 #include	"../editor_remote_response.h"
 
@@ -66,19 +62,8 @@ namespace nox::dev::editor_remote
 			main_window_handle_ = value;
 		}
 
-		inline nox::SceneView* GetSceneView()const noexcept
-		{
-			return reinterpret_cast<nox::SceneView*>(scene_view_.Get());
-		}
-
-		inline void SetSceneView(nox::SceneView* value)
-		{
-			scene_view_ = reinterpret_cast<nox::ManagedObject*>(value);
-		}
-
 	private:
 		nox::int64 main_window_handle_ {};
-		nox::IntrusivePtr<nox::ManagedObject> scene_view_ {};
 	};
 
 }

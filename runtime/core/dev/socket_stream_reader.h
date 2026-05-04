@@ -19,7 +19,7 @@ namespace nox::dev::editor_remote
 	private:
 		/// @brief		バッファサイズ
 		/// @details	リングバッファとして使用するバッファのサイズ（2^n必須）
-		static constexpr nox::uint32 k_buffer_size = nox::math::Pow(2, 11);
+		static constexpr nox::uint32 k_buffer_size = 65536;
 	public:
 		inline constexpr explicit SocketStreamReader(nox::dev::editor_remote::EditorRemoteServer& server)noexcept :
 			server_(server),
