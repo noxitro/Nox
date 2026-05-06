@@ -148,6 +148,18 @@ namespace ReflectionGenerator
 			}
 			return r ^ 0xFFFFFFFFU;
 		}
+
+        /// <summary>
+        /// 即時関数実行
+        /// </summary>
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+		public static T ImmediateInvoke<T>(Func<T> f) => f();
+
+        /// <summary>
+        /// 即時関数実行
+        /// </summary>
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static void ImmediateInvoke(Action f) => f();
         #endregion
     }
 

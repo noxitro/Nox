@@ -1966,6 +1966,17 @@ namespace ReflectionGenerator.Parser2
 							}
 							break;
 						case VariableDecl declImpl:
+							
+							{
+                                //	変数の方が完全型かチェック
+                                //	ポインタ型かもしれないので、TypeInfoをたどって完全型を探す
+                                RecordTypeInfo? pointeeType = Util.ImmediateInvoke(() => {
+									RecordTypeInfo? result = null;
+
+                                    return result;
+								});
+                            }
+
 							container.VariableList.Add(declImpl);
 
 							break;
@@ -2351,9 +2362,10 @@ namespace ReflectionGenerator.Parser2
 		//	bool isForwardDeclaration = cursor.IsForwardDeclaration();
 			if (cursor.IsForwardDeclaration() == true)
             {
-				if (cursor.TryGetDefinitionCursor(out ClangSharp.Interop.CXCursor defCursor) == true)
+				//	前方宣言型を弾く
+			//	if (cursor.TryGetDefinitionCursor(out ClangSharp.Interop.CXCursor defCursor) == true)
 				{
-					VisitCursor(defCursor);
+			//		VisitCursor(defCursor);
 					return;
 				}
             }
@@ -2411,6 +2423,12 @@ namespace ReflectionGenerator.Parser2
             }
 
             string fqn = cursor.GetFQN();
+
+			if (fqn.Contains("::Impl"))
+			{
+				Util.BreakPoint();
+                //return;
+            }
 
             RecordDecl classDecl = new()
 			{
