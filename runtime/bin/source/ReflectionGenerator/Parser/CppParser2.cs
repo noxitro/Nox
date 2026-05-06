@@ -1966,17 +1966,6 @@ namespace ReflectionGenerator.Parser2
 							}
 							break;
 						case VariableDecl declImpl:
-							
-							{
-                                //	変数の方が完全型かチェック
-                                //	ポインタ型かもしれないので、TypeInfoをたどって完全型を探す
-                                RecordTypeInfo? pointeeType = Util.ImmediateInvoke(() => {
-									RecordTypeInfo? result = null;
-
-                                    return result;
-								});
-                            }
-
 							container.VariableList.Add(declImpl);
 
 							break;
@@ -2423,12 +2412,6 @@ namespace ReflectionGenerator.Parser2
             }
 
             string fqn = cursor.GetFQN();
-
-			if (fqn.Contains("::Impl"))
-			{
-				Util.BreakPoint();
-                //return;
-            }
 
             RecordDecl classDecl = new()
 			{
