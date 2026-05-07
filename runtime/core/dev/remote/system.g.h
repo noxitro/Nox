@@ -66,5 +66,51 @@ namespace nox::dev::editor_remote
 		nox::int64 main_window_handle_ {};
 	};
 
+	/// @brief nox::Objectの同期Query
+	class SyncQuery final : public nox::dev::editor_remote::Query
+	{
+		NOX_DECLARE_OBJECT(nox::dev::editor_remote::SyncQuery, nox::dev::editor_remote::Query);
+	public:
+		SyncQuery(){}
+		void OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)override;
+		void OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)override;
+		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::Application&, std::span<nox::uint8> storage)const override;
+
+		inline nox::int64 GetRemoteInstanceId()const noexcept
+		{
+			return remote_instance_id_;
+		}
+
+		inline void SetRemoteInstanceId(nox::int64 value)
+		{
+			remote_instance_id_ = value;
+		}
+
+		inline std::u8string_view GetFqn()const noexcept
+		{
+			return fqn_;
+		}
+
+		inline void SetFqn(std::u8string_view value)
+		{
+			fqn_ = value;
+		}
+
+		inline const std::array<nox::uint8, 2048>& GetPropertyByteBuffer()const noexcept
+		{
+			return property_byte_buffer_;
+		}
+
+		inline void SetPropertyByteBuffer(const std::array<nox::uint8, 2048>& value)
+		{
+			property_byte_buffer_ = value;
+		}
+
+	private:
+		nox::int64 remote_instance_id_ {};
+		nox::U8FixedString<512> fqn_ {};
+		std::array<nox::uint8, 2048> property_byte_buffer_ {};
+	};
+
 }
 #endif	//	NOX_DEVELOP

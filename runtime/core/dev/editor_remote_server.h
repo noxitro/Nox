@@ -41,6 +41,8 @@ namespace nox::dev::editor_remote
 	{
 		NOX_DECLARE_OBJECT(nox::dev::editor_remote::EditorRemoteServer, nox::dev::net::Server);
 		friend class EditorRemoteServerSystem;
+	private:
+		struct Impl;
 	public:
 		EditorRemoteServer();
 		~EditorRemoteServer()override;
@@ -81,6 +83,9 @@ namespace nox::dev::editor_remote
 
 		/// @brief リモートインスタンスIDを格納する辞書。Objectからint64へのマッピングを保持します。
 		nox::UnorderedMap<const nox::Object*, nox::int64> remote_instance_id_dict_;
+
+		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
+		nox::dev::editor_remote::EditorRemoteServer::Impl* impl_;
 	};
 
 	/// @brief 一時的なEditorRemoteServerのラッパー　EngineSystemとして登録するためのクラス
@@ -135,6 +140,7 @@ namespace nox::dev::editor_remote
 
 	private:
 		EditorRemoteServer* server_;
+		
 	};
 }
 #endif // NOX_DEVELOP

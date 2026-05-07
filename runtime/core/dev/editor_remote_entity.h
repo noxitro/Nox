@@ -17,7 +17,7 @@ namespace nox::dev::editor_remote
 		NOX_DECLARE_OBJECT(nox::dev::editor_remote::EditorRemoteEntity, nox::Object);
 	public:
 		inline constexpr EditorRemoteEntity() noexcept : id_(0) {}
-		inline constexpr ~EditorRemoteEntity() noexcept override {}
+		inline constexpr ~EditorRemoteEntity() override {}
 
 		void Serialize(nox::uint32 id, SocketStreamWriter& writer);
 		void Deserialize(SocketStreamReader& reader);

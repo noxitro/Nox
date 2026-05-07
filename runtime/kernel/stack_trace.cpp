@@ -23,144 +23,140 @@
 #include	"log_id.h"
 #include	"math/math_algorithm.h"
 #include	"assertion.h"
+#include	"memory/pmr.h"
+#include	"memory/pmr_buffer.h"
 
 namespace nox
 {
-	//	グローバル変数
-
-	/**
-	 * @brief スタックトレースAPI
-	*/
-	using StackBackTraceFuncType = ::USHORT(WINAPI*)(::ULONG, ::ULONG, ::PVOID*, __out_opt::PULONG);
-
-	StackBackTraceFuncType gRtiCaptureStackBackTrace = nullptr;
-
-	/**
-	 * @brief
-	*/
-	static inline void* mHandlePtr = nullptr;
-	//
-
-	/**
-	 * @brief
-	*/
-	nox::os::Mutex g_resolve_mutex;
-
-
-	//	関数
-	inline bool	ResolveStack(std::span<nox::stack_walker::StackFrame> stack_table)
+	namespace
 	{
-		::HANDLE const processHandle = ::GetCurrentProcess();
-		if (processHandle == nullptr)
+		//	グローバル変数
+
+		/// @brief スタックトレースAPI
+		using StackBackTraceFuncType = ::USHORT(WINAPI*)(::ULONG, ::ULONG, ::PVOID*, __out_opt::PULONG);
+
+		constinit StackBackTraceFuncType gRtiCaptureStackBackTrace = nullptr;
+
+		static constinit inline void* mHandlePtr = nullptr;
+
+		//
+		nox::os::Mutex g_resolve_mutex;
+
+		//	関数
+		inline bool	ResolveStack(std::span<nox::stack_walker::StackFrame> stack_table)
 		{
-			return false;
+			::HANDLE const processHandle = ::GetCurrentProcess();
+			if (processHandle == nullptr)
+			{
+				return false;
+			}
+
+			/* シンボル名最大サイズをセット */
+			constexpr size_t MaxNameSize = 255;
+
+			/* シンボル情報サイズを算出 */
+			constexpr size_t SymbolInfoSize = sizeof(::SYMBOL_INFOW) + ((MaxNameSize + 1) * sizeof(nox::wchar16));
+
+			//	シンボル情報のメモリ確保
+			std::array<nox::uint8, SymbolInfoSize> symbolBuffer;
+			::SYMBOL_INFOW* const symbol = reinterpret_cast <::SYMBOL_INFOW*>(symbolBuffer.data());
+			symbol->MaxNameLen = MaxNameSize;
+			symbol->SizeOfStruct = sizeof(::SYMBOL_INFOW);
+
+			////	Symbol情報
+			//::IMAGEHLP_SYMBOL64* symbolInfo = nullptr;
+			//u8 symbolInfoBuffer[MAX_PATH + sizeof(::IMAGEHLP_SYMBOL64)] = { 0 };
+
+			//symbolInfo = reinterpret_cast<::IMAGEHLP_SYMBOL64*>(symbolInfoBuffer);
+			//symbolInfo->SizeOfStruct = sizeof(::IMAGEHLP_SYMBOL64);
+			//symbolInfo->MaxNameLength = MAX_PATH;
+
+			//	hbgHelpはスレッドセーフではないので、ロックする必要がある
+			//	https://learn.microsoft.com/ja-jp/windows/win32/api/dbghelp/nf-dbghelp-symfromaddr
+			NOX_LOCAL_SCOPE(nox::os::ScopedLock{ g_resolve_mutex });
+
+			//	シンボルハンドラの初期化
+			::SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES | SYMOPT_UNDNAME);
+			::SymInitialize(processHandle, nullptr, TRUE);
+
+			//	情報を収集
+			const nox::uint8 stack_num = static_cast<nox::uint8>(stack_table.size());
+			for (nox::uint8 i = 0; i < stack_num; ++i)
+			{
+				nox::stack_walker::StackFrame& stack = stack_table[i];
+
+				//	解決済みか
+				if (stack.IsResolved() == true)
+				{
+					continue;
+				}
+
+				//	有効なアドレスか？
+				if (stack.IsInvalidAddress() == true)
+				{
+					continue;
+				}
+
+				//	アドレス
+				const ::DWORD64 nativeAddr = static_cast<::DWORD64>(stack.GetAddress());
+				::DWORD64  dwDisplacement64 = 0;
+
+
+				/* トレースアドレスからシンボル情報を取得 */
+				if (::SymFromAddrW(processHandle, nativeAddr, &dwDisplacement64, symbol) == false)
+				{
+					continue;
+				}
+
+				{
+					std::array<nox::char16, MaxNameSize> u32_symbol_name;
+					nox::unicode::ConvertU16String(symbol->Name, u32_symbol_name);
+					stack.SetSymbolName(u32_symbol_name.data());
+
+				}
+
+
+				//	ラインを取得
+				::IMAGEHLP_LINEW64 line;
+				line.SizeOfStruct = sizeof(::IMAGEHLP_LINEW64);
+
+				::DWORD dwDisplacement = 0x10000000;
+				//	::SymSetOptions()
+
+				if (::SymGetLineFromAddrW64(processHandle, nativeAddr, &dwDisplacement, &line) == FALSE)
+				{
+					continue;
+				}
+
+				stack.SetLine(line.LineNumber);
+
+				{
+					std::array<nox::char16, 1024> u32_file_name;
+					nox::unicode::ConvertU16String(line.FileName, u32_file_name);
+					stack.SetFileName(u32_file_name.data());
+				}
+
+				//	モジュール情報
+				::IMAGEHLP_MODULEW64 moduleInfo;
+				moduleInfo.SizeOfStruct = sizeof(::IMAGEHLP_MODULEW64);
+
+				if (::SymGetModuleInfoW64(processHandle, nativeAddr, &moduleInfo) == FALSE)
+				{
+					continue;
+				}
+
+				{
+					std::array<nox::char16, 1024> u32_module_name;
+					nox::unicode::ConvertU16String(moduleInfo.ModuleName, u32_module_name);
+					stack.SetModuleName(u32_module_name.data());
+				}
+
+				//	解決済みにする
+				stack.SetResolved(true);
+			}
+
+			return true;
 		}
-
-		/* シンボル名最大サイズをセット */
-		constexpr size_t MaxNameSize = 255;
-
-		/* シンボル情報サイズを算出 */
-		constexpr size_t SymbolInfoSize = sizeof(::SYMBOL_INFOW) + ((MaxNameSize + 1) * sizeof(nox::wchar16));
-
-		//	シンボル情報のメモリ確保
-		std::array<nox::uint8, SymbolInfoSize> symbolBuffer;
-		::SYMBOL_INFOW* const symbol = reinterpret_cast <::SYMBOL_INFOW*>(symbolBuffer.data());
-		symbol->MaxNameLen = MaxNameSize;
-		symbol->SizeOfStruct = sizeof(::SYMBOL_INFOW);
-
-		////	Symbol情報
-		//::IMAGEHLP_SYMBOL64* symbolInfo = nullptr;
-		//u8 symbolInfoBuffer[MAX_PATH + sizeof(::IMAGEHLP_SYMBOL64)] = { 0 };
-
-		//symbolInfo = reinterpret_cast<::IMAGEHLP_SYMBOL64*>(symbolInfoBuffer);
-		//symbolInfo->SizeOfStruct = sizeof(::IMAGEHLP_SYMBOL64);
-		//symbolInfo->MaxNameLength = MAX_PATH;
-
-		//	hbgHelpはスレッドセーフではないので、ロックする必要がある
-		//	https://learn.microsoft.com/ja-jp/windows/win32/api/dbghelp/nf-dbghelp-symfromaddr
-		NOX_LOCAL_SCOPE(nox::os::ScopedLock{ g_resolve_mutex });
-
-		//	シンボルハンドラの初期化
-		::SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES | SYMOPT_UNDNAME);
-		::SymInitialize(processHandle, nullptr, TRUE);
-
-		//	情報を収集
-		const nox::uint8 stack_num = static_cast<nox::uint8>(stack_table.size());
-		for (nox::uint8 i = 0; i < stack_num; ++i)
-		{
-			nox::stack_walker::StackFrame& stack = stack_table[i];
-
-			//	解決済みか
-			if (stack.IsResolved() == true)
-			{
-				continue;
-			}
-
-			//	有効なアドレスか？
-			if (stack.IsInvalidAddress() == true)
-			{
-				continue;
-			}
-
-			//	アドレス
-			const ::DWORD64 nativeAddr = static_cast<::DWORD64>(stack.GetAddress());
-			::DWORD64  dwDisplacement64 = 0;
-
-
-			/* トレースアドレスからシンボル情報を取得 */
-			if (::SymFromAddrW(processHandle, nativeAddr, &dwDisplacement64, symbol) == false)
-			{
-				continue;
-			}
-
-			{
-				std::array<nox::char16, MaxNameSize> u32_symbol_name;
-				nox::unicode::ConvertU16String(symbol->Name, u32_symbol_name);
-				stack.SetSymbolName(u32_symbol_name.data());
-
-			}
-
-
-			//	ラインを取得
-			::IMAGEHLP_LINEW64 line;
-			line.SizeOfStruct = sizeof(::IMAGEHLP_LINEW64);
-
-			::DWORD dwDisplacement = 0x10000000;
-			//	::SymSetOptions()
-
-			if (::SymGetLineFromAddrW64(processHandle, nativeAddr, &dwDisplacement, &line) == FALSE)
-			{
-				continue;
-			}
-
-			stack.SetLine(line.LineNumber);
-
-			{
-				std::array<nox::char16, 1024> u32_file_name;
-				nox::unicode::ConvertU16String(line.FileName, u32_file_name);
-				stack.SetFileName(u32_file_name.data());
-			}
-
-			//	モジュール情報
-			::IMAGEHLP_MODULEW64 moduleInfo;
-			moduleInfo.SizeOfStruct = sizeof(::IMAGEHLP_MODULEW64);
-
-			if (::SymGetModuleInfoW64(processHandle, nativeAddr, &moduleInfo) == FALSE)
-			{
-				continue;
-			}
-
-			{
-				std::array<nox::char16, 1024> u32_module_name;
-				nox::unicode::ConvertU16String(moduleInfo.ModuleName, u32_module_name);
-				stack.SetModuleName(u32_module_name.data());
-			}
-
-			//	解決済みにする
-			stack.SetResolved(true);
-		}
-
-		return true;
 	}
 }
 
@@ -329,56 +325,93 @@ void	nox::stack_walker::detail::WalkerSlimBase::Clear()noexcept
 
 namespace nox::stack_walker
 {
-	constexpr	nox::int32	k_max_name_size = 1024;
-
-	inline	bool	TraceImpl(::HANDLE const processHandle, ::SYMBOL_INFOW* const symbol, const nox::stack_walker::SlimStackFrame& stack)
+	namespace
 	{
-		//	アドレス
-		const ::DWORD64 nativeAddr = static_cast<::DWORD64>(stack.GetAddress());
-		::DWORD64  dwDisplacement64 = 0;
+		constexpr	nox::int32	k_max_name_size = 1024;
 
-		/* トレースアドレスからシンボル情報を取得 */
-		if (::SymFromAddrW(processHandle, nativeAddr, &dwDisplacement64, symbol) == false)
+		/// @brief [Symbol名]([ライン])を取得
+		/// @param dest_buffer 
+		/// @param processHandle 
+		/// @param symbol 
+		/// @param stack 
+		/// @return 
+		inline std::optional<std::u16string_view> GetCallStack(std::span<nox::char16> dest_buffer, ::HANDLE const processHandle, ::SYMBOL_INFOW* const symbol, const nox::stack_walker::SlimStackFrame& stack)
 		{
-			return false;
+			//	アドレス
+			const ::DWORD64 nativeAddr = static_cast<::DWORD64>(stack.GetAddress());
+			::DWORD64  dwDisplacement64 = 0;
+			/* トレースアドレスからシンボル情報を取得 */
+			if (::SymFromAddrW(processHandle, nativeAddr, &dwDisplacement64, symbol) == false)
+			{
+				return std::nullopt;
+			}
+			std::array<nox::char16, nox::stack_walker::k_max_name_size> u32_symbol_name{ 0 };
+			nox::unicode::ConvertU16String(symbol->Name, u32_symbol_name);
+
+			//	ラインを取得
+			::IMAGEHLP_LINEW64 line;
+			line.SizeOfStruct = sizeof(::IMAGEHLP_LINEW64);
+			::DWORD dwDisplacement = 0x10000000;
+			//	::SymSetOptions()
+			if (::SymGetLineFromAddrW64(processHandle, nativeAddr, &dwDisplacement, &line) == FALSE)
+			{
+				return std::u16string_view(u32_symbol_name.data(), symbol->NameLen);
+			}
+			std::array<nox::char16, 1024> u32_file_name = { 0 };
+			nox::unicode::ConvertU16String(line.FileName, u32_file_name);
+			util::Format(dest_buffer, u"{0} ({1})", std::u16string_view(u32_symbol_name.data(), symbol->NameLen), line.LineNumber);
+			return std::u16string_view(dest_buffer.data());
 		}
 
-		std::array<nox::char16, nox::stack_walker::k_max_name_size> u32_symbol_name{ 0 };
-		nox::unicode::ConvertU16String(symbol->Name, u32_symbol_name);
-		
-		//	ラインを取得
-		::IMAGEHLP_LINEW64 line;
-		line.SizeOfStruct = sizeof(::IMAGEHLP_LINEW64);
-
-		::DWORD dwDisplacement = 0x10000000;
-		//	::SymSetOptions()
-
-		if (::SymGetLineFromAddrW64(processHandle, nativeAddr, &dwDisplacement, &line) == FALSE)
+		inline	bool	TraceImpl(::HANDLE const processHandle, ::SYMBOL_INFOW* const symbol, const nox::stack_walker::SlimStackFrame& stack)
 		{
+			//	アドレス
+			const ::DWORD64 nativeAddr = static_cast<::DWORD64>(stack.GetAddress());
+			::DWORD64  dwDisplacement64 = 0;
+
+			/* トレースアドレスからシンボル情報を取得 */
+			if (::SymFromAddrW(processHandle, nativeAddr, &dwDisplacement64, symbol) == false)
+			{
+				return false;
+			}
+
+			std::array<nox::char16, nox::stack_walker::k_max_name_size> u32_symbol_name{ 0 };
+			nox::unicode::ConvertU16String(symbol->Name, u32_symbol_name);
+
+			//	ラインを取得
+			::IMAGEHLP_LINEW64 line;
+			line.SizeOfStruct = sizeof(::IMAGEHLP_LINEW64);
+
+			::DWORD dwDisplacement = 0x10000000;
+			//	::SymSetOptions()
+
+			if (::SymGetLineFromAddrW64(processHandle, nativeAddr, &dwDisplacement, &line) == FALSE)
+			{
+				//	[Symbol名]([ライン])
+				NOX_INFO_LINE(log_id::Kernel, u"{0} (invalid)", std::u16string_view(u32_symbol_name.data(), symbol->NameLen));
+				return true;
+				//			return false;
+			}
+
+			std::array<nox::char16, 1024> u32_file_name = { 0 };
+			nox::unicode::ConvertU16String(line.FileName, u32_file_name);
+
+			//	モジュール情報
+			::IMAGEHLP_MODULEW64 moduleInfo;
+			moduleInfo.SizeOfStruct = sizeof(::IMAGEHLP_MODULEW64);
+
+			if (::SymGetModuleInfoW64(processHandle, nativeAddr, &moduleInfo) == FALSE)
+			{
+				return false;
+			}
+
+			std::array<nox::char16, 1024> u32_module_name;
+			nox::unicode::ConvertU16String(moduleInfo.ModuleName, u32_module_name);
+
 			//	[Symbol名]([ライン])
-			NOX_INFO_LINE(log_id::Kernel, u"{0} (invalid)", std::u16string_view(u32_symbol_name.data(), symbol->NameLen));
+			NOX_INFO_LINE(log_id::Kernel, u"{0} ({1})", std::u16string_view(u32_symbol_name.data(), symbol->NameLen), line.LineNumber);
 			return true;
-//			return false;
 		}
-
-		std::array<nox::char16, 1024> u32_file_name = { 0 };
-		nox::unicode::ConvertU16String(line.FileName, u32_file_name);
-
-		//	モジュール情報
-		::IMAGEHLP_MODULEW64 moduleInfo;
-		moduleInfo.SizeOfStruct = sizeof(::IMAGEHLP_MODULEW64);
-
-		if (::SymGetModuleInfoW64(processHandle, nativeAddr, &moduleInfo) == FALSE)
-		{
-			return false;
-		}
-
-		std::array<nox::char16, 1024> u32_module_name;
-		nox::unicode::ConvertU16String(moduleInfo.ModuleName, u32_module_name);
-
-		//	[Symbol名]([ライン])
-		NOX_INFO_LINE(log_id::Kernel, u"{0} ({1})", std::u16string_view(u32_symbol_name.data(), symbol->NameLen), line.LineNumber);
-		return true;
 	}
 }
 
@@ -423,6 +456,15 @@ void	nox::stack_walker::detail::WalkerSlimBase::Trace()const
 	}
 
 	NOX_INFO_LINE(log_id::Kernel, u"===CallStackTrace終了===\n");
+
+	//	シンボルハンドラのクリーンアップ
+	::SymCleanup(processHandle);
+}
+
+std::u16string_view nox::stack_walker::detail::WalkerSlimBase::GetStackTraceU16(std::span<nox::char16> dest)const
+{
+	
+	return {};
 }
 
 void nox::stack_walker::detail::WalkerSlimBase::SetCollectLength(const uint8 length)

@@ -31,6 +31,12 @@ namespace nox::dev::editor_remote
 		void WriteLength(nox::uint64 length);
 		void WriteBytes(std::span<const nox::uint8> data);
 
+		inline void Write(std::span<const nox::uint8> data)
+		{
+			this->WriteLength(static_cast<nox::uint64>(data.size()));
+			this->WriteBytes(data);
+		}
+
 		template<typename T> requires(std::is_arithmetic_v<T>)
 		inline void Write(T value)
 		{

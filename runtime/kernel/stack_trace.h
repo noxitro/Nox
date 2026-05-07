@@ -230,6 +230,7 @@ namespace nox::stack_walker
 
 			void	Clear()noexcept;
 			void	Trace()const;
+			std::u16string_view GetStackTraceU16(std::span<nox::char16> dest)const;
 
 			inline	void Collected()noexcept
 			{

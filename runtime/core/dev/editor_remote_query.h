@@ -13,13 +13,17 @@ namespace nox
 
 namespace nox::dev::editor_remote
 {
+	/// @brief 受信専用Queryタグ
+	/// @details SendQuery不可
+	struct IRecvOnlyQueryTag {};
+
 	class Response;
 	class Query : public nox::dev::editor_remote::EditorRemoteEntity
 	{
 		NOX_DECLARE_OBJECT(nox::dev::editor_remote::Query, nox::dev::editor_remote::EditorRemoteEntity);
 	public:
 		inline constexpr Query()noexcept {}
-		inline constexpr ~Query() noexcept override {}
+		inline constexpr ~Query() override {}
 
 		/// @brief Queryを受信した時に実行される
 		/// @param application アプリケーションインスタンス

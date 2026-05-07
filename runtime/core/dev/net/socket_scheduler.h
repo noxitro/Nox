@@ -22,7 +22,7 @@ namespace nox::dev::net
 		NOX_DECLARE_OBJECT(nox::dev::net::SocketScheduler, nox::EngineSystem);
 		friend struct SocketSchedulerDetail;
 	private:
-		
+		struct Impl;
 	public:
 		SocketScheduler();
 		~SocketScheduler()override;

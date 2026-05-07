@@ -17,7 +17,8 @@ namespace nox
 	template<class T>
 	using PmrList = std::pmr::list<T>;
 
-	using PmrString = std::pmr::string;
+	template<class T>
+	using PmrStlString = std::pmr::basic_string<T>;
 
 	/// @brief アリーナのバッファ枯渇時の振る舞い
 	enum class ArenaOverflow : nox::uint8

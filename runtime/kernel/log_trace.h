@@ -30,7 +30,7 @@ namespace nox::log_id
 namespace nox::debug
 {
 	/// @brief ログタイプ
-	enum class LogCategory : uint8
+	enum class LogLevel : uint8
 	{
 		Info,
 		Warning,
@@ -41,17 +41,18 @@ namespace nox::debug
 	struct LogHandlerArgs
 	{
 		nox::uint32 column;
+		nox::debug::LogLevel level;
 		std::u8string_view message;
 		std::u8string_view callstack;
 	};
 
-	void AttachLogHandler(void(*callback)(const LogHandlerArgs&));
+	void AttachLogHandler(std::function<void(const nox::debug::LogHandlerArgs&)>);
 	void DetachLogHandler();
 
 	namespace detail
 	{
-		void	TraceDirect(LogCategory log_category, const std::u16string_view category, const std::u8string_view message, bool isNewLine, const std::source_location& source_location);
-		void	TraceDirect(LogCategory log_category, const std::u16string_view category, const std::u16string_view message, bool isNewLine, const std::source_location& source_location);
+		void	TraceDirect(LogLevel log_category, const std::u16string_view category, const std::u8string_view message, bool isNewLine, const std::source_location& source_location);
+		void	TraceDirect(LogLevel log_category, const std::u16string_view category, const std::u16string_view message, bool isNewLine, const std::source_location& source_location);
 
 		//template<class... Args>
 		//void	TraceDirectArgs(LogCategory log_category, const std::u16string_view category, bool isNewLine, const std::source_location& source_location, const std::u32string_view message, Args&&...args)
@@ -64,7 +65,7 @@ namespace nox::debug
 		//}
 
 		template<class... Args>
-		void	TraceDirectArgs(LogCategory log_category, const std::u16string_view category, bool isNewLine, const std::source_location& source_location, const std::u8string_view message, Args&&...args)
+		void	TraceDirectArgs(LogLevel log_category, const std::u16string_view category, bool isNewLine, const std::source_location& source_location, const std::u8string_view message, Args&&...args)
 		{
 			//	動的メモリ確保を行わないように確保済みのバッファを使用
 			std::array<nox::char8, 5096> buffer = { 0 };
@@ -74,7 +75,7 @@ namespace nox::debug
 		}
 
 		template<class... Args>
-		void	TraceDirectArgs(LogCategory log_category, const std::u16string_view category, bool isNewLine, const std::source_location& source_location, const std::u16string_view message, Args&&...args)
+		void	TraceDirectArgs(LogLevel log_category, const std::u16string_view category, bool isNewLine, const std::source_location& source_location, const std::u16string_view message, Args&&...args)
 		{
 			//	動的メモリ確保を行わないように確保済みのバッファを使用
 			std::array<nox::char16, 5096> buffer = { 0 };
@@ -94,7 +95,7 @@ namespace nox::debug
 
 	template<std::derived_from<log_id::LogId> LogId, class... Args>
 		requires(std::is_polymorphic_v<LogId> == false && std::is_same_v<std::u16string_view, decltype(LogId()())>)
-	inline	void	LogTraceArgs(LogCategory log_category, const std::source_location& source_location, const std::u8string_view message, Args&&... args)
+	inline	void	LogTraceArgs(LogLevel log_category, const std::source_location& source_location, const std::u8string_view message, Args&&... args)
 	{
 		constexpr std::u16string_view log_tag = LogId()();
 		nox::debug::detail::TraceDirectArgs(log_category, log_tag, true, source_location, message, std::forward<Args>(args)...);
@@ -117,7 +118,7 @@ namespace nox::debug
 	//}
 	template<std::derived_from<log_id::LogId> LogId, class... Args>
 		requires(std::is_polymorphic_v<LogId> == false && std::is_same_v<std::u16string_view, decltype(LogId()())>)
-	inline	void	LogTraceArgs(LogCategory log_category, const std::source_location& source_location, const std::u16string_view message, Args&&... args)
+	inline	void	LogTraceArgs(LogLevel log_category, const std::source_location& source_location, const std::u16string_view message, Args&&... args)
 	{
 		constexpr std::u16string_view log_tag = LogId()();
 		nox::debug::detail::TraceDirectArgs(log_category, log_tag, true, source_location, message, std::forward<Args>(args)...);
@@ -125,15 +126,15 @@ namespace nox::debug
 }
 
 #if NOX_DEBUG
-#define	NOX_INFO_LINE_OLD(...) ::nox::debug::LogTrace(::nox::debug::LogCategory::Info, __VA_ARGS__)
-#define NOX_WARNING_LINE_OLD(...) ::nox::debug::LogTrace(::nox::debug::LogCategory::Warning, __VA_ARGS__)
-#define NOX_ERROR_LINE_OLD(...) ::nox::debug::LogTrace(::nox::debug::LogCategory::Error, __VA_ARGS__)
+#define	NOX_INFO_LINE_OLD(...) ::nox::debug::LogTrace(::nox::debug::LogLevel::Info, __VA_ARGS__)
+#define NOX_WARNING_LINE_OLD(...) ::nox::debug::LogTrace(::nox::debug::LogLevel::Warning, __VA_ARGS__)
+#define NOX_ERROR_LINE_OLD(...) ::nox::debug::LogTrace(::nox::debug::LogLevel::Error, __VA_ARGS__)
 
 /// @brief		ログ出力 レベル：Info
 /// @details	フォーマット処理を動的メモリ確保を行わないように確保済みのバッファを使用する
-#define NOX_INFO_LINE(LodId, ...) ::nox::debug::LogTraceArgs<LodId>(::nox::debug::LogCategory::Info, ::std::source_location::current(), __VA_ARGS__)
-#define NOX_WARNING_LINE(LodId, ...) ::nox::debug::LogTraceArgs<LodId>(::nox::debug::LogCategory::Warning, ::std::source_location::current(), __VA_ARGS__)
-#define NOX_ERROR_LINE(LodId, ...) ::nox::debug::LogTraceArgs<LodId>(::nox::debug::LogCategory::Error, ::std::source_location::current(), __VA_ARGS__)
+#define NOX_INFO_LINE(LodId, ...) ::nox::debug::LogTraceArgs<LodId>(::nox::debug::LogLevel::Info, ::std::source_location::current(), __VA_ARGS__)
+#define NOX_WARNING_LINE(LodId, ...) ::nox::debug::LogTraceArgs<LodId>(::nox::debug::LogLevel::Warning, ::std::source_location::current(), __VA_ARGS__)
+#define NOX_ERROR_LINE(LodId, ...) ::nox::debug::LogTraceArgs<LodId>(::nox::debug::LogLevel::Error, ::std::source_location::current(), __VA_ARGS__)
 #else
 #define	NOX_INFO_LINE_OLD(...)
 #define NOX_WARNING_LINE_OLD(...)

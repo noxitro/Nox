@@ -12,10 +12,14 @@
 #include	"net/dev_net_api.h"
 #include	"net/dev_net_log_id.h"
 #include	"../application.h"
+#include	"../log_service.h"
 
 namespace nox::dev::editor_remote
 {
-	
+	struct EditorRemoteServer::Impl
+	{
+		nox::LogService log_service;
+	};
 }
 
 nox::dev::editor_remote::EditorRemoteServer::EditorRemoteServer():
@@ -25,7 +29,8 @@ nox::dev::editor_remote::EditorRemoteServer::EditorRemoteServer():
 	writer_(*this),
    reader_(*this),
 	socket_scheduler_(nullptr),
-	main_client_{}
+	main_client_{},
+	impl_(new Impl())
 {
 	
 }
@@ -37,6 +42,9 @@ nox::dev::editor_remote::EditorRemoteServer::~EditorRemoteServer()
 		socket_scheduler_->UnregisterEntity(*this);
 		socket_scheduler_ = nullptr;
 	}
+
+	delete impl_;
+	impl_ = nullptr;
 }
 
 void	nox::dev::editor_remote::EditorRemoteServer::SendQuery(nox::dev::editor_remote::Query& query, std::function<void(const nox::dev::editor_remote::Response&)> callback)
@@ -112,7 +120,7 @@ void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive(nox::Application
 		reader_.SkipHeader();
 
 		//	entity名を読み取り
-		std::u8string_view entity_full_name = this->reader_.Read(entity_name_buffer);
+		std::u8string_view entity_full_name = this->reader_.ReadString(entity_name_buffer);
 		if (entity_full_name.empty() == false && entity_full_name.back() == u8'\0')
 		{
 			entity_full_name.remove_suffix(1);
@@ -205,11 +213,16 @@ void nox::dev::editor_remote::EditorRemoteServer::OnReceive(nox::Application& ap
 void	nox::dev::editor_remote::EditorRemoteServer::OnConnected(const nox::dev::net::ConnectionContext& context)
 {
 	main_client_ = context;
+
+	//	log_serviceへサーバーを登録
+	impl_->log_service.AttachServer(*this);
 }
 
 void	nox::dev::editor_remote::EditorRemoteServer::OnDisconnected(const nox::dev::net::ConnectionContext& context)
 {
 	main_client_.socket = nox::dev::net::k_raw_invalid_socket;
+
+	impl_->log_service.DetachServer();
 }
 
 void	nox::dev::editor_remote::EditorRemoteServer::RegisterRemoteInstance(nox::Object& object, nox::int64 instance_id)

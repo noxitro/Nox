@@ -186,6 +186,9 @@
     <ClInclude Include="folder_node.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="log_service.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -357,6 +360,9 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="folder_node.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="log_service.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

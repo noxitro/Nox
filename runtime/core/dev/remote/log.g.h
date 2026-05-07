@@ -36,8 +36,30 @@ namespace nox::dev::editor_remote
 			level_ = value;
 		}
 
+		inline std::u8string_view GetMsg()const noexcept
+		{
+			return msg_;
+		}
+
+		inline void SetMsg(std::u8string_view value)
+		{
+			msg_ = value;
+		}
+
+		inline std::u8string_view GetCallStack()const noexcept
+		{
+			return call_stack_;
+		}
+
+		inline void SetCallStack(std::u8string_view value)
+		{
+			call_stack_ = value;
+		}
+
 	private:
 		LogLevel level_ {};
+		std::u8string_view msg_ {};
+		std::u8string_view call_stack_ {};
 	};
 
 }

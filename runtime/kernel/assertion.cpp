@@ -29,7 +29,7 @@ namespace nox
 
 void	nox::assertion::detail::Assert(std::u16string_view error_category, std::u8string_view message, const std::wstring_view file_name, const std::source_location& source_location)noexcept(false)
 {
-	std::array<char16, 1024> native_message = { 0 };
+	std::array<nox::char16, 1024> native_message = { 0 };
 	unicode::ConvertU16String(message, native_message);
 
 	nox::assertion::detail::Assert(error_category, native_message.data(), file_name, source_location);
@@ -37,7 +37,12 @@ void	nox::assertion::detail::Assert(std::u16string_view error_category, std::u8s
 
 void	nox::assertion::detail::Assert(std::u16string_view error_category, std::u16string_view message, const std::wstring_view file_name, const std::source_location& source_location)noexcept(false)
 {
-	std::array<char16, 2048> assert_message = { 0 };
+	nox::stack_walker::StackWalkerSlim stack_walker;
+	stack_walker.Collect(1);
+
+	stack_walker.GetStackList();
+
+	std::array<nox::char16, 4096> assert_message = { 0 };
 	nox::util::Format(assert_message, u"{0}\n{1}\nLine:{2}, Column:{3}", message, file_name.data(), source_location.line(), source_location.column());
 	
 	NOX_LOCAL_SCOPE(os::ScopedLock{ kMutex });

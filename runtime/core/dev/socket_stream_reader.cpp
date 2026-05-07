@@ -105,12 +105,18 @@ void	nox::dev::editor_remote::SocketStreamReader::ReadBytes(std::span<nox::uint8
 	read_pos_ = (read_pos_ + need) & (k_buffer_size - 1);
 }
 
-std::u8string_view nox::dev::editor_remote::SocketStreamReader::Read(std::span<nox::char8> dest)
+void nox::dev::editor_remote::SocketStreamReader::Read(std::span<nox::uint8> dest)
 {
 	const nox::uint64 length = ReadLength();
 	NOX_ASSERT(length <= static_cast<nox::uint64>(dest.size()), u"SocketStreamReader::ReadString: バッファサイズオーバー");
+	this->ReadBytes(std::span(dest.data(), static_cast<nox::uint32>(length)));
+}
+
+void nox::dev::editor_remote::SocketStreamReader::Read(std::span<nox::char8> dest)
+{
+	const nox::uint64 length = ReadLength();
+	NOX_ASSERT(length <= static_cast<nox::uint64>(dest.size()), u"SocketStreamReader::ReadString: バッファサイズオーバー length:{0}, buffer_size:{1}", length, dest.size());
 	this->ReadBytes(std::span<nox::uint8>(reinterpret_cast<nox::uint8*>(dest.data()), static_cast<nox::uint32>(length)));
-	return std::u8string_view(dest.data(), static_cast<std::size_t>(length));
 }
 
 nox::StlU8String nox::dev::editor_remote::SocketStreamReader::ReadString()
@@ -144,7 +150,7 @@ void nox::dev::editor_remote::SocketStreamReader::Read(nox::IntrusivePtr<nox::Ma
 	const nox::reflection::ClassInfo& class_info = [this]() -> const nox::reflection::ClassInfo&
 		{
 			std::array<nox::char8, nox::reflection::k_max_fqn_length> type_name_buffer{ 0 };
-			std::u8string_view type_name = this->Read(type_name_buffer);
+			const std::u8string_view type_name = this->ReadString(type_name_buffer);
 			return nox::util::Deref(nox::reflection::FindClassInfo(type_name));
 		}();
 		

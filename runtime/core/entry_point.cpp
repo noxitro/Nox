@@ -7,9 +7,16 @@
 
 #include	"application.h"
 #include	"log_id.h"
+#include	"log_service.h"
 
 nox::int32 nox::EntryPoint(const std::span<const nox::char16* const> args)
 {
+	//	LogHandlerを登録
+	nox::LogService log_service;
+	nox::debug::AttachLogHandler([&log_service](const auto& args) {
+		log_service.LogHandler(args);
+		});
+
 	//	runtime開始を通知
 	NOX_INFO_LINE(nox::log_id::CoreCommon, u"================================");
 	NOX_INFO_LINE(nox::log_id::CoreCommon, u"=== NOX ENGINE RUNTIME START ===");
@@ -39,5 +46,6 @@ nox::int32 nox::EntryPoint(const std::span<const nox::char16* const> args)
 	nox::memory::CheckMemoryLeak();
 	nox::memory::Finialize();
 
+	nox::debug::DetachLogHandler();
 	return 0;
 }

@@ -36,9 +36,14 @@ namespace nox::dev::editor_remote
 		void AddReceiveBuffer(std::span<const nox::uint8> buffer);
 		void ReadBytes(std::span<nox::uint8> dest);
 
-		/// @brief 文字列読み込み
-		/// @param dest 
-		std::u8string_view Read(std::span<nox::char8> dest);
+		void Read(std::span<nox::uint8> dest);
+		void Read(std::span<nox::char8> dest);
+		inline std::u8string_view ReadString(const std::span<nox::char8> dest)
+		{
+			nox::uint64 length = this->ReadLength();
+			this->Read(dest.subspan(0, static_cast<size_t>(length)));
+			return std::u8string_view(dest.data(), static_cast<size_t>(length));
+		}
 
 		template<typename T> requires(std::is_arithmetic_v<T>)
 		inline void Read(T& out)

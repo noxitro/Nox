@@ -14,7 +14,6 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::GetMainSceneView::Execute(nox::Application& application, std::span<nox::uint8> storage)const
 {
-	
 	auto scene_view_info = nox::PlacementObject<nox::dev::editor_remote::SceneViewInfo>::Construct(storage);							
 	nox::SceneManager& scene_manager = application.GetSystem<nox::SceneManager>();
 	auto& scene_view = scene_manager.GetMainSceneView();
@@ -22,5 +21,10 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 
 	scene_view_info->SetMainWindowHandle(reinterpret_cast<nox::intptr>(window_handle));
 	return scene_view_info;
+}
+
+nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::SyncQuery::Execute(nox::Application&, std::span<nox::uint8>)const
+{
+	return nullptr;
 }
 #endif // NOX_DEVELOP

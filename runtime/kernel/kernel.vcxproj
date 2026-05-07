@@ -42,6 +42,14 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="delegate_handler.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="delegate_old.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="dynamic_array.h">
       <SubType>
       </SubType>
@@ -361,6 +369,14 @@
     <ClCompile Include="basic_definition.cpp" />
     <ClCompile Include="basic_type.cpp" />
     <ClCompile Include="bit_flag.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="delegate_handler.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="delegate_old.cpp">
       <SubType>
       </SubType>
     </ClCompile>

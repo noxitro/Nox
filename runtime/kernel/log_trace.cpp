@@ -18,9 +18,9 @@ namespace nox
 {
 	namespace
 	{
-		inline constexpr std::u16string_view GetLogCategoryName(nox::debug::LogCategory log_category)noexcept
+		inline constexpr std::u16string_view GetLogCategoryName(nox::debug::LogLevel log_category)noexcept
 		{
-			constexpr std::array<std::u16string_view, nox::util::ToUnderlying(nox::debug::LogCategory::_Max)> table =
+			constexpr std::array<std::u16string_view, nox::util::ToUnderlying(nox::debug::LogLevel::_Max)> table =
 			{
 				u"Info",
 				u"Warning",
@@ -30,11 +30,11 @@ namespace nox
 			return table.at(nox::util::ToUnderlying(log_category));
 		}
 
-		constinit void(*g_log_handler)(const nox::debug::LogHandlerArgs&) = nullptr;
+		static inline std::function<void(const nox::debug::LogHandlerArgs&)> g_log_handler = nullptr;
 	}
 }
 
-void nox::debug::AttachLogHandler(void(*handler)(const nox::debug::LogHandlerArgs&))
+void nox::debug::AttachLogHandler(std::function<void(const nox::debug::LogHandlerArgs&)> handler)
 {
 	g_log_handler = handler;
 }
@@ -44,7 +44,7 @@ void nox::debug::DetachLogHandler()
 	g_log_handler = nullptr;
 }
 
-void nox::debug::detail::TraceDirect(nox::debug::LogCategory log_category, const std::u16string_view category, const std::u8string_view message, bool isNewLine, const std::source_location& source_location)
+void nox::debug::detail::TraceDirect(nox::debug::LogLevel log_category, const std::u16string_view category, const std::u8string_view message, bool isNewLine, const std::source_location& source_location)
 {
 	std::array<char16, 2048> buffer = { 0 };
 	//source_location;
@@ -71,12 +71,15 @@ void nox::debug::detail::TraceDirect(nox::debug::LogCategory log_category, const
 	{
 		const nox::debug::LogHandlerArgs args{
 			.column = source_location.column(),
+			.level = log_category,
+			.message = message,
 		};
+
 		g_log_handler(args);
 	}
 }
 
-void nox::debug::detail::TraceDirect(nox::debug::LogCategory log_category, const std::u16string_view category, const std::u16string_view message, bool isNewLine, const std::source_location& source_location)
+void nox::debug::detail::TraceDirect(nox::debug::LogLevel log_category, const std::u16string_view category, const std::u16string_view message, bool isNewLine, const std::source_location& source_location)
 {
 	std::array<char16, 2048> buffer = { 0 };
 	//source_location;

@@ -21,6 +21,7 @@
 #include	"os/os.h"
 #include	"os/atomic.h"
 #include	"os/mutex.h"
+#include	"os/read_write_lock.h"
 #include	"os/thread.h"
 #include	"os/clipboard.h"
 #include	"os/window.h"

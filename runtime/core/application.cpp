@@ -25,7 +25,7 @@ nox::Application::Application()noexcept :
 	enabled_vsync_(true),
 	target_frame_rate_(60),
 	kill_(false),
-	studio_mode_(nox::os::ContainsCommandLineArgKey(u"--stduio"))
+	studio_mode_(nox::os::ContainsCommandLineArgKey(u"--studio"))
 {
 }
 
@@ -262,6 +262,8 @@ inline	void	nox::Application::Update()
 
 	ExecutePhase(nox::SystemPhaseType::Update);
 	++frame_counter_;
+
+	nox::os::ContainsCommandLineArgKey(u"--studio");
 
 	//	次のフレーム更新時間
 	next_elapsed_milli_seconds_ += (1000.0f / static_cast<nox::float_t>(target_frame_rate_));

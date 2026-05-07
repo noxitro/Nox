@@ -408,6 +408,12 @@
     <ClInclude Include="math\position.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="delegate_handler.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="delegate_old.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="basic_definition.cpp">
@@ -789,6 +795,12 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="math\position.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="delegate_handler.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="delegate_old.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
