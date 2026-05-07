@@ -85,7 +85,7 @@ void nox::debug::detail::TraceDirect(nox::debug::LogLevel log_category, const st
 	//source_location;
 	if (isNewLine)
 	{
-		nox::util::Format(buffer, u"[{0}][{1}]{2}\n", "Info", category.data(), message.data());
+		nox::util::Format(buffer, u"[{0}][{1}]{2}\n", GetLogCategoryName(log_category), category.data(), message.data());
 	}
 	else
 	{
@@ -104,8 +104,12 @@ void nox::debug::detail::TraceDirect(nox::debug::LogLevel log_category, const st
 
 	if (g_log_handler != nullptr)
 	{
+		std::array<nox::char8, 2048> message_buffer = { 0 };
+		const std::u8string_view utf8_message = nox::unicode::ConvertU8String(message, message_buffer);
 		const nox::debug::LogHandlerArgs args{
 			.column = source_location.column(),
+			.level = log_category,
+			.message = utf8_message,
 		};
 		g_log_handler(args);
 	}
