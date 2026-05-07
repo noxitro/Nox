@@ -1,4 +1,4 @@
-
+﻿
 using System.Runtime.CompilerServices;
 
 namespace Core.UI
@@ -20,9 +20,15 @@ namespace Core.UI
 
 		public override void RegisterTypes(IContainerRegistry containerRegistry)
 		{
+			containerRegistry.RegisterInstance(Core.StudioManager.Instance.Workspace.LogService);
 			containerRegistry.Register<Core.UI.ViewModels.RuntimeControlViewModel>();
 			containerRegistry.Register<Core.UI.ViewModels.MessageBoxWindowViewModel>();
 			containerRegistry.Register<Core.UI.ViewModels.RuntimeViewModel>();
+			containerRegistry.Register<Core.UI.ViewModels.HierarchyViewModel>();
+			containerRegistry.Register<Core.UI.ViewModels.AssetBrowserViewModel>();
+			containerRegistry.Register<Core.UI.ViewModels.InspectorViewModel>();
+			containerRegistry.Register<Core.UI.ViewModels.LogViewModel>();
+			containerRegistry.Register<Core.UI.ViewModels.ProjectSettingsViewModel>();
 		}
 
 		void IDisposable.Dispose()

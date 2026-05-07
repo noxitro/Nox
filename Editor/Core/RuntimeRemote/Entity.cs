@@ -28,7 +28,7 @@ namespace Core.RuntimeRemote
 		{
 			//	runtimeの型名へ変換
 			Type type = GetType();
-			writer.Write(GetRuntimeTypeFQN(type));
+			writer.Write(GetRuntimeTypeFQN(type) + '\0');
 
 			//	id
 			writer.Write(Id);
@@ -116,7 +116,7 @@ namespace Core.RuntimeRemote
 					{
 						//	fqnを取得
 						ReadOnlySpan<char> runtimeFqn = reader.ReadString();
-						RuntimeObject? runtimeObject = Runtime.Instance.CreateRuntimeObject(runtimeFqn);
+						RuntimeObject? runtimeObject = Core.StudioManager.Instance.GetEngineSystem<Runtime>().CreateRuntimeObject(runtimeFqn);
 						Nox.Util.Assert(runtimeObject != null, $"RuntimeObjectの生成に失敗しました。fqn={runtimeFqn}");
 						if (runtimeObject == null) continue;
 

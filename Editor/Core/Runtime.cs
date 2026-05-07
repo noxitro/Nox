@@ -6,8 +6,10 @@ using System.Reflection;
 
 namespace Core
 {
-	public class Runtime : Nox.ISingleton<Runtime>, System.IDisposable
+	public class Runtime : EngineSystem, System.IDisposable
 	{
+		public static readonly SystemPhaseTerminate<Runtime> TerminatePhase = new(nameof(IDisposable.Dispose), static engineSystem => ((System.IDisposable)engineSystem).Dispose());
+
 		#region 非公開フィールド
 
         /// <summary>
@@ -26,8 +28,7 @@ namespace Core
 		#endregion
 
 		#region 公開プロパティ
-		public static Runtime Instance => Nox.ISingleton<Runtime>.Instance;
-		public PlatformType Platform { get; set; } = PlatformType.X64;
+        public PlatformType Platform { get; set; } = PlatformType.X64;
 		public ConfigurationType ConfigurationType { get; set; } = ConfigurationType.Debug;
 		public RuntimeTypeDB TypeDB { get; set; } = new RuntimeTypeDB();
 
@@ -47,16 +48,6 @@ namespace Core
 		#endregion
 
 		#region 公開メソッド
-		public static void CreateInstance()
-		{
-			Nox.ISingleton<Runtime>.CreateInstance();
-		}
-		public static void DeleteInstance()
-		{
-			((System.IDisposable)Instance).Dispose();
-			Nox.ISingleton<Runtime>.DeleteInstance();
-		}
-
 		public Runtime()
 		{
 			BuildTypeDB();
@@ -120,17 +111,25 @@ namespace Core
 			}
 		}
 
+		public override PhaseRegister[] GetPhaseRegisterList()
+		{
+			return
+			[
+				PhaseRegister.Create(TerminatePhase, this),
+			];
+		}
+
 		void IDisposable.Dispose()
 		{
 			MainRuntimeSession.Dispose();
 		}
 
-		public void Reboot()
+		public bool Reboot()
 		{
 			RuntimeSession runtimeSession = MainRuntimeSession;
 			runtimeSession.Platform = Platform;
 			runtimeSession.ConfigurationType = ConfigurationType;
-			runtimeSession.Reboot();
+			return runtimeSession.Reboot();
 		}
 
 		public void StartTcpConnection()

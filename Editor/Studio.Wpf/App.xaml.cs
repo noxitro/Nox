@@ -13,16 +13,16 @@ namespace Studio.Wpf
 
 		public App()
 		{
-			Core.EntryManager.CreateInstance();
+			Core.EngineModule.CreateInstance();
 
-			System.Type entryType = typeof(Core.EntryBase);
+			System.Type entryType = typeof(Core.EngineModule);
 			System.Type uiEntryType = typeof(Core.UI.EntryBase);
 
 			foreach (System.Type type in Core.TypeDB.AllTypeList)
 			{
 				if (entryType != type && entryType.IsAssignableFrom(type))
 				{
-					Core.EntryBase entry = (Core.EntryBase)System.Activator.CreateInstance(type)!;
+					Core.EngineModule entry = (Core.EngineModule)System.Activator.CreateInstance(type)!;
 				}
 
 				if (uiEntryType != type && uiEntryType.IsAssignableFrom(type))
@@ -62,12 +62,22 @@ namespace Studio.Wpf
         protected override void OnStartup(StartupEventArgs e)
 		{
 			var args = ParseArguments(e.Args);
-			string engineRootDir = args.TryGetValue("EngineRootDir", out string? engineRoot) ? engineRoot : ".";
-			engineRootDir = System.IO.Path.GetFullPath(engineRootDir);
+			if (args.TryGetValue("ProjectPath", out string? projectPath))
+			{
+				Core.StudioManager.ConfigureProjectPath(projectPath);
+			}
+			else if (args.TryGetValue("EngineRootDir", out string? legacyProjectPath))
+			{
+				Core.StudioManager.ConfigureProjectPath(legacyProjectPath);
+			}
+			else
+			{
+				Core.StudioManager.ConfigureProjectPath(null);
+			}
 
             System.Threading.Tasks.TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
-			Core.EntryManager.Instance.InvokeStart();
+			Core.EngineModule.Instance.InvokeStart();
 
 			base.OnStartup(e);
 		}
@@ -76,8 +86,8 @@ namespace Studio.Wpf
 		{
 			base.OnExit(e);
 
-			Core.EntryManager.Instance.InvokeFinalize();
-			Core.EntryManager.DeleteInstance();
+			Core.EngineModule.Instance.InvokeFinalize();
+			Core.EngineModule.DeleteInstance();
 		}
 
 		[System.Runtime.Versioning.SupportedOSPlatform("windows10.0")]
@@ -107,7 +117,6 @@ namespace Studio.Wpf
 	//	[System.Runtime.Versioning.SupportedOSPlatform("windows10.0")]
 		private void OnUnobservedTaskException(object? sender, System.Threading.Tasks.UnobservedTaskExceptionEventArgs e)
 		{
-			
 			var ex = e.Exception; // AggregateException
 
 			// ログ

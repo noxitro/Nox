@@ -49,6 +49,7 @@ namespace Core.UI.ViewModels
 							{
 								new() { Header = "Inspector", Tooltip = "Inspector を表示", Command = ShowInspectorCommand },
 								new() { Header = "Hierarchy", Tooltip = "Hierarchy を表示", Command = ShowHierarchyCommand },
+								new() { Header = "Project Settings", Tooltip = "Project Settings を表示", Command = ShowProjectSettingsCommand },
 							},
 						},
 					},
@@ -78,6 +79,7 @@ namespace Core.UI.ViewModels
 		public NoxUI.ViewModelCommand GenerateRemoteCodeCommand => field ??= new(GenerateRemoteCode);
 		public NoxUI.ViewModelCommand ShowInspectorCommand => field ??= new(ShowInspector);
 		public NoxUI.ViewModelCommand ShowHierarchyCommand => field ??= new(ShowHierarchy);
+		public NoxUI.ViewModelCommand ShowProjectSettingsCommand => field ??= new(ShowProjectSettings);
 		#endregion
 
 		#region 非公開メソッド
@@ -111,7 +113,12 @@ namespace Core.UI.ViewModels
 
 		private void ShowHierarchy()
 		{
-			// TODO: Hierarchy の表示処理を実装
+			Core.StudioManager.Instance.Workspace.SceneHierarchy.InitializeDefaultScene();
+		}
+
+		private void ShowProjectSettings()
+		{
+			Core.UI.ProjectSettingsViewService.Show();
 		}
 		#endregion
 	}

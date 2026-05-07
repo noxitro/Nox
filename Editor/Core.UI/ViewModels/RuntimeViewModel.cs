@@ -9,6 +9,7 @@ namespace Core.UI.ViewModels
 	{
 		#region 非公開フィールド
 		private readonly Core.RuntimeSession _RuntimeSession;
+		private readonly System.Windows.Threading.DispatcherTimer _StatusUpdateTimer;
 		#endregion
 
 		#region 公開プロパティ
@@ -17,6 +18,19 @@ namespace Core.UI.ViewModels
 			get => field;
 			set => SetProperty(ref field, value);
 		}
+
+		public IntPtr MainWindowHandle
+		{
+			get => field;
+			set => SetProperty(ref field, value);
+		}
+
+		public string DebugStatus
+		{
+			get => field;
+			private set => SetProperty(ref field, value);
+		} = string.Empty;
+
 		#endregion
 
 		public RuntimeViewModel()
@@ -25,7 +39,14 @@ namespace Core.UI.ViewModels
 			_RuntimeSession = Core.StudioManager.Instance.Workspace.RuntimeSessions.GetActiveOrMainSession();
 			_RuntimeSession.ProcessChanged += OnRuntimeProcessChanged;
 			_RuntimeSession.MainSceneViewChanged += OnMainSceneViewChanged;
+			_StatusUpdateTimer = new System.Windows.Threading.DispatcherTimer
+			{
+				Interval = TimeSpan.FromMilliseconds(250),
+			};
+			_StatusUpdateTimer.Tick += (_, _) => UpdateDebugStatus();
+			_StatusUpdateTimer.Start();
 			UpdateMainView();
+			UpdateDebugStatus();
 		}
 
 		private void OnRuntimeProcessChanged(object? sender, EventArgs e)
@@ -48,6 +69,16 @@ namespace Core.UI.ViewModels
 			}
 
 			MainView = _RuntimeSession.MainSceneView;
+			MainWindowHandle = _RuntimeSession.MainSceneViewWindowHandle;
+			UpdateDebugStatus();
+		}
+
+		private void UpdateDebugStatus()
+		{
+			Core.Net.RuntimeRemoteClient remoteClient = _RuntimeSession.RemoteClient;
+			Core.Net.SocketScheduler socketScheduler = Core.StudioManager.Instance.GetEngineSystem<Core.Net.SocketScheduler>();
+			string handle = MainWindowHandle == IntPtr.Zero ? "null" : $"0x{MainWindowHandle.ToInt64():X}";
+			DebugStatus = $"State={remoteClient.State}; Attempts={remoteClient.ConnectionAttemptCount}; Sent={remoteClient.SentQueryCount}; Received={remoteClient.ReceivedByteCount}; Deserialized={remoteClient.DeserializedEntityCount}; Handle={handle}; Error={remoteClient.LastWorkerError}; ConnectError={remoteClient.LastConnectionError}; Scheduler={socketScheduler.UpdateCount}; Clients={socketScheduler.ClientCount}; PendingClients={socketScheduler.PendingClientRequestCount}; SchedulerError={socketScheduler.LastError}";
 		}
 	}
 }

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Core
 {
-	public class SceneAsset : Asset
+	public class SceneAsset : Core.Asset
 	{
 		#region 公開プロパティ
 

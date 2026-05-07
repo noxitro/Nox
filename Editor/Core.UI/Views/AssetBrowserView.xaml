@@ -1,0 +1,104 @@
+﻿<UserControl x:Class="Core.UI.Views.AssetBrowserView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:prism="http://prismlibrary.com/"
+             xmlns:vm="clr-namespace:Core.UI.ViewModels"
+             mc:Ignorable="d"
+             d:DesignHeight="260" d:DesignWidth="900"
+             d:DataContext="{d:DesignInstance vm:AssetBrowserViewModel, IsDesignTimeCreatable=False}"
+             prism:ViewModelLocator.AutoWireViewModel="True"
+             AutomationProperties.AutomationId="NoxStudio.AssetBrowserView">
+    <Border Background="{DynamicResource Nox.Brush.SurfaceBackground}" BorderBrush="{DynamicResource Nox.Brush.GridLine}" BorderThickness="1">
+        <DockPanel>
+            <Border DockPanel.Dock="Top" Padding="8" Background="{DynamicResource Nox.Brush.HeaderBackground}" BorderBrush="{DynamicResource Nox.Brush.GridLine}" BorderThickness="0,0,0,1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Text="Asset Browser" Foreground="{DynamicResource Nox.Brush.TextHeading}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource Nox.Brush.TextMuted}" Margin="8,0,0,0" />
+                    </StackPanel>
+                     <TextBox Grid.Column="1"
+                             AutomationProperties.AutomationId="NoxStudio.AssetBrowser.SearchBox"
+                             Height="28"
+                             MinWidth="260"
+                             VerticalContentAlignment="Center"
+                             Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}"
+                             ToolTip="Asset を検索" />
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="8,0,0,0">
+                        <Button Content="Refresh" AutomationProperties.AutomationId="NoxStudio.AssetBrowser.RefreshButton" Height="28" MinWidth="76" Command="{Binding RefreshCommand}" />
+                        <Button Content="Explorer" AutomationProperties.AutomationId="NoxStudio.AssetBrowser.ExplorerButton" Height="28" MinWidth="76" Margin="6,0,0,0" Command="{Binding OpenInExplorerCommand}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="260" />
+                    <ColumnDefinition Width="1" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <TreeView Grid.Column="0"
+                           AutomationProperties.AutomationId="NoxStudio.AssetBrowser.Tree"
+                           ItemsSource="{Binding RootNodes}"
+                           Background="{DynamicResource Nox.Brush.SurfaceBackground}"
+                           Foreground="{DynamicResource Nox.Brush.TextHeading}"
+                           BorderThickness="0"
+                           Padding="4"
+                           SelectedItemChanged="OnSelectedItemChanged">
+                    <TreeView.Resources>
+                        <HierarchicalDataTemplate DataType="{x:Type vm:AssetTreeNodeViewModel}" ItemsSource="{Binding Children}">
+                            <StackPanel Orientation="Horizontal" Margin="2">
+                                <TextBlock Text="{Binding Icon}" FontFamily="Segoe MDL2 Assets" Width="18" Foreground="{DynamicResource Nox.Brush.Accent}" />
+                                <TextBlock Text="{Binding Name}" Margin="6,0,0,0" />
+                            </StackPanel>
+                        </HierarchicalDataTemplate>
+                    </TreeView.Resources>
+                </TreeView>
+
+                <Border Grid.Column="1" Background="{DynamicResource Nox.Brush.GridLine}" />
+
+                <DockPanel Grid.Column="2">
+                    <Border DockPanel.Dock="Bottom" Padding="8" Background="{DynamicResource Nox.Brush.HeaderBackground}" BorderBrush="{DynamicResource Nox.Brush.GridLine}" BorderThickness="0,1,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="{Binding SelectedAssetName}" Foreground="{DynamicResource Nox.Brush.TextHeading}" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding SelectedAssetPath}" Foreground="{DynamicResource Nox.Brush.TextTertiary}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding SelectedAssetMetadata}" Foreground="{DynamicResource Nox.Brush.TextTertiary}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="Reveal" Height="28" MinWidth="72" Margin="8,0,0,0" Command="{Binding OpenInExplorerCommand}" />
+                        </Grid>
+                    </Border>
+
+                    <ListView AutomationProperties.AutomationId="NoxStudio.AssetBrowser.AssetList"
+                              ItemsSource="{Binding Assets}"
+                              SelectedItem="{Binding SelectedAsset, Mode=TwoWay}"
+                              Background="{DynamicResource Nox.Brush.SurfaceBackground}"
+                              Foreground="{DynamicResource Nox.Brush.TextHeading}"
+                              BorderThickness="0"
+                              MouseDoubleClick="OnAssetDoubleClick">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="220" />
+                                <GridViewColumn Header="Kind" DisplayMemberBinding="{Binding Kind}" Width="100" />
+                                <GridViewColumn Header="Path" DisplayMemberBinding="{Binding RelativePath}" Width="360" />
+                                <GridViewColumn Header="Size" DisplayMemberBinding="{Binding SizeText}" Width="90" />
+                                <GridViewColumn Header="Modified" DisplayMemberBinding="{Binding LastWriteTime}" Width="150" />
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </DockPanel>
+            </Grid>
+        </DockPanel>
+    </Border>
+</UserControl>

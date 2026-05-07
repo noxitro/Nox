@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Core.RuntimeRemote
 {
-	[Core.RuntimeRemote.Attributes.CoreRuntimeRemoteCode("log", comment: "ログ送信")]
+	[Core.RuntimeRemote.Attributes.CoreRuntimeRemoteCode("log", comment: "ログ送信", enabledRecv:false)]
 	public class SendLog : Query
 	{
 		public enum LogLevel : byte
@@ -18,9 +18,9 @@ namespace Core.RuntimeRemote
 		public LogLevel Level { get; set; }
 
 		[Core.RuntimeRemote.Attributes.StringView]
-		private string Str { get; set; } = string.Empty;
+		public string Msg { get; set; } = string.Empty;
 
 		[Core.RuntimeRemote.Attributes.StringView]
-		private string CallStack { get; set; } = string.Empty;
+		public string CallStack { get; set; } = string.Empty;
 	}
 }

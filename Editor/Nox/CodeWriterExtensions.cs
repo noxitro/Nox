@@ -59,9 +59,9 @@ namespace Nox
 			codeWriter.WriteLine($"//\tCopyright (c) {DateTime.Now.Year.ToString()} NOX ENGINE All rights reserved.");
 		}
 
-		public static void WriteIncludeStdafx(this BaseCodeWriter codeWriter)
+		public static void WriteIncludePch(this BaseCodeWriter codeWriter)
 		{
-			codeWriter.WriteLine("#include\t\"stdafx.h\"");
+			codeWriter.WriteLine("#include\t\"pch.h\"");
 		}
 
 		public static void WriteLineInclude(this BaseCodeWriter codeWriter, ReadOnlySpan<char> includePath)

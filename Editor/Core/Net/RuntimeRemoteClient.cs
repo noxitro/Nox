@@ -63,6 +63,10 @@ namespace Core.Net
 
 		#region 公開プロパティ
 		public RuntimeSession Session { get; }
+		public int SentQueryCount { get; private set; }
+		public int ReceivedByteCount { get; private set; }
+		public int DeserializedEntityCount { get; private set; }
+		public string LastWorkerError { get; private set; } = string.Empty;
 		#endregion
 
 		#region 公開メソッド
@@ -284,45 +288,54 @@ namespace Core.Net
 			Span<char> fqnBuffer = stackalloc char[256];
 			Span<byte> fqnBytes = stackalloc byte[FQN_BYTES_MAX]; // 十分大きいバッファを確保
 
-			while (IsDisconnected == false)
+			try
 			{
-				_SendSignal.Wait();
-				_SendSignal.Reset();
-
-				lock (_LockQueryList)
+				while (IsDisconnected == false)
 				{
-					bool failed = false;
-                    using (var binaryWriter = new System.IO.BinaryWriter(_WriterStream, System.Text.Encoding.UTF8, leaveOpen: true))
-					{
-                      while (_QueryQueue.Count > 0)
-						{
-							var query = _QueryQueue.Dequeue();
-							
-							//	データの送信
-							try
-							{
-								query.Serialize(binaryWriter);
-								binaryWriter.Flush();
-							}
-							catch (System.InvalidOperationException)
-							{
-								//	切断中の送信エラーは無視
-								Nox.LogTrace.InfoLine<Core.LogId.RuntimeRemote>("切断中の送信エラーを無視します");
-								failed = true;
-							}
+					_SendSignal.Wait();
+					_SendSignal.Reset();
 
-							if (failed)
+					lock (_LockQueryList)
+					{
+						bool failed = false;
+	                    using (var binaryWriter = new System.IO.BinaryWriter(_WriterStream, System.Text.Encoding.UTF8, leaveOpen: true))
+						{
+	                      while (_QueryQueue.Count > 0)
 							{
-								break;
+								var query = _QueryQueue.Dequeue();
+								
+								//	データの送信
+								try
+								{
+									query.Serialize(binaryWriter);
+									binaryWriter.Flush();
+									SentQueryCount++;
+								}
+								catch (System.InvalidOperationException)
+								{
+									//	切断中の送信エラーは無視
+									Nox.LogTrace.InfoLine<Core.LogId.RuntimeRemote>("切断中の送信エラーを無視します");
+									failed = true;
+								}
+
+								if (failed)
+								{
+									break;
+								}
 							}
 						}
-					}
 
-					if (failed)
-					{
-						_QueryQueue.Clear();
+						if (failed)
+						{
+							_QueryQueue.Clear();
+						}
 					}
 				}
+			}
+			catch (Exception ex)
+			{
+				LastWorkerError = $"SendProcess: {ex.GetType().Name}: {ex.Message}";
+				Nox.LogTrace.ErrorLine<Core.LogId.RuntimeRemote>("SendProcess failed: {0}", ex);
 			}
 		}
 
@@ -352,6 +365,7 @@ namespace Core.Net
 					int received = Receive(buffer);
 					if (received > 0)
 					{
+						ReceivedByteCount += received;
 						_ReaderStream.AddBuffer(buffer.Slice(0, received));
 
 						// 1パケット分揃った時だけ通知
@@ -384,70 +398,78 @@ namespace Core.Net
 		/// </summary>
 		private void DeserializeProcess()
 		{
-			Span<char> fqnBuffer = stackalloc char[512];
-			while (IsDisconnected == false)
+			try
 			{
-				_DeserializeSignal.Wait();
-				_DeserializeSignal.Reset();
-
-				using var binaryReader = new System.IO.BinaryReader(_ReaderStream, System.Text.Encoding.UTF8, leaveOpen: true);
-
-				// 1パケット分揃っている間は連続処理
-
-				while (_ReaderStream.CanReadBody())
+				while (IsDisconnected == false)
 				{
-					// パケット全長ヘッダ（LEB128）を消費
-					binaryReader.Read7BitEncodedInt64();
+					_DeserializeSignal.Wait();
+					_DeserializeSignal.Reset();
 
-					// FQN
-					ReadOnlySpan<char> runtimeFQN = binaryReader.ReadString();
-					// ✅ コンストラクタ側と同じ方法でハッシュ計算
-					int fqnHash = string.GetHashCode(runtimeFQN, StringComparison.Ordinal);
-					if (_RemoteEntityTypeDict.TryGetValue(fqnHash, out Func<Core.RuntimeRemote.Entity>? factory) == false)
+					using var binaryReader = new System.IO.BinaryReader(_ReaderStream, System.Text.Encoding.UTF8, leaveOpen: true);
+
+					// 1パケット分揃っている間は連続処理
+
+					while (_ReaderStream.CanReadBody())
 					{
-						Nox.Util.Assert(false, $"{runtimeFQN}がdictに存在しません");
-					}
+						// パケット全長ヘッダ（LEB128）を消費
+						binaryReader.Read7BitEncodedInt64();
 
-					Core.RuntimeRemote.Entity entity = factory();
-					entity.SetRemoteClient(this);
-
-					if (entity is Core.RuntimeRemote.Query query)
-					{
-						Nox.Util.Assert(query != null, $"型 {runtimeFQN} のインスタンスを作成できませんでした");
-						if (query == null) continue;
-						query.Deserialize(binaryReader);
-						query.Execute();
-					}
-					else if (entity is Core.RuntimeRemote.Response response)
-					{
-						Nox.Util.Assert(response != null, $"型 {runtimeFQN} のインスタンスを作成できませんでした");
-						if (response == null) continue;
-						response.Deserialize(binaryReader);
-
-                       Action<Core.RuntimeRemote.Response>? callback = null;
-						lock (_LockQueryList)
+						// FQN
+						ReadOnlySpan<char> runtimeFQN = binaryReader.ReadString();
+						// ✅ コンストラクタ側と同じ方法でハッシュ計算
+						int fqnHash = string.GetHashCode(runtimeFQN, StringComparison.Ordinal);
+						if (_RemoteEntityTypeDict.TryGetValue(fqnHash, out Func<Core.RuntimeRemote.Entity>? factory) == false)
 						{
-							if (_ResponseDict.TryGetValue(response.Id, out callback))
-							{
-								_ResponseDict.Remove(response.Id);
-							}
+							Nox.Util.Assert(false, $"{runtimeFQN}がdictに存在しません");
 						}
 
-						if (callback != null)
+						Core.RuntimeRemote.Entity entity = factory();
+						entity.SetRemoteClient(this);
+
+						if (entity is Core.RuntimeRemote.Query query)
 						{
-							callback.Invoke(response);
+							Nox.Util.Assert(query != null, $"型 {runtimeFQN} のインスタンスを作成できませんでした");
+							if (query == null) continue;
+							query.Deserialize(binaryReader);
+							query.Execute();
+						}
+						else if (entity is Core.RuntimeRemote.Response response)
+						{
+							Nox.Util.Assert(response != null, $"型 {runtimeFQN} のインスタンスを作成できませんでした");
+							if (response == null) continue;
+							response.Deserialize(binaryReader);
+							DeserializedEntityCount++;
+
+	                       Action<Core.RuntimeRemote.Response>? callback = null;
+							lock (_LockQueryList)
+							{
+								if (_ResponseDict.TryGetValue(response.Id, out callback))
+								{
+									_ResponseDict.Remove(response.Id);
+								}
+							}
+
+							if (callback != null)
+							{
+								callback.Invoke(response);
+							}
+							else
+							{
+								Nox.LogTrace.WarningLine<Core.LogId.RuntimeRemote>(
+									$"クエリID {response.Id} に対応するコールバックが見つかりませんでした");
+							}
 						}
 						else
 						{
-							Nox.LogTrace.WarningLine<Core.LogId.RuntimeRemote>(
-								$"クエリID {response.Id} に対応するコールバックが見つかりませんでした");
+							Nox.Util.Assert(false, $"型 {runtimeFQN} は Query でも Response でもありません");
 						}
 					}
-					else
-					{
-						Nox.Util.Assert(false, $"型 {runtimeFQN} は Query でも Response でもありません");
-					}
 				}
+			}
+			catch (Exception ex)
+			{
+				LastWorkerError = $"DeserializeProcess: {ex.GetType().Name}: {ex.Message}";
+				Nox.LogTrace.ErrorLine<Core.LogId.RuntimeRemote>("DeserializeProcess failed: {0}", ex);
 			}
 		}
 		#endregion

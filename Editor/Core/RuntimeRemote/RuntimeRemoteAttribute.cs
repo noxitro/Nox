@@ -10,13 +10,15 @@ namespace Core.RuntimeRemote.Attributes
 	[System.AttributeUsage(AttributeTargets.Class)]
 	public class RuntimeRemoteCodeAttribute : System.Attribute
 	{
-		public RuntimeRemoteCodeAttribute(string path, string namespaceStr = "nox::dev::editor_remote", bool execute = true, string comment = "")
+		public RuntimeRemoteCodeAttribute(string path, string namespaceStr = "nox::dev::editor_remote", bool execute = true, bool enabledSend = true, bool enabledRecv = true, string comment = "")
 		{
 			Path = path;
 			EnabledExecute = execute;
+			EnabledSend = enabledSend;
+			EnabledRecv = enabledRecv;
 			Comment = comment;
 			NamespaceStr = namespaceStr;
-		}
+        }
 
 		/// <summary>
 		/// 出力先パス
@@ -36,12 +38,15 @@ namespace Core.RuntimeRemote.Attributes
 		/// c++側でのコメント
 		/// </summary>
 		public string Comment { get; init; }
+
+		public bool EnabledSend { get; init; }
+		public bool EnabledRecv { get; init; }
 	}
 
 	internal sealed class CoreRuntimeRemoteCodeAttribute : RuntimeRemoteCodeAttribute
 	{
-		public CoreRuntimeRemoteCodeAttribute(string filename, bool execute = true, string comment = "")
-			: base($"core/dev/remote/{filename}", "nox::dev::editor_remote", execute, comment)
+		public CoreRuntimeRemoteCodeAttribute(string filename, bool execute = true, bool enabledSend = true, bool enabledRecv = true, string comment = "")
+			: base($"core/dev/remote/{filename}", "nox::dev::editor_remote", execute, enabledSend, enabledRecv, comment)
 		{
 		}
 	}
@@ -58,7 +63,7 @@ namespace Core.RuntimeRemote.Attributes
 	}
 
 	/// <summary>
-	/// c#側のarrayをcpp側で固定長配列として扱うための属性
+	/// c#側のstringをcpp側で固定長配列(fixed_string)として扱うための属性
 	/// </summary>
 	[System.AttributeUsage(System.AttributeTargets.Property)]
 	public sealed class FixedStringAttribute : System.Attribute
@@ -78,4 +83,16 @@ namespace Core.RuntimeRemote.Attributes
 	public sealed class StringViewAttribute : System.Attribute
 	{
 	}
+
+    /// <summary>
+    /// c++側で固定長配列として扱うための属性
+    /// </summary>
+    public sealed class FixedArrayAttribute : System.Attribute
+	{
+		public FixedArrayAttribute(uint length)
+		{
+			Length = length;
+		}
+		public uint Length { get; init; }
+    }
 }

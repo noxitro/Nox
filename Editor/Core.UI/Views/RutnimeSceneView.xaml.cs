@@ -32,6 +32,33 @@ namespace Core.UI.Views
 			get => (Core.RuntimeWrapper.SceneView)GetValue(SceneViewProperty);
 			set => SetValue(SceneViewProperty, value);
 		}
+
+		public static readonly System.Windows.DependencyProperty WindowHandleProperty =
+			NoxUI.IDependencyObject<RutnimeSceneView>.Register<IntPtr>(nameof(WindowHandle), IntPtr.Zero, ChangeWindowHandleProperty);
+
+		public IntPtr WindowHandle
+		{
+			get => (IntPtr)GetValue(WindowHandleProperty);
+			set => SetValue(WindowHandleProperty, value);
+		}
+
+		public static readonly System.Windows.DependencyProperty IsAttachedProperty =
+			NoxUI.IDependencyObject<RutnimeSceneView>.Register<bool>(nameof(IsAttached), new System.Windows.PropertyMetadata(false));
+
+		public bool IsAttached
+		{
+			get => (bool)GetValue(IsAttachedProperty);
+			private set => SetValue(IsAttachedProperty, value);
+		}
+
+		public static readonly System.Windows.DependencyProperty AttachErrorProperty =
+			NoxUI.IDependencyObject<RutnimeSceneView>.Register<string>(nameof(AttachError), new System.Windows.PropertyMetadata(string.Empty));
+
+		public string AttachError
+		{
+			get => (string)GetValue(AttachErrorProperty);
+			private set => SetValue(AttachErrorProperty, value);
+		}
 		#endregion
 
 		public RutnimeSceneView()
@@ -56,12 +83,17 @@ namespace Core.UI.Views
 			if (e.NewValue is Core.RuntimeWrapper.SceneView sceneView)
 			{
 				sceneView.WindowHandleChanged += owner.OnSceneViewWindowHandleChanged;
-				owner.AttachSceneView(sceneView);
+				owner.AttachCurrentWindow();
 			}
 			else
 			{
-				owner._SceneViewPanel.Detach();
+				owner.AttachCurrentWindow();
 			}
+		}
+
+		private static void ChangeWindowHandleProperty(RutnimeSceneView owner, in DependencyPropertyChangedEventArgs e)
+		{
+			owner.AttachCurrentWindow();
 		}
 
 		private void OnSceneViewWindowHandleChanged(object? sender, EventArgs e)
@@ -74,19 +106,38 @@ namespace Core.UI.Views
 
 			if (sender is Core.RuntimeWrapper.SceneView sceneView)
 			{
-				AttachSceneView(sceneView);
+				AttachCurrentWindow();
 			}
 		}
 
-		private void AttachSceneView(Core.RuntimeWrapper.SceneView sceneView)
+		private void AttachCurrentWindow()
 		{
-			if (sceneView.WindowHandle != IntPtr.Zero)
+			IntPtr windowHandle = WindowHandle;
+			if (windowHandle == IntPtr.Zero && SceneView != null)
 			{
-				_SceneViewPanel.Attach(sceneView.WindowHandle);
+				windowHandle = SceneView.WindowHandle;
+			}
+
+			if (windowHandle != IntPtr.Zero)
+			{
+				try
+				{
+					_SceneViewPanel.Attach(windowHandle);
+					IsAttached = _SceneViewPanel.IsAttached;
+					AttachError = _SceneViewPanel.LastAttachError;
+				}
+				catch (Exception ex)
+				{
+					Nox.LogTrace.ErrorLine<Core.LogId.Runtime>("Runtime SceneView attach failed: {0}", ex);
+					IsAttached = false;
+					AttachError = ex.Message;
+				}
 			}
 			else
 			{
 				_SceneViewPanel.Detach();
+				IsAttached = false;
+				AttachError = string.Empty;
 			}
 		}
 		#endregion

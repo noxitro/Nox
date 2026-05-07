@@ -4,8 +4,10 @@ using System.Threading;
 
 namespace Core.Net
 {
-	public class SocketScheduler : Nox.ISingleton<SocketScheduler>
+  public class SocketScheduler : Core.EngineSystem
 	{
+		public static readonly Core.SystemPhaseTerminate<SocketScheduler> TerminatePhase = new(nameof(Stop), static engineSystem => engineSystem.Stop());
+
 		#region 非公開フィールド
 		private readonly List<Core.Net.Client> _ClientList = new();
 		private readonly List<(Core.Net.Client Client, bool isAdd)> _ReqClientList = new();
@@ -15,28 +17,24 @@ namespace Core.Net
 		#endregion
 
 		#region 公開プロパティ
-		public static SocketScheduler Instance => Nox.ISingleton<SocketScheduler>.Instance;
-		public static bool HasInstance => Nox.ISingleton<SocketScheduler>.HasInstance;
+		public long UpdateCount { get; private set; }
+		public int ClientCount => _ClientList.Count;
+		public int PendingClientRequestCount => _ReqClientList.Count;
+		public string LastError { get; private set; } = string.Empty;
 		#endregion
 
 		#region 公開メソッド
-		public static void CreateInstance()
-		{
-			Nox.ISingleton<SocketScheduler>.CreateInstance();
-		}
-
-		public static void DeleteInstance()
-		{
-			if (HasInstance)
-			{
-			}
-
-			Nox.ISingleton<SocketScheduler>.DeleteInstance();
-		}
-
 		public SocketScheduler()
 		{
 			var task = Nox.Threading.Tasks.Task.Run(Update);
+		}
+
+		public override Core.PhaseRegister[] GetPhaseRegisterList()
+		{
+			return
+			[
+				Core.PhaseRegister.Create(TerminatePhase, this),
+			];
 		}
 
 		public void RegisterClient(Core.Net.Client client)
@@ -62,35 +60,50 @@ namespace Core.Net
 		{
 			while (_IsStopped == false)
 			{
-				if (_ReqClientList.Count > 0)
+				try
 				{
-					lock (_LockClientList)
+					UpdateCount++;
+					if (_ReqClientList.Count > 0)
 					{
-						foreach (var req in _ReqClientList)
+						lock (_LockClientList)
 						{
-							if (req.isAdd)
+							foreach (var req in _ReqClientList)
 							{
-								_ClientList.Add(req.Client);
+								if (req.isAdd)
+								{
+									_ClientList.Add(req.Client);
+								}
+								else
+								{
+									_ClientList.Remove(req.Client);
+								}
 							}
-							else
-							{
-								_ClientList.Remove(req.Client);
-							}
-						}
 
-						_ReqClientList.Clear();
+							_ReqClientList.Clear();
+						}
+					}
+
+					foreach(Client client in _ClientList)
+					{
+						client.Connection();
+						client.Update();
 					}
 				}
-
-				foreach(Client client in _ClientList)
+				catch (Exception ex)
 				{
-					client.Connection();
-					client.Update();
+					LastError = $"{ex.GetType().Name}: {ex.Message}";
+					Nox.LogTrace.ErrorLine<Core.LogId.Net>("SocketScheduler update failed: {0}", ex);
 				}
 
 				Thread.Sleep(1);
 			}
 		}
+
+		private void Stop()
+		{
+			_IsStopped = true;
+		}
+
 		#endregion
 	}
 }

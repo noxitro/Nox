@@ -11,21 +11,34 @@
              d:DesignHeight="450" d:DesignWidth="800"
              d:DataContext="{d:DesignInstance vm:RuntimeViewModel, IsDesignTimeCreatable=True}"
              >
-    <Grid>
+    <Grid Background="{DynamicResource Nox.Brush.PanelBackground}">
         <Grid.RowDefinitions>
             <RowDefinition Height="20" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="Runtime View" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/>
-
+        <TextBlock Grid.Row="0"
+                   Text="Runtime View"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   FontWeight="Bold"
+                   AutomationProperties.AutomationId="NoxStudio.RuntimeView.AttachStatus"
+                   AutomationProperties.Name="{Binding IsAttached, ElementName=RuntimeSceneView}">
+            <AutomationProperties.HelpText>
+                <MultiBinding StringFormat="AttachError={0}; {1}">
+                    <Binding ElementName="RuntimeSceneView" Path="AttachError"/>
+                    <Binding Path="DebugStatus"/>
+                </MultiBinding>
+            </AutomationProperties.HelpText>
+        </TextBlock>
         <!--SceneViewの配置-->
         <local:RutnimeSceneView 
             
-            x:Name="RuntimeSceneView"
-            Grid.Row="1"
-            SceneView="{Binding MainView}"
-            >
+             x:Name="RuntimeSceneView"
+             Grid.Row="1"
+              WindowHandle="{Binding MainWindowHandle}"
+              SceneView="{Binding MainView}"
+              >
 
         </local:RutnimeSceneView>
 

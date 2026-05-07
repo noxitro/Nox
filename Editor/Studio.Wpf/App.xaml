@@ -6,6 +6,10 @@
     xmlns:local="clr-namespace:Studio.Wpf"
     xmlns:prism="http://prismlibrary.com/">
     <Application.Resources>
-
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Studio.Wpf;component/Themes/NoxTheme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 </prism:PrismApplication>

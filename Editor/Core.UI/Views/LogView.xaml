@@ -4,9 +4,43 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:Core.UI.Views"
+             xmlns:prism="http://prismlibrary.com/"
+             xmlns:vm="clr-namespace:Core.UI.ViewModels"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
-    <Grid>
-            
-    </Grid>
+             d:DesignHeight="300" d:DesignWidth="420"
+             d:DataContext="{d:DesignInstance vm:LogViewModel, IsDesignTimeCreatable=False}"
+             prism:ViewModelLocator.AutoWireViewModel="True"
+             AutomationProperties.AutomationId="NoxStudio.TraceView">
+    <Border Background="{DynamicResource Nox.Brush.SurfaceBackground}" BorderBrush="{DynamicResource Nox.Brush.GridLine}" BorderThickness="1">
+        <DockPanel>
+            <Border DockPanel.Dock="Top" Padding="8" Background="{DynamicResource Nox.Brush.HeaderBackground}" BorderBrush="{DynamicResource Nox.Brush.GridLine}" BorderThickness="0,0,0,1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Trace" Foreground="{DynamicResource Nox.Brush.TextHeading}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource Nox.Brush.TextMuted}" Margin="8,0,0,0" />
+                    </StackPanel>
+                    <Button Grid.Column="1" AutomationProperties.AutomationId="NoxStudio.Trace.ClearButton" Content="Clear" Height="24" MinWidth="64" Command="{Binding ClearCommand}" />
+                </Grid>
+            </Border>
+
+            <ListView AutomationProperties.AutomationId="NoxStudio.Trace.List"
+                      ItemsSource="{Binding Items}"
+                      Background="{DynamicResource Nox.Brush.SurfaceBackground}"
+                      Foreground="{DynamicResource Nox.Brush.TextHeading}"
+                      BorderThickness="0">
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Header="Time" DisplayMemberBinding="{Binding Time}" Width="70" />
+                        <GridViewColumn Header="Level" DisplayMemberBinding="{Binding Level}" Width="70" />
+                        <GridViewColumn Header="Source" DisplayMemberBinding="{Binding Source}" Width="90" />
+                        <GridViewColumn Header="Message" DisplayMemberBinding="{Binding Message}" Width="360" />
+                    </GridView>
+                </ListView.View>
+            </ListView>
+        </DockPanel>
+    </Border>
 </UserControl>

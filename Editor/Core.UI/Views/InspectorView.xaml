@@ -1,0 +1,39 @@
+﻿<UserControl x:Class="Core.UI.Views.InspectorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:prism="http://prismlibrary.com/"
+             xmlns:vm="clr-namespace:Core.UI.ViewModels"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="360"
+             d:DataContext="{d:DesignInstance vm:InspectorViewModel, IsDesignTimeCreatable=False}"
+             prism:ViewModelLocator.AutoWireViewModel="True"
+             AutomationProperties.AutomationId="NoxStudio.InspectorView">
+    <Border Background="{DynamicResource Nox.Brush.Inspector.Background}" BorderBrush="{DynamicResource Nox.Brush.Inspector.Border}" BorderThickness="1">
+        <DockPanel>
+            <Border DockPanel.Dock="Top" Padding="10" Background="{DynamicResource Nox.Brush.Inspector.HeaderBackground}" BorderBrush="{DynamicResource Nox.Brush.Inspector.Border}" BorderThickness="0,0,0,1">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Icon}" FontFamily="Segoe MDL2 Assets" Width="22" Foreground="{DynamicResource Nox.Brush.Accent}" />
+                        <TextBlock AutomationProperties.AutomationId="NoxStudio.Inspector.TitleText" Text="{Binding Title}" Foreground="{DynamicResource Nox.Brush.Inspector.TitleForeground}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <TextBlock AutomationProperties.AutomationId="NoxStudio.Inspector.DescriptionText" Text="{Binding Description}" Foreground="{DynamicResource Nox.Brush.Inspector.DescriptionForeground}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Border>
+
+            <ListView AutomationProperties.AutomationId="NoxStudio.Inspector.PropertyList"
+                      ItemsSource="{Binding Properties}"
+                      Background="{DynamicResource Nox.Brush.Inspector.Background}"
+                      Foreground="{DynamicResource Nox.Brush.Inspector.PropertyValueForeground}"
+                      BorderThickness="0">
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Header="Property" DisplayMemberBinding="{Binding Name}" Width="110" />
+                        <GridViewColumn Header="Value" DisplayMemberBinding="{Binding Value}" Width="220" />
+                    </GridView>
+                </ListView.View>
+            </ListView>
+        </DockPanel>
+    </Border>
+</UserControl>

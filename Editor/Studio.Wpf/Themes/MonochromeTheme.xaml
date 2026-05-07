@@ -1,0 +1,164 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:adControls="clr-namespace:AvalonDock.Controls;assembly=AvalonDock">
+
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/Studio.Wpf;component/Themes/NoxTheme.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <Color x:Key="Nox.Color.WindowBackground">#FF050505</Color>
+    <Color x:Key="Nox.Color.PanelBackground">#FF0D0D0F</Color>
+    <Color x:Key="Nox.Color.PanelBorder">#FFE8E8E8</Color>
+
+    <Color x:Key="Nox.Color.ControlBackground">#FF18181A</Color>
+    <Color x:Key="Nox.Color.ControlBackgroundHover">#FF252529</Color>
+    <Color x:Key="Nox.Color.ControlBackgroundPressed">#FF101012</Color>
+    <Color x:Key="Nox.Color.InputBackground">#FF101012</Color>
+    <Color x:Key="Nox.Color.HeaderBackground">#FF1D1D20</Color>
+    <Color x:Key="Nox.Color.HeaderBackgroundActive">#FF3A3A3F</Color>
+    <Color x:Key="Nox.Color.HeaderBackgroundInactive">#FF141416</Color>
+    <Color x:Key="Nox.Color.HeaderBackgroundHover">#FF2C2C31</Color>
+    <Color x:Key="Nox.Color.GridLine">#FF3A3A3F</Color>
+    <Color x:Key="Nox.Color.SelectionBackground">#FF4A4A50</Color>
+    <Color x:Key="Nox.Color.SurfaceBackground">#FF111113</Color>
+    <Color x:Key="Nox.Color.SurfaceRaised">#FF1A1A1D</Color>
+    <Color x:Key="Nox.Color.CommandBarBackground">#FF161619</Color>
+    <Color x:Key="Nox.Color.CommandBarBadgeBackground">#FF0C0C0E</Color>
+    <Color x:Key="Nox.Color.CommandBadgeBackground">#FF202023</Color>
+    <Color x:Key="Nox.Color.IconBackground">#FF242428</Color>
+    <Color x:Key="Nox.Color.ControlBorder">#FF4A4A50</Color>
+    <Color x:Key="Nox.Color.ControlBorderHover">#FF707078</Color>
+    <Color x:Key="Nox.Color.ControlBorderPressed">#FF8A8A92</Color>
+    <Color x:Key="Nox.Color.IconBorder">#FF4A4A50</Color>
+    <Color x:Key="Nox.Color.BadgeBorder">#FF4E4E55</Color>
+
+    <Color x:Key="Nox.Color.TextPrimary">#FFF7F7F7</Color>
+    <Color x:Key="Nox.Color.TextSecondary">#FFC7C7C7</Color>
+    <Color x:Key="Nox.Color.TextHeading">#FFEDEDED</Color>
+    <Color x:Key="Nox.Color.TextStrong">#FFFFFFFF</Color>
+    <Color x:Key="Nox.Color.TextMuted">#FF9A9A9A</Color>
+    <Color x:Key="Nox.Color.TextTertiary">#FF828282</Color>
+    <Color x:Key="Nox.Color.TextSubtle">#FFB0B0B0</Color>
+    <Color x:Key="Nox.Color.Accent">#FFFFFFFF</Color>
+    <Color x:Key="Nox.Color.AccentHover">#FFE2E2E2</Color>
+    <Color x:Key="Nox.Color.AccentForeground">#FF050505</Color>
+    <Color x:Key="Nox.Color.AccentBorder">#FFFFFFFF</Color>
+    <Color x:Key="Nox.Color.AccentBorderHover">#FFFFFFFF</Color>
+    <Color x:Key="Nox.Color.Danger">#FFE6E6E6</Color>
+    <Color x:Key="Nox.Color.DangerForeground">#FFFFFFFF</Color>
+    <Color x:Key="Nox.Color.DangerBorder">#FF777777</Color>
+    <Color x:Key="Nox.Color.ErrorText">#FFE8E8E8</Color>
+    <Color x:Key="Nox.Color.MenuBackground">#FF18181B</Color>
+    <Color x:Key="Nox.Color.TabBarBackground">#FF080809</Color>
+    <Color x:Key="Nox.Color.TabHoverBackground">#FF222226</Color>
+    <Color x:Key="Nox.Color.TabSelectedBackground">#FF2D2D32</Color>
+    <Color x:Key="Nox.Color.TabHoverBorder">#FF4B4B52</Color>
+    <Color x:Key="Nox.Color.TabSelectedBorder">#FF707078</Color>
+
+    <Color x:Key="Nox.Color.Inspector.Background">#FF0A0A0C</Color>
+    <Color x:Key="Nox.Color.Inspector.HeaderBackground">#FF17171A</Color>
+    <Color x:Key="Nox.Color.Inspector.Border">#FFE8E8E8</Color>
+    <Color x:Key="Nox.Color.Inspector.TitleForeground">#FFFFFFFF</Color>
+    <Color x:Key="Nox.Color.Inspector.DescriptionForeground">#FFCFCFCF</Color>
+    <Color x:Key="Nox.Color.Inspector.PropertyNameForeground">#FFE8E8E8</Color>
+    <Color x:Key="Nox.Color.Inspector.PropertyValueForeground">#FFF7F7F7</Color>
+
+    <SolidColorBrush x:Key="Nox.Brush.WindowBackground" Color="{StaticResource Nox.Color.WindowBackground}" />
+    <SolidColorBrush x:Key="Nox.Brush.PanelBackground" Color="{StaticResource Nox.Color.PanelBackground}" />
+    <SolidColorBrush x:Key="Nox.Brush.PanelBorder" Color="{StaticResource Nox.Color.PanelBorder}" />
+
+    <SolidColorBrush x:Key="Nox.Brush.ControlBackground" Color="{StaticResource Nox.Color.ControlBackground}" />
+    <SolidColorBrush x:Key="Nox.Brush.ControlBackgroundHover" Color="{StaticResource Nox.Color.ControlBackgroundHover}" />
+    <SolidColorBrush x:Key="Nox.Brush.ControlBackgroundPressed" Color="{StaticResource Nox.Color.ControlBackgroundPressed}" />
+    <SolidColorBrush x:Key="Nox.Brush.InputBackground" Color="{StaticResource Nox.Color.InputBackground}" />
+    <SolidColorBrush x:Key="Nox.Brush.HeaderBackground" Color="{StaticResource Nox.Color.HeaderBackground}" />
+    <SolidColorBrush x:Key="Nox.Brush.HeaderBackgroundActive" Color="{StaticResource Nox.Color.HeaderBackgroundActive}" />
+    <SolidColorBrush x:Key="Nox.Brush.HeaderBackgroundInactive" Color="{StaticResource Nox.Color.HeaderBackgroundInactive}" />
+    <SolidColorBrush x:Key="Nox.Brush.HeaderBackgroundHover" Color="{StaticResource Nox.Color.HeaderBackgroundHover}" />
+    <SolidColorBrush x:Key="Nox.Brush.GridLine" Color="{StaticResource Nox.Color.GridLine}" />
+    <SolidColorBrush x:Key="Nox.Brush.SelectionBackground" Color="{StaticResource Nox.Color.SelectionBackground}" />
+    <SolidColorBrush x:Key="Nox.Brush.SurfaceBackground" Color="{StaticResource Nox.Color.SurfaceBackground}" />
+    <SolidColorBrush x:Key="Nox.Brush.SurfaceRaised" Color="{StaticResource Nox.Color.SurfaceRaised}" />
+    <SolidColorBrush x:Key="Nox.Brush.CommandBarBackground" Color="{StaticResource Nox.Color.CommandBarBackground}" />
+    <SolidColorBrush x:Key="Nox.Brush.CommandBarBadgeBackground" Color="{StaticResource Nox.Color.CommandBarBadgeBackground}" />
+    <SolidColorBrush x:Key="Nox.Brush.CommandBadgeBackground" Color="{StaticResource Nox.Color.CommandBadgeBackground}" />
+    <SolidColorBrush x:Key="Nox.Brush.IconBackground" Color="{StaticResource Nox.Color.IconBackground}" />
+    <SolidColorBrush x:Key="Nox.Brush.ControlBorder" Color="{StaticResource Nox.Color.ControlBorder}" />
+    <SolidColorBrush x:Key="Nox.Brush.ControlBorderHover" Color="{StaticResource Nox.Color.ControlBorderHover}" />
+    <SolidColorBrush x:Key="Nox.Brush.ControlBorderPressed" Color="{StaticResource Nox.Color.ControlBorderPressed}" />
+    <SolidColorBrush x:Key="Nox.Brush.IconBorder" Color="{StaticResource Nox.Color.IconBorder}" />
+    <SolidColorBrush x:Key="Nox.Brush.BadgeBorder" Color="{StaticResource Nox.Color.BadgeBorder}" />
+
+    <SolidColorBrush x:Key="Nox.Brush.TextPrimary" Color="{StaticResource Nox.Color.TextPrimary}" />
+    <SolidColorBrush x:Key="Nox.Brush.TextSecondary" Color="{StaticResource Nox.Color.TextSecondary}" />
+    <SolidColorBrush x:Key="Nox.Brush.TextHeading" Color="{StaticResource Nox.Color.TextHeading}" />
+    <SolidColorBrush x:Key="Nox.Brush.TextStrong" Color="{StaticResource Nox.Color.TextStrong}" />
+    <SolidColorBrush x:Key="Nox.Brush.TextMuted" Color="{StaticResource Nox.Color.TextMuted}" />
+    <SolidColorBrush x:Key="Nox.Brush.TextTertiary" Color="{StaticResource Nox.Color.TextTertiary}" />
+    <SolidColorBrush x:Key="Nox.Brush.TextSubtle" Color="{StaticResource Nox.Color.TextSubtle}" />
+    <SolidColorBrush x:Key="Nox.Brush.Accent" Color="{StaticResource Nox.Color.Accent}" />
+    <SolidColorBrush x:Key="Nox.Brush.AccentHover" Color="{StaticResource Nox.Color.AccentHover}" />
+    <SolidColorBrush x:Key="Nox.Brush.AccentForeground" Color="{StaticResource Nox.Color.AccentForeground}" />
+    <SolidColorBrush x:Key="Nox.Brush.AccentBorder" Color="{StaticResource Nox.Color.AccentBorder}" />
+    <SolidColorBrush x:Key="Nox.Brush.AccentBorderHover" Color="{StaticResource Nox.Color.AccentBorderHover}" />
+    <SolidColorBrush x:Key="Nox.Brush.Danger" Color="{StaticResource Nox.Color.Danger}" />
+    <SolidColorBrush x:Key="Nox.Brush.DangerForeground" Color="{StaticResource Nox.Color.DangerForeground}" />
+    <SolidColorBrush x:Key="Nox.Brush.DangerBorder" Color="{StaticResource Nox.Color.DangerBorder}" />
+    <SolidColorBrush x:Key="Nox.Brush.ErrorText" Color="{StaticResource Nox.Color.ErrorText}" />
+    <SolidColorBrush x:Key="Nox.Brush.MenuBackground" Color="{StaticResource Nox.Color.MenuBackground}" />
+    <SolidColorBrush x:Key="Nox.Brush.TabBarBackground" Color="{StaticResource Nox.Color.TabBarBackground}" />
+    <SolidColorBrush x:Key="Nox.Brush.TabHoverBackground" Color="{StaticResource Nox.Color.TabHoverBackground}" />
+    <SolidColorBrush x:Key="Nox.Brush.TabSelectedBackground" Color="{StaticResource Nox.Color.TabSelectedBackground}" />
+    <SolidColorBrush x:Key="Nox.Brush.TabHoverBorder" Color="{StaticResource Nox.Color.TabHoverBorder}" />
+    <SolidColorBrush x:Key="Nox.Brush.TabSelectedBorder" Color="{StaticResource Nox.Color.TabSelectedBorder}" />
+
+    <SolidColorBrush x:Key="Nox.Brush.Inspector.Background" Color="{StaticResource Nox.Color.Inspector.Background}" />
+    <SolidColorBrush x:Key="Nox.Brush.Inspector.HeaderBackground" Color="{StaticResource Nox.Color.Inspector.HeaderBackground}" />
+    <SolidColorBrush x:Key="Nox.Brush.Inspector.Border" Color="{StaticResource Nox.Color.Inspector.Border}" />
+    <SolidColorBrush x:Key="Nox.Brush.Inspector.TitleForeground" Color="{StaticResource Nox.Color.Inspector.TitleForeground}" />
+    <SolidColorBrush x:Key="Nox.Brush.Inspector.DescriptionForeground" Color="{StaticResource Nox.Color.Inspector.DescriptionForeground}" />
+    <SolidColorBrush x:Key="Nox.Brush.Inspector.PropertyNameForeground" Color="{StaticResource Nox.Color.Inspector.PropertyNameForeground}" />
+    <SolidColorBrush x:Key="Nox.Brush.Inspector.PropertyValueForeground" Color="{StaticResource Nox.Color.Inspector.PropertyValueForeground}" />
+
+    <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="{StaticResource Nox.Color.WindowBackground}" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="{StaticResource Nox.Color.ControlBackground}" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlLightBrushKey}" Color="{StaticResource Nox.Color.ControlBackgroundHover}" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlDarkBrushKey}" Color="{StaticResource Nox.Color.GridLine}" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.WindowTextBrushKey}" Color="{StaticResource Nox.Color.TextPrimary}" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="{StaticResource Nox.Color.TextPrimary}" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="{StaticResource Nox.Color.SelectionBackground}" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="{StaticResource Nox.Color.TextPrimary}" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="{StaticResource Nox.Color.SelectionBackground}" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="{StaticResource Nox.Color.TextPrimary}" />
+
+    <StaticResource x:Key="PanelBorderBrush" ResourceKey="Nox.Brush.GridLine" />
+    <StaticResource x:Key="FloatingDocumentWindowBackground" ResourceKey="Nox.Brush.PanelBackground" />
+    <StaticResource x:Key="FloatingDocumentWindowBorder" ResourceKey="Nox.Brush.GridLine" />
+    <StaticResource x:Key="FloatingToolWindowBackground" ResourceKey="Nox.Brush.PanelBackground" />
+    <StaticResource x:Key="FloatingToolWindowBorder" ResourceKey="Nox.Brush.GridLine" />
+
+    <StaticResource x:Key="DocumentWellTabSelectedActiveBackground" ResourceKey="Nox.Brush.HeaderBackgroundActive" />
+    <StaticResource x:Key="DocumentWellTabSelectedActiveText" ResourceKey="Nox.Brush.TextPrimary" />
+    <StaticResource x:Key="DocumentWellTabSelectedInactiveBackground" ResourceKey="Nox.Brush.HeaderBackgroundInactive" />
+    <StaticResource x:Key="DocumentWellTabSelectedInactiveText" ResourceKey="Nox.Brush.TextSecondary" />
+    <StaticResource x:Key="DocumentWellTabUnselectedBackground" ResourceKey="Nox.Brush.HeaderBackground" />
+    <StaticResource x:Key="DocumentWellTabUnselectedText" ResourceKey="Nox.Brush.TextSecondary" />
+    <StaticResource x:Key="DocumentWellTabUnselectedHoveredBackground" ResourceKey="Nox.Brush.HeaderBackgroundHover" />
+    <StaticResource x:Key="DocumentWellTabUnselectedHoveredText" ResourceKey="Nox.Brush.TextPrimary" />
+
+    <StaticResource x:Key="ToolWindowCaptionActiveBackground" ResourceKey="Nox.Brush.HeaderBackgroundActive" />
+    <StaticResource x:Key="ToolWindowCaptionActiveText" ResourceKey="Nox.Brush.TextPrimary" />
+    <StaticResource x:Key="ToolWindowCaptionActiveGrip" ResourceKey="Nox.Brush.Accent" />
+    <StaticResource x:Key="ToolWindowCaptionInactiveBackground" ResourceKey="Nox.Brush.HeaderBackgroundInactive" />
+    <StaticResource x:Key="ToolWindowCaptionInactiveText" ResourceKey="Nox.Brush.TextSecondary" />
+    <StaticResource x:Key="ToolWindowCaptionInactiveGrip" ResourceKey="Nox.Brush.GridLine" />
+    <StaticResource x:Key="ToolWindowTabSelectedActiveBackground" ResourceKey="Nox.Brush.HeaderBackgroundActive" />
+    <StaticResource x:Key="ToolWindowTabSelectedActiveText" ResourceKey="Nox.Brush.TextPrimary" />
+    <StaticResource x:Key="ToolWindowTabSelectedInactiveBackground" ResourceKey="Nox.Brush.HeaderBackgroundInactive" />
+    <StaticResource x:Key="ToolWindowTabSelectedInactiveText" ResourceKey="Nox.Brush.TextSecondary" />
+    <StaticResource x:Key="ToolWindowTabUnselectedBackground" ResourceKey="Nox.Brush.HeaderBackground" />
+    <StaticResource x:Key="ToolWindowTabUnselectedText" ResourceKey="Nox.Brush.TextSecondary" />
+    <StaticResource x:Key="ToolWindowTabUnselectedHoveredBackground" ResourceKey="Nox.Brush.HeaderBackgroundHover" />
+    <StaticResource x:Key="ToolWindowTabUnselectedHoveredText" ResourceKey="Nox.Brush.TextPrimary" />
+</ResourceDictionary>

@@ -369,7 +369,14 @@ namespace Core.RuntimeRemote
 						{
 							codeWriter.WriteLine($"/// @brief {param.Attr.Comment}");
 						}
-						codeWriter.WriteLine($"class {typeName} final : public {baseTypeFullName}");
+						if (param.Attr.EnabledSend)
+						{
+                            codeWriter.WriteLine($"class {typeName} final : public {baseTypeFullName}");
+                        }
+						else
+						{
+                            codeWriter.WriteLine($"class {typeName} final : public {baseTypeFullName}, nox::dev::editor_remote::IRecvOnlyQueryTag");
+                        }
 
 						using (codeWriter.Indent("{", "};"))
 						{
@@ -560,7 +567,7 @@ namespace Core.RuntimeRemote
 				codeWriter.WriteLineSource("RuntimeRemoteCodeGenerator");
 				codeWriter.WriteNewLine();
 
-				codeWriter.WriteIncludeStdafx();
+				codeWriter.WriteIncludePch();
 
 				codeWriter.WriteLineInclude($"{fileName}.g.h");
 
@@ -586,12 +593,19 @@ namespace Core.RuntimeRemote
 						codeWriter.WriteLine($"void nox::dev::editor_remote::{runtimeTypeFQN}::OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)");
 						using (codeWriter.Indent("{", "}"))
 						{
-							for (int propIndex = 0; propIndex < propertyLength; ++propIndex)
+							if (param.Attr.EnabledSend)
 							{
-								ref readonly RuntimePropertyInfo propInfo = ref param.PropertyList[propIndex];
+								for (int propIndex = 0; propIndex < propertyLength; ++propIndex)
+								{
+									ref readonly RuntimePropertyInfo propInfo = ref param.PropertyList[propIndex];
 
-								codeWriter.WriteLine($"writer.Write({propInfo.NameSnakeCase});");
+									codeWriter.WriteLine($"writer.Write({propInfo.NameSnakeCase});");
+								}
 							}
+							else
+							{
+								codeWriter.WriteLine("NOX_ASSERT(false, u8\"受信専用Queryです\");");
+                            }
 						}
 
 						codeWriter.WriteNewLine();
@@ -599,20 +613,27 @@ namespace Core.RuntimeRemote
 						codeWriter.WriteLine($"void nox::dev::editor_remote::{runtimeTypeFQN}::OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)");
 						using (codeWriter.Indent("{", "}"))
 						{
-							for (int propIndex = 0; propIndex < propertyLength; ++propIndex)
+							if (param.Attr.EnabledRecv)
 							{
-								ref readonly RuntimePropertyInfo propInfo = ref param.PropertyList[propIndex];
-
-								switch (propInfo.Kind)
+								for (int propIndex = 0; propIndex < propertyLength; ++propIndex)
 								{
-									case PropertyTypeKind.String:
-										codeWriter.WriteLine($"reader.Read({propInfo.NameSnakeCase});");
-										break;
-									default:
-										codeWriter.WriteLine($"reader.Read({propInfo.NameSnakeCase});");
-										break;
+									ref readonly RuntimePropertyInfo propInfo = ref param.PropertyList[propIndex];
+
+									switch (propInfo.Kind)
+									{
+										case PropertyTypeKind.String:
+											codeWriter.WriteLine($"reader.Read({propInfo.NameSnakeCase});");
+											break;
+										default:
+											codeWriter.WriteLine($"reader.Read({propInfo.NameSnakeCase});");
+											break;
+									}
 								}
 							}
+							else
+							{
+								codeWriter.WriteLine("NOX_ASSERT(false, u8\"送信専用Queryです\");");
+                            }
 						}
 					}
 				}
@@ -628,7 +649,7 @@ namespace Core.RuntimeRemote
 
 					codeWriter.WriteLineCopyRight();
 					codeWriter.WriteNewLine();
-					codeWriter.WriteIncludeStdafx();
+					codeWriter.WriteIncludePch();
 					codeWriter.WriteLineInclude($"{fileName}.g.h");
 					
 					var dataList = data.TypeInfoList;
@@ -784,8 +805,33 @@ namespace Core.RuntimeRemote
 				getterTypeFqn = setterTypeFqn = "std::u8string_view";
 				propertyTypeKind = PropertyTypeKind.String;
 			}
-			//	string_view
-			else if (sourceProperty.GetCustomAttribute<Core.RuntimeRemote.Attributes.StringViewAttribute>() is var svAttr && svAttr != null)
+			//	fixed array
+            else if (sourceProperty.GetCustomAttribute<Core.RuntimeRemote.Attributes.FixedArrayAttribute>() is var fixedArrayAttr && fixedArrayAttr != null)
+            {
+				//	配列型のはずなので、ElementTypeを得る
+				var elementType = propertyType.GetElementType();
+				Nox.Util.Assert(elementType != null, $"配列型ではありません:{propertyType.FullName}");
+
+                var runtimePrimitiveTypeFqn = GetRuntimePrimitiveType(elementType);
+                if (runtimePrimitiveTypeFqn != string.Empty)
+				{
+                    typeFqn = $"std::array<{runtimePrimitiveTypeFqn}, {fixedArrayAttr.Length}>";
+                }
+				else if (elementType.IsPrimitive)
+				{
+                    typeFqn = $"std::array<{Core.RuntimeTypeUtil.GetPrimitiveTypeName(Type.GetTypeCode(elementType)).ToString()}, {fixedArrayAttr.Length}>";
+                }
+				else
+				{
+					typeFqn = $"std::array<{elementType.Name}, {fixedArrayAttr.Length}>";
+                }
+                
+                memberDeclTypeName = typeFqn;
+                getterTypeFqn = setterTypeFqn = $"const {typeFqn}&";
+                propertyTypeKind = PropertyTypeKind.PrimitiveType;
+            }
+            //	string_view
+            else if (sourceProperty.GetCustomAttribute<Core.RuntimeRemote.Attributes.StringViewAttribute>() is var svAttr && svAttr != null)
 			{
 				typeFqn = "std::u8string_view";
 				memberDeclTypeName = typeFqn;

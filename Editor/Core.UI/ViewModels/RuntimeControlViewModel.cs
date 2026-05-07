@@ -16,7 +16,16 @@
 		private void Reboot()
 		{
 			Core.RuntimeSession runtimeSession = Core.StudioManager.Instance.Workspace.RuntimeSessions.GetActiveOrMainSession();
-			runtimeSession.Reboot();
+			if (runtimeSession.Reboot())
+			{
+				return;
+			}
+
+			Core.UI.MessageBox.ShowDialog(
+				$"Runtime executable was not found.\n\nPath:\n{runtimeSession.RuntimeExecutablePath}",
+				"Runtime launch failed",
+				System.Windows.MessageBoxImage.Warning,
+				System.Windows.MessageBoxButton.OK);
 		}
 
 		private void StartConnection()

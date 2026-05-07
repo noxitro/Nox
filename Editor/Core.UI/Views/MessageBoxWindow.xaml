@@ -10,41 +10,109 @@
         WindowStartupLocation="CenterOwner"
         SizeToContent="WidthAndHeight"
         ResizeMode="NoResize"
+        WindowStyle="None"
+        Background="{DynamicResource Nox.Brush.WindowBackground}"
+        Foreground="{DynamicResource Nox.Brush.TextPrimary}"
         ShowInTaskbar="False"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:MessageBoxWindowViewModel, IsDesignTimeCreatable=True}"
         Title="{Binding Title}"
         >
 
-    <Border Padding="16" CornerRadius="4" Background="Black">
+    <Window.Resources>
+        <Style x:Key="MessageBoxButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Width" Value="80"/>
+            <Setter Property="MinHeight" Value="24"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="Padding" Value="8,2"/>
+            <Setter Property="Background" Value="{DynamicResource Nox.Brush.ControlBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.GridLine}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              RecognizesAccessKey="True"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource Nox.Brush.ControlBackgroundHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource Nox.Brush.ControlBackgroundPressed}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="MessageBoxCaptionButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource MessageBoxButtonStyle}">
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+    </Window.Resources>
+
+    <Border CornerRadius="4"
+            Background="{DynamicResource Nox.Brush.WindowBackground}"
+            BorderBrush="{DynamicResource Nox.Brush.GridLine}"
+            BorderThickness="1">
         <Grid>
             <Grid.RowDefinitions>
+                <RowDefinition Height="32"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0"
+                    Background="{DynamicResource Nox.Brush.HeaderBackground}"
+                    MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <Grid>
+                    <TextBlock Text="{Binding Title}"
+                               VerticalAlignment="Center"
+                               Margin="12,0,40,0"
+                               Foreground="{DynamicResource Nox.Brush.TextPrimary}"/>
+                    <Button HorizontalAlignment="Right"
+                            Content="×"
+                            Style="{StaticResource MessageBoxCaptionButtonStyle}"
+                            Click="CloseButton_Click"/>
+                </Grid>
+            </Border>
+
+            <Border Grid.Row="1" Padding="16" Background="{DynamicResource Nox.Brush.WindowBackground}">
+                <Grid>
+                    <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="8"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="16"/>
                 <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+                    </Grid.RowDefinitions>
 
             <TextBlock Grid.Row="2"
                     Text="{Binding Message}"
                     TextWrapping="Wrap"
-                    Foreground="White"
+                    Foreground="{DynamicResource Nox.Brush.TextPrimary}"
                     Width="400"/>
 
             <StackPanel Grid.Row="4"
                      Orientation="Horizontal"
                      HorizontalAlignment="Right">
-                <StackPanel.Resources>
-                    <Style TargetType="Button">
-                        <Setter Property="Width" Value="80"/>
-                        <Setter Property="Margin" Value="0,0,8,0"/>
-                    </Style>
-                </StackPanel.Resources>
-
                 <Button Content="Yes" Command="{Binding YesCommand}" IsDefault="True">
                     <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                        <Style TargetType="Button" BasedOn="{StaticResource MessageBoxButtonStyle}">
                             <Setter Property="Visibility" Value="Collapsed"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding Style}" Value="OK">
@@ -66,7 +134,7 @@
 
                 <Button Content="No" Command="{Binding NoCommand}">
                     <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                        <Style TargetType="Button" BasedOn="{StaticResource MessageBoxButtonStyle}">
                             <Setter Property="Visibility" Value="Collapsed"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding Style}" Value="YesNo">
@@ -82,7 +150,7 @@
 
                 <Button Content="Cancel" Command="{Binding CancelCommand}" IsCancel="True" Margin="0">
                     <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                        <Style TargetType="Button" BasedOn="{StaticResource MessageBoxButtonStyle}">
                             <Setter Property="Visibility" Value="Collapsed"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding Style}" Value="OKCancel">
@@ -96,6 +164,8 @@
                     </Button.Style>
                 </Button>
             </StackPanel>
+                </Grid>
+            </Border>
         </Grid>
     </Border>
 </Window>

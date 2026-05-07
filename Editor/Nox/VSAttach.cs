@@ -20,12 +20,9 @@ namespace Nox
 
 		public static void VisualStudioAttachToProcess(int pid, string solutionFullPath)
 		{
-			if (pid <= 0)
-			{
-				throw new ArgumentOutOfRangeException(nameof(pid));
-			}
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pid);
 
-			if (string.IsNullOrWhiteSpace(solutionFullPath))
+            if (string.IsNullOrWhiteSpace(solutionFullPath))
 			{
 				throw new ArgumentException("ソリューションパスが空です。", nameof(solutionFullPath));
 			}

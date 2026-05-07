@@ -25,6 +25,8 @@ namespace Core
 		private Nox.DelegateHandle _HandleRuntimeConnected = default;
 		private readonly Core.Net.RuntimeRemoteClient _RemoteClient;
 		private Core.RuntimeWrapper.SceneView? _MainSceneView;
+		private IntPtr _MainSceneViewWindowHandle;
+		private bool _IsMainSceneViewQueryPending;
 		private bool _Disposed;
 		#endregion
 
@@ -34,16 +36,17 @@ namespace Core
 		public RuntimeSessionKind Kind { get; }
 		public PlatformType Platform { get; set; } = PlatformType.X64;
 		public ConfigurationType ConfigurationType { get; set; } = ConfigurationType.Debug;
-		public string RuntimeExecutablePath => Workspace.GetFullPath(
-			"runtime",
+		public string RuntimeExecutablePath => Path.GetFullPath(Path.Combine(
+			Workspace.RuntimeRootPath,
 			"build",
 			"runtime",
 			Platform.GetName().ToString(),
 			ConfigurationType.GetName().ToString(),
-			"runtime.exe");
+			"runtime.exe"));
 		public Process? Process => _Process;
 		public Core.Net.RuntimeRemoteClient RemoteClient => _RemoteClient;
 		public Core.RuntimeWrapper.SceneView? MainSceneView => _MainSceneView;
+		public IntPtr MainSceneViewWindowHandle => _MainSceneViewWindowHandle;
 		public event EventHandler? ProcessChanged
 		{
 			add => _ProcessChanged += value;
@@ -64,7 +67,7 @@ namespace Core
 			_RemoteClient = new Core.Net.RuntimeRemoteClient(this);
 		}
 
-		public void Reboot()
+		public bool Reboot()
 		{
 			Nox.Util.Assert(_Disposed == false, "RuntimeSession is disposed.");
 
@@ -73,24 +76,34 @@ namespace Core
 				StopProcess();
 
 				string runtimeExeFullPath = RuntimeExecutablePath;
-				Nox.Util.Assert(File.Exists(runtimeExeFullPath), "Runtime.exeが存在しません:{0}", runtimeExeFullPath);
+				if (System.IO.File.Exists(runtimeExeFullPath) == false)
+				{
+					Nox.LogTrace.WarningLine<Core.LogId.Runtime>("Runtime.exe が見つかりません: {0}", runtimeExeFullPath);
+					return false;
+				}
 
 				KillExistingRuntimeProcess(runtimeExeFullPath);
 
 				ProcessStartInfo psi = new()
 				{
 					FileName = runtimeExeFullPath,
-					Arguments = "-Studio",
-					WorkingDirectory = Path.GetDirectoryName(runtimeExeFullPath) ?? Environment.CurrentDirectory,
+					Arguments = "--studio",//	studio モードで起動することで、Runtime側でスタジオからの接続待ち受けが有効になる
+                    WorkingDirectory = Path.GetDirectoryName(runtimeExeFullPath) ?? Environment.CurrentDirectory,
 					UseShellExecute = true,
 				};
 
 				_Process = System.Diagnostics.Process.Start(psi);
 				Nox.Util.Assert(_Process != null, "Runtime.exeの起動に失敗しました:{0}", runtimeExeFullPath);
+				Process runtimeProcess = _Process;
+
+				if (Workspace.ProjectSettings.EditorCore().VSAttachWithStartup)
+				{
+					//Nox.Util.VisualStudioAttachToProcess(_Process.Id, runtimeExeFullPath);
+				}
 
 				try
 				{
-					_Process.WaitForInputIdle(5000);
+					runtimeProcess.WaitForInputIdle(5000);
 				}
 				catch (InvalidOperationException ex)
 				{
@@ -100,6 +113,7 @@ namespace Core
 				_ProcessChanged?.Invoke(this, EventArgs.Empty);
 
 				StartTcpConnection();
+				return true;
 			}
 			catch (Exception ex)
 			{
@@ -136,20 +150,36 @@ namespace Core
 
 		private void RuntimeConnected()
 		{
+			if (_MainSceneViewWindowHandle != IntPtr.Zero || _IsMainSceneViewQueryPending)
+			{
+				return;
+			}
+
+			_IsMainSceneViewQueryPending = true;
 			RemoteClient.SendQuery(new Core.RuntimeRemote.GetMainSceneView(),
 				(Core.RuntimeRemote.Response respose) =>
 				{
+					_IsMainSceneViewQueryPending = false;
 					RuntimeRemote.SceneViewInfo sceneViewInfo = Nox.Util.Cast<Core.RuntimeRemote.SceneViewInfo>(respose);
-					Nox.Util.Assert(sceneViewInfo.SceneView != null, "SceneViewの取得に失敗しました");
-
-					sceneViewInfo.SceneView.WindowHandle = (IntPtr)sceneViewInfo.MainWindowHandle;
-					SetMainSceneView(sceneViewInfo.SceneView);
+					IntPtr mainWindowHandle = (IntPtr)sceneViewInfo.MainWindowHandle;
+					Nox.Util.Assert(mainWindowHandle != IntPtr.Zero, "SceneViewのウィンドウハンドル取得に失敗しました");
+					SetMainSceneViewWindowHandle(mainWindowHandle);
 				});
 		}
 
 		private void SetMainSceneView(Core.RuntimeWrapper.SceneView? sceneView)
 		{
 			_MainSceneView = sceneView;
+			_MainSceneViewChanged?.Invoke(this, EventArgs.Empty);
+		}
+
+		private void SetMainSceneViewWindowHandle(IntPtr windowHandle)
+		{
+			_MainSceneViewWindowHandle = windowHandle;
+			if (windowHandle == IntPtr.Zero)
+			{
+				_IsMainSceneViewQueryPending = false;
+			}
 			_MainSceneViewChanged?.Invoke(this, EventArgs.Empty);
 		}
 
@@ -160,9 +190,14 @@ namespace Core
 				return;
 			}
 
-			_Process.Kill();
+			if (_Process.HasExited == false)
+			{
+				_Process.Kill(entireProcessTree: true);
+				_Process.WaitForExit(5000);
+			}
 			_Process = null;
 			SetMainSceneView(null);
+			SetMainSceneViewWindowHandle(IntPtr.Zero);
 			_ProcessChanged?.Invoke(this, EventArgs.Empty);
 		}
 

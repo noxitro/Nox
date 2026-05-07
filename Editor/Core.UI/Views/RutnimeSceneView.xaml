@@ -10,7 +10,7 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800"
              >
-    <Grid>
+    <Grid Background="{DynamicResource Nox.Brush.WindowBackground}">
         <wfi:WindowsFormsHost x:Name="WinFormsHost"></wfi:WindowsFormsHost>
     </Grid>
 </UserControl>

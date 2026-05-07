@@ -18,10 +18,10 @@ namespace Nox
 		#endregion
 
 		#region Window Style
-		[LibraryImport("user32.dll", SetLastError = true)]
+		[LibraryImport("user32.dll", EntryPoint = "GetWindowLongW", SetLastError = true)]
 		public static partial int GetWindowLong(IntPtr hWnd, int nIndex);
 
-		[LibraryImport("user32.dll", SetLastError = true)]
+		[LibraryImport("user32.dll", EntryPoint = "SetWindowLongW", SetLastError = true)]
 		public static partial int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 		#endregion
 

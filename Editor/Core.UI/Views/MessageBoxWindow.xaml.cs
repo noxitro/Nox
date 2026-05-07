@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Input;
 using Core.UI.ViewModels;
 
 namespace Core.UI.Views
@@ -16,5 +17,15 @@ namespace Core.UI.Views
             DataContext = viewModel;
             viewModel.CloseAction = Close;
 		}
+
+        private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            DragMove();
+        }
+
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
 	}
 }

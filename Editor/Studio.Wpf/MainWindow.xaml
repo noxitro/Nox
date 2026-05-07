@@ -9,9 +9,10 @@
         xmlns:adLayout="clr-namespace:AvalonDock.Layout;assembly=AvalonDock"
         mc:Ignorable="d"
         Title="Studio" Height="1080" Width="1920"
+        AutomationProperties.AutomationId="NoxStudio.MainWindow"
         >
 
-    <Grid Background="#FF171A1F">
+    <Grid Background="{DynamicResource Nox.Brush.WindowBackground}">
         <Grid.RowDefinitions>
             <!-- 上部タブ行 -->
             <RowDefinition Height="36" />
@@ -31,60 +32,71 @@
 
         <!-- ====== ドッキング領域（AvalonDock） ====== -->
         <ad:DockingManager x:Name="DockManager"
+                           AutomationProperties.AutomationId="NoxStudio.DockManager"
                            Grid.Row="2"
                            Theme="{Binding Theme.CurrentTheme}"
                            DocumentsSource="{Binding ToolViewModelList}"
                            AnchorablesSource="{Binding AssetViewModelList}"
                            >
             <ad:DockingManager.Resources>
-                <!-- 例: LayoutAnchorable のヘッダー色を変えるリソース -->
-                <SolidColorBrush x:Key="AnchorableHeaderBackground" Color="#FF2B2B2B" />
+                <StaticResource x:Key="AnchorableHeaderBackground" ResourceKey="Nox.Brush.HeaderBackgroundInactive" />
             </ad:DockingManager.Resources>
 
-            <!-- Unreal Engine 風レイアウト
-                 ┌────────────────────────────────┬──────────────┐
-                 │                                │  Outliner    │
-                 │           Viewport             ├──────────────┤
-                 │          (Runtime)             │  Details     │
-                 │                                │ (Inspector)  │
-                 ├────────────────────────────────┴──────────────┤
-                 │  Content Browser (Project) | Output Log       │
-                 └───────────────────────────────────────────────┘ -->
+            <!-- Unity 風レイアウト
+                 ┌──────────────────────┬──────────────┬──────────────┐
+                 │ Runtime View         │ Hierarchy    │ Inspector    │
+                 ├──────────────┬───────┴──────────────┴──────────────┤
+                 │ Trace        │ Asset Browser                       │
+                 └──────────────┴─────────────────────────────────────┘ -->
             <ad:DockingManager.Layout>
                 <adLayout:LayoutRoot>
                     <adLayout:LayoutPanel Orientation="Vertical">
-                        <!-- 上段: Viewport + 右サイド (Outliner / Details) -->
-                        <adLayout:LayoutPanel Orientation="Horizontal">
-                            <!-- 中央: Viewport (Runtime) -->
-                            <adLayout:LayoutDocumentPaneGroup>
-                                <adLayout:LayoutDocumentPane>
-                                    <adLayout:LayoutDocument Title="Viewport" CanClose="False" CanFloat="False">
-                                        <views:RuntimeView />
+                        <!-- 中央: Runtime / Hierarchy / Inspector -->
+                        <adLayout:LayoutPanel Orientation="Horizontal" DockHeight="*">
+                            <adLayout:LayoutDocumentPaneGroup DockWidth="3*">
+                                <adLayout:LayoutDocumentPane x:Name="MainDocumentPane">
+                                    <adLayout:LayoutDocument Title="Runtime" ContentId="Runtime" CanClose="False" CanFloat="False">
+                                        <views:RuntimeView AutomationProperties.AutomationId="NoxStudio.RuntimeView" />
                                     </adLayout:LayoutDocument>
                                 </adLayout:LayoutDocumentPane>
                             </adLayout:LayoutDocumentPaneGroup>
 
-                            <!-- 右側: 縦方向に Outliner / Details -->
-                            <adLayout:LayoutAnchorablePaneGroup Orientation="Vertical" DockWidth="340">
-                                <adLayout:LayoutAnchorablePane DockHeight="*">
-                                    <adLayout:LayoutAnchorable Title="Outliner" ContentId="Hierarchy" />
+                            <adLayout:LayoutAnchorablePaneGroup DockWidth="360">
+                                <adLayout:LayoutAnchorablePane>
+                                    <adLayout:LayoutAnchorable Title="Hierarchy" ContentId="Hierarchy" CanClose="False" CanHide="False">
+                                        <views:HierarchyView AutomationProperties.AutomationId="NoxStudio.HierarchyView" />
+                                    </adLayout:LayoutAnchorable>
                                 </adLayout:LayoutAnchorablePane>
-                                <adLayout:LayoutAnchorablePane DockHeight="2*">
-                                    <adLayout:LayoutAnchorable Title="Details" ContentId="Inspector" />
+
+                            </adLayout:LayoutAnchorablePaneGroup>
+
+                            <adLayout:LayoutAnchorablePaneGroup DockWidth="360">
+                                <adLayout:LayoutAnchorablePane>
+                                    <adLayout:LayoutAnchorable Title="Inspector" ContentId="Inspector" CanClose="False" CanHide="False">
+                                        <views:InspectorView AutomationProperties.AutomationId="NoxStudio.InspectorView" />
+                                    </adLayout:LayoutAnchorable>
                                 </adLayout:LayoutAnchorablePane>
                             </adLayout:LayoutAnchorablePaneGroup>
                         </adLayout:LayoutPanel>
 
-                        <!-- 下段: Content Browser / Output Log をタブで集約 -->
-                        <adLayout:LayoutAnchorablePaneGroup DockHeight="260">
-                            <adLayout:LayoutAnchorablePane>
-                                <adLayout:LayoutAnchorable Title="Content Browser" ContentId="Project" CanHide="False" />
-                                <adLayout:LayoutAnchorable Title="Output Log" ContentId="Log" CanHide="False" CanClose="False">
-                                    <views:LogView />
-                                </adLayout:LayoutAnchorable>
-                                <adLayout:LayoutAnchorable Title="Cmd" ContentId="Console" />
-                            </adLayout:LayoutAnchorablePane>
-                        </adLayout:LayoutAnchorablePaneGroup>
+                        <!-- 下段: Trace / Asset Browser -->
+                        <adLayout:LayoutPanel Orientation="Horizontal" DockHeight="300">
+                            <adLayout:LayoutAnchorablePaneGroup DockWidth="420">
+                                <adLayout:LayoutAnchorablePane>
+                                    <adLayout:LayoutAnchorable Title="Trace" ContentId="Trace" CanHide="False" CanClose="False">
+                                        <views:LogView AutomationProperties.AutomationId="NoxStudio.TraceView" />
+                                    </adLayout:LayoutAnchorable>
+                                </adLayout:LayoutAnchorablePane>
+                            </adLayout:LayoutAnchorablePaneGroup>
+
+                            <adLayout:LayoutAnchorablePaneGroup DockWidth="*">
+                                <adLayout:LayoutAnchorablePane>
+                                    <adLayout:LayoutAnchorable Title="Asset Browser" ContentId="Project" CanHide="False" CanClose="False">
+                                        <views:AssetBrowserView AutomationProperties.AutomationId="NoxStudio.AssetBrowserView" />
+                                    </adLayout:LayoutAnchorable>
+                                </adLayout:LayoutAnchorablePane>
+                            </adLayout:LayoutAnchorablePaneGroup>
+                        </adLayout:LayoutPanel>
                     </adLayout:LayoutPanel>
                 </adLayout:LayoutRoot>
             </ad:DockingManager.Layout>

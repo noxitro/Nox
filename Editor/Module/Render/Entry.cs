@@ -1,6 +1,6 @@
 ﻿namespace Render
 {
-	file class Entry : Core.EntryBase
+	file class Entry : Core.EngineModule
 	{
 	}
 }

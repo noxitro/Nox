@@ -12,5 +12,13 @@ namespace Core.UI.Views
 		{
 			InitializeComponent();
 		}
+
+		private void OnSelectedItemChanged(object sender, System.Windows.RoutedPropertyChangedEventArgs<object> e)
+		{
+			if (DataContext is Core.UI.ViewModels.HierarchyViewModel viewModel)
+			{
+				viewModel.SelectedNode = e.NewValue as Core.UI.ViewModels.HierarchyNodeViewModel;
+			}
+		}
 	}
 }

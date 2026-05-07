@@ -4,9 +4,66 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:Core.UI.Views"
+             xmlns:prism="http://prismlibrary.com/"
+             xmlns:vm="clr-namespace:Core.UI.ViewModels"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
-    <Grid>
-            
-    </Grid>
+             d:DesignHeight="450" d:DesignWidth="320"
+             d:DataContext="{d:DesignInstance vm:HierarchyViewModel, IsDesignTimeCreatable=False}"
+             prism:ViewModelLocator.AutoWireViewModel="True"
+             AutomationProperties.AutomationId="NoxStudio.HierarchyView">
+    <Border Background="{DynamicResource Nox.Brush.SurfaceBackground}" BorderBrush="{DynamicResource Nox.Brush.GridLine}" BorderThickness="1">
+        <DockPanel>
+            <Border DockPanel.Dock="Top" Padding="8" Background="{DynamicResource Nox.Brush.HeaderBackground}" BorderBrush="{DynamicResource Nox.Brush.GridLine}" BorderThickness="0,0,0,1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Hierarchy" Foreground="{DynamicResource Nox.Brush.TextHeading}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding NodeCountText}" Foreground="{DynamicResource Nox.Brush.TextMuted}" Margin="8,0,0,0" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <Button Content="Root +" AutomationProperties.AutomationId="NoxStudio.Hierarchy.RootAddButton" Height="24" Margin="4,0,0,0" Padding="8,0" Command="{Binding AddRootEntityNodeCommand}" ToolTip="ルート EntityNode を追加" />
+                        <Button Content="Child +" AutomationProperties.AutomationId="NoxStudio.Hierarchy.ChildAddButton" Height="24" Margin="4,0,0,0" Padding="8,0" Command="{Binding AddChildEntityNodeCommand}" ToolTip="選択中ノードの子に EntityNode を追加" />
+                        <Button Content="Delete" AutomationProperties.AutomationId="NoxStudio.Hierarchy.DeleteButton" Height="24" Margin="4,0,0,0" Padding="8,0" Command="{Binding DeleteSelectedCommand}" ToolTip="選択中ノードを削除" />
+                        <Button Content="↻" AutomationProperties.AutomationId="NoxStudio.Hierarchy.RefreshButton" Width="28" Height="24" Margin="4,0,0,0" Command="{Binding RefreshCommand}" ToolTip="更新" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border DockPanel.Dock="Top" Padding="8" Background="{DynamicResource Nox.Brush.SurfaceBackground}" BorderBrush="{DynamicResource Nox.Brush.GridLine}" BorderThickness="0,0,0,1">
+                <TextBox Height="28"
+                         AutomationProperties.AutomationId="NoxStudio.Hierarchy.SearchBox"
+                         VerticalContentAlignment="Center"
+                         Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}"
+                         ToolTip="名前または種類で検索" />
+            </Border>
+
+            <Border DockPanel.Dock="Bottom" Padding="8" Background="{DynamicResource Nox.Brush.HeaderBackground}" BorderBrush="{DynamicResource Nox.Brush.GridLine}" BorderThickness="0,1,0,0">
+                <StackPanel>
+                    <TextBlock Text="{Binding SelectedNodeSummary}" Foreground="{DynamicResource Nox.Brush.TextHeading}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding SelectedNodePath}" Foreground="{DynamicResource Nox.Brush.TextTertiary}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Border>
+
+            <TreeView ItemsSource="{Binding RootNodes}"
+                      AutomationProperties.AutomationId="NoxStudio.Hierarchy.Tree"
+                      Background="{DynamicResource Nox.Brush.SurfaceBackground}"
+                      BorderThickness="0"
+                      Foreground="{DynamicResource Nox.Brush.TextHeading}"
+                      Padding="4"
+                      SelectedItemChanged="OnSelectedItemChanged">
+                <TreeView.Resources>
+                    <HierarchicalDataTemplate DataType="{x:Type vm:HierarchyNodeViewModel}" ItemsSource="{Binding Children}">
+                        <StackPanel Orientation="Horizontal" Margin="2">
+                            <TextBlock Text="{Binding Icon}" FontFamily="Segoe MDL2 Assets" Width="18" Foreground="{DynamicResource Nox.Brush.Accent}" />
+                            <TextBlock Text="{Binding Name}" Margin="6,0,0,0" />
+                            <TextBlock Text="{Binding Kind}" Margin="8,0,0,0" Foreground="{DynamicResource Nox.Brush.TextMuted}" FontSize="11" />
+                        </StackPanel>
+                    </HierarchicalDataTemplate>
+                </TreeView.Resources>
+            </TreeView>
+        </DockPanel>
+    </Border>
 </UserControl>

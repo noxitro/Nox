@@ -8,14 +8,14 @@ namespace Core.RuntimeWrapper
 	public class SceneNode : ManagedObject
 	{
 		#region 非公開メソッド
-		private List<EntityNode> _GameObjectList = new();
+		private List<EntityNode> _EntityNodeList = new();
 		#endregion
 
 		#region 非公開メソッド
 		#endregion
 
 		#region 公開メソッド
-		public SceneNode() 
+		public SceneNode()
 		{
 
 		}
