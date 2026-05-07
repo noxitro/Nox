@@ -19,6 +19,18 @@ namespace nox::dev::editor_remote
 	struct EditorRemoteServer::Impl
 	{
 		nox::LogService log_service;
+
+		inline Impl() noexcept
+		{
+			nox::debug::AttachLogHandler([&](const nox::debug::LogHandlerArgs& args) {
+				log_service.LogHandler(args);
+				});
+		}
+
+		inline ~Impl() noexcept
+		{
+			nox::debug::AttachLogHandler(nullptr);
+		}
 	};
 }
 

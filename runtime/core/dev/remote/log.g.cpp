@@ -12,6 +12,7 @@ void nox::dev::editor_remote::SendLog::OnSerialize(nox::dev::editor_remote::Sock
 	writer.Write(level_);
 	writer.Write(msg_);
 	writer.Write(call_stack_);
+	writer.Write(channel_);
 }
 
 void nox::dev::editor_remote::SendLog::OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)

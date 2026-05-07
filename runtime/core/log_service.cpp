@@ -15,16 +15,18 @@ namespace nox
 {
 	namespace
 	{
-		void SendLogToServer(
+		inline void SendLogToServer(
 			nox::dev::editor_remote::EditorRemoteServer& server,
 			const std::u8string_view message,
 			const std::u8string_view callstack,
+			const std::u8string_view channel,
 			const nox::debug::LogLevel level)
 		{
 			nox::dev::editor_remote::SendLog send_log;
 			send_log.SetLevel(static_cast<nox::dev::editor_remote::SendLog::LogLevel>(level));
 			send_log.SetMsg(message);
 			send_log.SetCallStack(callstack);
+			send_log.SetChannel(channel);
 			server.SendQuery(send_log);
 		}
 	}
@@ -54,13 +56,13 @@ void nox::LogService::DetachServer()
 	server_ = nullptr;
 }
 
-void nox::LogService::AddLog(std::u8string_view message, std::u8string_view callstack, nox::debug::LogLevel level)
+void nox::LogService::AddLog(std::u8string_view message, std::u8string_view callstack, std::u8string_view channel, nox::debug::LogLevel level)
 {
 	NOX_LOCAL_SCOPE(nox::os::ScopedReadLock(rw_lock_));
 
 	if (server_ != nullptr)
 	{
-		SendLogToServer(*server_, message, callstack, level);
+		SendLogToServer(*server_, message, callstack, channel, level);
 	}
 	else
 	{
@@ -176,10 +178,10 @@ void nox::LogService::Flush(const Data& data)const
 		return;
 	}
 
-	SendLogToServer(*server_, data.GetMeg(), data.GetCallstack(), data.level_);
+	SendLogToServer(*server_, data.GetMeg(), data.GetCallstack(), data.GetChannel(), data.level_);
 }
 
 void nox::LogService::LogHandler(const nox::debug::LogHandlerArgs& args)
 {
-	AddLog(args.message, args.callstack, args.level);
+	AddLog(args.message, args.callstack, args.channel, args.level);
 }

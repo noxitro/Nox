@@ -11,6 +11,7 @@ namespace nox
 		class EditorRemoteServer;
 	}
 
+	/// @brief runtimeのログをserverに送信するクラス
 	class LogService
 	{
 	private:
@@ -21,11 +22,13 @@ namespace nox
 
 			nox::uint16 message_length_;
 			nox::uint16 callstack_length_;
+			nox::uint8 channel_length_;
 
 			nox::debug::LogLevel level_;
 
 			const nox::char8* message_;
 			const nox::char8* callstack_;
+			const nox::char8* channel_;
 
 			constexpr static nox::uint32 k_header_size = sizeof(message_length_) + sizeof(callstack_length_) + sizeof(level_);
 
@@ -43,6 +46,11 @@ namespace nox
 			{
 				return std::u8string_view(callstack_, callstack_length_);
 			}
+
+			inline constexpr std::u8string_view GetChannel()const noexcept
+			{
+				return std::u8string_view(channel_, channel_length_);
+			}
 		};
 	public:
 		LogService();
@@ -50,7 +58,7 @@ namespace nox
 		void AttachServer(nox::dev::editor_remote::EditorRemoteServer& server);
 		void DetachServer();
 
-		void AddLog(std::u8string_view message, std::u8string_view callstack, nox::debug::LogLevel level);
+		void AddLog(std::u8string_view message, std::u8string_view callstack, std::u8string_view channel, nox::debug::LogLevel level);
 
 		void LogHandler(const nox::debug::LogHandlerArgs&);
 	private:

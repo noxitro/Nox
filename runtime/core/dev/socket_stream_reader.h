@@ -41,7 +41,8 @@ namespace nox::dev::editor_remote
 		inline std::u8string_view ReadString(const std::span<nox::char8> dest)
 		{
 			nox::uint64 length = this->ReadLength();
-			this->Read(dest.subspan(0, static_cast<size_t>(length)));
+			NOX_ASSERT(length <= static_cast<nox::uint64>(dest.size()), u"SocketStreamReader::ReadString: バッファサイズオーバー length:{0}, buffer_size:{1}", length, dest.size());
+			this->ReadBytes(std::span<nox::uint8>(reinterpret_cast<nox::uint8*>(dest.data()), static_cast<nox::uint32>(length)));
 			return std::u8string_view(dest.data(), static_cast<size_t>(length));
 		}
 

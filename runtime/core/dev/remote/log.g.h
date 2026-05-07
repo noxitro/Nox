@@ -56,10 +56,21 @@ namespace nox::dev::editor_remote
 			call_stack_ = value;
 		}
 
+		inline std::u8string_view GetChannel()const noexcept
+		{
+			return channel_;
+		}
+
+		inline void SetChannel(std::u8string_view value)
+		{
+			channel_ = value;
+		}
+
 	private:
 		LogLevel level_ {};
 		std::u8string_view msg_ {};
 		std::u8string_view call_stack_ {};
+		std::u8string_view channel_ {};
 	};
 
 }

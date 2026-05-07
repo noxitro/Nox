@@ -44,6 +44,7 @@ namespace nox::debug
 		nox::debug::LogLevel level;
 		std::u8string_view message;
 		std::u8string_view callstack;
+		std::u8string_view channel;
 	};
 
 	void AttachLogHandler(std::function<void(const nox::debug::LogHandlerArgs&)>);

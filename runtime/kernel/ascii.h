@@ -20,8 +20,8 @@ namespace nox::encoding::ascii
 		return true;
 	}
 
-	template<typename To, typename From> requires(std::is_same_v<To, From> == false)
-	inline constexpr std::basic_string_view<To> ConvertString(std::basic_string_view<From> str, std::span<To> dest_buffer) noexcept
+	template<typename To, typename From, size_t _Size> requires(std::is_same_v<To, From> == false)
+	inline constexpr std::basic_string_view<To> ConvertString(std::basic_string_view<From> str, std::span<To, _Size> dest_buffer) noexcept
 	{
 		const size_t copy_size = str.size() < dest_buffer.size() ? str.size() : dest_buffer.size();
 		for (size_t i = 0; i < copy_size; ++i)
@@ -31,8 +31,8 @@ namespace nox::encoding::ascii
 		return std::basic_string_view<To>(dest_buffer.data(), copy_size);
 	}
 
-	template<typename To, typename From> requires(std::is_same_v<To, From> == false)
-		inline constexpr std::optional<std::basic_string_view<To>> TryConvertString(std::basic_string_view<From> str, std::span<To> dest_buffer) noexcept
+	template<typename To, typename From, size_t _Size> requires(std::is_same_v<To, From> == false)
+		inline constexpr std::optional<std::basic_string_view<To>> TryConvertString(std::basic_string_view<From> str, std::span<To, _Size> dest_buffer) noexcept
 	{
 		if (nox::encoding::ascii::IsAsciiString(str) == false)
 		{
