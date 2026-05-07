@@ -67,14 +67,16 @@ void nox::LogService::AddLog(std::u8string_view message, std::u8string_view call
 	else
 	{
 		constexpr std::size_t k_max_text_length = std::numeric_limits<nox::uint16>::max();
+		constexpr std::size_t k_max_channel_length = std::numeric_limits<nox::uint8>::max();
 		NOX_ASSERT(message.size() <= k_max_text_length, u8"Log message is too long. size={0}", message.size());
 		NOX_ASSERT(callstack.size() <= k_max_text_length, u8"Log callstack is too long. size={0}", callstack.size());
-		if (message.size() > k_max_text_length || callstack.size() > k_max_text_length)
+		NOX_ASSERT(channel.size() <= k_max_channel_length, u8"Log channel is too long. size={0}", channel.size());
+		if (message.size() > k_max_text_length || callstack.size() > k_max_text_length || channel.size() > k_max_channel_length)
 		{
 			return;
 		}
 
-		const nox::uint32 total_size = static_cast<nox::uint32>(Data::k_header_size + message.size() + callstack.size());
+		const nox::uint32 total_size = static_cast<nox::uint32>(Data::k_header_size + message.size() + callstack.size() + channel.size());
 		NOX_ASSERT(total_size <= k_buffer_size, u8"Log data is too long. size={0}", total_size);
 		if (total_size > k_buffer_size)
 		{
@@ -100,10 +102,13 @@ void nox::LogService::AddLog(std::u8string_view message, std::u8string_view call
 		nox::uint8* cursor = buffer_.data() + write_position;
 		const nox::uint16 message_length = static_cast<nox::uint16>(message.size());
 		const nox::uint16 callstack_length = static_cast<nox::uint16>(callstack.size());
+		const nox::uint8 channel_length = static_cast<nox::uint8>(channel.size());
 		nox::memory::Copy(static_cast<void*>(cursor), &message_length, sizeof(message_length));
 		cursor += sizeof(message_length);
 		nox::memory::Copy(static_cast<void*>(cursor), &callstack_length, sizeof(callstack_length));
 		cursor += sizeof(callstack_length);
+		nox::memory::Copy(static_cast<void*>(cursor), &channel_length, sizeof(channel_length));
+		cursor += sizeof(channel_length);
 		nox::memory::Copy(static_cast<void*>(cursor), &level, sizeof(level));
 		cursor += sizeof(level);
 
@@ -116,6 +121,12 @@ void nox::LogService::AddLog(std::u8string_view message, std::u8string_view call
 		if (callstack.empty() == false)
 		{
 			nox::memory::Copy(static_cast<void*>(cursor), callstack.data(), callstack.size());
+			cursor += callstack.size();
+		}
+
+		if (channel.empty() == false)
+		{
+			nox::memory::Copy(static_cast<void*>(cursor), channel.data(), channel.size());
 		}
 
 		write_position_.store(write_position + total_size);
@@ -149,6 +160,8 @@ void nox::LogService::Flush()
 		cursor += sizeof(data.message_length_);
 		nox::memory::Copy(&data.callstack_length_, cursor, sizeof(data.callstack_length_));
 		cursor += sizeof(data.callstack_length_);
+		nox::memory::Copy(&data.channel_length_, cursor, sizeof(data.channel_length_));
+		cursor += sizeof(data.channel_length_);
 		nox::memory::Copy(&data.level_, cursor, sizeof(data.level_));
 		cursor += sizeof(data.level_);
 
@@ -161,6 +174,8 @@ void nox::LogService::Flush()
 		data.message_ = reinterpret_cast<const nox::char8*>(cursor);
 		cursor += data.message_length_;
 		data.callstack_ = reinterpret_cast<const nox::char8*>(cursor);
+		cursor += data.callstack_length_;
+		data.channel_ = reinterpret_cast<const nox::char8*>(cursor);
 
 		Flush(data);
 		position += data.GetSize();

@@ -30,11 +30,11 @@ namespace nox
 			const nox::char8* callstack_;
 			const nox::char8* channel_;
 
-			constexpr static nox::uint32 k_header_size = sizeof(message_length_) + sizeof(callstack_length_) + sizeof(level_);
+			constexpr static nox::uint32 k_header_size = sizeof(message_length_) + sizeof(callstack_length_) + sizeof(channel_length_) + sizeof(level_);
 
 			inline constexpr nox::uint32 GetSize()const noexcept
 			{
-				return k_header_size + message_length_ + callstack_length_;
+				return k_header_size + message_length_ + callstack_length_ + channel_length_;
 			}
 
 			inline constexpr std::u8string_view GetMeg()const noexcept
