@@ -43,8 +43,14 @@ namespace Core.RuntimeAttributes
 		}
 	}
 
-	[RuntimeAttributeAttach("nox::dev::attr::Hide")]
+	[RuntimeAttributeAttach("nox::attr::dev::Hide")]
 	public sealed class HideAttribute : RuntimeAttribute
+	{
+
+	}
+
+	[RuntimeAttributeAttach("nox::attr::dev::Action")]
+	public sealed class ActionAttribute : RuntimeAttribute
 	{
 
 	}
@@ -64,6 +70,13 @@ namespace Core.RuntimeAttributes
 	public sealed class PropertyAttribute : RuntimeAttribute
 	{
 		public string PropertyName { get; init; } = string.Empty;
+
+		public PropertyAttribute() { }
+
+		public PropertyAttribute(string name)
+		{
+			PropertyName = name;
+		}
 	}
 
 	[RuntimeAttributeAttach("nox::attr::dev::PropertySetter")]

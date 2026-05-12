@@ -11,40 +11,153 @@
              d:DataContext="{d:DesignInstance vm:HierarchyViewModel, IsDesignTimeCreatable=False}"
              prism:ViewModelLocator.AutoWireViewModel="True"
              AutomationProperties.AutomationId="NoxStudio.HierarchyView">
-    <Border Background="{DynamicResource Nox.Brush.SurfaceBackground}" BorderBrush="{DynamicResource Nox.Brush.GridLine}" BorderThickness="1">
+    <UserControl.Resources>
+        <Style x:Key="NoxHierarchyTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Background" Value="{DynamicResource Nox.Brush.InputBackground}" />
+            <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorder}" />
+            <Setter Property="CaretBrush" Value="{DynamicResource Nox.Brush.TextPrimary}" />
+            <Setter Property="Padding" Value="5,3" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="NoxHierarchySearchTextBoxStyle"
+               TargetType="TextBox"
+               BasedOn="{StaticResource NoxHierarchyTextBoxStyle}">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+
+        <Style x:Key="NoxHierarchyButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource Nox.Brush.SurfaceBackground}" />
+            <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorder}" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chrome"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Nox.Brush.TabHoverBackground}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextMuted}" />
+                                <Setter TargetName="Chrome" Property="Opacity" Value="0.55" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="NoxHierarchyComboBoxStyle"
+               TargetType="ComboBox"
+               BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="Background" Value="{DynamicResource Nox.Brush.InputBackground}" />
+            <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorder}" />
+        </Style>
+
+        <Style x:Key="HierarchyInlineRenameTextStyle" TargetType="{x:Type TextBlock}">
+            <Setter Property="Visibility" Value="Visible" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsRenaming}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="HierarchyInlineRenameEditorStyle"
+               TargetType="{x:Type TextBox}"
+               BasedOn="{StaticResource NoxHierarchyTextBoxStyle}">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Setter Property="MinWidth" Value="120" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsRenaming}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Border Background="{DynamicResource Nox.Brush.SurfaceBackground}" BorderBrush="{DynamicResource Nox.Brush.GridLine}" BorderThickness="1"
+            PreviewMouseLeftButtonDown="OnHierarchyPreviewMouseDown"
+            PreviewMouseRightButtonDown="OnHierarchyPreviewMouseDown">
         <DockPanel>
             <Border DockPanel.Dock="Top" Padding="8" Background="{DynamicResource Nox.Brush.HeaderBackground}" BorderBrush="{DynamicResource Nox.Brush.GridLine}" BorderThickness="0,0,0,1">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="Hierarchy" Foreground="{DynamicResource Nox.Brush.TextHeading}" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding NodeCountText}" Foreground="{DynamicResource Nox.Brush.TextMuted}" Margin="8,0,0,0" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                        <Button Content="Root +" AutomationProperties.AutomationId="NoxStudio.Hierarchy.RootAddButton" Height="24" Margin="4,0,0,0" Padding="8,0" Command="{Binding AddRootEntityNodeCommand}" ToolTip="ルート EntityNode を追加" />
-                        <Button Content="Child +" AutomationProperties.AutomationId="NoxStudio.Hierarchy.ChildAddButton" Height="24" Margin="4,0,0,0" Padding="8,0" Command="{Binding AddChildEntityNodeCommand}" ToolTip="選択中ノードの子に EntityNode を追加" />
-                        <Button Content="Delete" AutomationProperties.AutomationId="NoxStudio.Hierarchy.DeleteButton" Height="24" Margin="4,0,0,0" Padding="8,0" Command="{Binding DeleteSelectedCommand}" ToolTip="選択中ノードを削除" />
-                        <Button Content="↻" AutomationProperties.AutomationId="NoxStudio.Hierarchy.RefreshButton" Width="28" Height="24" Margin="4,0,0,0" Command="{Binding RefreshCommand}" ToolTip="更新" />
-                    </StackPanel>
+
+                    <Border ToolTip="{Binding NodeCountText}"
+                            Background="{DynamicResource Nox.Brush.InputBackground}"
+                            BorderBrush="{DynamicResource Nox.Brush.ControlBorder}"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Height="28"
+                            Padding="8,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="&#xE721;"
+                                       FontFamily="Segoe MDL2 Assets"
+                                       Foreground="{DynamicResource Nox.Brush.TextMuted}"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,8,0" />
+                            <TextBox Grid.Column="1"
+                                     AutomationProperties.AutomationId="NoxStudio.Hierarchy.SearchBox"
+                                     Style="{StaticResource NoxHierarchySearchTextBoxStyle}"
+                                     Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="名前または種類で検索" />
+                        </Grid>
+                    </Border>
+
+                    <ComboBox Grid.Column="1"
+                              Width="108"
+                              Height="26"
+                              Margin="8,0,6,0"
+                                ItemsSource="{Binding AutoSyncOptions}"
+                                SelectedItem="{Binding SelectedAutoSyncOption, Mode=TwoWay}"
+                               DisplayMemberPath="DisplayName"
+                               Style="{StaticResource NoxHierarchyComboBoxStyle}"
+                               AutomationProperties.AutomationId="NoxStudio.Hierarchy.AutoSyncInterval">
+                        <ComboBox.Resources>
+                            <StaticResource x:Key="{x:Static SystemColors.WindowBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
+                            <StaticResource x:Key="{x:Static SystemColors.WindowTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
+                            <StaticResource x:Key="{x:Static SystemColors.ControlBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
+                            <StaticResource x:Key="{x:Static SystemColors.ControlTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
+                            <StaticResource x:Key="{x:Static SystemColors.HighlightBrushKey}" ResourceKey="Nox.Brush.TabHoverBackground" />
+                            <StaticResource x:Key="{x:Static SystemColors.HighlightTextBrushKey}" ResourceKey="Nox.Brush.TextStrong" />
+                            <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+                                <Setter Property="Background" Value="{DynamicResource Nox.Brush.MenuBackground}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextHeading}" />
+                                </Style>
+                            </ComboBox.Resources>
+                    </ComboBox>
+                    <Button Grid.Column="2"
+                            Content="Sync"
+                            MinWidth="54"
+                            Height="26"
+                            IsEnabled="{Binding IsManualSync}"
+                            Command="{Binding ManualSyncCommand}"
+                            Style="{StaticResource NoxHierarchyButtonStyle}"
+                            AutomationProperties.AutomationId="NoxStudio.Hierarchy.ManualSyncButton" />
                 </Grid>
-            </Border>
-
-            <Border DockPanel.Dock="Top" Padding="8" Background="{DynamicResource Nox.Brush.SurfaceBackground}" BorderBrush="{DynamicResource Nox.Brush.GridLine}" BorderThickness="0,0,0,1">
-                <TextBox Height="28"
-                         AutomationProperties.AutomationId="NoxStudio.Hierarchy.SearchBox"
-                         VerticalContentAlignment="Center"
-                         Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}"
-                         ToolTip="名前または種類で検索" />
-            </Border>
-
-            <Border DockPanel.Dock="Bottom" Padding="8" Background="{DynamicResource Nox.Brush.HeaderBackground}" BorderBrush="{DynamicResource Nox.Brush.GridLine}" BorderThickness="0,1,0,0">
-                <StackPanel>
-                    <TextBlock Text="{Binding SelectedNodeSummary}" Foreground="{DynamicResource Nox.Brush.TextHeading}" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text="{Binding SelectedNodePath}" Foreground="{DynamicResource Nox.Brush.TextTertiary}" FontSize="11" TextTrimming="CharacterEllipsis" />
-                </StackPanel>
             </Border>
 
             <TreeView ItemsSource="{Binding RootNodes}"
@@ -53,16 +166,89 @@
                       BorderThickness="0"
                       Foreground="{DynamicResource Nox.Brush.TextHeading}"
                       Padding="4"
+                      PreviewKeyDown="OnHierarchyPreviewKeyDown"
                       SelectedItemChanged="OnSelectedItemChanged">
                 <TreeView.Resources>
+                    <StaticResource x:Key="{x:Static SystemColors.MenuBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
+                    <StaticResource x:Key="{x:Static SystemColors.MenuTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
+                    <StaticResource x:Key="{x:Static SystemColors.ControlBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
+                    <StaticResource x:Key="{x:Static SystemColors.ControlTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
+                    <StaticResource x:Key="{x:Static SystemColors.HighlightBrushKey}" ResourceKey="Nox.Brush.TabHoverBackground" />
+                    <StaticResource x:Key="{x:Static SystemColors.HighlightTextBrushKey}" ResourceKey="Nox.Brush.TextStrong" />
+                    <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
+                        <EventSetter Event="PreviewMouseRightButtonDown" Handler="OnTreeViewItemPreviewMouseRightButtonDown" />
+                    </Style>
+                    <Style x:Key="NoxHierarchyContextMenuItemStyle" TargetType="MenuItem">
+                        <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextHeading}" />
+                        <Setter Property="Background" Value="{DynamicResource Nox.Brush.MenuBackground}" />
+                        <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorder}" />
+                        <Setter Property="Padding" Value="12,7" />
+                        <Setter Property="MinHeight" Value="26" />
+                    </Style>
                     <HierarchicalDataTemplate DataType="{x:Type vm:HierarchyNodeViewModel}" ItemsSource="{Binding Children}">
-                        <StackPanel Orientation="Horizontal" Margin="2">
+                        <Grid Margin="2,3">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="18" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
                             <TextBlock Text="{Binding Icon}" FontFamily="Segoe MDL2 Assets" Width="18" Foreground="{DynamicResource Nox.Brush.Accent}" />
-                            <TextBlock Text="{Binding Name}" Margin="6,0,0,0" />
-                            <TextBlock Text="{Binding Kind}" Margin="8,0,0,0" Foreground="{DynamicResource Nox.Brush.TextMuted}" FontSize="11" />
-                        </StackPanel>
+                            <Grid Grid.Column="1" Margin="6,0,0,0">
+                                <TextBlock Text="{Binding Name}"
+                                           Style="{StaticResource HierarchyInlineRenameTextStyle}" />
+                                <TextBox Text="{Binding EditingName, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource HierarchyInlineRenameEditorStyle}"
+                                         Loaded="OnRenameEditorLoaded"
+                                         KeyDown="OnRenameEditorKeyDown"
+                                         LostFocus="OnRenameEditorLostFocus" />
+                            </Grid>
+                        </Grid>
                     </HierarchicalDataTemplate>
                 </TreeView.Resources>
+                <TreeView.ContextMenu>
+                    <ContextMenu Background="{DynamicResource Nox.Brush.MenuBackground}"
+                                 BorderBrush="{DynamicResource Nox.Brush.ControlBorder}"
+                                 Foreground="{DynamicResource Nox.Brush.TextHeading}">
+                        <ContextMenu.Resources>
+                            <StaticResource x:Key="{x:Static SystemColors.MenuBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
+                            <StaticResource x:Key="{x:Static SystemColors.MenuTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
+                            <StaticResource x:Key="{x:Static SystemColors.ControlBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
+                            <StaticResource x:Key="{x:Static SystemColors.ControlTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
+                            <StaticResource x:Key="{x:Static SystemColors.HighlightBrushKey}" ResourceKey="Nox.Brush.TabHoverBackground" />
+                            <StaticResource x:Key="{x:Static SystemColors.HighlightTextBrushKey}" ResourceKey="Nox.Brush.TextStrong" />
+                            <Style TargetType="MenuItem" BasedOn="{StaticResource NoxHierarchyContextMenuItemStyle}" />
+                            <Style TargetType="Separator">
+                                <Setter Property="Background" Value="{DynamicResource Nox.Brush.GridLine}" />
+                                <Setter Property="Margin" Value="4" />
+                                <Setter Property="Height" Value="1" />
+                            </Style>
+                        </ContextMenu.Resources>
+                        <MenuItem Header="Create Entity"
+                                  AutomationProperties.AutomationId="NoxStudio.Hierarchy.Context.CreateEntity"
+                                  Command="{Binding PlacementTarget.DataContext.AddRootEntityNodeCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+                                  ToolTip="シーン直下に EntityNode を追加" />
+                        <MenuItem Header="Create Group"
+                                  AutomationProperties.AutomationId="NoxStudio.Hierarchy.Context.CreateGroup"
+                                  Command="{Binding PlacementTarget.DataContext.AddRootGroupNodeCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+                                  ToolTip="シーン直下に GroupNode を追加" />
+                        <MenuItem Header="Create Child Entity"
+                                  AutomationProperties.AutomationId="NoxStudio.Hierarchy.Context.CreateChildEntity"
+                                  Command="{Binding PlacementTarget.DataContext.AddChildEntityNodeCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+                                  ToolTip="選択中ノードの子に EntityNode を追加" />
+                        <MenuItem Header="Create Child Group"
+                                  AutomationProperties.AutomationId="NoxStudio.Hierarchy.Context.CreateChildGroup"
+                                  Command="{Binding PlacementTarget.DataContext.AddChildGroupNodeCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+                                  ToolTip="選択中ノードの子に GroupNode を追加" />
+                        <Separator />
+                        <MenuItem Header="Rename"
+                                  AutomationProperties.AutomationId="NoxStudio.Hierarchy.Context.Rename"
+                                  Command="{Binding PlacementTarget.DataContext.RenameSelectedCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+                                  ToolTip="選択中ノードの名前を変更" />
+                        <MenuItem Header="Delete"
+                                  AutomationProperties.AutomationId="NoxStudio.Hierarchy.Context.Delete"
+                                  Command="{Binding PlacementTarget.DataContext.DeleteSelectedCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+                                  ToolTip="選択中ノードを削除" />
+                    </ContextMenu>
+                </TreeView.ContextMenu>
             </TreeView>
         </DockPanel>
     </Border>

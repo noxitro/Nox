@@ -121,7 +121,7 @@ namespace Core
 
 		void IDisposable.Dispose()
 		{
-			MainRuntimeSession.Dispose();
+			StudioManager.Instance.Workspace.RuntimeSessions.FindMainSession()?.Dispose();
 		}
 
 		public bool Reboot()
@@ -151,7 +151,8 @@ namespace Core
 		{
 			if (_RuntimeObjectActivatorDict.TryGetValue(runtimeFQN.GetHashCode(StringComparison.Ordinal), out var factory) == false)
 			{
-				return null;
+				RuntimeRecordDecl? runtimeRecordDecl = TypeDB.FindRecordDecl(runtimeFQN);
+				return runtimeRecordDecl == null ? null : new DynamicRuntimeObject(runtimeRecordDecl);
 			}
 
 			return factory();

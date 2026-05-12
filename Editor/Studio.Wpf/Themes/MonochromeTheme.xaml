@@ -144,8 +144,8 @@
     <StaticResource x:Key="DocumentWellTabSelectedInactiveText" ResourceKey="Nox.Brush.TextSecondary" />
     <StaticResource x:Key="DocumentWellTabUnselectedBackground" ResourceKey="Nox.Brush.HeaderBackground" />
     <StaticResource x:Key="DocumentWellTabUnselectedText" ResourceKey="Nox.Brush.TextSecondary" />
-    <StaticResource x:Key="DocumentWellTabUnselectedHoveredBackground" ResourceKey="Nox.Brush.HeaderBackgroundHover" />
-    <StaticResource x:Key="DocumentWellTabUnselectedHoveredText" ResourceKey="Nox.Brush.TextPrimary" />
+    <StaticResource x:Key="DocumentWellTabUnselectedHoveredBackground" ResourceKey="Nox.Brush.TabHoverBackground" />
+    <StaticResource x:Key="DocumentWellTabUnselectedHoveredText" ResourceKey="Nox.Brush.TextSecondary" />
 
     <StaticResource x:Key="ToolWindowCaptionActiveBackground" ResourceKey="Nox.Brush.HeaderBackgroundActive" />
     <StaticResource x:Key="ToolWindowCaptionActiveText" ResourceKey="Nox.Brush.TextPrimary" />
@@ -159,6 +159,6 @@
     <StaticResource x:Key="ToolWindowTabSelectedInactiveText" ResourceKey="Nox.Brush.TextSecondary" />
     <StaticResource x:Key="ToolWindowTabUnselectedBackground" ResourceKey="Nox.Brush.HeaderBackground" />
     <StaticResource x:Key="ToolWindowTabUnselectedText" ResourceKey="Nox.Brush.TextSecondary" />
-    <StaticResource x:Key="ToolWindowTabUnselectedHoveredBackground" ResourceKey="Nox.Brush.HeaderBackgroundHover" />
-    <StaticResource x:Key="ToolWindowTabUnselectedHoveredText" ResourceKey="Nox.Brush.TextPrimary" />
+    <StaticResource x:Key="ToolWindowTabUnselectedHoveredBackground" ResourceKey="Nox.Brush.TabHoverBackground" />
+    <StaticResource x:Key="ToolWindowTabUnselectedHoveredText" ResourceKey="Nox.Brush.TextSecondary" />
 </ResourceDictionary>

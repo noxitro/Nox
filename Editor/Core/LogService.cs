@@ -8,17 +8,19 @@ namespace Core
     {
         public readonly struct Data
         {
-            public Data(System.DateTime timeStamp, string logLevel, string source, string message)
+            public Data(System.DateTime timeStamp, string logLevel, string source, string channel, string message)
             {
                 TimeStamp = timeStamp;
                 LogLevel = logLevel;
                 Source = source;
+                Channel = channel;
                 Message = message;
             }
 
             public System.DateTime TimeStamp { get; }
             public string LogLevel { get; }
             public string Source { get; }
+            public string Channel { get; }
             public string Message { get; }
         }
 
@@ -44,14 +46,14 @@ namespace Core
             System.Diagnostics.Trace.Listeners.Add(_LogHubTraceListener);
         }
 
-        public void Append(string logLevel, string source, string message)
+        public void Append(string logLevel, string source, string message, string channel)
         {
             if (string.IsNullOrEmpty(message))
             {
                 return;
             }
 
-            Data data = new(System.DateTime.Now, logLevel, source, message);
+            Data data = new(System.DateTime.Now, logLevel, source, channel, message);
             _DataQueue.Enqueue(data);
             Interlocked.Increment(ref _QueuedCount);
         }
@@ -113,7 +115,12 @@ namespace Core
             }
 
             ParseTraceMessage(message, out string logLevel, out string source, out string body);
-            _LogService.Append(logLevel, source, body);
+            _LogService.Append(logLevel, "Editor", body, NormalizeEditorChannel(source));
+        }
+
+        private static string NormalizeEditorChannel(string channel)
+        {
+            return string.IsNullOrWhiteSpace(channel) ? "editor.default" : $"editor.{channel}";
         }
 
         private static void ParseTraceMessage(string message, out string logLevel, out string source, out string body)

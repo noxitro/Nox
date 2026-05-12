@@ -11,117 +11,7 @@ namespace Core.UI.ViewModels
 	{
 		public required string Name { get; init; }
 		public required string Category { get; init; }
-		public ObservableCollection<ProjectSettingsPropertyViewModel> Properties { get; } = new();
-	}
-
-	public sealed class ProjectSettingsPropertyViewModel : NoxUI.ViewModelBase
-	{
-		private readonly object _Source;
-		private readonly PropertyInfo _Property;
-		private readonly Action _MarkDirty;
-
-		public string Name => _Property.Name;
-		public string TypeName => GetTypeName(_Property.PropertyType);
-		public bool IsBoolean => _Property.PropertyType == typeof(bool);
-		public bool IsEnum => _Property.PropertyType.IsEnum;
-		public bool IsText => IsBoolean == false && IsEnum == false;
-		public string[] EnumValues { get; }
-
-		public string ValueText
-		{
-			get => Convert.ToString(_Property.GetValue(_Source), CultureInfo.InvariantCulture) ?? string.Empty;
-			set
-			{
-				if (SetValue(value))
-				{
-					RaisePropertyChanged();
-				}
-			}
-		}
-
-		public bool BoolValue
-		{
-			get => _Property.GetValue(_Source) is true;
-			set
-			{
-				if (SetSourceValue(value))
-				{
-					RaisePropertyChanged();
-				}
-			}
-		}
-
-		public string SelectedEnumValue
-		{
-			get => Convert.ToString(_Property.GetValue(_Source), CultureInfo.InvariantCulture) ?? string.Empty;
-			set
-			{
-				if (SetValue(value))
-				{
-					RaisePropertyChanged();
-				}
-			}
-		}
-
-		public string ErrorText
-		{
-			get => field;
-			private set
-			{
-				if (SetProperty(ref field, value))
-				{
-					RaisePropertyChanged(nameof(HasError));
-				}
-			}
-		} = string.Empty;
-
-		public bool HasError => string.IsNullOrWhiteSpace(ErrorText) == false;
-
-		public ProjectSettingsPropertyViewModel(object source, PropertyInfo property, Action markDirty)
-		{
-			_Source = source;
-			_Property = property;
-			_MarkDirty = markDirty;
-			EnumValues = property.PropertyType.IsEnum ? Enum.GetNames(property.PropertyType) : Array.Empty<string>();
-		}
-
-		private bool SetValue(string value)
-		{
-			try
-			{
-				Type propertyType = Nullable.GetUnderlyingType(_Property.PropertyType) ?? _Property.PropertyType;
-				object? convertedValue = propertyType.IsEnum
-					? Enum.Parse(propertyType, value)
-					: TypeDescriptor.GetConverter(propertyType).ConvertFrom(null, CultureInfo.InvariantCulture, value);
-				return SetSourceValue(convertedValue);
-			}
-			catch (Exception ex) when (ex is ArgumentException or FormatException or NotSupportedException)
-			{
-				ErrorText = ex.Message;
-				return false;
-			}
-		}
-
-		private bool SetSourceValue(object? value)
-		{
-			object? currentValue = _Property.GetValue(_Source);
-			if (Equals(currentValue, value))
-			{
-				ErrorText = string.Empty;
-				return false;
-			}
-
-			_Property.SetValue(_Source, value);
-			ErrorText = string.Empty;
-			_MarkDirty();
-			return true;
-		}
-
-		private static string GetTypeName(Type type)
-		{
-			Type propertyType = Nullable.GetUnderlyingType(type) ?? type;
-			return propertyType.IsEnum ? "enum" : propertyType.Name;
-		}
+		public ObservableCollection<PropertyInspectorFieldViewModel> Properties { get; } = new();
 	}
 
 	public sealed class ProjectSettingsViewModel : NoxUI.ViewModelBase
@@ -208,7 +98,7 @@ namespace Core.UI.ViewModels
 				.Where(static property => property.CanRead && property.CanWrite && property.GetIndexParameters().Length == 0 && IsSupportedPropertyType(property.PropertyType))
 				.OrderBy(static property => property.Name, StringComparer.Ordinal))
 			{
-				group.Properties.Add(new ProjectSettingsPropertyViewModel(source, property, MarkDirty));
+				group.Properties.Add(CreatePropertyField(source, property));
 			}
 
 			if (group.Properties.Count > 0)
@@ -233,6 +123,71 @@ namespace Core.UI.ViewModels
 			IsDirty = false;
 		}
 
+		private PropertyInspectorFieldViewModel CreatePropertyField(object source, PropertyInfo property)
+		{
+			Type propertyType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+			PropertyInspectorFieldViewModel fieldViewModel;
+			if (propertyType == typeof(bool))
+			{
+				PropertyInspectorBooleanFieldViewModel? booleanField = null;
+				booleanField = new PropertyInspectorBooleanFieldViewModel(value => SetSourceValue(source, property, value, booleanField!));
+				booleanField.SetInitialValue(property.GetValue(source) is true);
+				fieldViewModel = booleanField;
+			}
+			else if (propertyType.IsEnum)
+			{
+				PropertyInspectorEnumFieldViewModel? enumField = null;
+				enumField = new PropertyInspectorEnumFieldViewModel(Enum.GetNames(propertyType), value => SetConvertedValue(source, property, value, enumField!));
+				enumField.SetInitialValue(Convert.ToString(property.GetValue(source), CultureInfo.InvariantCulture) ?? string.Empty);
+				fieldViewModel = enumField;
+			}
+			else
+			{
+				PropertyInspectorTextFieldViewModel? textField = null;
+				textField = new PropertyInspectorTextFieldViewModel(value => SetConvertedValue(source, property, value, textField!));
+				textField.SetInitialValue(Convert.ToString(property.GetValue(source), CultureInfo.InvariantCulture) ?? string.Empty);
+				textField.IsMultiline = propertyType == typeof(string);
+				fieldViewModel = textField;
+			}
+
+			fieldViewModel.Name = property.Name;
+			fieldViewModel.DisplayName = property.Name;
+			fieldViewModel.TypeName = GetTypeName(property.PropertyType);
+			return fieldViewModel;
+		}
+
+		private bool SetConvertedValue(object source, PropertyInfo property, string value, PropertyInspectorFieldViewModel fieldViewModel)
+		{
+			try
+			{
+				Type propertyType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+				object? convertedValue = propertyType.IsEnum
+					? Enum.Parse(propertyType, value)
+					: TypeDescriptor.GetConverter(propertyType).ConvertFrom(null, CultureInfo.InvariantCulture, value);
+				return SetSourceValue(source, property, convertedValue, fieldViewModel);
+			}
+			catch (Exception ex) when (ex is ArgumentException or FormatException or NotSupportedException)
+			{
+				fieldViewModel.SetError(ex.Message);
+				return false;
+			}
+		}
+
+		private bool SetSourceValue(object source, PropertyInfo property, object? value, PropertyInspectorFieldViewModel fieldViewModel)
+		{
+			object? currentValue = property.GetValue(source);
+			if (Equals(currentValue, value))
+			{
+				fieldViewModel.SetError(string.Empty);
+				return false;
+			}
+
+			property.SetValue(source, value);
+			fieldViewModel.SetError(string.Empty);
+			MarkDirty();
+			return true;
+		}
+
 		private static bool IsSupportedPropertyType(Type type)
 		{
 			Type propertyType = Nullable.GetUnderlyingType(type) ?? type;
@@ -246,6 +201,12 @@ namespace Core.UI.ViewModels
 				propertyType == typeof(float) ||
 				propertyType == typeof(double) ||
 				propertyType == typeof(decimal);
+		}
+
+		private static string GetTypeName(Type type)
+		{
+			Type propertyType = Nullable.GetUnderlyingType(type) ?? type;
+			return propertyType.IsEnum ? "enum" : propertyType.Name;
 		}
 	}
 }

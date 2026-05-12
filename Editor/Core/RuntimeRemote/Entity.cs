@@ -3,6 +3,7 @@ using Nox.Extensions;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using System.Text;
 
@@ -61,6 +62,12 @@ namespace Core.RuntimeRemote
 				{
 					writer.Write((string)value);
 				}
+				else if (propType == typeof(byte[]))
+				{
+					byte[] bytes = (byte[])value;
+					WriteLength(writer, bytes.Length);
+					writer.Write(bytes);
+				}
 				else if (propType.IsSubclassOf(runtimeObjectType) || propType == runtimeObjectType)
 				{
 					long instanceId = ((Core.RuntimeObject)value).RemoteInstanceId;
@@ -103,6 +110,11 @@ namespace Core.RuntimeRemote
 				else if (propType == typeof(string))
 				{
 					value = reader.ReadString();
+				}
+				else if (propType == typeof(byte[]))
+				{
+					int length = ReadLength(reader);
+					value = reader.ReadBytes(length);
 				}
 				else if (propType.IsSubclassOf(runtimeObjectType) || propType == runtimeObjectType)
 				{
@@ -197,6 +209,37 @@ namespace Core.RuntimeRemote
 				TypeCode.Double  => reader.ReadDouble(),
 				_ => throw new NotSupportedException($"Unsupported TypeCode: {typeCode}"),
 			};
+		}
+
+		private static void WriteLength(BinaryWriter writer, int length)
+		{
+			uint value = (uint)length;
+			while (value >= 0x80)
+			{
+				writer.Write((byte)((value & 0x7F) | 0x80));
+				value >>= 7;
+			}
+
+			writer.Write((byte)value);
+		}
+
+		private static int ReadLength(BinaryReader reader)
+		{
+			uint value = 0;
+			int shift = 0;
+			for (int i = 0; i < 5; ++i)
+			{
+				byte current = reader.ReadByte();
+				value |= (uint)(current & 0x7F) << shift;
+				if ((current & 0x80) == 0)
+				{
+					return checked((int)value);
+				}
+
+				shift += 7;
+			}
+
+			throw new InvalidDataException("Invalid length encoding.");
 		}
 
 		/// <summary>

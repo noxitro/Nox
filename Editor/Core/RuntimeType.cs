@@ -139,6 +139,8 @@ namespace Core
 
 		public RuntimeTypeInfo PointeeTypeInfo { get; init; } = Invalid;
 		public RuntimeTypeInfo UnderlyingTypeInfo { get; init; } = Invalid;
+		public RuntimeTypeInfo ReturnTypeInfo { get; init; } = Invalid;
+		public RuntimeTypeInfo[] ArgumentTypeList { get; init; } = [];
 		public DeclBase Decl { get; set; } = RuntimeInvalidDecl.Invalid;
 		#endregion
 
@@ -188,6 +190,7 @@ namespace Core
 		public required RuntimeEnumDecl[] EnumList { get; init; }
 		public required RuntimeVariableDecl[] VariableList { get; init; }
 		public required RuntimeFunctionDecl[] FunctionList { get; init; }
+		public RuntimePropertyDecl[] PropertyList { get; set; } = [];
 		//	未実装
 		public bool IsReflectionClass { get; set; }
 		//	未実装
@@ -212,6 +215,14 @@ namespace Core
 		public required ArgumentInfo[] ArgumentList { private get; init; }
 		public ReadOnlySpan<ArgumentInfo> GetArgumentList() => ArgumentList;
 		public required int NumDefaultArgument { get; init; } 
+	}
+
+	public sealed class RuntimePropertyDecl : NamedDecl
+	{
+		public required RuntimeTypeInfo TypeInfo { get; init; }
+		public required RuntimeVariableDecl? VariableDecl { get; init; }
+		public required RuntimeFunctionDecl? GetterFunctionDecl { get; init; }
+		public required RuntimeFunctionDecl? SetterFunctionDecl { get; init; }
 	}
 
 	public sealed class RuntimeVariableDecl : RuntimeTypeDecl

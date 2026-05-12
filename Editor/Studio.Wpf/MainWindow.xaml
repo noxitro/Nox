@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:Studio.Wpf"
         xmlns:views="clr-namespace:Core.UI.Views;assembly=Core.UI"
         xmlns:ad="clr-namespace:AvalonDock;assembly=AvalonDock"
+        xmlns:adControls="clr-namespace:AvalonDock.Controls;assembly=AvalonDock"
         xmlns:adLayout="clr-namespace:AvalonDock.Layout;assembly=AvalonDock"
         mc:Ignorable="d"
         Title="Studio" Height="1080" Width="1920"
@@ -14,8 +15,8 @@
 
     <Grid Background="{DynamicResource Nox.Brush.WindowBackground}">
         <Grid.RowDefinitions>
-            <!-- 上部タブ行 -->
-            <RowDefinition Height="36" />
+            <!-- メニューバー行 -->
+            <RowDefinition Height="30" />
 
             <!-- 上部コマンドバー行 -->
             <RowDefinition Height="64" />
@@ -24,8 +25,74 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- ====== 上部タブ ====== -->
-        <views:DocumentTabView Grid.Row="0" />
+        <!-- ====== メニューバー ====== -->
+        <Menu Grid.Row="0"
+              Background="{DynamicResource Nox.Brush.TabBarBackground}"
+              Foreground="{DynamicResource Nox.Brush.TextHeading}"
+              Padding="4,0"
+              AutomationProperties.AutomationId="NoxStudio.MenuBar">
+            <Menu.Resources>
+                <StaticResource x:Key="{x:Static SystemColors.MenuBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
+                <StaticResource x:Key="{x:Static SystemColors.MenuTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
+                <StaticResource x:Key="{x:Static SystemColors.ControlBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
+                <StaticResource x:Key="{x:Static SystemColors.ControlTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
+                <StaticResource x:Key="{x:Static SystemColors.HighlightBrushKey}" ResourceKey="Nox.Brush.TabHoverBackground" />
+                <StaticResource x:Key="{x:Static SystemColors.HighlightTextBrushKey}" ResourceKey="Nox.Brush.TextStrong" />
+                <Style x:Key="NoxMenuItemStyle" TargetType="MenuItem">
+                    <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextHeading}" />
+                    <Setter Property="Background" Value="{DynamicResource Nox.Brush.MenuBackground}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorder}" />
+                    <Setter Property="Padding" Value="12,7" />
+                    <Setter Property="FontSize" Value="13" />
+                    <Setter Property="MinHeight" Value="26" />
+                </Style>
+                <Style TargetType="MenuItem" BasedOn="{StaticResource NoxMenuItemStyle}" />
+                <Style TargetType="Separator">
+                    <Setter Property="Background" Value="{DynamicResource Nox.Brush.GridLine}" />
+                    <Setter Property="Margin" Value="4" />
+                    <Setter Property="Height" Value="1" />
+                </Style>
+            </Menu.Resources>
+            <MenuItem Header="Project" ToolTip="プロジェクト操作">
+                <MenuItem Header="Project Settings" ToolTip="プロジェクト設定を表示" Command="{Binding ShowProjectSettingsCommand}" />
+            </MenuItem>
+            <MenuItem Header="Develop" ToolTip="開発ツール">
+                <MenuItem Header="Generate Remote Code" ToolTip="RemoteCodeを出力" Command="{Binding GenerateRemoteCodeCommand}" />
+            </MenuItem>
+            <MenuItem Header="View" ToolTip="表示設定">
+                <MenuItem Header="Theme" ToolTip="テーマ設定" ItemsSource="{Binding ThemeMenuItems}">
+                    <MenuItem.ItemContainerStyle>
+                        <Style TargetType="MenuItem" BasedOn="{StaticResource NoxMenuItemStyle}">
+                             <Setter Property="Header" Value="{Binding Header}" />
+                            <Setter Property="AutomationProperties.AutomationId" Value="{Binding AutomationId}" />
+                             <Setter Property="Command" Value="{Binding Command}" />
+                            <Setter Property="IsCheckable" Value="True" />
+                            <Setter Property="IsChecked" Value="{Binding IsChecked}" />
+                        </Style>
+                    </MenuItem.ItemContainerStyle>
+                </MenuItem>
+                <MenuItem Header="Theme Settings"
+                          ToolTip="テーマ設定 UI を表示"
+                          Command="{Binding ShowThemeSettingsCommand}" />
+                <Separator />
+                <MenuItem Header="Core">
+                    <MenuItem Header="Inspector" ToolTip="Inspector を表示" Command="{Binding ShowInspectorCommand}" />
+                    <MenuItem Header="Hierarchy" ToolTip="Hierarchy を表示" Command="{Binding ShowHierarchyCommand}" />
+                    <MenuItem Header="EngineSystem Graph" ToolTip="EngineSystem の依存関係グラフを表示" Command="{Binding ShowEngineSystemGraphCommand}" />
+                    <MenuItem Header="Remote Instances" ToolTip="RemoteInstance の管理状態を表示" Command="{Binding ShowRemoteInstanceManagerCommand}" />
+                    <MenuItem Header="Memory Profiler" ToolTip="profile_handle に基づくヒープ情報を表示" Command="{Binding ShowMemoryProfilerCommand}" />
+                    <MenuItem Header="Project Settings" ToolTip="Project Settings を表示" Command="{Binding ShowProjectSettingsCommand}" />
+                </MenuItem>
+            </MenuItem>
+            <MenuItem Header="File" ToolTip="ファイル操作">
+                <MenuItem Header="New Scene" AutomationProperties.AutomationId="NoxStudio.File.NewScene" ToolTip="新しいシーンを作成" Command="{Binding NewSceneCommand}" />
+                <Separator />
+                <MenuItem Header="Save Scene" AutomationProperties.AutomationId="NoxStudio.File.SaveScene" ToolTip="現在のシーンを保存" Command="{Binding SaveSceneCommand}" />
+                <MenuItem Header="Save As" AutomationProperties.AutomationId="NoxStudio.File.SaveAs" ToolTip="名前を付けてシーンを保存" Command="{Binding SaveSceneAsCommand}" />
+                <Separator />
+                <MenuItem Header="Exit" ToolTip="エディターを終了" Command="{Binding ExitCommand}" />
+            </MenuItem>
+        </Menu>
 
         <!-- ====== Runtime コントロールバー ====== -->
         <views:RuntimeControlView Grid.Row="1" />
@@ -35,11 +102,16 @@
                            AutomationProperties.AutomationId="NoxStudio.DockManager"
                            Grid.Row="2"
                            Theme="{Binding Theme.CurrentTheme}"
+                           DocumentPaneControlStyle="{StaticResource Nox.DocumentPaneControlStyle}"
+                           AnchorablePaneControlStyle="{StaticResource Nox.AnchorablePaneControlStyle}"
                            DocumentsSource="{Binding ToolViewModelList}"
                            AnchorablesSource="{Binding AssetViewModelList}"
                            >
             <ad:DockingManager.Resources>
                 <StaticResource x:Key="AnchorableHeaderBackground" ResourceKey="Nox.Brush.HeaderBackgroundInactive" />
+                <StaticResource x:Key="AnchorablePaneControlStyle" ResourceKey="Nox.AnchorablePaneControlStyle" />
+                <Style TargetType="{x:Type adControls:LayoutAnchorablePaneControl}"
+                       BasedOn="{StaticResource Nox.AnchorablePaneControlStyle}" />
             </ad:DockingManager.Resources>
 
             <!-- Unity 風レイアウト
@@ -74,6 +146,9 @@
                                 <adLayout:LayoutAnchorablePane>
                                     <adLayout:LayoutAnchorable Title="Inspector" ContentId="Inspector" CanClose="False" CanHide="False">
                                         <views:InspectorView AutomationProperties.AutomationId="NoxStudio.InspectorView" />
+                                    </adLayout:LayoutAnchorable>
+                                    <adLayout:LayoutAnchorable Title="Asset Properties" ContentId="AssetProperties" CanClose="False" CanHide="False">
+                                        <views:AssetPropertiesView AutomationProperties.AutomationId="NoxStudio.AssetPropertiesView" />
                                     </adLayout:LayoutAnchorable>
                                 </adLayout:LayoutAnchorablePane>
                             </adLayout:LayoutAnchorablePaneGroup>

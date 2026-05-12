@@ -13,7 +13,7 @@
 		//	PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
 		//}
 
-		public void Dispose()
+		public virtual void Dispose()
 		{
 			// 共通の解放処理があればここに
 		}

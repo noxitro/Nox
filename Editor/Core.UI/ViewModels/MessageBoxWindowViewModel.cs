@@ -13,8 +13,6 @@ namespace Core.UI.ViewModels
 		public required System.Windows.MessageBoxButton Style { get; init; } = System.Windows.MessageBoxButton.OK;
 		public required Action<System.Windows.MessageBoxResult> Callback { get; init; } = (result) => { };
 
-		public System.Windows.Media.Brush Background { get; } = System.Windows.SystemColors.GrayTextBrush;
-
 		public NoxUI.ViewModelCommand YesCommand => field ??= new(ClickYes);
 		public NoxUI.ViewModelCommand NoCommand => field ??= new(ClickNo);
 		public NoxUI.ViewModelCommand CancelCommand => field ??= new(ClickCancel);
@@ -24,31 +22,6 @@ namespace Core.UI.ViewModels
 		#endregion
 
 		#region 非公開メソッド
-		public MessageBoxWindowViewModel()
-		{
-			switch(Level)
-			{
-				case System.Windows.MessageBoxImage.Error:
-				//case System.Windows.MessageBoxImage.Hand:
-				//case System.Windows.MessageBoxImage.Stop:
-					Background = System.Windows.SystemColors.ControlDarkBrush;
-					break;
-				case System.Windows.MessageBoxImage.Warning:
-					Background = System.Windows.SystemColors.ControlDarkBrush;
-					break;
-				case System.Windows.MessageBoxImage.Information:
-				//case System.Windows.MessageBoxImage.Asterisk:
-					Background = System.Windows.SystemColors.ControlLightBrush;
-					break;
-				case System.Windows.MessageBoxImage.Question:
-					Background = System.Windows.SystemColors.ControlLightBrush;
-					break;
-				default:
-					Background = System.Windows.SystemColors.ControlBrush;
-					break;
-			}
-		}
-
 		private void ClickYes()
 		{
 			Clicked(System.Windows.MessageBoxResult.Yes);

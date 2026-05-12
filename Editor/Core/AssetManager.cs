@@ -99,6 +99,54 @@ namespace Core
 				asset.RelativePath.Contains(keyword, StringComparison.OrdinalIgnoreCase));
 		}
 
+		public string Rename(ProjectAsset asset, string requestedName)
+		{
+			ArgumentNullException.ThrowIfNull(asset);
+
+			string trimmedName = requestedName.Trim();
+			ValidateRename(trimmedName);
+			if (string.Equals(trimmedName, asset.Name, StringComparison.Ordinal))
+			{
+				return asset.RelativePath;
+			}
+
+			string sourcePath = asset.FullPath;
+			string parentDirectory = Path.GetDirectoryName(sourcePath)
+				?? throw new InvalidOperationException($"Asset path is invalid: {sourcePath}");
+			string targetPath = Path.Combine(parentDirectory, trimmedName);
+			if (string.Equals(sourcePath, targetPath, StringComparison.OrdinalIgnoreCase))
+			{
+				return asset.RelativePath;
+			}
+
+			EnsureRenameTargetDoesNotExist(targetPath);
+			switch (asset.Kind)
+			{
+				case AssetKind.Folder:
+					Directory.Move(sourcePath, targetPath);
+					break;
+				default:
+					File.Move(sourcePath, targetPath);
+					break;
+			}
+
+			MoveMetaIfNeeded(GetMetaPath(sourcePath), GetMetaPath(targetPath));
+			return Path.GetRelativePath(_Workspace.AssetRootPath, targetPath);
+		}
+
+		public string CreateFolder(string parentRelativePath, string baseName)
+		{
+			string parentPath = string.IsNullOrWhiteSpace(parentRelativePath)
+				? _Workspace.AssetRootPath
+				: Path.Combine(_Workspace.AssetRootPath, parentRelativePath);
+			Directory.CreateDirectory(parentPath);
+
+			string folderName = GetUniqueName(parentPath, baseName, extension: null, separator: " ");
+			string folderPath = Path.Combine(parentPath, folderName);
+			Directory.CreateDirectory(folderPath);
+			return Path.GetRelativePath(_Workspace.AssetRootPath, folderPath);
+		}
+
 		private AssetTreeNode CreateRootNode()
 		{
 			return new AssetTreeNode(_Workspace.AssetFolderName, string.Empty, null);
@@ -273,6 +321,30 @@ namespace Core
 			return assetPath + ".meta";
 		}
 
+		private static void EnsureRenameTargetDoesNotExist(string targetPath)
+		{
+			if (File.Exists(targetPath) || Directory.Exists(targetPath))
+			{
+				throw new IOException($"An asset with the same name already exists: {targetPath}");
+			}
+
+			string targetMetaPath = GetMetaPath(targetPath);
+			if (File.Exists(targetMetaPath) || Directory.Exists(targetMetaPath))
+			{
+				throw new IOException($"A meta file with the same name already exists: {targetMetaPath}");
+			}
+		}
+
+		private static void MoveMetaIfNeeded(string sourceMetaPath, string targetMetaPath)
+		{
+			if (File.Exists(sourceMetaPath) == false)
+			{
+				return;
+			}
+
+			File.Move(sourceMetaPath, targetMetaPath);
+		}
+
 		private static AssetKind GetAssetKind(string extension)
 		{
 			return extension.ToLowerInvariant() switch
@@ -299,6 +371,45 @@ namespace Core
 		private static string NormalizeAssetPath(string relativePath)
 		{
 			return relativePath.Replace(Path.DirectorySeparatorChar, '/').Replace(Path.AltDirectorySeparatorChar, '/');
+		}
+
+		private static void ValidateRename(string name)
+		{
+			if (string.IsNullOrWhiteSpace(name))
+			{
+				throw new ArgumentException("Asset name cannot be empty.", nameof(name));
+			}
+
+			if (Path.GetFileName(name) != name)
+			{
+				throw new ArgumentException("Asset name cannot contain path separators.", nameof(name));
+			}
+
+			if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+			{
+				throw new ArgumentException("Asset name contains invalid characters.", nameof(name));
+			}
+		}
+
+		private static string GetUniqueName(string directoryPath, string baseName, string? extension, string separator)
+		{
+			string candidate = baseName;
+			int suffix = 1;
+			while (PathExists(directoryPath, candidate, extension))
+			{
+				candidate = $"{baseName}{separator}{suffix.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+				++suffix;
+			}
+
+			return candidate;
+		}
+
+		private static bool PathExists(string directoryPath, string fileName, string? extension)
+		{
+			string fullPath = extension == null
+				? Path.Combine(directoryPath, fileName)
+				: Path.Combine(directoryPath, fileName + extension);
+			return File.Exists(fullPath) || Directory.Exists(fullPath);
 		}
 
 		private static string GetImporterName(AssetKind kind)

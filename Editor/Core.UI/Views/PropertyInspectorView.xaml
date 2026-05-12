@@ -1,0 +1,265 @@
+<UserControl x:Class="Core.UI.Views.PropertyInspectorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vm="clr-namespace:Core.UI.ViewModels"
+             mc:Ignorable="d"
+             d:DesignHeight="360"
+             d:DesignWidth="520">
+    <UserControl.Resources>
+        <Style x:Key="PropertyInspectorTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Background" Value="{DynamicResource Nox.Brush.InputBackground}" />
+            <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.Inspector.Border}" />
+            <Setter Property="CaretBrush" Value="{DynamicResource Nox.Brush.TextPrimary}" />
+            <Setter Property="Padding" Value="5,3" />
+            <Setter Property="MinHeight" Value="24" />
+        </Style>
+
+        <Style x:Key="PropertyInspectorActionButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource Nox.Brush.SurfaceBackground}" />
+            <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.Inspector.Border}" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="MinHeight" Value="26" />
+        </Style>
+
+        <Style x:Key="PropertyInspectorComboBoxStyle"
+               TargetType="ComboBox"
+               BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="Background" Value="{DynamicResource Nox.Brush.InputBackground}" />
+            <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.Inspector.Border}" />
+            <Setter Property="MinHeight" Value="26" />
+        </Style>
+
+        <Style x:Key="PropertyInspectorComboBoxItemStyle"
+               TargetType="ComboBoxItem"
+               BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+            <Setter Property="Background" Value="{DynamicResource Nox.Brush.MenuBackground}" />
+            <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextHeading}" />
+        </Style>
+
+        <DataTemplate DataType="{x:Type vm:PropertyInspectorReadOnlyFieldViewModel}">
+            <TextBlock Text="{Binding Value}" Foreground="{DynamicResource Nox.Brush.Inspector.PropertyValueForeground}" TextWrapping="Wrap" />
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:PropertyInspectorTextFieldViewModel}">
+            <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                     IsReadOnly="{Binding IsReadOnly}"
+                     AutomationProperties.AutomationId="NoxStudio.PropertyInspector.TextField">
+                <TextBox.Style>
+                    <Style TargetType="TextBox" BasedOn="{StaticResource PropertyInspectorTextBoxStyle}">
+                        <Setter Property="TextWrapping" Value="NoWrap" />
+                        <Setter Property="AcceptsReturn" Value="False" />
+                        <Setter Property="VerticalScrollBarVisibility" Value="Disabled" />
+                        <Setter Property="MinLines" Value="1" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsMultiline}" Value="True">
+                                <Setter Property="TextWrapping" Value="Wrap" />
+                                <Setter Property="AcceptsReturn" Value="True" />
+                                <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+                                <Setter Property="MinLines" Value="2" />
+                                <Setter Property="MaxLines" Value="5" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBox.Style>
+            </TextBox>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:PropertyInspectorBooleanFieldViewModel}">
+            <CheckBox IsChecked="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                      IsEnabled="{Binding IsEditable}"
+                      Foreground="{DynamicResource Nox.Brush.TextPrimary}"
+                      AutomationProperties.AutomationId="NoxStudio.PropertyInspector.BooleanField" />
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:PropertyInspectorEnumFieldViewModel}">
+            <ComboBox ItemsSource="{Binding Values}"
+                      SelectedItem="{Binding SelectedValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                      IsEnabled="{Binding IsEditable}"
+                      Style="{StaticResource PropertyInspectorComboBoxStyle}"
+                      ItemContainerStyle="{StaticResource PropertyInspectorComboBoxItemStyle}"
+                      AutomationProperties.AutomationId="NoxStudio.PropertyInspector.EnumField">
+                <ComboBox.Resources>
+                    <StaticResource x:Key="{x:Static SystemColors.WindowBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
+                    <StaticResource x:Key="{x:Static SystemColors.WindowTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
+                    <StaticResource x:Key="{x:Static SystemColors.ControlBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
+                    <StaticResource x:Key="{x:Static SystemColors.ControlTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
+                    <StaticResource x:Key="{x:Static SystemColors.HighlightBrushKey}" ResourceKey="Nox.Brush.TabHoverBackground" />
+                    <StaticResource x:Key="{x:Static SystemColors.HighlightTextBrushKey}" ResourceKey="Nox.Brush.TextStrong" />
+                </ComboBox.Resources>
+            </ComboBox>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:PropertyInspectorVector3FieldViewModel}">
+            <Grid AutomationProperties.AutomationId="NoxStudio.PropertyInspector.Vector3Field">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <DockPanel Grid.Column="0" Margin="0,0,4,0">
+                    <TextBlock DockPanel.Dock="Left" Text="X" Foreground="{DynamicResource Nox.Brush.TextMuted}" VerticalAlignment="Center" Margin="0,0,4,0" />
+                    <TextBox Text="{Binding XText, UpdateSourceTrigger=PropertyChanged}"
+                             IsReadOnly="{Binding IsReadOnly}"
+                             Style="{StaticResource PropertyInspectorTextBoxStyle}" />
+                </DockPanel>
+                <DockPanel Grid.Column="1" Margin="0,0,4,0">
+                    <TextBlock DockPanel.Dock="Left" Text="Y" Foreground="{DynamicResource Nox.Brush.TextMuted}" VerticalAlignment="Center" Margin="0,0,4,0" />
+                    <TextBox Text="{Binding YText, UpdateSourceTrigger=PropertyChanged}"
+                             IsReadOnly="{Binding IsReadOnly}"
+                             Style="{StaticResource PropertyInspectorTextBoxStyle}" />
+                </DockPanel>
+                <DockPanel Grid.Column="2">
+                    <TextBlock DockPanel.Dock="Left" Text="Z" Foreground="{DynamicResource Nox.Brush.TextMuted}" VerticalAlignment="Center" Margin="0,0,4,0" />
+                    <TextBox Text="{Binding ZText, UpdateSourceTrigger=PropertyChanged}"
+                             IsReadOnly="{Binding IsReadOnly}"
+                             Style="{StaticResource PropertyInspectorTextBoxStyle}" />
+                </DockPanel>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:PropertyInspectorActionFieldViewModel}">
+            <Button Content="{Binding DisplayName}"
+                    Command="{Binding ExecuteCommand}"
+                    Style="{StaticResource PropertyInspectorActionButtonStyle}"
+                    AutomationProperties.AutomationId="NoxStudio.PropertyInspector.ActionButton" />
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:PropertyInspectorGraphFieldViewModel}">
+            <Border Background="{DynamicResource Nox.Brush.InputBackground}"
+                    BorderBrush="{DynamicResource Nox.Brush.Inspector.Border}"
+                    BorderThickness="1"
+                    Padding="8"
+                    AutomationProperties.AutomationId="NoxStudio.PropertyInspector.DependencyGraph">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top"
+                               Text="{Binding Summary}"
+                               Foreground="{DynamicResource Nox.Brush.TextMuted}"
+                               FontSize="11"
+                               Margin="0,0,0,6"
+                               AutomationProperties.AutomationId="NoxStudio.PropertyInspector.DependencyGraph" />
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" MaxHeight="360">
+                        <Canvas Width="{Binding CanvasWidth}" Height="{Binding CanvasHeight}">
+                            <ItemsControl ItemsSource="{Binding Edges}"
+                                          Width="{Binding CanvasWidth}"
+                                          Height="{Binding CanvasHeight}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <Canvas />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Line X1="{Binding X1}" Y1="{Binding Y1}" X2="{Binding X2}" Y2="{Binding Y2}"
+                                              Stroke="{DynamicResource Nox.Brush.AccentBorder}"
+                                              StrokeThickness="1.2"
+                                              Opacity="0.72" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <ItemsControl ItemsSource="{Binding Nodes}"
+                                          Width="{Binding CanvasWidth}"
+                                          Height="{Binding CanvasHeight}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <Canvas />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="{Binding X}" />
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Width="190"
+                                                MinHeight="58"
+                                                CornerRadius="6"
+                                                Background="{DynamicResource Nox.Brush.SurfaceRaised}"
+                                                BorderBrush="{DynamicResource Nox.Brush.AccentBorder}"
+                                                BorderThickness="1"
+                                                Padding="8"
+                                                AutomationProperties.AutomationId="NoxStudio.PropertyInspector.DependencyGraph.Node">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Label}"
+                                                           Foreground="{DynamicResource Nox.Brush.TextPrimary}"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           AutomationProperties.AutomationId="NoxStudio.PropertyInspector.DependencyGraph.Node" />
+                                                <TextBlock Text="{Binding Subtitle}"
+                                                           Foreground="{DynamicResource Nox.Brush.TextMuted}"
+                                                           FontSize="11"
+                                                           Margin="0,3,0,0"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Canvas>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <ItemsControl AutomationProperties.AutomationId="{Binding PropertyInspectorAutomationId, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                  ItemsSource="{Binding ItemsSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                  Background="{DynamicResource Nox.Brush.SurfaceBackground}"
+                  Foreground="{DynamicResource Nox.Brush.Inspector.PropertyValueForeground}">
+        <ItemsControl.ItemTemplate>
+            <DataTemplate>
+                <Border Background="{DynamicResource Nox.Brush.SurfaceBackground}"
+                        BorderBrush="{DynamicResource Nox.Brush.Inspector.Border}"
+                        BorderThickness="0,0,0,1"
+                        Padding="7,6"
+                        ToolTip="{Binding ToolTipText}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{Binding LabelWidth, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                            <TextBlock Text="{Binding DisplayName}" Foreground="{DynamicResource Nox.Brush.Inspector.PropertyNameForeground}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Category}" Foreground="{DynamicResource Nox.Brush.TextMuted}" FontSize="10" TextTrimming="CharacterEllipsis">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Style.Triggers>
+                                            <Trigger Property="Text" Value="">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                        <ContentPresenter Grid.Column="1" Content="{Binding}" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ErrorText}" Foreground="{DynamicResource Nox.Brush.ErrorText}" Margin="0,3,0,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasError}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+        </ItemsControl.ItemTemplate>
+    </ItemsControl>
+</UserControl>

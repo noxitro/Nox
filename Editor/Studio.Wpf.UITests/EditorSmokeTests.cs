@@ -1,5 +1,7 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Drawing;
+using System.Reflection;
+using System.Runtime.Serialization;
 using FlaUI.Core;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Definitions;
@@ -24,11 +26,19 @@ public sealed class EditorSmokeTests
 		using EditorApp editor = EditorApp.Launch(workspace.RootPath);
 
 		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.RuntimeControlView"));
-		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.Hierarchy.RootAddButton"));
+		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.Hierarchy.Tree"));
 		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.AssetBrowser.SearchBox"));
 		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.AssetBrowser.AssetList"));
-		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.Inspector.PropertyList"));
+		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.PropertyInspector.PropertyList"));
+		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.Trace.LevelFilter"));
+		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.Trace.ChannelTabs"));
+		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.Trace.SearchBox"));
 		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.Trace.List"));
+		WaitForDescendantByName(editor.MainWindow, "File").Click();
+		Assert.NotNull(FindDesktopByAutomationId(editor, "NoxStudio.File.NewScene"));
+		Assert.NotNull(FindDesktopByAutomationId(editor, "NoxStudio.File.SaveScene"));
+		Assert.NotNull(FindDesktopByAutomationId(editor, "NoxStudio.File.SaveAs"));
+		editor.MainWindow.Click();
 
 		string metaPath = workspace.GetAssetPath("SmokeAsset.txt.meta");
 		Assert.True(File.Exists(metaPath), $"Expected asset meta file to be generated: {metaPath}");
@@ -44,10 +54,25 @@ public sealed class EditorSmokeTests
 		using TestWorkspace workspace = TestWorkspace.Create();
 		using EditorApp editor = EditorApp.Launch(workspace.RootPath);
 
-		FindByAutomationId(editor.MainWindow, "NoxStudio.Hierarchy.RootAddButton").AsButton().Invoke();
+		AutomationElement hierarchyTree = FindByAutomationId(editor.MainWindow, "NoxStudio.Hierarchy.Tree");
+		Assert.Null(hierarchyTree.FindFirstDescendant(cf => cf.ByName("Main Scene")));
+		Assert.NotNull(WaitForDescendantByName(hierarchyTree, "Main Camera"));
 
-		AutomationElement titleText = WaitForDescendantByName(editor.MainWindow, "EntityNode 4");
+		CreateRootEntityFromHierarchyContextMenu(editor);
+
+		AutomationElement titleText = WaitForDescendantByName(editor.MainWindow, "EntityNode 3");
 		Assert.Equal(ControlType.Text, titleText.ControlType);
+
+		InvokeTopMenuItem(editor, "File", "NoxStudio.File.SaveScene");
+		string scenePath = workspace.GetAssetPath("Main Scene.noxscene");
+		RetryResult<string?> sceneFileResult = Retry.WhileNull(
+			() => File.Exists(scenePath) ? scenePath : null,
+			UiTimeout);
+		Assert.NotNull(sceneFileResult.Result);
+		string sceneJson = File.ReadAllText(scenePath);
+		Assert.Contains("\"Name\": \"Main Scene\"", sceneJson, StringComparison.Ordinal);
+		Assert.Contains("\"Name\": \"Main Camera\"", sceneJson, StringComparison.Ordinal);
+		Assert.Contains("\"Name\": \"EntityNode 3\"", sceneJson, StringComparison.Ordinal);
 	}
 
 	[Fact]
@@ -66,17 +91,12 @@ public sealed class EditorSmokeTests
 	}
 
 	[Fact]
-	public void ProjectSettingsOpensFromViewsMenu()
+	public void ProjectSettingsOpensFromProjectMenu()
 	{
 		using TestWorkspace workspace = TestWorkspace.Create();
 		using EditorApp editor = EditorApp.Launch(workspace.RootPath);
 
-		WaitForDescendantByName(editor.MainWindow, "Views").Click();
-		RetryResult<AutomationElement?> coreMenuItemResult = Retry.WhileNull(
-			() => editor.Automation.GetDesktop().FindFirstDescendant(cf => cf.ByName("Core")),
-			UiTimeout);
-		AutomationElement coreMenuItem = coreMenuItemResult.Result ?? throw new InvalidOperationException("Core view menu item was not shown.");
-		coreMenuItem.Click();
+		WaitForDescendantByName(editor.MainWindow, "Project").Click();
 
 		RetryResult<AutomationElement?> menuItemResult = Retry.WhileNull(
 			() => editor.Automation.GetDesktop().FindFirstDescendant(cf => cf.ByName("Project Settings")),
@@ -86,6 +106,8 @@ public sealed class EditorSmokeTests
 
 		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.ProjectSettingsView"));
 		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.ProjectSettings.SaveButton"));
+		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.ProjectSettings.PropertyInspector"));
+		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.PropertyInspector.TextField"));
 	}
 
 	[Fact]
@@ -113,6 +135,43 @@ public sealed class EditorSmokeTests
 	}
 
 	[Fact]
+	public void ThemeMenuSwitchesAllThemesWithoutBreakingMainPanels()
+	{
+		using TestWorkspace workspace = TestWorkspace.Create();
+		using EditorApp editor = EditorApp.Launch(workspace.RootPath);
+
+		foreach ((string themeKey, string themeName) in new[] { ("Gunmetal", "Gunmetal"), ("BrushedSteel", "Brushed Steel"), ("Bronze", "Bronze"), ("Monochrome", "Monochrome"), ("Nox", "Nox") })
+		{
+			InvokeThemeMenuItem(editor, themeKey);
+
+			Assert.False(editor.HasExited, $"Editor exited after applying theme '{themeName}'.");
+			Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.Hierarchy.Tree"));
+			Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.PropertyInspector.PropertyList"));
+			Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.Trace.List"));
+		}
+	}
+
+	[Fact]
+	public void RuntimeObjectDirtyFlagsTrackStringAndBooleanEdits()
+	{
+		FakeInspectorRuntimeObject runtimeObject = new();
+
+		Assert.False(runtimeObject.IsDirty("Enabled"));
+		Assert.False(runtimeObject.IsDirty("Title"));
+
+		runtimeObject.SetValue("Enabled", true);
+		runtimeObject.SetValue("Title", "Player");
+
+		Assert.True(runtimeObject.IsDirty("Enabled"));
+		Assert.True(runtimeObject.IsDirty("Title"));
+
+		runtimeObject.ClearDirtyFlags();
+
+		Assert.False(runtimeObject.IsDirty("Enabled"));
+		Assert.False(runtimeObject.IsDirty("Title"));
+	}
+
+	[Fact]
 	public void RebootButtonLaunchesRuntimeAndHostsWindowInRuntimeView()
 	{
 		string repositoryRoot = EditorApp.ResolveRepositoryRoot();
@@ -125,8 +184,78 @@ public sealed class EditorSmokeTests
 
 			FindByAutomationId(editor.MainWindow, "NoxStudio.RuntimeControl.RebootButton").AsButton().Invoke();
 
-			WaitForAttachStatus(editor, "True", runtimeExecutablePath);
+			AutomationElement attachStatus = WaitForAttachStatus(editor, "True", runtimeExecutablePath);
+			int sentBeforeAdd = GetDebugCounter(attachStatus.HelpText, "Sent");
+			int deserializedBeforeAdd = GetDebugCounter(attachStatus.HelpText, "Deserialized");
+			CreateRootEntityFromHierarchyContextMenu(editor);
+			Assert.NotNull(WaitForDescendantByName(editor.MainWindow, "EntityNode 3"));
+			WaitForDebugCounterAtLeast(editor, "Sent", sentBeforeAdd + 1, runtimeExecutablePath);
+			WaitForDebugCounterAtLeast(editor, "Deserialized", deserializedBeforeAdd + 1, runtimeExecutablePath);
+			int sentAfterCreate = GetDebugCounter(
+				FindByAutomationId(editor.MainWindow, "NoxStudio.RuntimeView.AttachStatus").HelpText,
+				"Sent");
+			int deserializedAfterCreate = GetDebugCounter(
+				FindByAutomationId(editor.MainWindow, "NoxStudio.RuntimeView.AttachStatus").HelpText,
+				"Deserialized");
+			WaitForDebugCounterAtLeast(editor, "Sent", sentAfterCreate + 1, runtimeExecutablePath);
+			WaitForDebugCounterAtLeast(editor, "Deserialized", deserializedAfterCreate + 1, runtimeExecutablePath);
 			Assert.False(editor.HasExited, "Studio exited after invoking the Reboot button.");
+		}
+		finally
+		{
+			KillRuntimeProcesses(runtimeExecutablePath);
+		}
+	}
+
+	[Fact]
+	public void TransformInspectorFieldsStaySyncedAfterRuntimeRoundTrip()
+	{
+		string repositoryRoot = EditorApp.ResolveRepositoryRoot();
+		string runtimeExecutablePath = Path.Combine(repositoryRoot, "runtime", "build", "runtime", "x64", "Debug", "runtime.exe");
+		Assert.True(File.Exists(runtimeExecutablePath), $"runtime.exe was not found. Build runtime before running this FlaUI test: {runtimeExecutablePath}");
+
+		try
+		{
+			using EditorApp editor = EditorApp.Launch(repositoryRoot);
+
+			FindByAutomationId(editor.MainWindow, "NoxStudio.RuntimeControl.RebootButton").AsButton().Invoke();
+			AutomationElement attachStatus = WaitForAttachStatus(editor, "True", runtimeExecutablePath);
+			int sentBeforeEdit = GetDebugCounter(attachStatus.HelpText, "Sent");
+			int deserializedBeforeEdit = GetDebugCounter(attachStatus.HelpText, "Deserialized");
+
+			AutomationElement hierarchyTree = FindByAutomationId(editor.MainWindow, "NoxStudio.Hierarchy.Tree");
+			WaitForDescendantByName(hierarchyTree, "Main Camera").Click();
+
+			AutomationElement componentTree = FindByAutomationId(editor.MainWindow, "NoxStudio.Inspector.ComponentTree");
+			Assert.NotNull(WaitForDescendantByName(componentTree, "Transform"));
+			Assert.NotNull(WaitForDescendantByName(componentTree, "LocalPosition"));
+			Assert.NotNull(WaitForDescendantByName(componentTree, "LocalScale"));
+			Assert.NotNull(WaitForDescendantByName(componentTree, "LocalRotation"));
+
+			RetryResult<TextBox[]?> textBoxResult = Retry.WhileNull(
+				() =>
+				{
+					TextBox[] edits = componentTree.FindAllDescendants(cf => cf.ByControlType(ControlType.Edit))
+						.Select(element => element.AsTextBox())
+						.ToArray();
+					return edits.Length >= 3 ? edits : null;
+				},
+				UiTimeout);
+			TextBox[] textBoxes = textBoxResult.Result ?? throw new InvalidOperationException(
+				"Transform vector text boxes were not found. " + DescribeAutomationSubtree(componentTree));
+			Assert.True(textBoxes.Length >= 3, "Expected LocalPosition to expose three editable text boxes.");
+
+			textBoxes[0].Click();
+			textBoxes[0].Text = "123";
+			textBoxes[1].Click();
+
+			RetryResult<bool> valueResult = Retry.WhileFalse(
+				() => textBoxes[0].Text.StartsWith("123", StringComparison.Ordinal),
+				TimeSpan.FromSeconds(3));
+			Assert.True(valueResult.Success, $"LocalPosition X did not remain synchronized after edit. Actual='{textBoxes[0].Text}'.");
+
+			WaitForDebugCounterAtLeast(editor, "Sent", sentBeforeEdit + 1, runtimeExecutablePath);
+			WaitForDebugCounterAtLeast(editor, "Deserialized", deserializedBeforeEdit + 1, runtimeExecutablePath);
 		}
 		finally
 		{
@@ -150,6 +279,46 @@ public sealed class EditorSmokeTests
 		return result.Result ?? throw new InvalidOperationException($"Element not found. Name={name}");
 	}
 
+	private static void CreateRootEntityFromHierarchyContextMenu(EditorApp editor)
+	{
+		AutomationElement hierarchyTree = FindByAutomationId(editor.MainWindow, "NoxStudio.Hierarchy.Tree");
+		hierarchyTree.RightClick();
+		AutomationElement createEntity = FindDesktopByAutomationId(editor, "NoxStudio.Hierarchy.Context.CreateEntity");
+		createEntity.Click();
+	}
+
+	private static void InvokeTopMenuItem(EditorApp editor, string topLevelName, string menuItemAutomationId)
+	{
+		WaitForDescendantByName(editor.MainWindow, topLevelName).Click();
+		FindDesktopByAutomationId(editor, menuItemAutomationId).Click();
+	}
+
+	private static void InvokeThemeMenuItem(EditorApp editor, string themeKey)
+	{
+		editor.MainWindow.Click();
+		Thread.Sleep(100);
+		WaitForDescendantByName(editor.MainWindow, "View").AsMenuItem().Expand();
+		WaitForDesktopElementByName(editor, "Theme").AsMenuItem().Expand();
+		FindDesktopByAutomationId(editor, $"NoxStudio.Theme.{themeKey}").Click();
+		Thread.Sleep(100);
+	}
+
+	private static AutomationElement WaitForDesktopElementByName(EditorApp editor, string name)
+	{
+		RetryResult<AutomationElement?> result = Retry.WhileNull(
+			() => editor.Automation.GetDesktop().FindFirstDescendant(cf => cf.ByName(name)),
+			UiTimeout);
+		return result.Result ?? throw new InvalidOperationException($"Desktop element not found. Name={name}");
+	}
+
+	private static AutomationElement FindDesktopByAutomationId(EditorApp editor, string automationId)
+	{
+		RetryResult<AutomationElement?> result = Retry.WhileNull(
+			() => editor.Automation.GetDesktop().FindFirstDescendant(cf => cf.ByAutomationId(automationId)),
+			UiTimeout);
+		return result.Result ?? throw new InvalidOperationException($"Desktop element not found. AutomationId={automationId}");
+	}
+
 	private static AutomationElement WaitForAttachStatus(EditorApp editor, string expectedText, string runtimeExecutablePath)
 	{
 		RetryResult<AutomationElement?> result = Retry.WhileNull(
@@ -163,6 +332,40 @@ public sealed class EditorSmokeTests
 
 		return result.Result ?? throw new InvalidOperationException(
 			$"Runtime view was not attached. Expected status text '{expectedText}'. EditorExited={editor.HasExited}. {GetRuntimeViewDiagnostics(editor.MainWindow)} {GetRuntimeDiagnostics(runtimeExecutablePath)}");
+	}
+
+	private static void WaitForDebugCounterAtLeast(EditorApp editor, string counterName, int expectedMinimum, string runtimeExecutablePath)
+	{
+		RetryResult<AutomationElement?> result = Retry.WhileNull(
+			() =>
+			{
+				AutomationElement status = FindByAutomationId(editor.MainWindow, "NoxStudio.RuntimeView.AttachStatus");
+				return GetDebugCounter(status.HelpText, counterName) >= expectedMinimum ? status : null;
+			},
+			UiTimeout);
+
+		Assert.NotNull(result.Result);
+		Assert.False(editor.HasExited, $"Editor exited while waiting for RuntimeView debug counter {counterName}>={expectedMinimum}. {GetRuntimeViewDiagnostics(editor.MainWindow)} {GetRuntimeDiagnostics(runtimeExecutablePath)}");
+	}
+
+	private static int GetDebugCounter(string? debugText, string counterName)
+	{
+		if (string.IsNullOrWhiteSpace(debugText))
+		{
+			return 0;
+		}
+
+		string prefix = counterName + "=";
+		foreach (string part in debugText.Split(';', StringSplitOptions.TrimEntries))
+		{
+			if (part.StartsWith(prefix, StringComparison.Ordinal) &&
+				int.TryParse(part.AsSpan(prefix.Length), out int value))
+			{
+				return value;
+			}
+		}
+
+		return 0;
 	}
 
 	private static Rectangle GetHeaderSampleRectangle(AutomationElement view)
@@ -253,6 +456,12 @@ public sealed class EditorSmokeTests
 		}
 
 		return diagnostics.Count == 0 ? "No matching runtime.exe process was found." : string.Join("; ", diagnostics);
+	}
+
+	private static string DescribeAutomationSubtree(AutomationElement root)
+	{
+		return string.Join(" | ", root.FindAllDescendants().Take(80).Select(element =>
+			$"Name='{element.Name}', Id='{element.AutomationId}', Type='{element.ControlType}'"));
 	}
 
 	private static string GetProcessWindowDiagnostics(Process process)
@@ -473,6 +682,87 @@ public sealed class EditorSmokeTests
 			{
 				_Disposed = true;
 			}
+		}
+	}
+
+	[Core.Attributes.RuntimeWrapper("nox::FakeInspectorRuntimeObject")]
+	private sealed class FakeInspectorRuntimeObject : Core.RuntimeObject
+	{
+		static FakeInspectorRuntimeObject()
+		{
+			Type holderType = typeof(Core.RuntimeObject)
+				.GetNestedType("RuntimeRecordDeclHolder`1", BindingFlags.NonPublic)!
+				.MakeGenericType(typeof(FakeInspectorRuntimeObject));
+			holderType.GetField("Value", BindingFlags.Public | BindingFlags.Static)!.SetValue(null, CreateRuntimeRecordDecl());
+		}
+
+		private static Core.RuntimeRecordDecl CreateRuntimeRecordDecl()
+		{
+			Core.RuntimeTypeInfo boolType = new()
+			{
+				TypeKind = Core.RuntimeTypeKind.Bool,
+				Size = 1,
+				Alignment = 1,
+				Name = "bool",
+				FullName = "bool",
+				Namespace = string.Empty,
+			};
+			Core.RuntimeTypeInfo stringType = new()
+			{
+				TypeKind = Core.RuntimeTypeKind.Class,
+				Size = 24,
+				Alignment = 8,
+				Name = "string",
+				FullName = "System.String",
+				Namespace = "System",
+			};
+			Core.RuntimeTypeInfo recordType = new()
+			{
+				TypeKind = Core.RuntimeTypeKind.Class,
+				Size = 1,
+				Alignment = 1,
+				Name = nameof(FakeInspectorRuntimeObject),
+				FullName = "nox::FakeInspectorRuntimeObject",
+				Namespace = "nox",
+			};
+			DataMemberAttribute remoteAttribute = new();
+			return new Core.RuntimeRecordDecl
+			{
+				Name = nameof(FakeInspectorRuntimeObject),
+				FullName = "nox::FakeInspectorRuntimeObject",
+				Namespace = "nox",
+				AttributeList = [],
+				RecordList = [],
+				EnumList = [],
+				FunctionList = [],
+				IsNoxObject = true,
+				TypeInfo = recordType,
+				VariableList =
+				[
+					new Core.RuntimeVariableDecl
+					{
+						Name = "Enabled",
+						FullName = "nox::FakeInspectorRuntimeObject::Enabled",
+						Namespace = "nox",
+						AttributeList = [remoteAttribute],
+						TypeInfo = boolType,
+						VariableAttributeFlags = Core.RuntimeVariableAttributeFlag.None,
+						OffsetBits = 0,
+						BitFieldWidth = 0,
+					},
+					new Core.RuntimeVariableDecl
+					{
+						Name = "Title",
+						FullName = "nox::FakeInspectorRuntimeObject::Title",
+						Namespace = "nox",
+						AttributeList = [remoteAttribute],
+						TypeInfo = stringType,
+						VariableAttributeFlags = Core.RuntimeVariableAttributeFlag.None,
+						OffsetBits = 8,
+						BitFieldWidth = 0,
+					},
+				],
+			};
 		}
 	}
 }

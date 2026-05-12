@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="Core.UI.Views.AssetBrowserView"
+<UserControl x:Class="Core.UI.Views.AssetBrowserView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -6,97 +6,419 @@
              xmlns:prism="http://prismlibrary.com/"
              xmlns:vm="clr-namespace:Core.UI.ViewModels"
              mc:Ignorable="d"
-             d:DesignHeight="260" d:DesignWidth="900"
+             d:DesignHeight="260"
+             d:DesignWidth="900"
              d:DataContext="{d:DesignInstance vm:AssetBrowserViewModel, IsDesignTimeCreatable=False}"
              prism:ViewModelLocator.AutoWireViewModel="True"
              AutomationProperties.AutomationId="NoxStudio.AssetBrowserView">
-    <Border Background="{DynamicResource Nox.Brush.SurfaceBackground}" BorderBrush="{DynamicResource Nox.Brush.GridLine}" BorderThickness="1">
+    <UserControl.Resources>
+        <Style x:Key="TreeNodeContainerStyle"
+               TargetType="{x:Type TreeViewItem}"
+               BasedOn="{StaticResource {x:Type TreeViewItem}}">
+            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
+            <EventSetter Event="PreviewMouseRightButtonDown" Handler="OnTreeViewItemPreviewMouseRightButtonDown" />
+        </Style>
+
+        <Style x:Key="AssetListViewItemStyle"
+               TargetType="{x:Type ListViewItem}"
+               BasedOn="{StaticResource {x:Type ListViewItem}}">
+            <EventSetter Event="PreviewMouseRightButtonDown" Handler="OnAssetItemPreviewMouseRightButtonDown" />
+        </Style>
+
+        <Style x:Key="NoxAssetBrowserComboBoxStyle"
+               TargetType="ComboBox"
+               BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="Background" Value="{DynamicResource Nox.Brush.InputBackground}" />
+            <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorder}" />
+        </Style>
+
+        <Style x:Key="DetailsViewStyle" TargetType="{x:Type ListView}" BasedOn="{StaticResource {x:Type ListView}}">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsDetailsView}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="ThumbnailViewStyle" TargetType="{x:Type ListBox}">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsThumbnailView}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="ThumbnailItemContainerStyle" TargetType="{x:Type ListBoxItem}">
+            <Setter Property="Margin" Value="6" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+            <EventSetter Event="PreviewMouseRightButtonDown" Handler="OnAssetItemPreviewMouseRightButtonDown" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                        <Border x:Name="ItemBorder"
+                                Background="{DynamicResource Nox.Brush.SurfaceRaised}"
+                                BorderBrush="{DynamicResource Nox.Brush.ControlBorder}"
+                                BorderThickness="1"
+                                CornerRadius="6">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorderHover}" />
+                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource Nox.Brush.HeaderBackgroundHover}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource Nox.Brush.HeaderBackgroundActive}" />
+                                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource Nox.Brush.Accent}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="AssetBrowserContextMenuItemStyle" TargetType="MenuItem">
+            <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextHeading}" />
+            <Setter Property="Background" Value="{DynamicResource Nox.Brush.MenuBackground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorder}" />
+            <Setter Property="Padding" Value="12,7" />
+            <Setter Property="MinHeight" Value="26" />
+        </Style>
+
+        <Style x:Key="InlineRenameTextStyle" TargetType="{x:Type TextBlock}">
+            <Setter Property="Visibility" Value="Visible" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsRenaming}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="InlineRenameEditorStyle"
+               TargetType="{x:Type TextBox}"
+               BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Setter Property="MinWidth" Value="96" />
+            <Setter Property="Padding" Value="4,2" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsRenaming}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Border Background="{DynamicResource Nox.Brush.SurfaceBackground}"
+            BorderBrush="{DynamicResource Nox.Brush.GridLine}"
+            BorderThickness="1"
+            PreviewMouseLeftButtonDown="OnAssetBrowserPreviewMouseDown"
+            PreviewMouseRightButtonDown="OnAssetBrowserPreviewMouseDown">
         <DockPanel>
-            <Border DockPanel.Dock="Top" Padding="8" Background="{DynamicResource Nox.Brush.HeaderBackground}" BorderBrush="{DynamicResource Nox.Brush.GridLine}" BorderThickness="0,0,0,1">
+            <Border DockPanel.Dock="Top"
+                    Padding="8"
+                    Background="{DynamicResource Nox.Brush.HeaderBackground}"
+                    BorderBrush="{DynamicResource Nox.Brush.GridLine}"
+                    BorderThickness="0,0,0,1">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
+
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
-                        <TextBlock Text="Asset Browser" Foreground="{DynamicResource Nox.Brush.TextHeading}" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource Nox.Brush.TextMuted}" Margin="8,0,0,0" />
+                        <TextBlock Text="Asset Browser"
+                                   Foreground="{DynamicResource Nox.Brush.TextHeading}"
+                                   FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding StatusText}"
+                                   Foreground="{DynamicResource Nox.Brush.TextMuted}"
+                                   Margin="8,0,0,0" />
                     </StackPanel>
-                     <TextBox Grid.Column="1"
+
+                    <TextBox Grid.Column="1"
                              AutomationProperties.AutomationId="NoxStudio.AssetBrowser.SearchBox"
                              Height="28"
                              MinWidth="260"
                              VerticalContentAlignment="Center"
                              Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}"
                              ToolTip="Asset を検索" />
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="8,0,0,0">
-                        <Button Content="Refresh" AutomationProperties.AutomationId="NoxStudio.AssetBrowser.RefreshButton" Height="28" MinWidth="76" Command="{Binding RefreshCommand}" />
-                        <Button Content="Explorer" AutomationProperties.AutomationId="NoxStudio.AssetBrowser.ExplorerButton" Height="28" MinWidth="76" Margin="6,0,0,0" Command="{Binding OpenInExplorerCommand}" />
-                    </StackPanel>
+
+                    <ComboBox Grid.Column="2"
+                              Width="132"
+                              Height="28"
+                              Margin="8,0,0,0"
+                              ItemsSource="{Binding ViewModes}"
+                              SelectedItem="{Binding SelectedViewMode, Mode=TwoWay}"
+                              DisplayMemberPath="DisplayName"
+                              Style="{StaticResource NoxAssetBrowserComboBoxStyle}"
+                              AutomationProperties.AutomationId="NoxStudio.AssetBrowser.ViewModeCombo">
+                        <ComboBox.Resources>
+                            <StaticResource x:Key="{x:Static SystemColors.WindowBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
+                            <StaticResource x:Key="{x:Static SystemColors.WindowTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
+                            <StaticResource x:Key="{x:Static SystemColors.ControlBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
+                            <StaticResource x:Key="{x:Static SystemColors.ControlTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
+                            <StaticResource x:Key="{x:Static SystemColors.HighlightBrushKey}" ResourceKey="Nox.Brush.TabHoverBackground" />
+                            <StaticResource x:Key="{x:Static SystemColors.HighlightTextBrushKey}" ResourceKey="Nox.Brush.TextStrong" />
+                            <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+                                <Setter Property="Background" Value="{DynamicResource Nox.Brush.MenuBackground}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextHeading}" />
+                            </Style>
+                        </ComboBox.Resources>
+                    </ComboBox>
+
+                    <Button Grid.Column="3"
+                            Content="Refresh"
+                            AutomationProperties.AutomationId="NoxStudio.AssetBrowser.RefreshButton"
+                            Height="28"
+                            MinWidth="76"
+                            Margin="8,0,0,0"
+                            Command="{Binding RefreshCommand}" />
                 </Grid>
             </Border>
 
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="260" />
+                    <ColumnDefinition Width="280" />
                     <ColumnDefinition Width="1" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
                 <TreeView Grid.Column="0"
-                           AutomationProperties.AutomationId="NoxStudio.AssetBrowser.Tree"
-                           ItemsSource="{Binding RootNodes}"
-                           Background="{DynamicResource Nox.Brush.SurfaceBackground}"
-                           Foreground="{DynamicResource Nox.Brush.TextHeading}"
-                           BorderThickness="0"
+                          AutomationProperties.AutomationId="NoxStudio.AssetBrowser.Tree"
+                          ItemsSource="{Binding RootNodes}"
+                          ItemContainerStyle="{StaticResource TreeNodeContainerStyle}"
+                          Background="{DynamicResource Nox.Brush.SurfaceBackground}"
+                          Foreground="{DynamicResource Nox.Brush.TextHeading}"
+                          BorderThickness="0"
                            Padding="4"
+                          PreviewKeyDown="OnAssetBrowserPreviewKeyDown"
                            SelectedItemChanged="OnSelectedItemChanged">
                     <TreeView.Resources>
+                        <StaticResource x:Key="{x:Static SystemColors.MenuBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
+                        <StaticResource x:Key="{x:Static SystemColors.MenuTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
+                        <StaticResource x:Key="{x:Static SystemColors.ControlBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
+                        <StaticResource x:Key="{x:Static SystemColors.ControlTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
+                        <StaticResource x:Key="{x:Static SystemColors.HighlightBrushKey}" ResourceKey="Nox.Brush.TabHoverBackground" />
+                        <StaticResource x:Key="{x:Static SystemColors.HighlightTextBrushKey}" ResourceKey="Nox.Brush.TextStrong" />
                         <HierarchicalDataTemplate DataType="{x:Type vm:AssetTreeNodeViewModel}" ItemsSource="{Binding Children}">
-                            <StackPanel Orientation="Horizontal" Margin="2">
-                                <TextBlock Text="{Binding Icon}" FontFamily="Segoe MDL2 Assets" Width="18" Foreground="{DynamicResource Nox.Brush.Accent}" />
-                                <TextBlock Text="{Binding Name}" Margin="6,0,0,0" />
-                            </StackPanel>
+                            <Grid Margin="2">
+                                <Grid Grid.Column="0">
+                                    <TextBlock Text="{Binding Name}"
+                                               Style="{StaticResource InlineRenameTextStyle}" />
+                                    <TextBox Text="{Binding EditingName, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource InlineRenameEditorStyle}"
+                                             LostFocus="OnRenameEditorLostFocus"
+                                             KeyDown="OnRenameEditorKeyDown"
+                                             Loaded="OnRenameEditorLoaded" />
+                                </Grid>
+                            </Grid>
                         </HierarchicalDataTemplate>
                     </TreeView.Resources>
+                    <TreeView.ContextMenu>
+                        <ContextMenu Background="{DynamicResource Nox.Brush.MenuBackground}"
+                                     BorderBrush="{DynamicResource Nox.Brush.ControlBorder}"
+                                     Foreground="{DynamicResource Nox.Brush.TextHeading}">
+                            <ContextMenu.Resources>
+                                <StaticResource x:Key="{x:Static SystemColors.MenuBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
+                                <StaticResource x:Key="{x:Static SystemColors.MenuTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
+                                <StaticResource x:Key="{x:Static SystemColors.ControlBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
+                                <StaticResource x:Key="{x:Static SystemColors.ControlTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
+                                <StaticResource x:Key="{x:Static SystemColors.HighlightBrushKey}" ResourceKey="Nox.Brush.TabHoverBackground" />
+                                <StaticResource x:Key="{x:Static SystemColors.HighlightTextBrushKey}" ResourceKey="Nox.Brush.TextStrong" />
+                                <Style TargetType="MenuItem" BasedOn="{StaticResource AssetBrowserContextMenuItemStyle}" />
+                            </ContextMenu.Resources>
+                            <MenuItem Header="Create Folder"
+                                      AutomationProperties.AutomationId="NoxStudio.AssetBrowser.Context.CreateFolder.Tree"
+                                      Command="{Binding PlacementTarget.DataContext.CreateFolderCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                            <MenuItem Header="Rename"
+                                      AutomationProperties.AutomationId="NoxStudio.AssetBrowser.Context.Rename.Tree"
+                                      Command="{Binding PlacementTarget.DataContext.RenameFolderCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                            <MenuItem Header="Open in Explorer"
+                                      AutomationProperties.AutomationId="NoxStudio.AssetBrowser.Context.OpenExplorer.Tree"
+                                      Command="{Binding PlacementTarget.DataContext.OpenInExplorerCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                        </ContextMenu>
+                    </TreeView.ContextMenu>
                 </TreeView>
 
                 <Border Grid.Column="1" Background="{DynamicResource Nox.Brush.GridLine}" />
 
                 <DockPanel Grid.Column="2">
-                    <Border DockPanel.Dock="Bottom" Padding="8" Background="{DynamicResource Nox.Brush.HeaderBackground}" BorderBrush="{DynamicResource Nox.Brush.GridLine}" BorderThickness="0,1,0,0">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel>
-                                <TextBlock Text="{Binding SelectedAssetName}" Foreground="{DynamicResource Nox.Brush.TextHeading}" TextTrimming="CharacterEllipsis" />
-                                <TextBlock Text="{Binding SelectedAssetPath}" Foreground="{DynamicResource Nox.Brush.TextTertiary}" FontSize="11" TextTrimming="CharacterEllipsis" />
-                                <TextBlock Text="{Binding SelectedAssetMetadata}" Foreground="{DynamicResource Nox.Brush.TextTertiary}" FontSize="11" TextTrimming="CharacterEllipsis" />
-                            </StackPanel>
-                            <Button Grid.Column="1" Content="Reveal" Height="28" MinWidth="72" Margin="8,0,0,0" Command="{Binding OpenInExplorerCommand}" />
-                        </Grid>
+                    <Border DockPanel.Dock="Top"
+                            Padding="8"
+                            Background="{DynamicResource Nox.Brush.HeaderBackground}"
+                            BorderBrush="{DynamicResource Nox.Brush.GridLine}"
+                            BorderThickness="0,0,0,1">
+                        <TextBlock Text="{Binding SelectedFolderText}"
+                                   Foreground="{DynamicResource Nox.Brush.TextHeading}"
+                                   FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis" />
                     </Border>
 
-                    <ListView AutomationProperties.AutomationId="NoxStudio.AssetBrowser.AssetList"
-                              ItemsSource="{Binding Assets}"
-                              SelectedItem="{Binding SelectedAsset, Mode=TwoWay}"
-                              Background="{DynamicResource Nox.Brush.SurfaceBackground}"
-                              Foreground="{DynamicResource Nox.Brush.TextHeading}"
-                              BorderThickness="0"
-                              MouseDoubleClick="OnAssetDoubleClick">
-                        <ListView.View>
-                            <GridView>
-                                <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="220" />
-                                <GridViewColumn Header="Kind" DisplayMemberBinding="{Binding Kind}" Width="100" />
-                                <GridViewColumn Header="Path" DisplayMemberBinding="{Binding RelativePath}" Width="360" />
-                                <GridViewColumn Header="Size" DisplayMemberBinding="{Binding SizeText}" Width="90" />
-                                <GridViewColumn Header="Modified" DisplayMemberBinding="{Binding LastWriteTime}" Width="150" />
-                            </GridView>
-                        </ListView.View>
-                    </ListView>
+                    <Grid Background="{DynamicResource Nox.Brush.SurfaceBackground}">
+                        <ListView AutomationProperties.AutomationId="NoxStudio.AssetBrowser.AssetList"
+                                  Style="{StaticResource DetailsViewStyle}"
+                                  ItemsSource="{Binding Assets}"
+                                  SelectedItem="{Binding SelectedAsset, Mode=TwoWay}"
+                                  ItemContainerStyle="{StaticResource AssetListViewItemStyle}"
+                                  Background="{DynamicResource Nox.Brush.SurfaceBackground}"
+                                  Foreground="{DynamicResource Nox.Brush.TextHeading}"
+                                  BorderThickness="0"
+                                  PreviewKeyDown="OnAssetBrowserPreviewKeyDown"
+                                  MouseDoubleClick="OnAssetDoubleClick">
+                            <ListView.View>
+                                <GridView>
+                                    <GridViewColumn Header="Name" Width="240">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate DataType="{x:Type vm:ProjectAssetViewModel}">
+                                                <Grid>
+                                                    <TextBlock Text="{Binding Name}"
+                                                               VerticalAlignment="Center"
+                                                               Style="{StaticResource InlineRenameTextStyle}" />
+                                                    <TextBox Text="{Binding EditingName, UpdateSourceTrigger=PropertyChanged}"
+                                                             Style="{StaticResource InlineRenameEditorStyle}"
+                                                             VerticalContentAlignment="Center"
+                                                             LostFocus="OnRenameEditorLostFocus"
+                                                             KeyDown="OnRenameEditorKeyDown"
+                                                             Loaded="OnRenameEditorLoaded" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="Kind" DisplayMemberBinding="{Binding Kind}" Width="100" />
+                                    <GridViewColumn Header="Path" DisplayMemberBinding="{Binding RelativePath}" Width="360" />
+                                    <GridViewColumn Header="Size" DisplayMemberBinding="{Binding SizeText}" Width="90" />
+                                    <GridViewColumn Header="Modified" DisplayMemberBinding="{Binding LastWriteTime}" Width="150" />
+                                </GridView>
+                            </ListView.View>
+                            <ListView.ContextMenu>
+                                <ContextMenu Background="{DynamicResource Nox.Brush.MenuBackground}"
+                                             BorderBrush="{DynamicResource Nox.Brush.ControlBorder}"
+                                             Foreground="{DynamicResource Nox.Brush.TextHeading}">
+                                    <ContextMenu.Resources>
+                                        <StaticResource x:Key="{x:Static SystemColors.MenuBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
+                                        <StaticResource x:Key="{x:Static SystemColors.MenuTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
+                                        <StaticResource x:Key="{x:Static SystemColors.ControlBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
+                                        <StaticResource x:Key="{x:Static SystemColors.ControlTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
+                                        <StaticResource x:Key="{x:Static SystemColors.HighlightBrushKey}" ResourceKey="Nox.Brush.TabHoverBackground" />
+                                        <StaticResource x:Key="{x:Static SystemColors.HighlightTextBrushKey}" ResourceKey="Nox.Brush.TextStrong" />
+                                        <Style TargetType="MenuItem" BasedOn="{StaticResource AssetBrowserContextMenuItemStyle}" />
+                                    </ContextMenu.Resources>
+                                    <MenuItem Header="Create C++ Script"
+                                              AutomationProperties.AutomationId="NoxStudio.AssetBrowser.Context.CreateScript.List"
+                                              Command="{Binding PlacementTarget.DataContext.CreateScriptCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                                    <MenuItem Header="Rename"
+                                              AutomationProperties.AutomationId="NoxStudio.AssetBrowser.Context.Rename.List"
+                                              Command="{Binding PlacementTarget.DataContext.RenameAssetCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                                    <MenuItem Header="Open in Explorer"
+                                              AutomationProperties.AutomationId="NoxStudio.AssetBrowser.Context.OpenExplorer.List"
+                                              Command="{Binding PlacementTarget.DataContext.OpenInExplorerCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                                </ContextMenu>
+                            </ListView.ContextMenu>
+                        </ListView>
+
+                        <ListBox AutomationProperties.AutomationId="NoxStudio.AssetBrowser.ThumbnailList"
+                                 Style="{StaticResource ThumbnailViewStyle}"
+                                 ItemsSource="{Binding Assets}"
+                                 SelectedItem="{Binding SelectedAsset, Mode=TwoWay}"
+                                 Background="{DynamicResource Nox.Brush.SurfaceBackground}"
+                                 Foreground="{DynamicResource Nox.Brush.TextHeading}"
+                                 BorderThickness="0"
+                                  Padding="8"
+                                  ItemContainerStyle="{StaticResource ThumbnailItemContainerStyle}"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                  PreviewKeyDown="OnAssetBrowserPreviewKeyDown"
+                                  MouseDoubleClick="OnAssetDoubleClick">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:ProjectAssetViewModel}">
+                                    <Grid Width="140" Height="160" Margin="0">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="*" />
+                                        </Grid.RowDefinitions>
+
+                                        <Border Height="88"
+                                                Margin="0"
+                                                Padding="8"
+                                                Background="{DynamicResource Nox.Brush.IconBackground}"
+                                                BorderBrush="{DynamicResource Nox.Brush.IconBorder}"
+                                                BorderThickness="1"
+                                                CornerRadius="4">
+                                            <TextBlock Text="{Binding Icon}"
+                                                       FontFamily="Segoe MDL2 Assets"
+                                                       FontSize="34"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource Nox.Brush.Accent}" />
+                                        </Border>
+
+                                        <Grid Grid.Row="1" Margin="8,8,8,0">
+                                            <TextBlock Text="{Binding Name}"
+                                                       Foreground="{DynamicResource Nox.Brush.TextHeading}"
+                                                       TextAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       Style="{StaticResource InlineRenameTextStyle}" />
+                                            <TextBox Text="{Binding EditingName, UpdateSourceTrigger=PropertyChanged}"
+                                                     Style="{StaticResource InlineRenameEditorStyle}"
+                                                     HorizontalContentAlignment="Center"
+                                                     LostFocus="OnRenameEditorLostFocus"
+                                                     KeyDown="OnRenameEditorKeyDown"
+                                                     Loaded="OnRenameEditorLoaded" />
+                                        </Grid>
+
+                                        <StackPanel Grid.Row="2" Margin="8,4,8,8">
+                                            <TextBlock Text="{Binding Kind}"
+                                                       Foreground="{DynamicResource Nox.Brush.TextSecondary}"
+                                                       FontSize="11"
+                                                       TextAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding SizeText}"
+                                                       Foreground="{DynamicResource Nox.Brush.TextTertiary}"
+                                                       FontSize="11"
+                                                       TextAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                            <ListBox.ContextMenu>
+                                <ContextMenu Background="{DynamicResource Nox.Brush.MenuBackground}"
+                                             BorderBrush="{DynamicResource Nox.Brush.ControlBorder}"
+                                             Foreground="{DynamicResource Nox.Brush.TextHeading}">
+                                    <ContextMenu.Resources>
+                                        <StaticResource x:Key="{x:Static SystemColors.MenuBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
+                                        <StaticResource x:Key="{x:Static SystemColors.MenuTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
+                                        <StaticResource x:Key="{x:Static SystemColors.ControlBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
+                                        <StaticResource x:Key="{x:Static SystemColors.ControlTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
+                                        <StaticResource x:Key="{x:Static SystemColors.HighlightBrushKey}" ResourceKey="Nox.Brush.TabHoverBackground" />
+                                        <StaticResource x:Key="{x:Static SystemColors.HighlightTextBrushKey}" ResourceKey="Nox.Brush.TextStrong" />
+                                        <Style TargetType="MenuItem" BasedOn="{StaticResource AssetBrowserContextMenuItemStyle}" />
+                                    </ContextMenu.Resources>
+                                    <MenuItem Header="Create C++ Script"
+                                              AutomationProperties.AutomationId="NoxStudio.AssetBrowser.Context.CreateScript.Thumbnail"
+                                              Command="{Binding PlacementTarget.DataContext.CreateScriptCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                                    <MenuItem Header="Rename"
+                                              AutomationProperties.AutomationId="NoxStudio.AssetBrowser.Context.Rename.Thumbnail"
+                                              Command="{Binding PlacementTarget.DataContext.RenameAssetCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                                    <MenuItem Header="Open in Explorer"
+                                              AutomationProperties.AutomationId="NoxStudio.AssetBrowser.Context.OpenExplorer.Thumbnail"
+                                              Command="{Binding PlacementTarget.DataContext.OpenInExplorerCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                                </ContextMenu>
+                            </ListBox.ContextMenu>
+                        </ListBox>
+                    </Grid>
                 </DockPanel>
             </Grid>
         </DockPanel>

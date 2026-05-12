@@ -6,11 +6,18 @@
              mc:Ignorable="d">
     <Grid Background="{DynamicResource Nox.Brush.TabBarBackground}">
         <Grid.Resources>
-            <Style TargetType="MenuItem">
+            <Style x:Key="NoxDocumentTabMenuItemStyle"
+                   TargetType="MenuItem"
+                   BasedOn="{StaticResource {x:Type MenuItem}}">
                 <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextHeading}" />
+                <Setter Property="Background" Value="{DynamicResource Nox.Brush.MenuBackground}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorder}" />
                 <Setter Property="Padding" Value="12,7" />
                 <Setter Property="FontSize" Value="13" />
+                <Setter Property="MinHeight" Value="26" />
             </Style>
+
+            <Style TargetType="MenuItem" BasedOn="{StaticResource NoxDocumentTabMenuItemStyle}" />
 
             <Style TargetType="TabItem">
                 <EventSetter Event="PreviewMouseLeftButtonDown" Handler="TabItem_OnPreviewMouseLeftButtonDown" />
@@ -29,18 +36,33 @@
                                      BorderBrush="{DynamicResource Nox.Brush.ControlBorder}"
                                      BorderThickness="1"
                                      Padding="4">
+                            <ContextMenu.Resources>
+                                <StaticResource x:Key="{x:Static SystemColors.MenuBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
+                                <StaticResource x:Key="{x:Static SystemColors.MenuTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
+                                <StaticResource x:Key="{x:Static SystemColors.ControlBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
+                                <StaticResource x:Key="{x:Static SystemColors.ControlTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
+                                <StaticResource x:Key="{x:Static SystemColors.HighlightBrushKey}" ResourceKey="Nox.Brush.TabHoverBackground" />
+                                <StaticResource x:Key="{x:Static SystemColors.HighlightTextBrushKey}" ResourceKey="Nox.Brush.TextStrong" />
+                                <Style TargetType="MenuItem" BasedOn="{StaticResource NoxDocumentTabMenuItemStyle}" />
+                                <Style TargetType="Separator">
+                                    <Setter Property="Background" Value="{DynamicResource Nox.Brush.GridLine}" />
+                                    <Setter Property="Margin" Value="4" />
+                                    <Setter Property="Height" Value="1" />
+                                </Style>
+                            </ContextMenu.Resources>
                             <ContextMenu.ItemContainerStyle>
-                                <Style TargetType="MenuItem">
+                                <Style TargetType="MenuItem" BasedOn="{StaticResource NoxDocumentTabMenuItemStyle}">
                                     <Setter Property="Header" Value="{Binding Header}" />
                                     <Setter Property="Command" Value="{Binding Command}" />
                                     <Setter Property="ToolTip" Value="{Binding Tooltip}" />
-                                    <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextHeading}" />
-                                    <Setter Property="Background" Value="{DynamicResource Nox.Brush.MenuBackground}" />
-                                    <Setter Property="Padding" Value="12,7" />
-                                    <Setter Property="FontSize" Value="13" />
                                     <Setter Property="Icon">
                                         <Setter.Value>
-                                            <TextBlock Text="{Binding Glyph}" FontFamily="Segoe MDL2 Assets" FontSize="14" Width="18" TextAlignment="Center" />
+                                            <TextBlock Text="{Binding Glyph}"
+                                                       FontFamily="Segoe MDL2 Assets"
+                                                       FontSize="14"
+                                                       Width="18"
+                                                       TextAlignment="Center"
+                                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=MenuItem}}" />
                                         </Setter.Value>
                                     </Setter>
                                     <Setter Property="ItemsSource" Value="{Binding Children}" />

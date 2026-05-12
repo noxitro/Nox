@@ -20,6 +20,7 @@ namespace Core.UI.Views
 	{
 		#region 非公開フィールド
 		private readonly Core.UI.Views.SceneViewPanel _SceneViewPanel = new();
+		private Core.RuntimeWrapper.SceneView? _SubscribedSceneView;
 
 		#endregion
 
@@ -70,25 +71,15 @@ namespace Core.UI.Views
 #endif
 //			_SceneViewPanel = new SceneViewPanel();
 			this.WinFormsHost.Child = _SceneViewPanel;
+			Loaded += OnLoaded;
+			Unloaded += OnUnloaded;
 		}
 
 		#region 非公開メソッド
 		private static void ChangeSceneViewProperty(RutnimeSceneView owner, in DependencyPropertyChangedEventArgs e)
 		{
-			if (e.OldValue is Core.RuntimeWrapper.SceneView oldSceneView)
-			{
-				oldSceneView.WindowHandleChanged -= owner.OnSceneViewWindowHandleChanged;
-			}
-
-			if (e.NewValue is Core.RuntimeWrapper.SceneView sceneView)
-			{
-				sceneView.WindowHandleChanged += owner.OnSceneViewWindowHandleChanged;
-				owner.AttachCurrentWindow();
-			}
-			else
-			{
-				owner.AttachCurrentWindow();
-			}
+			owner.UpdateSceneViewSubscription((Core.RuntimeWrapper.SceneView?)e.NewValue);
+			owner.AttachCurrentWindow();
 		}
 
 		private static void ChangeWindowHandleProperty(RutnimeSceneView owner, in DependencyPropertyChangedEventArgs e)
@@ -98,9 +89,14 @@ namespace Core.UI.Views
 
 		private void OnSceneViewWindowHandleChanged(object? sender, EventArgs e)
 		{
+			if (NoxUI.DispatcherHelper.IsShuttingDown(Dispatcher) || IsLoaded == false)
+			{
+				return;
+			}
+
 			if (Dispatcher.CheckAccess() == false)
 			{
-				Dispatcher.BeginInvoke((Action)(() => OnSceneViewWindowHandleChanged(sender, e)));
+				NoxUI.DispatcherHelper.TryBeginInvoke(Dispatcher, () => OnSceneViewWindowHandleChanged(sender, e));
 				return;
 			}
 
@@ -110,8 +106,49 @@ namespace Core.UI.Views
 			}
 		}
 
+		private void OnLoaded(object sender, RoutedEventArgs e)
+		{
+			UpdateSceneViewSubscription(SceneView);
+			AttachCurrentWindow();
+		}
+
+		private void OnUnloaded(object sender, RoutedEventArgs e)
+		{
+			UpdateSceneViewSubscription(null);
+			_SceneViewPanel.Detach();
+			IsAttached = false;
+			AttachError = string.Empty;
+		}
+
+		private void UpdateSceneViewSubscription(Core.RuntimeWrapper.SceneView? sceneView)
+		{
+			if (ReferenceEquals(_SubscribedSceneView, sceneView))
+			{
+				return;
+			}
+
+			if (_SubscribedSceneView != null)
+			{
+				_SubscribedSceneView.WindowHandleChanged -= OnSceneViewWindowHandleChanged;
+			}
+
+			_SubscribedSceneView = sceneView;
+			if (_SubscribedSceneView != null && IsLoaded)
+			{
+				_SubscribedSceneView.WindowHandleChanged += OnSceneViewWindowHandleChanged;
+			}
+		}
+
 		private void AttachCurrentWindow()
 		{
+			if (IsLoaded == false || NoxUI.DispatcherHelper.IsShuttingDown(Dispatcher))
+			{
+				_SceneViewPanel.Detach();
+				IsAttached = false;
+				AttachError = string.Empty;
+				return;
+			}
+
 			IntPtr windowHandle = WindowHandle;
 			if (windowHandle == IntPtr.Zero && SceneView != null)
 			{

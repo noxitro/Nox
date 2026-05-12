@@ -85,6 +85,11 @@ namespace Core
 			throw new InvalidOperationException($"EngineSystem is not registered. Type={typeof(T).FullName}");
 		}
 
+		public IReadOnlyList<EngineSystem> GetEngineSystemList()
+		{
+			return _EngineSystemList;
+		}
+
 		public void InvokeInit()
 		{
 			Invoke(SystemPhaseType.Init);

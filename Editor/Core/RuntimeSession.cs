@@ -105,7 +105,7 @@ namespace Core
 				{
 					runtimeProcess.WaitForInputIdle(5000);
 				}
-				catch (InvalidOperationException ex)
+				catch (Exception ex) when (ex is InvalidOperationException || ex is System.ComponentModel.Win32Exception)
 				{
 					Nox.LogTrace.WarningLine<Core.LogId.Runtime>("Runtime.exeの入力待機に失敗しました: {0}", ex);
 				}
@@ -150,6 +150,8 @@ namespace Core
 
 		private void RuntimeConnected()
 		{
+			Workspace.SceneHierarchy.SyncRuntimeObjects();
+
 			if (_MainSceneViewWindowHandle != IntPtr.Zero || _IsMainSceneViewQueryPending)
 			{
 				return;
@@ -185,17 +187,17 @@ namespace Core
 
 		private void StopProcess()
 		{
-			if (_Process == null)
+			Process? process = _Process;
+			if (process == null)
 			{
 				return;
 			}
 
-			if (_Process.HasExited == false)
-			{
-				_Process.Kill(entireProcessTree: true);
-				_Process.WaitForExit(5000);
-			}
 			_Process = null;
+			TryKill(process);
+			TryWaitForExit(process, 5000);
+
+			process.Dispose();
 			SetMainSceneView(null);
 			SetMainSceneViewWindowHandle(IntPtr.Zero);
 			_ProcessChanged?.Invoke(this, EventArgs.Empty);
@@ -220,8 +222,8 @@ namespace Core
 
 					if (!string.IsNullOrEmpty(path) && string.Equals(path, runtimeExeFullPath, StringComparison.OrdinalIgnoreCase))
 					{
-						p.Kill();
-						p.WaitForExit(2000);
+						TryKill(p);
+						TryWaitForExit(p, 2000);
 					}
 				}
 				catch (Exception ex)
@@ -232,6 +234,30 @@ namespace Core
 				{
 					p.Dispose();
 				}
+			}
+		}
+
+		private static void TryKill(Process process)
+		{
+			try
+			{
+				process.Kill();
+			}
+			catch (Exception ex) when (ex is InvalidOperationException || ex is System.ComponentModel.Win32Exception || ex is NotSupportedException)
+			{
+				Nox.LogTrace.WarningLine<Core.LogId.Runtime>("runtime.exe の終了要求に失敗しました: {0}", ex);
+			}
+		}
+
+		private static void TryWaitForExit(Process process, int milliseconds)
+		{
+			try
+			{
+				process.WaitForExit(milliseconds);
+			}
+			catch (Exception ex) when (ex is InvalidOperationException || ex is System.ComponentModel.Win32Exception || ex is NotSupportedException)
+			{
+				Nox.LogTrace.WarningLine<Core.LogId.Runtime>("runtime.exe の終了待機に失敗しました: {0}", ex);
 			}
 		}
 	}

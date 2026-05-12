@@ -58,6 +58,19 @@ namespace Core
 			return CreateSession(RuntimeSessionKind.Main);
 		}
 
+		public RuntimeSession? FindMainSession()
+		{
+			foreach (RuntimeSession session in _SessionList)
+			{
+				if (session.Kind == RuntimeSessionKind.Main)
+				{
+					return session;
+				}
+			}
+
+			return null;
+		}
+
 		public RuntimeSession GetActiveOrMainSession()
 		{
 			return _ActiveSession ?? GetOrCreateMainSession();

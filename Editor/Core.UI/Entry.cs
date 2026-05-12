@@ -26,9 +26,13 @@ namespace Core.UI
 			containerRegistry.Register<Core.UI.ViewModels.RuntimeViewModel>();
 			containerRegistry.Register<Core.UI.ViewModels.HierarchyViewModel>();
 			containerRegistry.Register<Core.UI.ViewModels.AssetBrowserViewModel>();
+			containerRegistry.Register<Core.UI.ViewModels.AssetPropertiesViewModel>();
 			containerRegistry.Register<Core.UI.ViewModels.InspectorViewModel>();
 			containerRegistry.Register<Core.UI.ViewModels.LogViewModel>();
 			containerRegistry.Register<Core.UI.ViewModels.ProjectSettingsViewModel>();
+			containerRegistry.Register<Core.UI.ViewModels.EngineSystemGraphViewModel>();
+			containerRegistry.Register<Core.UI.ViewModels.RemoteInstanceManagerViewModel>();
+			containerRegistry.Register<Core.UI.ViewModels.MemoryProfilerViewModel>();
 		}
 
 		void IDisposable.Dispose()

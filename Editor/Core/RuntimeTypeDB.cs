@@ -4,6 +4,7 @@ using Nox.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Core.RuntimeAttributes;
 using System.Reflection.Metadata.Ecma335;
 using System.Text;
 
@@ -291,6 +292,11 @@ namespace Core
 			return null;
 		}
 
+		public IReadOnlyList<Core.RuntimeRecordDecl> GetRecordDeclList()
+		{
+			return _RecordDeclList;
+		}
+
 		//public Core.DeclBase? FindDecl(ReadOnlySpan<char> fqn)
 		//{
 		//	if (_DeclDictWithFQN.TryGetValue(fqn.ToString(), out var decl))
@@ -359,6 +365,7 @@ namespace Core
 					TypeInfo = typeInfo,
 				};
 				typeInfo.Decl = declList[i];
+				declList[i].PropertyList = CreatePropertyDeclList(declList[i]);
 				
 				AddDeclWithFQN(declList[i]);
 			}
@@ -395,7 +402,6 @@ namespace Core
 					EnumeratorInfoList = enumeratorInfoList, 
 					TypeInfo = GetCreateRuntimeTypeInfo(source.TypeInfo, source),
 				};
-
 				AddDeclWithFQN(declList[i]);
 			}
 			return declList;
@@ -472,6 +478,290 @@ namespace Core
 			return attributeList;
 		}
 
+		private RuntimePropertyDecl[] CreatePropertyDeclList(RuntimeRecordDecl recordDecl)
+		{
+			List<RuntimePropertyDecl> propertyList = [];
+			Dictionary<string, int> propertyIndexByName = new(StringComparer.Ordinal);
+
+			foreach (RuntimeVariableDecl variableDecl in recordDecl.VariableList)
+			{
+				if (Core.RuntimeRemote.Util.IsRemoteVariable(variableDecl) == false ||
+					HasAttribute<HideAttribute>(variableDecl.AttributeList))
+				{
+					continue;
+				}
+
+				AddOrReplacePropertyDecl(
+					propertyList,
+					propertyIndexByName,
+					new RuntimePropertyDecl
+					{
+						Name = variableDecl.Name,
+						FullName = recordDecl.FullName + "::" + variableDecl.Name,
+						AttributeList = variableDecl.AttributeList,
+						TypeInfo = NormalizePropertyTypeInfo(variableDecl.TypeInfo),
+						VariableDecl = variableDecl,
+						GetterFunctionDecl = null,
+						SetterFunctionDecl = null,
+					},
+					preferReplacement: false);
+			}
+
+			foreach (RuntimeFunctionDecl functionDecl in recordDecl.FunctionList)
+			{
+				if (TryGetPropertyMetadata(functionDecl, out string propertyName, out RuntimeTypeInfo propertyType, out bool isGetter) == false)
+				{
+					continue;
+				}
+
+				RuntimePropertyDecl propertyDecl = new()
+				{
+					Name = propertyName,
+					FullName = recordDecl.FullName + "::" + propertyName,
+					AttributeList = functionDecl.AttributeList,
+					TypeInfo = propertyType,
+					VariableDecl = null,
+					GetterFunctionDecl = isGetter ? functionDecl : null,
+					SetterFunctionDecl = isGetter ? null : functionDecl,
+				};
+
+				if (propertyIndexByName.TryGetValue(propertyName, out int existingIndex))
+				{
+					RuntimePropertyDecl existing = propertyList[existingIndex];
+					RuntimeTypeInfo mergedType = existing.TypeInfo;
+					if (existing.GetterFunctionDecl == null && existing.SetterFunctionDecl == null)
+					{
+						mergedType = propertyType;
+					}
+					else
+					{
+						Nox.Util.Assert(
+							existing.TypeInfo.FullName == propertyType.FullName,
+							$"Property getter/setter type mismatch. Property={propertyName}, Existing={existing.TypeInfo.FullName}, New={propertyType.FullName}");
+					}
+
+					propertyList[existingIndex] = new RuntimePropertyDecl
+					{
+						Name = propertyName,
+						FullName = existing.FullName,
+						AttributeList = MergeAttributeLists(existing.AttributeList, functionDecl.AttributeList),
+						TypeInfo = mergedType,
+						VariableDecl = existing.GetterFunctionDecl == null && existing.SetterFunctionDecl == null ? null : existing.VariableDecl,
+						GetterFunctionDecl = isGetter ? functionDecl : existing.GetterFunctionDecl,
+						SetterFunctionDecl = isGetter ? existing.SetterFunctionDecl : functionDecl,
+					};
+					continue;
+				}
+
+				AddOrReplacePropertyDecl(propertyList, propertyIndexByName, propertyDecl, preferReplacement: true);
+			}
+
+			return propertyList.ToArray();
+		}
+
+		private static void AddOrReplacePropertyDecl(
+			List<RuntimePropertyDecl> propertyList,
+			Dictionary<string, int> propertyIndexByName,
+			RuntimePropertyDecl propertyDecl,
+			bool preferReplacement)
+		{
+			if (propertyIndexByName.TryGetValue(propertyDecl.Name, out int existingIndex))
+			{
+				if (preferReplacement)
+				{
+					propertyList[existingIndex] = propertyDecl;
+				}
+				return;
+			}
+
+			propertyIndexByName.Add(propertyDecl.Name, propertyList.Count);
+			propertyList.Add(propertyDecl);
+		}
+
+		private static bool TryGetPropertyMetadata(RuntimeFunctionDecl functionDecl, out string propertyName, out RuntimeTypeInfo propertyType, out bool isGetter)
+		{
+			propertyName = string.Empty;
+			propertyType = RuntimeTypeInfo.Invalid;
+			isGetter = false;
+
+			if ((functionDecl.FunctionAttributeFlags & RuntimeFunctionAttributeFlag.Static) != 0)
+			{
+				return false;
+			}
+
+			string? explicitPropertyName = null;
+			if (functionDecl.AttributeList.OfType<PropertyGetterAttribute>().FirstOrDefault() is PropertyGetterAttribute getterAttribute)
+			{
+				explicitPropertyName = getterAttribute.PropertyName;
+				isGetter = true;
+			}
+			else if (functionDecl.AttributeList.OfType<PropertySetterAttribute>().FirstOrDefault() is PropertySetterAttribute setterAttribute)
+			{
+				explicitPropertyName = setterAttribute.PropertyName;
+				isGetter = false;
+			}
+			else if (functionDecl.AttributeList.OfType<PropertyAttribute>().FirstOrDefault() is PropertyAttribute propertyAttribute)
+			{
+				explicitPropertyName = propertyAttribute.PropertyName;
+				int argumentLength = functionDecl.GetArgumentList().Length;
+				if (argumentLength == 0)
+				{
+					isGetter = true;
+				}
+				else if (argumentLength == 1)
+				{
+					isGetter = false;
+				}
+				else
+				{
+					return false;
+				}
+			}
+			else
+			{
+				return false;
+			}
+
+			propertyName = string.IsNullOrWhiteSpace(explicitPropertyName)
+				? TrimPropertyFunctionPrefix(functionDecl.Name)
+				: explicitPropertyName;
+			if (string.IsNullOrWhiteSpace(propertyName))
+			{
+				return false;
+			}
+
+			if (isGetter)
+			{
+				if (functionDecl.TypeInfo.ReturnTypeInfo == RuntimeTypeInfo.Invalid)
+				{
+					return false;
+				}
+
+				propertyType = NormalizePropertyTypeInfo(functionDecl.TypeInfo.ReturnTypeInfo);
+				return propertyType != RuntimeTypeInfo.Invalid;
+			}
+
+			ReadOnlySpan<RuntimeFunctionDecl.ArgumentInfo> argumentList = functionDecl.GetArgumentList();
+			if (argumentList.Length != 1)
+			{
+				return false;
+			}
+
+			propertyType = NormalizePropertyTypeInfo(argumentList[0].TypeInfo);
+			return propertyType != RuntimeTypeInfo.Invalid;
+		}
+
+		private static RuntimeTypeInfo NormalizePropertyTypeInfo(RuntimeTypeInfo typeInfo)
+		{
+			RuntimeTypeInfo current = typeInfo;
+			while (current.TypeKind is RuntimeTypeKind.LValueReference or RuntimeTypeKind.RValueReference or RuntimeTypeKind.Pointer)
+			{
+				if (current.PointeeTypeInfo == RuntimeTypeInfo.Invalid)
+				{
+					break;
+				}
+
+				current = current.PointeeTypeInfo;
+			}
+
+			if (current != RuntimeTypeInfo.Invalid &&
+				string.IsNullOrWhiteSpace(current.FullName) == false &&
+				current.TypeKind != RuntimeTypeKind.Invalid)
+			{
+				return current;
+			}
+
+			if (TryNormalizeKnownTypeName(typeInfo.FullName, out string normalizedTypeName) == false)
+			{
+				return RuntimeTypeInfo.Invalid;
+			}
+
+			return new RuntimeTypeInfo
+			{
+				TypeKind = RuntimeTypeKind.Class,
+				Size = typeInfo.Size,
+				Alignment = typeInfo.Alignment,
+				Name = normalizedTypeName[(normalizedTypeName.LastIndexOf("::", StringComparison.Ordinal) + 2)..],
+				FullName = normalizedTypeName,
+				Namespace = normalizedTypeName.Contains("::", StringComparison.Ordinal)
+					? normalizedTypeName[..normalizedTypeName.LastIndexOf("::", StringComparison.Ordinal)]
+					: string.Empty,
+			};
+		}
+
+		private static bool TryNormalizeKnownTypeName(string typeName, out string normalizedTypeName)
+		{
+			normalizedTypeName = typeName.Trim();
+			if (normalizedTypeName.StartsWith("const ", StringComparison.Ordinal))
+			{
+				normalizedTypeName = normalizedTypeName["const ".Length..];
+			}
+
+			normalizedTypeName = normalizedTypeName.TrimEnd();
+			while (normalizedTypeName.EndsWith("&", StringComparison.Ordinal) ||
+				normalizedTypeName.EndsWith("*", StringComparison.Ordinal))
+			{
+				normalizedTypeName = normalizedTypeName[..^1].TrimEnd();
+			}
+
+			return normalizedTypeName is
+				"nox::Position" or
+				"nox::Vec3" or
+				"nox::detail::Vector3D<float>" or
+				"nox::Vec3d" or
+				"nox::detail::Vector3D<double>" or
+				"nox::Quat" or
+				"nox::detail::Quaternion<float>";
+		}
+
+		private static string TrimPropertyFunctionPrefix(string name)
+		{
+			if (name.StartsWith("Get", StringComparison.Ordinal) && name.Length > 3)
+			{
+				return name[3..];
+			}
+
+			if (name.StartsWith("Set", StringComparison.Ordinal) && name.Length > 3)
+			{
+				return name[3..];
+			}
+
+			if (name.StartsWith("Is", StringComparison.Ordinal) && name.Length > 2)
+			{
+				return name[2..];
+			}
+
+			return name;
+		}
+
+		private static System.Attribute[] MergeAttributeLists(System.Attribute[] existingAttributes, System.Attribute[] newAttributes)
+		{
+			List<System.Attribute> merged = new(existingAttributes.Length + newAttributes.Length);
+			HashSet<Type> seenTypes = new();
+			foreach (System.Attribute attribute in existingAttributes)
+			{
+				if (seenTypes.Add(attribute.GetType()))
+				{
+					merged.Add(attribute);
+				}
+			}
+
+			foreach (System.Attribute attribute in newAttributes)
+			{
+				if (seenTypes.Add(attribute.GetType()))
+				{
+					merged.Add(attribute);
+				}
+			}
+
+			return merged.ToArray();
+		}
+
+		private static bool HasAttribute<T>(IEnumerable<System.Attribute> attributes) where T : System.Attribute
+		{
+			return attributes.OfType<T>().Any();
+		}
+
 
 		private RuntimeTypeInfo GetCreateRuntimeTypeInfo(ReflectionGenerator.RuntimeTypeDB.TypeInfo source, ReflectionGenerator.RuntimeTypeDB.DeclBase? declaration = null)
 		{
@@ -511,6 +801,31 @@ namespace Core
 				pointeeTypeInfo = RuntimeTypeInfo.Invalid;
 			}
 
+			RuntimeTypeInfo returnTypeInfo;
+			if (source.ReturnType != null &&
+				source.ReturnType.Kind != ReflectionGenerator.RuntimeTypeDB.RuntimeTypeKind.Invalid)
+			{
+				returnTypeInfo = GetCreateRuntimeTypeInfo(source.ReturnType);
+			}
+			else
+			{
+				returnTypeInfo = RuntimeTypeInfo.Invalid;
+			}
+
+			RuntimeTypeInfo[] argumentTypeList;
+			if (source.ArgumentTypeList == null || source.ArgumentTypeList.Length == 0)
+			{
+				argumentTypeList = [];
+			}
+			else
+			{
+				argumentTypeList = new RuntimeTypeInfo[source.ArgumentTypeList.Length];
+				for (int i = 0; i < argumentTypeList.Length; ++i)
+				{
+					argumentTypeList[i] = GetCreateRuntimeTypeInfo(source.ArgumentTypeList[i]);
+				}
+			}
+
 			RuntimeTypeInfo runtimeTypeInfo = new()
 			{
 				TypeKind = Local.Convert(source.Kind),
@@ -521,6 +836,8 @@ namespace Core
 				Namespace = source.Namespace,
 				UnderlyingTypeInfo = underlyingTypeInfo,
 				PointeeTypeInfo = pointeeTypeInfo,
+				ReturnTypeInfo = returnTypeInfo,
+				ArgumentTypeList = argumentTypeList,
 			};
 
 //			Nox.LogTrace.InfoLine<Core.LogId.Runtime>("type:{0}", runtimeTypeInfo.FullName);
@@ -535,6 +852,10 @@ namespace Core
 		{
 		//	Nox.Util.Assert(_DeclDictWithFQN.ContainsKey(decl.FullName) == false, "同じFQNのDeclが既に登録されています。FQN={0}", decl.FullName);
 		//	_DeclDictWithFQN[decl.FullName] = decl;
+			if (decl is RuntimeRecordDecl recordDecl && _RecordDeclDictWithFQN.TryAdd(recordDecl.FullName, recordDecl))
+			{
+				_RecordDeclList.Add(recordDecl);
+			}
 		}
 
 

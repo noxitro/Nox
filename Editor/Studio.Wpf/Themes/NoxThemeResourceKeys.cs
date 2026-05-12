@@ -16,6 +16,10 @@ public static class NoxThemeResourceKeys
     public const string HeaderBackgroundHoverBrush = "Nox.Brush.HeaderBackgroundHover";
     public const string GridLineBrush = "Nox.Brush.GridLine";
     public const string SelectionBackgroundBrush = "Nox.Brush.SelectionBackground";
+    public const string ControlBackgroundBrush = "Nox.Brush.ControlBackground";
+    public const string ControlBackgroundHoverBrush = "Nox.Brush.ControlBackgroundHover";
+    public const string ControlBackgroundPressedBrush = "Nox.Brush.ControlBackgroundPressed";
+    public const string InputBackgroundBrush = "Nox.Brush.InputBackground";
     public const string CommandBarBackgroundBrush = "Nox.Brush.CommandBarBackground";
     public const string CommandBarBadgeBackgroundBrush = "Nox.Brush.CommandBarBadgeBackground";
     public const string CommandBadgeBackgroundBrush = "Nox.Brush.CommandBadgeBackground";

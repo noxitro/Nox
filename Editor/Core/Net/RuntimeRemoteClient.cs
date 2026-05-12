@@ -69,6 +69,14 @@ namespace Core.Net
 		public string LastWorkerError { get; private set; } = string.Empty;
 		#endregion
 
+		public readonly record struct RemoteInstanceSnapshot(
+			long RemoteInstanceId,
+			string Owner,
+			string TypeName,
+			string RuntimeFqn,
+			int VariableCount,
+			int DirtyVariableCount);
+
 		#region 公開メソッド
 		public RuntimeRemoteClient(RuntimeSession session)
 		{
@@ -230,9 +238,61 @@ namespace Core.Net
 			}
 			return null;
 		}
+
+		public RemoteInstanceSnapshot[] GetRemoteInstanceSnapshots()
+		{
+			using var _ = _RemoteObjectDictParallelExecuteChecker.EnterReadScope();
+
+			RemoteInstanceSnapshot[] snapshots = new RemoteInstanceSnapshot[_EditorObjectDict.Count + _RuntimeObjectDict.Count];
+			int index = 0;
+			AppendRemoteInstanceSnapshots(_EditorObjectDict, "Editor", snapshots, ref index);
+			AppendRemoteInstanceSnapshots(_RuntimeObjectDict, "Runtime", snapshots, ref index);
+			return snapshots;
+		}
+
+		public void UnregisterRemoteObject(long instanceId)
+		{
+			if (instanceId == 0)
+			{
+				return;
+			}
+
+			using var _ = _RemoteObjectDictParallelExecuteChecker.EnterWriteScope();
+			Dictionary<long, Core.RuntimeObject> dict = instanceId >= 0 ? _EditorObjectDict : _RuntimeObjectDict;
+			dict.Remove(instanceId);
+		}
 		#endregion
 
 		#region 非公開メソッド
+		private static void AppendRemoteInstanceSnapshots(
+			IEnumerable<KeyValuePair<long, Core.RuntimeObject>> source,
+			string owner,
+			RemoteInstanceSnapshot[] destination,
+			ref int index)
+		{
+			foreach (KeyValuePair<long, Core.RuntimeObject> pair in source)
+			{
+				Core.RuntimeObject runtimeObject = pair.Value;
+				ReadOnlySpan<bool> dirtyList = runtimeObject.VariableDirtyList;
+				int dirtyCount = 0;
+				for (int i = 0; i < dirtyList.Length; ++i)
+				{
+					if (dirtyList[i])
+					{
+						++dirtyCount;
+					}
+				}
+
+				destination[index++] = new RemoteInstanceSnapshot(
+					pair.Key,
+					owner,
+					runtimeObject.GetType().Name,
+					runtimeObject.RuntimeFqn,
+					runtimeObject.VariableList.Length,
+					dirtyCount);
+			}
+		}
+
 		protected override void OnConneced()
 		{
 			_SendThread = new System.Threading.Thread(SendProcess);

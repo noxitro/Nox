@@ -13,6 +13,7 @@
     <Color x:Key="Metallic.BorderColor">#FF120C07</Color>
 
     <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/Studio.Wpf;component/Themes/NoxTheme.xaml" />
         <ResourceDictionary
             Source="/Studio.Wpf;component/Themes/Shared/MetallicShared.xaml" />
     </ResourceDictionary.MergedDictionaries>

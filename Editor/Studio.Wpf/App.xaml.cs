@@ -1,4 +1,4 @@
-﻿using System.Configuration;
+using System.Configuration;
 using System.Data;
 using System.Windows;
 
@@ -84,10 +84,8 @@ namespace Studio.Wpf
 
 		protected override void OnExit(ExitEventArgs e)
 		{
-			base.OnExit(e);
-
-			Core.EngineModule.Instance.InvokeFinalize();
 			Core.EngineModule.DeleteInstance();
+			base.OnExit(e);
 		}
 
 		[System.Runtime.Versioning.SupportedOSPlatform("windows10.0")]
@@ -107,6 +105,7 @@ namespace Studio.Wpf
 		{
 			//	テーマサービス（シングルトン）
 			containerRegistry.RegisterSingleton<Studio.Wpf.Themes.IThemeService, Studio.Wpf.Themes.ThemeService>();
+            containerRegistry.Register<Studio.Wpf.ViewModels.ThemeSettingsViewModel>();
 
 			foreach(var entry in UIEntryList)
 			{
