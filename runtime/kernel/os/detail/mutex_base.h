@@ -17,9 +17,6 @@ namespace nox
 
 	namespace concepts::detail
 	{
-		/**
-		 * @brief Mutex用
-		*/
 		template<class T>
 		concept MutexConcept = requires(T & x) {
 			std::is_base_of_v<os::detail::MutexBase, T>;
@@ -51,7 +48,7 @@ namespace nox
 			 * @details ロック開始
 			 * @param mutex ミューテックスオブジェクト
 			*/
-			inline explicit ScopedLock(_MutexType& mutex)noexcept :
+			inline explicit ScopedLock(_MutexType& mutex)noexcept(noexcept(mutex.Lock())) :
 				mutex_(mutex)
 			{
 				mutex_.Lock();
@@ -61,7 +58,7 @@ namespace nox
 			 * @brief デストラクタ
 			 * @details	ロック終了
 			*/
-			inline ~ScopedLock()
+			inline ~ScopedLock() noexcept(noexcept(mutex_.Unlock()))
 			{
 				mutex_.Unlock();
 			}

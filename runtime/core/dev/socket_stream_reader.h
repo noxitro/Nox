@@ -60,6 +60,13 @@ namespace nox::dev::editor_remote
 
 		void Read(nox::IntrusivePtr<nox::ManagedObject>& value);
 
+		template<std::size_t Length>
+		inline void Read(nox::BasicFixedString<nox::char8, Length>& value)
+		{
+			std::array<nox::char8, Length> buffer{};
+			value.Assign(this->ReadString(buffer));
+		}
+
 		nox::uint64 ReadLength();
 		
 		nox::StlU8String ReadString();

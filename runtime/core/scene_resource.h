@@ -16,7 +16,7 @@ namespace nox
 	public:
 
 	private:
-		void onInitialize(const nox::io::Stream& stream) override;
+		void OnInitialize(const nox::io::Stream& stream) override;
 
 	private:
 		

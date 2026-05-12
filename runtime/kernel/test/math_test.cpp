@@ -3,7 +3,7 @@
 ///	@file	math_test.cpp
 ///	@brief	kernel の数学ライブラリテスト
 
-#include "stdafx.h"
+#include "pch.h"
 #include "../math/vector2d.h"
 #include "../math/vector3d.h"
 

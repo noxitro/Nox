@@ -58,6 +58,10 @@ namespace nox
 		}
 
 		inline bool IsStudioMode()const noexcept { return studio_mode_; }
+#if !NOX_MASTER
+		NOX_ATTR_DECLARE(::nox::reflection::attr::IgnoreReflection())
+		nox::U8FixedString<3072> BuildRuntimeDependencyGraphText()const;
+#endif // !NOX_MASTER
 	private:
 		void	Init();
 		void	Update();

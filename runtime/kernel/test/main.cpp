@@ -3,7 +3,7 @@
 ///	@file	main.cpp
 ///	@brief	テストのメインエントリポイント
 
-#include "stdafx.h"
+#include "pch.h"
 
 int main(int argc, char** argv)
 {

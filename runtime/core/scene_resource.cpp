@@ -32,7 +32,7 @@ namespace nox
 	};
 }
 
-void nox::SceneResource::onInitialize(const nox::io::Stream& stream) 
+void nox::SceneResource::OnInitialize(const nox::io::Stream& stream) 
 {
 	
 }

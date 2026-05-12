@@ -97,6 +97,7 @@ namespace nox
 		inline constexpr IntrusivePtr(const IntrusivePtr& ths)noexcept :
 			instance_(ths.instance_)
 		{
+			nox::detail::IntrusivePtrAddReferenceWrapper(instance_);
 		}
 
 		inline constexpr IntrusivePtr(IntrusivePtr&& ths)noexcept :
@@ -110,6 +111,7 @@ namespace nox
 		inline constexpr IntrusivePtr(U*const& instance)noexcept :
 			instance_(static_cast<U*>(instance))
 		{
+			nox::detail::IntrusivePtrAddReferenceWrapper(instance_);
 		}
 
 		template<std::derived_from<T> U>

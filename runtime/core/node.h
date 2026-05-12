@@ -8,18 +8,21 @@
 namespace nox
 {
 	class Application;
+	class EntityNode;
 	class Node : public nox::ManagedObject
 	{
 		NOX_DECLARE_OBJECT(Node, nox::ManagedObject);
 	public:
 		inline nox::IntrusivePtr<nox::Node> GetParent()const noexcept { return parent_; }
+		inline void SetParent(nox::Node* parent)noexcept { parent_ = parent; }
 
-		void SetApplication(nox::Application& application)noexcept
+		inline void SetApplication(nox::Application& application)noexcept
 		{
 			application_ = &application;
 		}
 
-		nox::Application& GetApplication()const noexcept { return *application_; }
+		inline nox::Application& GetApplication()const noexcept { return *application_; }
+		inline nox::Application* GetApplicationPtr()const noexcept { return application_; }
 	protected:
 		inline Node() noexcept : 
 			parent_(nullptr), 

@@ -13,26 +13,21 @@ namespace nox
 	{
 		NOX_DECLARE_MANAGED_OBJECT(Component, nox::ManagedObject);
 	public:
-		inline class nox::EntityNode& EntityNode()noexcept { return nox::util::Deref(owner_); }
-		inline const class nox::EntityNode& EntityNode()const noexcept { return nox::util::Deref(owner_); }
+		inline class nox::EntityNode& GetEntityNode()noexcept { return nox::util::Deref(owner_); }
+		inline const class nox::EntityNode& GetEntityNode()const noexcept { return nox::util::Deref(owner_); }
 
-		void	SetOwner(class nox::EntityNode& owner)noexcept;
+		void	SetOwner(nox::EntityNode& owner)noexcept;
 		virtual	void	Loaded() { return; }
 		virtual void	UnLoaded() { return; }
-
-		inline	void	SetComponentChain(nox::Component*const chain)noexcept { chain_ = chain; }
-		inline	nox::Component* GetComponentChain()const noexcept { return chain_; }
 
 		/// @brief 有効かどうか
 		inline bool IsValid()const noexcept { return owner_ != nullptr; }
 	protected:
-		inline	Component()noexcept :
-			owner_(nullptr),
-			chain_(nullptr)
+		inline constexpr Component()noexcept :
+			owner_(nullptr)
 		{}
 
 	private:
-		class nox::EntityNode* owner_;
-		nox::Component* chain_;
+		nox::EntityNode* owner_;
 	};
 }

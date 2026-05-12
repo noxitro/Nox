@@ -20,18 +20,18 @@ namespace nox::os::detail
 			::DeleteCriticalSection(&criticalSection_);
 		}
 
-		inline	void	Lock()
+		inline	void	Lock() noexcept
 		{
 			::EnterCriticalSection(&criticalSection_);
 		}
 
-		inline	void	Unlock()
+		inline	void	Unlock() noexcept
 		{
 			::LeaveCriticalSection(&criticalSection_);
 		}
 
 		_When_(return != 0, _Acquires_lock_(criticalSection_))
-			inline	bool	TryLock()
+			inline	bool	TryLock() noexcept
 		{
 			return ::TryEnterCriticalSection(&criticalSection_) == TRUE;
 		}
@@ -39,9 +39,6 @@ namespace nox::os::detail
 
 		[[nodiscard]]	inline const ::CRITICAL_SECTION& GetCriticalSection()const noexcept { return criticalSection_; }
 	private:
-		/**
-		 * @brief
-		*/
 		::CRITICAL_SECTION criticalSection_;
 	};
 }

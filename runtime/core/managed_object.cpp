@@ -12,11 +12,6 @@ namespace
 	
 }
 
-nox::ManagedObject::ManagedObject()noexcept:ref_count_(0)
-{
-	
-}
-
 nox::ManagedObject::~ManagedObject()
 {
 

@@ -7,6 +7,8 @@
 
 namespace nox::attr::dev
 {
+	/// @brief		開発用属性の基底クラス
+	/// @details	QAReleaseビルドではこの属性を持つメンバは除去される
 	class DevelopAttribute : public nox::attr::Attribute
 	{
 		NOX_DECLARE_OBJECT(DevelopAttribute, nox::attr::Attribute);
@@ -39,6 +41,7 @@ namespace nox::attr::dev
 		const std::u8string_view member_name_;
 	};
 
+	/// @brief EditorでのTooltip
 	class Description : public nox::attr::dev::DevelopAttribute
 	{
 		NOX_DECLARE_OBJECT(Description, nox::attr::dev::DevelopAttribute);
@@ -52,9 +55,18 @@ namespace nox::attr::dev
 		const std::u8string_view description_;
 	};
 
+	/// @brief Editor側で値を変更不可にする属性
 	class ReadOnly : public nox::attr::dev::DevelopAttribute
 	{
 		NOX_DECLARE_OBJECT(ReadOnly, nox::attr::dev::DevelopAttribute);
+	};
+
+	/// @brief editor inspectorからボタンとして実行できる関数を表明する属性
+	class
+		NOX_ATTR_TYPE(::nox::attr::AttributeUsage(nox::attr::AttributeTargets::Function))
+		Action : public nox::attr::dev::DevelopAttribute
+	{
+		NOX_DECLARE_OBJECT(Action, nox::attr::dev::DevelopAttribute);
 	};
 
 	/// @brief インスペクタへ非公開にする属性
@@ -92,6 +104,8 @@ namespace nox::attr::dev
 			property_name_(name) {
 		}
 
+		[[nodiscard]] inline constexpr std::u8string_view GetPropertyName()const noexcept { return property_name_; }
+
 	private:
 		const std::u8string_view property_name_;
 	};
@@ -112,14 +126,28 @@ namespace nox::attr::dev
 			property_name_(name) {
 		}
 
+		[[nodiscard]] inline constexpr std::u8string_view GetPropertyName()const noexcept { return property_name_; }
+
 	private:
 		const std::u8string_view property_name_;
 	};
 
+	/// @brief		c++関数をeditorでc#プロパティとして扱うことを表明する属性
+	/// @details	引数が存在するならばPropertySetter、引数が存在しないならばPropertyGetterと同様に扱われる。property_name_を空文字列で渡した場合、Set, Get, Isを除去したメンバ変数を探しに行きます
 	class Property : public nox::attr::dev::DevelopAttribute
 	{
 		NOX_DECLARE_OBJECT(Property, nox::attr::dev::DevelopAttribute);
 	public:
+		inline constexpr Property()noexcept :
+			property_name_(u8"") {
+		}
+		inline constexpr explicit Property(std::u8string_view name)noexcept :
+			property_name_(name) {
+		}
 
+		[[nodiscard]] inline constexpr std::u8string_view GetPropertyName()const noexcept { return property_name_; }
+
+	private:
+		const std::u8string_view property_name_;
 	};
 }

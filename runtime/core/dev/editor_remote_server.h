@@ -14,6 +14,8 @@
 namespace nox
 {
 	class Application;
+	class Object;
+	class ManagedObject;
 }
 
 namespace nox::dev::net
@@ -50,10 +52,14 @@ namespace nox::dev::editor_remote
 		void	SendQuery(nox::dev::editor_remote::Query& query, std::function<void(const nox::dev::editor_remote::Response&)> callback = nullptr);
 		void	SendBuffer(std::span<const nox::uint8> buffer);
 		
-     void	RegisterRemoteInstance(nox::Object& object, nox::int64 instance_id = 0);
+      void	RegisterRemoteInstance(nox::Object& object, nox::int64 instance_id = 0);
+		void	RegisterEditorOwnedRemoteInstance(nox::ManagedObject& object, nox::int64 instance_id);
+		bool	UnregisterRemoteInstance(nox::int64 instance_id);
+		bool	NotifyRemoteInstanceDestroyed(nox::Object& object);
 
 		nox::int64 FindRemoteInstanceId(const nox::Object& object)const noexcept;
 		nox::Object* FindRemoteInstance(nox::int64 instance_id)const noexcept;
+		void	CollectRemoteInstances(std::function<void(nox::int64, const nox::Object&)> evaluate)const;
 	private:
 		/// @brief main threadから呼び出される更新処理
 		void	Start(nox::Application& application);

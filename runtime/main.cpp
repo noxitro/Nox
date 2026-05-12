@@ -6,7 +6,6 @@
 #include	"reflection/reflection.h"
 
 #include	"core/core.h"
-
 //	module
 
 //	app

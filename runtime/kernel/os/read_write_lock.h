@@ -29,24 +29,24 @@ namespace nox::os
 
 			}
 
-			inline void EnterReadLock()noexcept
+			inline void EnterReadLock()noexcept(noexcept(lock_.LockShared()))
 			{
 				nox::os::atomic::Increment(read_count_);
 				lock_.LockShared();
 			}
 
-			inline void ExitReadLock()noexcept
+			inline void ExitReadLock()noexcept(noexcept(lock_.UnlockShared()))
 			{
 				nox::os::atomic::Decrement(read_count_);
 				lock_.UnlockShared();
 			}
 
-			inline void EnterWriteLock()noexcept
+			inline void EnterWriteLock()noexcept(noexcept(lock_.LockExclusive()))
 			{
 				lock_.LockExclusive();
 			}
 
-			inline void ExitWriteLock()noexcept
+			inline void ExitWriteLock()noexcept(noexcept(lock_.UnlockExclusive()))
 			{
 				lock_.UnlockExclusive();
 			}
@@ -61,13 +61,13 @@ namespace nox::os
 	template<class _LockType>
 		struct ScopedReadLock
 	{
-		inline ScopedReadLock(_LockType& lock):
+		inline ScopedReadLock(_LockType& lock) noexcept(noexcept(lock.EnterReadLock())) :
 			lock_(lock)
 		{
 			lock_.EnterReadLock();
 		}
 
-		inline ~ScopedReadLock()
+		inline ~ScopedReadLock() noexcept(noexcept(lock_.ExitReadLock()))
 		{
 			lock_.ExitReadLock();
 		}
@@ -79,13 +79,13 @@ namespace nox::os
 	template<class _LockType>
 	struct ScopedWriteLock
 	{
-		inline ScopedWriteLock(_LockType& lock) :
+		inline ScopedWriteLock(_LockType& lock) noexcept(noexcept(lock.EnterWriteLock())) :
 			lock_(lock)
 		{
 			lock_.EnterWriteLock();
 		}
 
-		inline ~ScopedWriteLock()
+		inline ~ScopedWriteLock() noexcept(noexcept(lock_.ExitWriteLock()))
 		{
 			lock_.ExitWriteLock();
 		}

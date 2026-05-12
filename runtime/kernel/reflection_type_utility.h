@@ -244,7 +244,7 @@ namespace nox::reflection
 	{
 		FunctionAttributeFlag attr_flags = FunctionAttributeFlag::None;
 		attr_flags = nox::util::BitOrConditional<nox::IsFunctionConstValue<T>, FunctionAttributeFlag::Const>(attr_flags);
-		attr_flags = nox::util::BitOrConditional<std::is_member_function_pointer_v<T>, FunctionAttributeFlag::Static>(attr_flags);
+		attr_flags = nox::util::BitOrConditional<std::is_member_function_pointer_v<T> == false, FunctionAttributeFlag::Static>(attr_flags);
 		attr_flags = nox::util::BitOrConditional<nox::IsFunctionVolatileValue<T>, FunctionAttributeFlag::Volatile>(attr_flags);
 		attr_flags = nox::util::BitOrConditional<nox::IsFunctionLValueReference<T>, FunctionAttributeFlag::LvalueRef>(attr_flags);
 		attr_flags = nox::util::BitOrConditional<nox::IsFunctionRValueReference<T>, FunctionAttributeFlag::RvalueRef>(attr_flags);
@@ -264,7 +264,7 @@ namespace nox::reflection
 		VariableAttributeFlag retFlags = VariableAttributeFlag::None;
 
 		//	メンバーか
-		if constexpr (std::is_member_object_pointer_v<T> == true)
+		if constexpr (std::is_member_object_pointer_v<T> == false)
 		{
 			retFlags = nox::util::BitOr(retFlags, VariableAttributeFlag::Static);
 		}

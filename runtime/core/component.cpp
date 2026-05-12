@@ -9,6 +9,6 @@
 
 void	nox::Component::SetOwner(nox::EntityNode& owner)noexcept
 {
-	NOX_ASSERT(owner_ == nullptr, u"既にGameObjectをアタッチ済みです");
+	NOX_ASSERT(owner_ == nullptr, u8"既にGameObjectをアタッチ済みです");
 	owner_ = &owner;
 }

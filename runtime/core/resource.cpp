@@ -5,6 +5,6 @@
 #include	"pch.h"
 #include	"resource.h"
 
-void	nox::Resource::initialize(nox::U8StringView path)
+void	nox::Resource::Initialize(nox::U8StringView path)
 {
 }

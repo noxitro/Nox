@@ -24,10 +24,10 @@ namespace nox
 		Resource() {}
 		~Resource()override {}
 
-		void initialize(nox::U8StringView path);
+		void Initialize(nox::U8StringView path);
 
 	private:
-		virtual void onInitialize(const nox::io::Stream& stream) = 0;
+		virtual void OnInitialize(const nox::io::Stream& stream) = 0;
 
 	private:
 //		nox::String path_;

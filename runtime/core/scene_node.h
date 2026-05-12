@@ -14,6 +14,8 @@ namespace nox
 		NOX_DECLARE_OBJECT(nox::SceneNode, nox::Node);
 	public:
 		void	SetResource(class SceneResource& resource);
+		void	AddEntity(nox::EntityNode& entity_node, nox::Node* parent = nullptr);
+		bool	RemoveEntity(nox::EntityNode& entity_node)noexcept;
 
 	private:
 

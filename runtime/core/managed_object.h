@@ -10,13 +10,14 @@ namespace nox
 	/// @brief ガベージコレクション対象基底クラス
 	class ManagedObject : public Object
 	{
-		NOX_DECLARE_MANAGED_OBJECT(ManagedObject, Object);
+		NOX_DECLARE_OBJECT(ManagedObject, Object);
 
 	public:
 		void	AddRef();
 		void	ReleaseRef();
 
-		ManagedObject()noexcept;
+		constexpr ManagedObject()noexcept :ref_count_(0)
+		{ }
 		~ManagedObject()override;
 
 		/// @brief 参照カウンタ取得

@@ -172,6 +172,8 @@ namespace nox::reflection
 
 		inline	constexpr	const nox::reflection::Type& GetType()const noexcept { return type_; }
 		inline	constexpr	nox::reflection::AccessLevel	GetAccessLevel()const noexcept { return access_level_; }
+		inline	constexpr	std::int32_t GetFieldOffsetBits()const noexcept { return field_offset_; }
+		inline	constexpr	std::int32_t GetBitWidth()const noexcept { return bit_width_; }
 
 		inline	constexpr	const nox::ObjectPointerId& GetObjectPointerId()const noexcept { return object_id_; }
 

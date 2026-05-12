@@ -146,6 +146,10 @@
     </ClInclude>
     <ClInclude Include="math\matrix3d.h" />
     <ClInclude Include="math\matrix4d.h" />
+    <ClInclude Include="math\matrix_util.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="math\position.h">
       <SubType>
       </SubType>
@@ -479,6 +483,10 @@
     </ClCompile>
     <ClCompile Include="math\matrix3d.cpp" />
     <ClCompile Include="math\matrix4d.cpp" />
+    <ClCompile Include="math\matrix_util.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="math\position.cpp">
       <SubType>
       </SubType>

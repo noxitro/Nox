@@ -3,8 +3,26 @@
 ///	@file	basic_test.cpp
 ///	@brief	kernel の基本機能テスト
 
-#include "stdafx.h"
+#include "pch.h"
 #include "../basic_type.h"
+#include "../reflection_type_definition.h"
+#include "../reflection_type_utility.h"
+#include "../type_traits/function_signature.h"
+
+namespace
+{
+	struct ReflectionTypeUtilityTestType
+	{
+		int value{};
+		static inline int static_value = 0;
+
+		void MemberFunction() noexcept {}
+		static void StaticFunction() noexcept {}
+	};
+
+	void FreeFunction() noexcept {}
+	int g_free_value = 0;
+}
 
 // 基本型のテスト
 TEST(KernelBasicTest, BasicTypes)
@@ -31,5 +49,39 @@ TEST(KernelBasicTest, PointerTypes)
 	// x64 では 8 バイトのはず
 	EXPECT_EQ(sizeof(nox::intptr), sizeof(void*));
 	EXPECT_EQ(sizeof(nox::uintptr), sizeof(void*));
+}
+
+TEST(KernelBasicTest, MemberFunctionsAreNotMarkedStatic)
+{
+	using MemberFunction = nox::ToMemberFunctionPointerType<void() noexcept, ReflectionTypeUtilityTestType>;
+	using StaticFunction = decltype(&ReflectionTypeUtilityTestType::StaticFunction);
+	using FreeFunctionType = decltype(&FreeFunction);
+
+	EXPECT_FALSE(nox::util::IsBitAnd(
+		nox::reflection::GetFunctionAttributeFlags<MemberFunction>(),
+		nox::reflection::FunctionAttributeFlag::Static));
+	EXPECT_TRUE(nox::util::IsBitAnd(
+		nox::reflection::GetFunctionAttributeFlags<StaticFunction>(),
+		nox::reflection::FunctionAttributeFlag::Static));
+	EXPECT_TRUE(nox::util::IsBitAnd(
+		nox::reflection::GetFunctionAttributeFlags<FreeFunctionType>(),
+		nox::reflection::FunctionAttributeFlag::Static));
+}
+
+TEST(KernelBasicTest, MemberFieldsAreNotMarkedStatic)
+{
+	using MemberField = decltype(&ReflectionTypeUtilityTestType::value);
+	using StaticField = decltype(&ReflectionTypeUtilityTestType::static_value);
+	using FreeField = decltype(&g_free_value);
+
+	EXPECT_FALSE(nox::util::IsBitAnd(
+		nox::reflection::GetFieldAttributeFlags<MemberField>(),
+		nox::reflection::VariableAttributeFlag::Static));
+	EXPECT_TRUE(nox::util::IsBitAnd(
+		nox::reflection::GetFieldAttributeFlags<StaticField>(),
+		nox::reflection::VariableAttributeFlag::Static));
+	EXPECT_TRUE(nox::util::IsBitAnd(
+		nox::reflection::GetFieldAttributeFlags<FreeField>(),
+		nox::reflection::VariableAttributeFlag::Static));
 }
 

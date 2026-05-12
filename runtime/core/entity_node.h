@@ -17,23 +17,16 @@ namespace nox
 	private:
 
 	public:
-		/*	using Collection = nox::Collection < nox::Component,
-				+[](nox::Component& component) { return component.chain_; },
-				+[](nox::Component& component) { return &component; }
-			> ;*/
-
 
 	public:
 		EntityNode();
 		~EntityNode()override;
 
-		/// @brief	
-		/// @param name 
-		/// @param pos 
-		/// @param rotation 
-		/// @return 
-		[[nodiscard]] static nox::IntrusivePtr<EntityNode> Create(nox::U8StringView name, const nox::Vec3& pos = nox::Vec3::Zero(), const nox::Quat& rotation = nox::Quat::Identity());
-		static void Destroy(EntityNode& gameObject);
+		[[nodiscard]] static nox::IntrusivePtr<EntityNode> Create(nox::U8StringView name, const nox::Position& pos = {}, const nox::Quat& rotation = nox::Quat::Identity());
+		static void Destroy(EntityNode& entity_node);
+
+		inline void SetName(nox::U8StringView name) { name_ = name; }
+		inline nox::U8StringView GetName()const noexcept { return name_; }
 
 		[[nodiscard]] nox::Component* GetComponent(const nox::reflection::Type& type)const noexcept;
 		[[nodiscard]] nox::Component* GetSameComponent(const nox::reflection::Type& type)const noexcept;
@@ -50,28 +43,25 @@ namespace nox
 			return static_cast<T*>(GetSameComponent(nox::reflection::Typeof<T>()));
 		}
 
-		/// @brief 
-		/// @param type 
-		/// @return 
 		nox::Component* CreateComponent(const nox::reflection::Type& type);
 
-		/// @brief 
-		/// @tparam T 
-		/// @return 
 		template<std::derived_from<nox::Component> T> requires(std::is_abstract_v<T> == false)
 			inline T* CreateComponent()
 		{
 			return static_cast<T*>(this->CreateComponent(nox::reflection::Typeof<T>()));
 		}
 
-		inline nox::Transform& Transform()const noexcept { return nox::util::Deref(transform_); }
+		inline nox::Transform& GetTransform()const noexcept { return nox::util::Deref(transform_); }
+		void EnumComponents(std::function<void(nox::Component&)> func)const;
 	private:
-		/// @brief 
-		///	@detail	必ず持っているコンポーネント
-		class nox::Transform* transform_;
+		nox::Transform* transform_;
+
+		nox::Vector<std::reference_wrapper<nox::Component>> component_list_;
 
 		// @brief 名前
 		NOX_ATTR_DECLARE(nox::attr::DataMember())
-			nox::U8String name_;
+		nox::U8String name_;
+
+		mutable nox::os::ReadWriteLock component_list_lock_;
 	};
 }

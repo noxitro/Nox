@@ -13,12 +13,15 @@
 #include	"net/dev_net_log_id.h"
 #include	"../application.h"
 #include	"../log_service.h"
+#include	"../managed_object.h"
+#include	"remote/system.g.h"
 
 namespace nox::dev::editor_remote
 {
 	struct EditorRemoteServer::Impl
 	{
 		nox::LogService log_service;
+		nox::Vector<nox::IntrusivePtr<nox::ManagedObject>> editor_owned_remote_instances;
 
 		inline Impl() noexcept
 		{
@@ -120,7 +123,7 @@ void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive(nox::Application
 	}
 
 	alignas(alignof(std::max_align_t)) std::array<nox::uint8, 1024> entity_buffer{ 0 };
-	alignas(alignof(std::max_align_t)) std::array<nox::uint8, 1024> receive_buffer{ 0 };
+	alignas(alignof(std::max_align_t)) std::array<nox::uint8, 4096> receive_buffer{ 0 };
 		std::array<nox::char8, 256> entity_name_buffer{};
 
     NOX_LOCAL_SCOPE(nox::os::ScopedLock(mutex_reader_));
@@ -141,11 +144,24 @@ void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive(nox::Application
 		const nox::reflection::ClassInfo*const class_info = nox::reflection::FindClassInfo(entity_full_name);
 		NOX_ASSERT(class_info != nullptr, u"不明なEntity:{0}", entity_full_name);
 
-		nox::dev::editor_remote::EditorRemoteEntity*const entity = static_cast<nox::dev::editor_remote::EditorRemoteEntity*>(class_info->GetType().CreateObject(entity_buffer));
+		bool is_heap_entity = false;
+		nox::dev::editor_remote::EditorRemoteEntity* entity = static_cast<nox::dev::editor_remote::EditorRemoteEntity*>(class_info->GetType().CreateObject(entity_buffer));
+		if (entity == nullptr)
+		{
+			entity = static_cast<nox::dev::editor_remote::EditorRemoteEntity*>(class_info->GetType().CreateObject());
+			is_heap_entity = true;
+		}
 		NOX_ASSERT(entity != nullptr, u"EditorIpcEntityの生成に失敗:{0}", entity_full_name);
 
-		NOX_LOCAL_SCOPE(nox::util::ScopeExit([&entity]() {
-			std::destroy_at(entity);
+		NOX_LOCAL_SCOPE(nox::util::ScopeExit([entity, is_heap_entity]() {
+			if (is_heap_entity)
+			{
+				delete entity;
+			}
+			else
+			{
+				std::destroy_at(entity);
+			}
 			}));
 
 		//	query
@@ -254,6 +270,65 @@ void	nox::dev::editor_remote::EditorRemoteServer::RegisterRemoteInstance(nox::Ob
 	remote_instance_id_dict_.emplace(&object, instance_id);
 }
 
+void nox::dev::editor_remote::EditorRemoteServer::RegisterEditorOwnedRemoteInstance(nox::ManagedObject& object, nox::int64 instance_id)
+{
+	RegisterRemoteInstance(object, instance_id);
+
+	for (const nox::IntrusivePtr<nox::ManagedObject>& instance : impl_->editor_owned_remote_instances)
+	{
+		if (instance.Get() == &object)
+		{
+			return;
+		}
+	}
+
+	nox::IntrusivePtr<nox::ManagedObject> keep_alive;
+	keep_alive.Reset(&object);
+	impl_->editor_owned_remote_instances.emplace_back(std::move(keep_alive));
+}
+
+bool nox::dev::editor_remote::EditorRemoteServer::UnregisterRemoteInstance(nox::int64 instance_id)
+{
+	const auto remote_instance_it = remote_instance_dict_.find(instance_id);
+	if (remote_instance_it == remote_instance_dict_.end())
+	{
+		return false;
+	}
+
+	nox::Object& object = remote_instance_it->second.get();
+	remote_instance_id_dict_.erase(&object);
+	remote_instance_dict_.erase(remote_instance_it);
+
+	for (auto it = impl_->editor_owned_remote_instances.begin(); it != impl_->editor_owned_remote_instances.end();)
+	{
+		if (it->Get() == &object)
+		{
+			it = impl_->editor_owned_remote_instances.erase(it);
+		}
+		else
+		{
+			++it;
+		}
+	}
+
+	return true;
+}
+
+bool nox::dev::editor_remote::EditorRemoteServer::NotifyRemoteInstanceDestroyed(nox::Object& object)
+{
+	const nox::int64 instance_id = FindRemoteInstanceId(object);
+	if (instance_id == 0)
+	{
+		return false;
+	}
+
+	nox::dev::editor_remote::RuntimeObjectDestroyedQuery query;
+	query.SetRemoteInstanceId(instance_id);
+	SendQuery(query);
+	UnregisterRemoteInstance(instance_id);
+	return instance_id > 0;
+}
+
 nox::int64 nox::dev::editor_remote::EditorRemoteServer::FindRemoteInstanceId(const nox::Object& object)const noexcept
 {
 	const auto it = remote_instance_id_dict_.find(&object);
@@ -272,6 +347,14 @@ nox::Object* nox::dev::editor_remote::EditorRemoteServer::FindRemoteInstance(nox
 		return &it->second.get();
 	}
 	return nullptr;
+}
+
+void nox::dev::editor_remote::EditorRemoteServer::CollectRemoteInstances(std::function<void(nox::int64, const nox::Object&)> evaluate)const
+{
+	for (const auto& pair : remote_instance_dict_)
+	{
+		evaluate(pair.first, pair.second.get());
+	}
 }
 
 std::span<const nox::EngineSystem::PhaseRegister> nox::dev::editor_remote::EditorRemoteServerSystem::GetPhaseRegisterList()const noexcept

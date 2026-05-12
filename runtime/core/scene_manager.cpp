@@ -24,6 +24,7 @@ nox::SceneManager::~SceneManager()
 void	nox::SceneManager::Initialize(nox::Application& application)
 {
 	main_scene_ = new SceneNode();
+	main_scene_->SetApplication(application);
 
 	//	windowを生成
 	{

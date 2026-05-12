@@ -11,6 +11,9 @@
 #include	"engine_system.h"
 #include	"log_id.h"
 
+#include	<charconv>
+#include	<optional>
+
 namespace nox
 {
 	namespace
@@ -18,6 +21,55 @@ namespace nox
 		inline	void HookException(nox::uint32 code, ::_EXCEPTION_POINTERS* const exception_ptr)
 		{
 		}
+
+#if !NOX_MASTER
+		constexpr std::u8string_view ToGraphPhaseName(const nox::SystemPhaseType phase_type)noexcept
+		{
+			switch (phase_type)
+			{
+			case nox::SystemPhaseType::Init: return u8"Init";
+			case nox::SystemPhaseType::Start: return u8"Start";
+			case nox::SystemPhaseType::Update: return u8"Update";
+			case nox::SystemPhaseType::Terminate: return u8"Terminate";
+			default: return u8"Unknown";
+			}
+		}
+
+		struct RuntimeGraphTextBuilder
+		{
+			std::array<nox::char8, 3072> buffer{};
+			size_t length = 0;
+
+			void Append(std::u8string_view value)noexcept
+			{
+				const size_t writable_length = std::min(value.length(), buffer.size() - length - 1);
+				std::ranges::copy_n(value.data(), writable_length, buffer.data() + length);
+				length += writable_length;
+				buffer[length] = u8'\0';
+			}
+
+			void Append(std::string_view value)noexcept
+			{
+				const size_t writable_length = std::min(value.length(), buffer.size() - length - 1);
+				for (size_t i = 0; i < writable_length; ++i)
+				{
+					buffer[length + i] = static_cast<nox::char8>(value[i]);
+				}
+				length += writable_length;
+				buffer[length] = u8'\0';
+			}
+
+			void Append(nox::uint32 value)noexcept
+			{
+				std::array<char, 16> temp{};
+				const auto [ptr, ec] = std::to_chars(temp.data(), temp.data() + temp.size(), value);
+				if (ec == std::errc{})
+				{
+					Append(std::string_view(temp.data(), static_cast<size_t>(ptr - temp.data())));
+				}
+			}
+		};
+#endif // !NOX_MASTER
 	}
 }
 
@@ -200,6 +252,109 @@ void nox::Application::BuildExecuteNodeList(std::span<nox::EngineSystem*> system
 		}
 	}
 }
+
+#if !NOX_MASTER
+nox::U8FixedString<3072> nox::Application::BuildRuntimeDependencyGraphText()const
+{
+	struct PhaseNode
+	{
+		const nox::EngineSystem::SystemPhase* phase = nullptr;
+		const nox::EngineSystem* instance = nullptr;
+		nox::uint32 id = 0;
+		nox::uint32 layer = 0;
+	};
+
+	RuntimeGraphTextBuilder builder;
+	nox::Vector<PhaseNode> phase_nodes;
+	phase_nodes.reserve(128);
+
+	for (nox::uint32 phase_type_index = 0; phase_type_index < nox::util::ToUnderlying(nox::SystemPhaseType::_Max); ++phase_type_index)
+	{
+		const nox::SystemPhaseType phase_type = static_cast<nox::SystemPhaseType>(phase_type_index);
+		const nox::Vector<ExecuteNode>& execute_nodes = system_phase_table_[phase_type_index];
+		for (const ExecuteNode& execute_node : execute_nodes)
+		{
+			const nox::uint32 id = static_cast<nox::uint32>(phase_nodes.size());
+			const nox::uint32 graph_layer = (phase_type_index * 8u) + execute_node.layer_index;
+			phase_nodes.push_back(PhaseNode{
+				&execute_node.phase.get(),
+				&execute_node.instance.get(),
+				id,
+				graph_layer,
+			});
+
+			builder.Append(u8"NODE|n");
+			builder.Append(id);
+			builder.Append(u8"|");
+			builder.Append(execute_node.instance.get().GetType().GetTypeName());
+			builder.Append(u8"|");
+			builder.Append(execute_node.phase.get().name);
+			builder.Append(u8"|");
+			builder.Append(ToGraphPhaseName(phase_type));
+			builder.Append(u8"|");
+			builder.Append(graph_layer);
+			builder.Append(u8"\n");
+		}
+	}
+
+	auto find_node_id = [&phase_nodes](const nox::EngineSystem::SystemPhase& phase) -> std::optional<nox::uint32>
+		{
+			for (const PhaseNode& node : phase_nodes)
+			{
+				if (node.phase == &phase)
+				{
+					return node.id;
+				}
+			}
+			return std::nullopt;
+		};
+
+	for (const PhaseNode& node : phase_nodes)
+	{
+		const nox::EngineSystem::PhaseRegister* current_register = nullptr;
+		for (const nox::EngineSystem::PhaseRegister& phase_register : node.instance->GetPhaseRegisterList())
+		{
+			if (&phase_register.GetPhase() == node.phase)
+			{
+				current_register = &phase_register;
+				break;
+			}
+		}
+		if (current_register == nullptr)
+		{
+			continue;
+		}
+
+		for (const std::reference_wrapper<const nox::EngineSystem::SystemPhase>& dependency : current_register->GetDependencies())
+		{
+			if (std::optional<nox::uint32> dependency_id = find_node_id(dependency.get()))
+			{
+				builder.Append(u8"EDGE|n");
+				builder.Append(*dependency_id);
+				builder.Append(u8"|n");
+				builder.Append(node.id);
+				builder.Append(u8"|depends\n");
+			}
+		}
+
+		for (const std::reference_wrapper<const nox::EngineSystem::SystemPhase>& depended : current_register->GetDepended())
+		{
+			if (std::optional<nox::uint32> depended_id = find_node_id(depended.get()))
+			{
+				builder.Append(u8"EDGE|n");
+				builder.Append(node.id);
+				builder.Append(u8"|n");
+				builder.Append(*depended_id);
+				builder.Append(u8"|depends\n");
+			}
+		}
+	}
+
+	nox::U8FixedString<3072> graph_text;
+	graph_text.Assign(std::u8string_view(builder.buffer.data(), builder.length));
+	return graph_text;
+}
+#endif // !NOX_MASTER
 
 void	nox::Application::Run()
 {
