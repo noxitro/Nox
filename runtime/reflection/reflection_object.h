@@ -86,12 +86,13 @@ namespace nox::reflection
 	///	@param ClassType 	型
 	/// @details	リフレクション対象となり、型情報を取得する関数が定義されます
 #define NOX_DECLARE_REFLECTION_OBJECT(ClassType)\
-	private:\
-		NOX_ATTR_DECLARE(::nox::reflection::attr::IgnoreReflection())	\
-		inline consteval void StaticAssertNoxDeclareReflectionObject()noexcept{ static_assert(std::is_base_of_v<::nox::reflection::ReflectionObject, ClassType>, "is not base of ReflectionObject"); }\
 	public:\
 		NOX_ATTR_DECLARE(::nox::reflection::attr::IgnoreReflection())	\
-		inline constexpr const ::nox::reflection::Type& GetType()const noexcept override { return ::nox::reflection::Typeof<ClassType>(); }\
+		inline constexpr const ::nox::reflection::Type& GetType()const noexcept override \
+		{ \
+			return ::nox::reflection::Typeof<ClassType>(); \
+			static_assert(std::is_base_of_v<::nox::reflection::ReflectionObject, ClassType>, "is not base of ReflectionObject"); \
+		}\
 		NOX_DECLARE_REFLECTION(ClassType)
 //	end define
 	
@@ -102,20 +103,8 @@ namespace nox::reflection
 	public:
 		/// @brief 型情報を取得
 		inline constexpr virtual const ::nox::reflection::Type& GetType()const noexcept = 0;
-
-	//protected:
 		[[nodiscard]] inline constexpr ReflectionObject()noexcept = default;
 		inline constexpr virtual ~ReflectionObject()noexcept {}
-
-	protected:
-	/*	/// @brief		関数がオーバーライドされているか
-		bool	IsOverride(nox::uint64 function_id)const noexcept;
-
-
-		inline bool IsOverride()const noexcept
-		{
-			return ReflectionObject::IsOverride(nox::GetFunctionPointerID<T>());
-		}*/
 
 	private: 
 		inline constexpr ReflectionObject(const ReflectionObject&)noexcept = delete;

@@ -32,18 +32,13 @@ namespace nox
 ///@brief	オブジェクトの定義
 #define	NOX_DECLARE_OBJECT(ClassType, BaseType) \
 	NOX_DECLARE_REFLECTION_OBJECT(ClassType); \
-	private:\
-		NOX_ATTR(::nox::reflection::attr::IgnoreReflection())\
-		static inline consteval void	StaticAssertNoxDeclareObject()noexcept\
-		{\
-			static_assert(!std::is_same_v<BaseType, ClassType>, "base type failed");\
-			static_assert(std::is_base_of_v<BaseType, ClassType>, "base type failed");\
-		}\
 	public:\
 		template<class... Args> requires(std::is_constructible_v<ClassType, Args...>)\
 		inline static constexpr ClassType& Ctor(Args&&... args)noexcept(std::is_nothrow_constructible_v<ClassType, Args...>)\
 		{\
 			return ::nox::detail::ObjectCtor<ClassType>(std::forward<Args>(args)...);\
+			static_assert(!std::is_same_v<BaseType, ClassType>, "base type failed");\
+			static_assert(std::is_base_of_v<BaseType, ClassType>, "base type failed");\
 		}\
 		using Base = BaseType
 //	end define
