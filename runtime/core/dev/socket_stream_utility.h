@@ -7,7 +7,7 @@
 
 namespace nox
 {
-	class ManagedObject;
+	class Object;
 }
 
 namespace nox::dev::editor_remote
@@ -23,8 +23,8 @@ namespace nox::dev::editor_remote
 	///// @brief editorと共有する関数情報のリストを取得
 	//std::span<std::reference_wrapper<const nox::reflection::FunctionInfo>> GetRemoteFunctionInfoList(const nox::reflection::ClassInfo& class_info)noexcept;
 
-	std::span<nox::uint8> GetPropertiesBytes(std::span<nox::uint8> buffer, const nox::ManagedObject& obj);
-	void SetPropertiesFromBytes(const std::span<const nox::uint8> bytes, nox::ManagedObject& obj);
+	std::span<nox::uint8> GetPropertiesBytes(std::span<nox::uint8> buffer, const nox::Object& obj);
+	void SetPropertiesFromBytes(const std::span<const nox::uint8> bytes, nox::Object& obj);
 }
 
 #endif // NOX_DEVELOP

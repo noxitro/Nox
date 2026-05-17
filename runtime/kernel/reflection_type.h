@@ -122,8 +122,7 @@ namespace nox::reflection
 
 		template<class T> requires(
 			std::is_default_constructible_v<T>&& 
-			std::is_invocable_v<decltype(static_cast<T* (*)(T*)>(std::construct_at)), std::add_pointer_t<T>>&&
-			requires { []()constexpr noexcept -> void { T* _ = new(static_cast<void*>(nullptr)) T(); }(); })
+			requires(T* p) { std::construct_at(p); })
 			inline constexpr void* ConstructAt(T* const storage)	noexcept(noexcept(std::construct_at(storage)))
 		{
 			return std::construct_at(storage);

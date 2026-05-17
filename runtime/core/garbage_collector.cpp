@@ -5,7 +5,7 @@
 #include	"pch.h"
 #include	"garbage_collector.h"
 
-#include	"managed_object.h"
+#include	"object.h"
 
 namespace nox
 {
@@ -13,12 +13,12 @@ namespace nox
 	{
 	public:
 		nox::os::Mutex mutex_;
-		nox::Vector<std::reference_wrapper<class nox::ManagedObject>> destroy_objects_;
-		nox::Vector<std::reference_wrapper<class nox::ManagedObject>> managed_objects_;
+		nox::Vector<std::reference_wrapper<class nox::Object>> destroy_objects_;
+		nox::Vector<std::reference_wrapper<class nox::Object>> managed_objects_;
 	};
 }
 
-void	nox::GarbageCollector::Register(nox::ManagedObject& managed_object)
+void	nox::GarbageCollector::Register(nox::Object& managed_object)
 {
 	NOX_LOCAL_SCOPE(nox::os::Mutex{ impl_->mutex_ });
 	impl_->managed_objects_.emplace_back(managed_object);
@@ -39,16 +39,16 @@ void	nox::GarbageCollector::FrameGC(nox::Application&)
 {
 	if (impl_->destroy_objects_.size() > 0)
 	{
-		for (nox::ManagedObject& managed_object : impl_->destroy_objects_)
+		for (nox::Object& managed_object : impl_->destroy_objects_)
 		{
-			managed_object.ReleaseRef();
+			nox::detail::ObjectImpl::Release(managed_object);
 		}
 		impl_->destroy_objects_.clear();
 	}
 	
-	const auto result = std::ranges::remove_if(impl_->managed_objects_, +[](const nox::ManagedObject& managed_object)noexcept 
+	const auto result = std::ranges::remove_if(impl_->managed_objects_, +[](const nox::Object& managed_object)noexcept 
 		{
-			return managed_object.GetRefCount() < 0;
+			return nox::detail::ObjectImpl::GetRefCount(managed_object) < 0;
 		});
 	
 	impl_->destroy_objects_.insert(impl_->destroy_objects_.end(), result.begin(), result.end());

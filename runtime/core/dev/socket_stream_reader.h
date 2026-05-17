@@ -7,7 +7,6 @@
 namespace nox
 {
 	class Object;
-	class ManagedObject;
 }
 
 namespace nox::dev::editor_remote
@@ -58,7 +57,7 @@ namespace nox::dev::editor_remote
 			this->ReadBytes(std::span<nox::uint8>(reinterpret_cast<nox::uint8*>(&value), sizeof(T)));
 		}
 
-		void Read(nox::IntrusivePtr<nox::ManagedObject>& value);
+		void Read(nox::IntrusivePtr<nox::Object>& value);
 
 		template<std::size_t Length>
 		inline void Read(nox::BasicFixedString<nox::char8, Length>& value)

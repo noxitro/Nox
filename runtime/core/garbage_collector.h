@@ -11,7 +11,7 @@ namespace nox
 	{
 		NOX_DECLARE_OBJECT(nox::GarbageCollector, nox::EngineSystem);
 	public:
-		static void	Register(class nox::ManagedObject& managed_object);
+		static void	Register(class nox::Object& managed_object);
 
 	private:
 		void Initialize(nox::Application& application);

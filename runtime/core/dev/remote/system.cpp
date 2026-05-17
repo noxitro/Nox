@@ -7,7 +7,6 @@
 #include	"../../attribute_dev_common.h"
 #include	"../../component.h"
 #include	"../../entity_node.h"
-#include	"../../managed_object.h"
 #include	"../../node.h"
 #include	"../../scene_manager.h"
 #include	"../../scene_node.h"
@@ -27,7 +26,6 @@ namespace
 		switch (type)
 		{
 		case nox::memory::InstanceType::Object: return "Object";
-		case nox::memory::InstanceType::ManagedObject: return "ManagedObject";
 		case nox::memory::InstanceType::Stl: return "Stl";
 		case nox::memory::InstanceType::Other: return "Other";
 		default: return "Unknown";
@@ -95,7 +93,7 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 
 	if (nox::Object* const registered_object = server.FindRemoteInstance(remote_instance_id))
 	{
-		nox::ManagedObject* const managed_object = static_cast<nox::ManagedObject*>(registered_object);
+		nox::Object* const managed_object = static_cast<nox::Object*>(registered_object);
 		NOX_ASSERT(managed_object != nullptr, u"Registered remote instance is not ManagedObject. id:{0}", remote_instance_id);
 		if (managed_object != nullptr)
 		{
@@ -113,7 +111,7 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 		return response;
 	}
 
-	nox::IntrusivePtr<nox::ManagedObject> object;
+	nox::IntrusivePtr<nox::Object> object;
 	if (class_info->GetType() == nox::reflection::Typeof<nox::EntityNode>())
 	{
 		nox::IntrusivePtr<nox::EntityNode> entity_node = nox::EntityNode::Create(u8"");
@@ -121,9 +119,9 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 	}
 	else
 	{
-		NOX_ASSERT(class_info->IsSubclassOf<nox::ManagedObject>(), u"SyncQuery type must inherit ManagedObject: {0}", GetFqn());
+		NOX_ASSERT(class_info->IsSubclassOf<nox::Object>(), u"SyncQuery type must inherit Object: {0}", GetFqn());
 		nox::Object* const created_object = static_cast<nox::Object*>(class_info->GetType().CreateObject());
-		nox::ManagedObject* const managed_object = nox::reflection::AsCast<nox::ManagedObject*>(created_object);
+		nox::Object* const managed_object = nox::reflection::AsCast<nox::Object*>(created_object);
 		NOX_ASSERT(managed_object != nullptr, u"SyncQuery instance creation failed: {0}", GetFqn());
 		object.Reset(managed_object);
 	}
@@ -269,7 +267,7 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 	response->SetRemoteInstanceId(GetRemoteInstanceId());
 
 	nox::Object* const object = server.FindRemoteInstance(GetRemoteInstanceId());
-	nox::ManagedObject* const managed_object = object != nullptr ? static_cast<nox::ManagedObject*>(object) : nullptr;
+	nox::Object* const managed_object = object != nullptr ? static_cast<nox::Object*>(object) : nullptr;
 	if (managed_object == nullptr)
 	{
 		response->SetExists(false);
@@ -290,14 +288,13 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 	response->SetRemoteInstanceId(GetRemoteInstanceId());
 
 	nox::Object* const object = server.FindRemoteInstance(GetRemoteInstanceId());
-	nox::ManagedObject* const managed_object = object != nullptr ? static_cast<nox::ManagedObject*>(object) : nullptr;
-	if (managed_object == nullptr)
+	if (object == nullptr)
 	{
 		response->SetInvoked(false);
 		return response;
 	}
 
-	const nox::reflection::ClassInfo* const class_info = nox::reflection::FindClassInfo(managed_object->GetType());
+	const nox::reflection::ClassInfo* const class_info = nox::reflection::FindClassInfo(object->GetType());
 	NOX_ASSERT(class_info != nullptr, u8"Action invoke target type is not registered. id:{0}", GetRemoteInstanceId());
 	if (class_info == nullptr)
 	{
@@ -327,7 +324,7 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 		}
 		else
 		{
-			std::array<void*, 1> args = { managed_object };
+			std::array<void*, 1> args = { object };
 			invoke_result = static_cast<const nox::reflection::detail::FunctionInfoImpl<void>&>(function_info).InvokeImpl(args);
 		}
 		response->SetInvoked(invoke_result.has_value());

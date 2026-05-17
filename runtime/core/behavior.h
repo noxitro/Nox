@@ -9,7 +9,7 @@ namespace nox
 {
 	class Behavior : public nox::Component
 	{
-		NOX_DECLARE_MANAGED_OBJECT(Behavior, nox::Component);
+		NOX_DECLARE_OBJECT(Behavior, nox::Component);
 	private:
 		enum class FunctionType : nox::uint8
 		{

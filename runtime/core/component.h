@@ -4,14 +4,14 @@
 ///	@brief	component
 #pragma once
 
-#include	"managed_object.h"
+#include	"object.h"
 
 namespace nox
 {
 	class EntityNode;
-	class Component : public nox::ManagedObject
+	class Component : public nox::Object
 	{
-		NOX_DECLARE_MANAGED_OBJECT(Component, nox::ManagedObject);
+		NOX_DECLARE_OBJECT(Component, nox::Object);
 	public:
 		inline class nox::EntityNode& GetEntityNode()noexcept { return nox::util::Deref(owner_); }
 		inline const class nox::EntityNode& GetEntityNode()const noexcept { return nox::util::Deref(owner_); }

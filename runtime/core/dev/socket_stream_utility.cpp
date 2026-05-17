@@ -11,7 +11,7 @@
 #include	<malloc.h>
 
 #if NOX_DEVELOP
-#include	"../managed_object.h"
+#include	"../object.h"
 #include	"net/dev_net_log_id.h"
 
 namespace nox::dev::editor_remote
@@ -428,7 +428,7 @@ namespace nox::dev::editor_remote
 			return static_cast<std::span<const RemotePropertyInfo>>(storage);
 		}
 
-		const nox::uint8* TryGetFieldAddress(const nox::reflection::VariableInfo& variable_info, const nox::ManagedObject& obj) noexcept
+		const nox::uint8* TryGetFieldAddress(const nox::reflection::VariableInfo& variable_info, const nox::Object& obj) noexcept
 		{
 			if (variable_info.IsStatic())
 			{
@@ -444,16 +444,16 @@ namespace nox::dev::editor_remote
 			return reinterpret_cast<const nox::uint8*>(std::addressof(obj)) + (offset_bits / 8);
 		}
 
-		nox::uint8* TryGetFieldAddress(const nox::reflection::VariableInfo& variable_info, nox::ManagedObject& obj) noexcept
+		nox::uint8* TryGetFieldAddress(const nox::reflection::VariableInfo& variable_info, nox::Object& obj) noexcept
 		{
-			return const_cast<nox::uint8*>(TryGetFieldAddress(variable_info, static_cast<const nox::ManagedObject&>(obj)));
+			return const_cast<nox::uint8*>(TryGetFieldAddress(variable_info, static_cast<const nox::Object&>(obj)));
 		}
 
 		bool TryWriteBitCopyValue(
 			nox::uint8*& cursor,
 			nox::uint8* const buffer_end,
 			const nox::reflection::VariableInfo& variable_info,
-			const nox::ManagedObject& obj)
+			const nox::Object& obj)
 		{
 			const nox::reflection::Type& type = variable_info.GetType();
 			if (type.IsEnum() == false &&
@@ -489,7 +489,7 @@ namespace nox::dev::editor_remote
 			const nox::uint8*& cursor,
 			const nox::uint8* const bytes_end,
 			const nox::reflection::VariableInfo& variable_info,
-			nox::ManagedObject& obj)
+			nox::Object& obj)
 		{
 			const nox::reflection::Type& type = variable_info.GetType();
 			if (type.IsEnum() == false &&
@@ -526,9 +526,9 @@ namespace nox::dev::editor_remote
 			nox::uint8*& cursor,
 			nox::uint8* const buffer_end,
 			const nox::reflection::FunctionInfo& function_info,
-			const nox::ManagedObject& obj)
+			const nox::Object& obj)
 		{
-			std::array<void*, 1> args = { const_cast<nox::ManagedObject*>(std::addressof(obj)) };
+			std::array<void*, 1> args = { const_cast<nox::Object*>(std::addressof(obj)) };
 			const auto result = static_cast<const nox::reflection::detail::FunctionInfoImpl<ResultType>&>(function_info).InvokeImpl(args);
 			if (result.has_value() == false)
 			{
@@ -562,7 +562,7 @@ namespace nox::dev::editor_remote
 			nox::uint8*& cursor,
 			nox::uint8* const buffer_end,
 			const RemotePropertyInfo& property_info,
-			const nox::ManagedObject& obj)
+			const nox::Object& obj)
 		{
 			const nox::reflection::FunctionInfo* const getter_function = property_info.getter_function;
 			const nox::reflection::Type* const value_type = property_info.value_type;
@@ -617,7 +617,7 @@ namespace nox::dev::editor_remote
 			return false;
 		}
 
-		bool TryInvokePropertySetter(const nox::reflection::FunctionInfo& function_info, nox::ManagedObject& obj, void* value_ptr)
+		bool TryInvokePropertySetter(const nox::reflection::FunctionInfo& function_info, nox::Object& obj, void* value_ptr)
 		{
 			if (function_info.IsNoReturn() == false)
 			{
@@ -632,7 +632,7 @@ namespace nox::dev::editor_remote
 			const nox::uint8*& cursor,
 			const nox::uint8* const bytes_end,
 			const RemotePropertyInfo& property_info,
-			nox::ManagedObject& obj)
+			nox::Object& obj)
 		{
 			const nox::reflection::Type* const value_type = property_info.value_type;
 			if (value_type == nullptr)
@@ -691,7 +691,7 @@ bool nox::dev::editor_remote::IsRemoteFunction(const nox::reflection::FunctionIn
 	return true;
 }
 
-std::span<nox::uint8> nox::dev::editor_remote::GetPropertiesBytes(std::span<nox::uint8> buffer, const nox::ManagedObject& obj)
+std::span<nox::uint8> nox::dev::editor_remote::GetPropertiesBytes(std::span<nox::uint8> buffer, const nox::Object& obj)
 {
 	//	書き込み位置カーソル
 	nox::uint8* cursor = buffer.data();
@@ -787,7 +787,7 @@ std::span<nox::uint8> nox::dev::editor_remote::GetPropertiesBytes(std::span<nox:
 	return std::span(buffer.data(), static_cast<std::size_t>(cursor - buffer.data()));
 }
 
-void nox::dev::editor_remote::SetPropertiesFromBytes(const std::span<const nox::uint8> bytes, nox::ManagedObject& obj)
+void nox::dev::editor_remote::SetPropertiesFromBytes(const std::span<const nox::uint8> bytes, nox::Object& obj)
 {
 	//	読み取り位置カーソル
 	const nox::uint8* cursor = bytes.data();

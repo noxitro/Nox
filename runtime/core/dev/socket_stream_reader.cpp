@@ -8,7 +8,7 @@
 #include	"editor_remote_server.h"
 #include	"attribute_common.h"
 #include	"socket_stream_utility.h"
-#include	"../managed_object.h"
+#include	"../object.h"
 
 nox::uint64 nox::dev::editor_remote::SocketStreamReader::ReadLength()
 {
@@ -127,7 +127,7 @@ nox::StlU8String nox::dev::editor_remote::SocketStreamReader::ReadString()
 	return result;
 }
 
-void nox::dev::editor_remote::SocketStreamReader::Read(nox::IntrusivePtr<nox::ManagedObject>& value)
+void nox::dev::editor_remote::SocketStreamReader::Read(nox::IntrusivePtr<nox::Object>& value)
 {
 	//	remote instance idを読み取る
 	nox::int64 remote_instance_id;
@@ -138,10 +138,8 @@ void nox::dev::editor_remote::SocketStreamReader::Read(nox::IntrusivePtr<nox::Ma
 		//	remote instance idが0でないなら、リモートインスタンスを探して返す
 		nox::Object* remote_instance = server_.FindRemoteInstance(remote_instance_id);
 		NOX_ASSERT(remote_instance != nullptr, u"リモートインスタンスが見つかりませんでした remote_instance_id:{0}", remote_instance_id);
-		nox::ManagedObject* obj = nox::reflection::AsCast<nox::ManagedObject*>(remote_instance);
-		NOX_ASSERT(obj != nullptr, u"リモートインスタンスはManagedObjectを継承している必要があります remote_instance_id:{0}", remote_instance_id);
-
-		value.Reset(obj);
+	
+		value.Reset(remote_instance);
 		return;
 	}
 

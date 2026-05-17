@@ -3,15 +3,15 @@
 /// @file	node.h
 /// @brief	node
 #pragma once
-#include	"managed_object.h"
+#include	"object.h"
 
 namespace nox
 {
 	class Application;
 	class EntityNode;
-	class Node : public nox::ManagedObject
+	class Node : public nox::Object
 	{
-		NOX_DECLARE_OBJECT(Node, nox::ManagedObject);
+		NOX_DECLARE_OBJECT(Node, nox::Object);
 	public:
 		inline nox::IntrusivePtr<nox::Node> GetParent()const noexcept { return parent_; }
 		inline void SetParent(nox::Node* parent)noexcept { parent_ = parent; }

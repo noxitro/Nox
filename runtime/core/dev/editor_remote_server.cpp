@@ -13,7 +13,7 @@
 #include	"net/dev_net_log_id.h"
 #include	"../application.h"
 #include	"../log_service.h"
-#include	"../managed_object.h"
+#include	"../object.h"
 #include	"remote/system.g.h"
 
 namespace nox::dev::editor_remote
@@ -21,7 +21,7 @@ namespace nox::dev::editor_remote
 	struct EditorRemoteServer::Impl
 	{
 		nox::LogService log_service;
-		nox::Vector<nox::IntrusivePtr<nox::ManagedObject>> editor_owned_remote_instances;
+		nox::Vector<nox::IntrusivePtr<nox::Object>> editor_owned_remote_instances;
 
 		inline Impl() noexcept
 		{
@@ -270,11 +270,11 @@ void	nox::dev::editor_remote::EditorRemoteServer::RegisterRemoteInstance(nox::Ob
 	remote_instance_id_dict_.emplace(&object, instance_id);
 }
 
-void nox::dev::editor_remote::EditorRemoteServer::RegisterEditorOwnedRemoteInstance(nox::ManagedObject& object, nox::int64 instance_id)
+void nox::dev::editor_remote::EditorRemoteServer::RegisterEditorOwnedRemoteInstance(nox::Object& object, nox::int64 instance_id)
 {
 	RegisterRemoteInstance(object, instance_id);
 
-	for (const nox::IntrusivePtr<nox::ManagedObject>& instance : impl_->editor_owned_remote_instances)
+	for (const nox::IntrusivePtr<nox::Object>& instance : impl_->editor_owned_remote_instances)
 	{
 		if (instance.Get() == &object)
 		{
@@ -282,7 +282,7 @@ void nox::dev::editor_remote::EditorRemoteServer::RegisterEditorOwnedRemoteInsta
 		}
 	}
 
-	nox::IntrusivePtr<nox::ManagedObject> keep_alive;
+	nox::IntrusivePtr<nox::Object> keep_alive;
 	keep_alive.Reset(&object);
 	impl_->editor_owned_remote_instances.emplace_back(std::move(keep_alive));
 }

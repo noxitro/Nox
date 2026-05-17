@@ -10,9 +10,6 @@ namespace nox::memory
 		/// @brief runtimeのObject継承クラス
 		Object,
 
-		/// @brief rutnimeのManagedObject継承クラス
-		ManagedObject,
-
 		/// @brief stlから確保したメモリ
 		Stl,
 

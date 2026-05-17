@@ -7,10 +7,16 @@
 
 namespace nox
 {
+	namespace detail
+	{
+		struct ObjectImpl;
+	}
+
 	/// @brief 基底オブジェクト
 	class Object : public ::nox::reflection::ReflectionObject
 	{
 		NOX_DECLARE_OBJECT_ROOT(Object);
+		friend struct ::nox::detail::ObjectImpl;
 	public:
 		constexpr Object() noexcept {}
 		virtual constexpr ~Object() override {}
@@ -21,26 +27,135 @@ namespace nox
 
 		/// @brief 文字列化　バッファ指定
 		virtual ::nox::U8StringView	ToString(std::span<::nox::char8> dest_buffer)const;
+
+		inline static void* operator new (size_t size)
+		{
+			return nox::memory::Allocate(size, nox::memory::InstanceType::Object);
+		}
+
+		inline static void operator delete(void* ptr) noexcept
+		{
+			nox::memory::Deallocate(ptr);
+		}
+
+		inline static void* operator new[](size_t size)
+		{
+			NOX_ASSERT(false, u"配列のnewはサポートされていません");
+		}
+
+		inline static void operator delete[](void* ptr) noexcept
+		{
+			NOX_ASSERT(false, u"配列のdeleteはサポートされていません");
+		}
+
+		inline static void* operator new(size_t size, std::align_val_t align)
+		{
+			return nox::memory::Allocate(size, static_cast<std::size_t>(align), nox::memory::InstanceType::Object);
+		}
+
+		inline static void* operator new(size_t, void* ptr) noexcept
+		{
+			return ptr;
+		}
+
+		inline static void operator delete(void* ptr, std::align_val_t align) noexcept
+		{
+			nox::memory::Deallocate(ptr, static_cast<std::size_t>(align));
+		}
+
+		inline static void operator delete(void*, void*) noexcept
+		{
+		}
+
+		inline static void* operator new[](size_t size, std::align_val_t align)
+		{
+			NOX_ASSERT(false, u"配列のnewはサポートされていません");
+		}
+
+		inline static void operator delete[](void* ptr, std::align_val_t align) noexcept
+		{
+			NOX_ASSERT(false, u"配列のdeleteはサポートされていません");
+		}
+
+		inline static void* operator new(size_t size, const std::nothrow_t&) noexcept
+		{
+			NOX_ASSERT(false, u"nothrow newはサポートされていません");
+		}
+
+		inline static void operator delete(void* ptr, const std::nothrow_t&) noexcept
+		{
+			NOX_ASSERT(false, u"nothrow deleteはサポートされていません");
+		}
+
+		inline static void* operator new[](size_t size, const std::nothrow_t&) noexcept
+		{
+			NOX_ASSERT(false, u"nothrow newはサポートされていません");
+		}
+
+		inline static void operator delete[](void* ptr, const std::nothrow_t&) noexcept
+		{
+			NOX_ASSERT(false, u"nothrow deleteはサポートされていません");
+		}
+
+		inline static void* operator new(size_t size, std::align_val_t align, const std::nothrow_t&) noexcept
+		{
+			NOX_ASSERT(false, u"nothrow newはサポートされていません");
+		}
+
+		inline static void operator delete(void* ptr, std::align_val_t align, const std::nothrow_t&) noexcept
+		{
+			NOX_ASSERT(false, u"nothrow deleteはサポートされていません");
+		}
+
+		inline static void* operator new[](size_t size, std::align_val_t align, const std::nothrow_t&) noexcept
+		{
+			NOX_ASSERT(false, u"nothrow newはサポートされていません");
+		}
+
+		inline static void operator delete[](void* ptr, std::align_val_t align, const std::nothrow_t&) noexcept
+		{
+			NOX_ASSERT(false, u"nothrow deleteはサポートされていません");
+		}
 	protected:
 		inline	std::span<void(*)()> GetVTable()const noexcept { return ::nox::util::GetVTable(this); }
-		/*bool	IsOverride(const nox::uint64 function_id, std::span<void(*)()> vtable)const noexcept;
-		inline bool	IsOverride(const nox::uint64 function_id)const noexcept
-		{
-			return IsOverride(function_id, GetVTable());
-		}
-
-		template<nox::concepts::EveryFunctionType T>
-		inline	bool	IsOverride(std::span<void(*)()> vtable)const noexcept
-		{
-			return IsOverride(nox::util::GetFunctionPointerID<T>(), vtable);
-		}
-		template<nox::concepts::EveryFunctionType T>
-		inline	bool	IsOverride()const noexcept
-		{
-			return IsOverride<T>(GetVTable());
-		}*/
 
 	private:
+		void AddRef();
+		void Release();
 
+	private:
+		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
+		std::atomic_int32_t ref_count_;
 	};
+
+	namespace detail
+	{
+		struct ObjectImpl
+		{
+			static inline void AddRef(Object& v)
+			{
+				v.AddRef();
+			}
+
+			static inline void Release(Object& v)
+			{
+				v.Release();
+			}
+
+			static inline nox::uint32 GetRefCount(const Object& v) noexcept
+			{
+				return v.ref_count_.load(std::memory_order_relaxed);
+			}
+		};
+	}
+
+	inline void IntrusivePtrAddReference(::nox::Object& v)
+	{
+		nox::detail::ObjectImpl::AddRef(v);
+	}
+
+	inline void IntrusivePtrReleaseReference(::nox::Object& v)
+	{
+		nox::detail::ObjectImpl::Release(v);
+	}
 }

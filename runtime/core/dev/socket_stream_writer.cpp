@@ -7,7 +7,7 @@
 
 #include	"editor_remote_server.h"
 #include	"socket_stream_utility.h"
-#include	"../managed_object.h"
+#include	"../object.h"
 
 namespace nox::dev::editor_remote
 {
@@ -123,7 +123,7 @@ void nox::dev::editor_remote::SocketStreamWriter::Clear()
 	position_ = k_header_reserve_size;
 }
 
-void nox::dev::editor_remote::SocketStreamWriter::Write(nox::IntrusivePtr<nox::ManagedObject>& value)
+void nox::dev::editor_remote::SocketStreamWriter::Write(nox::IntrusivePtr<nox::Object>& value)
 {
 	if (value == nullptr)
 	{

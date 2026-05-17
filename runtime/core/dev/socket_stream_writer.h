@@ -7,7 +7,6 @@
 namespace nox
 {
 	class Object;
-	class ManagedObject;
 }
 
 namespace nox::dev::editor_remote
@@ -64,7 +63,7 @@ namespace nox::dev::editor_remote
 			this->WriteBytes(std::span(static_cast<const nox::uint8*>(std::addressof(value)), sizeof(T)));
 		}
 
-		void Write(nox::IntrusivePtr<nox::ManagedObject>& value);
+		void Write(nox::IntrusivePtr<nox::Object>& value);
 	private:
 		nox::uint32 WriteLeb128ToEnd(nox::uint64 length);
 

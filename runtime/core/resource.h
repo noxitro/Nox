@@ -3,7 +3,7 @@
 ///	@file	resource.h
 ///	@brief	resource
 #pragma once
-#include	"managed_object.h"
+#include	"object.h"
 #include	"attribute_common.h"
 
 namespace nox
@@ -17,9 +17,9 @@ namespace nox
 		};
 	}
 
-	class Resource : public nox::ManagedObject
+	class Resource : public nox::Object
 	{
-		NOX_DECLARE_OBJECT(Resource, nox::ManagedObject);
+		NOX_DECLARE_OBJECT(Resource, nox::Object);
 	public:
 		Resource() {}
 		~Resource()override {}

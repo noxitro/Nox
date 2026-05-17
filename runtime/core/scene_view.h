@@ -3,7 +3,7 @@
 ///	@file	scene_view.h
 ///	@brief	scene_view
 #pragma once
-#include	"managed_object.h"
+#include	"object.h"
 
 namespace nox
 {
@@ -11,9 +11,9 @@ namespace nox
 
 	/// @brief		シーンビュー
 	/// @details	シーン情報とウィンドウを管理する
-	class SceneView : public nox::ManagedObject
+	class SceneView : public nox::Object
 	{
-		NOX_DECLARE_OBJECT(nox::SceneView, nox::ManagedObject);
+		NOX_DECLARE_OBJECT(nox::SceneView, nox::Object);
 	public:
 		SceneView()noexcept;
 		~SceneView()override;

@@ -590,6 +590,12 @@ nox::uint32 nox::memory::GetMemorySize(const nox::memory::SegmentType segment)no
 	return nox::os::atomic::Read(info_with_segment_table_[nox::util::ToUnderlying(segment)].total_size);
 }
 
+bool nox::memory::IsHeapPtr(nox::not_null<const void*> ptr)noexcept
+{
+	const nox::memory::HeapInfo& heap_info = nox::memory::GetHeapInfo(ptr);
+	return nox::memory::IsValidHeapInfo(heap_info);
+}
+
 void nox::memory::VerifyMemory()
 {
     nox::memory::CollectHeapInfoList([](const nox::memory::HeapInfo& heap_info)noexcept {

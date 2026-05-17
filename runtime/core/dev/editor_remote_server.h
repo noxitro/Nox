@@ -15,7 +15,6 @@ namespace nox
 {
 	class Application;
 	class Object;
-	class ManagedObject;
 }
 
 namespace nox::dev::net
@@ -53,7 +52,7 @@ namespace nox::dev::editor_remote
 		void	SendBuffer(std::span<const nox::uint8> buffer);
 		
       void	RegisterRemoteInstance(nox::Object& object, nox::int64 instance_id = 0);
-		void	RegisterEditorOwnedRemoteInstance(nox::ManagedObject& object, nox::int64 instance_id);
+		void	RegisterEditorOwnedRemoteInstance(nox::Object& object, nox::int64 instance_id);
 		bool	UnregisterRemoteInstance(nox::int64 instance_id);
 		bool	NotifyRemoteInstanceDestroyed(nox::Object& object);
 

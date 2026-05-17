@@ -13,7 +13,7 @@ namespace nox
 
 	class EntityNode final : public nox::Node
 	{
-		NOX_DECLARE_MANAGED_OBJECT(EntityNode, nox::Node);
+		NOX_DECLARE_OBJECT(EntityNode, nox::Node);
 	private:
 
 	public:

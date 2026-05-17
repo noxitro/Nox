@@ -89,6 +89,7 @@ namespace nox::memory
 	}
 
 	nox::uint32 GetMemorySize(const nox::memory::SegmentType segment)noexcept;
+	bool IsHeapPtr(nox::not_null<const void*> ptr)noexcept;
 
 	/// @brief メモリ破壊チェック
 	void VerifyMemory();

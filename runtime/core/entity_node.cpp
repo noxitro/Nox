@@ -27,7 +27,7 @@ nox::EntityNode::~EntityNode()
 	for (nox::Component& component : component_list_)
 	{
 		component.UnLoaded();
-		component.ReleaseRef();
+	//	component.ReleaseRef();
 	}
 	transform_ = nullptr;
 }
@@ -35,7 +35,7 @@ nox::EntityNode::~EntityNode()
 nox::IntrusivePtr<nox::EntityNode> nox::EntityNode::Create(nox::U8StringView name, const nox::Position& pos, const nox::Quat& rotation)
 {
 	nox::EntityNode* const entity_node = new nox::EntityNode();
-	entity_node->AddRef();
+//	entity_node->AddRef();
 	entity_node->name_ = name;
 
 	constexpr auto nse = std::derived_from< nox::Transform, nox::Component>;
@@ -74,7 +74,7 @@ void nox::EntityNode::Destroy(nox::EntityNode& entity_node)
 		}
 	}
 #endif
-	entity_node.ReleaseRef();
+//	entity_node.ReleaseRef();
 }
 
 nox::Component* nox::EntityNode::GetComponent(const nox::reflection::Type& type)const noexcept
@@ -140,7 +140,7 @@ nox::Component* nox::EntityNode::CreateComponent(const nox::reflection::Type& ty
 	}
 
 	component->SetOwner(*this);
-	component->AddRef();
+//	component->AddRef();
 
 	if (transform_ == nullptr)
 	{

@@ -30,9 +30,6 @@
     <ClInclude Include="object_definition.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="managed_object.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="transform.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -183,9 +180,6 @@
     <ClInclude Include="scene_node.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="folder_node.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="log_service.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -204,9 +198,6 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="object_definition.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="managed_object.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="transform.cpp">
@@ -357,9 +348,6 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="scene_node.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="folder_node.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="log_service.cpp">
