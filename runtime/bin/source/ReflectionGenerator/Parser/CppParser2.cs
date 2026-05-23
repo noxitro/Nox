@@ -2010,7 +2010,7 @@ namespace ReflectionGenerator.Parser2
 						//	NOX_DECLARE_OBJECTの定義漏れチェック
 						if (declImpl.IsNoxObject == true && declImpl.FullName != "nox::Object")
 						{
-							if (declImpl.FunctionList.Exists(x => x.Name == "StaticAssertNoxDeclareObject") == false)
+							if (declImpl.FunctionList.Exists(x => x.Name == "GetType") == false)
 							{
 								Trace.ErrorLine(null, $"{declImpl.FullName}\tNOX_DECLARE_OBJECTが宣言されていません");
                                 success = false;
