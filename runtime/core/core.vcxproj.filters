@@ -153,9 +153,6 @@
     <ClInclude Include="dev\socket_stream_utility.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="engine_system.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="system_phase.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -315,9 +312,6 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="dev\socket_stream_utility.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="engine_system.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="system_phase.cpp">

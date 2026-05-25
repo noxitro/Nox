@@ -6,7 +6,6 @@
 #include	"attribute_common.h"
 #include	"attribute_dev_common.h"
 
-#include	"engine_system.h"
 #include	"log_service.h"
 
 namespace nox

@@ -10,7 +10,7 @@ namespace nox
 {
 	class EngineModule;
 	class Application;
-	class EngineSystem;
+	class SystemBase;
 
 	/// @brief		モジュールエントリ基底クラス
 	///	@details	nox::Applicationで収集され、各フェーズで呼び出される関数を登録するための基底クラス
@@ -21,6 +21,6 @@ namespace nox
 		inline constexpr EngineModule()noexcept = default;
 		virtual ~EngineModule() = default;
 
-		virtual void CreateEngineSystems([[maybe_unused]] nox::PmrVector<nox::EngineSystem*>& out)const {}
+		virtual void CreateEngineSystems([[maybe_unused]] nox::PmrVector<nox::SystemBase*>& out)const {}
 	};
 }

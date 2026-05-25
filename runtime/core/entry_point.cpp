@@ -5,7 +5,8 @@
 #include	"pch.h"
 #include	"entry_point.h"
 
-#include	"application.h"
+//#include	"application.h"
+#include	"world.h"
 #include	"log_id.h"
 #include	"log_service.h"
 
@@ -28,8 +29,8 @@ nox::int32 nox::EntryPoint(const std::span<const nox::char16* const> args)
 	nox::os::Initialize(args);
 
 	{
-		nox::Application application;
-		application.Run();
+		nox::World world;
+		world.Run();
 	}
 
 	nox::os::Finalize();

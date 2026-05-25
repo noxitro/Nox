@@ -126,10 +126,6 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="engine_system.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
     <ClInclude Include="entity.h">
       <SubType>
       </SubType>
@@ -334,10 +330,6 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="dev\socket_stream_writer.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="engine_system.cpp">
       <SubType>
       </SubType>
     </ClCompile>

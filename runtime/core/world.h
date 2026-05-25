@@ -3,14 +3,14 @@
 /// @file	world.h
 /// @brief	world
 #pragma once
-#include	"object.h"
+#include	"system.h"
 #include	"entity.h"
 
 namespace nox
 {
 	struct IComponentData;
-	struct ISystem;
-	
+	class Component;
+	class SystemBase;
 	class EngineModule;
 
 	class World : public nox::Object
@@ -26,6 +26,14 @@ namespace nox
 		static constexpr nox::uint32 k_max_entity_count = k_entity_record_page_size * k_max_entity_page_count;
 		static constexpr nox::uint32 k_invalid_entity_index = std::numeric_limits<nox::uint32>::max();
 		static constexpr nox::uint32 k_initial_live_generation = 1u;
+
+		/// @brief 実行ノード
+		struct ExecuteNode
+		{
+			std::reference_wrapper<nox::SystemBase> instance;
+			std::reference_wrapper<const nox::SystemBase::SystemPhase> phase;
+			nox::uint32 layer_index;	///< 小さいほど先に実行。同一レイヤーは並列実行可能
+		};
 
 		struct EntityRecord
 		{
@@ -114,7 +122,7 @@ namespace nox
 		std::mutex entity_record_page_mutex_;
 
 		nox::Vector<nox::EngineModule*> modules_;
-		nox::Vector<nox::ISystem*> systems_;
+		nox::Vector<nox::SystemBase*> systems_;
 
 		const bool studio_mode_;
 		bool kill_;

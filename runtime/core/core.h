@@ -12,6 +12,7 @@
 #include	"application.h"
 #include	"engine_module.h"
 #include	"core_entry.h"
+#include	"world.h"
 
 //	editor_remote
 #include	"dev/remote/remote_system.g.h"
