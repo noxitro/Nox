@@ -20,19 +20,19 @@ namespace Core.UI.Views
 	{
 		#region 非公開フィールド
 		private readonly Core.UI.Views.SceneViewPanel _SceneViewPanel = new();
-		private Core.RuntimeWrapper.SceneView? _SubscribedSceneView;
+		//private Core.RuntimeWrapper.SceneView? _SubscribedSceneView;
 
 		#endregion
 
 		#region 公開プロパティ
-		public static readonly System.Windows.DependencyProperty SceneViewProperty =
-			NoxUI.IDependencyObject<RutnimeSceneView>.Register<Core.RuntimeWrapper.SceneView?>(nameof(SceneView), null, ChangeSceneViewProperty);
+		//public static readonly System.Windows.DependencyProperty SceneViewProperty =
+		//	NoxUI.IDependencyObject<RutnimeSceneView>.Register<Core.RuntimeWrapper.SceneView?>(nameof(SceneView), null, ChangeSceneViewProperty);
 
-		public Core.RuntimeWrapper.SceneView? SceneView
-		{
-			get => (Core.RuntimeWrapper.SceneView)GetValue(SceneViewProperty);
-			set => SetValue(SceneViewProperty, value);
-		}
+		//public Core.RuntimeWrapper.SceneView? SceneView
+		//{
+		//	get => (Core.RuntimeWrapper.SceneView)GetValue(SceneViewProperty);
+		//	set => SetValue(SceneViewProperty, value);
+		//}
 
 		public static readonly System.Windows.DependencyProperty WindowHandleProperty =
 			NoxUI.IDependencyObject<RutnimeSceneView>.Register<IntPtr>(nameof(WindowHandle), IntPtr.Zero, ChangeWindowHandleProperty);
@@ -78,7 +78,7 @@ namespace Core.UI.Views
 		#region 非公開メソッド
 		private static void ChangeSceneViewProperty(RutnimeSceneView owner, in DependencyPropertyChangedEventArgs e)
 		{
-			owner.UpdateSceneViewSubscription((Core.RuntimeWrapper.SceneView?)e.NewValue);
+		//	owner.UpdateSceneViewSubscription((Core.RuntimeWrapper.SceneView?)e.NewValue);
 			owner.AttachCurrentWindow();
 		}
 
@@ -100,7 +100,7 @@ namespace Core.UI.Views
 				return;
 			}
 
-			if (sender is Core.RuntimeWrapper.SceneView sceneView)
+		//	if (sender is Core.RuntimeWrapper.SceneView sceneView)
 			{
 				AttachCurrentWindow();
 			}
@@ -108,36 +108,36 @@ namespace Core.UI.Views
 
 		private void OnLoaded(object sender, RoutedEventArgs e)
 		{
-			UpdateSceneViewSubscription(SceneView);
+		//	UpdateSceneViewSubscription(SceneView);
 			AttachCurrentWindow();
 		}
 
 		private void OnUnloaded(object sender, RoutedEventArgs e)
 		{
-			UpdateSceneViewSubscription(null);
+		//	UpdateSceneViewSubscription(null);
 			_SceneViewPanel.Detach();
 			IsAttached = false;
 			AttachError = string.Empty;
 		}
 
-		private void UpdateSceneViewSubscription(Core.RuntimeWrapper.SceneView? sceneView)
-		{
-			if (ReferenceEquals(_SubscribedSceneView, sceneView))
-			{
-				return;
-			}
+		//private void UpdateSceneViewSubscription(Core.RuntimeWrapper.SceneView? sceneView)
+		//{
+		//	if (ReferenceEquals(_SubscribedSceneView, sceneView))
+		//	{
+		//		return;
+		//	}
 
-			if (_SubscribedSceneView != null)
-			{
-				_SubscribedSceneView.WindowHandleChanged -= OnSceneViewWindowHandleChanged;
-			}
+		//	if (_SubscribedSceneView != null)
+		//	{
+		//		_SubscribedSceneView.WindowHandleChanged -= OnSceneViewWindowHandleChanged;
+		//	}
 
-			_SubscribedSceneView = sceneView;
-			if (_SubscribedSceneView != null && IsLoaded)
-			{
-				_SubscribedSceneView.WindowHandleChanged += OnSceneViewWindowHandleChanged;
-			}
-		}
+		//	_SubscribedSceneView = sceneView;
+		//	if (_SubscribedSceneView != null && IsLoaded)
+		//	{
+		//		_SubscribedSceneView.WindowHandleChanged += OnSceneViewWindowHandleChanged;
+		//	}
+		//}
 
 		private void AttachCurrentWindow()
 		{
@@ -150,9 +150,9 @@ namespace Core.UI.Views
 			}
 
 			IntPtr windowHandle = WindowHandle;
-			if (windowHandle == IntPtr.Zero && SceneView != null)
+		//	if (windowHandle == IntPtr.Zero && SceneView != null)
 			{
-				windowHandle = SceneView.WindowHandle;
+		//		windowHandle = SceneView.WindowHandle;
 			}
 
 			if (windowHandle != IntPtr.Zero)

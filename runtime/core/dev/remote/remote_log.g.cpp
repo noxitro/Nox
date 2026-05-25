@@ -3,7 +3,7 @@
 //	written from RuntimeRemoteCodeGenerator
 
 #include	"pch.h"
-#include	"log.g.h"
+#include	"remote_log.g.h"
 #include	"codegen_preamble.h"
 
 

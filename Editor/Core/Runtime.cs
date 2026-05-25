@@ -33,7 +33,7 @@ namespace Core
 		public RuntimeTypeDB TypeDB { get; set; } = new RuntimeTypeDB();
 
 		public System.Diagnostics.Process? Process => MainRuntimeSession.Process;
-		public Core.RuntimeWrapper.SceneView? MainSceneView => MainRuntimeSession.MainSceneView;
+		//public Core.RuntimeWrapper.SceneView? MainSceneView => MainRuntimeSession.MainSceneView;
 		public event EventHandler? ProcessChanged
 		{
 			add => MainRuntimeSession.ProcessChanged += value;

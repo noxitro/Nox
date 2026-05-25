@@ -21,6 +21,6 @@ namespace nox
 		inline constexpr EngineModule()noexcept = default;
 		virtual ~EngineModule() = default;
 
-		virtual void CreateEngineSystems(nox::PmrVector<nox::EngineSystem*>& out)const {}
+		virtual void CreateEngineSystems([[maybe_unused]] nox::PmrVector<nox::EngineSystem*>& out)const {}
 	};
 }

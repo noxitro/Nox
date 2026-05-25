@@ -145,10 +145,6 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="test_behavior.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\core\core.vcxproj">

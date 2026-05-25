@@ -3,7 +3,7 @@
 ///	@file	server.h
 ///	@brief	server
 #pragma once
-#include	"entity.h"
+#include	"net_entity.h"
 
 namespace nox
 {

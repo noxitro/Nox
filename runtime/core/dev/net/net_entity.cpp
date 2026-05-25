@@ -3,7 +3,7 @@
 ///	@file	entity.cpp
 ///	@brief	entity
 #include	"pch.h"
-#include	"entity.h"
+#include	"net_entity.h"
 
 #include	"dev_net_api.h"
 

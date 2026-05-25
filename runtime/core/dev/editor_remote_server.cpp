@@ -14,7 +14,7 @@
 #include	"../application.h"
 #include	"../log_service.h"
 #include	"../object.h"
-#include	"remote/system.g.h"
+#include	"remote/remote_system.g.h"
 
 namespace nox::dev::editor_remote
 {

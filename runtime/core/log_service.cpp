@@ -8,7 +8,7 @@
 
 #include "log_service.h"
 
-#include "dev/remote/log.g.h"
+#include "dev/remote/remote_log.g.h"
 #include "dev/editor_remote_server.h"
 
 namespace nox

@@ -3,7 +3,7 @@
 //	written from RuntimeRemoteCodeGenerator
 
 #include	"pch.h"
-#include	"system.g.h"
+#include	"remote_system.g.h"
 #include	"codegen_preamble.h"
 
 
@@ -191,4 +191,13 @@ void nox::dev::editor_remote::RuntimeObjectDestroyedQuery::OnSerialize(nox::dev:
 void nox::dev::editor_remote::RuntimeObjectDestroyedQuery::OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)
 {
 	NOX_ASSERT(false, u8"送信専用Queryです");
+}
+void nox::dev::editor_remote::EndSyncQuery::OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)
+{
+	writer.Write(remote_instance_id_);
+}
+
+void nox::dev::editor_remote::EndSyncQuery::OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)
+{
+	reader.Read(remote_instance_id_);
 }

@@ -627,5 +627,29 @@ namespace nox::dev::editor_remote
 		nox::int64 remote_instance_id_ {};
 	};
 
+	/// @brief nox::Objectの同期完了通知Query
+	class EndSyncQuery final : public nox::dev::editor_remote::Query
+	{
+		NOX_DECLARE_OBJECT(nox::dev::editor_remote::EndSyncQuery, nox::dev::editor_remote::Query);
+	public:
+		EndSyncQuery(){}
+		void OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)override;
+		void OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)override;
+		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::Application&, std::span<nox::uint8> storage)const override;
+
+		inline nox::int64 GetRemoteInstanceId()const noexcept
+		{
+			return remote_instance_id_;
+		}
+
+		inline void SetRemoteInstanceId(nox::int64 value)
+		{
+			remote_instance_id_ = value;
+		}
+
+	private:
+		nox::int64 remote_instance_id_ {};
+	};
+
 }
 #endif	//	NOX_DEVELOP

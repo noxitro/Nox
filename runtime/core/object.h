@@ -38,12 +38,12 @@ namespace nox
 			nox::memory::Deallocate(ptr);
 		}
 
-		inline static void* operator new[](size_t size)
+		inline static void* operator new[]([[maybe_unused]] size_t size)
 		{
 			NOX_ASSERT(false, u"配列のnewはサポートされていません");
 		}
 
-		inline static void operator delete[](void* ptr) noexcept
+		inline static void operator delete[]([[maybe_unused]] void* ptr) noexcept
 		{
 			NOX_ASSERT(false, u"配列のdeleteはサポートされていません");
 		}
@@ -63,56 +63,56 @@ namespace nox
 			nox::memory::Deallocate(ptr, static_cast<std::size_t>(align));
 		}
 
-		inline static void operator delete(void*, void*) noexcept
+		inline static void operator delete([[maybe_unused]] void*, [[maybe_unused]] void*) noexcept
 		{
 		}
 
-		inline static void* operator new[](size_t size, std::align_val_t align)
+		inline static void* operator new[]([[maybe_unused]] size_t size, [[maybe_unused]] std::align_val_t align)
 		{
 			NOX_ASSERT(false, u"配列のnewはサポートされていません");
 		}
 
-		inline static void operator delete[](void* ptr, std::align_val_t align) noexcept
+		inline static void operator delete[]([[maybe_unused]] void* ptr, [[maybe_unused]] std::align_val_t align) noexcept
 		{
 			NOX_ASSERT(false, u"配列のdeleteはサポートされていません");
 		}
 
-		inline static void* operator new(size_t size, const std::nothrow_t&) noexcept
+		inline static void* operator new([[maybe_unused]] size_t size, [[maybe_unused]] const std::nothrow_t&) noexcept
 		{
 			NOX_ASSERT(false, u"nothrow newはサポートされていません");
 		}
 
-		inline static void operator delete(void* ptr, const std::nothrow_t&) noexcept
+		inline static void operator delete([[maybe_unused]] void* ptr, [[maybe_unused]] const std::nothrow_t&) noexcept
 		{
 			NOX_ASSERT(false, u"nothrow deleteはサポートされていません");
 		}
 
-		inline static void* operator new[](size_t size, const std::nothrow_t&) noexcept
+		inline static void* operator new[]([[maybe_unused]] size_t size, [[maybe_unused]] const std::nothrow_t&) noexcept
 		{
 			NOX_ASSERT(false, u"nothrow newはサポートされていません");
 		}
 
-		inline static void operator delete[](void* ptr, const std::nothrow_t&) noexcept
+		inline static void operator delete[]([[maybe_unused]] void* ptr, [[maybe_unused]] const std::nothrow_t&) noexcept
 		{
 			NOX_ASSERT(false, u"nothrow deleteはサポートされていません");
 		}
 
-		inline static void* operator new(size_t size, std::align_val_t align, const std::nothrow_t&) noexcept
+		inline static void* operator new([[maybe_unused]] size_t size, [[maybe_unused]] std::align_val_t align, [[maybe_unused]] const std::nothrow_t&) noexcept
 		{
 			NOX_ASSERT(false, u"nothrow newはサポートされていません");
 		}
 
-		inline static void operator delete(void* ptr, std::align_val_t align, const std::nothrow_t&) noexcept
+		inline static void operator delete([[maybe_unused]] void* ptr, [[maybe_unused]] std::align_val_t align, [[maybe_unused]] const std::nothrow_t&) noexcept
 		{
 			NOX_ASSERT(false, u"nothrow deleteはサポートされていません");
 		}
 
-		inline static void* operator new[](size_t size, std::align_val_t align, const std::nothrow_t&) noexcept
+		inline static void* operator new[]([[maybe_unused]] size_t size, [[maybe_unused]] std::align_val_t align, [[maybe_unused]] const std::nothrow_t&) noexcept
 		{
 			NOX_ASSERT(false, u"nothrow newはサポートされていません");
 		}
 
-		inline static void operator delete[](void* ptr, std::align_val_t align, const std::nothrow_t&) noexcept
+		inline static void operator delete[]([[maybe_unused]] void* ptr, [[maybe_unused]] std::align_val_t align, [[maybe_unused]] const std::nothrow_t&) noexcept
 		{
 			NOX_ASSERT(false, u"nothrow deleteはサポートされていません");
 		}

@@ -2,16 +2,12 @@
 
 #include	"pch.h"
 #if NOX_DEVELOP
-#include	"system.g.h"
+#include	"remote_system.g.h"
 #include	"../../application.h"
 #include	"../../attribute_dev_common.h"
 #include	"../../component.h"
-#include	"../../entity_node.h"
-#include	"../../node.h"
 #include	"../../scene_manager.h"
-#include	"../../scene_node.h"
 #include	"../../scene_view.h"
-#include	"../../transform.h"
 #include	"../editor_remote_server.h"
 #include	"../socket_stream_utility.h"
 #include	"../../../kernel/memory/memory_profile.h"
@@ -52,18 +48,6 @@ namespace
 			return;
 		}
 		text.append(reinterpret_cast<const char8_t*>(line), static_cast<std::size_t>(length));
-	}
-
-	void UnregisterEntityComponents(nox::dev::editor_remote::EditorRemoteServer& server, nox::EntityNode& entity_node)
-	{
-		entity_node.EnumComponents([&server](nox::Component& component)
-			{
-				const nox::int64 component_remote_instance_id = server.FindRemoteInstanceId(component);
-				if (component_remote_instance_id != 0)
-				{
-					server.UnregisterRemoteInstance(component_remote_instance_id);
-				}
-			});
 	}
 }
 
@@ -112,19 +96,19 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 	}
 
 	nox::IntrusivePtr<nox::Object> object;
-	if (class_info->GetType() == nox::reflection::Typeof<nox::EntityNode>())
-	{
-		nox::IntrusivePtr<nox::EntityNode> entity_node = nox::EntityNode::Create(u8"");
-		object = std::move(entity_node);
-	}
-	else
-	{
-		NOX_ASSERT(class_info->IsSubclassOf<nox::Object>(), u"SyncQuery type must inherit Object: {0}", GetFqn());
-		nox::Object* const created_object = static_cast<nox::Object*>(class_info->GetType().CreateObject());
-		nox::Object* const managed_object = nox::reflection::AsCast<nox::Object*>(created_object);
-		NOX_ASSERT(managed_object != nullptr, u"SyncQuery instance creation failed: {0}", GetFqn());
-		object.Reset(managed_object);
-	}
+	//if (class_info->GetType() == nox::reflection::Typeof<nox::EntityNode>())
+	//{
+	//	nox::IntrusivePtr<nox::EntityNode> entity_node = nox::EntityNode::Create(u8"");
+	//	object = std::move(entity_node);
+	//}
+	//else
+	//{
+	//	NOX_ASSERT(class_info->IsSubclassOf<nox::Object>(), u"SyncQuery type must inherit Object: {0}", GetFqn());
+	//	nox::Object* const created_object = static_cast<nox::Object*>(class_info->GetType().CreateObject());
+	//	nox::Object* const managed_object = nox::reflection::AsCast<nox::Object*>(created_object);
+	//	NOX_ASSERT(managed_object != nullptr, u"SyncQuery instance creation failed: {0}", GetFqn());
+	//	object.Reset(managed_object);
+	//}
 
 	if (object == nullptr)
 	{
@@ -132,10 +116,10 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 		return response;
 	}
 
-	if (nox::Node* const node = nox::reflection::AsCast<nox::Node*>(object.Get()))
+	/*if (nox::Node* const node = nox::reflection::AsCast<nox::Node*>(object.Get()))
 	{
 		node->SetApplication(application);
-	}
+	}*/
 
 	nox::dev::editor_remote::SetPropertiesFromBytes(GetPropertyByteBuffer(), *object.Get());
 	server.RegisterEditorOwnedRemoteInstance(*object.Get(), remote_instance_id);
@@ -145,49 +129,50 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::AddEntityNodeQuery::Execute(nox::Application& application, std::span<nox::uint8> storage)const
 {
-	nox::dev::editor_remote::EditorRemoteServer& server = application.GetSystem<nox::dev::editor_remote::EditorRemoteServerSystem>().GetServer();
-	nox::SceneNode& main_scene = application.GetSystem<nox::SceneManager>().GetMainScene();
-	const nox::int64 remote_instance_id = GetRemoteInstanceId();
-	NOX_ASSERT(remote_instance_id > 0, u"Editor owned EntityNode id must be positive. id:{0}", remote_instance_id);
-	auto response = nox::PlacementObject<nox::dev::editor_remote::AddEntityNodeResponse>::Construct(storage);
-	response->SetRemoteInstanceId(remote_instance_id);
+	//nox::dev::editor_remote::EditorRemoteServer& server = application.GetSystem<nox::dev::editor_remote::EditorRemoteServerSystem>().GetServer();
+	//nox::SceneNode& main_scene = application.GetSystem<nox::SceneManager>().GetMainScene();
+	//const nox::int64 remote_instance_id = GetRemoteInstanceId();
+	//NOX_ASSERT(remote_instance_id > 0, u"Editor owned EntityNode id must be positive. id:{0}", remote_instance_id);
+	//auto response = nox::PlacementObject<nox::dev::editor_remote::AddEntityNodeResponse>::Construct(storage);
+	//response->SetRemoteInstanceId(remote_instance_id);
 
-	nox::Object* registered_object = server.FindRemoteInstance(remote_instance_id);
-	nox::EntityNode* entity_node = registered_object != nullptr ? static_cast<nox::EntityNode*>(registered_object) : nullptr;
-	if (entity_node == nullptr)
-	{
-		nox::IntrusivePtr<nox::EntityNode> created_entity_node = nox::EntityNode::Create(GetName());
-		entity_node = created_entity_node.Get();
-		entity_node->SetApplication(application);
-		server.RegisterEditorOwnedRemoteInstance(*entity_node, remote_instance_id);
-		response->SetCreated(true);
-	}
-	else
-	{
-		entity_node->SetName(GetName());
-	}
+	//nox::Object* registered_object = server.FindRemoteInstance(remote_instance_id);
+	//nox::EntityNode* entity_node = registered_object != nullptr ? static_cast<nox::EntityNode*>(registered_object) : nullptr;
+	//if (entity_node == nullptr)
+	//{
+	//	nox::IntrusivePtr<nox::EntityNode> created_entity_node = nox::EntityNode::Create(GetName());
+	//	entity_node = created_entity_node.Get();
+	//	entity_node->SetApplication(application);
+	//	server.RegisterEditorOwnedRemoteInstance(*entity_node, remote_instance_id);
+	//	response->SetCreated(true);
+	//}
+	//else
+	//{
+	//	entity_node->SetName(GetName());
+	//}
 
-	nox::Node* parent = &main_scene;
-	const nox::int64 parent_remote_instance_id = GetParentRemoteInstanceId();
-	if (parent_remote_instance_id != 0)
-	{
-		nox::Object* const parent_object = server.FindRemoteInstance(parent_remote_instance_id);
-		parent = parent_object != nullptr ? static_cast<nox::Node*>(parent_object) : nullptr;
-		NOX_ASSERT(parent != nullptr, u"Parent EntityNode was not registered. id:{0}", parent_remote_instance_id);
-		if (parent == nullptr)
-		{
-			parent = &main_scene;
-		}
-	}
+	//nox::Node* parent = &main_scene;
+	//const nox::int64 parent_remote_instance_id = GetParentRemoteInstanceId();
+	//if (parent_remote_instance_id != 0)
+	//{
+	//	nox::Object* const parent_object = server.FindRemoteInstance(parent_remote_instance_id);
+	//	parent = parent_object != nullptr ? static_cast<nox::Node*>(parent_object) : nullptr;
+	//	NOX_ASSERT(parent != nullptr, u"Parent EntityNode was not registered. id:{0}", parent_remote_instance_id);
+	//	if (parent == nullptr)
+	//	{
+	//		parent = &main_scene;
+	//	}
+	//}
 
-	main_scene.AddEntity(*entity_node, parent);
-	response->SetAttached(true);
-	return response;
+	//main_scene.AddEntity(*entity_node, parent);
+	//response->SetAttached(true);
+	//return response;
+	return {};
 }
 
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::AddComponentQuery::Execute(nox::Application& application, std::span<nox::uint8> storage)const
 {
-	nox::dev::editor_remote::EditorRemoteServer& server = application.GetSystem<nox::dev::editor_remote::EditorRemoteServerSystem>().GetServer();
+	/*nox::dev::editor_remote::EditorRemoteServer& server = application.GetSystem<nox::dev::editor_remote::EditorRemoteServerSystem>().GetServer();
 	const nox::int64 remote_instance_id = GetRemoteInstanceId();
 	NOX_ASSERT(remote_instance_id > 0, u"Editor owned Component id must be positive. id:{0}", remote_instance_id);
 	auto response = nox::PlacementObject<nox::dev::editor_remote::AddComponentResponse>::Construct(storage);
@@ -235,12 +220,13 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 
 	nox::dev::editor_remote::SetPropertiesFromBytes(GetPropertyByteBuffer(), *component);
 	response->SetAdded(component->IsValid());
-	return response;
+	return response;*/
+	return {};
 }
 
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::DestroyEntityNodeQuery::Execute(nox::Application& application, std::span<nox::uint8>)const
 {
-	nox::dev::editor_remote::EditorRemoteServer& server = application.GetSystem<nox::dev::editor_remote::EditorRemoteServerSystem>().GetServer();
+	/*nox::dev::editor_remote::EditorRemoteServer& server = application.GetSystem<nox::dev::editor_remote::EditorRemoteServerSystem>().GetServer();
 	nox::Object* const object = server.FindRemoteInstance(GetRemoteInstanceId());
 	if (object == nullptr)
 	{
@@ -257,7 +243,8 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 	UnregisterEntityComponents(server, *entity_node);
 	application.GetSystem<nox::SceneManager>().GetMainScene().RemoveEntity(*entity_node);
 	server.UnregisterRemoteInstance(GetRemoteInstanceId());
-	return nullptr;
+	return nullptr;*/
+	return {};
 }
 
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::AutoSyncQuery::Execute(nox::Application& application, std::span<nox::uint8> storage)const
@@ -444,4 +431,10 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 	response->SetSnapshotText(text);
 	return response;
 }
+
+nox::PlacementObject<nox::dev::editor_remote::Response>	nox::dev::editor_remote::EndSyncQuery::Execute(nox::Application& application, std::span<nox::uint8> storage)const
+{
+	return nullptr;
+}
+
 #endif // NOX_DEVELOP

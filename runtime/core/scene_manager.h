@@ -7,7 +7,6 @@
 
 namespace nox
 {
-	class SceneNode;
 	class SceneView;
 	class Application;
 
@@ -18,7 +17,6 @@ namespace nox
 		SceneManager()noexcept;
 		~SceneManager()override;
 
-		inline nox::SceneNode& GetMainScene() noexcept { return *main_scene_; }
 		inline nox::SceneView& GetMainSceneView() noexcept { return *main_scene_view_; }
 		inline const nox::SceneView& GetMainSceneView()const noexcept { return *main_scene_view_; }
 
@@ -45,7 +43,6 @@ namespace nox
 		};
 
 	private:
-		nox::SceneNode* main_scene_;
 		nox::SceneView* main_scene_view_;
 
 		nox::Vector<std::reference_wrapper<nox::SceneView>> scene_view_list_;

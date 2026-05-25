@@ -14,12 +14,6 @@ namespace Core.UI.ViewModels
 		#endregion
 
 		#region 公開プロパティ
-		public Core.RuntimeWrapper.SceneView? MainView
-		{
-			get => field;
-			set => SetProperty(ref field, value);
-		}
-
 		public IntPtr MainWindowHandle
 		{
 			get => field;
@@ -84,7 +78,7 @@ namespace Core.UI.ViewModels
 				return;
 			}
 
-			MainView = _RuntimeSession.MainSceneView;
+			//MainView = _RuntimeSession.MainSceneView;
 			MainWindowHandle = _RuntimeSession.MainSceneViewWindowHandle;
 			UpdateDebugStatus();
 		}

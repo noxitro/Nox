@@ -1,7 +1,7 @@
 ﻿//	Copyright (c) 2026 NOX ENGINE All rights reserved.
 
 #include	"pch.h"
-#include	"log.g.h"
+#include	"remote_log.g.h"
 
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::SendLog::Execute(nox::Application&, std::span<nox::uint8> storage)const
 {

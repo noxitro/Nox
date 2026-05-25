@@ -141,7 +141,7 @@ namespace Core.RuntimeRemote
 			Invalid,
 			PrimitiveType,
 			RuntimeObject,
-			RuntimeManagedObject,
+			//RuntimeManagedObject,
 			String,
 			EditorType,
 		}
@@ -319,7 +319,6 @@ namespace Core.RuntimeRemote
 							switch (prop.Kind)
 							{
 								case PropertyTypeKind.RuntimeObject:
-								case PropertyTypeKind.RuntimeManagedObject:
 									break;
 								//	runtime wrapper以外は前方宣言不要
 								default:
@@ -758,7 +757,7 @@ namespace Core.RuntimeRemote
 
 		private static RuntimePropertyInfo CreatePropertyInfo(System.Reflection.PropertyInfo sourceProperty)
 		{
-			System.Type managedObjectType = typeof(Core.RuntimeWrapper.ManagedObject);
+			System.Type managedObjectType = typeof(Core.RuntimeObject);
 
 			System.Type propertyType = sourceProperty.PropertyType;
 			System.TypeCode typeCode = Type.GetTypeCode(propertyType);
@@ -806,32 +805,32 @@ namespace Core.RuntimeRemote
 				propertyTypeKind = PropertyTypeKind.String;
 			}
 			//	fixed array
-            else if (sourceProperty.GetCustomAttribute<Core.RuntimeRemote.Attributes.FixedArrayAttribute>() is var fixedArrayAttr && fixedArrayAttr != null)
-            {
+			else if (sourceProperty.GetCustomAttribute<Core.RuntimeRemote.Attributes.FixedArrayAttribute>() is var fixedArrayAttr && fixedArrayAttr != null)
+			{
 				//	配列型のはずなので、ElementTypeを得る
 				var elementType = propertyType.GetElementType();
 				Nox.Util.Assert(elementType != null, $"配列型ではありません:{propertyType.FullName}");
 
-                var runtimePrimitiveTypeFqn = GetRuntimePrimitiveType(elementType);
-                if (runtimePrimitiveTypeFqn != string.Empty)
+				var runtimePrimitiveTypeFqn = GetRuntimePrimitiveType(elementType);
+				if (runtimePrimitiveTypeFqn != string.Empty)
 				{
-                    typeFqn = $"std::array<{runtimePrimitiveTypeFqn}, {fixedArrayAttr.Length}>";
-                }
+					typeFqn = $"std::array<{runtimePrimitiveTypeFqn}, {fixedArrayAttr.Length}>";
+				}
 				else if (elementType.IsPrimitive)
 				{
-                    typeFqn = $"std::array<{Core.RuntimeTypeUtil.GetPrimitiveTypeName(Type.GetTypeCode(elementType)).ToString()}, {fixedArrayAttr.Length}>";
-                }
+					typeFqn = $"std::array<{Core.RuntimeTypeUtil.GetPrimitiveTypeName(Type.GetTypeCode(elementType)).ToString()}, {fixedArrayAttr.Length}>";
+				}
 				else
 				{
 					typeFqn = $"std::array<{elementType.Name}, {fixedArrayAttr.Length}>";
-                }
-                
-                memberDeclTypeName = typeFqn;
-                getterTypeFqn = setterTypeFqn = $"const {typeFqn}&";
-                propertyTypeKind = PropertyTypeKind.PrimitiveType;
-            }
-            //	string_view
-            else if (sourceProperty.GetCustomAttribute<Core.RuntimeRemote.Attributes.StringViewAttribute>() is var svAttr && svAttr != null)
+				}
+
+				memberDeclTypeName = typeFqn;
+				getterTypeFqn = setterTypeFqn = $"const {typeFqn}&";
+				propertyTypeKind = PropertyTypeKind.PrimitiveType;
+			}
+			//	string_view
+			else if (sourceProperty.GetCustomAttribute<Core.RuntimeRemote.Attributes.StringViewAttribute>() is var svAttr && svAttr != null)
 			{
 				typeFqn = "std::u8string_view";
 				memberDeclTypeName = typeFqn;
@@ -852,19 +851,11 @@ namespace Core.RuntimeRemote
 				setterTypeFqn = $"{typeFqn}*";
 				getterTypeFqn = $"{typeFqn}*";
 
-				if (managedObjectType.IsAssignableFrom(propertyType))
-				{
-					propertyTypeKind = PropertyTypeKind.RuntimeObject;
-					memberDeclTypeName = "nox::IntrusivePtr<nox::ManagedObject>";
+				propertyTypeKind = PropertyTypeKind.RuntimeObject;
+				memberDeclTypeName = "nox::IntrusivePtr<nox::ManagedObject>";
 
-					getterStr = $"reinterpret_cast<{typeFqn}*>({snakeCaseName}.Get())";
-					setterStr = $"{snakeCaseName} = reinterpret_cast<{typeFqn}*>(value)";
-				}
-				else
-				{
-					propertyTypeKind = PropertyTypeKind.RuntimeManagedObject;
-					memberDeclTypeName = $"{typeFqn}*";
-				}
+				getterStr = $"reinterpret_cast<{typeFqn}*>({snakeCaseName}.Get())";
+				setterStr = $"{snakeCaseName} = reinterpret_cast<{typeFqn}*>(value)";
 			}
 			//	other
 			else

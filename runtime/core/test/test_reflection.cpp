@@ -4,11 +4,6 @@
 ///	@brief	test_reflection
 #include	"pch.h"
 #include	"test_reflection.h"
-
-#include	"entity_node.h"
-#include	"test_behavior.h"
-#include	"transform.h"
-
 #include	"../reflection_generated/support_functions.h"
 
 

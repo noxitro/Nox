@@ -3,7 +3,7 @@
 ///	@file	client.h
 ///	@brief	client
 #pragma once
-#include	"entity.h"
+#include	"net_entity.h"
 namespace nox::dev::net
 {
 	/*enum class ConnectionState : nox::uint8

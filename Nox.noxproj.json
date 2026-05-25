@@ -1,0 +1,15 @@
+{
+  "AssetFolderName": "Assets",
+  "RuntimeRootRelativePath": "runtime",
+  "RuntimeSettings": {
+    "Core.ProjectSettingRuntimeCore": {
+      "Name": "Core"
+    }
+  },
+  "EditorSettings": {
+    "Core.ProjectSettingEditorCore": {
+      "Name": "Core",
+      "VSAttachWithStartup": false
+    }
+  }
+}

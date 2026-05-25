@@ -71,7 +71,13 @@ namespace nox
 
 		}
 
-		
+		template<class T>
+		void SetResource() {}
+
+		template<class T>
+		T* TryGetResource()const { return nullptr; }
+
+
 	private:
 		void Init();
 		void Update();
@@ -93,10 +99,10 @@ namespace nox
 
 	private:
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
-		alignas(64) nox::Atomic<nox::uint64> free_entity_head_;
+		nox::Atomic<nox::uint64> free_entity_head_;
 
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
-		alignas(64) nox::Atomic<nox::uint32> next_entity_index_;
+		nox::Atomic<nox::uint32> next_entity_index_;
 
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
 		nox::World::EntityRecordPage first_entity_record_page_;

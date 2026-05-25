@@ -37,7 +37,7 @@
              x:Name="RuntimeSceneView"
              Grid.Row="1"
               WindowHandle="{Binding MainWindowHandle}"
-              SceneView="{Binding MainView}"
+            
               >
 
         </local:RutnimeSceneView>

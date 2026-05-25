@@ -14,6 +14,11 @@ namespace nox
 
 	};
 
+	class Component : public nox::Object, IComponentData
+	{
+		NOX_DECLARE_OBJECT(Component, nox::Object);
+	};
+
 	template<class T>
 	inline consteval bool IsComponentDataType()noexcept
 	{
@@ -24,29 +29,6 @@ namespace nox
 			std::is_default_constructible_v<T>
 			;
 	}
-
-	class EntityNode;
-	class Component : public nox::Object, nox::IComponentData
-	{
-		NOX_DECLARE_OBJECT(Component, nox::Object);
-	public:
-		inline class nox::EntityNode& GetEntityNode()noexcept { return nox::util::Deref(owner_); }
-		inline const class nox::EntityNode& GetEntityNode()const noexcept { return nox::util::Deref(owner_); }
-
-		void	SetOwner(nox::EntityNode& owner)noexcept;
-		virtual	void	Loaded() { return; }
-		virtual void	UnLoaded() { return; }
-
-		/// @brief 有効かどうか
-		inline bool IsValid()const noexcept { return owner_ != nullptr; }
-	protected:
-		inline constexpr Component()noexcept :
-			owner_(nullptr)
-		{}
-
-	private:
-		nox::EntityNode* owner_;
-	};
 
 	template<class T>
 	inline consteval bool IsComponentType()noexcept

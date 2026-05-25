@@ -80,7 +80,7 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="dev\net\entity.h">
+    <ClInclude Include="dev\net\net_entity.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -108,8 +108,8 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="dev\remote\log.g.h" />
-    <ClInclude Include="dev\remote\system.g.h" />
+    <ClInclude Include="dev\remote\remote_log.g.h" />
+    <ClInclude Include="dev\remote\remote_system.g.h" />
     <ClInclude Include="dev\remote\test.g.h">
       <SubType>
       </SubType>
@@ -134,10 +134,6 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="entity_node.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
     <ClInclude Include="entry_point.h">
       <SubType>
       </SubType>
@@ -151,10 +147,6 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="log_service.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="node.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -175,10 +167,6 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="scene_manager.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="scene_node.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -222,10 +210,6 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="test\test_behavior.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
     <ClInclude Include="test\test_reflection.h">
       <SubType>
       </SubType>
@@ -235,10 +219,6 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="test\utility.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="transform.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -313,7 +293,7 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="dev\net\entity.cpp">
+    <ClCompile Include="dev\net\net_entity.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -337,10 +317,10 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="dev\remote\log.cpp" />
-    <ClCompile Include="dev\remote\log.g.cpp" />
-    <ClCompile Include="dev\remote\system.cpp" />
-    <ClCompile Include="dev\remote\system.g.cpp" />
+    <ClCompile Include="dev\remote\remote_log.cpp" />
+    <ClCompile Include="dev\remote\remote_log.g.cpp" />
+    <ClCompile Include="dev\remote\remote_system.cpp" />
+    <ClCompile Include="dev\remote\remote_system.g.cpp" />
     <ClCompile Include="dev\remote\test.g.cpp">
       <SubType>
       </SubType>
@@ -365,10 +345,6 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="entity_node.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
     <ClCompile Include="entry_point.cpp">
       <SubType>
       </SubType>
@@ -382,10 +358,6 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="log_service.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="node.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -406,10 +378,6 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="scene_manager.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="scene_node.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -460,19 +428,11 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="test\test_behavior.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
     <ClCompile Include="test\test_reflection.cpp">
       <SubType>
       </SubType>
     </ClCompile>
     <ClCompile Include="test\utility.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="transform.cpp">
       <SubType>
       </SubType>
     </ClCompile>

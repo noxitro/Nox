@@ -26,7 +26,7 @@ namespace Core.RuntimeRemote.Attributes
 		/// </summary>
 		public string Path { get; init; }
 
-		public string NamespaceStr { get; init; }
+        public string NamespaceStr { get; init; }
 
 		/// <summary>
 		/// execute関数をcpp側で実装するか
@@ -46,7 +46,7 @@ namespace Core.RuntimeRemote.Attributes
 	internal sealed class CoreRuntimeRemoteCodeAttribute : RuntimeRemoteCodeAttribute
 	{
 		public CoreRuntimeRemoteCodeAttribute(string filename, bool execute = true, bool enabledSend = true, bool enabledRecv = true, string comment = "")
-			: base($"core/dev/remote/{filename}", "nox::dev::editor_remote", execute, enabledSend, enabledRecv, comment)
+			: base($"core/dev/remote/remote_{filename}", "nox::dev::editor_remote", execute, enabledSend, enabledRecv, comment)
 		{
 		}
 	}

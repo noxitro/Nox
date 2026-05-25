@@ -24,7 +24,7 @@ namespace Core
 		private EventHandler? _MainSceneViewChanged;
 		private Nox.DelegateHandle _HandleRuntimeConnected = default;
 		private readonly Core.Net.RuntimeRemoteClient _RemoteClient;
-		private Core.RuntimeWrapper.SceneView? _MainSceneView;
+		//private Core.RuntimeWrapper.SceneView? _MainSceneView;
 		private IntPtr _MainSceneViewWindowHandle;
 		private bool _IsMainSceneViewQueryPending;
 		private bool _Disposed;
@@ -45,7 +45,7 @@ namespace Core
 			"runtime.exe"));
 		public Process? Process => _Process;
 		public Core.Net.RuntimeRemoteClient RemoteClient => _RemoteClient;
-		public Core.RuntimeWrapper.SceneView? MainSceneView => _MainSceneView;
+	//	public Core.RuntimeWrapper.SceneView? MainSceneView => _MainSceneView;
 		public IntPtr MainSceneViewWindowHandle => _MainSceneViewWindowHandle;
 		public event EventHandler? ProcessChanged
 		{
@@ -169,11 +169,11 @@ namespace Core
 				});
 		}
 
-		private void SetMainSceneView(Core.RuntimeWrapper.SceneView? sceneView)
-		{
-			_MainSceneView = sceneView;
-			_MainSceneViewChanged?.Invoke(this, EventArgs.Empty);
-		}
+		//private void SetMainSceneView(Core.RuntimeWrapper.SceneView? sceneView)
+		//{
+		//	_MainSceneView = sceneView;
+		//	_MainSceneViewChanged?.Invoke(this, EventArgs.Empty);
+		//}
 
 		private void SetMainSceneViewWindowHandle(IntPtr windowHandle)
 		{
@@ -198,7 +198,7 @@ namespace Core
 			TryWaitForExit(process, 5000);
 
 			process.Dispose();
-			SetMainSceneView(null);
+			//SetMainSceneView(null);
 			SetMainSceneViewWindowHandle(IntPtr.Zero);
 			_ProcessChanged?.Invoke(this, EventArgs.Empty);
 		}

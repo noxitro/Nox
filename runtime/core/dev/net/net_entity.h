@@ -31,7 +31,7 @@ namespace nox::dev::net
 
 	protected:
 		virtual void OnSent() {}
-		virtual void OnReceive(nox::Application& application) {}
+		virtual void OnReceive([[maybe_unused]] nox::Application& application) {}
 
 	protected:
 		static inline nox::dev::net::port_t base_port_ = 0;

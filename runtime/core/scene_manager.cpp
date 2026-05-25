@@ -6,11 +6,9 @@
 #include	"scene_manager.h"
 
 #include	"application.h"
-#include	"scene_node.h"
 #include	"scene_view.h"
 
 nox::SceneManager::SceneManager()noexcept:
-	main_scene_(nullptr),
 	main_scene_view_(nullptr)
 {
 
@@ -23,8 +21,6 @@ nox::SceneManager::~SceneManager()
 
 void	nox::SceneManager::Initialize(nox::Application& application)
 {
-	main_scene_ = new SceneNode();
-	main_scene_->SetApplication(application);
 
 	//	windowを生成
 	{
@@ -52,7 +48,6 @@ void	nox::SceneManager::Update(nox::Application& application)
 
 void	nox::SceneManager::Finalize(nox::Application& application)
 {
-	nox::util::SafeDelete(main_scene_);
 	nox::util::SafeDelete(main_scene_view_);
 }
 

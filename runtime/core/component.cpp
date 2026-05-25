@@ -4,11 +4,3 @@
 ///	@brief	component
 #include	"pch.h"
 #include	"component.h"
-
-#include	"entity_node.h"
-
-void	nox::Component::SetOwner(nox::EntityNode& owner)noexcept
-{
-	NOX_ASSERT(owner_ == nullptr, u8"既にGameObjectをアタッチ済みです");
-	owner_ = &owner;
-}
