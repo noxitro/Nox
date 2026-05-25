@@ -8,7 +8,7 @@ namespace app
 {
 	class TestBehavior : public nox::Behavior
 	{
-		NOX_DECLARE_MANAGED_OBJECT(TestBehavior, nox::Behavior);
+		NOX_DECLARE_OBJECT(TestBehavior, nox::Behavior);
 	public:
 		
 	};

@@ -1,0 +1,17 @@
+// Copyright (C) 2026 NOX ENGINE All rights reserved.
+
+/// @file	entity.h
+/// @brief	entity
+#pragma once
+
+namespace nox
+{
+	struct EntityId
+	{
+		/// @brief スロット番号
+		nox::uint32 index;
+
+		/// @brief 世代番号(破棄/再利用で更新され、stale handleの検出に使う)
+		nox::uint32 generation;
+	};
+}

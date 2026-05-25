@@ -100,9 +100,8 @@ inline	void	nox::Application::Init()
 
 	nox::FixedVector<nox::EngineSystem*, 128> engine_system_list;
 	{
-		nox::FixedPmrArena<sizeof(nox::EngineSystem*) * 32> engine_system_dest_buffer_arena;
-		auto dest_buffer = engine_system_dest_buffer_arena.MakeVector<nox::EngineSystem*>();
-
+		nox::StackAllocVector<nox::EngineSystem*, 32> enginse_system_dest_buffer_vector;
+		std::pmr::vector dest_buffer = enginse_system_dest_buffer_vector.GetContainer();
 		for (const nox::EngineModule& entry : module_entry_list_)
 		{
 			entry.CreateEngineSystems(dest_buffer);
