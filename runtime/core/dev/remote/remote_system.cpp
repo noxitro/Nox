@@ -3,7 +3,7 @@
 #include	"pch.h"
 #if NOX_DEVELOP
 #include	"remote_system.g.h"
-#include	"../../application.h"
+#include	"../../world.h"
 #include	"../../attribute_dev_common.h"
 #include	"../../component.h"
 #include	"../../scene_manager.h"
@@ -51,15 +51,15 @@ namespace
 	}
 }
 
-nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::ResourceConvertQuery::Execute(nox::Application&, std::span<nox::uint8> storage)const
+nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::ResourceConvertQuery::Execute(nox::World&, std::span<nox::uint8> storage)const
 {
 	return nullptr;
 }
 
-nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::GetMainSceneView::Execute(nox::Application& application, std::span<nox::uint8> storage)const
+nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::GetMainSceneView::Execute(nox::World& world, std::span<nox::uint8> storage)const
 {
 	auto scene_view_info = nox::PlacementObject<nox::dev::editor_remote::SceneViewInfo>::Construct(storage);
-	nox::SceneManager& scene_manager = application.GetSystem<nox::SceneManager>();
+	nox::SceneManager& scene_manager = world.GetSystem<nox::SceneManager>();
 	auto& scene_view = scene_manager.GetMainSceneView();
 	auto window_handle = scene_view.GetWindow().GetNativeHandle();
 
@@ -67,9 +67,9 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 	return scene_view_info;
 }
 
-nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::SyncQuery::Execute(nox::Application& application, std::span<nox::uint8> storage)const
+nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::SyncQuery::Execute(nox::World& world, std::span<nox::uint8> storage)const
 {
-	nox::dev::editor_remote::EditorRemoteServer& server = application.GetSystem<nox::dev::editor_remote::EditorRemoteServerSystem>().GetServer();
+	nox::dev::editor_remote::EditorRemoteServer& server = world.GetSystem<nox::dev::editor_remote::EditorRemoteServerSystem>().GetServer();
 	const nox::int64 remote_instance_id = GetRemoteInstanceId();
 	NOX_ASSERT(remote_instance_id > 0, u"Editor owned remote instance id must be positive. id:{0}", remote_instance_id);
 	auto response = nox::PlacementObject<nox::dev::editor_remote::SyncResponse>::Construct(storage);
@@ -127,10 +127,10 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 	return response;
 }
 
-nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::AddEntityNodeQuery::Execute(nox::Application& application, std::span<nox::uint8> storage)const
+nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::AddEntityNodeQuery::Execute(nox::World& world, std::span<nox::uint8> storage)const
 {
-	//nox::dev::editor_remote::EditorRemoteServer& server = application.GetSystem<nox::dev::editor_remote::EditorRemoteServerSystem>().GetServer();
-	//nox::SceneNode& main_scene = application.GetSystem<nox::SceneManager>().GetMainScene();
+	//nox::dev::editor_remote::EditorRemoteServer& server = world.GetSystem<nox::dev::editor_remote::EditorRemoteServerSystem>().GetServer();
+	//nox::SceneNode& main_scene = world.GetSystem<nox::SceneManager>().GetMainScene();
 	//const nox::int64 remote_instance_id = GetRemoteInstanceId();
 	//NOX_ASSERT(remote_instance_id > 0, u"Editor owned EntityNode id must be positive. id:{0}", remote_instance_id);
 	//auto response = nox::PlacementObject<nox::dev::editor_remote::AddEntityNodeResponse>::Construct(storage);
@@ -170,9 +170,9 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 	return {};
 }
 
-nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::AddComponentQuery::Execute(nox::Application& application, std::span<nox::uint8> storage)const
+nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::AddComponentQuery::Execute(nox::World& world, std::span<nox::uint8> storage)const
 {
-	/*nox::dev::editor_remote::EditorRemoteServer& server = application.GetSystem<nox::dev::editor_remote::EditorRemoteServerSystem>().GetServer();
+	/*nox::dev::editor_remote::EditorRemoteServer& server = world.GetSystem<nox::dev::editor_remote::EditorRemoteServerSystem>().GetServer();
 	const nox::int64 remote_instance_id = GetRemoteInstanceId();
 	NOX_ASSERT(remote_instance_id > 0, u"Editor owned Component id must be positive. id:{0}", remote_instance_id);
 	auto response = nox::PlacementObject<nox::dev::editor_remote::AddComponentResponse>::Construct(storage);
@@ -224,9 +224,9 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 	return {};
 }
 
-nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::DestroyEntityNodeQuery::Execute(nox::Application& application, std::span<nox::uint8>)const
+nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::DestroyEntityNodeQuery::Execute(nox::World& world, std::span<nox::uint8>)const
 {
-	/*nox::dev::editor_remote::EditorRemoteServer& server = application.GetSystem<nox::dev::editor_remote::EditorRemoteServerSystem>().GetServer();
+	/*nox::dev::editor_remote::EditorRemoteServer& server = world.GetSystem<nox::dev::editor_remote::EditorRemoteServerSystem>().GetServer();
 	nox::Object* const object = server.FindRemoteInstance(GetRemoteInstanceId());
 	if (object == nullptr)
 	{
@@ -241,15 +241,15 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 	}
 
 	UnregisterEntityComponents(server, *entity_node);
-	application.GetSystem<nox::SceneManager>().GetMainScene().RemoveEntity(*entity_node);
+	world.GetSystem<nox::SceneManager>().GetMainScene().RemoveEntity(*entity_node);
 	server.UnregisterRemoteInstance(GetRemoteInstanceId());
 	return nullptr;*/
 	return {};
 }
 
-nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::AutoSyncQuery::Execute(nox::Application& application, std::span<nox::uint8> storage)const
+nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::AutoSyncQuery::Execute(nox::World& world, std::span<nox::uint8> storage)const
 {
-	nox::dev::editor_remote::EditorRemoteServer& server = application.GetSystem<nox::dev::editor_remote::EditorRemoteServerSystem>().GetServer();
+	nox::dev::editor_remote::EditorRemoteServer& server = world.GetSystem<nox::dev::editor_remote::EditorRemoteServerSystem>().GetServer();
 	auto response = nox::PlacementObject<nox::dev::editor_remote::AutoSyncResponse>::Construct(storage);
 	response->SetRemoteInstanceId(GetRemoteInstanceId());
 
@@ -268,9 +268,9 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 	return response;
 }
 
-nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::InvokeRuntimeActionQuery::Execute(nox::Application& application, std::span<nox::uint8> storage)const
+nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::InvokeRuntimeActionQuery::Execute(nox::World& world, std::span<nox::uint8> storage)const
 {
-	nox::dev::editor_remote::EditorRemoteServer& server = application.GetSystem<nox::dev::editor_remote::EditorRemoteServerSystem>().GetServer();
+	nox::dev::editor_remote::EditorRemoteServer& server = world.GetSystem<nox::dev::editor_remote::EditorRemoteServerSystem>().GetServer();
 	auto response = nox::PlacementObject<nox::dev::editor_remote::InvokeRuntimeActionResponse>::Construct(storage);
 	response->SetRemoteInstanceId(GetRemoteInstanceId());
 
@@ -323,19 +323,19 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 	return response;
 }
 
-nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::GetRuntimeDependencyGraphQuery::Execute(nox::Application& application, std::span<nox::uint8> storage)const
+nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::GetRuntimeDependencyGraphQuery::Execute(nox::World& world, std::span<nox::uint8> storage)const
 {
 	auto response = nox::PlacementObject<nox::dev::editor_remote::RuntimeDependencyGraphResponse>::Construct(storage);
 #if !NOX_MASTER
-	response->SetGraphText(application.BuildRuntimeDependencyGraphText());
+	response->SetGraphText(world.BuildRuntimeDependencyGraphText());
 #endif // !NOX_MASTER
 	return response;
 }
 
-nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::GetRemoteInstanceSnapshotQuery::Execute(nox::Application& application, std::span<nox::uint8> storage)const
+nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::GetRemoteInstanceSnapshotQuery::Execute(nox::World& world, std::span<nox::uint8> storage)const
 {
 	auto response = nox::PlacementObject<nox::dev::editor_remote::RemoteInstanceSnapshotResponse>::Construct(storage);
-	nox::dev::editor_remote::EditorRemoteServer& server = application.GetSystem<nox::dev::editor_remote::EditorRemoteServerSystem>().GetServer();
+	nox::dev::editor_remote::EditorRemoteServer& server = world.GetSystem<nox::dev::editor_remote::EditorRemoteServerSystem>().GetServer();
 
 	std::u8string text;
 	text.reserve(3072);
@@ -364,7 +364,7 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 	return response;
 }
 
-nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::GetMemoryProfilerSnapshotQuery::Execute(nox::Application&, std::span<nox::uint8> storage)const
+nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::GetMemoryProfilerSnapshotQuery::Execute(nox::World&, std::span<nox::uint8> storage)const
 {
 	auto response = nox::PlacementObject<nox::dev::editor_remote::MemoryProfilerSnapshotResponse>::Construct(storage);
 
@@ -432,7 +432,7 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 	return response;
 }
 
-nox::PlacementObject<nox::dev::editor_remote::Response>	nox::dev::editor_remote::EndSyncQuery::Execute(nox::Application& application, std::span<nox::uint8> storage)const
+nox::PlacementObject<nox::dev::editor_remote::Response>	nox::dev::editor_remote::EndSyncQuery::Execute(nox::World& world, std::span<nox::uint8> storage)const
 {
 	return nullptr;
 }

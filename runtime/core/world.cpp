@@ -4,7 +4,12 @@
 /// @brief	world
 #include "pch.h"
 #include "world.h"
-#include "system.h"
+
+#include "engine_module.h"
+#include "log_id.h"
+
+#include <charconv>
+#include <optional>
 
 namespace nox
 {
@@ -45,23 +50,77 @@ namespace nox
 		{
 			return static_cast<nox::uint32>(head >> 32u);
 		}
+
+#if !NOX_MASTER
+		[[nodiscard]]
+		constexpr std::u8string_view to_graph_phase_name(const nox::SystemPhaseType phase_type) noexcept
+		{
+			switch (phase_type)
+			{
+			case nox::SystemPhaseType::Init: return u8"Init";
+			case nox::SystemPhaseType::Start: return u8"Start";
+			case nox::SystemPhaseType::Update: return u8"Update";
+			case nox::SystemPhaseType::Terminate: return u8"Terminate";
+			default: return u8"Unknown";
+			}
+		}
+
+		struct RuntimeGraphTextBuilder
+		{
+			std::array<nox::char8, 3072> buffer{};
+			size_t length = 0;
+
+			void Append(std::u8string_view value)noexcept
+			{
+				const size_t writable_length = std::min(value.length(), buffer.size() - length - 1);
+				std::ranges::copy_n(value.data(), writable_length, buffer.data() + length);
+				length += writable_length;
+				buffer[length] = u8'\0';
+			}
+
+			void Append(std::string_view value)noexcept
+			{
+				const size_t writable_length = std::min(value.length(), buffer.size() - length - 1);
+				for (size_t i = 0; i < writable_length; ++i)
+				{
+					buffer[length + i] = static_cast<nox::char8>(value[i]);
+				}
+				length += writable_length;
+				buffer[length] = u8'\0';
+			}
+
+			void Append(nox::uint32 value)noexcept
+			{
+				std::array<char, 16> temp{};
+				const auto [ptr, ec] = std::to_chars(temp.data(), temp.data() + temp.size(), value);
+				if (ec == std::errc{})
+				{
+					Append(std::string_view(temp.data(), static_cast<size_t>(ptr - temp.data())));
+				}
+			}
+		};
+#endif // !NOX_MASTER
 	}
-
-	struct World::Archtype
-	{
-
-	};
 }
 
-nox::World::World():
+nox::World::World() :
 	free_entity_head_(make_free_entity_head(k_invalid_entity_index, 0u)),
 	next_entity_index_(0u),
 	first_entity_record_page_(),
 	entity_record_pages_{},
 	entity_record_page_mutex_(),
-	studio_mode_(false),
+	stop_watch_(),
+	frame_counter_(0u),
+	elapsed_milli_seconds_(0.0f),
+	next_elapsed_milli_seconds_(0.0f),
+	target_frame_rate_(60),
+	enabled_vsync_(true),
+	studio_mode_(nox::os::ContainsCommandLineArgKey(u"--studio")),
 	kill_(false),
-	enabled_vsync_(true)
+	modules_(),
+	systems_(),
+	system_map_(),
+	system_phase_table_{}
 {
 	for (auto&& entity_record_page : entity_record_pages_)
 	{
@@ -73,11 +132,427 @@ nox::World::World():
 
 nox::World::~World()
 {
+	for (nox::SystemBase* const system : systems_)
+	{
+		delete system;
+	}
+
+	for (nox::EngineModule* const module : modules_)
+	{
+		delete module;
+	}
+
 	for (nox::uint32 page_index = 1u; page_index < k_max_entity_page_count; ++page_index)
 	{
 		delete entity_record_pages_[page_index].load(std::memory_order_relaxed);
 	}
 }
+
+void nox::World::Run()
+{
+	Init();
+	stop_watch_.Start();
+
+	nox::os::Thread game_thread;
+	game_thread.SetThreadName(u"Game");
+	game_thread.Dispatch([this]()
+		{
+			ExecutePhase(nox::SystemPhaseType::Init);
+			ExecutePhase(nox::SystemPhaseType::Start);
+
+			while (!kill_)
+			{
+				Update();
+			}
+
+			ExecutePhase(nox::SystemPhaseType::Terminate);
+		});
+
+	while (nox::os::Update())
+	{
+	}
+
+	kill_ = true;
+	game_thread.Wait();
+	Exit();
+}
+
+void nox::World::SetVSync(bool flag)noexcept
+{
+	enabled_vsync_ = flag;
+}
+
+nox::SystemBase* nox::World::FindSystem(const nox::reflection::Type& type)const noexcept
+{
+	const auto it = system_map_.find(&type);
+	if (it == system_map_.end())
+	{
+		return nullptr;
+	}
+	return it->second;
+}
+
+nox::SystemBase& nox::World::GetSystem(const nox::reflection::Type& type)const
+{
+	nox::SystemBase* const system = FindSystem(type);
+	if (system != nullptr)
+	{
+		return *system;
+	}
+
+	NOX_ASSERT(false, u8"システムが見つかりませんでした: {0}", type.GetTypeName());
+	std::abort();
+}
+
+void nox::World::Init()
+{
+	nox::reflection::ForeachDerivedClassInfoList(
+		nox::reflection::Typeof<nox::EngineModule>(),
+		[this](const nox::reflection::ClassInfo& class_info)
+		{
+			auto* const module = static_cast<nox::EngineModule*>(class_info.GetType().CreateObject());
+			NOX_ASSERT(module != nullptr, u8"EngineModuleの生成に失敗しました: {0}", class_info.GetFullName());
+			if (module != nullptr)
+			{
+				modules_.emplace_back(module);
+			}
+		});
+
+	nox::FixedVector<nox::SystemBase*, 128> system_list;
+	{
+		nox::StackAllocVector<nox::SystemBase*, 32> system_dest_buffer_vector;
+		auto& dest_buffer = system_dest_buffer_vector.GetContainer();
+
+		for (const nox::EngineModule* const module : modules_)
+		{
+			module->CreateEngineSystems(dest_buffer);
+
+			for (nox::SystemBase* const system : dest_buffer)
+			{
+				if (system == nullptr)
+				{
+					NOX_ASSERT(false, u8"EngineSystemの生成結果にnullが含まれています");
+					continue;
+				}
+
+				const nox::reflection::Type& type = system->GetType();
+				if (system_map_.contains(&type))
+				{
+					NOX_ASSERT(false, u8"登録済み: {0}", type.GetTypeName());
+					delete system;
+					continue;
+				}
+
+				RegisterSystem(*system);
+				systems_.emplace_back(system);
+				system_list.PushBack(system);
+			}
+
+			dest_buffer.clear();
+		}
+	}
+
+	BuildExecuteNodeList(system_list);
+
+#if !NOX_MASTER
+	TraceExecuteNodeList();
+#endif // !NOX_MASTER
+}
+
+void nox::World::Update()
+{
+	elapsed_milli_seconds_ = stop_watch_.ElapsedMilliseconds();
+	if (enabled_vsync_)
+	{
+		if (elapsed_milli_seconds_ < next_elapsed_milli_seconds_)
+		{
+			nox::os::Thread::Sleep(1);
+			return;
+		}
+	}
+
+	ExecutePhase(nox::SystemPhaseType::Update);
+	++frame_counter_;
+
+	next_elapsed_milli_seconds_ += (1000.0f / static_cast<nox::float_t>(target_frame_rate_));
+	stop_watch_.Restart();
+}
+
+void nox::World::Exit()
+{
+	kill_ = true;
+	system_map_.clear();
+
+	for (auto& layer : system_phase_table_)
+	{
+		layer.clear();
+		layer.shrink_to_fit();
+	}
+}
+
+void nox::World::BuildExecuteNodeList(std::span<nox::SystemBase*> system_list)
+{
+	struct Node
+	{
+		std::reference_wrapper<nox::SystemBase> instance;
+		std::reference_wrapper<const nox::SystemBase::SystemPhase> phase;
+		std::span<const std::reference_wrapper<const nox::SystemBase::SystemPhase>> dependencies;
+		std::span<const std::reference_wrapper<const nox::SystemBase::SystemPhase>> depended;
+	};
+
+	for (nox::uint8 phase_index = 0; phase_index < nox::util::ToUnderlying(nox::SystemPhaseType::_Max); ++phase_index)
+	{
+		const auto current_phase_type = static_cast<nox::SystemPhaseType>(phase_index);
+
+		nox::Vector<Node> nodes;
+		for (nox::SystemBase* const system : system_list)
+		{
+			for (const nox::SystemBase::PhaseRegister& reg : system->GetPhaseRegisterList())
+			{
+				if (reg.GetPhase().type != current_phase_type)
+				{
+					continue;
+				}
+
+				nodes.push_back(Node{
+					*system,
+					reg.GetPhase(),
+					reg.GetDependencies(),
+					reg.GetDepended()
+					});
+			}
+		}
+
+		if (nodes.empty())
+		{
+			continue;
+		}
+
+		nox::UnorderedMap<const nox::SystemBase::SystemPhase*, nox::uint32> phase_to_index;
+		phase_to_index.reserve(nodes.size());
+		for (nox::uint32 i = 0; i < nodes.size(); ++i)
+		{
+			phase_to_index.emplace(&nodes[i].phase.get(), i);
+		}
+
+		auto& dest = system_phase_table_[phase_index];
+		dest.reserve(nodes.size());
+
+		nox::Vector<nox::Vector<nox::uint32>> dependency_indices(nodes.size());
+		for (nox::uint32 i = 0; i < nodes.size(); ++i)
+		{
+			for (const std::reference_wrapper<const nox::SystemBase::SystemPhase>& dep_ref : nodes[i].dependencies)
+			{
+				const auto it = phase_to_index.find(&dep_ref.get());
+				if (it == phase_to_index.end())
+				{
+					continue;
+				}
+				dependency_indices[i].push_back(it->second);
+			}
+
+			for (const std::reference_wrapper<const nox::SystemBase::SystemPhase>& depended_ref : nodes[i].depended)
+			{
+				const auto it = phase_to_index.find(&depended_ref.get());
+				if (it == phase_to_index.end())
+				{
+					continue;
+				}
+				dependency_indices[it->second].push_back(i);
+			}
+		}
+
+		nox::Vector<nox::uint8> states(nodes.size(), 0);
+		nox::Vector<nox::uint32> layer_indices(nodes.size(), 0);
+		nox::uint32 max_layer_index = 0;
+
+		auto visit = [&](nox::uint32 node_index, auto& self) -> void
+		{
+			if (states[node_index] == 2)
+			{
+				return;
+			}
+			if (states[node_index] == 1)
+			{
+				NOX_ASSERT(false, u8"Phase依存に循環があります: {0}", nodes[node_index].phase.get().name);
+				return;
+			}
+
+			states[node_index] = 1;
+			nox::uint32 max_dependency_layer = 0;
+			for (const nox::uint32 dependency_index : dependency_indices[node_index])
+			{
+				self(dependency_index, self);
+				max_dependency_layer = std::max(max_dependency_layer, layer_indices[dependency_index] + 1);
+			}
+
+			states[node_index] = 2;
+			layer_indices[node_index] = max_dependency_layer;
+			max_layer_index = std::max(max_layer_index, max_dependency_layer);
+		};
+
+		for (nox::uint32 i = 0; i < nodes.size(); ++i)
+		{
+			visit(i, visit);
+		}
+
+		for (nox::uint32 layer_index = 0; layer_index <= max_layer_index; ++layer_index)
+		{
+			for (nox::uint32 i = 0; i < nodes.size(); ++i)
+			{
+				if (layer_indices[i] != layer_index)
+				{
+					continue;
+				}
+
+				dest.push_back(ExecuteNode{ nodes[i].instance, nodes[i].phase, layer_index });
+			}
+		}
+	}
+}
+
+void nox::World::ExecutePhase(const nox::SystemPhaseType phase_type)
+{
+	const nox::Vector<ExecuteNode>& layers = system_phase_table_[nox::util::ToUnderlying(phase_type)];
+	for (const ExecuteNode& layer : layers)
+	{
+		std::invoke(layer.phase.get().func, &layer.instance.get(), *this);
+	}
+}
+
+void nox::World::RegisterSystem(nox::SystemBase& system)
+{
+	const nox::reflection::Type& type = system.GetType();
+	if (system_map_.contains(&type))
+	{
+		NOX_ASSERT(false, u8"登録済み: {0}", type.GetTypeName());
+		return;
+	}
+
+	system_map_.emplace(&type, &system);
+}
+
+#if !NOX_MASTER
+nox::U8FixedString<3072> nox::World::BuildRuntimeDependencyGraphText()const
+{
+	struct PhaseNode
+	{
+		const nox::SystemBase::SystemPhase* phase = nullptr;
+		const nox::SystemBase* instance = nullptr;
+		nox::uint32 id = 0;
+		nox::uint32 layer = 0;
+	};
+
+	RuntimeGraphTextBuilder builder;
+	nox::Vector<PhaseNode> phase_nodes;
+	phase_nodes.reserve(128);
+
+	for (nox::uint32 phase_type_index = 0; phase_type_index < nox::util::ToUnderlying(nox::SystemPhaseType::_Max); ++phase_type_index)
+	{
+		const nox::SystemPhaseType phase_type = static_cast<nox::SystemPhaseType>(phase_type_index);
+		const nox::Vector<ExecuteNode>& execute_nodes = system_phase_table_[phase_type_index];
+		for (const ExecuteNode& execute_node : execute_nodes)
+		{
+			const nox::uint32 id = static_cast<nox::uint32>(phase_nodes.size());
+			const nox::uint32 graph_layer = (phase_type_index * 8u) + execute_node.layer_index;
+			phase_nodes.push_back(PhaseNode{
+				&execute_node.phase.get(),
+				&execute_node.instance.get(),
+				id,
+				graph_layer,
+				});
+
+			builder.Append(u8"NODE|n");
+			builder.Append(id);
+			builder.Append(u8"|");
+			builder.Append(execute_node.instance.get().GetType().GetTypeName());
+			builder.Append(u8"|");
+			builder.Append(execute_node.phase.get().name);
+			builder.Append(u8"|");
+			builder.Append(to_graph_phase_name(phase_type));
+			builder.Append(u8"|");
+			builder.Append(graph_layer);
+			builder.Append(u8"\n");
+		}
+	}
+
+	const auto find_node_id = [&phase_nodes](const nox::SystemBase::SystemPhase& phase) -> std::optional<nox::uint32>
+	{
+		for (const PhaseNode& node : phase_nodes)
+		{
+			if (node.phase == &phase)
+			{
+				return node.id;
+			}
+		}
+		return std::nullopt;
+	};
+
+	for (const PhaseNode& node : phase_nodes)
+	{
+		const nox::SystemBase::PhaseRegister* current_register = nullptr;
+		for (const nox::SystemBase::PhaseRegister& phase_register : node.instance->GetPhaseRegisterList())
+		{
+			if (&phase_register.GetPhase() == node.phase)
+			{
+				current_register = &phase_register;
+				break;
+			}
+		}
+		if (current_register == nullptr)
+		{
+			continue;
+		}
+
+		for (const std::reference_wrapper<const nox::SystemBase::SystemPhase>& dependency : current_register->GetDependencies())
+		{
+			if (const std::optional<nox::uint32> dependency_id = find_node_id(dependency.get()))
+			{
+				builder.Append(u8"EDGE|n");
+				builder.Append(*dependency_id);
+				builder.Append(u8"|n");
+				builder.Append(node.id);
+				builder.Append(u8"|depends\n");
+			}
+		}
+
+		for (const std::reference_wrapper<const nox::SystemBase::SystemPhase>& depended : current_register->GetDepended())
+		{
+			if (const std::optional<nox::uint32> depended_id = find_node_id(depended.get()))
+			{
+				builder.Append(u8"EDGE|n");
+				builder.Append(node.id);
+				builder.Append(u8"|n");
+				builder.Append(*depended_id);
+				builder.Append(u8"|depends\n");
+			}
+		}
+	}
+
+	nox::U8FixedString<3072> graph_text;
+	graph_text.Assign(std::u8string_view(builder.buffer.data(), builder.length));
+	return graph_text;
+}
+
+void nox::World::TraceExecuteNodeList()const
+{
+	for (nox::uint8 phase_index = 0; phase_index < nox::util::ToUnderlying(nox::SystemPhaseType::_Max); ++phase_index)
+	{
+		const auto current_phase_type = static_cast<nox::SystemPhaseType>(phase_index);
+		const auto& layers = system_phase_table_[phase_index];
+		if (layers.empty())
+		{
+			continue;
+		}
+
+		NOX_INFO_LINE(nox::log_id::CoreCommon, u"Phase: {0}", current_phase_type);
+		for (const ExecuteNode& node : layers)
+		{
+			NOX_INFO_LINE(nox::log_id::CoreCommon, u"  Layer {0}: {1}", node.layer_index, node.phase.get().name);
+		}
+	}
+}
+#endif // !NOX_MASTER
 
 nox::World::EntityRecord* nox::World::TryGetEntityRecord(nox::uint32 index) noexcept
 {
@@ -259,30 +734,8 @@ bool nox::World::IsAlive(nox::EntityId entity)const noexcept
 	return is_live_generation(current_generation) && (current_generation == entity.generation);
 }
 
-void nox::World::Run()
+nox::IComponentData* nox::World::CreateComponent(nox::EntityId entity, const nox::reflection::Type& type)
 {
-
-}
-
-void nox::World::Init()
-{
-
-}
-
-void nox::World::Update()
-{
-
-}
-
-void nox::World::Terminate()
-{
-	kill_ = true;
-
-	for (auto&& system : systems_)
-	{
-		delete system;
-	}
-
-	systems_.clear();
-	systems_.shrink_to_fit();
+	NOX_ASSERT(false, u8"World::CreateComponent is not implemented. entity_index={0}, type={1}", entity.index, type.GetTypeName());
+	return nullptr;
 }

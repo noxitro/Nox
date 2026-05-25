@@ -9,7 +9,6 @@
 
 #include	"scene_view.h"
 #include	"scene_resource.h"
-#include	"application.h"
 #include	"engine_module.h"
 #include	"core_entry.h"
 #include	"world.h"

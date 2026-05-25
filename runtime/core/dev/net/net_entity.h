@@ -8,7 +8,7 @@
 
 namespace nox
 {
-	class Application;
+	class World;
 }
 
 namespace nox::dev::net
@@ -31,7 +31,7 @@ namespace nox::dev::net
 
 	protected:
 		virtual void OnSent() {}
-		virtual void OnReceive([[maybe_unused]] nox::Application& application) {}
+		virtual void OnReceive([[maybe_unused]] nox::World& world) {}
 
 	protected:
 		static inline nox::dev::net::port_t base_port_ = 0;

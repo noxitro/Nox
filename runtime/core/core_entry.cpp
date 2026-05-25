@@ -22,7 +22,7 @@ nox::CoreModule::~CoreModule()
 {
 }
 
-void nox::CoreModule::CreateEngineSystems(nox::PmrVector<nox::EngineSystem*>& out)const
+void nox::CoreModule::CreateEngineSystems(nox::PmrVector<nox::SystemBase*>& out)const
 {
 	out.emplace_back(new nox::SceneManager());
 	out.emplace_back(new nox::ResourceManager());

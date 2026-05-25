@@ -7,7 +7,7 @@
 
 namespace nox
 {
-	class Application;
+	class World;
 }
 
 namespace nox::dev::net
@@ -53,7 +53,7 @@ namespace nox::dev::net
 		void	Connection(::fd_set& fds);
 
 		/// @brief SocketSchedulerから呼び出される更新処理
-		void Update(nox::Application& application);
+		void Update(nox::World& world);
 
 		/// @brief clientを切断
 		/// @param socket 切断するclientのソケット

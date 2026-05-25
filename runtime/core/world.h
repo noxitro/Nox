@@ -17,7 +17,7 @@ namespace nox
 	{
 		NOX_DECLARE_OBJECT(World, nox::Object);
 	public:
-		struct Archtype;
+		struct Archtype {};
 	private:
 		static constexpr nox::uint32 k_entity_record_page_shift = 10u;
 		static constexpr nox::uint32 k_entity_record_page_size = 1u << k_entity_record_page_shift;
@@ -60,6 +60,34 @@ namespace nox
 		~World();
 
 		void Run();
+		inline constexpr nox::uint32 GetFrameCount()const noexcept { return frame_counter_; }
+		inline constexpr nox::uint16 GetTargetFrameRate()const noexcept { return target_frame_rate_; }
+		inline constexpr bool EnabledVSync()const noexcept { return enabled_vsync_; }
+		void SetVSync(bool flag)noexcept;
+
+		inline constexpr bool IsKill()const noexcept { return kill_; }
+		inline bool IsStudioMode()const noexcept { return studio_mode_; }
+
+		nox::SystemBase* FindSystem(const nox::reflection::Type& type)const noexcept;
+
+		template<std::derived_from<nox::SystemBase> T>
+		inline T* FindSystem()const noexcept
+		{
+			return static_cast<T*>(FindSystem(nox::reflection::Typeof<T>()));
+		}
+
+		nox::SystemBase& GetSystem(const nox::reflection::Type& type)const;
+
+		template<std::derived_from<nox::SystemBase> T>
+		inline T& GetSystem()const
+		{
+			return static_cast<T&>(GetSystem(nox::reflection::Typeof<T>()));
+		}
+
+#if !NOX_MASTER
+		NOX_ATTR_DECLARE(::nox::reflection::attr::IgnoreReflection())
+		nox::U8FixedString<3072> BuildRuntimeDependencyGraphText()const;
+#endif // !NOX_MASTER
 
 		nox::EntityId CreateEntity();
 		void DestroyEntity(nox::EntityId entity);
@@ -89,7 +117,14 @@ namespace nox
 	private:
 		void Init();
 		void Update();
-		void Terminate();
+		void Exit();
+		void BuildExecuteNodeList(std::span<nox::SystemBase*> system_list);
+		void ExecutePhase(const nox::SystemPhaseType phase_type);
+		void RegisterSystem(nox::SystemBase& system);
+
+#if !NOX_MASTER
+		void TraceExecuteNodeList()const;
+#endif // !NOX_MASTER
 
 		[[nodiscard]]
 		nox::World::EntityRecord* TryGetEntityRecord(nox::uint32 index) noexcept;
@@ -121,11 +156,18 @@ namespace nox
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
 		std::mutex entity_record_page_mutex_;
 
-		nox::Vector<nox::EngineModule*> modules_;
-		nox::Vector<nox::SystemBase*> systems_;
-
+		nox::StopWatch stop_watch_;
+		nox::uint32 frame_counter_;
+		nox::float_t elapsed_milli_seconds_;
+		nox::float_t next_elapsed_milli_seconds_;
+		nox::uint16 target_frame_rate_;
+		bool enabled_vsync_;
 		const bool studio_mode_;
 		bool kill_;
-		bool enabled_vsync_;
+
+		nox::Vector<nox::EngineModule*> modules_;
+		nox::Vector<nox::SystemBase*> systems_;
+		nox::UnorderedMap<const nox::reflection::Type*, nox::SystemBase*> system_map_;
+		std::array<nox::Vector<ExecuteNode>, nox::util::ToUnderlying(nox::SystemPhaseType::_Max)> system_phase_table_;
 	};
 }

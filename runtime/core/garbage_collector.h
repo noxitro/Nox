@@ -3,22 +3,22 @@
 ///	@file	garbage_collector.h
 ///	@brief	garbage_collector
 #pragma once
-#include	"engine_system.h"
+#include	"system.h"
 
 namespace nox
 {
-	class GarbageCollector : public nox::EngineSystem
+	class GarbageCollector : public nox::SystemBase
 	{
-		NOX_DECLARE_OBJECT(nox::GarbageCollector, nox::EngineSystem);
+		NOX_DECLARE_OBJECT(nox::GarbageCollector, nox::SystemBase);
 	public:
 		static void	Register(class nox::Object& managed_object);
 
 	private:
-		void Initialize(nox::Application& application);
-		void FrameGC(nox::Application& application);
-		void Finalize(nox::Application& application);
+		void Initialize(nox::World& world);
+		void FrameGC(nox::World& world);
+		void Finalize(nox::World& world);
 
-		std::span<const nox::EngineSystem::PhaseRegister> GetPhaseRegisterList()const noexcept override;
+		std::span<const nox::SystemBase::PhaseRegister> GetPhaseRegisterList()const noexcept override;
 	public:
 		static constexpr SystemPhaseUpdate k_phase_gc_update{
 			&GarbageCollector::FrameGC,

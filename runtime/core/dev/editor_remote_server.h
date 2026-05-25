@@ -6,14 +6,14 @@
 #if NOX_DEVELOP
 #include	"net/server.h"
 #include	"net/client.h"
-#include	"../engine_system.h"
+#include	"../system.h"
 
 #include	"socket_stream_writer.h"
 #include	"socket_stream_reader.h"
 
 namespace nox
 {
-	class Application;
+	class World;
 	class Object;
 }
 
@@ -61,13 +61,13 @@ namespace nox::dev::editor_remote
 		void	CollectRemoteInstances(std::function<void(nox::int64, const nox::Object&)> evaluate)const;
 	private:
 		/// @brief main threadから呼び出される更新処理
-		void	Start(nox::Application& application);
-		void	Update(nox::Application& application);
+		void	Start(nox::World& world);
+		void	Update(nox::World& world);
 
 		void	OnConnected(const nox::dev::net::ConnectionContext& context)override;
 		void	OnDisconnected(const nox::dev::net::ConnectionContext& context)override;
-		void UpdateReceive(nox::Application& application);
-		void OnReceive(nox::Application& application);
+		void UpdateReceive(nox::World& world);
+		void OnReceive(nox::World& world);
 	private:
 		nox::uint32 query_id_counter_;
 		nox::int64 instance_id_counter_;
@@ -93,11 +93,11 @@ namespace nox::dev::editor_remote
 		nox::dev::editor_remote::EditorRemoteServer::Impl* impl_;
 	};
 
-	/// @brief 一時的なEditorRemoteServerのラッパー　EngineSystemとして登録するためのクラス
-	///		@details 将来的にはEditorRemoteServer自体をEngineSystemとして実装する
-	class EditorRemoteServerSystem : public nox::EngineSystem
+	/// @brief 一時的なEditorRemoteServerのラッパー　SystemBaseとして登録するためのクラス
+	///		@details 将来的にはEditorRemoteServer自体をSystemBaseとして実装する
+	class EditorRemoteServerSystem : public nox::SystemBase
 	{
-		NOX_DECLARE_OBJECT(nox::dev::editor_remote::EditorRemoteServerSystem, nox::EngineSystem);
+		NOX_DECLARE_OBJECT(nox::dev::editor_remote::EditorRemoteServerSystem, nox::SystemBase);
 	public:
 		EditorRemoteServerSystem()noexcept :
 			server_(new EditorRemoteServer()) {
@@ -109,19 +109,19 @@ namespace nox::dev::editor_remote
 
 		inline EditorRemoteServer& GetServer()const noexcept { return *this->server_; }
 
-		std::span<const nox::EngineSystem::PhaseRegister> GetPhaseRegisterList()const noexcept override;
+		std::span<const nox::SystemBase::PhaseRegister> GetPhaseRegisterList()const noexcept override;
 	private:
-		inline void Initialize(nox::Application& application)
+		inline void Initialize(nox::World& world)
 		{
-			server_->Start(application);
+			server_->Start(world);
 		}
 
-		inline void Update(nox::Application& application)
+		inline void Update(nox::World& world)
 		{
-			this->server_->Update(application);
+			this->server_->Update(world);
 		}
 
-		inline void Terminate(nox::Application&)
+		inline void Terminate(nox::World&)
 		{
 			delete server_;
 			server_ = nullptr;

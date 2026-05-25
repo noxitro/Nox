@@ -24,18 +24,18 @@ void	nox::GarbageCollector::Register(nox::Object& managed_object)
 	impl_->managed_objects_.emplace_back(managed_object);
 }
 
-void	nox::GarbageCollector::Initialize(nox::Application&)
+void	nox::GarbageCollector::Initialize([[maybe_unused]] nox::World&)
 {
 	impl_ = new Impl();
 }
 
-void	nox::GarbageCollector::Finalize(nox::Application&)
+void	nox::GarbageCollector::Finalize([[maybe_unused]] nox::World&)
 {
 	delete impl_;
 	impl_ = nullptr;
 }
 
-void	nox::GarbageCollector::FrameGC(nox::Application&)
+void	nox::GarbageCollector::FrameGC([[maybe_unused]] nox::World&)
 {
 	if (impl_->destroy_objects_.size() > 0)
 	{
@@ -55,7 +55,7 @@ void	nox::GarbageCollector::FrameGC(nox::Application&)
 	impl_->managed_objects_.erase(result.begin(), result.end());
 }
 
-std::span<const nox::EngineSystem::PhaseRegister> nox::GarbageCollector::GetPhaseRegisterList()const noexcept
+std::span<const nox::SystemBase::PhaseRegister> nox::GarbageCollector::GetPhaseRegisterList()const noexcept
 {
 	static constexpr auto table = std::array{
 		PhaseRegister(k_phase_init),

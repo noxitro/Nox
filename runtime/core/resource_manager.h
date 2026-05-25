@@ -3,16 +3,15 @@
 ///	@file	resource_manager.h
 ///	@brief	resource_manager
 #pragma once
-#include	"engine_system.h"
+#include	"system.h"
 
 namespace nox
 {
-	class Application;
 	class Resource;
 	
-	class ResourceManager : public nox::EngineSystem
+	class ResourceManager : public nox::SystemBase
 	{
-		NOX_DECLARE_OBJECT(ResourceManager, nox::EngineSystem);
+		NOX_DECLARE_OBJECT(ResourceManager, nox::SystemBase);
 	public:
 
 		template<std::derived_from<nox::Resource> T>
@@ -28,6 +27,6 @@ namespace nox
 
 	private:
 		nox::Resource* GetResourceImpl(std::u8string_view path);
-		std::span<const nox::EngineSystem::PhaseRegister> GetPhaseRegisterList()const noexcept override;
+		std::span<const nox::SystemBase::PhaseRegister> GetPhaseRegisterList()const noexcept override;
 	};
 }

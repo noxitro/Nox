@@ -7,7 +7,7 @@
 
 #include	"server.h"
 #include	"client.h"
-#include	"application.h"
+#include	"../../world.h"
 #include	"dev_net_log_id.h"
 
 #if NOX_DEVELOP
@@ -29,7 +29,7 @@ namespace nox::dev::net
 
 }
 
-std::span<const nox::EngineSystem::PhaseRegister> nox::dev::net::SocketScheduler::GetPhaseRegisterList()const noexcept
+std::span<const nox::SystemBase::PhaseRegister> nox::dev::net::SocketScheduler::GetPhaseRegisterList()const noexcept
 {
 	static constexpr auto table = std::array{
 		PhaseRegister(k_phase_init),
@@ -51,7 +51,7 @@ nox::dev::net::SocketScheduler::~SocketScheduler()
 {
 }
 
-void	nox::dev::net::SocketScheduler::Initialize(nox::Application& application)
+void	nox::dev::net::SocketScheduler::Initialize(nox::World& world)
 {
 #if NOX_WINDOWS
 	::WSADATA wsaData;
@@ -62,13 +62,15 @@ void	nox::dev::net::SocketScheduler::Initialize(nox::Application& application)
 
 	thread_.SetThreadName(u"SocketScheduler");
 	thread_.SetThreadPriority(nox::os::ThreadPriority::Lowest);
-	thread_.Dispatch([this, &application]() {
-		this->UpdateTask(application);
+	thread_.Dispatch([this, &world]() {
+		this->UpdateTask(world);
 		});
 }
 
-void	nox::dev::net::SocketScheduler::Finalize(nox::Application& application)
+void	nox::dev::net::SocketScheduler::Finalize([[maybe_unused]] nox::World& world)
 {
+	thread_.Wait();
+
 #if NOX_WINDOWS
 	const nox::int32 error_code = ::WSACleanup();
 	NOX_ASSERT(error_code == 0, nox::util::Format(u"WSACleanup failed. error_code={0}", error_code));
@@ -76,9 +78,9 @@ void	nox::dev::net::SocketScheduler::Finalize(nox::Application& application)
 
 }
 
-void	nox::dev::net::SocketScheduler::UpdateTask(nox::Application& application)
+void	nox::dev::net::SocketScheduler::UpdateTask(nox::World& world)
 {
-	while (application.IsKill()==false)
+	while (world.IsKill() == false)
 	{
 		//	保留リストから本リストへ移動
 		if (pending_server_list_.empty() == false)
@@ -158,7 +160,7 @@ void	nox::dev::net::SocketScheduler::UpdateTask(nox::Application& application)
 				}
 
 				//	受け付け処理
-				server.Update(application);
+				server.Update(world);
 			}
 		}
 	}

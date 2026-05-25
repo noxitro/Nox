@@ -3,12 +3,12 @@
 ///	@file	socket_scheduler.h
 ///	@brief	socket_scheduler
 #pragma once
-#include	"../../engine_system.h"
+#include	"../../system.h"
 #include	"dev_net_definition.h"
 
 namespace nox
 {
-	class Application;
+	class World;
 }
 
 namespace nox::dev::net
@@ -17,9 +17,9 @@ namespace nox::dev::net
 	class Server;
 	class Client;
 
-	class SocketScheduler : public nox::EngineSystem
+	class SocketScheduler : public nox::SystemBase
 	{
-		NOX_DECLARE_OBJECT(nox::dev::net::SocketScheduler, nox::EngineSystem);
+		NOX_DECLARE_OBJECT(nox::dev::net::SocketScheduler, nox::SystemBase);
 		friend struct SocketSchedulerDetail;
 	private:
 		struct Impl;
@@ -34,13 +34,13 @@ namespace nox::dev::net
 		void	UnregisterEntity(nox::dev::net::Client& entity);
 
 	private:
-		void	Initialize(nox::Application& application);
-		void	Finalize(nox::Application& application);
+		void	Initialize(nox::World& world);
+		void	Finalize(nox::World& world);
 
-		void	UpdateTask(nox::Application& application);
+		void	UpdateTask(nox::World& world);
 		void	DoConnectionServerClient();
 
-		std::span<const nox::EngineSystem::PhaseRegister>	GetPhaseRegisterList()const noexcept override;
+		std::span<const nox::SystemBase::PhaseRegister>	GetPhaseRegisterList()const noexcept override;
 	public:
 		static constexpr SystemPhaseInit k_phase_init{
 			&SocketScheduler::Initialize,

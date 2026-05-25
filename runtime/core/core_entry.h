@@ -15,7 +15,7 @@ namespace nox
 		CoreModule();
 		~CoreModule()override;
 
-		void CreateEngineSystems(nox::PmrVector<nox::EngineSystem*>& out)const override;
+		void CreateEngineSystems(nox::PmrVector<nox::SystemBase*>& out)const override;
 	public:
 	};
 }

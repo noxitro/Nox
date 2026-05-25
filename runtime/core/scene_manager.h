@@ -3,16 +3,15 @@
 ///	@file	scene_manager.h
 ///	@brief	scene_manager
 #pragma once
-#include	"engine_system.h"
+#include	"system.h"
 
 namespace nox
 {
 	class SceneView;
-	class Application;
 
-	class SceneManager : public nox::EngineSystem
+	class SceneManager : public nox::SystemBase
 	{
-		NOX_DECLARE_OBJECT(SceneManager, nox::EngineSystem);
+		NOX_DECLARE_OBJECT(SceneManager, nox::SystemBase);
 	public:
 		SceneManager()noexcept;
 		~SceneManager()override;
@@ -21,11 +20,11 @@ namespace nox
 		inline const nox::SceneView& GetMainSceneView()const noexcept { return *main_scene_view_; }
 
 	private:
-		void	Initialize(nox::Application& application);
-		void	Update(nox::Application& application);
-		void	Finalize(nox::Application& application);
+		void	Initialize(nox::World& world);
+		void	Update(nox::World& world);
+		void	Finalize(nox::World& world);
 
-		std::span<const nox::EngineSystem::PhaseRegister> GetPhaseRegisterList()const noexcept override;
+		std::span<const nox::SystemBase::PhaseRegister> GetPhaseRegisterList()const noexcept override;
 	public:
 		static constexpr SystemPhaseInit k_phase_init{
 			&SceneManager::Initialize,

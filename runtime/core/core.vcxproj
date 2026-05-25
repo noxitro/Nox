@@ -15,10 +15,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="application.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
     <ClInclude Include="attribute.h">
       <SubType>
       </SubType>
@@ -228,10 +224,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="application.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
     <ClCompile Include="attribute.cpp">
       <SubType>
       </SubType>

@@ -11,7 +11,7 @@
 #include	"editor_remote_query.h"
 #include	"net/dev_net_api.h"
 #include	"net/dev_net_log_id.h"
-#include	"../application.h"
+#include	"../world.h"
 #include	"../log_service.h"
 #include	"../object.h"
 #include	"remote/remote_system.g.h"
@@ -89,7 +89,7 @@ void	nox::dev::editor_remote::EditorRemoteServer::SendBuffer(std::span<const nox
 	}
 }
 
-void	nox::dev::editor_remote::EditorRemoteServer::Start(nox::Application& application)
+void	nox::dev::editor_remote::EditorRemoteServer::Start(nox::World& world)
 {
     const bool started = this->Startup(InitializeContext{
 		.max_connection = 1,
@@ -98,7 +98,7 @@ void	nox::dev::editor_remote::EditorRemoteServer::Start(nox::Application& applic
 
 	if (started && socket_scheduler_ == nullptr)
 	{
-		socket_scheduler_ = application.FindSystem<nox::dev::net::SocketScheduler>();
+		socket_scheduler_ = world.FindSystem<nox::dev::net::SocketScheduler>();
 		NOX_ASSERT(socket_scheduler_ != nullptr, u"SocketSchedulerが登録されていません");
 		if (socket_scheduler_ != nullptr)
 		{
@@ -107,15 +107,15 @@ void	nox::dev::editor_remote::EditorRemoteServer::Start(nox::Application& applic
 	}
 }
 
-void	nox::dev::editor_remote::EditorRemoteServer::Update(nox::Application& application)
+void	nox::dev::editor_remote::EditorRemoteServer::Update(nox::World& world)
 {
 	if (main_client_.socket != nox::dev::net::k_raw_invalid_socket)
 	{
-		UpdateReceive(application);
+		UpdateReceive(world);
 	}
 }
 
-void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive(nox::Application& application)
+void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive(nox::World& world)
 {
 	if (reader_.GetReceivedSize() <= 0)
 	{
@@ -172,7 +172,7 @@ void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive(nox::Application
 
 			//	レスポンス生成
 			{
-				nox::PlacementObject<nox::dev::editor_remote::Response> response = query.Execute(application, receive_buffer);
+				nox::PlacementObject<nox::dev::editor_remote::Response> response = query.Execute(world, receive_buffer);
 				if (response != nullptr)
 				{
                     NOX_LOCAL_SCOPE(nox::os::ScopedLock(mutex_writer_));
@@ -203,12 +203,12 @@ void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive(nox::Application
 	}
 }
 
-void nox::dev::editor_remote::EditorRemoteServer::OnReceive(nox::Application& application)
+void nox::dev::editor_remote::EditorRemoteServer::OnReceive(nox::World& world)
 {
 	//	受信バッファ 未初期化でOK
 	std::array<nox::uint8, 2048> receive_buffer;
 
-	if (application.IsKill())
+	if (world.IsKill())
 	{
 		return;
 	}
@@ -220,7 +220,7 @@ void nox::dev::editor_remote::EditorRemoteServer::OnReceive(nox::Application& ap
 			NOX_LOCAL_SCOPE(nox::os::ScopedLock(mutex_reader_));
 			reader_.AddReceiveBuffer(std::span(receive_buffer.data(), static_cast<std::size_t>(receive_size)));
 		}
-		UpdateReceive(application);
+		UpdateReceive(world);
 	}
 	else if (receive_size < 0)
 	{
@@ -357,7 +357,7 @@ void nox::dev::editor_remote::EditorRemoteServer::CollectRemoteInstances(std::fu
 	}
 }
 
-std::span<const nox::EngineSystem::PhaseRegister> nox::dev::editor_remote::EditorRemoteServerSystem::GetPhaseRegisterList()const noexcept
+std::span<const nox::SystemBase::PhaseRegister> nox::dev::editor_remote::EditorRemoteServerSystem::GetPhaseRegisterList()const noexcept
 {
 	static constexpr auto table = std::to_array({
 		PhaseRegister(k_phase_init, nox::dev::net::SocketScheduler::k_phase_init),

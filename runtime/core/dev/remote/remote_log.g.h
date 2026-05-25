@@ -24,7 +24,7 @@ namespace nox::dev::editor_remote
 		SendLog(){}
 		void OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)override;
 		void OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)override;
-		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::Application&, std::span<nox::uint8> storage)const override;
+		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::World&, std::span<nox::uint8> storage)const override;
 
 		inline LogLevel GetLevel()const noexcept
 		{

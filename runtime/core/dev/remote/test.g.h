@@ -22,7 +22,7 @@ namespace nox::dev::editor_remote
 			path_ = s;
 		}
 
-		nox::PlacementObject<Response> Execute(nox::Application&, std::span<nox::uint8> buffer)const override;
+		nox::PlacementObject<Response> Execute(nox::World&, std::span<nox::uint8> buffer)const override;
 	private:
 		nox::BasicFixedString<nox::char8, 256> path_;
 	};
