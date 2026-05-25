@@ -138,3 +138,4 @@
 /Editor/Studio.Wpf.UITests/obj
 /Assets
 /runtime/kernel/test/build/intermediate/x64/Debug/kernel_test
+/runtime/reflection_generated/gen
