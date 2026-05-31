@@ -62,14 +62,14 @@ namespace nox
 			}
 
 		private:
-			alignas(_Alignment) std::array<std::uint8_t, _Size> buffer_;
-			std::uint8_t* pos_;
+			alignas(_Alignment) std::array<std::byte, _Size> buffer_;
+			std::byte* pos_;
 		};
 
 		class SpanMemoryResource : public std::pmr::memory_resource
 		{
 		public:
-			inline constexpr explicit SpanMemoryResource(std::span<std::uint8_t> buffer) noexcept :
+			inline constexpr explicit SpanMemoryResource(std::span<std::byte> buffer) noexcept :
 				buffer_(buffer),
 				pos_(buffer_.data())
 			{
@@ -101,8 +101,8 @@ namespace nox
 			}
 
 		private:
-			std::span<std::uint8_t> buffer_;
-			std::uint8_t* pos_;
+			std::span<std::byte> buffer_;
+			std::byte* pos_;
 
 		};
 
@@ -135,7 +135,7 @@ namespace nox
 		public:
 			using ContainerType = _PmrContainer;
 		public:
-			inline constexpr explicit SpanMemoryContainer(std::span<std::uint8_t> buffer) noexcept :
+			inline constexpr explicit SpanMemoryContainer(std::span<std::byte> buffer) noexcept :
 				memory_resource_(buffer),
 				container_(&memory_resource_)
 			{
@@ -155,7 +155,17 @@ namespace nox
 	template<class T, std::size_t Size, std::size_t Alignment = alignof(T)>
 	using StackAllocVector = nox::detail::StackMemoryContainer<std::pmr::vector<T>, Size, Alignment>;
 
-	template<class T, std::size_t Size, std::size_t Alignment = alignof(T)>
+	template<class T>
 	using SpanAllocVector = nox::detail::SpanMemoryContainer<std::pmr::vector<T>>;
 
+	template<class T, std::size_t Size, std::size_t Alignment = alignof(T)>
+	using StackAllocStlBasicString = nox::detail::StackMemoryContainer<std::pmr::basic_string<T>, Size, Alignment>;
+
+	template<class T>
+	using SpanAllocStlBasicString = nox::detail::SpanMemoryContainer<std::pmr::basic_string<T>>;
+
+	template<std::size_t Size>
+	using StackAllocStlU8String = nox::StackAllocStlBasicString<nox::char8, Size>;
+
+	using SpanAllocStlU8String = nox::SpanAllocStlBasicString<nox::char8>;
 }

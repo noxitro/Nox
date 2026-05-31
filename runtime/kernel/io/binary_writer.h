@@ -16,26 +16,20 @@ namespace nox::io
 			stream_(stream) {
 		}
 
-		void WriteByte(const std::span<const nox::uint8> buffer)const;
+		void WriteByte(const std::span<const std::byte> buffer)const;
 		
 		void WriteLength(nox::uint64 length)const;
 
 		void Write(std::u8string_view value)const
 		{
 			WriteLength(value.length());
-			WriteByte({ reinterpret_cast<const nox::uint8*const>(value.data()), value.size() });
+			WriteByte({ reinterpret_cast<const std::byte*>(value.data()), value.size() });
 		}
 
-		template<std::integral T>
+		template<typename T> requires(std::is_trivially_copyable_v<T>)
 		inline void Write(T value)const
 		{
-			WriteByte({ reinterpret_cast<const nox::uint8*>(value), sizeof(T)});
-		}
-
-		template<std::floating_point T>
-		inline void Write(T value)const
-		{
-			WriteByte({ reinterpret_cast<const nox::uint8*>(value), sizeof(T) });
+			WriteByte({ reinterpret_cast<const std::byte*>(&value), sizeof(value) });
 		}
 
 	private:

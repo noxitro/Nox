@@ -12,7 +12,7 @@ namespace nox::io
 	public:
 		inline constexpr StreamWriter()noexcept {}
 		inline constexpr virtual ~StreamWriter()noexcept override{}
-		virtual void Write(const std::span<const nox::uint8> buffer) = 0;
+		virtual void Write(const std::span<const std::byte> buffer) = 0;
 
 	private:
 		

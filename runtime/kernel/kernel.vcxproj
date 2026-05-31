@@ -170,6 +170,18 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="os\detail\file_base.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="platform_type.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="random.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="os\file.h">
       <SubType>
       </SubType>
@@ -236,7 +248,7 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="os\detail\fie_win64.h" />
+    <ClInclude Include="os\detail\file_win64.h" />
     <ClInclude Include="os\detail\mutex_base.h" />
     <ClInclude Include="os\detail\mutex_win64.h" />
     <ClInclude Include="os\detail\os_detail.h">
@@ -507,6 +519,18 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="os\detail\file_base.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="platform_type.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="random.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="os\file.cpp">
       <SubType>
       </SubType>
@@ -568,7 +592,7 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="os\detail\fie_win64.cpp" />
+    <ClCompile Include="os\detail\file_win64.cpp" />
     <ClCompile Include="os\detail\mutex_base.cpp" />
     <ClCompile Include="os\detail\mutex_win64.cpp" />
     <ClCompile Include="os\detail\os_detail.cpp">

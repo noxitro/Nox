@@ -134,15 +134,23 @@ namespace nox
 			return buffer;
 		}
 
-		template<class To>
-		inline constexpr nox::BasicStringView<To> ConvertAscii(std::span<To> dest_buffer)const noexcept
+		template<class Buffer>
+		inline constexpr auto ConvertAscii(Buffer&& dest_buffer) const noexcept
+			-> nox::BasicStringView<std::remove_cv_t<std::ranges::range_value_t<Buffer>>>
+			requires (
+		std::ranges::contiguous_range<Buffer>&&
+			std::ranges::sized_range<Buffer> &&
+			(!std::is_const_v<std::remove_reference_t<std::ranges::range_value_t<Buffer>>>)
+			)
 		{
-			const auto converted = nox::encoding::ascii::ConvertString<To>(view_, dest_buffer);
+			using To = std::remove_cv_t<std::ranges::range_value_t<Buffer>>;
+			std::span<To> sp{ std::data(dest_buffer), std::size(dest_buffer) };
+			const auto converted = nox::encoding::ascii::ConvertString<To>(view_, sp);
 			return nox::BasicStringView<To>(converted);
 		}
 
-		template<class To>
-		inline constexpr std::optional<nox::BasicStringView<To>> TryConvertAscii(std::span<To> dest_buffer)const noexcept
+		template<class To, std::size_t _N = std::dynamic_extent>
+		inline constexpr std::optional<nox::BasicStringView<To>> TryConvertAscii(std::span<To, _N> dest_buffer)const noexcept
 		{
 			const auto converted = nox::encoding::ascii::TryConvertString<To>(view_, dest_buffer);
 			if (converted.has_value() == false)

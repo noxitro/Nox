@@ -25,6 +25,9 @@
 #include	"os/thread.h"
 #include	"os/clipboard.h"
 #include	"os/window.h"
+#include	"os/file.h"
+
+#include	"platform_type.h"
 //	end os
 
 #include	"function.h"
@@ -65,6 +68,12 @@
 #include	"path.h"
 #include	"fixed_vector.h"
 #include	"nameof.h"
+
+//	io
+#include	"io/binary_reader.h"
+#include	"io/stream_reader.h"
+//	end io
+
 //	diagnostics
 #include	"parallel_execute_checker.h"
 //	end diagnostics

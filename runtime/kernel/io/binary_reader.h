@@ -7,31 +7,26 @@
 
 namespace nox::io
 {
-	class StreamReader;
+	class StreamReaderBase;
 
 	class BinaryReader
 	{
 	public:
-		inline constexpr explicit BinaryReader(nox::io::StreamReader& stream)noexcept :
+		inline constexpr explicit BinaryReader(nox::io::StreamReaderBase& stream)noexcept :
 			stream_(stream) {
 		}
 
-		void ReadBytes(std::span<nox::uint8> dest)const;
+		void ReadBytes(std::span<std::byte> dest)const;
 
 		nox::uint64 ReadLength()const;
 
-		template<std::integral T>
+		template<typename T> requires(std::is_trivially_copyable_v<T>)
 		inline void Read(T& out)const
 		{
-			ReadBytes({ reinterpret_cast<nox::uint8*>(&out), sizeof(T) });
+			ReadBytes({ reinterpret_cast<std::byte*>(&out), sizeof(T) });
 		}
 
-		template<std::floating_point T>
-		inline void Read(T& out)const
-		{
-			ReadBytes({ reinterpret_cast<nox::uint8*>(&out), sizeof(T) });
-		}
 	private:
-		nox::io::StreamReader& stream_;
+		nox::io::StreamReaderBase& stream_;
 	};
 }

@@ -22,6 +22,9 @@
 #include	<expected>
 #include	<chrono>
 #include	<shared_mutex>
+#include	<iostream>
+#include	<fstream>
+#include	<filesystem>
 
 #include	"basic_type.h"
 #include	"memory/stl_allocate_adapter.h"
@@ -65,4 +68,8 @@ namespace nox
 	using StlU16String = StlBasicString<char16>;
 	using StlU32String = StlBasicString<char32>;
 
+	namespace io
+	{
+		using u8ifstream = std::basic_ifstream<nox::char8, std::char_traits<nox::char8>>;
+	}
 }

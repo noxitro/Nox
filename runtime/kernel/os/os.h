@@ -45,7 +45,7 @@ namespace nox::os
 
 	inline std::u16string_view GetCommandLineArg(nox::uint32 index)
 	{
-		return GetCommandLineArgList()[index];
+		return nox::os::GetCommandLineArgList()[index];
 	}
 
 	/// @brief		コマンドライン引数本体、または=で区切られたコマンドライン引数のキーが存在するか
@@ -55,6 +55,14 @@ namespace nox::os
 	/// @brief =で区切られたコマンドライン引数を取得します
 	/// @param key
 	std::optional<std::u16string_view> GetCommandLineArgValue(std::u16string_view key)noexcept;
+
+	/// @brief		ソリューションディレクトリを取得します
+	/// @details	デバッグ用途
+	/// @return 
+	inline std::u16string_view GetSolutionDir()noexcept
+	{
+		return nox::os::GetCommandLineArgValue(u"--solution-dir").value_or(u"");
+	}
 
 	StlU16String	GetDirectoryUTF8();
 
