@@ -4,9 +4,7 @@
 
 #include	"advanced_type.h"
 #include	"convert_string.h"
-#include	"nox_string_view.h"
 #include	"string_format.h"
-
 
 /// @brief		ログID構造体の定義名前空間
 namespace nox::log_id
@@ -23,7 +21,7 @@ namespace nox::log_id
 	/// @brief 無効なログID
 	struct Invalid final : LogId
 	{
-		inline constexpr std::u16string_view operator()() const noexcept { return u"Invalid"; }
+		inline constexpr std::u8string_view operator()() const noexcept { return u8"Invalid"; }
 	};
 }
 
@@ -52,8 +50,8 @@ namespace nox::debug
 
 	namespace detail
 	{
-		void	TraceDirect(LogLevel log_category, const std::u16string_view category, const std::u8string_view message, bool isNewLine, const std::source_location& source_location);
-		void	TraceDirect(LogLevel log_category, const std::u16string_view category, const std::u16string_view message, bool isNewLine, const std::source_location& source_location);
+		void	TraceDirect(LogLevel log_category, const std::u8string_view category, const std::u8string_view message, bool isNewLine, const std::source_location& source_location);
+		void	TraceDirect(LogLevel log_category, const std::u8string_view category, const std::u16string_view message, bool isNewLine, const std::source_location& source_location);
 
 		//template<class... Args>
 		//void	TraceDirectArgs(LogCategory log_category, const std::u16string_view category, bool isNewLine, const std::source_location& source_location, const std::u32string_view message, Args&&...args)
@@ -66,7 +64,7 @@ namespace nox::debug
 		//}
 
 		template<class... Args>
-		void	TraceDirectArgs(LogLevel log_category, const std::u16string_view category, bool isNewLine, const std::source_location& source_location, const std::u8string_view message, Args&&...args)
+		void	TraceDirectArgs(LogLevel log_category, const std::u8string_view category, bool isNewLine, const std::source_location& source_location, const std::u8string_view message, Args&&...args)
 		{
 			//	動的メモリ確保を行わないように確保済みのバッファを使用
 			std::array<nox::char8, 5096> buffer = { 0 };
@@ -76,7 +74,7 @@ namespace nox::debug
 		}
 
 		template<class... Args>
-		void	TraceDirectArgs(LogLevel log_category, const std::u16string_view category, bool isNewLine, const std::source_location& source_location, const std::u16string_view message, Args&&...args)
+		void	TraceDirectArgs(LogLevel log_category, const std::u8string_view category, bool isNewLine, const std::source_location& source_location, const std::u16string_view message, Args&&...args)
 		{
 			//	動的メモリ確保を行わないように確保済みのバッファを使用
 			std::array<nox::char16, 5096> buffer = { 0 };
@@ -95,10 +93,10 @@ namespace nox::debug
 	//}
 
 	template<std::derived_from<log_id::LogId> LogId, class... Args>
-		requires(std::is_polymorphic_v<LogId> == false && std::is_same_v<std::u16string_view, decltype(LogId()())>)
+		requires(std::is_polymorphic_v<LogId> == false && std::is_same_v<std::u8string_view, decltype(LogId()())>)
 	inline	void	LogTraceArgs(LogLevel log_category, const std::source_location& source_location, const std::u8string_view message, Args&&... args)
 	{
-		constexpr std::u16string_view log_tag = LogId()();
+		constexpr std::u8string_view log_tag = LogId()();
 		nox::debug::detail::TraceDirectArgs(log_category, log_tag, true, source_location, message, std::forward<Args>(args)...);
 	}
 
@@ -118,10 +116,10 @@ namespace nox::debug
 	//	nox::debug::detail::TraceDirectArgs(log_category, log_tag, true, source_location, message, std::forward<Args>(args)...);
 	//}
 	template<std::derived_from<log_id::LogId> LogId, class... Args>
-		requires(std::is_polymorphic_v<LogId> == false && std::is_same_v<std::u16string_view, decltype(LogId()())>)
+		requires(std::is_polymorphic_v<LogId> == false && std::is_same_v<std::u8string_view, decltype(LogId()())>)
 	inline	void	LogTraceArgs(LogLevel log_category, const std::source_location& source_location, const std::u16string_view message, Args&&... args)
 	{
-		constexpr std::u16string_view log_tag = LogId()();
+		constexpr std::u8string_view log_tag = LogId()();
 		nox::debug::detail::TraceDirectArgs(log_category, log_tag, true, source_location, message, std::forward<Args>(args)...);
 	}
 }

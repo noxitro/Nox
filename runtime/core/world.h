@@ -13,7 +13,7 @@ namespace nox
 	class SystemBase;
 	class EngineModule;
 
-	class World : public nox::Object
+	class World final: public nox::Object
 	{
 		NOX_DECLARE_OBJECT(World, nox::Object);
 	public:
@@ -57,7 +57,7 @@ namespace nox
 		};
 	public:
 		World();
-		~World();
+		~World()override;
 
 		void Run();
 		inline constexpr nox::uint32 GetFrameCount()const noexcept { return frame_counter_; }

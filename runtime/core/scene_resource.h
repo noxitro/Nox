@@ -8,17 +8,22 @@
 
 namespace nox
 {
+	class World;
 	/// @brief SceneResource
-	class NOX_ATTR_TYPE(nox::attr::Resource(u8"scn", 0)) 
+	class NOX_ATTR_TYPE(nox::attr::Resource(u8"scn", 0))
 		SceneResource : public nox::Resource
 	{
 		NOX_DECLARE_OBJECT(SceneResource, nox::Resource);
+		struct Data;
 	public:
+		SceneResource()noexcept;
+		void Instantiate(nox::World& world)const;
 
 	private:
-		void OnInitialize(const nox::io::Stream& stream) override;
+		bool OnInitialize(nox::io::BinaryReader& reader) override;
 
 	private:
-		
+		NOX_ATTR_DECLARE(nox::reflection::attr::IgnoreReflection())
+		Data* data_;
 	};
 }

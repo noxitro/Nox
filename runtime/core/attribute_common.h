@@ -21,28 +21,6 @@ namespace nox::attr
 	{
 		NOX_DECLARE_OBJECT(IgnoreDataMember, nox::attr::Attribute);
 	};
-
-	/// @brief リソースクラス
-	class Resource : public nox::attr::Attribute
-	{
-		NOX_DECLARE_OBJECT(Resource, nox::attr::Attribute);
-	public:
-		inline constexpr explicit Resource(std::u8string_view extension, nox::uint32 version)noexcept :
-			extension_(extension),
-			version_(version)
-		{
-		}
-
-		inline constexpr std::u8string_view GetExtension()const noexcept { return extension_; }
-		inline constexpr nox::uint32 GetVersion()const noexcept { return version_; }
-
-	private:
-		/// @brief 拡張子
-		std::u8string_view extension_;
-
-		/// @brief リソースバージョン
-		nox::uint32 version_;
-	};
 }
 
 namespace nox

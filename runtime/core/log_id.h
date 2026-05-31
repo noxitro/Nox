@@ -8,6 +8,11 @@ namespace nox::log_id
 {
 	struct CoreCommon : public nox::log_id::LogId
 	{
-		inline constexpr std::u16string_view operator()() const noexcept { return u"CoreCommon"; }
+		inline constexpr std::u8string_view operator()() const noexcept { return u8"CoreCommon"; }
+	};
+
+	struct Resource : public nox::log_id::LogId
+	{
+		inline constexpr std::u8string_view operator()() const noexcept { return u8"Resource"; }
 	};
 }

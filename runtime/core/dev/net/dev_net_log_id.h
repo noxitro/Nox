@@ -8,6 +8,6 @@ namespace nox::dev::net::log_id
 {
 	struct DevNet : nox::log_id::LogId
 	{
-		inline constexpr std::u16string_view operator()() const noexcept { return u"DevNet"; }
+		inline constexpr std::u8string_view operator()() const noexcept { return u8"DevNet"; }
 	};
 }

@@ -125,6 +125,10 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="kernel.h" />
+    <ClInclude Include="kernel_log_id.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="kernel_reflection.h">
       <SubType>
       </SubType>
@@ -471,6 +475,10 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="kernel.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="kernel_log_id.cpp">
       <SubType>
       </SubType>
     </ClCompile>

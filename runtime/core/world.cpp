@@ -147,7 +147,6 @@ nox::World::~World()
 		delete entity_record_pages_[page_index].load(std::memory_order_relaxed);
 	}
 }
-
 void nox::World::Run()
 {
 	Init();

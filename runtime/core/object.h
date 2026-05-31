@@ -125,7 +125,7 @@ namespace nox
 
 	private:
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
-		std::atomic_int32_t ref_count_;
+		std::atomic_int32_t ref_count_{ -1 };
 	};
 
 	namespace detail

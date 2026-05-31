@@ -5,34 +5,64 @@
 #include	"pch.h"
 #include	"scene_resource.h"
 
+#include	"entity.h"
+#include	"world.h"
+#include	"log_id.h"
+
 namespace nox
 {
-	struct ComponentNativeData
+	namespace
 	{
-		nox::char32 fqn[256];
+		struct ComponentData
+		{
+			nox::StlU8String fqn;
 
-	};
+		};
 
-	struct GameObjectNativeData
+		struct SceneNode
+		{
+			nox::Guid id;
+			nox::Vector<ComponentData> component_list;
+		};
+	}
+
+	struct SceneResource::Data
 	{
-		nox::char32 name[256];
-		nox::Guid id;
-
-		nox::uint16 component_count;
-		ComponentNativeData component_list[1];
-	};
-
-	struct SceneNativeData
-	{
-		nox::char32 name[256];
-		nox::Guid id;
-
-		nox::int16 object_count;
-		GameObjectNativeData object_list[1];
+		nox::Vector<SceneNode> node_list;
 	};
 }
 
-void nox::SceneResource::OnInitialize(const nox::io::Stream& stream) 
+nox::SceneResource::SceneResource()noexcept :
+	data_(nullptr)
 {
-	
+}
+
+void nox::SceneResource::Instantiate(nox::World& world)const
+{
+	NOX_ASSERT(data_ != nullptr, u8"invalid scene resource data.");
+	for (const SceneNode& node : data_->node_list)
+	{
+		nox::EntityId entity = world.CreateEntity();
+		for (const ComponentData& component_data : node.component_list)
+		{
+			const auto type = nox::reflection::FindClassInfo(component_data.fqn);
+			if (type == nullptr)
+			{
+				NOX_ERROR_LINE(nox::log_id::Resource, u8"failed to find component type: {0}", component_data.fqn);
+				continue;
+			}
+			nox::IComponentData* component = world.CreateComponent(entity, type->GetType());
+			if (component == nullptr)
+			{
+				NOX_ERROR_LINE(nox::log_id::Resource, u8"failed to create component: {0}", component_data.fqn);
+				continue;
+			}
+		}
+	}
+}
+
+bool nox::SceneResource::OnInitialize(nox::io::BinaryReader& reader)
+{
+
+	return true;
 }

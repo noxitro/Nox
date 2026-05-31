@@ -426,6 +426,9 @@
     <ClInclude Include="platform_type.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="kernel_log_id.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="basic_definition.cpp">
@@ -825,6 +828,9 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="platform_type.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel_log_id.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

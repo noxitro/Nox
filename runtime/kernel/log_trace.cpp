@@ -13,8 +13,6 @@
 #include	"os/windows.h"
 #endif // NOX_WIN64
 
-#include	<iostream>
-
 namespace nox
 {
 	namespace
@@ -45,17 +43,20 @@ void nox::debug::DetachLogHandler()
 	g_log_handler = nullptr;
 }
 
-void nox::debug::detail::TraceDirect(nox::debug::LogLevel log_category, const std::u16string_view channel, const std::u8string_view message, bool isNewLine, const std::source_location& source_location)
+void nox::debug::detail::TraceDirect(nox::debug::LogLevel log_category, const std::u8string_view channel, const std::u8string_view message, bool isNewLine, const std::source_location& source_location)
 {
+	std::array<nox::char16, 128> u16_channel_buffer = { 0 };
+	const std::u16string_view u16_channel = nox::encoding::ascii::ConvertString(channel, std::span(u16_channel_buffer));
+
 	std::array<char16, 2048> buffer = { 0 };
 	//source_location;
 	if (isNewLine)
 	{
-		nox::util::Format(buffer, u"[{0}][{1}]{2}\n", GetLogCategoryName(log_category), channel.data(), message.data());
+		nox::util::Format(buffer, u"[{0}][{1}]{2}\n", GetLogCategoryName(log_category), u16_channel.data(), message.data());
 	}
 	else
 	{
-		util::Format(buffer, u"[{0}][{1}]{2}", GetLogCategoryName(log_category), channel.data(), message.data());
+		util::Format(buffer, u"[{0}][{1}]{2}", GetLogCategoryName(log_category), u16_channel.data(), message.data());
 	}
 	
 	const wchar_t* converted_str = nox::util::CharCast<wchar_t>(buffer.data());
@@ -70,31 +71,31 @@ void nox::debug::detail::TraceDirect(nox::debug::LogLevel log_category, const st
 
 	if (g_log_handler != nullptr)
 	{
-		std::array<nox::char8, 256> channel_buffer = { 0 };
-		const std::u8string_view channnel_stringview = nox::encoding::ascii::ConvertString(channel, std::span(channel_buffer));
-
 		const nox::debug::LogHandlerArgs args{
 			.column = source_location.column(),
 			.level = log_category,
 			.message = message,
-			.channel = channnel_stringview,
+			.channel = channel,
 		};
 
 		g_log_handler(args);
 	}
 }
 
-void nox::debug::detail::TraceDirect(nox::debug::LogLevel log_category, const std::u16string_view channel, const std::u16string_view message, bool isNewLine, const std::source_location& source_location)
+void nox::debug::detail::TraceDirect(nox::debug::LogLevel log_category, const std::u8string_view channel, const std::u16string_view message, bool isNewLine, const std::source_location& source_location)
 {
-	std::array<char16, 2048> buffer = { 0 };
+	std::array<nox::char16, 128> u16_channel_buffer = { 0 };
+	const std::u16string_view u16_channel = nox::encoding::ascii::ConvertString(channel, std::span(u16_channel_buffer));
+
+	std::array<nox::char16, 2048> buffer = { 0 };
 	//source_location;
 	if (isNewLine)
 	{
-		nox::util::Format(buffer, u"[{0}][{1}]{2}\n", GetLogCategoryName(log_category), channel.data(), message.data());
+		nox::util::Format(buffer, u"[{0}][{1}]{2}\n", GetLogCategoryName(log_category), u16_channel.data(), message.data());
 	}
 	else
 	{
-		util::Format(buffer, u"[{0}][{1}]{2}", GetLogCategoryName(log_category), channel.data(), message.data());
+		util::Format(buffer, u"[{0}][{1}]{2}", GetLogCategoryName(log_category), u16_channel.data(), message.data());
 	}
 	
 	const wchar_t* converted_str = nox::util::CharCast<wchar_t>(buffer.data());
@@ -109,16 +110,13 @@ void nox::debug::detail::TraceDirect(nox::debug::LogLevel log_category, const st
 
 	if (g_log_handler != nullptr)
 	{
-		std::array<nox::char8, 256> channel_buffer = { 0 };
-		const std::u8string_view channnel_stringview = nox::encoding::ascii::ConvertString(channel, std::span(channel_buffer));
-
 		std::array<nox::char8, 2048> message_buffer = { 0 };
 		const std::u8string_view utf8_message = nox::unicode::ConvertU8String(message, message_buffer);
 		const nox::debug::LogHandlerArgs args{
 			.column = source_location.column(),
 			.level = log_category,
 			.message = utf8_message,
-			.channel = channnel_stringview,
+			.channel = channel,
 		};
 		g_log_handler(args);
 	}

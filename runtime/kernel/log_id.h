@@ -9,21 +9,21 @@ namespace nox::log_id
 {
 	struct Kernel : nox::log_id::LogId
 	{
-		inline constexpr std::u16string_view operator()() const noexcept { return u"Kernel"; }
+		inline constexpr std::u8string_view operator()() const noexcept { return u8"Kernel"; }
 	};
 
 	struct Memory : nox::log_id::LogId
 	{
-		inline constexpr std::u16string_view operator()() const noexcept { return u"Memory"; }
+		inline constexpr std::u8string_view operator()() const noexcept { return u8"Memory"; }
 	};
 
 	struct OS : nox::log_id::LogId
 	{
-		inline constexpr std::u16string_view operator()() const noexcept { return u"OS"; }
+		inline constexpr std::u8string_view operator()() const noexcept { return u8"OS"; }
 	};
 
 	struct Reflection : nox::log_id::LogId
 	{
-		inline constexpr std::u16string_view operator()() const noexcept { return u"Reflection"; }
+		inline constexpr std::u8string_view operator()() const noexcept { return u8"Reflection"; }
 	};
 }
