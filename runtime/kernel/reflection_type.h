@@ -14,7 +14,9 @@
 namespace nox::reflection
 {
 	//	前方宣言
+	class IType;
 	class Type;
+	class EnumInfo;
 
 	/// @brief 無効型IDを取得
 	inline constexpr const nox::reflection::Type& GetInvalidType()noexcept;
@@ -22,7 +24,7 @@ namespace nox::reflection
 	/// @brief nox::reflection::Typeの比較演算子
 	/// @details	c++23以降でクラス内定義が可能になるため、c++20での定義
 	[[nodiscard]]
-	inline constexpr  bool operator==(const nox::reflection::Type& a, const nox::reflection::Type& b)noexcept;
+	inline constexpr  bool operator==(const nox::reflection::Type& a, const nox::reflection::Type& b)noexcept { return &a == &b; }
 
 	namespace detail
 	{
@@ -30,7 +32,6 @@ namespace nox::reflection
 		/// @details	コンストラクタのパラメータが多すぎるため、構築情報を分離
 		struct TypeDesc
 		{
-			std::uint32_t id;
 			TypeKind kind;
 			TypeAttributeFlag attribute_flags;
 			std::uint32_t size;
@@ -148,12 +149,16 @@ namespace nox::reflection
 		}
 	}
 
+	class IType
+	{
+
+	};
+
 	/// @brief 汎用型情報
-	class Type
+	class Type : public nox::reflection::IType
 	{
 	protected:
 		[[nodiscard]] inline constexpr explicit Type(const nox::reflection::detail::TypeDesc& desc)noexcept:
-			id_(desc.id),
 			kind_(desc.kind),
 			attribute_flags_(desc.attribute_flags),
 			size_(desc.size),
@@ -200,9 +205,6 @@ namespace nox::reflection
 		inline constexpr bool	IsConvertible()const noexcept;
 
 #pragma region アクセサ
-		/// @brief 型IDを取得
-		[[nodiscard]] inline	constexpr	std::uint32_t GetTypeID()const noexcept { return id_; }
-
 		/// @brief 型の名前を取得
 		[[nodiscard]] inline	constexpr std::string_view GetTypeName()const noexcept { return name_; }
 
@@ -321,11 +323,7 @@ namespace nox::reflection
 			return nox::reflection::GetInvalidType();
 		}
 
-		[[nodiscard]] inline constexpr bool IsValid()const noexcept { return id_ != 0; }
-
-		//	リフレクション実装から取得する
-		[[nodiscard]] const class ClassInfo* GetUserDefinedCompoundTypeInfo()const noexcept;
-		[[nodiscard]] const class EnumInfo* GetEnumInfo()const noexcept;
+		[[nodiscard]] inline constexpr bool IsValid()const noexcept { return kind_ != nox::reflection::TypeKind::Unknown; }
 
 		/// @brief 関数の引数型情報リストを取得
 		[[nodiscard]] inline constexpr std::span<const std::reference_wrapper<const nox::reflection::Type>> GetArgumentTypeList()const noexcept { return this->get_argument_type_list_(*this); }
@@ -404,9 +402,6 @@ namespace nox::reflection
 		/// @brief 配列の次元数
 		const std::uint16_t array_rank_;
 
-		/// @brief 型ID
-		const std::uint32_t id_;
-
 		const std::uint32_t array_extent_;
 
 		/// @brief 型のサイズ
@@ -464,11 +459,6 @@ namespace nox::reflection
 		const nox::reflection::Type& owner_type_;
 	};
 
-	/// @brief nox::reflection::Typeの比較演算子
-	/// @details	c++23以降でクラス内定義が可能になるため、c++20での定義
-	[[nodiscard]]
-    inline constexpr bool operator==(const nox::reflection::Type& a, const nox::reflection::Type& b)noexcept { return &a == &b; }
-
 	namespace detail
 	{
 		/// @brief コンパイル時無効型
@@ -478,7 +468,6 @@ namespace nox::reflection
 			inline constexpr CompileTimeInvalidType()noexcept :
 				nox::reflection::Type(
 					nox::reflection::detail::TypeDesc{
-						.id = 0,
 						.kind = TypeKind::Unknown,
 						.attribute_flags = TypeAttributeFlag::None,
 						.size = 0,
@@ -544,7 +533,6 @@ namespace nox::reflection
 			)noexcept :
 				nox::reflection::Type(
 					nox::reflection::detail::TypeDesc{
-						.id = nox::util::GetUniqueTypeID<T>(),
 						.kind = nox::reflection::GetTypeKind<T>(),
 						.attribute_flags = nox::reflection::GetTypeAttributeFlags<T>(),
 						.size = SafeSizeof(),

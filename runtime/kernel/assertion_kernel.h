@@ -11,7 +11,14 @@
 
 namespace nox::assertion::detail
 {
+	void AssertKernel(std::u16string_view error_category, std::u8string_view message, std::wstring_view filename, const std::source_location location);
 	void AssertKernel(std::u16string_view error_category, std::u16string_view message, std::wstring_view filename, const std::source_location location);
+
+	template<std::derived_from<nox::assertion::id::ErrorId> Id> //requires(std::is_invocable_r_v<std::u8string_view, Id>)
+	inline void AssertKernel(std::u8string_view message, std::wstring_view filename, const std::source_location location)
+	{
+		nox::assertion::detail::AssertKernel(Id()(), message, filename, location);
+	}
 
 	template<std::derived_from<nox::assertion::id::ErrorId> Id> //requires(std::is_invocable_r_v<std::u8string_view, Id>)
 	inline void AssertKernel(std::u16string_view message, std::wstring_view filename, const std::source_location location)

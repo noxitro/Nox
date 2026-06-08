@@ -7,12 +7,12 @@
 #include	"codegen_preamble.h"
 
 
-void nox::dev::editor_remote::ResourceConvertQuery::OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)
+void nox::dev::editor_remote::AssetConvertQuery::OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)
 {
 	writer.Write(native_path_);
 }
 
-void nox::dev::editor_remote::ResourceConvertQuery::OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)
+void nox::dev::editor_remote::AssetConvertQuery::OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)
 {
 	reader.Read(native_path_);
 }

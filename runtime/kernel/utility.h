@@ -6,8 +6,43 @@
 #include <functional>
 #include <type_traits>
 
+#include "advanced_definition.h"
+#include "assertion_kernel.h"
+
 namespace nox::util
 {
+	/// @brief		遅延参照
+	/// @details	初期化時はnullptrで、アクセス時には参照先が存在することが保証される
+	template<class T>
+	class InitOnceRef
+	{
+	public:
+		using Type = T;
+
+	public:
+		inline constexpr InitOnceRef() noexcept :
+			ptr_(nullptr) {
+		}
+
+		inline InitOnceRef& operator=(T& value)
+		{
+			NOX_ASSERT_KERNEL(ptr_ == nullptr, u8"すでに値が設定されています");
+			ptr_ = &value;
+			return *this;
+		}
+
+		inline T& Get() const
+		{
+			return nox::util::Deref(ptr_);
+		}
+
+		inline operator T& () const
+		{
+			return Get();
+		}
+	private:
+		T* ptr_;
+	};
 
 	class ScopeExit
 	{

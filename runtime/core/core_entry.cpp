@@ -6,7 +6,7 @@
 #include	"core_entry.h"
 
 #include	"garbage_collector.h"
-#include	"resource_manager.h"
+#include	"asset_manager.h"
 #include	"scene_manager.h"
 
 #if NOX_DEVELOP
@@ -25,7 +25,7 @@ nox::CoreModule::~CoreModule()
 void nox::CoreModule::CreateEngineSystems(nox::PmrVector<nox::SystemBase*>& out)const
 {
 	out.emplace_back(new nox::SceneManager());
-	out.emplace_back(new nox::ResourceManager());
+	out.emplace_back(new nox::AssetManager());
 	out.emplace_back(new nox::GarbageCollector());
 #if NOX_DEVELOP
 	out.emplace_back(new nox::dev::net::SocketScheduler());

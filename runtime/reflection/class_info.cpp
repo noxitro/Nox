@@ -5,8 +5,13 @@
 
 #include	"function_info.h"
 #include	"variable_info.h"
-
 #include	"database.h"
+
+const nox::reflection::ClassInfo& nox::reflection::ClassInfo::GetExternalClassTypeInfo()const noexcept
+{
+	 return nox::util::Deref(nox::reflection::FindClassInfo(external_class_type_)); 
+}
+
 bool	nox::reflection::ClassInfo::IsBaseOf(const nox::reflection::ClassInfo& derived)const noexcept
 {
 	return nox::reflection::IsBaseOf(*this, derived);

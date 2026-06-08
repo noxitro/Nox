@@ -8,9 +8,11 @@
 #include	"entry_point.h"
 
 #include	"scene_view.h"
-#include	"scene_resource.h"
 #include	"engine_module.h"
 #include	"core_entry.h"
+#include	"asset_manager.h"
+#include	"asset.h"
+#include	"asset_ref.h"
 #include	"world.h"
 
 //	editor_remote

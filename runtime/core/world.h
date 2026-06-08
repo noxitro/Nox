@@ -1,4 +1,4 @@
-// Copyright (C) 2026 NOX ENGINE All rights reserved.
+﻿// Copyright (C) 2026 NOX ENGINE All rights reserved.
 
 /// @file	world.h
 /// @brief	world
@@ -65,7 +65,7 @@ namespace nox
 		inline constexpr bool EnabledVSync()const noexcept { return enabled_vsync_; }
 		void SetVSync(bool flag)noexcept;
 
-		inline constexpr bool IsKill()const noexcept { return kill_; }
+		inline bool IsKill()const noexcept { return kill_.load(std::memory_order_acquire); }
 		inline bool IsStudioMode()const noexcept { return studio_mode_; }
 
 		nox::SystemBase* FindSystem(const nox::reflection::Type& type)const noexcept;
@@ -112,7 +112,6 @@ namespace nox
 
 		template<class T>
 		T* TryGetResource()const { return nullptr; }
-
 
 	private:
 		void Init();
@@ -163,7 +162,9 @@ namespace nox
 		nox::uint16 target_frame_rate_;
 		bool enabled_vsync_;
 		const bool studio_mode_;
-		bool kill_;
+
+		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
+		std::atomic_bool kill_;
 
 		nox::Vector<nox::EngineModule*> modules_;
 		nox::Vector<nox::SystemBase*> systems_;

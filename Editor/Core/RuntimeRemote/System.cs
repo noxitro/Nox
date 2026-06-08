@@ -5,9 +5,9 @@ using System.Text;
 namespace Core.RuntimeRemote
 {
 	[Core.RuntimeRemote.Attributes.CoreRuntimeRemoteCode("system", comment: "リソースコンバートリクエスト")]
-	public sealed class ResourceConvertQuery : Core.RuntimeRemote.Query
+	public sealed class AssetConvertQuery : Core.RuntimeRemote.Query
 	{
-		public ResourceConvertQuery(string path)
+		public AssetConvertQuery(string path)
 		{
 			if (path.Length >= NativePath.Length)
 			{

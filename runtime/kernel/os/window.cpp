@@ -73,9 +73,18 @@ namespace nox::os
 
 	switch (message)
 	{
+	case WM_CLOSE:
+		::DestroyWindow(hWnd);
+		return 0;
+
 	case WM_DESTROY:
+		if (self != nullptr && self->window_handle_ == hWnd)
+		{
+			self->window_handle_ = nullptr;
+			self->is_visible_ = false;
+		}
 		::PostQuitMessage(0);
-		break;
+		return 0;
 	}
 
 	return ::DefWindowProcW(hWnd, message, wParam, lParam);

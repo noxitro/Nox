@@ -248,7 +248,7 @@ void nox::dev::editor_remote::SocketStreamReader::Read(nox::IntrusivePtr<nox::Ob
 		break;
 		case nox::reflection::TypeKind::Class:
 		{
-			const nox::reflection::ClassInfo* const variable_type_class_info = variable_type.GetUserDefinedCompoundTypeInfo();
+			const nox::reflection::ClassInfo* const variable_type_class_info = nox::reflection::FindClassInfo(variable_type);
 			if (variable_type_class_info != nullptr)
 			{
 				if (variable_type_class_info->IsBaseOf(nox::reflection::Typeof<nox::reflection::ReflectionObject>()) == true)

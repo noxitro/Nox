@@ -362,7 +362,6 @@ std::span<const nox::SystemBase::PhaseRegister> nox::dev::editor_remote::EditorR
 	static constexpr auto table = std::to_array({
 		PhaseRegister(k_phase_init, nox::dev::net::SocketScheduler::k_phase_init),
 		PhaseRegister(k_phase_update, 
-			{nox::dev::net::SocketScheduler::k_phase_socket_update},
 			{nox::dev::net::SocketScheduler::k_phase_socket_update}
 			),
 		PhaseRegister(k_phase_terminate)

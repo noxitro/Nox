@@ -429,6 +429,9 @@
     <ClInclude Include="kernel_log_id.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="hash.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="basic_definition.cpp">
@@ -831,6 +834,9 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="kernel_log_id.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="hash.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

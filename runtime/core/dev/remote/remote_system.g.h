@@ -9,11 +9,11 @@
 namespace nox::dev::editor_remote
 {
 	/// @brief リソースコンバートリクエスト
-	class ResourceConvertQuery final : public nox::dev::editor_remote::Query
+	class AssetConvertQuery final : public nox::dev::editor_remote::Query
 	{
-		NOX_DECLARE_OBJECT(nox::dev::editor_remote::ResourceConvertQuery, nox::dev::editor_remote::Query);
+		NOX_DECLARE_OBJECT(nox::dev::editor_remote::AssetConvertQuery, nox::dev::editor_remote::Query);
 	public:
-		ResourceConvertQuery(){}
+		AssetConvertQuery(){}
 		void OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)override;
 		void OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)override;
 		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::World&, std::span<nox::uint8> storage)const override;

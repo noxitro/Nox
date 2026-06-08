@@ -10,10 +10,7 @@
 #include	"../../scene_view.h"
 #include	"../editor_remote_server.h"
 #include	"../socket_stream_utility.h"
-#include	"../../../kernel/memory/memory_profile.h"
-#include	"../../../kernel/memory/nox_memory.h"
-#include	"../../../reflection/function_info.h"
-#include	<algorithm>
+#include	"../../asset_manager.h"
 
 namespace
 {
@@ -51,7 +48,7 @@ namespace
 	}
 }
 
-nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::ResourceConvertQuery::Execute(nox::World&, std::span<nox::uint8> storage)const
+nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::AssetConvertQuery::Execute(nox::World& world, std::span<nox::uint8> storage)const
 {
 	return nullptr;
 }

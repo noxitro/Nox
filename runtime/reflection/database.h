@@ -47,7 +47,7 @@ namespace nox::reflection
 	template<class T> requires(nox::concepts::ClassOrUnion<T>)
 	inline void ForeachDerivedClassInfoList(std::move_only_function<void(const nox::reflection::ClassInfo&)> callback, bool include_self = false, bool recursive = true)
 	{
-		nox::reflection::ForeachDerivedClassInfoList(nox::reflection::Typeof<T>(), callback, include_self, recursive);
+		nox::reflection::ForeachDerivedClassInfoList(nox::reflection::Typeof<T>(), std::move(callback), include_self, recursive);
 	}
 
 	template<class T>

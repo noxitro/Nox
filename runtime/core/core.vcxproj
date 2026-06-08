@@ -15,6 +15,22 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="asset.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="asset_attribute.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="asset_manager.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="asset_ref.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="attribute.h">
       <SubType>
       </SubType>
@@ -154,19 +170,11 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="resource.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="resource_manager.h">
+    <ClInclude Include="scene_asset.h">
       <SubType>
       </SubType>
     </ClInclude>
     <ClInclude Include="scene_manager.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="scene_resource.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -228,6 +236,22 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="asset.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="asset_attribute.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="asset_manager.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="asset_ref.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="attribute.cpp">
       <SubType>
       </SubType>
@@ -361,19 +385,11 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="resource.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="resource_manager.cpp">
+    <ClCompile Include="scene_asset.cpp">
       <SubType>
       </SubType>
     </ClCompile>
     <ClCompile Include="scene_manager.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="scene_resource.cpp">
       <SubType>
       </SubType>
     </ClCompile>

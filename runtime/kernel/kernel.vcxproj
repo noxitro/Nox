@@ -66,6 +66,10 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="hash.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="inplace_array.h">
       <SubType>
       </SubType>
@@ -413,6 +417,10 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="guid.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="hash.cpp">
       <SubType>
       </SubType>
     </ClCompile>

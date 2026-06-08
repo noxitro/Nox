@@ -20,7 +20,7 @@ namespace nox::io
 	class FileStreamReader final : public nox::io::StreamReaderBase
 	{
 	public:
-		inline explicit FileStreamReader(std::u8string_view path);
+		explicit FileStreamReader(std::u8string_view path);
 
 		void Read(std::span<std::byte> dest)override;
 	private:
@@ -45,7 +45,7 @@ namespace nox::io
 	class FileSpanStreamReader final : public StreamReaderBase
 	{
 	public:
-		inline explicit FileSpanStreamReader(std::u8string_view path);
+		explicit FileSpanStreamReader(std::u8string_view path);
 
 		void Read(std::span<std::byte> dest)override;
 	private:

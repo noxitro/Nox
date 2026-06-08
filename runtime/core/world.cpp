@@ -1,4 +1,4 @@
-// Copyright (C) 2026 NOX ENGINE All rights reserved.
+﻿// Copyright (C) 2026 NOX ENGINE All rights reserved.
 
 /// @file	world.cpp
 /// @brief	world
@@ -144,7 +144,11 @@ nox::World::~World()
 
 	for (nox::uint32 page_index = 1u; page_index < k_max_entity_page_count; ++page_index)
 	{
-		delete entity_record_pages_[page_index].load(std::memory_order_relaxed);
+		nox::World::EntityRecordPage* const page = entity_record_pages_[page_index].load(std::memory_order_relaxed);
+		if (page != nullptr)
+		{
+			delete page;
+		}
 	}
 }
 void nox::World::Run()
@@ -159,7 +163,7 @@ void nox::World::Run()
 			ExecutePhase(nox::SystemPhaseType::Init);
 			ExecutePhase(nox::SystemPhaseType::Start);
 
-			while (!kill_)
+			while (!kill_.load(std::memory_order_acquire))
 			{
 				Update();
 			}
@@ -171,7 +175,7 @@ void nox::World::Run()
 	{
 	}
 
-	kill_ = true;
+	kill_.store(true, std::memory_order_release);
 	game_thread.Wait();
 	Exit();
 }
@@ -198,7 +202,6 @@ nox::SystemBase& nox::World::GetSystem(const nox::reflection::Type& type)const
 	{
 		return *system;
 	}
-
 	NOX_ASSERT(false, u8"システムが見つかりませんでした: {0}", type.GetTypeName());
 	std::abort();
 }
@@ -219,8 +222,9 @@ void nox::World::Init()
 
 	nox::FixedVector<nox::SystemBase*, 128> system_list;
 	{
-		nox::StackAllocVector<nox::SystemBase*, 32> system_dest_buffer_vector;
+		nox::StackAllocVector<nox::SystemBase*, 512> system_dest_buffer_vector;
 		auto& dest_buffer = system_dest_buffer_vector.GetContainer();
+		dest_buffer.reserve(32);
 
 		for (const nox::EngineModule* const module : modules_)
 		{
@@ -279,7 +283,7 @@ void nox::World::Update()
 
 void nox::World::Exit()
 {
-	kill_ = true;
+	kill_.store(true, std::memory_order_release);
 	system_map_.clear();
 
 	for (auto& layer : system_phase_table_)

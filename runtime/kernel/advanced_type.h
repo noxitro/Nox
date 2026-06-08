@@ -26,6 +26,7 @@
 #include	<iostream>
 #include	<fstream>
 #include	<filesystem>
+#include	<semaphore>
 
 #include	"basic_type.h"
 #include	"memory/stl_allocate_adapter.h"

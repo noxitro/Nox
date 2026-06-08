@@ -114,8 +114,7 @@ namespace nox::reflection
 		[[nodiscard]] inline	constexpr	std::u8string_view GetNamespace()const noexcept { return namespace_; }
 
 		[[nodiscard]] inline	constexpr	const nox::reflection::Type& GetExternalType()const noexcept { return external_class_type_; }
-		[[nodiscard]] inline	const nox::reflection::ClassInfo& GetExternalUserDefinedCompoundTypeInfo()const noexcept { return nox::util::Deref(external_class_type_.GetUserDefinedCompoundTypeInfo()); }
-
+		[[nodiscard]] const nox::reflection::ClassInfo& GetExternalClassTypeInfo()const noexcept;
 
 		[[nodiscard]] inline	constexpr	std::uint8_t	GetAttributeListLength()const noexcept { return attribute_length_; }
 		[[nodiscard]] inline	constexpr	const std::span<const std::reference_wrapper<const reflection::ReflectionObject>> GetAttributeList()const noexcept { return std::span(attribute_list_, attribute_length_); }
