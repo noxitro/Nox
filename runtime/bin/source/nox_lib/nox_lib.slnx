@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="NoxLib.vcxproj" />
+  <Project Path="nox_lib.vcxproj" Id="2a5c25ff-3c74-4fa9-85e6-748ef25ca171" />
 </Solution>
