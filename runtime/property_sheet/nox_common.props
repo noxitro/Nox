@@ -7,6 +7,10 @@
     <IntDir>$(SolutionDir)build\intermediate\$(SolutionName)\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <_PropertySheetDisplayName>nox_common</_PropertySheetDisplayName>
     <LinkIncremental>true</LinkIncremental>
+    <!-- vcpkg (manifest mode) installed tree at repository root -->
+    <NoxVcpkgInstalledDir>$(MSBuildThisFileDirectory)..\..\vcpkg_installed\$(Platform)-windows\</NoxVcpkgInstalledDir>
+    <NoxVcpkgLibDir Condition="'$(Configuration)'=='Debug'">$(NoxVcpkgInstalledDir)debug\lib</NoxVcpkgLibDir>
+    <NoxVcpkgLibDir Condition="'$(NoxVcpkgLibDir)'==''">$(NoxVcpkgInstalledDir)lib</NoxVcpkgLibDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -25,7 +29,7 @@
       <OpenMPSupport>false</OpenMPSupport>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <CompileAsManaged>false</CompileAsManaged>
-      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(NoxVcpkgInstalledDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAsWinRT>false</CompileAsWinRT>
       <GenerateXMLDocumentationFiles>false</GenerateXMLDocumentationFiles>
       <ObjectFileName>$(IntDir)</ObjectFileName>
@@ -39,7 +43,9 @@
       <TranslateIncludes>false</TranslateIncludes>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
-    <Link />
+    <Link>
+      <AdditionalLibraryDirectories>$(NoxVcpkgLibDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
     <Lib>
       <SubSystem>Windows</SubSystem>
     </Lib>
