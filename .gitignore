@@ -1,6 +1,9 @@
 # Prerequisites
 *.d
 
+# vcpkg manifest-mode installed packages
+/vcpkg_installed/
+
 # Compiled Object files
 *.slo
 *.lo
