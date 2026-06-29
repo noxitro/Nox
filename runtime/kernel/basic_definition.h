@@ -2,7 +2,7 @@
 ///	@brief	汎用的に使う定義など
 #pragma once
 
-#include "gsl/gsl"
+#include <gsl/gsl>
 
 namespace nox
 {
