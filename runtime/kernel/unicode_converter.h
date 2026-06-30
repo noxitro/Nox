@@ -20,14 +20,14 @@ namespace nox::unicode
 	std::string_view	ConvertNString(std::wstring_view str_view, std::span<char> dest_buffer);
 
 	template<std::same_as<char> To, class From>
-		requires(std::is_void_v<std::void_t<decltype(::nox::unicode::ConvertNString(std::declval<From>()))>>)
+		requires requires { ::nox::unicode::ConvertNString(std::declval<From>()); }
 	inline	auto	ConvertString(From&& str, std::span<To> dest_buffer)
 	{
 		return ::nox::unicode::ConvertNString(str, dest_buffer);
 	}
 
 	template<std::same_as<::nox::StlNString> To, class From>
-		requires(std::is_void_v<std::void_t<decltype(::nox::unicode::ConvertNString(std::declval<From>()))>>)
+		requires requires { ::nox::unicode::ConvertNString(std::declval<From>()); }
 	inline	To	ConvertString(From&& str)
 	{
 		return ::nox::unicode::ConvertNString(str);
@@ -53,13 +53,13 @@ namespace nox::unicode
 	}
 
 	template<std::same_as<::nox::StlU8String> To, class From>
-		requires(std::is_void_v<std::void_t<decltype(unicode::ConvertU8String(std::declval<From>()))>>)
+		requires requires { ::nox::unicode::ConvertU8String(std::declval<From>()); }
 	inline	To	ConvertString(From&& str)
 	{
 		return ::nox::unicode::ConvertU8String(str);
 	}
 	template<std::same_as<char8> To, class From>
-		requires(std::is_void_v<std::void_t<decltype(::nox::unicode::ConvertU8String(std::declval<From>()))>>)
+		requires requires { ::nox::unicode::ConvertU8String(std::declval<From>(), std::declval<std::span<To>>()); }
 	inline	auto	ConvertString(From&& str, std::span<To> dest_buffer)
 	{
 		return ::nox::unicode::ConvertU8String(str, dest_buffer);
@@ -84,13 +84,13 @@ namespace nox::unicode
 	}
 
 	template<std::same_as<nox::StlU16String> To, class From>
-		requires(std::is_void_v<std::void_t<decltype(::nox::unicode::ConvertU16String(std::declval<From>()))>>)
+		requires requires { ::nox::unicode::ConvertU16String(std::declval<From>()); }
 	inline	To	ConvertString(From&& str)
 	{
 		return ::nox::unicode::ConvertU16String(str);
 	}
 	template<std::same_as<::nox::char16> To, class From>
-		requires(std::is_void_v<std::void_t<decltype(::nox::unicode::ConvertU16String(std::declval<From>()))>>)
+		requires requires { ::nox::unicode::ConvertU16String(std::declval<From>(), std::declval<std::span<To>>()); }
 	inline	auto	ConvertString(From&& str, std::span<To> dest_buffer)
 	{
 		return ::nox::unicode::ConvertU16String(str, dest_buffer);
@@ -129,7 +129,7 @@ namespace nox::unicode
 	}
 
 	template<std::same_as<::nox::StlWString> To, class From>
-		requires(std::is_void_v<std::void_t<decltype(::nox::unicode::ConvertWString(std::declval<From>()))>>)
+		requires requires { ::nox::unicode::ConvertWString(std::declval<From>()); }
 	inline	To	ConvertString(From&& str)
 	{
 		return ::nox::unicode::ConvertWString(str);
@@ -167,13 +167,13 @@ namespace nox::unicode
 	}
 
 	template<std::same_as<::nox::StlU32String> To, class From>
-		requires(std::is_void_v<std::void_t<decltype(unicode::ConvertU32String(std::declval<From>()))>>)
+		requires requires { ::nox::unicode::ConvertU32String(std::declval<From>()); }
 	inline	To	ConvertString(From&& str)
 	{
 		return ::nox::unicode::ConvertU32String(str);
 	}
 	template<std::same_as<::nox::char32> To, class From>
-		requires(std::is_void_v<std::void_t<decltype(unicode::ConvertU32String(std::declval<From>()))>>)
+		requires requires { ::nox::unicode::ConvertU32String(std::declval<From>(), std::declval<std::span<To>>()); }
 	inline	auto	ConvertString(From&& str, std::span<To> dest_buffer)
 	{
 		return ::nox::unicode::ConvertU32String(str, dest_buffer);

@@ -23,8 +23,8 @@
 //#pragma warning(disable:4820)
 //#pragma warning(disable:5027)
 #define FMT_HEADER_ONLY
-#include	"third_party/fmt/format.h"
-#include	"third_party/fmt/xchar.h"
+#include	<fmt/format.h>
+#include	<fmt/xchar.h>
 #pragma warning(pop)
 
 #include	"string_util.h"

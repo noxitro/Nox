@@ -234,7 +234,7 @@ namespace nox
 
 	/// @brief 文字列関係の型から文字型を表す
 	/// @tparam T 文字列関係の型
-	template<class T> requires(std::is_void_v<std::void_t<typename nox::detail::StringChar<T>::type>>)
+	template<class T> requires requires { typename nox::detail::StringChar<T>::type; }
 	using StringCharType = typename nox::detail::StringChar<T>::type;
 
 	template<class T, class U> requires(nox::IsTupleLikeValue<T> || nox::IsTupleLikeValue<U>)
