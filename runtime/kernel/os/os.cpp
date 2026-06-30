@@ -7,8 +7,8 @@
 #include	"thread.h"
 
 #if NOX_WINDOWS
-#include	"os/window.h"
 #include	<Psapi.h>
+#include	"os/window.h"
 #endif // NOX_WINDOWS
 
 #include	"../parallel_execute_checker.h"

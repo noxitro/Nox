@@ -11,9 +11,8 @@ namespace nox
 	enum class PlatformType : nox::uint16
 	{
 		None,
-		Studio = 1 << 0,
-		Win64 = 1 << 1,
-		Android = 1 << 2,
+		Win64,
+		Android,
 	};
 
 	namespace os
@@ -24,15 +23,10 @@ namespace nox
 		{
 			switch (type)
 			{
-			case nox::PlatformType::None:
-				return u8"None";
-			case nox::PlatformType::Studio:
-				return u8"Studio";
-			case nox::PlatformType::Win64:
-				return u8"Win64";
-			case nox::PlatformType::Android:
-				return u8"Android";
+			case nox::PlatformType::Win64:	return u8"Win64";
+			case nox::PlatformType::Android:	return u8"Android";
 			}
+			return u8"None";
 		}
 	}
 }
