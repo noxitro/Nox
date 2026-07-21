@@ -9,6 +9,7 @@
 namespace nox::render
 {
 	struct GraphicBufferDesc;
+	struct GraphicBufferSubResourceDesc;
 	class VertexBuffer;
 	class IndexBuffer;
 
@@ -20,7 +21,7 @@ namespace nox::render
 
 namespace nox::render::os
 {
-	class DeviceDX12 : public nox::render::RenderDevice
+	class DeviceDX12 final: public nox::render::RenderDevice
 	{
 		NOX_DECLARE_OBJECT(nox::render::os::DeviceDX12, nox::render::RenderDevice);
 	public:
@@ -34,6 +35,8 @@ namespace nox::render::os
 
 		inline constexpr ~DeviceDX12()noexcept override {}
 
+		void Initialize()override;
+		nox::IntrusivePtr<VertexBuffer> CreateVertexBuffer(const GraphicBufferDesc& desc, const GraphicBufferSubResourceDesc& sub_resource_desc)override;
 	private:
 		::ID3D12Device14* device_;
 		::IDXGISwapChain4* swap_chain_;

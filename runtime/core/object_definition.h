@@ -39,6 +39,7 @@ namespace nox
 			return ::nox::detail::ObjectCtor<ClassType>(std::forward<Args>(args)...);\
 			static_assert(!std::is_same_v<BaseType, ClassType>, "base type failed");\
 			static_assert(std::is_base_of_v<BaseType, ClassType>, "base type failed");\
+			static_assert(alignof(ClassType) == 16, "not aligned to 16 bytes");\
 		}\
 		using Base = BaseType
 //	end define

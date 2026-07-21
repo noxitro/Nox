@@ -13,7 +13,6 @@ namespace nox
 
 namespace nox::dev::net
 {
-	class Entity;
 	class Server;
 	class Client;
 

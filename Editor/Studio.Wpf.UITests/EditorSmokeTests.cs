@@ -44,7 +44,7 @@ public sealed class EditorSmokeTests
 		Assert.True(File.Exists(metaPath), $"Expected asset meta file to be generated: {metaPath}");
 		string metaJson = File.ReadAllText(metaPath);
 		Assert.Contains("\"Guid\"", metaJson, StringComparison.Ordinal);
-		Assert.Contains("\"Kind\": \"Document\"", metaJson, StringComparison.Ordinal);
+		Assert.DoesNotContain("\"Kind\"", metaJson, StringComparison.Ordinal);
 		Assert.Contains("\"Importer\": \"TextImporter\"", metaJson, StringComparison.Ordinal);
 	}
 

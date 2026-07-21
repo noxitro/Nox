@@ -13,8 +13,8 @@ namespace nox::render
 	enum class GraphicsApi : nox::uint8
 	{
 		DirectX12,
-		DirectX11,
 		Vulkan,
+		WebGPU,
 		_Max
 	};
 

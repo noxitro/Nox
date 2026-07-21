@@ -16,7 +16,8 @@ namespace nox::dev::net
 	inline constexpr std::string_view k_hand_shake_str3 = "HandShake3";
 }
 
-nox::dev::net::Server::Server() :
+nox::dev::net::Server::Server(nox::dev::net::IServerEventHandler& event_handler)noexcept :
+	event_handler_(event_handler),
 	is_startup_(false),
 	socket_(nox::dev::net::k_raw_invalid_socket),
 	initialize_context_{}
@@ -177,7 +178,7 @@ void	nox::dev::net::Server::Connection(::fd_set& fds)
 			}
 
 			std::array<char, k_hand_shake_str1.length()> dest_buffer{0};
-			auto r = this->Receive(client_socket, dest_buffer.data(), static_cast<nox::int32>(k_hand_shake_str1.length()));
+			auto r = nox::dev::net::ReceiveAll(client_socket, dest_buffer.data(), static_cast<nox::int32>(k_hand_shake_str1.length()));
 			if (!r)
 			{
 				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"ハンドシェイク1の受信に失敗しました");
@@ -193,7 +194,7 @@ void	nox::dev::net::Server::Connection(::fd_set& fds)
 		
 		//	handshake2の送信
 		{
-			const auto r = this->Send(client_socket, k_hand_shake_str2.data(), static_cast<nox::int32>(k_hand_shake_str2.length()));
+			const auto r = nox::dev::net::SendAll(client_socket, k_hand_shake_str2.data(), static_cast<nox::int32>(k_hand_shake_str2.length()));
 			if (!r)
 			{
 				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"ハンドシェイク2の送信に失敗しました");
@@ -240,7 +241,7 @@ void	nox::dev::net::Server::Connection(::fd_set& fds)
 			}
 
 			std::array<char, k_hand_shake_str3.length()> dest_buffer{};
-			auto r = this->Receive(client_socket, dest_buffer.data(), static_cast<nox::int32>(k_hand_shake_str3.length()));
+			auto r = nox::dev::net::ReceiveAll(client_socket, dest_buffer.data(), static_cast<nox::int32>(k_hand_shake_str3.length()));
 			if (!r)
 			{
 				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"ハンドシェイク3の受信に失敗しました");
@@ -283,7 +284,7 @@ void	nox::dev::net::Server::Connection(::fd_set& fds)
           client_list_.emplace_back(PeerContext{ .connection = connection_context, .socket = client_socket });
 			NOX_INFO_LINE(nox::dev::net::log_id::DevNet, u"接続完了 name:{0}, port{1}", connection_context.peername, connection_context.portname);
 
-			OnConnected(connection_context);
+			event_handler_.OnServerConnected(connection_context);
 		}
 	}
 }
@@ -350,7 +351,7 @@ void nox::dev::net::Server::Update(nox::World& world)
 			continue;
 		}
 
-		OnReceive(world);
+		event_handler_.OnServerReceive(world);
 	}
 }
 
@@ -360,6 +361,8 @@ void nox::dev::net::Server::Shutdown()
 	{
 		return;
 	}
+
+	is_startup_ = false;
 
 	//	全てのクライアントを切断
 	while (client_list_.empty() == false)
@@ -372,21 +375,6 @@ void nox::dev::net::Server::Shutdown()
 	socket_ = nox::dev::net::k_raw_invalid_socket;
 
 	//nox::dev::net::SocketScheduler::Instance().UnregisterEntity(*this);
-}
-
-void nox::dev::net::Server::Connected(const nox::dev::net::ConnectionContext& context)
-{
-	nox::dev::net::PeerContext peer_context;
-	peer_context.connection = context;
-	peer_context.socket = k_raw_invalid_socket;
-	client_list_.emplace_back(peer_context);
-
-	OnConnected(context);
-}
-
-void nox::dev::net::Server::Disconnected(const nox::dev::net::ConnectionContext& context)
-{
-
 }
 
 void nox::dev::net::Server::Disconnect(const nox::dev::net::raw_socket_t socket)
@@ -407,6 +395,15 @@ void nox::dev::net::Server::Disconnect(const nox::dev::net::raw_socket_t socket)
 	nox::dev::net::CloseSocket(socket);
 
 	NOX_INFO_LINE(nox::dev::net::log_id::DevNet, u"切断完了 name:{0}, port:{1}", it->connection.peername, it->connection.portname);
-	OnDisconnected(it->connection);
+	event_handler_.OnServerDisconnected(it->connection);
 	client_list_.erase(it);
+}
+
+std::expected<void, nox::dev::net::SocketIoError> nox::dev::net::Server::Send(
+	nox::dev::net::raw_socket_t socket,
+	nox::not_null<const void*> buffer,
+	nox::int32 size_to_send,
+	nox::dev::net::SendFlag flag)
+{
+	return nox::dev::net::SendAll(socket, buffer, size_to_send, flag);
 }

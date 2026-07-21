@@ -291,7 +291,7 @@
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
-                                    <GridViewColumn Header="Kind" DisplayMemberBinding="{Binding Kind}" Width="100" />
+                                    <GridViewColumn Header="Type" DisplayMemberBinding="{Binding AssetType}" Width="100" />
                                     <GridViewColumn Header="Path" DisplayMemberBinding="{Binding RelativePath}" Width="360" />
                                     <GridViewColumn Header="Size" DisplayMemberBinding="{Binding SizeText}" Width="90" />
                                     <GridViewColumn Header="Modified" DisplayMemberBinding="{Binding LastWriteTime}" Width="150" />
@@ -379,7 +379,7 @@
                                         </Grid>
 
                                         <StackPanel Grid.Row="2" Margin="8,4,8,8">
-                                            <TextBlock Text="{Binding Kind}"
+                                            <TextBlock Text="{Binding AssetType}"
                                                        Foreground="{DynamicResource Nox.Brush.TextSecondary}"
                                                        FontSize="11"
                                                        TextAlignment="Center"

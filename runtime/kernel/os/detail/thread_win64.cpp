@@ -34,9 +34,6 @@ void	nox::os::detail::ThreadWin64::Dispatch( std::function<void()> func)
 	//	関数をセット
 	thread_func_ = func;
 	NOX_ASSERT(thread_func_ != nullptr, u"スレッドコールバックがnullです");
-
-	//	終了していなければ待つ
-	Wait();
 	
 	native_thread_handle_ = reinterpret_cast<::HANDLE>(::_beginthreadex(
 		nullptr,	//	

@@ -11,5 +11,6 @@
 namespace nox::os
 {
 	using File = nox::os::detail::FileWin64;
+	using ReadOnlyMappedFile = nox::os::detail::ReadOnlyMappedFileWin64;
 }
 #endif // NOX_WIN64

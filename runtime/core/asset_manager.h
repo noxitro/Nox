@@ -8,7 +8,7 @@
 #if NOX_DEVELOP
 namespace nox::dev::editor_remote
 {
-	class EditorRemoteServerSystem;
+	class EditorRemoteServer;
 }
 #endif // NOX_DEVELOP
 
@@ -53,7 +53,23 @@ namespace nox
 
 		std::span<const nox::SystemBase::PhaseRegister> GetPhaseRegisterList()const noexcept override;
 
+		/// @brief ロードスレッドでのアセット処理結果
+		enum class LoadStatus : nox::uint8
+		{
+			/// @brief 初期化まで正常に完了した
+			Completed,
+			/// @brief ネイティブコンバートがまだ完了していないので再試行する
+			Pending,
+			/// @brief ファイルが破損しているので破棄する
+			Corrupted,
+		};
+
 		void LoadThread(nox::World& world);
+
+		/// @brief 単一アセットのロード処理（存在チェック・初期化チェック・初期化）
+		/// @param asset 対象アセット
+		/// @return 処理結果
+		LoadStatus ProcessLoad(nox::Asset& asset);
 	public:
 		static constexpr SystemPhaseInit kPhaseInit{
 			&AssetManager::Init,
@@ -67,18 +83,18 @@ namespace nox
 
 	private:
 #if NOX_DEVELOP
-		nox::util::InitOnceRef<nox::dev::editor_remote::EditorRemoteServerSystem> editor_remote_server_system_;
+		nox::util::InitOnceRef<nox::dev::editor_remote::EditorRemoteServer> editor_remote_server_system_;
 #endif // NOX_DEVELOP
 
 		nox::UnorderedMap<std::u8string_view, nox::Asset*> resource_cache_;
 		nox::UnorderedMap<std::u8string_view, std::reference_wrapper<const nox::reflection::ClassInfo>> resource_typeinfo_map_with_extension_;
-		nox::Vector<nox::Asset*> load_queue_;
+		nox::Queue<nox::Asset*> load_queue_;
 		bool is_resource_class_cache_built_ = false;
 		mutable nox::os::ReadWriteLock rw_lock_;
 		nox::os::ReadWriteLock load_queue_rw_lock_;
-		std::binary_semaphore load_queue_signal_;
-		
+		std::counting_semaphore<> load_queue_signal_;
+
 		nox::os::Thread load_thread_;
-		bool is_kill_;
+		std::atomic_bool is_kill_;
 	};
 }

@@ -38,15 +38,44 @@ namespace nox::dev::editor_remote
 		TwoWay
 	};
 
-	class EditorRemoteServer : public nox::dev::net::Server
+	class EditorRemoteServer final:	public nox::SystemBase
 	{
-		NOX_DECLARE_OBJECT(nox::dev::editor_remote::EditorRemoteServer, nox::dev::net::Server);
-		friend class EditorRemoteServerSystem;
+		NOX_DECLARE_OBJECT(nox::dev::editor_remote::EditorRemoteServer, nox::SystemBase);
 	private:
+		class ServerEventHandler final : public nox::dev::net::IServerEventHandler
+		{
+		public:
+			explicit ServerEventHandler(EditorRemoteServer& owner)noexcept :
+				owner_(owner) {
+			}
+
+			void OnServerConnected(const nox::dev::net::ConnectionContext& context) override
+			{
+				owner_.OnServerConnected(context);
+			}
+
+			void OnServerDisconnected(const nox::dev::net::ConnectionContext& context) override
+			{
+				owner_.OnServerDisconnected(context);
+			}
+
+			void OnServerReceive(nox::World& world) override
+			{
+				owner_.OnServerReceive(world);
+			}
+		private:
+			EditorRemoteServer& owner_;
+		};
+
 		struct Impl;
 	public:
 		EditorRemoteServer();
 		~EditorRemoteServer()override;
+
+		EditorRemoteServer(const EditorRemoteServer&) = delete;
+		EditorRemoteServer& operator=(const EditorRemoteServer&) = delete;
+		EditorRemoteServer(EditorRemoteServer&&) noexcept = delete;
+		EditorRemoteServer& operator=(EditorRemoteServer&&) noexcept = delete;
 
 		void	SendQuery(nox::dev::editor_remote::Query& query, std::function<void(const nox::dev::editor_remote::Response&)> callback = nullptr);
 		void	SendBuffer(std::span<const nox::uint8> buffer);
@@ -59,16 +88,37 @@ namespace nox::dev::editor_remote
 		nox::int64 FindRemoteInstanceId(const nox::Object& object)const noexcept;
 		nox::Object* FindRemoteInstance(nox::int64 instance_id)const noexcept;
 		void	CollectRemoteInstances(std::function<void(nox::int64, const nox::Object&)> evaluate)const;
+		std::span<const nox::SystemBase::PhaseRegister> GetPhaseRegisterList()const noexcept override;
 	private:
 		/// @brief main threadから呼び出される更新処理
 		void	Start(nox::World& world);
+		void	Shutdown();
 		void	Update(nox::World& world);
+		void	Terminate(nox::World& world);
 
-		void	OnConnected(const nox::dev::net::ConnectionContext& context)override;
-		void	OnDisconnected(const nox::dev::net::ConnectionContext& context)override;
+		void	OnServerConnected(const nox::dev::net::ConnectionContext& context);
+		void	OnServerDisconnected([[maybe_unused]] const nox::dev::net::ConnectionContext& context);
+		void	OnServerReceive(nox::World& world);
 		void UpdateReceive(nox::World& world);
-		void OnReceive(nox::World& world);
+	public:
+		static constexpr SystemPhaseInit k_phase_init{
+			&EditorRemoteServer::Start,
+			NOX_U8_NAMEOF_FUNCTION(&EditorRemoteServer::Start)
+		};
+
+		static constexpr SystemPhaseUpdate k_phase_update{
+			&EditorRemoteServer::Update,
+			NOX_U8_NAMEOF_FUNCTION(&EditorRemoteServer::Update)
+		};
+
+		static constexpr SystemPhaseTerminate k_phase_terminate{
+			&EditorRemoteServer::Terminate,
+			NOX_U8_NAMEOF_FUNCTION(&EditorRemoteServer::Terminate)
+		};
+
 	private:
+		ServerEventHandler event_handler_;
+		nox::dev::net::Server server_;
 		nox::uint32 query_id_counter_;
 		nox::int64 instance_id_counter_;
 		nox::UnorderedMap<nox::uint32, std::function<void(const nox::dev::editor_remote::Response&)>> response_dict_;
@@ -91,61 +141,6 @@ namespace nox::dev::editor_remote
 
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
 		nox::dev::editor_remote::EditorRemoteServer::Impl* impl_;
-	};
-
-	/// @brief 一時的なEditorRemoteServerのラッパー　SystemBaseとして登録するためのクラス
-	///		@details 将来的にはEditorRemoteServer自体をSystemBaseとして実装する
-	class EditorRemoteServerSystem : public nox::SystemBase
-	{
-		NOX_DECLARE_OBJECT(nox::dev::editor_remote::EditorRemoteServerSystem, nox::SystemBase);
-	public:
-		EditorRemoteServerSystem()noexcept :
-			server_(new EditorRemoteServer()) {
-		}
-		
-		~EditorRemoteServerSystem()override {
-			
-		}
-
-		inline EditorRemoteServer& GetServer()const noexcept { return *this->server_; }
-
-		std::span<const nox::SystemBase::PhaseRegister> GetPhaseRegisterList()const noexcept override;
-	private:
-		inline void Initialize(nox::World& world)
-		{
-			server_->Start(world);
-		}
-
-		inline void Update(nox::World& world)
-		{
-			this->server_->Update(world);
-		}
-
-		inline void Terminate(nox::World&)
-		{
-			delete server_;
-			server_ = nullptr;
-		}
-
-	public:
-		static constexpr SystemPhaseInit k_phase_init{
-			&EditorRemoteServerSystem::Initialize,
-			NOX_U8_NAMEOF_FUNCTION(&EditorRemoteServerSystem::Initialize)
-		};
-
-		static constexpr SystemPhaseUpdate k_phase_update{
-			&EditorRemoteServerSystem::Update,
-			NOX_U8_NAMEOF_FUNCTION(&EditorRemoteServerSystem::Update)
-		};
-
-		static constexpr SystemPhaseTerminate k_phase_terminate{
-			&EditorRemoteServerSystem::Terminate,
-			NOX_U8_NAMEOF_FUNCTION(&EditorRemoteServerSystem::Terminate)
-		};
-
-	private:
-		EditorRemoteServer* server_;
-		
 	};
 }
 #endif // NOX_DEVELOP

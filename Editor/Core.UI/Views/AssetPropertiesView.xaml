@@ -98,8 +98,8 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <TextBlock Text="Kind" Style="{StaticResource AssetPropertiesLabelStyle}" />
-                    <TextBlock Text="{Binding Kind}" Style="{StaticResource AssetPropertiesValueStyle}" />
+                    <TextBlock Text="Type" Style="{StaticResource AssetPropertiesLabelStyle}" />
+                    <TextBlock Text="{Binding AssetType}" Style="{StaticResource AssetPropertiesValueStyle}" />
 
                     <TextBlock Text="Relative Path" Style="{StaticResource AssetPropertiesLabelStyle}" />
                     <TextBlock Text="{Binding RelativePath}" Style="{StaticResource AssetPropertiesValueStyle}" />

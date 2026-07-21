@@ -21,7 +21,11 @@ nox::dev::net::Entity::~Entity()
 {
 }
 
-std::expected<void, nox::dev::net::SocketIoError> nox::dev::net::Entity::Receive(nox::dev::net::raw_socket_t socket, nox::not_null<void*> buffer, nox::int32 size_to_read, nox::dev::net::ReceiveFlag flag)
+std::expected<void, nox::dev::net::SocketIoError> nox::dev::net::ReceiveAll(
+	nox::dev::net::raw_socket_t socket,
+	nox::not_null<void*> buffer,
+	nox::int32 size_to_read,
+	nox::dev::net::ReceiveFlag flag)
 {
 	NOX_ASSERT(size_to_read > 0 && size_to_read <= k_max_size, nox::util::Format(u"size_to_read is zero or too large. size:{0}", size_to_read));
 
@@ -55,7 +59,11 @@ std::expected<void, nox::dev::net::SocketIoError> nox::dev::net::Entity::Receive
 	return {};
 }
 
-std::expected<void, nox::dev::net::SocketIoError> nox::dev::net::Entity::Send(nox::dev::net::raw_socket_t socket, nox::not_null<const void*> buffer, nox::int32 size_to_send, nox::dev::net::SendFlag flag)
+std::expected<void, nox::dev::net::SocketIoError> nox::dev::net::SendAll(
+	nox::dev::net::raw_socket_t socket,
+	nox::not_null<const void*> buffer,
+	nox::int32 size_to_send,
+	nox::dev::net::SendFlag flag)
 {
 	NOX_ASSERT(size_to_send > 0 && size_to_send <= k_max_size, nox::util::Format(u"size_to_send is zero or too large. size:{0}", size_to_send));
 	if (socket == k_raw_invalid_socket)
@@ -84,4 +92,22 @@ std::expected<void, nox::dev::net::SocketIoError> nox::dev::net::Entity::Send(no
 		}
 	}
 	return {};
+}
+
+std::expected<void, nox::dev::net::SocketIoError> nox::dev::net::Entity::Receive(
+	nox::dev::net::raw_socket_t socket,
+	nox::not_null<void*> buffer,
+	nox::int32 size_to_read,
+	nox::dev::net::ReceiveFlag flag)
+{
+	return nox::dev::net::ReceiveAll(socket, buffer, size_to_read, flag);
+}
+
+std::expected<void, nox::dev::net::SocketIoError> nox::dev::net::Entity::Send(
+	nox::dev::net::raw_socket_t socket,
+	nox::not_null<const void*> buffer,
+	nox::int32 size_to_send,
+	nox::dev::net::SendFlag flag)
+{
+	return nox::dev::net::SendAll(socket, buffer, size_to_send, flag);
 }

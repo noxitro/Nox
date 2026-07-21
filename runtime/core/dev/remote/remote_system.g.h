@@ -18,18 +18,18 @@ namespace nox::dev::editor_remote
 		void OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)override;
 		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::World&, std::span<nox::uint8> storage)const override;
 
-		inline std::u8string_view GetNativePath()const noexcept
+		inline std::u8string_view GetUri()const noexcept
 		{
-			return native_path_;
+			return uri_;
 		}
 
-		inline void SetNativePath(std::u8string_view value)
+		inline void SetUri(std::u8string_view value)
 		{
-			native_path_ = value;
+			uri_ = value;
 		}
 
 	private:
-		nox::U8FixedString<256> native_path_ {};
+		nox::U8FixedString<256> uri_ {};
 	};
 
 	/// @brief MainSceneViewを取得する

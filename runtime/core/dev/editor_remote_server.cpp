@@ -38,6 +38,8 @@ namespace nox::dev::editor_remote
 }
 
 nox::dev::editor_remote::EditorRemoteServer::EditorRemoteServer():
+	event_handler_(*this),
+	server_(event_handler_),
 	query_id_counter_(0),
 	instance_id_counter_(0),
 	response_dict_{},
@@ -52,12 +54,7 @@ nox::dev::editor_remote::EditorRemoteServer::EditorRemoteServer():
 
 nox::dev::editor_remote::EditorRemoteServer::~EditorRemoteServer()
 {
-	if (socket_scheduler_ != nullptr)
-	{
-		socket_scheduler_->UnregisterEntity(*this);
-		socket_scheduler_ = nullptr;
-	}
-
+	Shutdown();
 	delete impl_;
 	impl_ = nullptr;
 }
@@ -81,7 +78,7 @@ void	nox::dev::editor_remote::EditorRemoteServer::SendBuffer(std::span<const nox
 {
 	if (main_client_.socket != nox::dev::net::k_raw_invalid_socket)
 	{
-		const auto send_result = this->Send(main_client_.socket, static_cast<const void*>(buffer.data()), static_cast<nox::int32>(buffer.size()));
+		const auto send_result = server_.Send(main_client_.socket, static_cast<const void*>(buffer.data()), static_cast<nox::int32>(buffer.size()));
 		if (send_result.has_value() == false)
 		{
 			NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u8"送信エラー size={0}", buffer.size());
@@ -91,7 +88,7 @@ void	nox::dev::editor_remote::EditorRemoteServer::SendBuffer(std::span<const nox
 
 void	nox::dev::editor_remote::EditorRemoteServer::Start(nox::World& world)
 {
-    const bool started = this->Startup(InitializeContext{
+    const bool started = server_.Startup(nox::dev::net::Server::InitializeContext{
 		.max_connection = 1,
 		.port = 86,
 		});
@@ -102,9 +99,25 @@ void	nox::dev::editor_remote::EditorRemoteServer::Start(nox::World& world)
 		NOX_ASSERT(socket_scheduler_ != nullptr, u"SocketSchedulerが登録されていません");
 		if (socket_scheduler_ != nullptr)
 		{
-			socket_scheduler_->RegisterEntity(*this);
+			socket_scheduler_->RegisterEntity(server_);
 		}
 	}
+}
+
+void nox::dev::editor_remote::EditorRemoteServer::Shutdown()
+{
+	if (socket_scheduler_ != nullptr)
+	{
+		socket_scheduler_->UnregisterEntity(server_);
+		socket_scheduler_ = nullptr;
+	}
+
+	server_.Shutdown();
+}
+
+void nox::dev::editor_remote::EditorRemoteServer::Terminate([[maybe_unused]] nox::World& world)
+{
+	Shutdown();
 }
 
 void	nox::dev::editor_remote::EditorRemoteServer::Update(nox::World& world)
@@ -203,7 +216,7 @@ void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive(nox::World& worl
 	}
 }
 
-void nox::dev::editor_remote::EditorRemoteServer::OnReceive(nox::World& world)
+void nox::dev::editor_remote::EditorRemoteServer::OnServerReceive(nox::World& world)
 {
 	//	受信バッファ 未初期化でOK
 	std::array<nox::uint8, 2048> receive_buffer;
@@ -238,7 +251,7 @@ void nox::dev::editor_remote::EditorRemoteServer::OnReceive(nox::World& world)
 	}
 }
 
-void	nox::dev::editor_remote::EditorRemoteServer::OnConnected(const nox::dev::net::ConnectionContext& context)
+void	nox::dev::editor_remote::EditorRemoteServer::OnServerConnected(const nox::dev::net::ConnectionContext& context)
 {
 	main_client_ = context;
 
@@ -246,7 +259,7 @@ void	nox::dev::editor_remote::EditorRemoteServer::OnConnected(const nox::dev::ne
 	impl_->log_service.AttachServer(*this);
 }
 
-void	nox::dev::editor_remote::EditorRemoteServer::OnDisconnected(const nox::dev::net::ConnectionContext& context)
+void	nox::dev::editor_remote::EditorRemoteServer::OnServerDisconnected([[maybe_unused]] const nox::dev::net::ConnectionContext& context)
 {
 	main_client_.socket = nox::dev::net::k_raw_invalid_socket;
 
@@ -357,14 +370,17 @@ void nox::dev::editor_remote::EditorRemoteServer::CollectRemoteInstances(std::fu
 	}
 }
 
-std::span<const nox::SystemBase::PhaseRegister> nox::dev::editor_remote::EditorRemoteServerSystem::GetPhaseRegisterList()const noexcept
+std::span<const nox::SystemBase::PhaseRegister> nox::dev::editor_remote::EditorRemoteServer::GetPhaseRegisterList()const noexcept
 {
 	static constexpr auto table = std::to_array({
 		PhaseRegister(k_phase_init, nox::dev::net::SocketScheduler::k_phase_init),
 		PhaseRegister(k_phase_update, 
 			{nox::dev::net::SocketScheduler::k_phase_socket_update}
 			),
-		PhaseRegister(k_phase_terminate)
+		PhaseRegister(k_phase_terminate,
+			{},
+			{nox::dev::net::SocketScheduler::k_phase_terminate}
+			)
 	});
 
 	return table;

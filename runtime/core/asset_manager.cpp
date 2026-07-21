@@ -9,6 +9,7 @@
 #include	"world.h"
 #include	"core_utility.h"
 #include	"asset_attribute.h"
+#include	"log_id.h"
 
 #if NOX_DEVELOP
 #include	"dev/editor_remote_server.h"
@@ -20,23 +21,12 @@ namespace nox
 {
 	namespace
 	{
-		constexpr std::u8string_view k_scene_resource_extension = u8"noxscene";
-		constexpr std::u8string_view k_legacy_scene_resource_extension = u8"scene";
-		constexpr std::u8string_view k_short_scene_resource_extension = u8"scn";
-
-		std::u8string_view NormalizeResourceExtension(std::u8string_view extension)noexcept
-		{
-			if (extension == k_legacy_scene_resource_extension || extension == k_short_scene_resource_extension)
-			{
-				return k_scene_resource_extension;
-			}
-
-			return extension;
-		}
+		/// @brief ネイティブコンバート待ちで再試行するまでの待機時間(ms)
+		constexpr nox::uint32 k_load_retry_interval_ms = 100;
 
 		inline nox::U8FixedString<nox::os::k_max_path_length> GetFullPath(std::u8string_view native_path)
 		{
-			//	���[�J����fullpath
+			//	���[�J����fullpath
 			std::array<nox::char8, nox::os::k_max_path_length> project_dir_buffer{};
 			const std::u8string_view project_dir = nox::util::GetProjectDir(project_dir_buffer);
 
@@ -59,16 +49,7 @@ namespace nox
 		template<class String>
 		void AppendCanonicalResourceRelativePath(String& dest, std::u8string_view relative_path)
 		{
-			const std::u8string_view extension = NormalizeResourceExtension(nox::filesystem::GetExtensions(relative_path, 0));
-			if (extension == k_scene_resource_extension)
-			{
-				const std::u8string_view source_extension = nox::filesystem::GetExtensions(relative_path, 0);
-				const std::size_t base_length = relative_path.size() - source_extension.size();
-				dest.append(relative_path.substr(0, base_length));
-				dest.append(k_scene_resource_extension);
-				return;
-			}
-
+			// TODO: シーンリソース拡張子の正規化は未実装
 			dest.append(relative_path);
 		}
 	}
@@ -78,7 +59,7 @@ namespace nox::util
 {
 	nox::U8FixedString<nox::os::k_max_path_length> nox::util::GetNativeResourcePath(std::u8string_view uri)
 	{
-		//	�v���W�F�N�g�f�B���N�g����native�p�X�����ɍs��
+		//	�v���W�F�N�g�f�B���N�g����native�p�X�����ɍs��
 		//	uri:assets/aaa/bbb/ccc.ext
 		//	native:native/{platform}/aaa/bbb/ccc.ext
 		std::u8string_view relative_path = uri;
@@ -112,8 +93,8 @@ namespace nox::util
 }
 
 nox::AssetManager::AssetManager() :
-	is_kill_(false),
-	load_queue_signal_(0)
+	load_queue_signal_(0),
+	is_kill_(false)
 {
 
 }
@@ -126,7 +107,7 @@ nox::AssetManager::~AssetManager()
 nox::Asset& nox::AssetManager::CreateAssetImpl(std::u8string_view uri)
 {
 	{
-		//	���\�[�X�L���b�V���ɑ��݂��邩
+		//	���\�[�X�L���b�V���ɑ��݂��邩
 		NOX_LOCAL_SCOPE(nox::os::ScopedReadLock(rw_lock_));
 
 		const auto it = resource_cache_.find(uri);
@@ -147,8 +128,8 @@ nox::Asset& nox::AssetManager::CreateAssetImpl(std::u8string_view uri)
 			return *it->second;
 		}
 
-		//	�{���ɂȂ��̂ō쐬����
-		const std::u8string_view extension = NormalizeResourceExtension(nox::filesystem::GetExtensions(uri, 0));
+		//	�{���ɂȂ��̂ō쐬����
+		const std::u8string_view extension = nox::filesystem::GetExtensions(uri, 0);
 		const nox::reflection::ClassInfo& class_info = resource_typeinfo_map_with_extension_.at(extension);
 		new_asset = static_cast<nox::Asset*>(class_info.GetType().CreateObject());
 		new_asset->Bind(uri, *this);
@@ -156,14 +137,18 @@ nox::Asset& nox::AssetManager::CreateAssetImpl(std::u8string_view uri)
 		resource_cache_.emplace(new_asset->GetPath(), new_asset);
 	}
 
-	//	���[�h�L���[�ɒǉ�
+	//	���[�h�L���[�ɒǉ�
 	{
 		NOX_LOCAL_SCOPE(nox::os::ScopedWriteLock(load_queue_rw_lock_));
-		load_queue_.push_back(new_asset);
+		load_queue_.push(new_asset);
 
-		//	�R���o�[�g���N�G�X�g
+		//	�R���o�[�g���N�G�X�g
 #if NOX_DEVELOP
-		nox::dev::editor_remote::EditorRemoteServerSystem& server = editor_remote_server_system_;
+
+		nox::dev::editor_remote::EditorRemoteServer& server = editor_remote_server_system_;
+		nox::dev::editor_remote::AssetConvertQuery query;
+		query.SetUri(uri);
+		server.SendQuery(query);
 #endif // NOX_DEVELOP
 
 		//nox::dev::editor_remote::AssetConvertQuery
@@ -176,7 +161,7 @@ nox::Asset& nox::AssetManager::CreateAssetImpl(std::u8string_view uri)
 void nox::AssetManager::Init(nox::World& world)
 {
 #if NOX_DEVELOP
-	editor_remote_server_system_ = world.GetSystem<nox::dev::editor_remote::EditorRemoteServerSystem>();
+	editor_remote_server_system_ = world.GetSystem<nox::dev::editor_remote::EditorRemoteServer>();
 #endif // NOX_DEVELOP
 
 
@@ -184,11 +169,11 @@ void nox::AssetManager::Init(nox::World& world)
 	resource_typeinfo_map_with_extension_.clear();
 	is_resource_class_cache_built_ = false;
 
-	//	nox::Asset�p���N���X�����W
+	//	nox::Asset�p���N���X�����W
 	nox::reflection::ForeachDerivedClassInfoList<nox::Asset>([this](const nox::reflection::ClassInfo& class_info)
 		{
 			const nox::attr::Asset* const resource_attr = class_info.GetAttribute<nox::attr::Asset>();
-			NOX_ASSERT(resource_attr != nullptr, u"Asset�N���X�ɂ�nox::attr::Asset�������K�v�ł�:{0}", class_info.GetFullName());
+			NOX_ASSERT(resource_attr != nullptr, u"Asset�N���X�ɂ�nox::attr::Asset�������K�v�ł�:{0}", class_info.GetFullName());
 			if (resource_attr == nullptr)
 			{
 				return;
@@ -196,11 +181,6 @@ void nox::AssetManager::Init(nox::World& world)
 
 			const std::u8string_view extension = resource_attr->GetExtension();
 			resource_typeinfo_map_with_extension_.emplace(extension, std::cref(class_info));
-			if (extension == k_scene_resource_extension)
-			{
-				resource_typeinfo_map_with_extension_.emplace(k_legacy_scene_resource_extension, std::cref(class_info));
-				resource_typeinfo_map_with_extension_.emplace(k_short_scene_resource_extension, std::cref(class_info));
-			}
 		});
 	is_resource_class_cache_built_ = true;
 
@@ -212,7 +192,10 @@ void nox::AssetManager::Init(nox::World& world)
 
 void nox::AssetManager::Terminate([[maybe_unused]] nox::World& world)
 {
-	is_kill_ = true;
+	//	ロードスレッドを停止させる（停止フラグを立ててから起こし、終了を待つ）
+	is_kill_.store(true);
+	load_queue_signal_.release();
+	load_thread_.Wait();
 
 	for (auto& [path, resource] : resource_cache_)
 	{
@@ -233,16 +216,83 @@ std::span<const nox::SystemBase::PhaseRegister> nox::AssetManager::GetPhaseRegis
 	return table;
 }
 
-void nox::AssetManager::LoadThread(nox::World& world)
+void nox::AssetManager::LoadThread([[maybe_unused]] nox::World& world)
 {
-	while (is_kill_ == false)
+	while (is_kill_.load() == false)
 	{
+		//	コンバートリクエスト(CreateAsset)をトリガーに起床する
+		//	（複数積まれた場合の余分なトークンは、下のループで空キューを引いて消費される）
 		load_queue_signal_.acquire();
-		NOX_LOCAL_SCOPE(nox::os::ScopedWriteLock(load_queue_rw_lock_));
-
-		for (nox::Asset* asset : load_queue_)
+		if (is_kill_.load() == true)
 		{
-			//	�l�C�e�B�u�t�@�C���̑��݃`�F�b�N
+			break;
+		}
+
+		//	キューが空になるまで、先頭のアセットを順に処理する
+		while (is_kill_.load() == false)
+		{
+			//	先頭をピークする（popはしない）。キューへのアクセス時のみロックする
+			nox::Asset* asset = nullptr;
+			{
+				NOX_LOCAL_SCOPE(nox::os::ScopedReadLock(load_queue_rw_lock_));
+				if (load_queue_.empty() == true)
+				{
+					break;
+				}
+				asset = load_queue_.front();
+			}
+
+			const LoadStatus status = ProcessLoad(*asset);
+			if (status == LoadStatus::Pending)
+			{
+				//	ネイティブコンバートがまだ完了していないので、先頭に残したまま少し待って再試行する
+				nox::os::Sleep(k_load_retry_interval_ms);
+				continue;
+			}
+
+			//	完了または破損したので先頭を取り除く
+			NOX_LOCAL_SCOPE(nox::os::ScopedWriteLock(load_queue_rw_lock_));
+			load_queue_.pop();
 		}
 	}
+}
+
+nox::AssetManager::LoadStatus nox::AssetManager::ProcessLoad(nox::Asset& asset)
+{
+	const auto native_path = nox::util::GetNativeResourcePath(asset.GetPath());
+	const auto full_native_path = nox::GetFullPath(native_path);
+
+	//	1. ファイルの存在チェック
+	if (nox::os::Exists(full_native_path) == false)
+	{
+		//	ネイティブファイルがまだ生成されていない(コンバート待ち)
+		return LoadStatus::Pending;
+	}
+
+	//	2. 初期化チェック
+	{
+		nox::os::File file;
+
+		//	(a) ファイルを正常にオープンできるか(コンバート書き込み中はオープンに失敗し得る)
+		if (file.Open(full_native_path, u8"rb") == false)
+		{
+			return LoadStatus::Pending;
+		}
+
+		//	(b) ファイルサイズが0でないか(0は破損扱い)
+		if (file.GetSize() == 0)
+		{
+			NOX_ERROR_LINE(nox::log_id::Resource, u8"破損したアセットです(ファイルサイズ0):{0}", asset.GetPath());
+			return LoadStatus::Corrupted;
+		}
+	}
+
+	//	3. 初期化処理(ネイティブコンバートが完了しているので初期化を呼び出す)
+	if (asset.Initialize(full_native_path) == false)
+	{
+		NOX_ERROR_LINE(nox::log_id::Resource, u8"アセットの初期化に失敗しました:{0}", asset.GetPath());
+		return LoadStatus::Corrupted;
+	}
+
+	return LoadStatus::Completed;
 }

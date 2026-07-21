@@ -177,8 +177,8 @@ namespace Core.UI.ViewModels
 					TreeNodes.Add(CreateRuntimeObjectTreeNode(runtimeObject));
 					UpdateAutoSyncTimer(runtimeObject.RemoteInstanceId);
 					break;
-				case Core.ProjectAsset:
-					Icon = GetAssetIcon(Core.AssetKind.Unknown);
+				case Core.ProjectAsset asset:
+					Icon = Core.AssetTypeUtility.GetIconGlyph(asset.Extension);
 					AutoSyncStatus = "Auto-Sync: Off";
 					_AutoSyncTimer.Stop();
 					break;
@@ -959,24 +959,6 @@ namespace Core.UI.ViewModels
 				Core.SceneHierarchyNodeKind.SceneNode => "",
 				Core.SceneHierarchyNodeKind.GroupNode => "",
 				_ => "",
-			};
-		}
-
-		private static string GetAssetIcon(Core.AssetKind kind)
-		{
-			return kind switch
-			{
-				Core.AssetKind.Scene => "",
-				Core.AssetKind.Model => "",
-				Core.AssetKind.Texture => "",
-				Core.AssetKind.Material => "",
-				Core.AssetKind.Shader => "",
-				Core.AssetKind.Script => "",
-				Core.AssetKind.Audio => "",
-				Core.AssetKind.Font => "",
-				Core.AssetKind.Document => "",
-				Core.AssetKind.Folder => "",
-				_ => "",
 			};
 		}
 

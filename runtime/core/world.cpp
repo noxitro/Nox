@@ -8,11 +8,36 @@
 #include "engine_module.h"
 #include "log_id.h"
 
-#include <charconv>
-#include <optional>
-
 namespace nox
 {
+	template<class TupleType, typename Compare>
+	using SortedTuple = TupleType;
+
+	struct SizeLess
+	{
+		template<class T, class U>
+		constexpr bool operator()(const T&, const U&)const noexcept
+		{
+			return sizeof(T) < sizeof(U);
+		}
+	};
+
+	struct SignatureLess
+	{
+		template<class T, class U>
+		constexpr bool operator()(const T&, const U&)const noexcept
+		{
+			return nox::util::GetTypeName<T>() < nox::util::GetTypeName<U>();
+		}
+	};
+
+	inline void testFunc00()
+	{
+		SortedTuple<std::tuple<int, float, double>, SignatureLess> sortedTuple;
+	}
+	
+
+
 	namespace
 	{
 		[[nodiscard]]

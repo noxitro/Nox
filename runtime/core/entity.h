@@ -14,4 +14,10 @@ namespace nox
 		/// @brief 世代番号(破棄/再利用で更新され、stale handleの検出に使う)
 		nox::uint32 generation;
 	};
+
+	struct Entity
+	{
+		EntityId id;
+		class nox::World* world;
+	};
 }

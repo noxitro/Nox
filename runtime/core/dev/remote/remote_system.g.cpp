@@ -9,12 +9,12 @@
 
 void nox::dev::editor_remote::AssetConvertQuery::OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)
 {
-	writer.Write(native_path_);
+	writer.Write(uri_);
 }
 
 void nox::dev::editor_remote::AssetConvertQuery::OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)
 {
-	reader.Read(native_path_);
+	reader.Read(uri_);
 }
 void nox::dev::editor_remote::SceneViewInfo::OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)
 {

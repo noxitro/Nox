@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -88,7 +88,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="entry.cpp">
+    <ClCompile Include="mesh_asset.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="debug_draw.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="os\os_vulkan.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="render_module.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -105,10 +117,6 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="os\device_dx12.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="os\graphic_buffer_dx12.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -153,7 +161,23 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="entry.h">
+    <ClInclude Include="mesh_asset.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="debug_draw.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="os\device_dx12_internal.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="os\os_vulkan.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="render_module.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -170,10 +194,6 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="os\device_dx12.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="os\graphic_buffer_dx12.h">
       <SubType>
       </SubType>
     </ClInclude>

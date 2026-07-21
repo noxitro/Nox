@@ -1,7 +1,7 @@
 ﻿//	Copyright (C) 2024 NOX ENGINE All Rights Rserved.
 
-///	@file	core_entry.h
-///	@brief	core_entry
+///	@file	core_module.h
+///	@brief	core_module
 #pragma once
 
 #include	"engine_module.h"

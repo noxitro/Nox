@@ -10,10 +10,6 @@
 #include	"../../world.h"
 #include	"dev_net_log_id.h"
 
-#if NOX_DEVELOP
-#include	"../editor_remote_server.h"
-#endif // NOX_DEVELOP
-
 
 namespace nox
 {
@@ -33,9 +29,7 @@ std::span<const nox::SystemBase::PhaseRegister> nox::dev::net::SocketScheduler::
 {
 	static constexpr auto table = std::array{
 		PhaseRegister(k_phase_init),
-		PhaseRegister(k_phase_terminate, 
-			nox::dev::editor_remote::EditorRemoteServerSystem::k_phase_terminate
-			)
+		PhaseRegister(k_phase_terminate)
 	};
 
 	return table;

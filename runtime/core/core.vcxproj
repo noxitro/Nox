@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -16,6 +16,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="asset.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="asset_format.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -51,6 +55,10 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="builtin_entities.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="common_components.h">
       <SubType>
       </SubType>
@@ -63,7 +71,7 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="core_entry.h">
+    <ClInclude Include="core_module.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -72,6 +80,10 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="core_utility.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="dev\debug_draw.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -272,6 +284,10 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="builtin_entities.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="common_components.cpp">
       <SubType>
       </SubType>
@@ -280,7 +296,7 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="core_entry.cpp">
+    <ClCompile Include="core_module.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -289,6 +305,10 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="core_utility.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="dev\debug_draw.cpp">
       <SubType>
       </SubType>
     </ClCompile>

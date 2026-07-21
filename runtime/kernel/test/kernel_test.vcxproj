@@ -19,6 +19,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="basic_test.cpp" />
+    <ClCompile Include="file_win64_test.cpp" />
     <ClCompile Include="math_test.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="stdafx.cpp">

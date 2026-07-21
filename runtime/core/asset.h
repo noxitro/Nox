@@ -4,6 +4,9 @@
 /// @brief	asset
 #pragma once
 #include	"object.h"
+#include	"asset_format.h"
+
+//NOTE:	ネイティブファイルのフォーマット定義は asset_format.h を参照。
 
 namespace nox
 {
@@ -11,17 +14,15 @@ namespace nox
 	class Asset : public nox::Object
 	{
 		NOX_DECLARE_OBJECT(Asset, nox::Object);
-		struct alignas(16) Header
-		{
-			nox::uint32 magic;
-			nox::uint16 version;
-			nox::uint16 flags;
-		};
 	public:
 		inline Asset() : is_initialized_(false) {}
 
 		void Bind(std::u8string_view path, nox::AssetManager& manager);
-		bool Initialize();
+
+		/// @brief ネイティブリソースから初期化する
+		/// @param native_path コンバート済みネイティブファイルのフルパス
+		/// @return 初期化に成功したか
+		bool Initialize(std::u8string_view native_path);
 
 		inline bool IsReady()const noexcept { return is_initialized_; }
 		inline std::u8string_view GetPath()const noexcept { return path_; }
@@ -30,6 +31,7 @@ namespace nox
 	protected:
 		virtual bool OnInitialize(nox::io::BinaryReader& reader) = 0;
 	private:
+		/// @brief assetrootからの相対パス
 		nox::U8String path_;
 		nox::util::InitOnceRef<nox::AssetManager> manager_;
 		bool is_initialized_;

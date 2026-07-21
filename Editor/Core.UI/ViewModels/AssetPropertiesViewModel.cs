@@ -40,7 +40,7 @@ namespace Core.UI.ViewModels
 			private set => SetProperty(ref field, value);
 		} = string.Empty;
 
-		public string Kind
+		public string AssetType
 		{
 			get => field;
 			private set => SetProperty(ref field, value);
@@ -95,11 +95,11 @@ namespace Core.UI.ViewModels
 			if (selection.Value is Core.ProjectAsset asset)
 			{
 				HasAsset = true;
-				Icon = GetAssetIcon(asset.Kind);
+				Icon = Core.AssetTypeUtility.GetIconGlyph(asset.Extension);
 				Name = asset.Name;
 				Summary = asset.RelativePath;
 				Guid = asset.Guid;
-				Kind = asset.Kind.ToString();
+				AssetType = Core.AssetTypeUtility.GetAssetType(asset.Extension);
 				RelativePath = asset.RelativePath;
 				FullPath = asset.FullPath;
 				SizeText = FormatSize(asset.Size);
@@ -112,28 +112,11 @@ namespace Core.UI.ViewModels
 			Name = "No asset selected";
 			Summary = "Select an asset in the Asset Browser.";
 			Guid = string.Empty;
-			Kind = string.Empty;
+			AssetType = string.Empty;
 			RelativePath = string.Empty;
 			FullPath = string.Empty;
 			SizeText = string.Empty;
 			LastWriteTime = string.Empty;
-		}
-
-		private static string GetAssetIcon(Core.AssetKind kind)
-		{
-			return kind switch
-			{
-				Core.AssetKind.Scene => "",
-				Core.AssetKind.Model => "",
-				Core.AssetKind.Texture => "",
-				Core.AssetKind.Material => "",
-				Core.AssetKind.Shader => "",
-				Core.AssetKind.Script => "",
-				Core.AssetKind.Audio => "",
-				Core.AssetKind.Font => "",
-				Core.AssetKind.Document => "",
-				_ => "",
-			};
 		}
 
 		private static string FormatSize(long size)

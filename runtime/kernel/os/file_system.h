@@ -5,6 +5,11 @@
 #pragma once
 #include	"../nox_string.h"
 
+namespace nox::os
+{
+	bool Exists(std::u8string_view path);
+}
+
 namespace nox::filesystem
 {
 	nox::U16String	GetCurrentPath();

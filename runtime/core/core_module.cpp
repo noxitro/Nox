@@ -1,9 +1,9 @@
 ﻿//	Copyright (C) 2024 NOX ENGINE All Rights Rserved.
 
-///	@file	core_entry.cpp
-///	@brief	core_entry
+///	@file	core_module.cpp
+///	@brief	core_module
 #include	"pch.h"
-#include	"core_entry.h"
+#include	"core_module.h"
 
 #include	"garbage_collector.h"
 #include	"asset_manager.h"
@@ -29,6 +29,6 @@ void nox::CoreModule::CreateEngineSystems(nox::PmrVector<nox::SystemBase*>& out)
 	out.emplace_back(new nox::GarbageCollector());
 #if NOX_DEVELOP
 	out.emplace_back(new nox::dev::net::SocketScheduler());
-	out.emplace_back(new nox::dev::editor_remote::EditorRemoteServerSystem());
+	out.emplace_back(new nox::dev::editor_remote::EditorRemoteServer());
 #endif // NOX_DEVELOP
 }

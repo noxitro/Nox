@@ -12,15 +12,24 @@ namespace nox
 
 namespace nox::dev::net
 {
-	class Server : public nox::dev::net::Entity
+	class IServerEventHandler
 	{
-		NOX_DECLARE_OBJECT(nox::dev::net::Server, nox::dev::net::Entity);
+	public:
+		virtual void OnServerConnected(const nox::dev::net::ConnectionContext& context) = 0;
+		virtual void OnServerDisconnected(const nox::dev::net::ConnectionContext& context) = 0;
+		virtual void OnServerReceive(nox::World& world) = 0;
+	protected:
+		virtual ~IServerEventHandler() = default;
+	};
+
+	class Server
+	{
 	public:
 		struct InitializeContext
 		{
 			nox::uint16 max_connection;
 			nox::dev::net::port_t port;
-			bool resume_port;
+			bool resume_port = false;
 		};
 
 	private:
@@ -40,8 +49,14 @@ namespace nox::dev::net
 			ConnectionState connection_state = ConnectionState::Invalid;
 		};
 	public:
-		Server();
-		~Server()override;
+		explicit Server(nox::dev::net::IServerEventHandler& event_handler)noexcept;
+		~Server();
+
+		Server(const Server&) = delete;
+		Server& operator=(const Server&) = delete;
+		Server(Server&&) noexcept = delete;
+		Server& operator=(Server&&) noexcept = delete;
+
 		bool Startup(const Server::InitializeContext& context);
 		void Shutdown();
 
@@ -60,15 +75,23 @@ namespace nox::dev::net
 		void Disconnect(const nox::dev::net::raw_socket_t socket);
 
 		inline constexpr nox::dev::net::raw_socket_t GetSocket()const noexcept { return socket_; }
-	protected:
-		void Connected([[maybe_unused]] const nox::dev::net::ConnectionContext& context);
-		virtual void OnConnected([[maybe_unused]] const nox::dev::net::ConnectionContext& context) {}
 
-		void Disconnected([[maybe_unused]] const nox::dev::net::ConnectionContext& context);
-		virtual void OnDisconnected([[maybe_unused]] const nox::dev::net::ConnectionContext& context) {}
+		std::expected<void, nox::dev::net::SocketIoError> Send(
+			nox::dev::net::raw_socket_t socket,
+			nox::not_null<const void*> buffer,
+			nox::int32 size_to_send,
+			nox::dev::net::SendFlag flag = nox::dev::net::SendFlag::None);
 
-		inline const nox::Vector<PeerContext>& GetClientList()const noexcept { return client_list_; }
+		template<nox::concepts::TriviallyCopyable T>
+		inline std::expected<void, nox::dev::net::SocketIoError> Send(
+			nox::dev::net::raw_socket_t socket,
+			const T& buffer,
+			nox::dev::net::SendFlag flag = nox::dev::net::SendFlag::None)
+		{
+			return this->Send(socket, static_cast<const void*>(&buffer), static_cast<nox::int32>(sizeof(T)), flag);
+		}
 	private:
+		nox::dev::net::IServerEventHandler& event_handler_;
 		Server::InitializeContext initialize_context_;
 		nox::Vector<PeerContext> client_list_;
 

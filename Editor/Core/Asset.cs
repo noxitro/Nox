@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Core
 {
@@ -20,26 +18,11 @@ namespace Core
 		[Core.Attributes.Meta]
 		public System.Uri Uri { get; set; } = new System.Uri("assets:/");
 
-        /// <summary>
-        /// 第一拡張子は.jsonや、.fbxなどのファイル形式を表すものとする。
-		/// 第二拡張子は、studioで識別するためのもので、.scnや.meshなどのものとする。
-		/// AssetTypeが返すのは、第二拡張子の方とする。
-        /// </summary>
-        public string AssetType
-		{
-			get
-			{
-				string extension = System.IO.Path.GetExtension(Uri.AbsolutePath);
-				if (extension.StartsWith("."))
-				{
-					return extension.Substring(1);
-				}
-				else
-				{
-					return extension;
-                }
-            }
-		}
+		/// <summary>
+		/// ファイル拡張子から算出したアセットタイプを返します。
+		/// 先頭のドットは含みません。
+		/// </summary>
+		public string AssetType => AssetTypeUtility.GetAssetType(System.IO.Path.GetExtension(Uri.AbsolutePath));
 		#endregion
 
 		#region 公開メソッド
@@ -54,19 +37,166 @@ namespace Core
 		#endregion
 	}
 
-    public enum AssetKind : byte
+	public static class AssetTypeUtility
 	{
-		Unknown,
-		Folder,
-		Scene,
-		Model,
-		Texture,
-		Material,
-		Shader,
-		Script,
-		Audio,
-		Font,
-		Document,
+		public static string GetAssetType(string extension)
+		{
+			if (string.IsNullOrEmpty(extension))
+			{
+				return string.Empty;
+			}
+
+			return extension[0] == '.'
+				? extension[1..]
+				: extension;
+		}
+
+		public static string GetImporterName(string extension, bool isFolder = false)
+		{
+			if (isFolder)
+			{
+				return "FolderImporter";
+			}
+
+			if (HasExtension(extension, ".noxscene") || HasExtension(extension, ".scene"))
+			{
+				return "SceneImporter";
+			}
+
+			if (HasExtension(extension, ".fbx") ||
+				HasExtension(extension, ".obj") ||
+				HasExtension(extension, ".gltf") ||
+				HasExtension(extension, ".glb"))
+			{
+				return "ModelImporter";
+			}
+
+			if (HasExtension(extension, ".png") ||
+				HasExtension(extension, ".jpg") ||
+				HasExtension(extension, ".jpeg") ||
+				HasExtension(extension, ".tga") ||
+				HasExtension(extension, ".bmp") ||
+				HasExtension(extension, ".dds"))
+			{
+				return "TextureImporter";
+			}
+
+			if (HasExtension(extension, ".mat") || HasExtension(extension, ".material"))
+			{
+				return "MaterialImporter";
+			}
+
+			if (HasExtension(extension, ".hlsl") || HasExtension(extension, ".fx") || HasExtension(extension, ".shader"))
+			{
+				return "ShaderImporter";
+			}
+
+			if (HasExtension(extension, ".cs") ||
+				HasExtension(extension, ".cpp") ||
+				HasExtension(extension, ".h") ||
+				HasExtension(extension, ".hpp"))
+			{
+				return "ScriptImporter";
+			}
+
+			if (HasExtension(extension, ".wav") || HasExtension(extension, ".mp3") || HasExtension(extension, ".ogg"))
+			{
+				return "AudioImporter";
+			}
+
+			if (HasExtension(extension, ".ttf") || HasExtension(extension, ".otf"))
+			{
+				return "FontImporter";
+			}
+
+			if (HasExtension(extension, ".md") ||
+				HasExtension(extension, ".txt") ||
+				HasExtension(extension, ".json") ||
+				HasExtension(extension, ".xml") ||
+				HasExtension(extension, ".yaml") ||
+				HasExtension(extension, ".yml"))
+			{
+				return "TextImporter";
+			}
+
+			return "DefaultImporter";
+		}
+
+		public static string GetIconGlyph(string extension, bool isFolder = false)
+		{
+			if (isFolder)
+			{
+				return "";
+			}
+
+			if (HasExtension(extension, ".noxscene") || HasExtension(extension, ".scene"))
+			{
+				return "";
+			}
+
+			if (HasExtension(extension, ".fbx") ||
+				HasExtension(extension, ".obj") ||
+				HasExtension(extension, ".gltf") ||
+				HasExtension(extension, ".glb"))
+			{
+				return "";
+			}
+
+			if (HasExtension(extension, ".png") ||
+				HasExtension(extension, ".jpg") ||
+				HasExtension(extension, ".jpeg") ||
+				HasExtension(extension, ".tga") ||
+				HasExtension(extension, ".bmp") ||
+				HasExtension(extension, ".dds"))
+			{
+				return "";
+			}
+
+			if (HasExtension(extension, ".mat") || HasExtension(extension, ".material"))
+			{
+				return "";
+			}
+
+			if (HasExtension(extension, ".hlsl") || HasExtension(extension, ".fx") || HasExtension(extension, ".shader"))
+			{
+				return "";
+			}
+
+			if (HasExtension(extension, ".cs") ||
+				HasExtension(extension, ".cpp") ||
+				HasExtension(extension, ".h") ||
+				HasExtension(extension, ".hpp"))
+			{
+				return "";
+			}
+
+			if (HasExtension(extension, ".wav") || HasExtension(extension, ".mp3") || HasExtension(extension, ".ogg"))
+			{
+				return "";
+			}
+
+			if (HasExtension(extension, ".ttf") || HasExtension(extension, ".otf"))
+			{
+				return "";
+			}
+
+			if (HasExtension(extension, ".md") ||
+				HasExtension(extension, ".txt") ||
+				HasExtension(extension, ".json") ||
+				HasExtension(extension, ".xml") ||
+				HasExtension(extension, ".yaml") ||
+				HasExtension(extension, ".yml"))
+			{
+				return "";
+			}
+
+			return "";
+		}
+
+		private static bool HasExtension(string extension, string expected)
+		{
+			return string.Equals(extension, expected, StringComparison.OrdinalIgnoreCase);
+		}
 	}
 
 	public sealed class ProjectAsset : Asset
@@ -78,7 +208,7 @@ namespace Core
 		public string MetaPath { get; init; } = string.Empty;
 		public string RelativePath { get; init; } = string.Empty;
 		public string Extension { get; init; } = string.Empty;
-		public AssetKind Kind { get; init; } = AssetKind.Unknown;
+		public bool IsFolder { get; init; }
 		public long Size { get; init; }
 		public DateTime LastWriteTime { get; init; }
 		#endregion
@@ -90,7 +220,6 @@ namespace Core
 		public int Version { get; set; } = 1;
 		public string Guid { get; set; } = System.Guid.NewGuid().ToString("N");
 		public string AssetPath { get; set; } = string.Empty;
-		public AssetKind Kind { get; set; } = AssetKind.Unknown;
 		public string Importer { get; set; } = "DefaultImporter";
 		public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 		public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
@@ -108,7 +237,7 @@ namespace Core
 		public string RelativePath { get; }
 		public ProjectAsset? Asset { get; }
 		public IReadOnlyList<AssetTreeNode> Children => _Children;
-		public bool IsFolder => Asset == null || Asset.Kind == AssetKind.Folder;
+		public bool IsFolder => Asset == null || Asset.IsFolder;
 		#endregion
 
 		public AssetTreeNode(string name, string relativePath, ProjectAsset? asset)

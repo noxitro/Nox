@@ -9,7 +9,7 @@
 
 #include	"scene_view.h"
 #include	"engine_module.h"
-#include	"core_entry.h"
+#include	"core_module.h"
 #include	"asset_manager.h"
 #include	"asset.h"
 #include	"asset_ref.h"

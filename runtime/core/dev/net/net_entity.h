@@ -13,6 +13,20 @@ namespace nox
 
 namespace nox::dev::net
 {
+	std::expected<void, nox::dev::net::SocketIoError> ReceiveAll(
+		nox::dev::net::raw_socket_t socket,
+		nox::not_null<void*> buffer,
+		nox::int32 size_to_read,
+		nox::dev::net::ReceiveFlag flag = nox::dev::net::ReceiveFlag::None
+	);
+
+	std::expected<void, nox::dev::net::SocketIoError> SendAll(
+		nox::dev::net::raw_socket_t socket,
+		nox::not_null<const void*> buffer,
+		nox::int32 size_to_send,
+		nox::dev::net::SendFlag flag = nox::dev::net::SendFlag::None
+	);
+
 	class Entity : public nox::Object
 	{
 		NOX_DECLARE_OBJECT(nox::dev::net::Entity, nox::Object);

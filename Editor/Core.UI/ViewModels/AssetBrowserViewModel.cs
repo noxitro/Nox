@@ -104,9 +104,9 @@ namespace Core.UI.ViewModels
 		}
 		public string RelativePath => Asset.RelativePath;
 		public string Guid => Asset.Guid;
-		public string Kind => Asset.Kind.ToString();
+		public string AssetType => Core.AssetTypeUtility.GetAssetType(Asset.Extension);
 		public string Extension => Asset.Extension;
-		public string Icon => GetIcon(Asset.Kind);
+		public string Icon => Core.AssetTypeUtility.GetIconGlyph(Asset.Extension);
 		public string SizeText => FormatSize(Asset.Size);
 		public string LastWriteTime => Asset.LastWriteTime.ToString("yyyy/MM/dd HH:mm:ss");
 		public string EditingName
@@ -138,23 +138,6 @@ namespace Core.UI.ViewModels
 		{
 			EditingName = Name;
 			IsRenaming = false;
-		}
-
-		private static string GetIcon(Core.AssetKind kind)
-		{
-			return kind switch
-			{
-				Core.AssetKind.Scene => "",
-				Core.AssetKind.Model => "",
-				Core.AssetKind.Texture => "",
-				Core.AssetKind.Material => "",
-				Core.AssetKind.Shader => "",
-				Core.AssetKind.Script => "",
-				Core.AssetKind.Audio => "",
-				Core.AssetKind.Font => "",
-				Core.AssetKind.Document => "",
-				_ => "",
-			};
 		}
 
 		private static string FormatSize(long size)

@@ -10,7 +10,6 @@ namespace nox
 	class BehaviorManager : public nox::Object
 	{
 		NOX_DECLARE_OBJECT(nox::BehaviorManager, nox::Object);
-	private:
 	public:
 
 		void	Initialize();

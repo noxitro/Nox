@@ -23,5 +23,5 @@ void nox::BehaviorManager::LateUpdate()
 
 void nox::BehaviorManager::Finalize()
 {
-
+	
 }

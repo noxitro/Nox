@@ -13,13 +13,28 @@ namespace nox
 	}
 
 	/// @brief 基底オブジェクト
-	class Object : public ::nox::reflection::ReflectionObject
+	class alignas(16) Object : public ::nox::reflection::ReflectionObject
 	{
 		NOX_DECLARE_OBJECT_ROOT(Object);
 		friend struct ::nox::detail::ObjectImpl;
+		//	tagged pointerのビット定義 16bytesアラインメントのため下位4ビットが使用可能
+		static constexpr nox::uint8 kTaggedPointerBitHeap = 0b0001;
+		static constexpr nox::uint8 kTaggedPointerGC = 0b0010;
+		static constexpr nox::uint8 kTaggedPointerReserved1 = 0b0100;
+		static constexpr nox::uint8 kTaggedPointerReserved2 = 0b1000;
 	public:
 		constexpr Object() noexcept {}
 		virtual constexpr ~Object() override {}
+
+		inline constexpr bool IsHeap()const noexcept
+		{
+			return TestTaggedPointerBit(kTaggedPointerBitHeap);
+		}
+
+		inline constexpr bool IsGC()const noexcept
+		{
+			return TestTaggedPointerBit(kTaggedPointerGC);
+		}
 
 		/// @brief 文字列化　動的メモリ確保
 		/// @return 
@@ -122,6 +137,11 @@ namespace nox
 	private:
 		void AddRef();
 		void Release();
+
+		inline constexpr bool TestTaggedPointerBit(const nox::uint8 bit)const noexcept
+		{
+			return (reinterpret_cast<std::uintptr_t>(this) & bit) == bit;
+		}
 
 	private:
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())

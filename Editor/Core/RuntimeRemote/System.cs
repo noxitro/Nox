@@ -7,22 +7,47 @@ namespace Core.RuntimeRemote
 	[Core.RuntimeRemote.Attributes.CoreRuntimeRemoteCode("system", comment: "リソースコンバートリクエスト")]
 	public sealed class AssetConvertQuery : Core.RuntimeRemote.Query
 	{
-		public AssetConvertQuery(string path)
+		public AssetConvertQuery(string uri)
 		{
-			if (path.Length >= NativePath.Length)
+			if (uri.Length >= NativePathSize)
 			{
-				Nox.Util.Assert(false, "Path length exceeds the maximum allowed length.");
+				Nox.Util.Assert(false, "URI length exceeds the maximum allowed length.");
 			}
-			NativePath = path;
+			Uri = uri;
 		}
 
 		private const uint NativePathSize = 256;
 
 		[Core.RuntimeRemote.Attributes.FixedString(NativePathSize)]
-		public string NativePath { get; set; } = string.Empty;
+		public string Uri { get; set; } = string.Empty;
+
+		public override Core.RuntimeRemote.Response? Execute()
+		{
+			try
+			{
+				Core.Workspace workspace = Core.StudioManager.Instance.Workspace;
+				Core.NativeAssetConverter.Convert(workspace, Uri);
+			}
+			catch (Exception ex)
+			{
+				Nox.LogTrace.WarningLine<Core.LogId.Runtime>($"Asset convert failed: {Uri}, {ex}");
+			}
+
+			// NOTE: 現状の受信ディスパッチ（RuntimeRemoteClient）は Execute() の戻り値を送信しないため、
+			//       AssetConvertResponse は返さない。ランタイムのロードスレッドがネイティブファイルの
+			//       存在ポーリングで検知するため、書き出しのみで成立する。
+			return null;
+		}
 	}
 
-	[Core.RuntimeRemote.Attributes.CoreRuntimeRemoteCode("system", comment: "MainSceneViewを取得する")]
+	public sealed class AssetConvertResponse : Core.RuntimeRemote.Response
+    {
+        public bool Success { get; set; } = false;
+        [Core.RuntimeRemote.Attributes.FixedString(512)]
+        public string ConvertedUri { get; set; } = string.Empty;
+    }
+
+    [Core.RuntimeRemote.Attributes.CoreRuntimeRemoteCode("system", comment: "MainSceneViewを取得する")]
 	public class GetMainSceneView : Core.RuntimeRemote.Query
 	{
 		

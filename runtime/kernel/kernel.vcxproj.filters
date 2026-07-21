@@ -171,7 +171,7 @@
     <ClInclude Include="memory\stl_allocate_adapter.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="math\color.h">
+    <ClInclude Include="color.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="math\math.h">
@@ -432,6 +432,15 @@
     <ClInclude Include="hash.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="colors.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="type_traits\sorted_tuple2.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="type_traits\sorted_tuple.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="basic_definition.cpp">
@@ -578,7 +587,7 @@
     <ClCompile Include="memory\stl_allocate_adapter.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="math\color.cpp">
+    <ClCompile Include="color.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="math\math.cpp">
@@ -837,6 +846,12 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="hash.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="colors.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="type_traits\sorted_tuple.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
