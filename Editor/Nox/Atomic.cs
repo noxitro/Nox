@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading;
 
-namespace Nox
-{
+namespace Nox;
+
 	public interface IAtomic<T> where T : struct, System.Numerics.INumber<T>
 	{
 		public T Increment();
@@ -23,4 +23,3 @@ namespace Nox
 		private int _Value;
 		public readonly int RawValue => _Value;
 	}
-}

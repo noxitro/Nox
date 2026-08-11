@@ -1,7 +1,7 @@
 using System;
 
-namespace Core.UI
-{
+namespace Core.UI;
+
 	public enum CoreDiagnosticsViewKind
 	{
 		EngineSystemGraph,
@@ -31,4 +31,3 @@ namespace Core.UI
 			_Show?.Invoke(kind);
 		}
 	}
-}

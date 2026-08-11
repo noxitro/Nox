@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Nox.Diagnostics
-{
+namespace Nox.Diagnostics;
+
 	public static class Debug
 	{
 		public static void DebugBreak()
@@ -25,4 +25,3 @@ namespace Nox.Diagnostics
 			System.Diagnostics.Debug.Assert(condition, string.Format(message, args));
 		}
 	}
-}

@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Core.RuntimeRemote
-{
+namespace Core.RuntimeRemote;
+
 	[Core.RuntimeRemote.Attributes.CoreRuntimeRemoteCode("system", comment: "リソースコンバートリクエスト")]
 	public sealed class AssetConvertQuery : Core.RuntimeRemote.Query
 	{
@@ -41,13 +41,13 @@ namespace Core.RuntimeRemote
 	}
 
 	public sealed class AssetConvertResponse : Core.RuntimeRemote.Response
-    {
-        public bool Success { get; set; } = false;
-        [Core.RuntimeRemote.Attributes.FixedString(512)]
-        public string ConvertedUri { get; set; } = string.Empty;
-    }
+{
+    public bool Success { get; set; } = false;
+    [Core.RuntimeRemote.Attributes.FixedString(512)]
+    public string ConvertedUri { get; set; } = string.Empty;
+}
 
-    [Core.RuntimeRemote.Attributes.CoreRuntimeRemoteCode("system", comment: "MainSceneViewを取得する")]
+[Core.RuntimeRemote.Attributes.CoreRuntimeRemoteCode("system", comment: "MainSceneViewを取得する")]
 	public class GetMainSceneView : Core.RuntimeRemote.Query
 	{
 		
@@ -204,8 +204,7 @@ namespace Core.RuntimeRemote
 	}
 
 	[Core.RuntimeRemote.Attributes.CoreRuntimeRemoteCode("system", comment: "nox::Objectの同期完了通知Query")]
-    public class EndSyncQuery : Core.RuntimeRemote.Query
+public class EndSyncQuery : Core.RuntimeRemote.Query
 	{
 		public long RemoteInstanceId { get; init; } = 0;
-    }
 }

@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Core.RuntimeRemote.Attributes
-{
+namespace Core.RuntimeRemote.Attributes;
+
 	/// <summary>
 	/// runtimeパス下に出力します
 	/// </summary>
@@ -18,7 +18,7 @@ namespace Core.RuntimeRemote.Attributes
 			EnabledRecv = enabledRecv;
 			Comment = comment;
 			NamespaceStr = namespaceStr;
-        }
+    }
 
 		/// <summary>
 		/// 出力先パス
@@ -26,7 +26,7 @@ namespace Core.RuntimeRemote.Attributes
 		/// </summary>
 		public string Path { get; init; }
 
-        public string NamespaceStr { get; init; }
+    public string NamespaceStr { get; init; }
 
 		/// <summary>
 		/// execute関数をcpp側で実装するか
@@ -84,15 +84,14 @@ namespace Core.RuntimeRemote.Attributes
 	{
 	}
 
-    /// <summary>
-    /// c++側で固定長配列として扱うための属性
-    /// </summary>
-    public sealed class FixedArrayAttribute : System.Attribute
+/// <summary>
+/// c++側で固定長配列として扱うための属性
+/// </summary>
+public sealed class FixedArrayAttribute : System.Attribute
 	{
 		public FixedArrayAttribute(uint length)
 		{
 			Length = length;
 		}
 		public uint Length { get; init; }
-    }
 }

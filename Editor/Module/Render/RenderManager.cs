@@ -2,9 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Render
-{
+namespace Render;
+
 	internal class RenderManager
 	{
 	}
-}

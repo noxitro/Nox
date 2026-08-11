@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace NoxUI
-{
+namespace NoxUI;
+
 	public static class Brush
 	{
 		public static readonly System.Windows.Media.SolidColorBrush WindowBackground = Create(30, 30, 30);
@@ -16,4 +16,3 @@ namespace NoxUI
 			return brush;
 		}
 	}
-}

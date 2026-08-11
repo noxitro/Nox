@@ -1,8 +1,8 @@
 using System;
 using System.IO;
 
-namespace Core
-{
+namespace Core;
+
 	/// <summary>
 	/// ネイティブアセットファイルのオンディスクフォーマット定義（C++ runtime/core/asset_format.h のミラー）。
 	/// レイアウト: [FileHeader][ChunkHeader...][RawData]（リトルエンディアン・パディングなし）。
@@ -135,4 +135,3 @@ namespace Core
 			return path.TrimStart('/', '\\');
 		}
 	}
-}

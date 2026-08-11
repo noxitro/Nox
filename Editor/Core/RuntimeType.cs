@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Core
-{
+namespace Core;
+
 	public enum RuntimeTypeKind : byte
 	{
 		Invalid,
@@ -261,4 +261,3 @@ namespace Core
 		public required RuntimeFunctionDecl[] MethodList { get; init; }
 	}
 	#endregion
-}

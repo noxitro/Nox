@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Core.Threading.Tasks
-{
+namespace Core.Threading.Tasks;
+
 	public static class Task
 	{
 		/// <summary>
@@ -30,4 +30,3 @@ namespace Core.Threading.Tasks
 			return System.Threading.Tasks.Task.Run(wrapAction);
 		}
 	}
-}

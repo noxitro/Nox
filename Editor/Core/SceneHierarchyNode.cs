@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Core
-{
+namespace Core;
+
 	public enum SceneHierarchyNodeKind : byte
 	{
 		SceneNode,
@@ -140,4 +140,3 @@ namespace Core
 			_Components.Add(component);
 		}
 	}
-}

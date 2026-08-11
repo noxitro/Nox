@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Core.UI.ViewModels
-{
+namespace Core.UI.ViewModels;
+
 	public abstract class DocumentViewModel : NoxUI.ViewModelBase
 	{
 		#region 非公開フィールド
@@ -19,4 +19,3 @@ namespace Core.UI.ViewModels
 		public virtual bool CanClose { get; } = true;
 		#endregion
 	}
-}

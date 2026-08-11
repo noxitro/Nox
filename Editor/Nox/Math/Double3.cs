@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Nox.Math
-{
+namespace Nox.Math;
+
 	public struct Double3
 	{
 		public double x;
@@ -17,4 +17,3 @@ namespace Nox.Math
 			return $"({x}, {y}, {z})";
 		}
 	}
-}

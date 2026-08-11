@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Core.UI.ViewModels
-{
+namespace Core.UI.ViewModels;
+
 	public abstract class AssetViewModel : NoxUI.ViewModelBase
 	{
 
@@ -17,4 +17,3 @@ namespace Core.UI.ViewModels
 			Asset = asset;
 		}
 	}
-}

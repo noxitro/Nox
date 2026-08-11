@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 
-namespace Core
-{
+namespace Core;
+
 	public sealed record DependencyGraphNode(
 		string Id,
 		string Label,
@@ -147,4 +147,3 @@ namespace Core
 			return $"editor:{phase.PhaseType}:{phase.Name}";
 		}
 	}
-}

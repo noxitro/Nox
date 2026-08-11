@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace Core.RuntimeRemote
-{
+namespace Core.RuntimeRemote;
+
 	public static class Util
 	{
 		private static readonly Dictionary<Type, int> _BitCopySizeCache = [];
@@ -264,4 +264,3 @@ namespace Core.RuntimeRemote
 			}
 		}
 	}
-}

@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Core.RuntimeAttributes
-{
+namespace Core.RuntimeAttributes;
+
 	/// <summary>
 	/// runtimeで定義した属性の基底クラス
 	/// c#層ではこの属性を直接付与することはない。
@@ -102,4 +102,3 @@ namespace Core.RuntimeAttributes
 			PropertyName = name;
 		}
 	}
-}

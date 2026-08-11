@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Nox
-{
+namespace Nox;
+
 	public static class CodeWriterExtensions
 	{
 		//  タイトル
@@ -83,4 +83,3 @@ namespace Nox
 			codeWriter.WriteLineIgnoreNest($"#pragma endregion\t//\t{comment}");
 		}
 	}
-}

@@ -3,8 +3,8 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 
-namespace Core.UI.Views
-{
+namespace Core.UI.Views;
+
 	/// <summary>
 	/// HierarchyView.xaml の相互作用ロジック
 	/// </summary>
@@ -164,4 +164,3 @@ namespace Core.UI.Views
 			return null;
 		}
 	}
-}

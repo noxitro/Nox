@@ -3,20 +3,20 @@ using Nox.Extensions;
 using System.Numerics;
 using System.Reflection;
 
-namespace Core
-{
+namespace Core;
+
 
 	[Core.Attributes.RuntimeWrapper("nox::Object")]
 	public abstract class RuntimeObject
+{
+    internal static class RuntimeRecordDeclHolder<T> where T : RuntimeObject
     {
-        internal static class RuntimeRecordDeclHolder<T> where T : RuntimeObject
-        {
-            public static RuntimeRecordDecl Value = null!;
-        }
-        #region フィールド
-        /// <summary>
-        /// メンバ変数リスト
-        /// </summary>
+        public static RuntimeRecordDecl Value = null!;
+    }
+    #region フィールド
+    /// <summary>
+    /// メンバ変数リスト
+    /// </summary>
 		private readonly object[] _VariableList;
 		private readonly bool[] _VariableDirtyList;
 		private readonly string _RuntimeFqn;
@@ -230,16 +230,16 @@ namespace Core
 			RemoteClient = remoteClient;
 		}
 
-        /// <summary>
-        /// 型のRuntimeRecordDeclを取得する
-        /// </summary>
-        public static RuntimeRecordDecl GetRuntimeRecrodDecl<T>() where T : RuntimeObject
-        {
-            return RuntimeRecordDeclHolder<T>.Value;
-        }
-        #endregion
+    /// <summary>
+    /// 型のRuntimeRecordDeclを取得する
+    /// </summary>
+    public static RuntimeRecordDecl GetRuntimeRecrodDecl<T>() where T : RuntimeObject
+    {
+        return RuntimeRecordDeclHolder<T>.Value;
+    }
+    #endregion
 
-        #region 非公開メソッド
+    #region 非公開メソッド
 		private static object CreateRuntimeValue(RuntimeTypeKind kind)
 		{
 			switch (kind)
@@ -374,8 +374,8 @@ namespace Core
 			Nox.Util.Assert(attr != null, $"RuntimeWrapperAttribute is required. type={type.FullName}");
 			return attr?.RuntimeFQN ?? string.Empty;
 		}
-        #endregion
-    }
+    #endregion
+}
 
 	public sealed class DynamicRuntimeObject : RuntimeObject
 	{
@@ -384,4 +384,3 @@ namespace Core
 		{
 		}
 	}
-}

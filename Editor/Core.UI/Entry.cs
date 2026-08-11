@@ -1,8 +1,8 @@
 ﻿
 using System.Runtime.CompilerServices;
 
-namespace Core.UI
-{
+namespace Core.UI;
+
 	public abstract class EntryBase
 	{
 		public virtual void RegisterTypes(Prism.Ioc.IContainerRegistry containerRegistry)
@@ -40,4 +40,3 @@ namespace Core.UI
 
 		}
 	}
-}

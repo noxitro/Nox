@@ -1,7 +1,7 @@
 using System;
 
-namespace Core.UI
-{
+namespace Core.UI;
+
 	public static class ProjectSettingsViewService
 	{
 		private static Action? _Show;
@@ -24,4 +24,3 @@ namespace Core.UI
 			_Show?.Invoke();
 		}
 	}
-}

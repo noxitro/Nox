@@ -2,8 +2,8 @@ using System;
 using System.Collections.ObjectModel;
 using System.Windows.Threading;
 
-namespace Core.UI.ViewModels
-{
+namespace Core.UI.ViewModels;
+
 	public sealed class EngineSystemGraphViewModel : NoxUI.ViewModelBase
 	{
 		private bool _RuntimeGraphPending;
@@ -90,4 +90,3 @@ namespace Core.UI.ViewModels
 			StatusText = $"Graphs: {GraphFields.Count}";
 		}
 	}
-}

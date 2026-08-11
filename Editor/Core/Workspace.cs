@@ -1,8 +1,8 @@
 ﻿using System;
 using System.IO;
 
-namespace Core
-{
+namespace Core;
+
 	public sealed class Workspace : IDisposable
 	{
 		#region 公開定数
@@ -68,4 +68,3 @@ namespace Core
 			_Disposed = true;
 		}
 	}
-}

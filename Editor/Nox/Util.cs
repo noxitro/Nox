@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Nox
-{
+namespace Nox;
+
 	
 
 	public static partial class Util
@@ -116,4 +116,3 @@ namespace Nox
 		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
 		public static T Invoke<T>(Func<T> func) => func();
 	}
-}

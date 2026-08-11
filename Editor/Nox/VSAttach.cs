@@ -6,8 +6,8 @@ using System.Runtime.InteropServices.ComTypes;
 using System.IO;
 using System.Runtime.Versioning;
 
-namespace Nox
-{
+namespace Nox;
+
 	public static partial class Util
 	{
 		// 既存: Assert / VisualStudioAttachToProcess ...
@@ -20,9 +20,9 @@ namespace Nox
 
 		public static void VisualStudioAttachToProcess(int pid, string solutionFullPath)
 		{
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pid);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pid);
 
-            if (string.IsNullOrWhiteSpace(solutionFullPath))
+        if (string.IsNullOrWhiteSpace(solutionFullPath))
 			{
 				throw new ArgumentException("ソリューションパスが空です。", nameof(solutionFullPath));
 			}
@@ -318,4 +318,3 @@ namespace Nox
 		[DllImport("ole32.dll")]
 		private static extern int CreateBindCtx(int reserved, out IBindCtx? ppbc);
 	}
-}

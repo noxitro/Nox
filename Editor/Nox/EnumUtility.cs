@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Nox
-{
+namespace Nox;
+
 	public static class EnumExtensions
 	{
 		public static ReadOnlySpan<char> GetName<T>(this T self) where T : struct, Enum
@@ -76,4 +76,3 @@ namespace Nox
 		})).Invoke();
 		#endregion
 	}
-}

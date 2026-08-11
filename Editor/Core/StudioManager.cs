@@ -3,15 +3,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace Core
-{
+namespace Core;
+
 	public struct StudioInfo
 	{
 		public string ProjectPath { get; init; }
 		public string RuntimeSolutionDir { get; init; }
 	}
 
-  public class StudioManager : Core.EngineSystem, Nox.ISingleton<StudioManager>
+public class StudioManager : Core.EngineSystem, Nox.ISingleton<StudioManager>
 	{
 		#region 非公開定数
 		private const string ProjectPathEnvironmentVariableName = "NOX_STUDIO_PROJECT_PATH";
@@ -22,15 +22,15 @@ namespace Core
 		private StudioInfo _StudioInfo;
 		private ProjectSettings _ProjectSettings = new();
 		private Workspace _Workspace;
-      private readonly List<EngineSystem> _EngineSystemList = new();
-      private bool _Terminated;
+  private readonly List<EngineSystem> _EngineSystemList = new();
+  private bool _Terminated;
 		#endregion
 
 		#region 公開プロパティ
 		public ref readonly StudioInfo StudioInfo => ref _StudioInfo;
 		public ProjectSettings ProjectSettings => _ProjectSettings;
 		public Workspace Workspace => _Workspace;
-      public static StudioManager Instance => Nox.ISingleton<StudioManager>.Instance;
+  public static StudioManager Instance => Nox.ISingleton<StudioManager>.Instance;
 		#endregion
 
 		#region 公開メソッド
@@ -47,7 +47,7 @@ namespace Core
 
 		public static void DeleteInstance()
 		{
-          Instance.InvokeTerminate();
+      Instance.InvokeTerminate();
 			Nox.ISingleton<StudioManager>.DeleteInstance();
 		}
 
@@ -102,7 +102,7 @@ namespace Core
 
 		public void InvokeTerminate()
 		{
-          if (_Terminated)
+      if (_Terminated)
 			{
 				return;
 			}
@@ -114,7 +114,7 @@ namespace Core
 
 		private void Invoke(SystemPhaseType phaseType)
 		{
-            List<PhaseRegister> phaseRegisters = _EngineSystemList
+        List<PhaseRegister> phaseRegisters = _EngineSystemList
 				.SelectMany(system => system.GetPhaseRegisterList())
 				.Where(register => register.Phase.PhaseType == phaseType)
 				.ToList();
@@ -197,7 +197,7 @@ namespace Core
 			Nox.Util.Assert(baseDirectory.Parent != null, "Parent directory is null");
 			return baseDirectory.Parent!.FullName;
 		}
-        #endregion
+    #endregion
 
 		#region 非公開メソッド
 		public override PhaseRegister[] GetPhaseRegisterList()
@@ -205,5 +205,4 @@ namespace Core
 			return Array.Empty<PhaseRegister>();
 		}
 		#endregion
-    }
 }

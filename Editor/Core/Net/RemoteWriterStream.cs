@@ -1,16 +1,16 @@
 ﻿using System;
 
-namespace Core.Net
+namespace Core.Net;
+
+/// <summary>
+/// ソケット送信用の書き込み専用リングバッファストリーム
+/// </summary>
+public sealed class RemoteWriterStream : System.IO.Stream
 {
-    /// <summary>
-    /// ソケット送信用の書き込み専用リングバッファストリーム
-    /// </summary>
-    public sealed class RemoteWriterStream : System.IO.Stream
-    {
-        #region 非公開フィールド
-        private readonly RuntimeRemoteClient _Client;
-        private readonly byte[] _Buffer;
-        private int _Position;
+    #region 非公開フィールド
+    private readonly RuntimeRemoteClient _Client;
+    private readonly byte[] _Buffer;
+    private int _Position;
 
 		// LEB128(uint64)の最大バイト数。先頭に予約しておく
 		private const int HeaderReservedBytes = 10;
@@ -30,10 +30,10 @@ namespace Core.Net
 
 		#region コンストラクタ
 		public RemoteWriterStream(RuntimeRemoteClient client, int capacity = 8192)
-        {
-            Nox.Util.Assert(Nox.Util.IsPowOf(capacity, 2), "capacity must be power of 2.");
-            _Client = client;
-            _Buffer = new byte[capacity];
+    {
+        Nox.Util.Assert(Nox.Util.IsPowOf(capacity, 2), "capacity must be power of 2.");
+        _Client = client;
+        _Buffer = new byte[capacity];
 			_Position = HeaderReservedBytes; // 先頭に LEB128 の最大バイト数分を予約
 		}
 		#endregion
@@ -41,7 +41,7 @@ namespace Core.Net
 		#region 公開メソッド
 		public override void Write(ReadOnlySpan<byte> buffer)
 		{
-            int writeSize = buffer.Length;
+        int writeSize = buffer.Length;
 			if (_Position + writeSize > _Buffer.Length)
 			{
 				Nox.Util.Assert(false, "Buffer overflow. Position={0}, WriteSize={1}, Capacity={2}",
@@ -69,7 +69,7 @@ namespace Core.Net
 			int headerBytes = WriteLeb128ToEnd(HeaderReservedBytes, (uint)payloadSize);
 			int sendStart = HeaderReservedBytes - headerBytes;
 
-         if (_Client.Send(_Buffer.AsSpan(sendStart, headerBytes + payloadSize)) == false)
+     if (_Client.Send(_Buffer.AsSpan(sendStart, headerBytes + payloadSize)) == false)
 			{
 				throw new InvalidOperationException("Socket send failed");
 			}
@@ -80,9 +80,9 @@ namespace Core.Net
 		/// バッファをクリア（送信せずに破棄）
 		/// </summary>
 		public void Clear()
-        {
-          _Position = HeaderReservedBytes;
-        }
+    {
+      _Position = HeaderReservedBytes;
+    }
 
 		public override void Write(byte[] buffer, int offset, int count)
 		{
@@ -94,7 +94,7 @@ namespace Core.Net
 
 		#region 非公開メソッド
 		private void WriteLength(ulong value)
-        {
+    {
 			do
 			{
 				byte b = (byte)(value & 0x7F);  // 下位 7 ビット
@@ -141,14 +141,13 @@ namespace Core.Net
 
 		#region 未サポート操作
 		public override int Read(byte[] buffer, int offset, int count)
-            => throw new NotSupportedException("Read not supported");
+        => throw new NotSupportedException("Read not supported");
 
-        public override long Seek(long offset, SeekOrigin origin)
-            => throw new NotSupportedException("Seek not supported");
+    public override long Seek(long offset, SeekOrigin origin)
+        => throw new NotSupportedException("Seek not supported");
 
-        public override void SetLength(long value)
-            => throw new NotSupportedException("SetLength not supported");
+    public override void SetLength(long value)
+        => throw new NotSupportedException("SetLength not supported");
 
 		#endregion
 	}
-}

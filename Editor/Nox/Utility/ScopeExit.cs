@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Nox.Utility
-{
+namespace Nox.Utility;
+
 	/// <summary>
 	/// ゼロアロケーション版 ScopeExit。
 	/// delegate* を使うため、アクションは静的メソッドである必要があります。
@@ -21,4 +21,3 @@ namespace Nox.Utility
 		private readonly T _State;
 		private readonly delegate* managed<T, void> _Action;
 	}
-}

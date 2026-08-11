@@ -4,8 +4,8 @@ using System.IO;
 using System.Threading;
 using Nox;
 
-namespace Core
-{
+namespace Core;
+
 	public enum RuntimeSessionKind : byte
 	{
 		Main,
@@ -88,7 +88,7 @@ namespace Core
 				{
 					FileName = runtimeExeFullPath,
 					Arguments = "--studio",//	studio モードで起動することで、Runtime側でスタジオからの接続待ち受けが有効になる
-                    WorkingDirectory = Path.GetDirectoryName(runtimeExeFullPath) ?? Environment.CurrentDirectory,
+                WorkingDirectory = Path.GetDirectoryName(runtimeExeFullPath) ?? Environment.CurrentDirectory,
 					UseShellExecute = true,
 				};
 
@@ -261,4 +261,3 @@ namespace Core
 			}
 		}
 	}
-}

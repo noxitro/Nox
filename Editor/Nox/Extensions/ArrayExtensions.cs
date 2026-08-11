@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Nox.Extensions
-{
+namespace Nox.Extensions;
+
 	public static class ArrayExtensions
 	{
 		public delegate bool InPredicate<T>(in T element) where T : struct, allows ref struct;
@@ -42,4 +42,3 @@ namespace Nox.Extensions
 			return -1;
 		}
 	}
-}

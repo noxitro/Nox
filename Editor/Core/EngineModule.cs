@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Core
-{
+namespace Core;
+
 	public abstract class EngineModule
 	{
-      private static EngineModule? _Instance;
+  private static EngineModule? _Instance;
 		private readonly List<EngineSystem> _EngineSystemList = new();
 		private bool _Finalized;
 
-       public virtual EngineSystem[] CreateEngineSystems()
+   public virtual EngineSystem[] CreateEngineSystems()
 		{
 			return Array.Empty<EngineSystem>();
 		}
@@ -28,7 +28,7 @@ namespace Core
 				return;
 			}
 
-         _Instance.InvokeFinalize();
+     _Instance.InvokeFinalize();
 			_Instance = null;
 		}
 
@@ -52,7 +52,7 @@ namespace Core
 		public void InvokeStart()
 		{
 			StudioManager.CreateInstance();
-          _Finalized = false;
+      _Finalized = false;
 			_EngineSystemList.Clear();
 			_EngineSystemList.AddRange(CreateEngineSystems());
 
@@ -67,12 +67,12 @@ namespace Core
 
 		public void InvokeFinalize()
 		{
-          if (_Finalized)
+      if (_Finalized)
 			{
 				return;
 			}
 
-           _Finalized = true;
+       _Finalized = true;
 			StudioManager.DeleteInstance();
 		}
 	}
@@ -80,9 +80,9 @@ namespace Core
 
 	file class CoreModule : EngineModule
 	{
-     public CoreModule()
+ public CoreModule()
 		{
-       }
+   }
 
 		public override EngineSystem[] CreateEngineSystems()
 		{
@@ -90,7 +90,6 @@ namespace Core
 			[
 				new Core.Net.SocketScheduler(),
 				new Core.Runtime(),
-           ];
+       ];
 		}
 	}
-}

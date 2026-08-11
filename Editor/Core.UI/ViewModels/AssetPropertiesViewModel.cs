@@ -1,7 +1,7 @@
 using System;
 
-namespace Core.UI.ViewModels
-{
+namespace Core.UI.ViewModels;
+
 	public sealed class AssetPropertiesViewModel : NoxUI.ViewModelBase, IDisposable
 	{
 		#region Non-public fields
@@ -144,4 +144,3 @@ namespace Core.UI.ViewModels
 			_Disposed = true;
 		}
 	}
-}

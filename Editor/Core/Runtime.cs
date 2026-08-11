@@ -4,31 +4,31 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace Core
-{
+namespace Core;
+
 	public class Runtime : EngineSystem, System.IDisposable
 	{
 		public static readonly SystemPhaseTerminate<Runtime> TerminatePhase = new(nameof(IDisposable.Dispose), static engineSystem => ((System.IDisposable)engineSystem).Dispose());
 
 		#region 非公開フィールド
 
-        /// <summary>
-        /// RuntimeObjectのコンストラクタ辞書
-        /// key: RuntimeFQNのハッシュ値(StringComparison.Ordinal)
+    /// <summary>
+    /// RuntimeObjectのコンストラクタ辞書
+    /// key: RuntimeFQNのハッシュ値(StringComparison.Ordinal)
 		/// value: RuntimeObjectのインスタンスを生成するFunc
-        /// </summary>
-        private readonly IReadOnlyDictionary<int, Func<Core.RuntimeObject>> _RuntimeObjectActivatorDict;
+    /// </summary>
+    private readonly IReadOnlyDictionary<int, Func<Core.RuntimeObject>> _RuntimeObjectActivatorDict;
 
-        /// <summary>
-        /// RuntimeTypeDeclの辞書
-        /// key:RuntimeWrappwerのType
-        /// value:Core.RuntimeTypeDecl
-        /// </summary>
-        private readonly IReadOnlyDictionary<System.Type, Core.RuntimeTypeDecl> _RuntimeRecordDeclDict;
+    /// <summary>
+    /// RuntimeTypeDeclの辞書
+    /// key:RuntimeWrappwerのType
+    /// value:Core.RuntimeTypeDecl
+    /// </summary>
+    private readonly IReadOnlyDictionary<System.Type, Core.RuntimeTypeDecl> _RuntimeRecordDeclDict;
 		#endregion
 
 		#region 公開プロパティ
-        public PlatformType Platform { get; set; } = PlatformType.X64;
+    public PlatformType Platform { get; set; } = PlatformType.X64;
 		public ConfigurationType ConfigurationType { get; set; } = ConfigurationType.Debug;
 		public RuntimeTypeDB TypeDB { get; set; } = new RuntimeTypeDB();
 
@@ -169,4 +169,3 @@ namespace Core
 
 		#endregion
 	}
-}

@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Nox
-{
+namespace Nox;
+
 	public struct RingBuffer<T> : IEnumerable<T>
 	{
 		#region 非公開フィールド
@@ -58,4 +58,3 @@ namespace Nox
 		}
 		#endregion
 	}
-}

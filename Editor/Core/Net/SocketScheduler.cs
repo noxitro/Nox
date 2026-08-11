@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Threading;
 
-namespace Core.Net
-{
-  public class SocketScheduler : Core.EngineSystem
+namespace Core.Net;
+
+public class SocketScheduler : Core.EngineSystem
 	{
 		public static readonly Core.SystemPhaseTerminate<SocketScheduler> TerminatePhase = new(nameof(Stop), static engineSystem => engineSystem.Stop());
 
@@ -106,4 +106,3 @@ namespace Core.Net
 
 		#endregion
 	}
-}

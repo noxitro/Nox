@@ -1,5 +1,5 @@
-namespace Core.UI.Views
-{
+namespace Core.UI.Views;
+
 	/// <summary>
 	/// AssetPropertiesView.xaml の相互作用ロジック
 	/// </summary>
@@ -10,4 +10,3 @@ namespace Core.UI.Views
 			InitializeComponent();
 		}
 	}
-}

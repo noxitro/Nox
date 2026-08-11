@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Nox
-{
+namespace Nox;
+
 	public ref struct FixedString
 	{
 		#region 非公開フィールド
@@ -177,4 +177,3 @@ namespace Nox
 		}
 		#endregion
 	}
-}

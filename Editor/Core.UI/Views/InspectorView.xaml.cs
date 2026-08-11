@@ -1,5 +1,5 @@
-﻿namespace Core.UI.Views
-{
+﻿namespace Core.UI.Views;
+
 	/// <summary>
 	/// InspectorView.xaml の相互作用ロジック
 	/// </summary>
@@ -10,4 +10,3 @@
 			InitializeComponent();
 		}
 	}
-}

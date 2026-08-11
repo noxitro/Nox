@@ -3,8 +3,8 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
 
-namespace Core.UI.Views
-{
+namespace Core.UI.Views;
+
 	/// <summary>
 	/// AssetBrowserView.xaml の相互作用ロジック
 	/// </summary>
@@ -239,4 +239,3 @@ namespace Core.UI.Views
 			return null;
 		}
 	}
-}

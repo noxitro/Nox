@@ -5,8 +5,8 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 
-namespace Core.UI.ViewModels
-{
+namespace Core.UI.ViewModels;
+
 	public sealed class ProjectSettingsGroupViewModel
 	{
 		public required string Name { get; init; }
@@ -209,4 +209,3 @@ namespace Core.UI.ViewModels
 			return propertyType.IsEnum ? "enum" : propertyType.Name;
 		}
 	}
-}

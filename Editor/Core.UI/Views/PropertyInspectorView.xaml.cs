@@ -1,8 +1,8 @@
 using System.Collections;
 using System.Windows;
 
-namespace Core.UI.Views
-{
+namespace Core.UI.Views;
+
 	public partial class PropertyInspectorView : System.Windows.Controls.UserControl
 	{
 		public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(
@@ -46,4 +46,3 @@ namespace Core.UI.Views
 			set => SetValue(PropertyInspectorAutomationIdProperty, value);
 		}
 	}
-}

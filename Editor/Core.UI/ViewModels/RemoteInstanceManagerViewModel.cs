@@ -4,8 +4,8 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Windows.Threading;
 
-namespace Core.UI.ViewModels
-{
+namespace Core.UI.ViewModels;
+
 	public sealed class RemoteInstanceItemViewModel : NoxUI.ViewModelBase
 	{
 		public required string Session { get; init; }
@@ -202,4 +202,3 @@ namespace Core.UI.ViewModels
 			_Disposed = true;
 		}
 	}
-}

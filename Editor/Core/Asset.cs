@@ -1,16 +1,6 @@
 ﻿using System;
 
-namespace Core
-{
-	namespace Attributes
-	{
-		/// <summary>
-		/// メタ情報
-		/// </summary>
-		public sealed class MetaAttribute : System.Attribute
-		{
-		}
-	}
+namespace Core;
 
 	public abstract class Asset
 	{
@@ -253,4 +243,3 @@ namespace Core
 			return child;
 		}
 	}
-}

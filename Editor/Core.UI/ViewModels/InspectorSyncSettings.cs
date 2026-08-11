@@ -1,8 +1,8 @@
 using System;
 using System.Collections.ObjectModel;
 
-namespace Core.UI.ViewModels
-{
+namespace Core.UI.ViewModels;
+
 	public sealed class InspectorSyncIntervalOption
 	{
 		public required string DisplayName { get; init; }
@@ -50,4 +50,3 @@ namespace Core.UI.ViewModels
 			ManualSyncRequested?.Invoke(this, EventArgs.Empty);
 		}
 	}
-}

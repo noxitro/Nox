@@ -1,5 +1,5 @@
-﻿namespace NoxUI
-{
+﻿namespace NoxUI;
+
 	public abstract class ViewModelBase : Prism.Mvvm.BindableBase, System.IDisposable
 	{
 //		public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
@@ -18,4 +18,3 @@
 			// 共通の解放処理があればここに
 		}
 	}
-}

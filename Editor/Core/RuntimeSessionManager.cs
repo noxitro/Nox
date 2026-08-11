@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Core
-{
+namespace Core;
+
 	public sealed class RuntimeSessionManager : IDisposable
 	{
 		#region 非公開フィールド
@@ -108,4 +108,3 @@ namespace Core
 			_Disposed = true;
 		}
 	}
-}

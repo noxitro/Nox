@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Core.UI.ViewModels
-{
+namespace Core.UI.ViewModels;
+
 	public class DocumentTabViewModel : NoxUI.ViewModelBase
 	{
 		#region 型定義
@@ -122,4 +122,3 @@ namespace Core.UI.ViewModels
 		}
 		#endregion
 	}
-}

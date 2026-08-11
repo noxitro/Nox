@@ -1,5 +1,5 @@
-﻿namespace Core.UI.ViewModels
-{
+﻿namespace Core.UI.ViewModels;
+
 	/// <summary>
 	/// runtimeの再生ボタンなど
 	/// </summary>
@@ -43,4 +43,3 @@
 		}
 		#endregion
 	}
-}

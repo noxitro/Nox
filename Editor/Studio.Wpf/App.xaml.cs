@@ -2,8 +2,8 @@ using System.Configuration;
 using System.Data;
 using System.Windows;
 
-namespace Studio.Wpf
-{
+namespace Studio.Wpf;
+
 	/// <summary>
 	/// Interaction logic for App.xaml
 	/// </summary>
@@ -33,33 +33,33 @@ namespace Studio.Wpf
 			}
 		}
 
-        private static Dictionary<string, string> ParseArguments(ReadOnlySpan<string> args)
+    private static Dictionary<string, string> ParseArguments(ReadOnlySpan<string> args)
+    {
+        Dictionary<string, string> result = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (string arg in args)
         {
-            Dictionary<string, string> result = new(StringComparer.OrdinalIgnoreCase);
-
-            foreach (string arg in args)
+            if (!arg.StartsWith("--", StringComparison.Ordinal))
             {
-                if (!arg.StartsWith("--", StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                int separatorIndex = arg.IndexOf('=');
-                if (separatorIndex < 0)
-                {
-                    result[arg[2..]] = "true";
-                    continue;
-                }
-
-                string key = arg[2..separatorIndex];
-                string value = arg[(separatorIndex + 1)..].Trim('"');
-                result[key] = value;
+                continue;
             }
 
-            return result;
+            int separatorIndex = arg.IndexOf('=');
+            if (separatorIndex < 0)
+            {
+                result[arg[2..]] = "true";
+                continue;
+            }
+
+            string key = arg[2..separatorIndex];
+            string value = arg[(separatorIndex + 1)..].Trim('"');
+            result[key] = value;
         }
 
-        protected override void OnStartup(StartupEventArgs e)
+        return result;
+    }
+
+    protected override void OnStartup(StartupEventArgs e)
 		{
 			var args = ParseArguments(e.Args);
 			if (args.TryGetValue("ProjectPath", out string? projectPath))
@@ -75,7 +75,7 @@ namespace Studio.Wpf
 				Core.StudioManager.ConfigureProjectPath(null);
 			}
 
-            System.Threading.Tasks.TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+        System.Threading.Tasks.TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
 			Core.EngineModule.Instance.InvokeStart();
 
@@ -105,7 +105,7 @@ namespace Studio.Wpf
 		{
 			//	テーマサービス（シングルトン）
 			containerRegistry.RegisterSingleton<Studio.Wpf.Themes.IThemeService, Studio.Wpf.Themes.ThemeService>();
-            containerRegistry.Register<Studio.Wpf.ViewModels.ThemeSettingsViewModel>();
+        containerRegistry.Register<Studio.Wpf.ViewModels.ThemeSettingsViewModel>();
 
 			foreach(var entry in UIEntryList)
 			{
@@ -135,5 +135,3 @@ namespace Studio.Wpf
 			e.SetObserved();
 		}
 	}
-
-}

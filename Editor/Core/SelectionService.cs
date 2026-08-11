@@ -1,7 +1,7 @@
 ﻿using System;
 
-namespace Core
-{
+namespace Core;
+
 	public enum SelectionKind : byte
 	{
 		None,
@@ -68,4 +68,3 @@ namespace Core
 			_Changed?.Invoke(this, EventArgs.Empty);
 		}
 	}
-}

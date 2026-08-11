@@ -6,430 +6,316 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 
-namespace Core
+namespace Core.RuntimeRemote;
+
+public class RuntimeRemoteCodeGenerator
 {
-	public static partial class Util
+	#region 内部クラス定義
+	private readonly struct Data
 	{
-		public static string ToRuntimeFQN(string fqn)
-		{
-			string r = fqn.Replace(".", "::");
-			//	クラス内定義の場合は+が付くので、それも::に変換
-			return r.Replace("+", "::");
-		}
+		public readonly bool IsCoreEntry;
+		public readonly List<RemoteTypeInfo> TypeInfoList = new ();
 
-		/// <summary>
-		/// RuntimeFQNに変換する
-		/// 
-		/// 例: Core.RuntimeObject -> Core::RuntimeObject
-		/// </summary>
-		/// <param name="buffer"></param>
-		/// <param name="fqn"></param>
-		/// <returns></returns>
-		/// <exception cref="ArgumentException"></exception>
-		public static ReadOnlySpan<char> ToRuntimeFQN(Span<char> buffer, ReadOnlySpan<char> fqn)
+		public Data(bool isCoreEntry)
 		{
-			ReadOnlySpan<char> fqnSpan = fqn;
-			int bufferIndex = 0;
-			for (int i = 0, length = fqnSpan.Length; i < length; ++i)
-			{
-				char c = fqnSpan[i];
-				if (c == '.' || c == '+')
-				{
-					buffer[bufferIndex++] = ':';
-					buffer[bufferIndex++] = ':';
-				}
-				else
-				{
-					buffer[bufferIndex++] = c;
-				}
-			}
-			if (bufferIndex > buffer.Length)
-			{
-				throw new ArgumentException($"Buffer is too small for runtime FQN. required={bufferIndex}, actual={buffer.Length}");
-			}
-			return buffer.Slice(0, bufferIndex);
-		}
-
-		/// <summary>
-		/// runtime(c++)のFQNをeditor(c#)のFQNに変換する
-		/// </summary>
-		/// <param name="buffer"></param>
-		/// <param name="fqn"></param>
-		/// <returns></returns>
-		public static ReadOnlySpan<char> ToEditorFQN(Span<char> buffer, ReadOnlySpan<char> fqn)
-		{
-			ReadOnlySpan<char> fqnSpan = fqn;
-			int bufferIndex = 0;
-			for (int i = 0, length = fqnSpan.Length; i < length; ++i)
-			{
-				char c = fqnSpan[i];
-				if (c == ':' && i + 1 < length && fqnSpan[i + 1] == ':')
-				{
-					buffer[bufferIndex++] = '.';
-					++i;
-				}
-				else
-				{
-					buffer[bufferIndex++] = c;
-				}
-			}
-			if (bufferIndex > buffer.Length)
-			{
-				throw new ArgumentException($"Buffer is too small for editor FQN. required={bufferIndex}, actual={buffer.Length}");
-			}
-			return buffer.Slice(0, bufferIndex);
-		}
-
-		/// <summary>
-		/// runtime fqnからnamespace部分を取得する
-		/// </summary>
-		public static string GetNamespaceFromRuntimeFQN(ReadOnlySpan<char> fqn)
-		{
-			int lastSepIndex = fqn.LastIndexOf("::");
-			if (lastSepIndex >= 0)
-			{
-				return fqn.Slice(0, lastSepIndex).ToString();
-			}
-			else
-			{
-				return string.Empty;
-			}
-		}
-
-		public static string GetNameFromRuntimeFQN(ReadOnlySpan<char> fqn)
-		{
-			int lastSepIndex = fqn.LastIndexOf("::");
-			if (lastSepIndex >= 0)
-			{
-				return fqn.Slice(lastSepIndex + 2).ToString();
-			}
-			else
-			{
-				return fqn.ToString();
-			}
-		}
-	}
-}
-
-namespace Core.RuntimeRemote
-{
-	namespace LogId
-	{
-		file readonly struct RuntimeRemote : Nox.LogId.ILogId<RuntimeRemote>
-		{
-			public RuntimeRemote() { }
-			string Nox.LogId.ILogId<RuntimeRemote>.Tag { get; } = "Runtime";
+			IsCoreEntry = isCoreEntry;
 		}
 	}
 
-	public class RuntimeRemoteCodeGenerator
+	private enum PropertyTypeKind : byte
 	{
-		#region 内部クラス定義
-		private readonly struct Data
-		{
-			public readonly bool IsCoreEntry;
-			public readonly List<RemoteTypeInfo> TypeInfoList = new ();
+		Invalid,
+		PrimitiveType,
+		RuntimeObject,
+		//RuntimeManagedObject,
+		String,
+		EditorType,
+	}
 
-			public Data(bool isCoreEntry)
-			{
-				IsCoreEntry = isCoreEntry;
-			}
-		}
-
-		private enum PropertyTypeKind : byte
-		{
-			Invalid,
-			PrimitiveType,
-			RuntimeObject,
-			//RuntimeManagedObject,
-			String,
-			EditorType,
-		}
+	/// <summary>
+	/// runtime側でのプロパティ定義情報
+	/// </summary>
+	private readonly struct RuntimePropertyInfo
+	{
+		/// <summary>
+		/// 型名
+		/// runtime fqn
+		/// </summary>
+		public readonly string TypeFQN;
 
 		/// <summary>
-		/// runtime側でのプロパティ定義情報
+		/// setter引数の型名
 		/// </summary>
-		private readonly struct RuntimePropertyInfo
-		{
-			/// <summary>
-			/// 型名
-			/// runtime fqn
-			/// </summary>
-			public readonly string TypeFQN;
+		public string SetterTypeFqn { get; init; } = string.Empty;
 
-			/// <summary>
-			/// setter引数の型名
-			/// </summary>
-			public string SetterTypeFqn { get; init; } = string.Empty;
-
-			/// <summary>
-			/// getter戻り値の型名
-			/// </summary>
-			public string GetterTypeFqn { get; init; } = string.Empty;
-
-			/// <summary>
-			/// メンバ変数として定義する際の型名
-			/// </summary>
-			public required string MemberDeclTypeName { get; init; }
-
-			/// <summary>
-			/// runtime側でのメンバ変数名
-			/// snake_case_
-			/// </summary>
-			public required string NameSnakeCase { get; init; }
-
-			/// <summary>
-			/// getterでの記述名
-			/// </summary>
-			public string? GetterStr { get; init; } = null;
-
-			/// <summary>
-			/// setterでの記述名
-			/// </summary>
-			public string? SetterStr { get; init; } = null;
-
-			/// <summary>
-			/// runtime側での関数名用
-			/// </summary>
-			public required string NamePascalCase { get; init; }
-
-			public required System.Reflection.PropertyInfo RawPropertyInfo { get; init; }
-
-			public required PropertyTypeKind Kind { get; init; }
-
-			public RuntimePropertyInfo(string fqn)
-			{
-				TypeFQN = fqn;
-			}
-		}
-
-		private readonly struct RemoteTypeInfo
-		{
-			public readonly Core.RuntimeRemote.Attributes.RuntimeRemoteCodeAttribute Attr;
-			public readonly System.Type Type;
-			public readonly bool IsQuery;
-
-			public readonly RuntimePropertyInfo[] PropertyList = [];
-
-			public RemoteTypeInfo(System.Type type, Core.RuntimeRemote.Attributes.RuntimeRemoteCodeAttribute attr, bool isQuery, RuntimePropertyInfo[] propertyList)
-			{
-				Type = type;
-				Attr = attr;
-				IsQuery = isQuery;
-				PropertyList = propertyList;
-			}
-		}
-		#endregion
-
-		#region 公開メソッド
-		public void GenerateCode()
-		{
-			//	RuntimeWrapper型にDTIを設定する
-			System.Type queryType = typeof(Core.RuntimeRemote.Query);
-			System.Type responseType = typeof(Core.RuntimeRemote.Response);
-
-			System.Type runtimeRemoteCodeAttributeType = typeof(Core.RuntimeRemote.Attributes.RuntimeRemoteCodeAttribute);
-
-			//	key: 出力先ファイルパス
-			Dictionary<string, Data> dict = new();
-
-			string solutionDir = Core.StudioManager.Instance.StudioInfo.RuntimeSolutionDir;
-
-			foreach (System.Type type in Core.TypeDB.AllTypeList)
-			{
-				if (type.IsAbstract)
-				{
-					continue;
-				}
-
-				bool isQuery = false;
-				if (queryType.IsAssignableFrom(type))
-				{
-					isQuery = true;
-				}
-				else if (responseType.IsAssignableFrom(type))
-				{
-					isQuery = false;
-				}
-				else
-				{
-					continue;
-				}
-
-				Core.RuntimeRemote.Attributes.RuntimeRemoteCodeAttribute? attr = type.GetCustomAttribute<Core.RuntimeRemote.Attributes.RuntimeRemoteCodeAttribute>();
-				if (attr == null)
-				{
-					Nox.LogTrace.ErrorLine<Core.RuntimeRemote.LogId.RuntimeRemote>("Type '{0}' is missing RuntimeRemoteCodeAttribute.", type.FullName ?? "invalid");
-					continue;
-				}
-
-				//	Serialize対象のプロパティ一覧を作成
-				ReadOnlySpan<System.Reflection.PropertyInfo> srcPropList = GetSerializeProperties(type);
-				RuntimePropertyInfo[] propList = new RuntimePropertyInfo[srcPropList.Length];
-				for (int i = 0, length = srcPropList.Length; i < length; ++i)
-				{
-					propList[i] = CreatePropertyInfo(srcPropList[i]);
-				}
-
-				string genPath = $"{solutionDir}/{attr.Path}";
-				if (dict.TryGetValue(genPath, out var data) == false)
-				{
-					bool coreEntry = attr.Path.IndexOf("core/") == 0;
-					dict.Add(genPath, data = new(coreEntry));
-				}
-
-				data.TypeInfoList.Add(new RemoteTypeInfo (type, attr, isQuery, propList));
-			}
-
-			foreach (var v in dict)
-			{
-				GenerateImpl(v.Key, v.Value);
-			}
-		}
-		#endregion
-
-		#region 非公開メソッド
 		/// <summary>
-		/// 
+		/// getter戻り値の型名
 		/// </summary>
-		/// <param name="basePath">出力先ファイルパス（拡張子を除く）</param>
-		/// <param name="data"></param>
-		private void GenerateImpl(string basePath, in Data data)
+		public string GetterTypeFqn { get; init; } = string.Empty;
+
+		/// <summary>
+		/// メンバ変数として定義する際の型名
+		/// </summary>
+		public required string MemberDeclTypeName { get; init; }
+
+		/// <summary>
+		/// runtime側でのメンバ変数名
+		/// snake_case_
+		/// </summary>
+		public required string NameSnakeCase { get; init; }
+
+		/// <summary>
+		/// getterでの記述名
+		/// </summary>
+		public string? GetterStr { get; init; } = null;
+
+		/// <summary>
+		/// setterでの記述名
+		/// </summary>
+		public string? SetterStr { get; init; } = null;
+
+		/// <summary>
+		/// runtime側での関数名用
+		/// </summary>
+		public required string NamePascalCase { get; init; }
+
+		public required System.Reflection.PropertyInfo RawPropertyInfo { get; init; }
+
+		public required PropertyTypeKind Kind { get; init; }
+
+		public RuntimePropertyInfo(string fqn)
 		{
-			string fileName = System.IO.Path.GetFileName(basePath);
+			TypeFQN = fqn;
+		}
+	}
 
-			//	h
-			using (Nox.CodeWriter codeWriter = new CodeWriter($"{basePath}.g.h"))
+	private readonly struct RemoteTypeInfo
+	{
+		public readonly Core.RuntimeRemote.Attributes.RuntimeRemoteCodeAttribute Attr;
+		public readonly System.Type Type;
+		public readonly bool IsQuery;
+
+		public readonly RuntimePropertyInfo[] PropertyList = [];
+
+		public RemoteTypeInfo(System.Type type, Core.RuntimeRemote.Attributes.RuntimeRemoteCodeAttribute attr, bool isQuery, RuntimePropertyInfo[] propertyList)
+		{
+			Type = type;
+			Attr = attr;
+			IsQuery = isQuery;
+			PropertyList = propertyList;
+		}
+	}
+	#endregion
+
+	#region 公開メソッド
+	public void GenerateCode()
+	{
+		//	RuntimeWrapper型にDTIを設定する
+		System.Type queryType = typeof(Core.RuntimeRemote.Query);
+		System.Type responseType = typeof(Core.RuntimeRemote.Response);
+
+		System.Type runtimeRemoteCodeAttributeType = typeof(Core.RuntimeRemote.Attributes.RuntimeRemoteCodeAttribute);
+
+		//	key: 出力先ファイルパス
+		Dictionary<string, Data> dict = new();
+
+		string solutionDir = Core.StudioManager.Instance.StudioInfo.RuntimeSolutionDir;
+
+		foreach (System.Type type in Core.TypeDB.AllTypeList)
+		{
+			if (type.IsAbstract)
 			{
-				Nox.LogTrace.InfoLine<Core.RuntimeRemote.LogId.RuntimeRemote>("Generating remote code to '{0}.g.h' and '{0}.g.cpp'", basePath);
+				continue;
+			}
 
-				codeWriter.WriteLineHeader("RuntimeRemoteCodeGenerator");
-				codeWriter.WriteNewLine();
+			bool isQuery = false;
+			if (queryType.IsAssignableFrom(type))
+			{
+				isQuery = true;
+			}
+			else if (responseType.IsAssignableFrom(type))
+			{
+				isQuery = false;
+			}
+			else
+			{
+				continue;
+			}
 
-				codeWriter.WriteLinePPIf("NOX_DEVELOP");
+			Core.RuntimeRemote.Attributes.RuntimeRemoteCodeAttribute? attr = type.GetCustomAttribute<Core.RuntimeRemote.Attributes.RuntimeRemoteCodeAttribute>();
+			if (attr == null)
+			{
+				Nox.LogTrace.ErrorLine<Core.RuntimeRemote.LogId.RuntimeRemote>("Type '{0}' is missing RuntimeRemoteCodeAttribute.", type.FullName ?? "invalid");
+				continue;
+			}
 
-				//	メンバの前方宣言
+			//	Serialize対象のプロパティ一覧を作成
+			ReadOnlySpan<System.Reflection.PropertyInfo> srcPropList = GetSerializeProperties(type);
+			RuntimePropertyInfo[] propList = new RuntimePropertyInfo[srcPropList.Length];
+			for (int i = 0, length = srcPropList.Length; i < length; ++i)
+			{
+				propList[i] = CreatePropertyInfo(srcPropList[i]);
+			}
+
+			string genPath = $"{solutionDir}/{attr.Path}";
+			if (dict.TryGetValue(genPath, out var data) == false)
+			{
+				bool coreEntry = attr.Path.IndexOf("core/") == 0;
+				dict.Add(genPath, data = new(coreEntry));
+			}
+
+			data.TypeInfoList.Add(new RemoteTypeInfo (type, attr, isQuery, propList));
+		}
+
+		foreach (var v in dict)
+		{
+			GenerateImpl(v.Key, v.Value);
+		}
+	}
+	#endregion
+
+	#region 非公開メソッド
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <param name="basePath">出力先ファイルパス（拡張子を除く）</param>
+	/// <param name="data"></param>
+	private void GenerateImpl(string basePath, in Data data)
+	{
+		string fileName = System.IO.Path.GetFileName(basePath);
+
+		//	h
+		using (Nox.CodeWriter codeWriter = new CodeWriter($"{basePath}.g.h"))
+		{
+			Nox.LogTrace.InfoLine<Core.RuntimeRemote.LogId.RuntimeRemote>("Generating remote code to '{0}.g.h' and '{0}.g.cpp'", basePath);
+
+			codeWriter.WriteLineHeader("RuntimeRemoteCodeGenerator");
+			codeWriter.WriteNewLine();
+
+			codeWriter.WriteLinePPIf("NOX_DEVELOP");
+
+			//	メンバの前方宣言
+			{
+				HashSet<System.Type> runtimeWrawpperTypeHashSet = new HashSet<Type>();
+
+				foreach (var param in data.TypeInfoList)
 				{
-					HashSet<System.Type> runtimeWrawpperTypeHashSet = new HashSet<Type>();
-
-					foreach (var param in data.TypeInfoList)
+					foreach (var prop in param.PropertyList)
 					{
-						foreach (var prop in param.PropertyList)
+						switch (prop.Kind)
 						{
-							switch (prop.Kind)
-							{
-								case PropertyTypeKind.RuntimeObject:
-									break;
-								//	runtime wrapper以外は前方宣言不要
-								default:
-									continue;
-							}
-
-							System.Type runtimeWrapperType = prop.RawPropertyInfo.PropertyType;
-							if (runtimeWrawpperTypeHashSet.Contains(runtimeWrapperType) == true)
-							{
+							case PropertyTypeKind.RuntimeObject:
+								break;
+							//	runtime wrapper以外は前方宣言不要
+							default:
 								continue;
-							}
-							if (runtimeWrawpperTypeHashSet.Count == 0)
-							{
-								codeWriter.WriteLine("// forward declaration for runtime wrapper types");
-							}
-							runtimeWrawpperTypeHashSet.Add(runtimeWrapperType);
-
-							string namespaceStr = Core.Util.GetNamespaceFromRuntimeFQN(prop.TypeFQN);
-							codeWriter.WriteLine($"namespace {namespaceStr} {{ class {Core.Util.GetNameFromRuntimeFQN(prop.TypeFQN)}; }}");
 						}
-					}
 
-					if (runtimeWrawpperTypeHashSet.Count > 0)
-					{
-						codeWriter.WriteLine("// end forward declaration");
-						codeWriter.WriteNewLine();
+						System.Type runtimeWrapperType = prop.RawPropertyInfo.PropertyType;
+						if (runtimeWrawpperTypeHashSet.Contains(runtimeWrapperType) == true)
+						{
+							continue;
+						}
+						if (runtimeWrawpperTypeHashSet.Count == 0)
+						{
+							codeWriter.WriteLine("// forward declaration for runtime wrapper types");
+						}
+						runtimeWrawpperTypeHashSet.Add(runtimeWrapperType);
+
+						string namespaceStr = Core.Util.GetNamespaceFromRuntimeFQN(prop.TypeFQN);
+						codeWriter.WriteLine($"namespace {namespaceStr} {{ class {Core.Util.GetNameFromRuntimeFQN(prop.TypeFQN)}; }}");
 					}
 				}
 
-				if (data.IsCoreEntry)
+				if (runtimeWrawpperTypeHashSet.Count > 0)
 				{
-					codeWriter.WriteLineInclude("../editor_remote_query.h");
-					codeWriter.WriteLineInclude("../editor_remote_response.h");
+					codeWriter.WriteLine("// end forward declaration");
+					codeWriter.WriteNewLine();
 				}
+			}
 
-				codeWriter.WriteNewLine();
-				codeWriter.WriteNamespace("nox::dev::editor_remote");
-				using (codeWriter.Indent("{", "}"))
+			if (data.IsCoreEntry)
+			{
+				codeWriter.WriteLineInclude("../editor_remote_query.h");
+				codeWriter.WriteLineInclude("../editor_remote_response.h");
+			}
+
+			codeWriter.WriteNewLine();
+			codeWriter.WriteNamespace("nox::dev::editor_remote");
+			using (codeWriter.Indent("{", "}"))
+			{
+				foreach(var param in data.TypeInfoList)
 				{
-					foreach(var param in data.TypeInfoList)
+					ReadOnlySpan<char> typeName = param.Type.Name;
+
+					ReadOnlySpan<char> baseTypeFullName = param.IsQuery ? "nox::dev::editor_remote::Query" : "nox::dev::editor_remote::Response";
+					
+					if (param.Attr.Comment != string.Empty)
 					{
-						ReadOnlySpan<char> typeName = param.Type.Name;
+						codeWriter.WriteLine($"/// @brief {param.Attr.Comment}");
+					}
+					if (param.Attr.EnabledSend)
+					{
+                        codeWriter.WriteLine($"class {typeName} final : public {baseTypeFullName}");
+                    }
+					else
+					{
+                        codeWriter.WriteLine($"class {typeName} final : public {baseTypeFullName}, nox::dev::editor_remote::IRecvOnlyQueryTag");
+                    }
 
-						ReadOnlySpan<char> baseTypeFullName = param.IsQuery ? "nox::dev::editor_remote::Query" : "nox::dev::editor_remote::Response";
-						
-						if (param.Attr.Comment != string.Empty)
-						{
-							codeWriter.WriteLine($"/// @brief {param.Attr.Comment}");
-						}
-						if (param.Attr.EnabledSend)
-						{
-                            codeWriter.WriteLine($"class {typeName} final : public {baseTypeFullName}");
-                        }
-						else
-						{
-                            codeWriter.WriteLine($"class {typeName} final : public {baseTypeFullName}, nox::dev::editor_remote::IRecvOnlyQueryTag");
-                        }
+					using (codeWriter.Indent("{", "};"))
+					{
+						codeWriter.WriteLine($"NOX_DECLARE_OBJECT(nox::dev::editor_remote::{typeName}, {baseTypeFullName});");
 
-						using (codeWriter.Indent("{", "};"))
+						var propList = param.PropertyList;
+						int propertyLength = propList.Length;
+
+						//	editor側の型定義
 						{
-							codeWriter.WriteLine($"NOX_DECLARE_OBJECT(nox::dev::editor_remote::{typeName}, {baseTypeFullName});");
+							bool first = true;
 
-							var propList = param.PropertyList;
-							int propertyLength = propList.Length;
-
-							//	editor側の型定義
+							foreach (var prop in propList)
 							{
-								bool first = true;
-
-								foreach (var prop in propList)
+								if (prop.Kind != PropertyTypeKind.EditorType)
 								{
-									if (prop.Kind != PropertyTypeKind.EditorType)
-									{
-										continue;
-									}
+									continue;
+								}
 
-									if (first)
-									{
-										codeWriter.WriteLineOutdent("public:", 1);
-										first = false;
-									}
-									else
-									{
-										codeWriter.WriteNewLine();
-									}
+								if (first)
+								{
+									codeWriter.WriteLineOutdent("public:", 1);
+									first = false;
+								}
+								else
+								{
+									codeWriter.WriteNewLine();
+								}
 
-									System.Type propType = prop.RawPropertyInfo.PropertyType;
-									if (propType.IsEnum)
+								System.Type propType = prop.RawPropertyInfo.PropertyType;
+								if (propType.IsEnum)
+								{
+									ReadOnlySpan<char> underlyingTypeFqn = Core.RuntimeTypeUtil.GetPrimitiveTypeName(Type.GetTypeCode(propType.GetEnumUnderlyingType()));
+									codeWriter.WriteLine($"enum class {propType.Name} : {underlyingTypeFqn}");
+									using (codeWriter.Indent("{", "};"))
 									{
-										ReadOnlySpan<char> underlyingTypeFqn = Core.RuntimeTypeUtil.GetPrimitiveTypeName(Type.GetTypeCode(propType.GetEnumUnderlyingType()));
-										codeWriter.WriteLine($"enum class {propType.Name} : {underlyingTypeFqn}");
-										using (codeWriter.Indent("{", "};"))
+										ReadOnlySpan<string> nameList = propType.GetEnumNames();
+										Array enumValues = propType.GetEnumValues();
+
+										for (int enumeratorIndex = 0, length = nameList.Length; enumeratorIndex < length; ++enumeratorIndex)
 										{
-											ReadOnlySpan<string> nameList = propType.GetEnumNames();
-											Array enumValues = propType.GetEnumValues();
-
-											for (int enumeratorIndex = 0, length = nameList.Length; enumeratorIndex < length; ++enumeratorIndex)
+											string enumName = nameList[enumeratorIndex];
+											var enumValue = Convert.ChangeType(enumValues.GetValue(enumeratorIndex), Enum.GetUnderlyingType(propType));
+											if (enumeratorIndex + 1 < length)
 											{
-												string enumName = nameList[enumeratorIndex];
-												var enumValue = Convert.ChangeType(enumValues.GetValue(enumeratorIndex), Enum.GetUnderlyingType(propType));
-												if (enumeratorIndex + 1 < length)
-												{
-													codeWriter.WriteLine($"{enumName} = {enumValue},");
-												}
-												else
-												{
-													codeWriter.WriteLine($"{enumName} = {enumValue}");
-												}
+												codeWriter.WriteLine($"{enumName} = {enumValue},");
+											}
+											else
+											{
+												codeWriter.WriteLine($"{enumName} = {enumValue}");
 											}
 										}
 									}
+							}
 									else if (propType.IsValueType)
 									{
 										codeWriter.WriteLine($"struct {propType.Name}");
@@ -922,4 +808,3 @@ namespace Core.RuntimeRemote
 		}
 		#endregion
 	}
-}

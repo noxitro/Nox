@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Nox.Utility
-{
+namespace Nox.Utility;
+
 	public ref struct ParallelExecuteCheckScope : IDisposable
 	{
 		public ParallelExecuteCheckScope(ref ParallelExecuteChecker checker)
@@ -111,4 +111,3 @@ namespace Nox.Utility
 			return new WriteParallelExecuteCheckScope(ref checker);
 		}
 	}
-}

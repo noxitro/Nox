@@ -4,8 +4,8 @@ using System.Collections.ObjectModel;
 using System.Text;
 using System.ComponentModel;
 
-namespace Studio.Wpf.ViewModels
-{
+namespace Studio.Wpf.ViewModels;
+
 	public class MainWindowViewModel : NoxUI.ViewModelBase, IDisposable
 	{
 		public sealed class ThemeMenuItem : NoxUI.ViewModelBase
@@ -251,4 +251,3 @@ namespace Studio.Wpf.ViewModels
 		}
 		#endregion
 	}
-}

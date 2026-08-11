@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Nox
-{
+namespace Nox;
+
 	public abstract class DelegateHandler : System.IDisposable
 	{
 		#region 公開メソッド
@@ -126,4 +126,3 @@ namespace Nox
 	//		handle = AppTest.registerFunc(() => { });
 	//	}
 	//}
-}

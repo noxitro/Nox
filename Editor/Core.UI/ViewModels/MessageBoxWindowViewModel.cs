@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Core.UI.ViewModels
-{
+namespace Core.UI.ViewModels;
+
 	public class MessageBoxWindowViewModel : NoxUI.ViewModelBase
 	{
 		#region 公開プロパティ
@@ -45,4 +45,3 @@ namespace Core.UI.ViewModels
 		}
 		#endregion
 	}
-}

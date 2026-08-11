@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Core.UI
-{
+namespace Core.UI;
+
 	public static class MessageBox
 	{
 		#region 公開メソッド
@@ -129,4 +129,3 @@ namespace Core.UI
 			return vm.Result;
 		}
 	}
-}

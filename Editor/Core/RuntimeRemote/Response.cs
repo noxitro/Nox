@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Core.RuntimeRemote
-{
+namespace Core.RuntimeRemote;
+
 	public abstract class Response : Core.RuntimeRemote.Entity
 	{
 
 	}
-}

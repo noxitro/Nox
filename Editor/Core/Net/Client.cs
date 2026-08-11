@@ -3,8 +3,8 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 
-namespace Core.Net
-{
+namespace Core.Net;
+
 	public class Client : Core.Net.Entity, IDisposable
 	{
 		#region 公開型定義
@@ -513,4 +513,3 @@ namespace Core.Net
 		}
 		#endregion
 	}
-}

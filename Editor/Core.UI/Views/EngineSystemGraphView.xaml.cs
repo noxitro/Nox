@@ -1,5 +1,5 @@
-namespace Core.UI.Views
-{
+namespace Core.UI.Views;
+
 	public partial class EngineSystemGraphView : System.Windows.Controls.UserControl
 	{
 		public EngineSystemGraphView()
@@ -7,4 +7,3 @@ namespace Core.UI.Views
 			InitializeComponent();
 		}
 	}
-}

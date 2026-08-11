@@ -1,7 +1,7 @@
 using System;
 
-namespace Core.UI.Views
-{
+namespace Core.UI.Views;
+
 	//public static class Helper
 	//{
 	//	static System.Windows.DependencyProperty MakeDependencyProperty<PropertyType, OwnerType>(string path)
@@ -239,4 +239,3 @@ namespace Core.UI.Views
 	//	private static extern bool DestroyWindow(System.IntPtr hWnd);
 	//	#endregion
 	//}
-}

@@ -6,8 +6,8 @@ using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text.Json;
 
-namespace Core
-{
+namespace Core;
+
 	public enum ProjectSettingTabKind : byte
 	{
 		/// <summary>
@@ -90,9 +90,9 @@ namespace Core
 			if (_RuntimeSettings.TryGetValue(typeof(T), out var setting) == false)
 			{
 				throw new InvalidOperationException($"Runtime setting of type {typeof(T).FullName} not found.");
-            }
-			return (T)setting;
         }
+			return (T)setting;
+    }
 
 		public T GetEditorSetting<T>() where T : ProjectSettingEditor
 		{
@@ -101,8 +101,8 @@ namespace Core
 				throw new InvalidOperationException($"Editor setting of type {typeof(T).FullName} not found.");
 			}
 			return (T)setting;
-        }
-        #endregion
+    }
+    #endregion
 
 		#region 非公開メソッド
 		private static JsonSerializerOptions JsonOptions => new()
@@ -284,7 +284,7 @@ namespace Core
 			return "runtime";
 		}
 		#endregion
-    }
+}
 
 	public abstract class ProjectSettingBase
 	{
@@ -292,16 +292,15 @@ namespace Core
 	}
 
 	public abstract class ProjectSettingRuntime : ProjectSettingBase
-    {
+{
 
 	}
 
 	public abstract class ProjectSettingEditor : ProjectSettingBase
 	{
-    }
+}
 
 	public static partial class ProjectSettingsExtensions
 	{
 
 	}
-}

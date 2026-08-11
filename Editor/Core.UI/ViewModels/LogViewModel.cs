@@ -2,8 +2,8 @@
 using System.ComponentModel;
 using System.Windows.Data;
 
-namespace Core.UI.ViewModels
-{
+namespace Core.UI.ViewModels;
+
 	public class LogItemViewModel : NoxUI.ViewModelBase
 	{
 		#region 公開プロパティ
@@ -262,4 +262,3 @@ namespace Core.UI.ViewModels
 		}
 		#endregion
 	}
-}

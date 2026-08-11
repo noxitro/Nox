@@ -7,8 +7,8 @@ using Core.RuntimeAttributes;
 using System.Reflection.Metadata.Ecma335;
 using System.Text;
 
-namespace Core
-{
+namespace Core;
+
 	public static class RuntimeTypeExtensions
 	{
 		public static bool IsIntegral(this Core.RuntimeTypeKind self)
@@ -959,4 +959,3 @@ namespace Core
 		}
 		#endregion
 	}
-}

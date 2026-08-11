@@ -5,8 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Xml.Linq;
 
-namespace Core.UI.ViewModels
-{
+namespace Core.UI.ViewModels;
+
 	public enum AssetBrowserContentViewMode : byte
 	{
 		Details,
@@ -820,4 +820,3 @@ namespace Core.UI.ViewModels
 		}
 		#endregion
 	}
-}

@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace NoxUI
-{
+namespace NoxUI;
+
 	public interface IDependencyObject<Owner> where Owner : System.Windows.DependencyObject
 	{
 		public delegate void Callback(Owner owner, in System.Windows.DependencyPropertyChangedEventArgs e);
@@ -52,4 +52,3 @@ namespace NoxUI
 			return System.Windows.DependencyProperty.Register(name, typeof(Property), typeof(Owner));
 		}
 	}
-}

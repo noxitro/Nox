@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace NoxUI
-{
+namespace NoxUI;
+
 	public class ViewModelCommand : Prism.Commands.DelegateCommand
 	{
 		public ViewModelCommand(Action executeMethod) : base(executeMethod) { }
@@ -12,4 +12,3 @@ namespace NoxUI
 			base(executeMethod, canExecuteMethod)
 		{ }
 	}
-}

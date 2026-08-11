@@ -5,8 +5,8 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 
-namespace Core.Net
-{
+namespace Core.Net;
+
 	/// <summary>
 	/// runtime-editor間の同期方法
 	/// </summary>
@@ -192,7 +192,7 @@ namespace Core.Net
 
 			lock (_LockQueryList)
 			{
-             query.SetId(queryId);
+         query.SetId(queryId);
 				_QueryQueue.Enqueue(query);
 
 				if (response != null)
@@ -442,7 +442,7 @@ namespace Core.Net
 					}
 					else
 					{
-                       break;
+                   break;
 					}
 
 					if (IsRecvReadable(0) == false)
@@ -534,4 +534,3 @@ namespace Core.Net
 		}
 		#endregion
 	}
-}

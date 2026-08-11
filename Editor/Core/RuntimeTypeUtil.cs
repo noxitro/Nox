@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Core
-{
+namespace Core;
+
 	public static class RuntimeTypeUtil
 	{
 		public static ReadOnlySpan<char> GetPrimitiveTypeName(TypeCode typeCode)
@@ -28,4 +28,3 @@ namespace Core
 			return "";
 		}
 	}
-}

@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Buffers.Binary;
 
-namespace Nox
-{
+namespace Nox;
+
 
 	public ref struct StackMemoryWriter
 	{
@@ -136,4 +136,3 @@ namespace Nox
 		}
 		#endregion
 	}
-}

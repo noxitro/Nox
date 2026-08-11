@@ -9,8 +9,8 @@ using System.Numerics;
 using System.Threading;
 using System.Windows.Threading;
 
-namespace Core.UI.ViewModels
-{
+namespace Core.UI.ViewModels;
+
 	public sealed class ComponentTypeOption
 	{
 		public required string DisplayName { get; init; }
@@ -964,4 +964,3 @@ namespace Core.UI.ViewModels
 
 		#endregion
 	}
-}

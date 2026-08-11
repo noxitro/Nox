@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Core
-{
+namespace Core;
+
 	public static class TypeDB
 	{
 		private static System.Type[] CollectTypeList()
@@ -48,4 +48,3 @@ namespace Core
 		private static readonly System.Type[] _AllTypeList = CollectTypeList();
 		public static ReadOnlySpan<System.Type> AllTypeList => _AllTypeList;
 	}
-}

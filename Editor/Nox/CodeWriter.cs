@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Nox
-{
+namespace Nox;
+
 	public abstract class BaseCodeWriter
 	{
 		/// <summary>
@@ -302,4 +302,3 @@ namespace Nox
 		}
 		#endregion
 	}
-}

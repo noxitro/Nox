@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Core.Attributes
-{
+namespace Core.Attributes;
+
 	/// <summary>
 	/// Core.RuntimeObject継承クラスに付与する属性
 	/// runtimeとの型マッピング用
@@ -21,4 +21,3 @@ namespace Core.Attributes
 			RuntimeFQN = fqn;
 		}
 	}
-}

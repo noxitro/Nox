@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace NoxUI
-{
+namespace NoxUI;
+
 	public static class PrismHelper
 	{
 		public static T? ResolveDataContext<T>() where T : class
@@ -19,4 +19,3 @@ namespace NoxUI
 			return container.Resolve<T>();
 		}
 	}
-}

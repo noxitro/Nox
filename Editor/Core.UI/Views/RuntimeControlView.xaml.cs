@@ -11,8 +11,8 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace Core.UI.Views
-{
+namespace Core.UI.Views;
+
 	/// <summary>
 	/// RuntimeControlView.xaml の相互作用ロジック
 	/// </summary>
@@ -25,4 +25,3 @@ namespace Core.UI.Views
 		//	DataContext = NoxUI.PrismHelper.ResolveDataContext<Core.UI.ViewModels.RuntimeControlViewModel>();
 		}
 	}
-}

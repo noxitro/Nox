@@ -1,7 +1,7 @@
 ﻿using System;
 
-namespace Core.UI.ViewModels
-{
+namespace Core.UI.ViewModels;
+
 	/// <summary>
 	/// RuntimeWindowを表示するためのViewModel
 	/// </summary>
@@ -109,4 +109,3 @@ namespace Core.UI.ViewModels
 			_Disposed = true;
 		}
 	}
-}

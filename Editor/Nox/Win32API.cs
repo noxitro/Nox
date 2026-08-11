@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace Nox
-{
+namespace Nox;
+
 	/// <summary>
 	/// Win32 API の P/Invoke 定義
 	/// .NET 10 では LibraryImport（ソース生成）を使用
@@ -111,4 +111,3 @@ namespace Nox
 		public const uint SWP_FRAMECHANGED = 0x0020;
 		#endregion
 	}
-}

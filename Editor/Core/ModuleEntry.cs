@@ -2,23 +2,22 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Core
+namespace Core;
+
+public abstract class ModuleEntry
 {
-    public abstract class ModuleEntry
+    public class SystemPhase
     {
-        public class SystemPhase
-        {
 
-        }
+    }
 
-        public struct PhaseRegister
-        {
+    public struct PhaseRegister
+    {
 
-        }
+    }
 
-        public ModuleEntry()
-        {
+    public ModuleEntry()
+    {
 
-        }
     }
 }

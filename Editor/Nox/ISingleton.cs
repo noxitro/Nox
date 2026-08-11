@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Nox
-{
+namespace Nox;
+
 	public interface ISingleton<T>
 #if DEBUG
 		: IDisposable
@@ -91,4 +91,3 @@ namespace Nox
 #endif
 		#endregion
 	}
-}

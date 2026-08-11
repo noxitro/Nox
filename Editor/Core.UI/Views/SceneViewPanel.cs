@@ -1,7 +1,7 @@
 ﻿using System;
 
-namespace Core.UI.Views
-{
+namespace Core.UI.Views;
+
 	/// <summary>
 	/// runtimeのシーンビューを表示する
 	/// WindowsFormsHost.Child として使用し、win32apiで子ウィンドウをホストする
@@ -121,4 +121,3 @@ namespace Core.UI.Views
 		}
 		#endregion
 	}
-}

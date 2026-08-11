@@ -3,8 +3,8 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Windows.Threading;
 
-namespace Core.UI.ViewModels
-{
+namespace Core.UI.ViewModels;
+
 	public sealed class MemoryAllocationViewModel : NoxUI.ViewModelBase
 	{
 		public ushort ProfileHandle { get; init; }
@@ -213,4 +213,3 @@ namespace Core.UI.ViewModels
 			_Disposed = true;
 		}
 	}
-}

@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Buffers.Binary;
 
-namespace Nox
-{
+namespace Nox;
+
 	public ref struct StackMemoryStreamReader
 	{
 		#region 非公開フィールド
@@ -144,4 +144,3 @@ namespace Nox
 		}
 		#endregion
 	}
-}

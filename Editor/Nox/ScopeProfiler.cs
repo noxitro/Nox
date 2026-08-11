@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Nox
-{
+namespace Nox;
+
 	public readonly struct ScopeProfiler : System.IDisposable
 	{
 		private readonly System.Diagnostics.Stopwatch _Stopwatch = new();
@@ -48,4 +48,3 @@ namespace Nox
 			_Stopwatch.Stop();
 		}
 	}
-}

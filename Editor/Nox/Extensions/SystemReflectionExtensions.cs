@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Nox.Extensions
-{
+namespace Nox.Extensions;
+
 	public static class SystemReflectionExtensions
 	{
 		#region 公開メソッド
@@ -15,4 +15,3 @@ namespace Nox.Extensions
 		}
 		#endregion
 	}
-}

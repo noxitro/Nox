@@ -1,8 +1,8 @@
 using System;
 using System.Windows.Threading;
 
-namespace NoxUI
-{
+namespace NoxUI;
+
 	public static class DispatcherHelper
 	{
 		public static bool IsShuttingDown(Dispatcher? dispatcher)
@@ -31,4 +31,3 @@ namespace NoxUI
 			}
 		}
 	}
-}

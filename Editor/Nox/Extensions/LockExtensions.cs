@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Nox.Extensions
-{
+namespace Nox.Extensions;
+
 	public static class LockExtensions
 	{
 		public readonly ref struct ReadLockScope : IDisposable
@@ -34,4 +34,3 @@ namespace Nox.Extensions
 		public static WriteLockScope WriteLock(this System.Threading.ReaderWriterLockSlim self)
 			=> new WriteLockScope(self);
 	}
-}

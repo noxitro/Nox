@@ -7,8 +7,8 @@ using System.Globalization;
 using System.Linq;
 using System.Windows.Input;
 
-namespace Core.UI.ViewModels
-{
+namespace Core.UI.ViewModels;
+
 	public enum PropertyInspectorFieldKind
 	{
 		ReadOnly,
@@ -475,4 +475,3 @@ namespace Core.UI.ViewModels
 			CanvasHeight = Math.Max(96.0, Nodes.Max(static node => node.Y) + NodeHeight + 16.0);
 		}
 	}
-}

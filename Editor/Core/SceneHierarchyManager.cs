@@ -5,9 +5,9 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Core
-{
-    public sealed class SceneHierarchyManager : EngineSystem
+namespace Core;
+
+public sealed class SceneHierarchyManager : EngineSystem
 	{
 		private const string DefaultSceneName = "Main Scene";
 		private const string SceneFileExtension = ".noxscene";
@@ -15,7 +15,7 @@ namespace Core
 
 		#region 公開フィールド
 		public static readonly SystemPhaseInit<SceneHierarchyManager> InitPhase = new(nameof(InitializeDefaultScene), static engineSystem => engineSystem.InitializeDefaultScene());
-        public static readonly SystemPhaseTerminate<SceneHierarchyManager> TerminatePhase = new(nameof(Clear), static engineSystem => engineSystem.Clear());
+    public static readonly SystemPhaseTerminate<SceneHierarchyManager> TerminatePhase = new(nameof(Clear), static engineSystem => engineSystem.Clear());
 		#endregion
 
 		#region 非公開フィールド
@@ -38,7 +38,7 @@ namespace Core
 		{
 			return
 			[
-                PhaseRegister.Create(InitPhase, this, [AssetManager.InitPhase]),
+            PhaseRegister.Create(InitPhase, this, [AssetManager.InitPhase]),
 				PhaseRegister.Create(TerminatePhase, this),
 			];
 		}
@@ -440,4 +440,3 @@ namespace Core
 		}
 
 	}
-}

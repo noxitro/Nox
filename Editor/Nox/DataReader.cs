@@ -2,6 +2,4 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Nox
-{
-}
+namespace Nox;

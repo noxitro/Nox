@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Nox.Math
-{
+namespace Nox.Math;
+
 	public struct Float4
 	{
 		public float x;
@@ -11,4 +11,3 @@ namespace Nox.Math
 		public float z;
 		public float w;
 	}
-}

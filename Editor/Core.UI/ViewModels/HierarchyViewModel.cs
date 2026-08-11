@@ -2,8 +2,8 @@
 using System.Collections.ObjectModel;
 using System.Linq;
 
-namespace Core.UI.ViewModels
-{
+namespace Core.UI.ViewModels;
+
 	public sealed class HierarchyNodeViewModel : NoxUI.ViewModelBase
 	{
 		#region 公開プロパティ
@@ -475,4 +475,3 @@ namespace Core.UI.ViewModels
 		}
 		#endregion
 	}
-}

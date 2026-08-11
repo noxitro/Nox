@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Core.LogId
-{
+namespace Core.LogId;
+
 	public readonly struct Runtime : Nox.LogId.ILogId<Runtime>
 	{
 		public Runtime() { }
@@ -21,4 +21,3 @@ namespace Core.LogId
 		public RuntimeRemote() { }
 		string Nox.LogId.ILogId<RuntimeRemote>.Tag { get; } = "RuntimeRemote";
 	}
-}

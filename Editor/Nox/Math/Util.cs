@@ -1,7 +1,6 @@
-﻿namespace Nox.Math
-{
+﻿namespace Nox.Math;
+
 	public static class Util
 	{
 
 	}
-}
