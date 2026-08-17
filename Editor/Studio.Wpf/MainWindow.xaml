@@ -9,7 +9,8 @@
         xmlns:adControls="clr-namespace:AvalonDock.Controls;assembly=AvalonDock"
         xmlns:adLayout="clr-namespace:AvalonDock.Layout;assembly=AvalonDock"
         mc:Ignorable="d"
-        Title="Studio" Height="1080" Width="1920"
+        Title="Nox Studio" Height="1080" Width="1920"
+        MinHeight="720" MinWidth="1180"
         AutomationProperties.AutomationId="NoxStudio.MainWindow"
         >
 
@@ -19,7 +20,7 @@
             <RowDefinition Height="30" />
 
             <!-- 上部コマンドバー行 -->
-            <RowDefinition Height="64" />
+            <RowDefinition Height="60" />
 
             <!-- ドッキング領域 -->
             <RowDefinition Height="*" />
@@ -29,7 +30,10 @@
         <Menu Grid.Row="0"
               Background="{DynamicResource Nox.Brush.TabBarBackground}"
               Foreground="{DynamicResource Nox.Brush.TextHeading}"
-              Padding="4,0"
+              BorderBrush="{DynamicResource Nox.Brush.GridLine}"
+              BorderThickness="0,0,0,1"
+              Padding="8,0"
+              FontSize="12"
               AutomationProperties.AutomationId="NoxStudio.MenuBar">
             <Menu.Resources>
                 <StaticResource x:Key="{x:Static SystemColors.MenuBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
@@ -53,6 +57,14 @@
                     <Setter Property="Height" Value="1" />
                 </Style>
             </Menu.Resources>
+            <MenuItem Header="File" ToolTip="ファイル操作">
+                <MenuItem Header="New Scene" AutomationProperties.AutomationId="NoxStudio.File.NewScene" ToolTip="新しいシーンを作成" Command="{Binding NewSceneCommand}" />
+                <Separator />
+                <MenuItem Header="Save Scene" AutomationProperties.AutomationId="NoxStudio.File.SaveScene" ToolTip="現在のシーンを保存" Command="{Binding SaveSceneCommand}" />
+                <MenuItem Header="Save As" AutomationProperties.AutomationId="NoxStudio.File.SaveAs" ToolTip="名前を付けてシーンを保存" Command="{Binding SaveSceneAsCommand}" />
+                <Separator />
+                <MenuItem Header="Exit" ToolTip="エディターを終了" Command="{Binding ExitCommand}" />
+            </MenuItem>
             <MenuItem Header="Project" ToolTip="プロジェクト操作">
                 <MenuItem Header="Project Settings" ToolTip="プロジェクト設定を表示" Command="{Binding ShowProjectSettingsCommand}" />
             </MenuItem>
@@ -84,23 +96,22 @@
                     <MenuItem Header="Project Settings" ToolTip="Project Settings を表示" Command="{Binding ShowProjectSettingsCommand}" />
                 </MenuItem>
             </MenuItem>
-            <MenuItem Header="File" ToolTip="ファイル操作">
-                <MenuItem Header="New Scene" AutomationProperties.AutomationId="NoxStudio.File.NewScene" ToolTip="新しいシーンを作成" Command="{Binding NewSceneCommand}" />
-                <Separator />
-                <MenuItem Header="Save Scene" AutomationProperties.AutomationId="NoxStudio.File.SaveScene" ToolTip="現在のシーンを保存" Command="{Binding SaveSceneCommand}" />
-                <MenuItem Header="Save As" AutomationProperties.AutomationId="NoxStudio.File.SaveAs" ToolTip="名前を付けてシーンを保存" Command="{Binding SaveSceneAsCommand}" />
-                <Separator />
-                <MenuItem Header="Exit" ToolTip="エディターを終了" Command="{Binding ExitCommand}" />
-            </MenuItem>
         </Menu>
 
         <!-- ====== Runtime コントロールバー ====== -->
-        <views:RuntimeControlView Grid.Row="1" />
+        <Border Grid.Row="1"
+                Background="{DynamicResource Nox.Brush.CommandBarBackground}"
+                BorderBrush="{DynamicResource Nox.Brush.GridLine}"
+                BorderThickness="0,0,0,1">
+            <views:RuntimeControlView />
+        </Border>
 
         <!-- ====== ドッキング領域（AvalonDock） ====== -->
         <ad:DockingManager x:Name="DockManager"
                            AutomationProperties.AutomationId="NoxStudio.DockManager"
                            Grid.Row="2"
+                           Background="{DynamicResource Nox.Brush.WindowBackground}"
+                           SnapsToDevicePixels="True"
                            Theme="{Binding Theme.CurrentTheme}"
                            DocumentPaneControlStyle="{StaticResource Nox.DocumentPaneControlStyle}"
                            AnchorablePaneControlStyle="{StaticResource Nox.AnchorablePaneControlStyle}"

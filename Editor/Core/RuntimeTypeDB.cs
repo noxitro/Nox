@@ -263,9 +263,10 @@ namespace Core;
 
 			if (typeDB == null)
 			{
-				Nox.LogTrace.ErrorLine<Core.LogId.Runtime>("RuntimeTypeDBの生成に失敗");
+				const string message = "RuntimeTypeDBの生成に失敗しました。";
+				Nox.LogTrace.ErrorLine<Core.LogId.Runtime>(message);
+				throw new InvalidOperationException(message);
 			}
-			Nox.Util.Assert(typeDB != null, "RuntimeTypeDBの生成に失敗");
 
 			using (new Nox.ScopeProfiler<Core.LogId.Runtime>("RuntimeTypeDB CreateNamespaceDeclList"))
 			{

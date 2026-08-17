@@ -46,6 +46,12 @@
     <Color x:Key="Nox.Color.DangerForeground">#FFFFEEF2</Color>
     <Color x:Key="Nox.Color.DangerBorder">#FF7F3948</Color>
     <Color x:Key="Nox.Color.ErrorText">#FFFF9AAE</Color>
+    <Color x:Key="Nox.Color.Success">#FF73DACA</Color>
+    <Color x:Key="Nox.Color.SuccessForeground">#FF061713</Color>
+    <Color x:Key="Nox.Color.SuccessBorder">#FF3F8178</Color>
+    <Color x:Key="Nox.Color.Warning">#FFE0AF68</Color>
+    <Color x:Key="Nox.Color.WarningForeground">#FF1D1306</Color>
+    <Color x:Key="Nox.Color.WarningBorder">#FF806438</Color>
     <Color x:Key="Nox.Color.MenuBackground">#FF151D28</Color>
     <Color x:Key="Nox.Color.TabBarBackground">#FF0E141C</Color>
     <Color x:Key="Nox.Color.TabHoverBackground">#FF202A36</Color>
@@ -103,6 +109,12 @@
     <SolidColorBrush x:Key="Nox.Brush.DangerForeground" Color="{StaticResource Nox.Color.DangerForeground}" />
     <SolidColorBrush x:Key="Nox.Brush.DangerBorder" Color="{StaticResource Nox.Color.DangerBorder}" />
     <SolidColorBrush x:Key="Nox.Brush.ErrorText" Color="{StaticResource Nox.Color.ErrorText}" />
+    <SolidColorBrush x:Key="Nox.Brush.Success" Color="{StaticResource Nox.Color.Success}" />
+    <SolidColorBrush x:Key="Nox.Brush.SuccessForeground" Color="{StaticResource Nox.Color.SuccessForeground}" />
+    <SolidColorBrush x:Key="Nox.Brush.SuccessBorder" Color="{StaticResource Nox.Color.SuccessBorder}" />
+    <SolidColorBrush x:Key="Nox.Brush.Warning" Color="{StaticResource Nox.Color.Warning}" />
+    <SolidColorBrush x:Key="Nox.Brush.WarningForeground" Color="{StaticResource Nox.Color.WarningForeground}" />
+    <SolidColorBrush x:Key="Nox.Brush.WarningBorder" Color="{StaticResource Nox.Color.WarningBorder}" />
     <SolidColorBrush x:Key="Nox.Brush.MenuBackground" Color="{StaticResource Nox.Color.MenuBackground}" />
     <SolidColorBrush x:Key="Nox.Brush.TabBarBackground" Color="{StaticResource Nox.Color.TabBarBackground}" />
     <SolidColorBrush x:Key="Nox.Brush.TabHoverBackground" Color="{StaticResource Nox.Color.TabHoverBackground}" />
@@ -159,9 +171,19 @@
     <StaticResource x:Key="ToolWindowTabUnselectedHoveredBackground" ResourceKey="Nox.Brush.TabHoverBackground" />
     <StaticResource x:Key="ToolWindowTabUnselectedHoveredText" ResourceKey="Nox.Brush.TextSecondary" />
 
+    <FontFamily x:Key="Nox.Font.UI">Segoe UI Variable Text, Segoe UI</FontFamily>
+    <FontFamily x:Key="Nox.Font.Data">Cascadia Mono, Consolas</FontFamily>
+    <Thickness x:Key="Nox.Space.Compact">4</Thickness>
+    <Thickness x:Key="Nox.Space.Control">8,4</Thickness>
+    <Thickness x:Key="Nox.Space.Pane">12,8</Thickness>
+    <CornerRadius x:Key="Nox.Radius.Control">4</CornerRadius>
+    <CornerRadius x:Key="Nox.Radius.Raised">6</CornerRadius>
+
     <Style TargetType="{x:Type Window}">
         <Setter Property="Background" Value="{DynamicResource Nox.Brush.WindowBackground}" />
         <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
+        <Setter Property="FontFamily" Value="{StaticResource Nox.Font.UI}" />
+        <Setter Property="FontSize" Value="12" />
     </Style>
 
     <Style TargetType="{x:Type UserControl}">
@@ -186,6 +208,90 @@
         <Setter Property="Background" Value="{DynamicResource Nox.Brush.ControlBackground}" />
         <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.GridLine}" />
+    </Style>
+
+    <Style x:Key="Nox.CommandButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="MinHeight" Value="28" />
+        <Setter Property="Padding" Value="{StaticResource Nox.Space.Control}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Border x:Name="Chrome"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource Nox.Radius.Control}"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          RecognizesAccessKey="True" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Nox.Brush.ControlBackgroundHover}" />
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorderHover}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Nox.Brush.ControlBackgroundPressed}" />
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorderPressed}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Nox.Brush.Accent}" />
+                            <Setter TargetName="Chrome" Property="BorderThickness" Value="2" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextMuted}" />
+                            <Setter TargetName="Chrome" Property="Opacity" Value="0.55" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Nox.PrimaryCommandButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource Nox.CommandButtonStyle}">
+        <Setter Property="Background" Value="{DynamicResource Nox.Brush.Accent}" />
+        <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.AccentForeground}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.AccentBorder}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <Style x:Key="Nox.DangerCommandButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource Nox.CommandButtonStyle}">
+        <Setter Property="Background" Value="{DynamicResource Nox.Brush.ControlBackground}" />
+        <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.Danger}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.DangerBorder}" />
+    </Style>
+
+    <Style x:Key="Nox.SearchTextBoxStyle" TargetType="{x:Type TextBox}" BasedOn="{StaticResource {x:Type TextBox}}">
+        <Setter Property="MinHeight" Value="28" />
+        <Setter Property="Padding" Value="8,4" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorder}" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+
+    <Style x:Key="Nox.PaneHeaderBorderStyle" TargetType="{x:Type Border}">
+        <Setter Property="Background" Value="{DynamicResource Nox.Brush.HeaderBackgroundInactive}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.GridLine}" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="Padding" Value="{StaticResource Nox.Space.Pane}" />
+    </Style>
+
+    <Style x:Key="Nox.PaneTitleTextStyle" TargetType="{x:Type TextBlock}">
+        <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextHeading}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style x:Key="Nox.DataTextStyle" TargetType="{x:Type TextBlock}">
+        <Setter Property="FontFamily" Value="{StaticResource Nox.Font.Data}" />
+        <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextSecondary}" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 
     <Style TargetType="{x:Type CheckBox}">

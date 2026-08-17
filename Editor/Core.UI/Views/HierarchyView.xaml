@@ -12,13 +12,9 @@
              prism:ViewModelLocator.AutoWireViewModel="True"
              AutomationProperties.AutomationId="NoxStudio.HierarchyView">
     <UserControl.Resources>
-        <Style x:Key="NoxHierarchyTextBoxStyle" TargetType="TextBox">
-            <Setter Property="Background" Value="{DynamicResource Nox.Brush.InputBackground}" />
-            <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorder}" />
-            <Setter Property="CaretBrush" Value="{DynamicResource Nox.Brush.TextPrimary}" />
-            <Setter Property="Padding" Value="5,3" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Style x:Key="NoxHierarchyTextBoxStyle"
+               TargetType="TextBox"
+               BasedOn="{StaticResource Nox.SearchTextBoxStyle}">
         </Style>
 
         <Style x:Key="NoxHierarchySearchTextBoxStyle"
@@ -29,36 +25,9 @@
             <Setter Property="Padding" Value="0" />
         </Style>
 
-        <Style x:Key="NoxHierarchyButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource Nox.Brush.SurfaceBackground}" />
-            <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorder}" />
-            <Setter Property="Padding" Value="8,4" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Chrome"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="3"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Nox.Brush.TabHoverBackground}" />
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextMuted}" />
-                                <Setter TargetName="Chrome" Property="Opacity" Value="0.55" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <Style x:Key="NoxHierarchyButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource Nox.CommandButtonStyle}" />
 
         <Style x:Key="NoxHierarchyComboBoxStyle"
                TargetType="ComboBox"
@@ -94,7 +63,8 @@
             PreviewMouseLeftButtonDown="OnHierarchyPreviewMouseDown"
             PreviewMouseRightButtonDown="OnHierarchyPreviewMouseDown">
         <DockPanel>
-            <Border DockPanel.Dock="Top" Padding="8" Background="{DynamicResource Nox.Brush.HeaderBackground}" BorderBrush="{DynamicResource Nox.Brush.GridLine}" BorderThickness="0,0,0,1">
+            <Border DockPanel.Dock="Top"
+                    Style="{StaticResource Nox.PaneHeaderBorderStyle}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -129,7 +99,7 @@
 
                     <ComboBox Grid.Column="1"
                               Width="108"
-                              Height="26"
+                              Height="28"
                               Margin="8,0,6,0"
                                 ItemsSource="{Binding AutoSyncOptions}"
                                 SelectedItem="{Binding SelectedAutoSyncOption, Mode=TwoWay}"
@@ -152,7 +122,7 @@
                     <Button Grid.Column="2"
                             Content="Sync"
                             MinWidth="54"
-                            Height="26"
+                            Height="28"
                             IsEnabled="{Binding IsManualSync}"
                             Command="{Binding ManualSyncCommand}"
                             Style="{StaticResource NoxHierarchyButtonStyle}"

@@ -11,49 +11,16 @@
              prism:ViewModelLocator.AutoWireViewModel="True"
              AutomationProperties.AutomationId="NoxStudio.InspectorView">
     <UserControl.Resources>
-        <Style x:Key="NoxInspectorTextBoxStyle" TargetType="TextBox">
-            <Setter Property="Background" Value="{DynamicResource Nox.Brush.InputBackground}" />
-            <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorder}" />
-            <Setter Property="CaretBrush" Value="{DynamicResource Nox.Brush.TextPrimary}" />
-            <Setter Property="Padding" Value="5,3" />
+        <Style x:Key="NoxInspectorTextBoxStyle"
+               TargetType="TextBox"
+               BasedOn="{StaticResource Nox.SearchTextBoxStyle}">
             <Setter Property="MinWidth" Value="48" />
-            <Setter Property="MinHeight" Value="24" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="HorizontalContentAlignment" Value="Right" />
         </Style>
 
-        <Style x:Key="NoxInspectorButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource Nox.Brush.SurfaceBackground}" />
-            <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorder}" />
-            <Setter Property="Padding" Value="8,4" />
-            <Setter Property="MinHeight" Value="26" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Chrome"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="3"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Nox.Brush.TabHoverBackground}" />
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextMuted}" />
-                                <Setter TargetName="Chrome" Property="Opacity" Value="0.55" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <Style x:Key="NoxInspectorButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource Nox.CommandButtonStyle}" />
 
         <Style x:Key="NoxInspectorComboBoxStyle"
                TargetType="ComboBox"
@@ -210,7 +177,10 @@
 
     <Border Background="{DynamicResource Nox.Brush.Inspector.Background}" BorderBrush="{DynamicResource Nox.Brush.Inspector.Border}" BorderThickness="1">
         <DockPanel>
-            <Border DockPanel.Dock="Top" Padding="10" Background="{DynamicResource Nox.Brush.Inspector.HeaderBackground}" BorderBrush="{DynamicResource Nox.Brush.Inspector.Border}" BorderThickness="0,0,0,1">
+            <Border DockPanel.Dock="Top"
+                    Style="{StaticResource Nox.PaneHeaderBorderStyle}"
+                    Background="{DynamicResource Nox.Brush.Inspector.HeaderBackground}"
+                    BorderBrush="{DynamicResource Nox.Brush.Inspector.Border}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -220,7 +190,7 @@
                         <TextBlock Text="{Binding Icon}" FontFamily="Segoe MDL2 Assets" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource Nox.Brush.Accent}" />
                     </Border>
                     <StackPanel Grid.Column="1">
-                        <TextBlock AutomationProperties.AutomationId="NoxStudio.Inspector.TitleText" Text="{Binding Title}" Foreground="{DynamicResource Nox.Brush.Inspector.TitleForeground}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock AutomationProperties.AutomationId="NoxStudio.Inspector.TitleText" Text="{Binding Title}" Style="{StaticResource Nox.PaneTitleTextStyle}" TextTrimming="CharacterEllipsis" />
                         <TextBlock AutomationProperties.AutomationId="NoxStudio.Inspector.DescriptionText" Text="{Binding Description}" Foreground="{DynamicResource Nox.Brush.Inspector.DescriptionForeground}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
                     </StackPanel>
                 </Grid>
@@ -270,7 +240,7 @@
                                     Height="28"
                                     Margin="6,0,0,0"
                                     Command="{Binding AddComponentCommand}"
-                                    Style="{StaticResource NoxInspectorButtonStyle}"
+                                    Style="{StaticResource Nox.PrimaryCommandButtonStyle}"
                                     AutomationProperties.AutomationId="NoxStudio.Inspector.AddComponentButton" />
                         </Grid>
                     </Border>

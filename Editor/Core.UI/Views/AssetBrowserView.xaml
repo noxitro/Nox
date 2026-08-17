@@ -121,10 +121,7 @@
             PreviewMouseRightButtonDown="OnAssetBrowserPreviewMouseDown">
         <DockPanel>
             <Border DockPanel.Dock="Top"
-                    Padding="8"
-                    Background="{DynamicResource Nox.Brush.HeaderBackground}"
-                    BorderBrush="{DynamicResource Nox.Brush.GridLine}"
-                    BorderThickness="0,0,0,1">
+                    Style="{StaticResource Nox.PaneHeaderBorderStyle}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -135,10 +132,9 @@
 
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Text="Asset Browser"
-                                   Foreground="{DynamicResource Nox.Brush.TextHeading}"
-                                   FontWeight="SemiBold" />
+                                   Style="{StaticResource Nox.PaneTitleTextStyle}" />
                         <TextBlock Text="{Binding StatusText}"
-                                   Foreground="{DynamicResource Nox.Brush.TextMuted}"
+                                   Style="{StaticResource Nox.DataTextStyle}"
                                    Margin="8,0,0,0" />
                     </StackPanel>
 
@@ -146,7 +142,7 @@
                              AutomationProperties.AutomationId="NoxStudio.AssetBrowser.SearchBox"
                              Height="28"
                              MinWidth="260"
-                             VerticalContentAlignment="Center"
+                              Style="{StaticResource Nox.SearchTextBoxStyle}"
                              Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}"
                              ToolTip="Asset を検索" />
 
@@ -179,6 +175,7 @@
                             Height="28"
                             MinWidth="76"
                             Margin="8,0,0,0"
+                             Style="{StaticResource Nox.CommandButtonStyle}"
                             Command="{Binding RefreshCommand}" />
                 </Grid>
             </Border>
