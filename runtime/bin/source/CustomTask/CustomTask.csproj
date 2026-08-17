@@ -9,6 +9,7 @@
     <Platforms>AnyCPU;x64</Platforms>
     <OutputType>Library</OutputType>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+	<LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

@@ -4,15 +4,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ReflectionGenerator
+namespace ReflectionGenerator;
+
+public static class Extension
 {
-    public static class Extension
+    #region 公開メソッド
+    public static ReadOnlySpan<char> ToCppString(this AccessLevel accessLevel)
     {
-        #region 公開メソッド
-        public static ReadOnlySpan<char> ToCppString(this AccessLevel accessLevel)
-        {
-            return $"nox::reflection::AccessLevel::{accessLevel.ToString()}";
-        }
+        return $"nox::reflection::AccessLevel::{accessLevel.ToString()}";
+    }
 
 		/// <summary>
 		/// c++用のbool文字列に変換
@@ -21,34 +21,33 @@ namespace ReflectionGenerator
 		/// <returns></returns>
 		public static string ToLowerString(this bool val) => val ? "true" : "false";
 
-        #endregion
-    }
+    #endregion
+}
 
-    public static class HashSetExtension
+public static class HashSetExtension
+{
+    #region 公開メソッド
+    public static bool TryAdd<T>(this HashSet<T> hashSet, T val)
     {
-        #region 公開メソッド
-        public static bool TryAdd<T>(this HashSet<T> hashSet, T val)
+        if (!hashSet.Contains(val))
         {
-            if (!hashSet.Contains(val))
-            {
-                hashSet.Add(val);
-                return true;
-            }
-            return false;
+            hashSet.Add(val);
+            return true;
         }
-
-        #endregion
+        return false;
     }
 
-    public static class IReadOnlyListExtension
+    #endregion
+}
+
+public static class IReadOnlyListExtension
+{
+    public static void ForEach<T>(this IReadOnlyList<T> self, Action<T> action)
     {
-        public static void ForEach<T>(this IReadOnlyList<T> self, Action<T> action)
+        int length = self.Count;
+        for(int i = 0; i < length; i++)
         {
-            int length = self.Count;
-            for(int i = 0; i < length; i++)
-            {
-                action(self[i]);
-            }
+            action(self[i]);
         }
     }
 }

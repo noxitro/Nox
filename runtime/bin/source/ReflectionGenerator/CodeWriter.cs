@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace ReflectionGenerator
+namespace ReflectionGenerator;
+
+public abstract class BaseCodeWriter
 {
-    public abstract class BaseCodeWriter
-    {
 		/// <summary>
 		/// ネストの深さ
 		/// </summary>
@@ -44,21 +44,21 @@ namespace ReflectionGenerator
 		public void Push()
 		{
 			++_NestDepth;
-        }
+    }
 
 		public void Pop()
 		{
 			--_NestDepth;
-        }
+    }
 
-        public IndentScope Indent() => new IndentScope(this);
+    public IndentScope Indent() => new IndentScope(this);
 		public IndentScope Indent(ReadOnlySpan<char> begin, ReadOnlySpan<char> end) => new IndentScope(this, begin, end);
 
 		public abstract void Write(ReadOnlySpan<char> str);
-        public abstract void Write<T>(string str, params T[] args) where T : struct;
-        public abstract void WriteLine(ReadOnlySpan<char> str);
-        public abstract void WriteLine<T>(string str, T args0, params T[] args) where T : struct;
-        public abstract void WriteLine(string str, string args0, params string[] args);
+    public abstract void Write<T>(string str, params T[] args) where T : struct;
+    public abstract void WriteLine(ReadOnlySpan<char> str);
+    public abstract void WriteLine<T>(string str, T args0, params T[] args) where T : struct;
+    public abstract void WriteLine(string str, string args0, params string[] args);
 		public void WriteNewLine(uint line = 1)
 		{
 			Span<char> newLine = stackalloc char[(int)line*2];
@@ -72,7 +72,7 @@ namespace ReflectionGenerator
 
 		public void WriteNest()
 		{
-            if (_NestDepth == 0) return; //  ネストがない場合は何もしない
+        if (_NestDepth == 0) return; //  ネストがない場合は何もしない
 			Span<char> nestStr = stackalloc char[(int)_NestDepth];
 			for (int i = 0; i < _NestDepth; i++)
 			{
@@ -81,134 +81,134 @@ namespace ReflectionGenerator
 			Write(nestStr);
 		}
 
-        public void WriteLineIgnoreNest(ReadOnlySpan<char> str)
-        {
-            Write(str);
-            WriteNewLine(1);
+    public void WriteLineIgnoreNest(ReadOnlySpan<char> str)
+    {
+        Write(str);
+        WriteNewLine(1);
 		}
 	}
 
-    /// <summary>
-    /// コードジェネレータ
-    /// </summary>
-    public class CodeWriter : BaseCodeWriter, IDisposable
+/// <summary>
+/// コードジェネレータ
+/// </summary>
+public class CodeWriter : BaseCodeWriter, IDisposable
 	{
-        #region 型定義
-        public enum ScopeType : byte
-        {
-            /// <summary>
-            /// 宣言 {};
-            /// </summary>
-            Decl,
+    #region 型定義
+    public enum ScopeType : byte
+    {
+        /// <summary>
+        /// 宣言 {};
+        /// </summary>
+        Decl,
 
-            /// <summary>
-            /// 定義 {}
-            /// </summary>
-            Define,
+        /// <summary>
+        /// 定義 {}
+        /// </summary>
+        Define,
 
-            /// <summary>
-            /// 宣言(丸括弧) ();
-            /// </summary>
-            Decl_Paren
-        }
-        #endregion
+        /// <summary>
+        /// 宣言(丸括弧) ();
+        /// </summary>
+        Decl_Paren
+    }
+    #endregion
 
-        #region 非公開フィールド
+    #region 非公開フィールド
 		private readonly StreamWriter _Stream;
 
-        private Stack<ScopeType> _ScopeStack = new Stack<ScopeType>();
+    private Stack<ScopeType> _ScopeStack = new Stack<ScopeType>();
 
 #if DEBUG
 		private readonly string _FilePath;
 #endif
 #endregion
 
-        #region 公開メソッド
-        /// <summary>
-        /// ファイルが存在しない場合作成します
-        /// </summary>
-        /// <param name="path"></param>
-        public CodeWriter(string path)
-        {
-            _Stream = new System.IO.StreamWriter(path, false, System.Text.Encoding.UTF8);
+    #region 公開メソッド
+    /// <summary>
+    /// ファイルが存在しない場合作成します
+    /// </summary>
+    /// <param name="path"></param>
+    public CodeWriter(string path)
+    {
+        _Stream = new System.IO.StreamWriter(path, false, System.Text.Encoding.UTF8);
 
-            //  ファイルをクリア
-            _Stream.BaseStream.SetLength(0);
+        //  ファイルをクリア
+        _Stream.BaseStream.SetLength(0);
 
 #if DEBUG
-            _FilePath = path;
+        _FilePath = path;
+#endif
+    }
+
+    public void Dispose()
+    {
+        //  ネストのエラーチェック
+        if (_NestDepth > 0 || _ScopeStack.Count > 0)
+        {
+#if DEBUG
+            Trace.ErrorLine("ネストが正しく記述されていません thisName: ", _FilePath);
 #endif
         }
 
-        public void Dispose()
-        {
-            //  ネストのエラーチェック
-            if (_NestDepth > 0 || _ScopeStack.Count > 0)
-            {
-#if DEBUG
-                Trace.ErrorLine("ネストが正しく記述されていません thisName: ", _FilePath);
-#endif
-            }
+        _Stream.Close();
+    }
 
-            _Stream.Close();
+    public void Close() => _Stream.Close();
+
+    public void PushScope(ScopeType scopeType)
+    {
+        _ScopeStack.Push(scopeType);
+
+        switch (scopeType)
+        {
+            case ScopeType.Define:
+            case ScopeType.Decl:
+                WriteLine("{");
+                break;
+
+            case ScopeType.Decl_Paren:
+                WriteLine("(");
+                break;
+
+            default:
+                System.Diagnostics.Debug.Assert(false, $"未実装の項目:{scopeType.ToString()}");
+                break;
         }
 
-        public void Close() => _Stream.Close();
+        Push();
+    }
 
-        public void PushScope(ScopeType scopeType)
+    public void PopScope()
+    {
+        Pop();  //  先にネストを抜けてから
+
+        ScopeType scopeType = _ScopeStack.Pop();
+
+        switch (scopeType)
         {
-            _ScopeStack.Push(scopeType);
+            case ScopeType.Decl:
+                WriteLine("};");
+                break;
 
-            switch (scopeType)
-            {
-                case ScopeType.Define:
-                case ScopeType.Decl:
-                    WriteLine("{");
-                    break;
+            case ScopeType.Define:
+                WriteLine("}");
+                break;
 
-                case ScopeType.Decl_Paren:
-                    WriteLine("(");
-                    break;
+            case ScopeType.Decl_Paren:
+                WriteLine(");");
+                break;
 
-                default:
-                    System.Diagnostics.Debug.Assert(false, $"未実装の項目:{scopeType.ToString()}");
-                    break;
-            }
-
-            Push();
+            default:
+                System.Diagnostics.Debug.Assert(false, $"未実装の項目:{scopeType.ToString()}");
+                break;
         }
 
-        public void PopScope()
-        {
-            Pop();  //  先にネストを抜けてから
+    }
 
-            ScopeType scopeType = _ScopeStack.Pop();
-
-            switch (scopeType)
-            {
-                case ScopeType.Decl:
-                    WriteLine("};");
-                    break;
-
-                case ScopeType.Define:
-                    WriteLine("}");
-                    break;
-
-                case ScopeType.Decl_Paren:
-                    WriteLine(");");
-                    break;
-
-                default:
-                    System.Diagnostics.Debug.Assert(false, $"未実装の項目:{scopeType.ToString()}");
-                    break;
-            }
-
-        }
-
-        public override void Write(ReadOnlySpan<char> str)
-        {
-            _Stream.Write(str);
-        }
+    public override void Write(ReadOnlySpan<char> str)
+    {
+        _Stream.Write(str);
+    }
 
 		public override void Write<T>(string str, params T[] args) where T : struct
 		{
@@ -216,12 +216,12 @@ namespace ReflectionGenerator
 		}
 
 		public override void WriteLine(ReadOnlySpan<char> str)
-        {
-            WriteNest();
+    {
+        WriteNest();
 			_Stream.WriteLine(str);
 		}
 
-        public override void WriteLine<T>(string str, T args0, params T[] args) where T : struct
+    public override void WriteLine<T>(string str, T args0, params T[] args) where T : struct
 		{
 			WriteNest();
 			_Stream.WriteLine(str, args0, args);
@@ -232,58 +232,57 @@ namespace ReflectionGenerator
 			_Stream.WriteLine(str, args0, args);
 		}
 
-        #endregion
+    #endregion
 
-        #region 非公開メソッド
-        #endregion
+    #region 非公開メソッド
+    #endregion
 	}
 
-    public class CodeStringBuilder : BaseCodeWriter
+public class CodeStringBuilder : BaseCodeWriter
+{
+    #region フィールド
+    private readonly System.Text.StringBuilder _StringBuilder = new ();
+    #endregion
+
+    #region 公開メソッド
+    public void Clear()
     {
-        #region フィールド
-        private readonly System.Text.StringBuilder _StringBuilder = new ();
-        #endregion
-
-        #region 公開メソッド
-        public void Clear()
-        {
-            _StringBuilder.Clear();
+        _StringBuilder.Clear();
 		}
 
-        public override void Write(ReadOnlySpan<char> str)
-        {
+    public override void Write(ReadOnlySpan<char> str)
+    {
 			_StringBuilder.Append(str);
 		}
 
-        public override void Write<T>(string str, params T[] args) where T : struct
-        {
-            _StringBuilder.AppendFormat(str, args);
+    public override void Write<T>(string str, params T[] args) where T : struct
+    {
+        _StringBuilder.AppendFormat(str, args);
 		}
 
-        public override void WriteLine(ReadOnlySpan<char> str)
-        {
-            WriteNest();
+    public override void WriteLine(ReadOnlySpan<char> str)
+    {
+        WriteNest();
 			_StringBuilder.Append(str);
-            _StringBuilder.AppendLine();
-        }
-        public override void WriteLine<T>(string str, T args0, params T[] args) where T : struct
-        {
-            WriteNest();
+        _StringBuilder.AppendLine();
+    }
+    public override void WriteLine<T>(string str, T args0, params T[] args) where T : struct
+    {
+        WriteNest();
 			_StringBuilder.AppendFormat(str, args0, args);
-            _StringBuilder.AppendLine();
-        }
+        _StringBuilder.AppendLine();
+    }
 
-        public override void WriteLine(string str, string args0, params string[] args)
-        {
-            WriteNest();
-            _StringBuilder.AppendFormat(str, args0, args);
-            _StringBuilder.AppendLine();
-        }
+    public override void WriteLine(string str, string args0, params string[] args)
+    {
+        WriteNest();
+        _StringBuilder.AppendFormat(str, args0, args);
+        _StringBuilder.AppendLine();
+    }
 
-        public override string ToString()
-        {
-            return _StringBuilder.ToString();
+    public override string ToString()
+    {
+        return _StringBuilder.ToString();
 		}
-        #endregion
+    #endregion
 	}
-}

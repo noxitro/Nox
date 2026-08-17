@@ -5,8 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
-namespace ReflectionGenerator.Parser2
-{
+namespace ReflectionGenerator.Parser2;
+
 	public static class ParseExtensions
 	{
 		public static bool IsAnyOn(this Parser2.TypeAttributeFlag self, Parser2.TypeAttributeFlag flags)
@@ -1110,8 +1110,8 @@ namespace ReflectionGenerator.Parser2
 
 	#region 宣言情報
 	[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public abstract class DeclBase 
-    {
+public abstract class DeclBase 
+{
 		public required string Usr { get; init; }
 
 		/// <summary>
@@ -1148,14 +1148,14 @@ namespace ReflectionGenerator.Parser2
 		public required uint DebugHashCode { get; init; }
 		protected virtual string DebuggerDisplay => ToString();
 #endif
-        #region フィールド
-        private readonly uint _DeclHash;
+    #region フィールド
+    private readonly uint _DeclHash;
 
 		#endregion
 	}
 
 	public class NoFoundDecl : DeclBase
-    {
+{
 #if DEBUG
 
 #endif
@@ -1179,9 +1179,9 @@ namespace ReflectionGenerator.Parser2
 	}
 
 	public class NamedDecl : DeclBase
-    {
-        public required string Name { get; init; }
-        public required string FullName { get; init; }
+{
+    public required string Name { get; init; }
+    public required string FullName { get; init; }
 		public required AccessLevel AccessLevel { get; init; } 
 		public required AttributeDecl[] AttributeList
 		{
@@ -1196,97 +1196,97 @@ namespace ReflectionGenerator.Parser2
 
 		protected readonly AttributeDecl[] _AttributeList = Array.Empty<AttributeDecl>();
 
-        public override string ToString() => FullName;
-    }
+    public override string ToString() => FullName;
+}
 
-    public class TypeDecl : NamedDecl
-    {
-        public required string Namespace { get; init; }
+public class TypeDecl : NamedDecl
+{
+    public required string Namespace { get; init; }
 	}
 
 	public class NamespaceDecl : NamedDecl, IDeclarationContainer
 	{
 		public List<NamespaceDecl> NamespaceList { get; } = [];
-        public List<RecordDecl> RecordList { get; } = [];
-        public List<FunctionDecl> FunctionList { get; } = [];
-        public List<VariableDecl> VariableList { get; } = [];
-        public List<EnumDecl> EnumList { get; } = [];
-        public List<TypeAliasDecl> TypeAliasList { get; } = [];
-    }
+    public List<RecordDecl> RecordList { get; } = [];
+    public List<FunctionDecl> FunctionList { get; } = [];
+    public List<VariableDecl> VariableList { get; } = [];
+    public List<EnumDecl> EnumList { get; } = [];
+    public List<TypeAliasDecl> TypeAliasList { get; } = [];
+}
 
-    public class NamespaceNode : IDeclarationContainer
-    {
-        public required string Name { get; init; }
-        public required string FullName { get; init; }
+public class NamespaceNode : IDeclarationContainer
+{
+    public required string Name { get; init; }
+    public required string FullName { get; init; }
 
 		public List<NamespaceNode> Children { get; } = [];
 
 		public List<NamespaceDecl> NamespaceDeclList { get; } = [];
 
-        public List<RecordDecl> RecordList
+    public List<RecordDecl> RecordList
+    {
+        get
         {
-            get
+            List<RecordDecl> classList = new List<RecordDecl>();
+            foreach (NamespaceDecl child in NamespaceDeclList)
             {
-                List<RecordDecl> classList = new List<RecordDecl>();
-                foreach (NamespaceDecl child in NamespaceDeclList)
-                {
-                    classList.AddRange(child.RecordList);
-                }
-                return classList;
+                classList.AddRange(child.RecordList);
             }
-        }
-        public List<FunctionDecl> FunctionList
-        {
-            get
-            {
-                List<FunctionDecl> functionList = new List<FunctionDecl>();
-                foreach (NamespaceDecl child in NamespaceDeclList)
-                {
-                    functionList.AddRange(child.FunctionList);
-                }
-                return functionList;
-            }
-        }
-
-        public List<VariableDecl> VariableList
-        {
-            get
-            {
-                List<VariableDecl> variableList = new List<VariableDecl>();
-                foreach (NamespaceDecl child in NamespaceDeclList)
-                {
-                    variableList.AddRange(child.VariableList);
-                }
-                return variableList;
-            }
-        }
-
-        public List<EnumDecl> EnumList
-        {
-            get
-            {
-                List<EnumDecl> enumList = new List<EnumDecl>();
-                foreach (NamespaceDecl child in NamespaceDeclList)
-                {
-                    enumList.AddRange(child.EnumList);
-                }
-                return enumList;
-            }
-		}
-
-        public List<TypeAliasDecl> TypeAliasList
-        {
-            get
-            {
-				List<TypeAliasDecl> enumList = [];
-                foreach (NamespaceDecl child in NamespaceDeclList)
-                {
-                    enumList.AddRange(child.TypeAliasList);
-                }
-                return enumList;
-            }
+            return classList;
         }
     }
+    public List<FunctionDecl> FunctionList
+    {
+        get
+        {
+            List<FunctionDecl> functionList = new List<FunctionDecl>();
+            foreach (NamespaceDecl child in NamespaceDeclList)
+            {
+                functionList.AddRange(child.FunctionList);
+            }
+            return functionList;
+        }
+    }
+
+    public List<VariableDecl> VariableList
+    {
+        get
+        {
+            List<VariableDecl> variableList = new List<VariableDecl>();
+            foreach (NamespaceDecl child in NamespaceDeclList)
+            {
+                variableList.AddRange(child.VariableList);
+            }
+            return variableList;
+        }
+    }
+
+    public List<EnumDecl> EnumList
+    {
+        get
+        {
+            List<EnumDecl> enumList = new List<EnumDecl>();
+            foreach (NamespaceDecl child in NamespaceDeclList)
+            {
+                enumList.AddRange(child.EnumList);
+            }
+            return enumList;
+        }
+		}
+
+    public List<TypeAliasDecl> TypeAliasList
+    {
+        get
+        {
+				List<TypeAliasDecl> enumList = [];
+            foreach (NamespaceDecl child in NamespaceDeclList)
+            {
+                enumList.AddRange(child.TypeAliasList);
+            }
+            return enumList;
+        }
+    }
+}
 
 	public class RecordDecl : TypeDecl, IDeclarationContainer
 	{
@@ -1297,19 +1297,19 @@ namespace ReflectionGenerator.Parser2
 		public List<EnumDecl> EnumList { get; } = new List<EnumDecl>();
 		public List<TypeAliasDecl> TypeAliasList { get; } = [];
 		public List<FriendDecl> FriendList { get; } = [];
-        public required BaseSpecifierDecl[] BaseList { get; init; } = [];
+    public required BaseSpecifierDecl[] BaseList { get; init; } = [];
 		public ReadOnlySpan<BaseSpecifierDecl> BaseSpan => BaseList;
 		public RecordDecl? ParentRecordDecl { get; set; } = null;
-        public required RecordAttributeFlag RecordAttributeFlags { get; init; }
+    public required RecordAttributeFlag RecordAttributeFlags { get; init; }
 		public bool IsReflectionClass { get; set; }
 		public required bool IsNoxObject { get; init; }
 		public required bool IsDefinition { get; init; }
 	}
 
 	public class TypeAliasDecl : TypeDecl
-    {
-        public required string PointeeDeclUsr { get; init; }
-        public required uint PointeeDeclHash { get; init; } = 0;
+{
+    public required string PointeeDeclUsr { get; init; }
+    public required uint PointeeDeclHash { get; init; } = 0;
 		private readonly MetaInfo _PointeeMeta;
 		public required MetaInfo PointeeMeta
 		{
@@ -1337,9 +1337,9 @@ namespace ReflectionGenerator.Parser2
 	}
 
 	public class BaseSpecifierDecl : TypeDecl
-    {
-        public required uint PointeeDeclHash { get; init; }
-        public required string PointeeDeclUsr { get; init; }
+{
+    public required uint PointeeDeclHash { get; init; }
+    public required string PointeeDeclUsr { get; init; }
 		private readonly MetaInfo _PointeeMeta;
 		public required MetaInfo PointeeMeta
 		{
@@ -1348,10 +1348,10 @@ namespace ReflectionGenerator.Parser2
 		public ref readonly MetaInfo GetPointeeMeta() => ref _PointeeMeta;
 
 		public required bool IsVirtualBase { get; init; }
-    }
+}
 
 	public class TemplateClassDecl : TypeDecl, IDeclarationContainer
-    {
+{
 		public struct TemplateArgumentInfo
 		{
 			public required string Name { get; init; }
@@ -1363,22 +1363,22 @@ namespace ReflectionGenerator.Parser2
 			public required bool IsDefault { get; init; }
 		}
 
-        public RecordTypeInfo? TypeInfo { get; init; }
-        public List<RecordDecl> RecordList { get; } = new List<RecordDecl>();
-        public List<FunctionDecl> FunctionList { get; } = new List<FunctionDecl>();
-        public List<VariableDecl> VariableList { get; } = new List<VariableDecl>();
-        public List<EnumDecl> EnumList { get; } = new List<EnumDecl>();
-        public List<TypeAliasDecl> TypeAliasList { get; } = [];
-        public List<FriendDecl> FriendList { get; } = [];
-        public required BaseSpecifierDecl[] BaseList { get; init; } = [];
-        public ReadOnlySpan<BaseSpecifierDecl> BaseSpan => BaseList;
-        public RecordDecl? ParentRecordDecl { get; set; } = null;
-        public required RecordAttributeFlag RecordAttributeFlags { get; init; }
-        public bool IsReflectionClass { get; set; }
-        public required bool IsNoxObject { get; init; }
-        public required bool IsDefinition { get; init; }
+    public RecordTypeInfo? TypeInfo { get; init; }
+    public List<RecordDecl> RecordList { get; } = new List<RecordDecl>();
+    public List<FunctionDecl> FunctionList { get; } = new List<FunctionDecl>();
+    public List<VariableDecl> VariableList { get; } = new List<VariableDecl>();
+    public List<EnumDecl> EnumList { get; } = new List<EnumDecl>();
+    public List<TypeAliasDecl> TypeAliasList { get; } = [];
+    public List<FriendDecl> FriendList { get; } = [];
+    public required BaseSpecifierDecl[] BaseList { get; init; } = [];
+    public ReadOnlySpan<BaseSpecifierDecl> BaseSpan => BaseList;
+    public RecordDecl? ParentRecordDecl { get; set; } = null;
+    public required RecordAttributeFlag RecordAttributeFlags { get; init; }
+    public bool IsReflectionClass { get; set; }
+    public required bool IsNoxObject { get; init; }
+    public required bool IsDefinition { get; init; }
 
-        public required TemplateArgumentInfo[] TemplateArgumentList { private get; init; }
+    public required TemplateArgumentInfo[] TemplateArgumentList { private get; init; }
 		public ReadOnlySpan<TemplateArgumentInfo> TemplateArgumentSpan => TemplateArgumentList;
 		public required int NumDefaultArgument { get; init; }
 	}
@@ -1411,10 +1411,10 @@ namespace ReflectionGenerator.Parser2
 		public required int BitFieldWidth { get; init; }
 	}
 
-    public class EnumDecl : TypeDecl
+public class EnumDecl : TypeDecl
 	{
-        public readonly struct EnumeratorInfo
-        {
+    public readonly struct EnumeratorInfo
+    {
 			#region 公開プロパティ
 			/// <summary>
 			/// 名前
@@ -1459,8 +1459,8 @@ namespace ReflectionGenerator.Parser2
 		public string Hash { get; private init; } = string.Empty;
 
 		public required AttrKind AttrKind { get; init; }
-        public required string AttrName { get; init; }
-        public required string Value { get; init; }
+    public required string AttrName { get; init; }
+    public required string Value { get; init; }
 
 		private readonly uint _DeclHash;
 	}
@@ -1470,7 +1470,7 @@ namespace ReflectionGenerator.Parser2
 	/// Cpp解析
 	/// </summary>
 	public unsafe class CppParser
-    {
+{
 		#region クラス定義
 		public readonly struct SetupDesc
 		{
@@ -1563,18 +1563,18 @@ namespace ReflectionGenerator.Parser2
 		#region フィールド
 		private const string REFLECTION_OBJECT_FQN = "nox::reflection::ReflectionObject";
 
-        private string _ProjectRootDirectory = string.Empty;
+    private string _ProjectRootDirectory = string.Empty;
 
 		//private readonly Dictionary<int, TypeInfo> _TypeDict = new();
 		private readonly Dictionary<ClangSharp.Interop.CXType, TypeInfo> _TypeDict2 = new(CxTypeHashFirstComparer.Instance);
 
-        private NamespaceNode NamespaceNodeRoot => _NamespaceNodeDict[string.Empty];
+    private NamespaceNode NamespaceNodeRoot => _NamespaceNodeDict[string.Empty];
 		private readonly Dictionary<string, NamespaceNode> _NamespaceNodeDict = new Dictionary<string, NamespaceNode>();
 		/// <summary>
 		/// key:Cursor.Hash, Value:DeclBase
 		/// </summary>
-        private readonly Dictionary<uint, DeclBase> _DeclWithHashDict = new();
-        private readonly Dictionary<UniqueDeclKey, DeclBase> _DeclWithUsrDict = new();
+    private readonly Dictionary<uint, DeclBase> _DeclWithHashDict = new();
+    private readonly Dictionary<UniqueDeclKey, DeclBase> _DeclWithUsrDict = new();
 		private readonly Dictionary<string, List<NamespaceDecl>> _NamespaceDeclListWithProjectName = new();
 		private readonly List<NamespaceDecl> _NamespaceDeclList = new();
 
@@ -1596,67 +1596,67 @@ namespace ReflectionGenerator.Parser2
 
 		#region 公開メソッド
 		public void DumpTrace()
+    {
+        //MergedNamespace rootNamespaceDecl = _NamespaceDeclDict[string.Empty];
+        probeNamespaceDecl(NamespaceNodeRoot, 0);
+
+        static void traceDepth(int depth)
         {
-            //MergedNamespace rootNamespaceDecl = _NamespaceDeclDict[string.Empty];
-            probeNamespaceDecl(NamespaceNodeRoot, 0);
-
-            static void traceDepth(int depth)
+            Span<char> tab = stackalloc char[depth];
+            for (int i = 0; i < depth; i++)
             {
-                Span<char> tab = stackalloc char[depth];
-                for (int i = 0; i < depth; i++)
-                {
-                    tab[i] = '\t';
-                }
-                Trace.Info(null, tab);
+                tab[i] = '\t';
+            }
+            Trace.Info(null, tab);
+        }
+
+        static void probe(IDeclarationContainer container, int depth)
+        {
+            foreach (RecordDecl decl in container.RecordList)
+            {
+                traceDepth(depth);
+                Trace.InfoLine(null, $"[Class] {decl.FullName}");
+                probe(decl, depth);
             }
 
-            static void probe(IDeclarationContainer container, int depth)
+            foreach (FunctionDecl decl in container.FunctionList)
             {
-                foreach (RecordDecl decl in container.RecordList)
-                {
-                    traceDepth(depth);
-                    Trace.InfoLine(null, $"[Class] {decl.FullName}");
-                    probe(decl, depth);
-                }
-
-                foreach (FunctionDecl decl in container.FunctionList)
-                {
-                    traceDepth(depth);
-                    Trace.InfoLine(null, $"[Function] {decl.FullName}");
-                }
-
-                foreach (VariableDecl decl in container.VariableList)
-                {
-                    traceDepth(depth);
-                    Trace.InfoLine(null, $"[Variable] {decl.FullName}");
-                }
-
-                foreach (EnumDecl decl in container.EnumList)
-                {
-                    traceDepth(depth);
-                    Trace.InfoLine(null, $"[Enum] {decl.FullName}");
-                }
+                traceDepth(depth);
+                Trace.InfoLine(null, $"[Function] {decl.FullName}");
             }
 
-            static void probeNamespaceDecl(NamespaceNode node, int depth)
+            foreach (VariableDecl decl in container.VariableList)
             {
+                traceDepth(depth);
+                Trace.InfoLine(null, $"[Variable] {decl.FullName}");
+            }
+
+            foreach (EnumDecl decl in container.EnumList)
+            {
+                traceDepth(depth);
+                Trace.InfoLine(null, $"[Enum] {decl.FullName}");
+            }
+        }
+
+        static void probeNamespaceDecl(NamespaceNode node, int depth)
+        {
 				traceDepth(depth);
 				Trace.InfoLine(null, $"[Namespace] {node.FullName}");
 				probe(node, depth);
 
 				foreach (NamespaceNode child in node.Children)
+            {
+                if(child.FullName.Contains("nox") == false)
                 {
-                    if(child.FullName.Contains("nox") == false)
-                    {
-                        continue;
-                    }
+                    continue;
+                }
 
-                    probeNamespaceDecl(child, depth+1);
+                probeNamespaceDecl(child, depth+1);
 				}
 			}
 		}
 
-        public bool Parse(in SetupDesc setupParam)
+    public bool Parse(in SetupDesc setupParam)
 		{
 			_ProjectRootDirectory = System.IO.Path.GetDirectoryName(setupParam.SolutionPath) ?? string.Empty;
 
@@ -1672,16 +1672,16 @@ namespace ReflectionGenerator.Parser2
 		}
 
 		private bool Parse(in SetupDesc setupParam, ref ClangSharp.Interop.CXIndex rootIndex, ref ClangSharp.Interop.CXTranslationUnit translationUnit)
-        {
+    {
 			{
 				//  パースするソースファイルを作成
 #if false
-                string? parseSourceFilePath = CreateParseSourceFile(setupParam.SolutionPath, setupParam.IncludeHeaderListWithArtifact);
-                if(parseSourceFilePath == null)
-                {
-                    Trace.Error(this, "パース用ソースファイルの作成に失敗しました");
-                    return false;
-                }
+            string? parseSourceFilePath = CreateParseSourceFile(setupParam.SolutionPath, setupParam.IncludeHeaderListWithArtifact);
+            if(parseSourceFilePath == null)
+            {
+                Trace.Error(this, "パース用ソースファイルの作成に失敗しました");
+                return false;
+            }
 #endif
 				string parseSourceFilePath = setupParam.SourceFilePath;
 
@@ -1736,7 +1736,7 @@ namespace ReflectionGenerator.Parser2
 				ReadOnlySpan<string> additionalIncludeDirectories = setupParam.AdditionalIncludeDirectories.Split(';', StringSplitOptions.RemoveEmptyEntries);
 				foreach (string additionalIncludeDirectory in additionalIncludeDirectories)
 				{
-					parseCommandLineList.Add($"-I {additionalIncludeDirectory}");
+					parseCommandLineList.Add($"-I{additionalIncludeDirectory.Trim()}");
 				}
 				//  end
 
@@ -1813,19 +1813,19 @@ namespace ReflectionGenerator.Parser2
 			}
 		}
 
-        public bool ParseUnit(in ClangSharp.Interop.CXTranslationUnit translationUnit)
-        {
-            ClangSharp.Interop.CXCursor cursor = translationUnit.Cursor;
-            uint hash = cursor.Hash;
-            uint parentDeclHash = 0;
+    public bool ParseUnit(in ClangSharp.Interop.CXTranslationUnit translationUnit)
+    {
+        ClangSharp.Interop.CXCursor cursor = translationUnit.Cursor;
+        uint hash = cursor.Hash;
+        uint parentDeclHash = 0;
 
 			_RootNamespaceDecl = new NamespaceDecl()
-            {
+        {
 				Usr = cursor.GetNormalizedUsr(),
-                Name = string.Empty,
-                FullName = string.Empty,
-                DeclHash = hash,
-                ParentDeclHash = parentDeclHash,
+            Name = string.Empty,
+            FullName = string.Empty,
+            DeclHash = hash,
+            ParentDeclHash = parentDeclHash,
 				ParentUniqueDeclKey = default,
 				Meta = default,
 				AttributeList = CreateAttributeDeclList(cursor),
@@ -1835,19 +1835,19 @@ namespace ReflectionGenerator.Parser2
 				DebugHashCode = cursor.MakeDebugHashCode(),
 #endif
 			};
-            AddDecl(_RootNamespaceDecl);
+        AddDecl(_RootNamespaceDecl);
 
-            NamespaceNode node = _NamespaceNodeDict[""] = new NamespaceNode()
-            {
-                Name = string.Empty,
-                FullName = string.Empty,
-            };
-            node.NamespaceDeclList.Add(_RootNamespaceDecl);
+        NamespaceNode node = _NamespaceNodeDict[""] = new NamespaceNode()
+        {
+            Name = string.Empty,
+            FullName = string.Empty,
+        };
+        node.NamespaceDeclList.Add(_RootNamespaceDecl);
 
-            List<(ClangSharp.Interop.CXCursor, long, int index)> msList = new();
-            System.Diagnostics.Stopwatch sw = new();
+        List<(ClangSharp.Interop.CXCursor, long, int index)> msList = new();
+        System.Diagnostics.Stopwatch sw = new();
 
-            int visitCounter = 0;
+        int visitCounter = 0;
 
 			using (new ScopeProfiler() { Tag = "VisitChildren" })
 			{
@@ -1867,35 +1867,35 @@ namespace ReflectionGenerator.Parser2
 						return ClangSharp.Interop.CXChildVisitResult.CXChildVisit_Recurse;
 					}, default);
 			}
-            msList.Sort((x,y) => (int)y.Item2 - (int)x.Item2);
+        msList.Sort((x,y) => (int)y.Item2 - (int)x.Item2);
 
 			// Top 10 slowest cursors
-            Trace.InfoLine(null, "Top 10 slowest cursors:");
-            int count = 0;
-            foreach ((var c, long ms, int index) in msList)
+        Trace.InfoLine(null, "Top 10 slowest cursors:");
+        int count = 0;
+        foreach ((var c, long ms, int index) in msList)
+        {
+            if (count >= 10)
             {
-                if (count >= 10)
-                {
-                    break;
-                }
-                count++;
-                Trace.InfoLine(null, $"[{index}]Cursor: {c.ToString()} - {ms}ms");
+                break;
+            }
+            count++;
+            Trace.InfoLine(null, $"[{index}]Cursor: {c.ToString()} - {ms}ms");
 			}
 
 			using (new ScopeProfiler() { Tag = "PostProcess" })
-            {
-                if (PostProcess() == false)
+        {
+            if (PostProcess() == false)
 				{
 					Trace.Error(this, "PostProcessに失敗しました");
 					return false;
-                }
             }
-
-			return true;
         }
 
-        private bool PostProcess()
-        {
+			return true;
+    }
+
+    private bool PostProcess()
+    {
 			bool success = true;
 			//	ノードの構築
 			foreach (DeclBase decl in _DeclWithHashDict.Values)
@@ -1929,7 +1929,7 @@ namespace ReflectionGenerator.Parser2
 							parentNamespaceName = namespaceDecl.FullName.Substring(0, index);
 						}
 
-                        _NamespaceNodeDict[parentNamespaceName].Children.Add(node);
+                    _NamespaceNodeDict[parentNamespaceName].Children.Add(node);
 					}
 
 					((NamespaceDecl)parentDecl).NamespaceList.Add(namespaceDecl);
@@ -1988,7 +1988,7 @@ namespace ReflectionGenerator.Parser2
 							container.TypeAliasList.Add(declImpl);
 
 							break;
-                    }
+                }
 				}
 			}
 
@@ -2004,7 +2004,7 @@ namespace ReflectionGenerator.Parser2
 					continue;
 				}
 
-                switch (decl)
+            switch (decl)
 				{
 					case RecordDecl declImpl:
 						//	NOX_DECLARE_OBJECTの定義漏れチェック
@@ -2013,63 +2013,63 @@ namespace ReflectionGenerator.Parser2
 							if (declImpl.FunctionList.Exists(x => x.Name == "GetType") == false)
 							{
 								Trace.ErrorLine(null, $"{declImpl.FullName}\tNOX_DECLARE_OBJECTが宣言されていません");
-                                success = false;
+                            success = false;
 							}
 						}
 						break;
-                }
             }
+        }
 
-            return success;
+        return success;
 
-            void VerifyReflectionGenerateKind(NamedDecl namedDecl, NamedDecl? parentDecl)
+        void VerifyReflectionGenerateKind(NamedDecl namedDecl, NamedDecl? parentDecl)
+        {
+            if (parentDecl == null)
             {
-                if (parentDecl == null)
-                {
-                    return;
-                }
-
-                if (namedDecl.AccessLevel == AccessLevel.Public)
-                {
-                    switch (parentDecl.ReflectionGenerateKind)
-                    {
-                        case ReflectionGenerateKind.ImplicitReflection:
-                        case ReflectionGenerateKind.Reflection:
-                        case ReflectionGenerateKind.PrivateReflection:
-                            //	明示的リフレクションが指定されていないなら、暗黙的リフレクションにする
-                            if (namedDecl.ReflectionGenerateKind == ReflectionGenerateKind.None)
-                            {
-                                namedDecl.ReflectionGenerateKind = ReflectionGenerateKind.ImplicitReflection;
-                            }
-                            break;
-
-                        case ReflectionGenerateKind.IgnoreReflection:
-                            namedDecl.ReflectionGenerateKind = ReflectionGenerateKind.IgnoreReflection;
-                            break;
-                    }
-                }
-                //	自身が非公開の場合、親がprivate reflectionでなければリフレクション無視
-                else
-                {
-                    switch (parentDecl.ReflectionGenerateKind)
-                    {
-                        case ReflectionGenerateKind.PrivateReflection:
-                            //	明示的リフレクションが指定されていないなら、暗黙的リフレクションにする
-                            if (namedDecl.ReflectionGenerateKind == ReflectionGenerateKind.None)
-                            {
-                                namedDecl.ReflectionGenerateKind = ReflectionGenerateKind.ImplicitReflection;
-                            }
-                            break;
-
-                        default:
-                            namedDecl.ReflectionGenerateKind = ReflectionGenerateKind.IgnoreReflection;
-
-                            break;
-                    }
-                }
+                return;
             }
 
-            void VerifyReflectionGenerateKind_Namespace(NamespaceDecl namespaceDecl, NamedDecl? parentDecl)
+            if (namedDecl.AccessLevel == AccessLevel.Public)
+            {
+                switch (parentDecl.ReflectionGenerateKind)
+                {
+                    case ReflectionGenerateKind.ImplicitReflection:
+                    case ReflectionGenerateKind.Reflection:
+                    case ReflectionGenerateKind.PrivateReflection:
+                        //	明示的リフレクションが指定されていないなら、暗黙的リフレクションにする
+                        if (namedDecl.ReflectionGenerateKind == ReflectionGenerateKind.None)
+                        {
+                            namedDecl.ReflectionGenerateKind = ReflectionGenerateKind.ImplicitReflection;
+                        }
+                        break;
+
+                    case ReflectionGenerateKind.IgnoreReflection:
+                        namedDecl.ReflectionGenerateKind = ReflectionGenerateKind.IgnoreReflection;
+                        break;
+                }
+            }
+            //	自身が非公開の場合、親がprivate reflectionでなければリフレクション無視
+            else
+            {
+                switch (parentDecl.ReflectionGenerateKind)
+                {
+                    case ReflectionGenerateKind.PrivateReflection:
+                        //	明示的リフレクションが指定されていないなら、暗黙的リフレクションにする
+                        if (namedDecl.ReflectionGenerateKind == ReflectionGenerateKind.None)
+                        {
+                            namedDecl.ReflectionGenerateKind = ReflectionGenerateKind.ImplicitReflection;
+                        }
+                        break;
+
+                    default:
+                        namedDecl.ReflectionGenerateKind = ReflectionGenerateKind.IgnoreReflection;
+
+                        break;
+                }
+            }
+        }
+
+        void VerifyReflectionGenerateKind_Namespace(NamespaceDecl namespaceDecl, NamedDecl? parentDecl)
 			{
 				VerifyReflectionGenerateKind(namespaceDecl, parentDecl);
 
@@ -2163,18 +2163,18 @@ namespace ReflectionGenerator.Parser2
 		}
 
 		private void ParseNamespaceDecl(in ClangSharp.Interop.CXCursor cursor)
-        {
+    {
 			string usr = cursor.GetNormalizedUsr();
 			uint hash = cursor.Hash;
-            if (ContainsDecl(hash) == true)
-            {
-                return;
+        if (ContainsDecl(hash) == true)
+        {
+            return;
 			}
 
 			if (cursor.IsDeleted == true)
-            {
-                return;
-            }
+        {
+            return;
+        }
 
 			Util.Assert(cursor.GetDeclCategory() == DeclCategory.Definition);
 
@@ -2184,11 +2184,11 @@ namespace ReflectionGenerator.Parser2
 
 			NamespaceDecl namespaceDecl;
 			if (_DeclWithHashDict.TryGetValue(hash, out DeclBase? outDecl) == true)
-            {
-                namespaceDecl = (NamespaceDecl)outDecl;
+        {
+            namespaceDecl = (NamespaceDecl)outDecl;
 			}
-            else
-            {
+        else
+        {
 				namespaceDecl = new NamespaceDecl()
 				{
 					Usr = usr,
@@ -2221,15 +2221,15 @@ namespace ReflectionGenerator.Parser2
 				AddDecl(namespaceDecl);
 			}
 
-            cursor.VisitChildren(
-                (child, parent, data) =>
-                {
-                    VisitCursor(child);
-                    return ClangSharp.Interop.CXChildVisitResult.CXChildVisit_Continue;
-                }
-                , default
-                );
-        }
+        cursor.VisitChildren(
+            (child, parent, data) =>
+            {
+                VisitCursor(child);
+                return ClangSharp.Interop.CXChildVisitResult.CXChildVisit_Continue;
+            }
+            , default
+            );
+    }
 
 		private TemplateRecordTypeInfo.TemplateArgument CreateTemplateArgument(in ClangSharp.Interop.CX_TemplateArgument cursorTemplateArgument)
 		{
@@ -2340,24 +2340,24 @@ namespace ReflectionGenerator.Parser2
 		}
 
 		private void ParseRecordDecl(in ClangSharp.Interop.CXCursor cursor)
-        {
+    {
 			string usr = cursor.GetNormalizedUsr();
 			uint hash = cursor.Hash;
 			if (ContainsDecl(hash) == true)
-            {
-                return;
-            }
+        {
+            return;
+        }
 
 		//	bool isForwardDeclaration = cursor.IsForwardDeclaration();
 			if (cursor.IsForwardDeclaration() == true)
-            {
+        {
 				//	前方宣言型を弾く
 			//	if (cursor.TryGetDefinitionCursor(out ClangSharp.Interop.CXCursor defCursor) == true)
 				{
 			//		VisitCursor(defCursor);
 					return;
 				}
-            }
+        }
 			else if (cursor.IsDefinition==false)
 			{
 				return;
@@ -2370,17 +2370,17 @@ namespace ReflectionGenerator.Parser2
 
 			//  ラムダ式の場合はスキップ
 			if (cursor.LambdaCallOperator != ClangSharp.Interop.CXCursor.Null)
-            {
+        {
 				defaultReflectionGenerateKind = ReflectionGenerateKind.IgnoreReflection;
 			   // return;
 			}
 
-            //  関数内定義の型はスキップ
-            if (cursor.ParentFunctionOrMethod.IsNull == false)
-            {
+        //  関数内定義の型はスキップ
+        if (cursor.ParentFunctionOrMethod.IsNull == false)
+        {
 				defaultReflectionGenerateKind = ReflectionGenerateKind.IgnoreReflection;
 //				return;
-            }
+        }
 
 			//	匿名構造体/クラスはスキップ
 			if (cursor.IsAnonymous == true)
@@ -2397,8 +2397,8 @@ namespace ReflectionGenerator.Parser2
 		//	Util.Assert(GetDeclList(usr).Count == 0, "既に同じUsrのDeclが存在しています");
 			RecordTypeInfo typeInfo = GetOrCreateTypeInfo<RecordTypeInfo>(cursor.Type);
 			if (cursor.Type.kind != ClangSharp.Interop.CXTypeKind.CXType_Invalid)
-            {
-            }
+        {
+        }
 
 			ClangSharp.Interop.CXCursor parentCursor = GetParentDeclCursor(cursor);
 			uint parentDeclHash = parentCursor.Hash;
@@ -2406,14 +2406,14 @@ namespace ReflectionGenerator.Parser2
 
 			BaseSpecifierDecl[] baseTypeList = CreateBaseSpecifierDeclList(cursor, out bool isBaseReflectionClass, out bool inheritedFromNoxObject);
 
-            if (ContainsDecl(hash) == true)
-            {
-                return;
-            }
+        if (ContainsDecl(hash) == true)
+        {
+            return;
+        }
 
-            string fqn = cursor.GetFQN();
+        string fqn = cursor.GetFQN();
 
-            RecordDecl classDecl = new()
+        RecordDecl classDecl = new()
 			{
 				Usr = usr,
 				Name = cursor.Spelling.CString,
@@ -2452,11 +2452,11 @@ namespace ReflectionGenerator.Parser2
 			}
 
 			if (isBaseReflectionClass == false)
-            {
-                classDecl.IsReflectionClass = classDecl.FullName == REFLECTION_OBJECT_FQN;
+        {
+            classDecl.IsReflectionClass = classDecl.FullName == REFLECTION_OBJECT_FQN;
 			}
-            else
-            {
+        else
+        {
 				if ((classDecl.IsReflectionClass = isBaseReflectionClass) == true)
 				{
 					if (classDecl.ReflectionGenerateKind != ReflectionGenerateKind.IgnoreReflection)
@@ -2467,10 +2467,10 @@ namespace ReflectionGenerator.Parser2
 			}
 
 			for (uint i = 0, length = (uint)cursor.NumDecls; i < length; i++)
-            {
-                VisitCursor(cursor.GetDecl(i));
+        {
+            VisitCursor(cursor.GetDecl(i));
 			}
-        }
+    }
 
 		private void ParseTemplateRecordDecl(in ClangSharp.Interop.CXCursor cursor)
 		{
@@ -2520,12 +2520,12 @@ namespace ReflectionGenerator.Parser2
 
 			string fqn = cursor.GetFQN();
 
-            if (fqn.Contains("PhaseDeclareImpl<_PhaseType"))
-            {
-                Util.BreakPoint();
-            }
+        if (fqn.Contains("PhaseDeclareImpl<_PhaseType"))
+        {
+            Util.BreakPoint();
+        }
 
-            TemplateClassDecl classDecl = new()
+        TemplateClassDecl classDecl = new()
 			{
 				Usr = usr,
 				Name = cursor.Spelling.CString,
@@ -2561,7 +2561,7 @@ namespace ReflectionGenerator.Parser2
 
 
 		private void ParseAliasDecl(in ClangSharp.Interop.CXCursor cursor)
-        {
+    {
 			string usr = cursor.GetNormalizedUsr();
 			uint hash = cursor.Hash;
 			if (ContainsDecl(hash) == true)
@@ -2593,20 +2593,20 @@ namespace ReflectionGenerator.Parser2
 			ClangSharp.Interop.CXCursor pointeeCursor = cursor.Type.CanonicalType.Declaration;
 			//Util.Assert(pointeeCursor.kind != ClangSharp.Interop.CXCursorKind.CXCursor_NoDeclFound, "no found decl");
 			uint pointeeDeclHash = pointeeCursor.Hash;
-            ClangSharp.Interop.CXCursor parentCursor = GetParentDeclCursor(cursor);
+        ClangSharp.Interop.CXCursor parentCursor = GetParentDeclCursor(cursor);
 
-            TypeAliasDecl decl = new ()
-            {
+        TypeAliasDecl decl = new ()
+        {
 				Usr = usr,
 				Name = cursor.Spelling.CString,
-                FullName = cursor.GetFQN(),
-                Namespace = cursor.GetNamespace(),
-                DeclHash = hash,
-                ParentDeclHash = parentCursor.Hash,
+            FullName = cursor.GetFQN(),
+            Namespace = cursor.GetNamespace(),
+            DeclHash = hash,
+            ParentDeclHash = parentCursor.Hash,
 				ParentUniqueDeclKey = CreateUniqueDeclKey(parentCursor),
 				PointeeType = GetOrCreateTypeInfo(cursor.Type.CanonicalType),
 				PointeeDeclUsr = pointeeCursor.GetNormalizedUsr(),
-                PointeeDeclHash = pointeeDeclHash,
+            PointeeDeclHash = pointeeDeclHash,
 				AttributeList = CreateAttributeDeclList(cursor),
 				AccessLevel = cursor.CXXAccessSpecifier.GetAccessLevel(),
 				Meta = CreateMetaData(cursor),
@@ -2615,15 +2615,15 @@ namespace ReflectionGenerator.Parser2
 				DebugHashCode = cursor.MakeDebugHashCode(),
 #endif
 			};
-            AddDecl(decl);
+        AddDecl(decl);
 
 			if (decl.Name.Contains("conditional_t"))
 			{
 				Util.BreakPoint();
 			}
 
-            VisitCursor(cursor.Type.CanonicalType.Declaration);
-            VisitCursor(parentCursor);
+        VisitCursor(cursor.Type.CanonicalType.Declaration);
+        VisitCursor(parentCursor);
 
 		}
 
@@ -2702,8 +2702,8 @@ namespace ReflectionGenerator.Parser2
 			VisitCursor(parentCursor);
 		}
 
-        private void ParseBaseSpecifierDecl(in ClangSharp.Interop.CXCursor cursor)
-        {
+    private void ParseBaseSpecifierDecl(in ClangSharp.Interop.CXCursor cursor)
+    {
 			string usr = cursor.GetNormalizedUsr();
 			uint hash = cursor.Hash;
 			if (ContainsDecl(hash) == true)
@@ -2712,23 +2712,23 @@ namespace ReflectionGenerator.Parser2
 			}
 
 			if (cursor.IsDeleted == true || cursor.IsDefined == true)
-            {
-                return;
-            }
+        {
+            return;
+        }
 
-            ClangSharp.Interop.CXCursor referCursor = cursor.Referenced;
+        ClangSharp.Interop.CXCursor referCursor = cursor.Referenced;
 
 			BaseSpecifierDecl decl = new BaseSpecifierDecl()
-            {
+        {
 				Usr = usr,
 				Name = cursor.Spelling.CString,
-                FullName = cursor.Definition.GetFQN(),
-                Namespace = cursor.GetNamespace(),
-                DeclHash = hash,
-                ParentDeclHash = 0,
+            FullName = cursor.Definition.GetFQN(),
+            Namespace = cursor.GetNamespace(),
+            DeclHash = hash,
+            ParentDeclHash = 0,
 				ParentUniqueDeclKey = default,
 				PointeeDeclUsr = referCursor.GetNormalizedUsr(),
-                PointeeDeclHash = referCursor.Hash,
+            PointeeDeclHash = referCursor.Hash,
 				AttributeList = [],
 				IsVirtualBase = cursor.IsVirtualBase,
 				AccessLevel = cursor.CXXAccessSpecifier.GetAccessLevel(),
@@ -2739,7 +2739,7 @@ namespace ReflectionGenerator.Parser2
 #endif
 			};
 
-            AddDecl(decl);
+        AddDecl(decl);
 
 			VisitCursor(referCursor);
 		}
@@ -3074,8 +3074,8 @@ namespace ReflectionGenerator.Parser2
 			}
 		}
 
-        private void ParseVariableDecl(in ClangSharp.Interop.CXCursor cursor)
-        {
+    private void ParseVariableDecl(in ClangSharp.Interop.CXCursor cursor)
+    {
 			string usr = cursor.GetNormalizedUsr();
 			uint hash = cursor.Hash;
 			if (ContainsDecl(hash) == true)
@@ -3088,10 +3088,10 @@ namespace ReflectionGenerator.Parser2
 				return;
 			}
 
-            if (cursor.ParentFunctionOrMethod.IsNull == false)
-            {
-                //  関数内定義の変数はスキップ
-                return;
+        if (cursor.ParentFunctionOrMethod.IsNull == false)
+        {
+            //  関数内定義の変数はスキップ
+            return;
 			}
 
 			ClangSharp.Interop.CXCursor parentCursor = GetParentDeclCursor(cursor);
@@ -3128,15 +3128,15 @@ namespace ReflectionGenerator.Parser2
 
 
 			VariableDecl variableDecl = new ()
-            {
+        {
 				Usr = usr,
 				Name = cursor.Spelling.CString,
-                FullName = cursor.GetFQN(),
-                Namespace = cursor.GetNamespace(),
-                Type = typeInfo,
-                AttributeList = CreateAttributeDeclList(cursor),
+            FullName = cursor.GetFQN(),
+            Namespace = cursor.GetNamespace(),
+            Type = typeInfo,
+            AttributeList = CreateAttributeDeclList(cursor),
 				DeclHash = hash,
-                ParentDeclHash = parentDeclHash,
+            ParentDeclHash = parentDeclHash,
 				ParentUniqueDeclKey = CreateUniqueDeclKey(parentCursor),
 				VariableAttributeFlags = variableAttributeFlag,
 				Meta = CreateMetaData(cursor),
@@ -3144,7 +3144,7 @@ namespace ReflectionGenerator.Parser2
 				BitFieldWidth = cursor.FieldDeclBitWidth,
 				AccessLevel = cursor.CXXAccessSpecifier.GetAccessLevel(),
 #if DEBUG
-                DebugHashCode = cursor.MakeDebugHashCode(),
+            DebugHashCode = cursor.MakeDebugHashCode(),
 #endif
 			};
 
@@ -3158,28 +3158,28 @@ namespace ReflectionGenerator.Parser2
 		}
 
 		private void VisitCursor(in ClangSharp.Interop.CXCursor cursor)
-        {
+    {
 			switch (cursor.kind)
-            {
-                case ClangSharp.Interop.CXCursorKind.CXCursor_Namespace:
-                    ParseNamespaceDecl(cursor);
+        {
+            case ClangSharp.Interop.CXCursorKind.CXCursor_Namespace:
+                ParseNamespaceDecl(cursor);
 					break;
 
-                case ClangSharp.Interop.CXCursorKind.CXCursor_ClassDecl:
-                case ClangSharp.Interop.CXCursorKind.CXCursor_StructDecl:
-                case ClangSharp.Interop.CXCursorKind.CXCursor_UnionDecl:
-                    ParseRecordDecl(cursor);
+            case ClangSharp.Interop.CXCursorKind.CXCursor_ClassDecl:
+            case ClangSharp.Interop.CXCursorKind.CXCursor_StructDecl:
+            case ClangSharp.Interop.CXCursorKind.CXCursor_UnionDecl:
+                ParseRecordDecl(cursor);
 					break;
 
-                case ClangSharp.Interop.CXCursorKind.CXCursor_TypeAliasDecl:
-                    ParseAliasDecl(cursor);
-                    break;
+            case ClangSharp.Interop.CXCursorKind.CXCursor_TypeAliasDecl:
+                ParseAliasDecl(cursor);
+                break;
 
 				case ClangSharp.Interop.CXCursorKind.CXCursor_TypeAliasTemplateDecl:
 					ParseTemplateAliasDecl(cursor);
 					break;
 
-                case ClangSharp.Interop.CXCursorKind.CXCursor_ClassTemplate:
+            case ClangSharp.Interop.CXCursorKind.CXCursor_ClassTemplate:
 				//	部分特殊化もtemplate recordとして扱う
 				/*
 				// テンプレート
@@ -3198,18 +3198,18 @@ namespace ReflectionGenerator.Parser2
 					ParseTemplateRecordDecl(cursor);
 					break;
 
-                case ClangSharp.Interop.CXCursorKind.CXCursor_CXXMethod:
-                case ClangSharp.Interop.CXCursorKind.CXCursor_FunctionDecl:					
-                    ParseFunctionDecl(cursor);
+            case ClangSharp.Interop.CXCursorKind.CXCursor_CXXMethod:
+            case ClangSharp.Interop.CXCursorKind.CXCursor_FunctionDecl:					
+                ParseFunctionDecl(cursor);
 					break;
 
-                case ClangSharp.Interop.CXCursorKind.CXCursor_VarDecl:
+            case ClangSharp.Interop.CXCursorKind.CXCursor_VarDecl:
 				case ClangSharp.Interop.CXCursorKind.CXCursor_FieldDecl:
 					ParseVariableDecl(cursor);
 					break;
 
-                case ClangSharp.Interop.CXCursorKind.CXCursor_CXXBaseSpecifier:
-                    ParseBaseSpecifierDecl(cursor);
+            case ClangSharp.Interop.CXCursorKind.CXCursor_CXXBaseSpecifier:
+                ParseBaseSpecifierDecl(cursor);
 					break;
 
 				case ClangSharp.Interop.CXCursorKind.CXCursor_EnumDecl:
@@ -3225,10 +3225,10 @@ namespace ReflectionGenerator.Parser2
 					ParseFriendDecl(cursor);
 					break;
 
-                case ClangSharp.Interop.CXCursorKind.CXCursor_NoDeclFound:
+            case ClangSharp.Interop.CXCursorKind.CXCursor_NoDeclFound:
 					ParseNoDeclFound(cursor);
-                    break;
-            }
+                break;
+        }
 		}
 
 		//     private void RegisterTypeInfo(in ClangSharp.Interop.CXCursor cursor, TypeInfo typeInfo)
@@ -3272,12 +3272,12 @@ namespace ReflectionGenerator.Parser2
 		}
 
 		private TypeInfo GetOrCreateTypeInfo(in ClangSharp.Interop.CXType type, in ClangSharp.Interop.CXCursor declaration, TypeAttributeFlag addtionalAttributeFlags = TypeAttributeFlag.None)
-        {
-            int hash = type.GetHashCode();
+    {
+        int hash = type.GetHashCode();
 
 			//if (_TypeDict.TryGetValue(hash, out TypeInfo? typeInfo) == true)
-            {
-            //    return typeInfo;
+        {
+        //    return typeInfo;
 			}
 
 			if (_TypeDict2.TryGetValue(type, out TypeInfo? typeInfo) == true)
@@ -3289,21 +3289,21 @@ namespace ReflectionGenerator.Parser2
 			TypeKind typeKind = Local.GetTypeKind(type);
 
 			switch (type.TypeClass)
-            {
+        {
 				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Builtin:
 					typeInfo = new PrimitiveTypeInfo()
-                    {
+                {
 						TypeAttributeFlags = typeAttributeFlags,
 						Name = type.Spelling.CString,
-                        FullName = type.GetFQN(),
-                        Namespace = string.Empty,
+                    FullName = type.GetFQN(),
+                    Namespace = string.Empty,
 						TypeKind = typeKind,
 						Size = type.SizeOf,
 						Alignment = type.AlignOf,
 					};
-                    break;
+                break;
 
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Record:
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Record:
 					{
 						
 						if (declaration.IsAnonymous)
@@ -3367,7 +3367,7 @@ namespace ReflectionGenerator.Parser2
 					};
 					break;
 				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_FunctionNoProto:
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_FunctionProto:
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_FunctionProto:
 					{
 						int numArgTypes = type.NumArgTypes;
 						TypeInfo[] typeList = new TypeInfo[numArgTypes];
@@ -3416,15 +3416,15 @@ namespace ReflectionGenerator.Parser2
 					}
 					break;
 
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_MemberPointer:
-                    typeInfo = new MemberPointerType()
-                    {
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_MemberPointer:
+                typeInfo = new MemberPointerType()
+                {
 						TypeAttributeFlags = typeAttributeFlags,
 						Name = type.Spelling.CString,
-                        FullName = type.GetFQN(),
-                        Namespace = type.GetNamespace(),
-                        PointeeType = GetOrCreateTypeInfo(type.PointeeType),
-                        DeclHash = type.Declaration.Hash,
+                    FullName = type.GetFQN(),
+                    Namespace = type.GetNamespace(),
+                    PointeeType = GetOrCreateTypeInfo(type.PointeeType),
+                    DeclHash = type.Declaration.Hash,
 						TypeKind = typeKind,
 						Size = type.SizeOf,
 						Alignment = type.AlignOf,
@@ -3432,16 +3432,16 @@ namespace ReflectionGenerator.Parser2
 
 					break;
 
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Pointer:
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_LValueReference:
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_RValueReference:
-                    typeInfo = new PointerTypeInfo()
-                    {
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Pointer:
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_LValueReference:
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_RValueReference:
+                typeInfo = new PointerTypeInfo()
+                {
 						TypeAttributeFlags = typeAttributeFlags,
 						Name = type.Spelling.CString,
-                        FullName = type.GetFQN(),
-                        Namespace = type.GetNamespace(),
-                        PointeeType = GetOrCreateTypeInfo(type.PointeeType),
+                    FullName = type.GetFQN(),
+                    Namespace = type.GetNamespace(),
+                    PointeeType = GetOrCreateTypeInfo(type.PointeeType),
 						DeclHash = type.Declaration.Hash,
 						TypeKind = typeKind,
 						Size = type.SizeOf,
@@ -3450,7 +3450,7 @@ namespace ReflectionGenerator.Parser2
 					break;
 					
 
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Elaborated:
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Elaborated:
 					return GetOrCreateTypeInfo(type.CanonicalType, typeAttributeFlags);
 					//typeInfo = new ElaboratedTypeInfo()
 					//{
@@ -3463,21 +3463,21 @@ namespace ReflectionGenerator.Parser2
 					//	TypeKind = typeKind,
 					//};
 					//break;
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Typedef:
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Using:
-                    typeInfo = new TypeAliasInfo()
-                    {
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Typedef:
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Using:
+                typeInfo = new TypeAliasInfo()
+                {
 						TypeAttributeFlags = typeAttributeFlags,
 						Name = type.Spelling.CString,
-                        FullName = type.GetFQN(),
-                        Namespace = type.GetNamespace(),
-                        PointeeType = GetOrCreateTypeInfo(type.CanonicalType),
+                    FullName = type.GetFQN(),
+                    Namespace = type.GetNamespace(),
+                    PointeeType = GetOrCreateTypeInfo(type.CanonicalType),
 						DeclHash = type.Declaration.Hash,
 						TypeKind = typeKind,
 						Size = type.SizeOf,
 						Alignment = type.AlignOf,
 					};
-                    break;
+                break;
 				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_UnresolvedUsing:
 					typeInfo = new UnresolvedAliasInfo()
 					{
@@ -3520,8 +3520,8 @@ namespace ReflectionGenerator.Parser2
 					}
 					break;
 
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_TemplateTypeParm:
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_SubstTemplateTypeParm:
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_TemplateTypeParm:
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_SubstTemplateTypeParm:
 					typeInfo = new PrimitiveTypeInfo()
 					{
 						TypeAttributeFlags = typeAttributeFlags,
@@ -3534,7 +3534,7 @@ namespace ReflectionGenerator.Parser2
 					};
 					break;
 
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Auto:
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Auto:
 					typeInfo = new PrimitiveTypeInfo()
 					{
 						TypeAttributeFlags = typeAttributeFlags,
@@ -3547,12 +3547,12 @@ namespace ReflectionGenerator.Parser2
 					};
 					break;
 
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_DependentSizedArray:
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_ArrayParameter:
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_ConstantArray:
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_IncompleteArray:
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_VariableArray:
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_PackExpansion:
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_DependentSizedArray:
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_ArrayParameter:
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_ConstantArray:
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_IncompleteArray:
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_VariableArray:
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_PackExpansion:
 					typeInfo = new UnknownTypeInfo()
 					{
 						TypeAttributeFlags = typeAttributeFlags,
@@ -3565,7 +3565,7 @@ namespace ReflectionGenerator.Parser2
 					};
 					break;
 
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_DependentName:
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_DependentName:
 					typeInfo = new UnknownTypeInfo()
 					{
 						TypeAttributeFlags = typeAttributeFlags,
@@ -3578,7 +3578,7 @@ namespace ReflectionGenerator.Parser2
 					};
 					break;
 
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Decltype:
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Decltype:
 					typeInfo = new UnknownTypeInfo()
 					{
 						TypeAttributeFlags = typeAttributeFlags,
@@ -3591,9 +3591,9 @@ namespace ReflectionGenerator.Parser2
 					};
 					break;
 
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_TemplateSpecialization:
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_DeducedTemplateSpecialization:
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_DependentTemplateSpecialization:
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_TemplateSpecialization:
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_DeducedTemplateSpecialization:
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_DependentTemplateSpecialization:
 					typeInfo = new UnknownTypeInfo()
 					{
 						TypeAttributeFlags = typeAttributeFlags,
@@ -3606,7 +3606,7 @@ namespace ReflectionGenerator.Parser2
 					};
 					break;
 
-                case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_UnaryTransform:
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_UnaryTransform:
 					typeInfo = new UnknownTypeInfo()
 					{
 						TypeAttributeFlags = typeAttributeFlags,
@@ -3620,9 +3620,9 @@ namespace ReflectionGenerator.Parser2
 					break;
 
 				default:
-                    Util.Assert(false, "Unsupported type class encountered while creating TypeInfo.");
+                Util.Assert(false, "Unsupported type class encountered while creating TypeInfo.");
 					break;
-            }
+        }
 
 			_TypeDict2[type] = typeInfo;
 //			_TypeDict[hash] = typeInfo;
@@ -3638,8 +3638,8 @@ namespace ReflectionGenerator.Parser2
 			if(success == false)
 			{
 				DeclBase d = GetDecl(decl.DeclHash);
-                Util.Assert(false, $"追加済みのDeclです: {d.ToString()}");
-            }
+            Util.Assert(false, $"追加済みのDeclです: {d.ToString()}");
+        }
 #endif
 
 			{
@@ -3671,15 +3671,15 @@ namespace ReflectionGenerator.Parser2
 		}
 
 		private T? FindDecl<T>(uint hash) where T : DeclBase
-        {
-            _DeclWithHashDict.TryGetValue(hash, out DeclBase? decl);
-            return decl as T;
+    {
+        _DeclWithHashDict.TryGetValue(hash, out DeclBase? decl);
+        return decl as T;
 		}
 
 		private DeclBase GetDecl(uint hash)
-        {
-            Util.Assert(_DeclWithHashDict.ContainsKey(hash));
-            return _DeclWithHashDict[hash];
+    {
+        Util.Assert(_DeclWithHashDict.ContainsKey(hash));
+        return _DeclWithHashDict[hash];
 		}
 
 		private T GetDecl<T>(uint hash) where T : DeclBase
@@ -3707,7 +3707,7 @@ namespace ReflectionGenerator.Parser2
 		}
 
 		private ClangSharp.Interop.CXCursor GetParentDeclCursor(ClangSharp.Interop.CXCursor cursor, bool skipAnonymouse=false)
-        {
+    {
 			cursor = cursor.SemanticParent;
 
 			while (cursor.IsNull == false)
@@ -3739,19 +3739,19 @@ namespace ReflectionGenerator.Parser2
 		}
 
 		private DeclBase GetParentDecl(ClangSharp.Interop.CXCursor cursor)
-        {
+    {
 			return GetDecl(GetParentDeclCursor(cursor).Hash);
 		}
 
-        private AttributeDecl[] CreateAttributeDeclList(in ClangSharp.Interop.CXCursor cursor)
-        {
-            int numAttr = cursor.NumAttrs;
+    private AttributeDecl[] CreateAttributeDeclList(in ClangSharp.Interop.CXCursor cursor)
+    {
+        int numAttr = cursor.NumAttrs;
 
 			Util.Assert(numAttr >= 0, "Number of attributes cannot be negative.");
 			AttributeDecl[] attrDeclList = new AttributeDecl[numAttr];
 
-            for(uint i = 0; i < numAttr; i++)
-            {
+        for(uint i = 0; i < numAttr; i++)
+        {
 				ClangSharp.Interop.CXCursor attrCursor = cursor.GetAttr(i);
 				uint hash = attrCursor.Hash;
 
@@ -3766,8 +3766,8 @@ namespace ReflectionGenerator.Parser2
 						{
 							attrKind = AttrKind.Annotate;
 						}
-                        else
-                        {
+                    else
+                    {
 							if (value.Contains("IgnoreReflection()") == true)
 							{
 								attrKind = AttrKind.IgnoreReflectionTarget;
@@ -3809,37 +3809,37 @@ namespace ReflectionGenerator.Parser2
 				inheritedFromNoxObject = false;
 				return [];
 			}
-            BaseSpecifierDecl[] baseTypeList = new BaseSpecifierDecl[numBase];
-            isBaseReflectionClass = false;
-            inheritedFromNoxObject = false;
-            for (int i = 0, length = numBase; i < length; ++i)
-            {
-                ClangSharp.Interop.CXCursor baseCursor = cursor.GetBase((uint)i);
+        BaseSpecifierDecl[] baseTypeList = new BaseSpecifierDecl[numBase];
+        isBaseReflectionClass = false;
+        inheritedFromNoxObject = false;
+        for (int i = 0, length = numBase; i < length; ++i)
+        {
+            ClangSharp.Interop.CXCursor baseCursor = cursor.GetBase((uint)i);
 				
-                VisitCursor(baseCursor);
-                GetOrCreateTypeInfo(baseCursor.Type);
+            VisitCursor(baseCursor);
+            GetOrCreateTypeInfo(baseCursor.Type);
 
-                BaseSpecifierDecl baseSpecifierDecl = baseTypeList[i] = GetDecl< BaseSpecifierDecl>(baseCursor.Hash);
-                if (baseSpecifierDecl.PointeeDeclHash == 0)
-                {
-                    continue;
-                }
+            BaseSpecifierDecl baseSpecifierDecl = baseTypeList[i] = GetDecl< BaseSpecifierDecl>(baseCursor.Hash);
+            if (baseSpecifierDecl.PointeeDeclHash == 0)
+            {
+                continue;
+            }
 
-                DeclBase tmpBaseDecl = GetDecl(baseSpecifierDecl.GetPointeeMeta().UniqueDeclKey);
-                while (true)
+            DeclBase tmpBaseDecl = GetDecl(baseSpecifierDecl.GetPointeeMeta().UniqueDeclKey);
+            while (true)
+            {
+                if (tmpBaseDecl is RecordDecl tmpClassDecl)
                 {
-                    if (tmpBaseDecl is RecordDecl tmpClassDecl)
+                    if (tmpClassDecl.IsReflectionClass == true)
                     {
-                        if (tmpClassDecl.IsReflectionClass == true)
-                        {
-                            isBaseReflectionClass = true;
-                        }
-                        if (tmpClassDecl.IsNoxObject == true)
-                        {
-                            inheritedFromNoxObject = true;
-                        }
-                        break;
+                        isBaseReflectionClass = true;
                     }
+                    if (tmpClassDecl.IsNoxObject == true)
+                    {
+                        inheritedFromNoxObject = true;
+                    }
+                    break;
+                }
 					else if (tmpBaseDecl is TemplateTypeAliasDecl tmpTemplateTypeAliasDecl)
 					{
 						break;
@@ -3860,12 +3860,12 @@ namespace ReflectionGenerator.Parser2
 					{
 						Util.Assert(false, $"Unsupported base type declaration: {tmpBaseDecl.GetType().Name}");
 					}
-                }
             }
+        }
 			
 			
 			return baseTypeList;
-        }
+    }
 
 		private static UniqueDeclKey CreateUniqueDeclKey(in ClangSharp.Interop.CXCursor cursor)
 		{
@@ -3879,7 +3879,7 @@ namespace ReflectionGenerator.Parser2
 			return uniqueDeclKey;
 		}
 
-        private MetaInfo CreateMetaData(in ClangSharp.Interop.CXCursor cursor)
+    private MetaInfo CreateMetaData(in ClangSharp.Interop.CXCursor cursor)
 		{
 			//  ソリューションディレクトまで辿って、.vcxprojを探す
 			//  なければ、unnamedとして扱う
@@ -4001,4 +4001,3 @@ namespace ReflectionGenerator.Parser2
 		}
 		#endregion
 	}
-}

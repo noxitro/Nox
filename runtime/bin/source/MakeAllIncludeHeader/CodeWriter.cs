@@ -4,8 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MakeAllIncludeHeader
-{
+namespace MakeAllIncludeHeader;
+
 	public class CodeWriter : IDisposable
 	{
 		public enum ScopeType
@@ -191,4 +191,3 @@ namespace MakeAllIncludeHeader
 
 
 	}
-}

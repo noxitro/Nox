@@ -150,3 +150,5 @@
 
 # Local-only reference materials (copyrighted, do not commit)
 /docs/references/local/
+/runtime/bin/build/intermediate/x64/Debug/reflection_generated
+/runtime/bin/RuntimeTypeDB.dll

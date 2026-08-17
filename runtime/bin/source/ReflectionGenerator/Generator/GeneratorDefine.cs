@@ -4,12 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ReflectionGenerator.Generator
+namespace ReflectionGenerator.Generator;
+
+public static class GeneratorDefine
 {
-    public static class GeneratorDefine
-    {
-        #region 定数
-       
-        #endregion
-    }
+    #region 定数
+   
+    #endregion
 }

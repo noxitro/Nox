@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Nox.CustomTask
+namespace Nox.CustomTask;
+
+internal static class Define
 {
-	internal static class Define
-	{
 		
-	}
 }

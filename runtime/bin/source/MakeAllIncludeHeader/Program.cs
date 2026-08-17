@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Xml;
 
-namespace MakeAllIncludeHeader
-{
+namespace MakeAllIncludeHeader;
+
 	static class Entry
 	{
 		private enum ArgsCategory : byte
@@ -99,4 +99,3 @@ namespace MakeAllIncludeHeader
 			Console.WriteLine("MakeAllIncludeFile完了");
 		}
 	}
-}

@@ -1,12 +1,12 @@
 ﻿
 using System.Data;
 
-namespace ReflectionGenerator
-{
+namespace ReflectionGenerator;
+
 	/// <summary>
 	/// エントリーポイント
 	/// </summary>
-	file class Entry
+	internal static class Entry
 	{
 		#region 内部クラス定義
 		private enum ErrorCode : int
@@ -80,10 +80,10 @@ namespace ReflectionGenerator
 
 			_Max
 		}
-        #endregion
+    #endregion
 
-        #region 非公開メソッド
-		internal static int Main(string[] args)
+    #region 非公開メソッド
+		internal static int Run(string[] args)
 		{
 			return MainProcess2();
 		}
@@ -263,4 +263,3 @@ namespace ReflectionGenerator
 		}
 		#endregion
 	}
-}

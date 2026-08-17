@@ -5,8 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ReflectionGenerator
-{
+namespace ReflectionGenerator;
+
 	internal static class RuntimeTypeDBHelper
 	{
 		public static void Serialize(
@@ -287,4 +287,3 @@ namespace ReflectionGenerator
 			}
 		}
 	}
-}

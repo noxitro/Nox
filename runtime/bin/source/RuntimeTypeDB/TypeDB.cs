@@ -1,6 +1,6 @@
 ﻿
-namespace ReflectionGenerator.RuntimeTypeDB
-{
+namespace ReflectionGenerator.RuntimeTypeDB;
+
 	//	NOTE:	Enum定義関連は、ReflectionGenerator/Parser/CppParser2.csと合わせる
 
 	file static class Local
@@ -333,4 +333,3 @@ namespace ReflectionGenerator.RuntimeTypeDB
 			}
 		}
 	}
-}
