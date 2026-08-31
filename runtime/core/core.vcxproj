@@ -154,7 +154,15 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="entities.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="entity.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="entity_logic.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -199,6 +207,10 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="engine_module.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="service.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -377,7 +389,15 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="entities.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="entity.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="entity_logic.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -425,6 +445,10 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="engine_module.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="service.cpp">
       <SubType>
       </SubType>
     </ClCompile>

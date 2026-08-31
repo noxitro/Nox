@@ -10,6 +10,7 @@ namespace nox
 
 	/// @brief		アセット参照情報
 	/// @details	Editorとの同期は、この型をAssetとして扱います。Assetポインタは不可能で、AssetRefを使用してください。
+	/// @note		
 	template<std::derived_from<nox::Asset> T>
 	struct AssetRef
 	{

@@ -699,8 +699,8 @@ nox::EntityId nox::World::CreateEntity()
 		entity_record->generation.store(next_generation, std::memory_order_release);
 
 		return nox::EntityId{
-			.index = index,
 			.generation = next_generation,
+			.index = index,
 		};
 	}
 
@@ -718,8 +718,9 @@ nox::EntityId nox::World::CreateEntity()
 	entity_record->generation.store(k_initial_live_generation, std::memory_order_release);
 
 	return nox::EntityId{
-		.index = index,
 		.generation = k_initial_live_generation,
+		.index = index,
+
 	};
 }
 

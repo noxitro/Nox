@@ -21,13 +21,13 @@ namespace nox::assertion
 	}
 
 	template<std::derived_from<nox::assertion::id::ErrorId> Id, class... Args> requires(std::is_invocable_r_v<std::u16string_view, Id>)
-	inline void AssertArgs(const std::wstring_view file_name, const std::source_location location, std::u8string_view message, Args&&... args)
+	inline void AssertArgs(const std::wstring_view file_name, const std::source_location location, std::u8string_view message, const Args&... args)
 	{
 		if constexpr (sizeof...(Args) > 0)
 		{
 			//	動的メモリ確保を行わないように確保済みのバッファを使用
 			std::array<nox::char8, 5096> buffer = { 0 };
-			nox::util::Format(buffer, message.data(), std::forward<Args>(args)...);
+			nox::util::Format(buffer, message.data(), args...);
 
 			nox::assertion::detail::Assert(Id()(), buffer.data(), file_name, location);
 		}
@@ -38,13 +38,13 @@ namespace nox::assertion
 	}
 
 	template<std::derived_from<nox::assertion::id::ErrorId> Id, class... Args> requires(std::is_invocable_r_v<std::u16string_view, Id>)
-	inline void AssertArgs(const std::wstring_view file_name, const std::source_location location, std::u16string_view message, Args&&... args)
+	inline void AssertArgs(const std::wstring_view file_name, const std::source_location location, std::u16string_view message, const Args&... args)
 	{
 		if constexpr (sizeof...(Args) > 0)
 		{
 			//	動的メモリ確保を行わないように確保済みのバッファを使用
 			std::array<nox::char16, 5096> buffer = { 0 };
-			nox::util::Format(buffer, message.data(), std::forward<Args>(args)...);
+			nox::util::Format(buffer, message.data(), args...);
 
 			nox::assertion::detail::Assert(Id()(), buffer.data(), file_name, location);
 		}

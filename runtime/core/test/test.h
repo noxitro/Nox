@@ -8,4 +8,5 @@
 namespace nox::test
 {
 	void Test();
+	void TestDelegate();
 }

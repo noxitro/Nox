@@ -33,5 +33,6 @@
   <ItemGroup>
     <None Include="ipc\README.md" />
     
+    <None Include="bin\source\ReflectionGenerator\Program.cs" />
   </ItemGroup>
 </Project>

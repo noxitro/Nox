@@ -3,8 +3,9 @@
 /// @file	random.h
 /// @brief	random
 #pragma once
-#include	"basic_type.h"
 #include	<random>
+#include	"basic_type.h"
+
 namespace nox::random
 {
 	constexpr nox::uint32 k_default_seed = 5489U;

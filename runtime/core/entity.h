@@ -6,18 +6,18 @@
 
 namespace nox
 {
-	struct EntityId
+	//	64bit
+	union EntityId
 	{
-		/// @brief スロット番号
-		nox::uint32 index;
+		const nox::uint64 raw;
 
-		/// @brief 世代番号(破棄/再利用で更新され、stale handleの検出に使う)
-		nox::uint32 generation;
-	};
+		struct
+		{
+			/// @brief 世代番号(破棄/再利用で更新され、stale handleの検出に使う)
+			nox::uint32 generation : 32;
 
-	struct Entity
-	{
-		EntityId id;
-		class nox::World* world;
+			/// @brief スロット番号
+			nox::uint32 index : 32;
+		};
 	};
 }

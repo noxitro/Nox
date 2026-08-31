@@ -5,6 +5,7 @@
 #pragma once
 #include	"system_phase_type.h"
 #include	"object.h"
+#include	"entity.h"
 
 namespace nox
 {
@@ -158,6 +159,71 @@ namespace nox
 		virtual ~SystemBase()override {}
 
 	};
+
+	struct ComponentSystemBase
+	{
+	protected:
+		class ManagerBase
+		{
+
+		};
+	};
+
+	template<class... ComponentTypes>
+	struct EntityAccessor
+	{
+
+	};
+
+	template<class...>
+	struct SystemAccessor;
+
+	template<class... ComponentTypes, class... ServiceTypes>
+	struct SystemAccessor<std::tuple<ComponentTypes...>, std::tuple<ServiceTypes...>>
+	{
+
+	};
+
+	struct System0000 : public nox::SystemAccessor<
+		std::tuple<int, float>, 
+		std::tuple<int>
+	>
+	{
+
+	};
+
+
+	/// @brief SystemがアクセスするComponentの型を指定するためのテンプレートクラス
+	/// @tparam ...ComponentTypes アクセス対象components. const修飾子の有無で読み取り専用か書き込み可能かを指定する
+	template<class... ComponentTypes>
+	struct ComponentSystem : public nox::ComponentSystemBase
+	{
+	protected:
+		class Manager 
+		{
+		private:
+
+		public:
+			/// @brief		foreachでアクセスするComponentの型を指定するためのテンプレート関数
+			///				第一引数はEntityId、第二引数以降はアクセス対象のComponent左辺参照型
+			/// @details	アクセス対象外の場合はコンパイルエラーになる
+			/// @tparam _F 
+			/// @param func 
+			template<class _F> 
+				requires	std::is_void_v<std::invoke_result_t<_F, nox::EntityId, std::add_lvalue_reference_t<ComponentTypes>...>> 
+			void ForEach(_F&& func)
+			{
+
+			}
+		};
+
+		virtual void OnUpdate(Manager& manager) 
+		{
+
+		}
+	};
+
+
 
 	template<class T>
 	consteval bool StaticAssertIsSystem()noexcept
