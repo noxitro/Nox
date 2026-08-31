@@ -29,7 +29,7 @@ public sealed class EditorSmokeTests
 		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.Hierarchy.Tree"));
 		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.AssetBrowser.SearchBox"));
 		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.AssetBrowser.AssetList"));
-		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.PropertyInspector.PropertyList"));
+		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.Inspector.ComponentTree"));
 		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.Trace.LevelFilter"));
 		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.Trace.ChannelTabs"));
 		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.Trace.SearchBox"));
@@ -146,7 +146,7 @@ public sealed class EditorSmokeTests
 
 			Assert.False(editor.HasExited, $"Editor exited after applying theme '{themeName}'.");
 			Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.Hierarchy.Tree"));
-			Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.PropertyInspector.PropertyList"));
+			Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.Inspector.ComponentTree"));
 			Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.Trace.List"));
 		}
 	}
@@ -282,8 +282,16 @@ public sealed class EditorSmokeTests
 	private static void CreateRootEntityFromHierarchyContextMenu(EditorApp editor)
 	{
 		AutomationElement hierarchyTree = FindByAutomationId(editor.MainWindow, "NoxStudio.Hierarchy.Tree");
-		hierarchyTree.RightClick();
-		AutomationElement createEntity = FindDesktopByAutomationId(editor, "NoxStudio.Hierarchy.Context.CreateEntity");
+		RetryResult<AutomationElement?> result = Retry.WhileNull(
+			() =>
+			{
+				hierarchyTree.RightClick();
+				return editor.Automation.GetDesktop().FindFirstDescendant(
+					cf => cf.ByAutomationId("NoxStudio.Hierarchy.Context.CreateEntity"));
+			},
+			UiTimeout);
+		AutomationElement createEntity = result.Result ?? throw new InvalidOperationException(
+			"Hierarchy context-menu item was not shown.");
 		createEntity.Click();
 	}
 

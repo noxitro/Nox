@@ -9,4 +9,6 @@ namespace nox::test
 {
 	void Test();
 	void TestDelegate();
-}
+	void TestEntityCommandBuffer();
+	void TestEntityEcs();
+} 

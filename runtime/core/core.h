@@ -4,7 +4,6 @@
 ///	@brief	core
 #pragma once
 
-#include	"behavior.h"
 #include	"entry_point.h"
 
 #include	"scene_view.h"
@@ -14,6 +13,13 @@
 #include	"asset.h"
 #include	"asset_ref.h"
 #include	"world.h"
+#include	"component_type.h"
+#include	"entity_access.h"
+#include	"archetype.h"
+#include	"entity_query.h"
+#include	"entity_system.h"
+#include	"entity_logic.h"
+#include	"local_transform.h"
 
 //	editor_remote
 #include	"dev/remote/remote_system.g.h"

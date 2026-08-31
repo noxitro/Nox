@@ -10,34 +10,6 @@
 
 namespace nox
 {
-	template<class TupleType, typename Compare>
-	using SortedTuple = TupleType;
-
-	struct SizeLess
-	{
-		template<class T, class U>
-		constexpr bool operator()(const T&, const U&)const noexcept
-		{
-			return sizeof(T) < sizeof(U);
-		}
-	};
-
-	struct SignatureLess
-	{
-		template<class T, class U>
-		constexpr bool operator()(const T&, const U&)const noexcept
-		{
-			return nox::util::GetTypeName<T>() < nox::util::GetTypeName<U>();
-		}
-	};
-
-	inline void testFunc00()
-	{
-		SortedTuple<std::tuple<int, float, double>, SignatureLess> sortedTuple;
-	}
-	
-
-
 	namespace
 	{
 		[[nodiscard]]
@@ -62,6 +34,14 @@ namespace nox
 		constexpr nox::uint64 make_free_entity_head(nox::uint32 index, nox::uint32 version) noexcept
 		{
 			return (static_cast<nox::uint64>(version) << 32u) | static_cast<nox::uint64>(index);
+		}
+
+		[[nodiscard]]
+		constexpr nox::EntityId make_entity_id(nox::uint32 generation, nox::uint32 index) noexcept
+		{
+			return nox::EntityId{
+				(static_cast<nox::uint64>(index) << 32u) | static_cast<nox::uint64>(generation)
+			};
 		}
 
 		[[nodiscard]]
@@ -142,6 +122,13 @@ nox::World::World() :
 	enabled_vsync_(true),
 	studio_mode_(nox::os::ContainsCommandLineArgKey(u"--studio")),
 	kill_(false),
+	is_executing_system_phase_(false),
+	entity_command_buffer_(),
+	archetypes_(),
+	entity_systems_(),
+	entity_logic_storages_(),
+	entity_system_phase_table_{},
+	services_(),
 	modules_(),
 	systems_(),
 	system_map_(),
@@ -153,10 +140,33 @@ nox::World::World() :
 	}
 
 	entity_record_pages_[0].store(&first_entity_record_page_, std::memory_order_relaxed);
+
+	//	Archetypeの追加でVectorが再確保されてもポインタは動かないが、確保回数自体を減らしておく。
+	archetypes_.reserve(k_initial_archetype_capacity);
 }
 
 nox::World::~World()
 {
+	for (nox::EntityLogicStorage* const storage : entity_logic_storages_)
+	{
+		delete storage;
+	}
+
+	for (nox::EntitySystemBase* const entity_system : entity_systems_)
+	{
+		entity_system->Destroy();
+	}
+
+	for (nox::Archetype* const archetype : archetypes_)
+	{
+		delete archetype;
+	}
+
+	for (nox::uint32 service_index = 0u; service_index < services_.GetLength(); ++service_index)
+	{
+		delete services_.GetStorage()[service_index].service;
+	}
+
 	for (nox::SystemBase* const system : systems_)
 	{
 		delete system;
@@ -281,6 +291,8 @@ void nox::World::Init()
 	}
 
 	BuildExecuteNodeList(system_list);
+	CreateEntitySystems();
+	CreateEntityLogicStorages();
 
 #if !NOX_MASTER
 	TraceExecuteNodeList();
@@ -442,9 +454,114 @@ void nox::World::BuildExecuteNodeList(std::span<nox::SystemBase*> system_list)
 void nox::World::ExecutePhase(const nox::SystemPhaseType phase_type)
 {
 	const nox::Vector<ExecuteNode>& layers = system_phase_table_[nox::util::ToUnderlying(phase_type)];
+	is_executing_system_phase_.store(true, std::memory_order_release);
 	for (const ExecuteNode& layer : layers)
 	{
 		std::invoke(layer.phase.get().func, &layer.instance.get(), *this);
+	}
+
+	ExecuteEntitySystemPhase(phase_type);
+	ExecuteEntityLogicPhase(phase_type);
+
+	//	将来の並列ディスパッチでは、このplaybackポイントまでに全Systemジョブをjoinする必要がある。
+	FlushEntityCommands();
+	is_executing_system_phase_.store(false, std::memory_order_release);
+}
+
+void nox::World::CreateEntitySystems()
+{
+	for (const nox::EntitySystemTypeDescriptor* descriptor = nox::detail::GetEntitySystemTypeListHead();
+		descriptor != nullptr;
+		descriptor = descriptor->next)
+	{
+		nox::EntitySystemBase* const entity_system = descriptor->create();
+		if (entity_system == nullptr)
+		{
+			NOX_ASSERT(false, u8"EntitySystemの生成に失敗しました");
+			continue;
+		}
+
+		//	生成済みArchetypeをQueryへ反映する。以降はArchetype追加時に差分だけが通知される。
+		for (nox::Archetype* const archetype : archetypes_)
+		{
+			entity_system->GetQuery().TryAddArchetype(*archetype);
+		}
+
+		entity_systems_.push_back(entity_system);
+		entity_system_phase_table_[nox::util::ToUnderlying(descriptor->phase)].push_back(entity_system);
+	}
+}
+
+void nox::World::ExecuteEntitySystemPhase(const nox::SystemPhaseType phase_type)
+{
+	//	同一フェーズ内は、宣言(引数リスト)から導出したマスクが衝突しない限り並列実行できる。
+	//	現状は登録順の直列実行だが、依存解析の入力は既に揃っている。
+	for (nox::EntitySystemBase* const entity_system : entity_system_phase_table_[nox::util::ToUnderlying(phase_type)])
+	{
+		entity_system->Execute(*this);
+	}
+}
+
+void nox::World::CreateEntityLogicStorages()
+{
+	for (const nox::EntityLogicTypeDescriptor* descriptor = nox::detail::GetEntityLogicTypeListHead();
+		descriptor != nullptr;
+		descriptor = descriptor->next)
+	{
+#if !NOX_MASTER
+		//	更新メソッドが宣言したComponentDataは、必ず必須ComponentDataに含まれていなければならない。
+		//	含まれていないと、インスタンスが存在するのに列が引けないentityが生じる。
+		const nox::ComponentMask required_mask = descriptor->make_required_mask();
+		for (const nox::EntityLogicMethodDescriptor& method : descriptor->get_methods())
+		{
+			NOX_ASSERT(required_mask.Contains(method.make_read_write_mask()),
+				u8"EntityLogicの更新メソッドが必須ComponentDataの外を宣言しています: {0}", method.name);
+		}
+#endif // !NOX_MASTER
+
+		entity_logic_storages_.push_back(new nox::EntityLogicStorage(*descriptor));
+	}
+}
+
+void nox::World::RefreshEntityLogics(const nox::EntityId entity, const nox::Archetype* const archetype)
+{
+	for (nox::EntityLogicStorage* const storage : entity_logic_storages_)
+	{
+		const bool satisfied =
+			(archetype != nullptr) && archetype->GetMask().Contains(storage->GetDescriptor().make_required_mask());
+		if (satisfied)
+		{
+			storage->CreateInstance(*this, entity);
+		}
+		else
+		{
+			storage->DestroyInstance(entity);
+		}
+	}
+}
+
+void nox::World::ExecuteEntityLogicPhase(const nox::SystemPhaseType phase_type)
+{
+	for (nox::EntityLogicStorage* const storage : entity_logic_storages_)
+	{
+		const std::span<const nox::EntityLogicMethodDescriptor> methods = storage->GetDescriptor().get_methods();
+		for (const nox::EntityLogicMethodDescriptor& method : methods)
+		{
+			if (method.phase != phase_type)
+			{
+				continue;
+			}
+
+			for (const nox::EntityLogicStorage::Entry& entry : storage->GetEntries())
+			{
+				const auto* const entity_record = TryGetEntityRecord(entry.entity.index);
+				if (entity_record == nullptr || entity_record->archetype == nullptr)
+				{
+					continue;
+				}
+				method.invoke(entry.instance, *this, *entity_record->archetype, entity_record->location, entry.entity);
+			}
+		}
 	}
 }
 
@@ -678,6 +795,12 @@ void nox::World::PushFreeEntityIndex(nox::uint32 index) noexcept
 
 nox::EntityId nox::World::CreateEntity()
 {
+	NOX_ASSERT(is_executing_system_phase_.load(std::memory_order_acquire) == false, u8"SystemからのEntity生成はサポートされていません");
+	if (is_executing_system_phase_.load(std::memory_order_acquire))
+	{
+		return nox::EntityId{ 0u };
+	}
+
 	nox::uint32 index = TryPopFreeEntityIndex();
 	if (index != k_invalid_entity_index)
 	{
@@ -693,15 +816,12 @@ nox::EntityId nox::World::CreateEntity()
 		const nox::uint32 next_generation = current_generation + 1u;
 		NOX_ASSERT(next_generation != 0u, u8"Entity generation overflow: index={0}", index);
 
-		entity_record->row = 0u;
-		entity_record->archtype = nullptr;
+		entity_record->archetype = nullptr;
+		entity_record->location = nox::ArchetypeLocation::Invalid();
 		entity_record->next_free_index.store(k_invalid_entity_index, std::memory_order_relaxed);
 		entity_record->generation.store(next_generation, std::memory_order_release);
 
-		return nox::EntityId{
-			.generation = next_generation,
-			.index = index,
-		};
+		return make_entity_id(next_generation, index);
 	}
 
 	index = next_entity_index_.fetch_add(1u, std::memory_order_relaxed);
@@ -712,19 +832,26 @@ nox::EntityId nox::World::CreateEntity()
 	}
 
 	auto* entity_record = EnsureEntityRecord(index);
-	entity_record->row = 0u;
-	entity_record->archtype = nullptr;
+	entity_record->archetype = nullptr;
+	entity_record->location = nox::ArchetypeLocation::Invalid();
 	entity_record->next_free_index.store(k_invalid_entity_index, std::memory_order_relaxed);
 	entity_record->generation.store(k_initial_live_generation, std::memory_order_release);
 
-	return nox::EntityId{
-		.generation = k_initial_live_generation,
-		.index = index,
-
-	};
+	return make_entity_id(k_initial_live_generation, index);
 }
 
 void nox::World::DestroyEntity(nox::EntityId entity)
+{
+	NOX_ASSERT(is_executing_system_phase_.load(std::memory_order_acquire) == false, u8"SystemからのEntity破棄にはQueueDestroyEntityを使用してください");
+	if (is_executing_system_phase_.load(std::memory_order_acquire))
+	{
+		return;
+	}
+
+	DestroyEntityImmediate(entity);
+}
+
+void nox::World::DestroyEntityImmediate(const nox::EntityId entity)noexcept
 {
 	auto* entity_record = TryGetEntityRecord(entity.index);
 	if (entity_record == nullptr)
@@ -746,9 +873,53 @@ void nox::World::DestroyEntity(nox::EntityId entity)
 		return;
 	}
 
-	entity_record->row = 0u;
-	entity_record->archtype = nullptr;
+	//	ComponentDataの列から抜く。swap-removeで詰めた分だけ他entityの位置を更新する。
+	MoveEntityToArchetype(*entity_record, entity, nullptr);
 	PushFreeEntityIndex(entity.index);
+}
+
+bool nox::World::QueueDestroyEntity(const nox::EntityId entity)noexcept
+{
+	NOX_ASSERT(is_executing_system_phase_.load(std::memory_order_acquire), u8"QueueDestroyEntityはSystem実行中のみ使用できます");
+	if (is_executing_system_phase_.load(std::memory_order_acquire) == false)
+	{
+		return false;
+	}
+
+	const bool queued = entity_command_buffer_.TryDestroy(entity);
+	NOX_ASSERT(queued, u8"EntityCommandBuffer capacity exceeded: {0}", k_entity_command_capacity);
+	if (queued == false)
+	{
+		std::abort();
+	}
+	return queued;
+}
+
+void nox::World::FlushEntityCommands()noexcept
+{
+	entity_command_buffer_.BeginPlayback();
+	nox::uint32 command_index = 0u;
+	while (command_index < entity_command_buffer_.GetLength())
+	{
+		nox::EntityCommand command{};
+		const bool ready = entity_command_buffer_.TryGet(command_index++, command);
+		NOX_ASSERT(ready, u8"EntityCommandBuffer command was not published");
+		if (ready == false)
+		{
+			std::abort();
+		}
+
+		switch (command.type)
+		{
+		case nox::EntityCommandType::Destroy:
+			DestroyEntityImmediate(nox::EntityId{ command.entity_raw });
+			break;
+		default:
+			NOX_ASSERT(false, u8"Unknown entity command");
+			break;
+		}
+	}
+	entity_command_buffer_.Clear();
 }
 
 bool nox::World::IsAlive(nox::EntityId entity)const noexcept
@@ -763,8 +934,255 @@ bool nox::World::IsAlive(nox::EntityId entity)const noexcept
 	return is_live_generation(current_generation) && (current_generation == entity.generation);
 }
 
-nox::IComponentData* nox::World::CreateComponent(nox::EntityId entity, const nox::reflection::Type& type)
+#pragma region ComponentData
+
+void* nox::World::AddComponent(const nox::EntityId entity, const nox::ComponentTypeInfo& type_info)
 {
-	NOX_ASSERT(false, u8"World::CreateComponent is not implemented. entity_index={0}, type={1}", entity.index, type.GetTypeName());
+	NOX_ASSERT(is_executing_system_phase_.load(std::memory_order_acquire) == false,
+		u8"System実行中の構造変更はサポートされていません");
+	if (is_executing_system_phase_.load(std::memory_order_acquire))
+	{
+		return nullptr;
+	}
+
+	auto* const entity_record = TryGetEntityRecord(entity.index);
+	if (entity_record == nullptr || entity_record->generation.load(std::memory_order_acquire) != entity.generation)
+	{
+		NOX_ASSERT(false, u8"破棄済みのentityにComponentDataを追加しようとしました: index={0}", entity.index);
+		return nullptr;
+	}
+
+	nox::ComponentMask mask = (entity_record->archetype != nullptr) ? entity_record->archetype->GetMask() : nox::ComponentMask{};
+	if (mask.Test(type_info.index) == false)
+	{
+		mask.Set(type_info.index);
+		MoveEntityToArchetype(*entity_record, entity, &GetOrCreateArchetype(mask));
+	}
+
+	void* const column = entity_record->archetype->TryGetComponentArray(entity_record->location.chunk_index, type_info.index);
+	if (column == nullptr)
+	{
+		return nullptr;
+	}
+	return static_cast<nox::uint8*>(column) + static_cast<size_t>(entity_record->location.row) * type_info.size;
+}
+
+void nox::World::RemoveComponent(const nox::EntityId entity, const nox::ComponentTypeInfo& type_info)
+{
+	NOX_ASSERT(is_executing_system_phase_.load(std::memory_order_acquire) == false,
+		u8"System実行中の構造変更はサポートされていません");
+	if (is_executing_system_phase_.load(std::memory_order_acquire))
+	{
+		return;
+	}
+
+	auto* const entity_record = TryGetEntityRecord(entity.index);
+	if (entity_record == nullptr ||
+		entity_record->generation.load(std::memory_order_acquire) != entity.generation ||
+		entity_record->archetype == nullptr)
+	{
+		return;
+	}
+
+	nox::ComponentMask mask = entity_record->archetype->GetMask();
+	if (mask.Test(type_info.index) == false)
+	{
+		return;
+	}
+
+	mask.Reset(type_info.index);
+	MoveEntityToArchetype(*entity_record, entity, mask.IsEmpty() ? nullptr : &GetOrCreateArchetype(mask));
+}
+
+void* nox::World::TryGetComponent(const nox::EntityId entity, const nox::ComponentTypeIndex type_index)noexcept
+{
+	const auto* const entity_record = TryGetEntityRecord(entity.index);
+	if (entity_record == nullptr ||
+		entity_record->generation.load(std::memory_order_acquire) != entity.generation ||
+		entity_record->archetype == nullptr)
+	{
+		return nullptr;
+	}
+
+	void* const column = entity_record->archetype->TryGetComponentArray(entity_record->location.chunk_index, type_index);
+	if (column == nullptr)
+	{
+		return nullptr;
+	}
+
+	const nox::ComponentTypeInfo* const type_info = nox::detail::TryGetComponentTypeInfo(type_index);
+	NOX_ASSERT(type_info != nullptr, u8"未登録のComponentTypeIndexが指定されました");
+	if (type_info == nullptr)
+	{
+		return nullptr;
+	}
+	return static_cast<nox::uint8*>(column) + static_cast<size_t>(entity_record->location.row) * type_info->size;
+}
+
+bool nox::World::HasComponent(const nox::EntityId entity, const nox::ComponentTypeIndex type_index)const noexcept
+{
+	const auto* const entity_record = TryGetEntityRecord(entity.index);
+	if (entity_record == nullptr ||
+		entity_record->generation.load(std::memory_order_acquire) != entity.generation ||
+		entity_record->archetype == nullptr)
+	{
+		return false;
+	}
+	return entity_record->archetype->GetMask().Test(type_index);
+}
+
+#pragma endregion
+
+#pragma region Archetype
+
+nox::Archetype* nox::World::TryFindArchetype(const nox::ComponentMask& mask)const noexcept
+{
+	for (nox::Archetype* const archetype : archetypes_)
+	{
+		if (archetype->GetMask() == mask)
+		{
+			return archetype;
+		}
+	}
 	return nullptr;
 }
+
+nox::Archetype& nox::World::GetOrCreateArchetype(const nox::ComponentMask& mask)
+{
+	if (nox::Archetype* const found = TryFindArchetype(mask); found != nullptr)
+	{
+		return *found;
+	}
+
+	nox::FixedVector<const nox::ComponentTypeInfo*, nox::k_max_component_type_per_archetype> type_list;
+	for (nox::uint32 raw_type_index = 0u; raw_type_index < nox::k_max_component_type_count; ++raw_type_index)
+	{
+		const auto type_index = static_cast<nox::ComponentTypeIndex>(raw_type_index);
+		if (mask.Test(type_index) == false)
+		{
+			continue;
+		}
+
+		const nox::ComponentTypeInfo* const type_info = nox::detail::TryGetComponentTypeInfo(type_index);
+		NOX_ASSERT(type_info != nullptr, u8"未登録のComponentTypeIndexがマスクに含まれています: {0}", raw_type_index);
+		if (type_info != nullptr)
+		{
+			type_list.PushBack(type_info);
+		}
+	}
+
+	auto* const archetype = new nox::Archetype(
+		mask,
+		std::span(type_list.GetStorage().data(), type_list.GetLength()));
+	archetypes_.push_back(archetype);
+
+	//	既存のQueryへ即座に通知する。以降このArchetypeの照合は二度と走らない。
+	for (nox::EntitySystemBase* const entity_system : entity_systems_)
+	{
+		entity_system->GetQuery().TryAddArchetype(*archetype);
+	}
+	return *archetype;
+}
+
+void nox::World::MoveEntityToArchetype(nox::World::EntityRecord& entity_record, const nox::EntityId entity, nox::Archetype* const destination)
+{
+	nox::Archetype* const source = entity_record.archetype;
+	if (source == destination)
+	{
+		return;
+	}
+
+	nox::ArchetypeLocation destination_location = nox::ArchetypeLocation::Invalid();
+	if (destination != nullptr)
+	{
+		destination_location = destination->AddEntity(entity);
+		if (source != nullptr)
+		{
+			source->CopySharedComponents(entity_record.location, *destination, destination_location);
+		}
+	}
+
+	if (source != nullptr)
+	{
+		const nox::EntityId moved_entity = source->RemoveEntity(entity_record.location);
+		if (moved_entity.raw != 0ull)
+		{
+			PatchMovedEntityLocation(moved_entity, entity_record.location);
+		}
+	}
+
+	entity_record.archetype = destination;
+	entity_record.location = destination_location;
+
+	//	構造変更フック。宣言したComponentDataが揃った/欠けたEntityLogicを追従させる。
+	RefreshEntityLogics(entity, destination);
+}
+
+void nox::World::PatchMovedEntityLocation(const nox::EntityId moved_entity, const nox::ArchetypeLocation location)noexcept
+{
+	auto* const moved_record = TryGetEntityRecord(moved_entity.index);
+	NOX_ASSERT(moved_record != nullptr, u8"swap-removeで移動したentityのレコードが見つかりません");
+	if (moved_record != nullptr)
+	{
+		moved_record->location = location;
+	}
+}
+
+nox::Archetype* nox::World::TryGetArchetype(const nox::EntityId entity)const noexcept
+{
+	const auto* const entity_record = TryGetEntityRecord(entity.index);
+	if (entity_record == nullptr || entity_record->generation.load(std::memory_order_acquire) != entity.generation)
+	{
+		return nullptr;
+	}
+	return entity_record->archetype;
+}
+
+nox::ArchetypeLocation nox::World::GetArchetypeLocation(const nox::EntityId entity)const noexcept
+{
+	const auto* const entity_record = TryGetEntityRecord(entity.index);
+	if (entity_record == nullptr || entity_record->generation.load(std::memory_order_acquire) != entity.generation)
+	{
+		return nox::ArchetypeLocation::Invalid();
+	}
+	return entity_record->location;
+}
+
+void nox::World::BuildQuery(nox::EntityQuery& query, const nox::ComponentMask& required_mask)
+{
+	query.Reset(required_mask);
+	for (nox::Archetype* const archetype : archetypes_)
+	{
+		query.TryAddArchetype(*archetype);
+	}
+}
+
+#pragma endregion
+
+#pragma region Service
+
+void nox::World::RegisterService(const nox::reflection::Type& type, nox::Service& service)
+{
+	NOX_ASSERT(TryGetService(type) == nullptr, u8"Serviceが二重に登録されました: {0}", type.GetTypeName());
+	services_.PushBack(nox::World::ServiceEntry{ .type = &type, .service = &service });
+}
+
+nox::Service* nox::World::TryGetService(const nox::reflection::Type& type)const noexcept
+{
+	for (nox::uint32 service_index = 0u; service_index < services_.GetLength(); ++service_index)
+	{
+		const nox::World::ServiceEntry& entry = services_.GetStorage()[service_index];
+		if (entry.type == &type)
+		{
+			return entry.service;
+		}
+	}
+	return nullptr;
+}
+
+nox::Service* nox::detail::TryGetServiceOfWorld(nox::World& world, const nox::reflection::Type& type)noexcept
+{
+	return world.TryGetService(type);
+}
+
+#pragma endregion

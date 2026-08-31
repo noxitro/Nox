@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 
 namespace Core;
 
@@ -11,7 +12,7 @@ public sealed class SceneHierarchyManager : EngineSystem
 	{
 		private const string DefaultSceneName = "Main Scene";
 		private const string SceneFileExtension = ".noxscene";
-		private const string TransformRuntimeFqn = "nox::Transform";
+		private const string TransformRuntimeFqn = "nox::LocalTransform";
 
 		#region 公開フィールド
 		public static readonly SystemPhaseInit<SceneHierarchyManager> InitPhase = new(nameof(InitializeDefaultScene), static engineSystem => engineSystem.InitializeDefaultScene());
@@ -20,7 +21,13 @@ public sealed class SceneHierarchyManager : EngineSystem
 
 		#region 非公開フィールド
 		private readonly List<SceneHierarchyNode> _RootNodeList = new();
+		private readonly Lock _StructuralChangeLock = new();
+		private readonly List<StructuralChange> _StructuralChanges = new();
+		private readonly SynchronizationContext? _OwnerSynchronizationContext = SynchronizationContext.Current;
+		private readonly int _OwnerThreadId = Environment.CurrentManagedThreadId;
 		private EventHandler? _Changed;
+		private int _StructuralChangeBatchDepth;
+		private bool _IsFlushingStructuralChanges;
 		#endregion
 
 		#region 公開プロパティ
@@ -67,8 +74,9 @@ public sealed class SceneHierarchyManager : EngineSystem
 				parent.AddChild(node);
 			}
 
-			SyncRuntimeObject(node);
+			QueueSyncRuntimeObject(node);
 			EnsureDefaultComponents(node);
+			FlushStructuralChangesIfReady();
 			_Changed?.Invoke(this, EventArgs.Empty);
 			return node;
 		}
@@ -94,10 +102,11 @@ public sealed class SceneHierarchyManager : EngineSystem
 			{
 				if (syncRuntime)
 				{
-					SendDestroyEntityNodeQueryRecursive(node);
+					QueueStructuralChange(StructuralChange.Destroy(node));
 				}
 
-				UnregisterRemoteObjectRecursive(node);
+				QueueStructuralChange(StructuralChange.Unregister(node));
+				FlushStructuralChangesIfReady();
 				_Changed?.Invoke(this, EventArgs.Empty);
 			}
 
@@ -106,6 +115,11 @@ public sealed class SceneHierarchyManager : EngineSystem
 
 		public bool RemoveByRemoteInstanceId(long remoteInstanceId, bool syncRuntime)
 		{
+			if (TryPostRemoveByRemoteInstanceId(remoteInstanceId, syncRuntime, out bool removed))
+			{
+				return removed;
+			}
+
 			if (remoteInstanceId == 0)
 			{
 				return false;
@@ -125,7 +139,8 @@ public sealed class SceneHierarchyManager : EngineSystem
 			node.Name = name;
 			if (node.Kind != SceneHierarchyNodeKind.SceneNode)
 			{
-				SyncRuntimeObject(node);
+				QueueSyncRuntimeObject(node);
+				FlushStructuralChangesIfReady();
 			}
 			_Changed?.Invoke(this, EventArgs.Empty);
 		}
@@ -150,9 +165,10 @@ public sealed class SceneHierarchyManager : EngineSystem
 				return null;
 			}
 
-			SyncRuntimeObject(node);
-			SendAddComponentQuery(node, component);
 			node.AddComponent(component);
+			QueueSyncRuntimeObject(node);
+			QueueStructuralChange(StructuralChange.AddComponent(node, component));
+			FlushStructuralChangesIfReady();
 			_Changed?.Invoke(this, EventArgs.Empty);
 			return component;
 		}
@@ -191,16 +207,45 @@ public sealed class SceneHierarchyManager : EngineSystem
 
 		public void Clear()
 		{
+			lock (_StructuralChangeLock)
+			{
+				if (_StructuralChangeBatchDepth != 0)
+				{
+					throw new InvalidOperationException("Cannot clear a scene while a structural change batch is active.");
+				}
+
+				_StructuralChanges.Clear();
+			}
+
 			_RootNodeList.Clear();
 			_Changed?.Invoke(this, EventArgs.Empty);
 		}
 
 		public void SyncRuntimeObjects()
 		{
+			if (TryPostToOwnerContext(SyncRuntimeObjects))
+			{
+				return;
+			}
+
+			using StructuralChangeBatch _ = BeginStructuralChangeBatch();
 			foreach (SceneHierarchyNode node in SceneNodes)
 			{
-				SyncRuntimeObjectRecursive(node);
+				QueueSyncRuntimeObjectRecursive(node);
 			}
+		}
+
+		/// <summary>
+		/// Groups structural ECS changes so their remote representation is emitted at one safe point.
+		/// Nested batches flush only when the outermost scope completes.
+		/// </summary>
+		public StructuralChangeBatch BeginStructuralChangeBatch()
+		{
+			lock (_StructuralChangeLock)
+			{
+				++_StructuralChangeBatchDepth;
+			}
+			return new StructuralChangeBatch(this);
 		}
 
 		private SceneHierarchyNode EnsureSceneRoot()
@@ -234,13 +279,21 @@ public sealed class SceneHierarchyManager : EngineSystem
 			return scene;
 		}
 
-		private static void SyncRuntimeObjectRecursive(SceneHierarchyNode node)
+		private void QueueSyncRuntimeObjectRecursive(SceneHierarchyNode node)
 		{
-			SyncRuntimeObject(node);
+			QueueSyncRuntimeObject(node);
 			EnsureDefaultComponents(node);
 			foreach (SceneHierarchyNode child in node.Children)
 			{
-				SyncRuntimeObjectRecursive(child);
+				QueueSyncRuntimeObjectRecursive(child);
+			}
+		}
+
+		private void QueueSyncRuntimeObject(SceneHierarchyNode node)
+		{
+			if (node.Kind != SceneHierarchyNodeKind.SceneNode)
+			{
+				QueueStructuralChange(StructuralChange.Sync(node));
 			}
 		}
 
@@ -280,7 +333,7 @@ public sealed class SceneHierarchyManager : EngineSystem
 			remoteObject.Sync(remoteClient, Core.Net.SyncMode.TwoWay);
 		}
 
-		private static void EnsureDefaultComponents(SceneHierarchyNode node)
+		private void EnsureDefaultComponents(SceneHierarchyNode node)
 		{
 			if (node.Kind == SceneHierarchyNodeKind.SceneNode || node.HasComponent(TransformRuntimeFqn))
 			{
@@ -294,8 +347,8 @@ public sealed class SceneHierarchyManager : EngineSystem
 				return;
 			}
 
-			SendAddComponentQuery(node, transform);
 			node.AddComponent(transform);
+			QueueStructuralChange(StructuralChange.AddComponent(node, transform));
 		}
 
 		private static void SendAddComponentQuery(SceneHierarchyNode node, RuntimeObject component)
@@ -399,8 +452,193 @@ public sealed class SceneHierarchyManager : EngineSystem
 				Id = node.Id,
 				Name = node.Name,
 				Kind = node.Kind,
+				ComponentRuntimeFqns = node.Components.Select(static component => component.RuntimeFqn).ToArray(),
 				Children = node.Children.Select(CreateSceneNodeData).ToArray(),
 			};
+		}
+
+		private void QueueStructuralChange(StructuralChange change)
+		{
+			lock (_StructuralChangeLock)
+			{
+				_StructuralChanges.Add(change);
+			}
+		}
+
+		private void FlushStructuralChangesIfReady()
+		{
+			lock (_StructuralChangeLock)
+			{
+				if (_StructuralChangeBatchDepth != 0)
+				{
+					return;
+				}
+			}
+
+			FlushStructuralChanges();
+		}
+
+		private void FlushStructuralChanges()
+		{
+			lock (_StructuralChangeLock)
+			{
+				if (_StructuralChangeBatchDepth != 0 || _IsFlushingStructuralChanges)
+				{
+					return;
+				}
+
+				_IsFlushingStructuralChanges = true;
+			}
+
+			try
+			{
+				while (true)
+				{
+					StructuralChange[] changes;
+					lock (_StructuralChangeLock)
+					{
+						if (_StructuralChanges.Count == 0)
+						{
+							return;
+						}
+
+						changes = _StructuralChanges.ToArray();
+						_StructuralChanges.Clear();
+					}
+
+					for (int index = 0; index < changes.Length; ++index)
+					{
+						try
+						{
+							ExecuteStructuralChange(changes[index]);
+						}
+						catch (Exception ex)
+						{
+							Nox.LogTrace.ErrorLine<Core.LogId.RuntimeRemote>(
+								"Structural change failed and was discarded. kind:{0} node:{1} error:{2}",
+								changes[index].Kind,
+								changes[index].Node.Name,
+								ex);
+						}
+					}
+				}
+			}
+			finally
+			{
+				lock (_StructuralChangeLock)
+				{
+					_IsFlushingStructuralChanges = false;
+				}
+			}
+		}
+
+		private static void ExecuteStructuralChange(StructuralChange change)
+		{
+			switch (change.Kind)
+			{
+				case StructuralChangeKind.Sync:
+					SyncRuntimeObject(change.Node);
+					break;
+				case StructuralChangeKind.AddComponent:
+					SendAddComponentQuery(change.Node, change.Component!);
+					break;
+				case StructuralChangeKind.Destroy:
+					SendDestroyEntityNodeQueryRecursive(change.Node);
+					break;
+				case StructuralChangeKind.Unregister:
+					UnregisterRemoteObjectRecursive(change.Node);
+					break;
+				default:
+					throw new InvalidOperationException($"Unknown structural change: {change.Kind}");
+			}
+		}
+
+		private void EndStructuralChangeBatch()
+		{
+			lock (_StructuralChangeLock)
+			{
+				if (_StructuralChangeBatchDepth <= 0)
+				{
+					throw new InvalidOperationException("Structural change batch underflow.");
+				}
+
+				--_StructuralChangeBatchDepth;
+			}
+
+			FlushStructuralChangesIfReady();
+		}
+
+		private bool TryPostToOwnerContext(Action callback)
+		{
+			if (Environment.CurrentManagedThreadId == _OwnerThreadId)
+			{
+				return false;
+			}
+
+			if (_OwnerSynchronizationContext == null)
+			{
+				throw new InvalidOperationException("Scene hierarchy was created without an owner synchronization context.");
+			}
+
+			_OwnerSynchronizationContext.Post(static state => ((Action)state!).Invoke(), callback);
+			return true;
+		}
+
+		private bool TryPostRemoveByRemoteInstanceId(long remoteInstanceId, bool syncRuntime, out bool result)
+		{
+			if (Environment.CurrentManagedThreadId == _OwnerThreadId)
+			{
+				result = false;
+				return false;
+			}
+
+			if (_OwnerSynchronizationContext == null)
+			{
+				throw new InvalidOperationException("Scene hierarchy was created without an owner synchronization context.");
+			}
+
+			_OwnerSynchronizationContext.Post(static state =>
+			{
+				(SceneHierarchyManager owner, long remoteInstanceId, bool syncRuntime) = ((SceneHierarchyManager, long, bool))state!;
+				owner.RemoveByRemoteInstanceId(remoteInstanceId, syncRuntime);
+			}, (this, remoteInstanceId, syncRuntime));
+			result = true;
+			return true;
+		}
+
+		public sealed class StructuralChangeBatch : IDisposable
+		{
+			private SceneHierarchyManager? _Owner;
+
+			internal StructuralChangeBatch(SceneHierarchyManager owner)
+			{
+				_Owner = owner;
+			}
+
+			public void Dispose()
+			{
+				SceneHierarchyManager? owner = Interlocked.Exchange(ref _Owner, null);
+				owner?.EndStructuralChangeBatch();
+			}
+		}
+
+		private enum StructuralChangeKind : byte
+		{
+			Sync,
+			AddComponent,
+			Destroy,
+			Unregister,
+		}
+
+		private readonly record struct StructuralChange(
+			StructuralChangeKind Kind,
+			SceneHierarchyNode Node,
+			RuntimeObject? Component)
+		{
+			public static StructuralChange Sync(SceneHierarchyNode node) => new(StructuralChangeKind.Sync, node, null);
+			public static StructuralChange AddComponent(SceneHierarchyNode node, RuntimeObject component) => new(StructuralChangeKind.AddComponent, node, component);
+			public static StructuralChange Destroy(SceneHierarchyNode node) => new(StructuralChangeKind.Destroy, node, null);
+			public static StructuralChange Unregister(SceneHierarchyNode node) => new(StructuralChangeKind.Unregister, node, null);
 		}
 
 		private static JsonSerializerOptions CreateSceneJsonOptions()
@@ -436,6 +674,7 @@ public sealed class SceneHierarchyManager : EngineSystem
 			public Guid Id { get; init; }
 			public required string Name { get; init; }
 			public SceneHierarchyNodeKind Kind { get; init; }
+			public required string[] ComponentRuntimeFqns { get; init; }
 			public required SceneNodeData[] Children { get; init; }
 		}
 

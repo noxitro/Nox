@@ -7,7 +7,7 @@
 
 namespace nox
 {
-	struct LocalTransform : IComponentData
+	struct NOX_ATTR_TYPE(nox::reflection::attr::Reflection()) LocalTransform : IComponentData
 	{
 		nox::Position position;
 		nox::Quat rotation;

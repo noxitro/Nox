@@ -47,14 +47,6 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="behavior.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="behavior_manager.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
     <ClInclude Include="builtin_entities.h">
       <SubType>
       </SubType>
@@ -155,6 +147,30 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="entities.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="entity_command_buffer.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="archetype.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="entity_access.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="component_type.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="entity_query.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="entity_system.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -288,14 +304,6 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="behavior.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="behavior_manager.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
     <ClCompile Include="builtin_entities.cpp">
       <SubType>
       </SubType>
@@ -393,7 +401,27 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="test\entity_command_buffer_test.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="test\entity_ecs_test.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="entity.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="archetype.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="component_type.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="entity_system.cpp">
       <SubType>
       </SubType>
     </ClCompile>

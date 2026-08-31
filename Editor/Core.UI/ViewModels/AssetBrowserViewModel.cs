@@ -427,6 +427,11 @@ namespace Core.UI.ViewModels;
 
 		private bool IsInSelectedFolder(Core.ProjectAsset asset)
 		{
+			if (string.IsNullOrWhiteSpace(SearchKeyword) == false)
+			{
+				return true;
+			}
+
 			string selectedPath = SelectedTreeNode?.RelativePath ?? string.Empty;
 			return string.Equals(GetParentRelativePath(asset.RelativePath), selectedPath, StringComparison.OrdinalIgnoreCase);
 		}

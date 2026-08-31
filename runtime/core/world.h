@@ -5,6 +5,11 @@
 #pragma once
 #include	"system.h"
 #include	"entity.h"
+#include	"entity_command_buffer.h"
+#include	"archetype.h"
+#include	"entity_system.h"
+#include	"entity_logic.h"
+#include	"service.h"
 
 namespace nox
 {
@@ -16,8 +21,6 @@ namespace nox
 	class World final: public nox::Object
 	{
 		NOX_DECLARE_OBJECT(World, nox::Object);
-	public:
-		struct Archtype {};
 	private:
 		static constexpr nox::uint32 k_entity_record_page_shift = 10u;
 		static constexpr nox::uint32 k_entity_record_page_size = 1u << k_entity_record_page_shift;
@@ -26,6 +29,9 @@ namespace nox
 		static constexpr nox::uint32 k_max_entity_count = k_entity_record_page_size * k_max_entity_page_count;
 		static constexpr nox::uint32 k_invalid_entity_index = std::numeric_limits<nox::uint32>::max();
 		static constexpr nox::uint32 k_initial_live_generation = 1u;
+		static constexpr nox::uint32 k_entity_command_capacity = 1024u;
+		static constexpr nox::uint32 k_max_service_count = 64u;
+		static constexpr nox::uint32 k_initial_archetype_capacity = 64u;
 
 		/// @brief 実行ノード
 		struct ExecuteNode
@@ -39,16 +45,23 @@ namespace nox
 		{
 			nox::Atomic<nox::uint32> generation;
 			nox::Atomic<nox::uint32> next_free_index;
-			nox::uint32 row;
-			nox::World::Archtype* archtype;
+			/// @brief 所属Archetype。ComponentDataを1つも持たない間はnullptr。
+			nox::Archetype* archetype;
+			nox::ArchetypeLocation location;
 
 			EntityRecord() noexcept :
 				generation(0u),
 				next_free_index(k_invalid_entity_index),
-				row(0u),
-				archtype(nullptr)
+				archetype(nullptr),
+				location(nox::ArchetypeLocation::Invalid())
 			{
 			}
+		};
+
+		struct ServiceEntry
+		{
+			const nox::reflection::Type* type;
+			nox::Service* service;
 		};
 
 		struct EntityRecordPage
@@ -91,27 +104,70 @@ namespace nox
 
 		nox::EntityId CreateEntity();
 		void DestroyEntity(nox::EntityId entity);
+		[[nodiscard]] bool QueueDestroyEntity(nox::EntityId entity)noexcept;
 		bool IsAlive(nox::EntityId entity)const noexcept;
 
-		nox::IComponentData* CreateComponent(nox::EntityId entity, const nox::reflection::Type& type);
-
-		template<std::derived_from<nox::IComponentData> T>
-		T* CreateComponent(nox::EntityId entity)
+#pragma region ComponentData
+		/// @brief ComponentDataを追加する。Archetype間の移動を伴うため列挙中・System実行中は呼べない。
+		/// @return 追加された(既に持っていた場合は既存の)ComponentDataへのポインタ。
+		template<class T>
+			requires(nox::IsComponentDataType<T>())
+		T* AddComponent(const nox::EntityId entity)
 		{
-			return static_cast<T*>(CreateComponent(entity, nox::reflection::Typeof<T>()));
-		}
-
-		template<class _F>
-		void Each(_F&& func)
-		{
-
+			return static_cast<T*>(AddComponent(entity, nox::ComponentTypeOf<T>()));
 		}
 
 		template<class T>
-		void SetResource() {}
+			requires(nox::IsComponentDataType<T>())
+		void RemoveComponent(const nox::EntityId entity)
+		{
+			RemoveComponent(entity, nox::ComponentTypeOf<T>());
+		}
 
 		template<class T>
-		T* TryGetResource()const { return nullptr; }
+			requires(nox::IsComponentDataType<T>())
+		[[nodiscard]] T* TryGetComponent(const nox::EntityId entity)noexcept
+		{
+			return static_cast<T*>(TryGetComponent(entity, nox::ComponentTypeIndexOf<T>()));
+		}
+
+		template<class T>
+			requires(nox::IsComponentDataType<T>())
+		[[nodiscard]] bool HasComponent(const nox::EntityId entity)const noexcept
+		{
+			return HasComponent(entity, nox::ComponentTypeIndexOf<T>());
+		}
+
+		void* AddComponent(nox::EntityId entity, const nox::ComponentTypeInfo& type_info);
+		void RemoveComponent(nox::EntityId entity, const nox::ComponentTypeInfo& type_info);
+		[[nodiscard]] void* TryGetComponent(nox::EntityId entity, nox::ComponentTypeIndex type_index)noexcept;
+		[[nodiscard]] bool HasComponent(nox::EntityId entity, nox::ComponentTypeIndex type_index)const noexcept;
+#pragma endregion
+
+#pragma region Service
+		/// @brief Serviceを登録する。所有権はWorldに移り、World破棄時に解放される。
+		void RegisterService(const nox::reflection::Type& type, nox::Service& service);
+
+		template<std::derived_from<nox::Service> T>
+		void RegisterService(T& service) { RegisterService(nox::reflection::Typeof<T>(), service); }
+
+		[[nodiscard]] nox::Service* TryGetService(const nox::reflection::Type& type)const noexcept;
+
+		template<std::derived_from<nox::Service> T>
+		[[nodiscard]] T* TryGetService()const noexcept
+		{
+			return static_cast<T*>(TryGetService(nox::reflection::Typeof<T>()));
+		}
+#pragma endregion
+
+		/// @brief 指定したComponentDataを全て持つArchetypeにマッチするQueryを構築する。
+		void BuildQuery(nox::EntityQuery& query, const nox::ComponentMask& required_mask);
+
+		/// @brief entityが所属するArchetype。ComponentDataを1つも持たない場合はnullptr。
+		[[nodiscard]] nox::Archetype* TryGetArchetype(nox::EntityId entity)const noexcept;
+
+		/// @brief entityのArchetype内での位置。所属していない場合はInvalid。
+		[[nodiscard]] nox::ArchetypeLocation GetArchetypeLocation(nox::EntityId entity)const noexcept;
 
 	private:
 		void Init();
@@ -120,6 +176,22 @@ namespace nox
 		void BuildExecuteNodeList(std::span<nox::SystemBase*> system_list);
 		void ExecutePhase(const nox::SystemPhaseType phase_type);
 		void RegisterSystem(nox::SystemBase& system);
+		void FlushEntityCommands()noexcept;
+		void DestroyEntityImmediate(nox::EntityId entity)noexcept;
+
+		void CreateEntitySystems();
+		void ExecuteEntitySystemPhase(nox::SystemPhaseType phase_type);
+		void CreateEntityLogicStorages();
+		void ExecuteEntityLogicPhase(nox::SystemPhaseType phase_type);
+		/// @brief entityのComponentData構成が変わったので、EntityLogicの生成/破棄を追従させる。
+		void RefreshEntityLogics(nox::EntityId entity, const nox::Archetype* archetype);
+
+		[[nodiscard]] nox::Archetype& GetOrCreateArchetype(const nox::ComponentMask& mask);
+		[[nodiscard]] nox::Archetype* TryFindArchetype(const nox::ComponentMask& mask)const noexcept;
+		/// @brief entityを別のArchetypeへ移す。共通のComponentDataだけが引き継がれる。
+		void MoveEntityToArchetype(nox::World::EntityRecord& entity_record, nox::EntityId entity, nox::Archetype* destination);
+		/// @brief swap-removeで移動してきたentityの位置情報を更新する。
+		void PatchMovedEntityLocation(nox::EntityId moved_entity, nox::ArchetypeLocation location)noexcept;
 
 #if !NOX_MASTER
 		void TraceExecuteNodeList()const;
@@ -165,6 +237,23 @@ namespace nox
 
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
 		std::atomic_bool kill_;
+		std::atomic_bool is_executing_system_phase_;
+		nox::EntityCommandBuffer<k_entity_command_capacity> entity_command_buffer_;
+
+		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
+		nox::Vector<nox::Archetype*> archetypes_;
+
+		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
+		nox::Vector<nox::EntitySystemBase*> entity_systems_;
+
+		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
+		nox::Vector<nox::EntityLogicStorage*> entity_logic_storages_;
+
+		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
+		std::array<nox::Vector<nox::EntitySystemBase*>, nox::util::ToUnderlying(nox::SystemPhaseType::_Max)> entity_system_phase_table_;
+
+		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
+		nox::FixedVector<nox::World::ServiceEntry, k_max_service_count> services_;
 
 		nox::Vector<nox::EngineModule*> modules_;
 		nox::Vector<nox::SystemBase*> systems_;

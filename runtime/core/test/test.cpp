@@ -11,4 +11,6 @@ void nox::test::Test()
 {
 	nox::test::TestReflection();
 	nox::test::TestDelegate();
+	nox::test::TestEntityCommandBuffer();
+	nox::test::TestEntityEcs();
 }
