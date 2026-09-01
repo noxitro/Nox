@@ -542,6 +542,31 @@ namespace ReflectionGenerator.Parser2;
 
 			return sb.ToString();
 		}
+
+		private static uint _DeclIdCount = 0;
+		private static readonly Dictionary<ClangSharp.Interop.CXCursor, uint> _DeclIdDict = new(CxCursorHashFirstComparer.Instance);
+
+		/// <summary>
+		/// 宣言を一意に識別するIDを取得する
+		/// </summary>
+		/// <remarks>
+		///	NOTE:	CXCursor.Hash(clang_hashCursor)はDecl*のポインタ値から算出されるため
+		///			実行ごとに値が変わり、32bit空間では実行ごとに異なるハッシュ衝突が起きる。
+		///			衝突すると別々の宣言が同じキーに潰れて親子関係が壊れるので、
+		///			カーソルの同一性(clang_equalCursors)で引いた通し番号をキーとして使う。
+		///			採番は解析の走査順なので実行間で安定する。
+		/// </remarks>
+		public static uint GetDeclId(this in ClangSharp.Interop.CXCursor cursor)
+		{
+			if (_DeclIdDict.TryGetValue(cursor, out uint id) == true)
+			{
+				return id;
+			}
+
+			id = ++_DeclIdCount;
+			_DeclIdDict.Add(cursor, id);
+			return id;
+		}
 #if DEBUG
 		private static uint _HashCount = 0;
 		private static readonly Dictionary<uint, uint> _DebugHashSet = new();
@@ -561,6 +586,26 @@ namespace ReflectionGenerator.Parser2;
 			return hash;
 		}
 #endif
+	}
+
+	file sealed class CxCursorHashFirstComparer : System.Collections.Generic.IEqualityComparer<ClangSharp.Interop.CXCursor>
+	{
+		public static CxCursorHashFirstComparer Instance { get; } = new();
+
+		bool System.Collections.Generic.IEqualityComparer<ClangSharp.Interop.CXCursor>.Equals(ClangSharp.Interop.CXCursor x, ClangSharp.Interop.CXCursor y)
+		{
+			// 通常は Dictionary 側でハッシュ一致時のみ呼ばれるが、保険で早期リターン
+			if (x.Hash != y.Hash)
+				return false;
+
+			return ClangSharp.Interop.clang.equalCursors(x, y) != 0;
+		}
+
+		int System.Collections.Generic.IEqualityComparer<ClangSharp.Interop.CXCursor>.GetHashCode(ClangSharp.Interop.CXCursor obj)
+		{
+			// CXCursor の組み込みハッシュ（clang_hashCursor）をそのまま利用
+			return (int)obj.Hash;
+		}
 	}
 
 	file sealed class CxTypeHashFirstComparer : System.Collections.Generic.IEqualityComparer<ClangSharp.Interop.CXType>
@@ -1115,7 +1160,7 @@ public abstract class DeclBase
 		public required string Usr { get; init; }
 
 		/// <summary>
-		/// ClangSharpのハッシュ
+		/// 宣言を一意に識別するID(GetDeclId)
 		/// </summary>
 		public required uint DeclHash
 		{
@@ -1445,7 +1490,7 @@ public class EnumDecl : TypeDecl
 	public class AttributeDecl
 	{
 		// <summary>
-		/// ClangSharpのハッシュ
+		/// 宣言を一意に識別するID(GetDeclId)
 		/// </summary>
 		public required uint DeclHash
 		{
@@ -1571,7 +1616,7 @@ public class EnumDecl : TypeDecl
     private NamespaceNode NamespaceNodeRoot => _NamespaceNodeDict[string.Empty];
 		private readonly Dictionary<string, NamespaceNode> _NamespaceNodeDict = new Dictionary<string, NamespaceNode>();
 		/// <summary>
-		/// key:Cursor.Hash, Value:DeclBase
+		/// key:GetDeclId(), Value:DeclBase
 		/// </summary>
     private readonly Dictionary<uint, DeclBase> _DeclWithHashDict = new();
     private readonly Dictionary<UniqueDeclKey, DeclBase> _DeclWithUsrDict = new();
@@ -1816,7 +1861,7 @@ public class EnumDecl : TypeDecl
     public bool ParseUnit(in ClangSharp.Interop.CXTranslationUnit translationUnit)
     {
         ClangSharp.Interop.CXCursor cursor = translationUnit.Cursor;
-        uint hash = cursor.Hash;
+        uint hash = cursor.GetDeclId();
         uint parentDeclHash = 0;
 
 			_RootNamespaceDecl = new NamespaceDecl()
@@ -1905,7 +1950,24 @@ public class EnumDecl : TypeDecl
 					continue;
 				}
 
-				DeclBase parentDecl = _DeclWithHashDict[decl.ParentDeclHash];
+				//	NOTE:	SDKやサードパーティのヘッダはvcxprojに属さないのでProjectNameがUNKNOWN_MODULE_NAMEになる
+				//			その場合はリフレクション対象外なのでスキップし、
+				//			ソリューション内のプロジェクトの宣言であれば解析の不具合としてエラーにする
+				bool isProjectDecl = decl.GetMeta().ProjectName != Define.UNKNOWN_MODULE_NAME;
+
+				if (_DeclWithHashDict.TryGetValue(decl.ParentDeclHash, out DeclBase? parentDecl) == false)
+				{
+					if (isProjectDecl == true)
+					{
+						Util.Assert(false, "親宣言が見つかりませんでした:{0}", decl.ToString());
+						Trace.ErrorLine(this, $"親宣言が見つかりませんでした:{decl.ToString()}");
+						success = false;
+						continue;
+					}
+
+					Trace.WarningLine(this, $"親宣言が見つかりませんでした(解析対象外):{decl.ToString()}");
+					continue;
+				}
 
 				if (decl is NamespaceDecl namespaceDecl)
 				{
@@ -1938,7 +2000,19 @@ public class EnumDecl : TypeDecl
 				else
 				{
 					IDeclarationContainer? container = parentDecl as IDeclarationContainer;
-					Util.Assert(container != null, "親宣言がDeclarationContainerではありません:{0}", parentDecl.ToString());
+					if (container == null)
+					{
+						if (isProjectDecl == true)
+						{
+							Util.Assert(false, "親宣言がDeclarationContainerではありません:{0}", parentDecl.ToString());
+							Trace.ErrorLine(this, $"親宣言がDeclarationContainerではありません:{parentDecl.ToString()}");
+							success = false;
+							continue;
+						}
+
+						Trace.WarningLine(this, $"親宣言がDeclarationContainerではありません(解析対象外):{parentDecl.ToString()}");
+						continue;
+					}
 
 					RecordDecl? containerRecord = container as RecordDecl;
 					
@@ -2165,7 +2239,7 @@ public class EnumDecl : TypeDecl
 		private void ParseNamespaceDecl(in ClangSharp.Interop.CXCursor cursor)
     {
 			string usr = cursor.GetNormalizedUsr();
-			uint hash = cursor.Hash;
+			uint hash = cursor.GetDeclId();
         if (ContainsDecl(hash) == true)
         {
             return;
@@ -2179,7 +2253,7 @@ public class EnumDecl : TypeDecl
 			Util.Assert(cursor.GetDeclCategory() == DeclCategory.Definition);
 
 			ClangSharp.Interop.CXCursor parentCursor = GetParentDeclCursor(cursor);
-			uint parentDeclHash = parentCursor.Hash;
+			uint parentDeclHash = parentCursor.GetDeclId();
 			UniqueDeclKey parentUniqueDeclKey = CreateUniqueDeclKey(parentCursor);
 
 			NamespaceDecl namespaceDecl;
@@ -2342,7 +2416,7 @@ public class EnumDecl : TypeDecl
 		private void ParseRecordDecl(in ClangSharp.Interop.CXCursor cursor)
     {
 			string usr = cursor.GetNormalizedUsr();
-			uint hash = cursor.Hash;
+			uint hash = cursor.GetDeclId();
 			if (ContainsDecl(hash) == true)
         {
             return;
@@ -2401,7 +2475,7 @@ public class EnumDecl : TypeDecl
         }
 
 			ClangSharp.Interop.CXCursor parentCursor = GetParentDeclCursor(cursor);
-			uint parentDeclHash = parentCursor.Hash;
+			uint parentDeclHash = parentCursor.GetDeclId();
 			UniqueDeclKey parentUniqueDeclKey = CreateUniqueDeclKey(parentCursor);
 
 			BaseSpecifierDecl[] baseTypeList = CreateBaseSpecifierDeclList(cursor, out bool isBaseReflectionClass, out bool inheritedFromNoxObject);
@@ -2475,7 +2549,7 @@ public class EnumDecl : TypeDecl
 		private void ParseTemplateRecordDecl(in ClangSharp.Interop.CXCursor cursor)
 		{
 			string usr = cursor.GetNormalizedUsr();
-			uint hash = cursor.Hash;
+			uint hash = cursor.GetDeclId();
 			if (ContainsDecl(hash) == true)
 			{
 				return;
@@ -2532,7 +2606,7 @@ public class EnumDecl : TypeDecl
 				FullName = fqn,
 				Namespace = cursor.GetNamespace(),
 				DeclHash = hash,
-				ParentDeclHash = parentCursor.Hash,
+				ParentDeclHash = parentCursor.GetDeclId(),
 				ParentUniqueDeclKey = CreateUniqueDeclKey(parentCursor),
 				RecordAttributeFlags = GetRecordAttributeFlags(cursor),
 				AttributeList = CreateAttributeDeclList(cursor),
@@ -2563,7 +2637,7 @@ public class EnumDecl : TypeDecl
 		private void ParseAliasDecl(in ClangSharp.Interop.CXCursor cursor)
     {
 			string usr = cursor.GetNormalizedUsr();
-			uint hash = cursor.Hash;
+			uint hash = cursor.GetDeclId();
 			if (ContainsDecl(hash) == true)
 			{
 				return;
@@ -2592,7 +2666,7 @@ public class EnumDecl : TypeDecl
 
 			ClangSharp.Interop.CXCursor pointeeCursor = cursor.Type.CanonicalType.Declaration;
 			//Util.Assert(pointeeCursor.kind != ClangSharp.Interop.CXCursorKind.CXCursor_NoDeclFound, "no found decl");
-			uint pointeeDeclHash = pointeeCursor.Hash;
+			uint pointeeDeclHash = pointeeCursor.GetDeclId();
         ClangSharp.Interop.CXCursor parentCursor = GetParentDeclCursor(cursor);
 
         TypeAliasDecl decl = new ()
@@ -2602,7 +2676,7 @@ public class EnumDecl : TypeDecl
             FullName = cursor.GetFQN(),
             Namespace = cursor.GetNamespace(),
             DeclHash = hash,
-            ParentDeclHash = parentCursor.Hash,
+            ParentDeclHash = parentCursor.GetDeclId(),
 				ParentUniqueDeclKey = CreateUniqueDeclKey(parentCursor),
 				PointeeType = GetOrCreateTypeInfo(cursor.Type.CanonicalType),
 				PointeeDeclUsr = pointeeCursor.GetNormalizedUsr(),
@@ -2630,7 +2704,7 @@ public class EnumDecl : TypeDecl
 		private void ParseTemplateAliasDecl(in ClangSharp.Interop.CXCursor cursor)
 		{
 			string usr = cursor.GetNormalizedUsr();
-			uint hash = cursor.Hash;
+			uint hash = cursor.GetDeclId();
 			if (ContainsDecl(hash) == true)
 			{
 				return;
@@ -2669,9 +2743,9 @@ public class EnumDecl : TypeDecl
 
 			Util.Assert(!cursor.TemplatedDecl.IsNull, "template decl is null");
 
-			//			uint pointeeDeclHash = cursor.Type.CanonicalType.Declaration.Hash;
+			//			uint pointeeDeclHash = cursor.Type.CanonicalType.Declaration.GetDeclId();
 			ClangSharp.Interop.CXCursor pointeeCursor = cursor.TemplatedDecl.UnderlyingDecl;
-			uint pointeeDeclHash = pointeeCursor.Hash;
+			uint pointeeDeclHash = pointeeCursor.GetDeclId();
 
 
 			TemplateTypeAliasDecl decl = new ()
@@ -2682,7 +2756,7 @@ public class EnumDecl : TypeDecl
 				Namespace = cursor.GetNamespace(),
 				DeclHash = hash,
 				PointeeDeclUsr = pointeeCursor.GetNormalizedUsr(),
-				ParentDeclHash = parentCursor.Hash,
+				ParentDeclHash = parentCursor.GetDeclId(),
 				ParentUniqueDeclKey = CreateUniqueDeclKey(parentCursor),
 				PointeeType = GetOrCreateTypeInfo(pointeeCursor.Type),
 				PointeeDeclHash = pointeeDeclHash,
@@ -2705,7 +2779,7 @@ public class EnumDecl : TypeDecl
     private void ParseBaseSpecifierDecl(in ClangSharp.Interop.CXCursor cursor)
     {
 			string usr = cursor.GetNormalizedUsr();
-			uint hash = cursor.Hash;
+			uint hash = cursor.GetDeclId();
 			if (ContainsDecl(hash) == true)
 			{
 				return;
@@ -2728,7 +2802,7 @@ public class EnumDecl : TypeDecl
             ParentDeclHash = 0,
 				ParentUniqueDeclKey = default,
 				PointeeDeclUsr = referCursor.GetNormalizedUsr(),
-            PointeeDeclHash = referCursor.Hash,
+            PointeeDeclHash = referCursor.GetDeclId(),
 				AttributeList = [],
 				IsVirtualBase = cursor.IsVirtualBase,
 				AccessLevel = cursor.CXXAccessSpecifier.GetAccessLevel(),
@@ -2777,7 +2851,7 @@ public class EnumDecl : TypeDecl
 			}
 
 			string usr = cursor.GetNormalizedUsr();
-			uint hash = cursor.Hash;
+			uint hash = cursor.GetDeclId();
 			if (ContainsDecl(hash) == true)
 			{
 				return;
@@ -2788,7 +2862,7 @@ public class EnumDecl : TypeDecl
 			EnumDecl.EnumeratorInfo[] enumeratorInfoList = new EnumDecl.EnumeratorInfo[numEnumerator];
 
 			ClangSharp.Interop.CXCursor parentCursor = GetParentDeclCursor(cursor);
-			uint parentDeclHash = parentCursor.Hash;
+			uint parentDeclHash = parentCursor.GetDeclId();
 
 			EnumDecl decl = new EnumDecl()
 							{
@@ -2796,7 +2870,7 @@ public class EnumDecl : TypeDecl
 				Name = cursor.Spelling.CString,
 				FullName = cursor.GetFQN(),
 				Namespace = cursor.GetNamespace(),
-				DeclHash = cursor.Hash,
+				DeclHash = cursor.GetDeclId(),
 				ParentDeclHash = parentDeclHash,
 				ParentUniqueDeclKey = CreateUniqueDeclKey(parentCursor),
 				EnumeratorInfoList = enumeratorInfoList,
@@ -2845,21 +2919,21 @@ public class EnumDecl : TypeDecl
 			}
 
 			string usr = cursor.GetNormalizedUsr();
-			uint hash = cursor.Hash;
+			uint hash = cursor.GetDeclId();
 			if (ContainsDecl(hash) == true)
 			{
 				return;
 			}
 
-			uint parentHash = cursor.ParentFunctionOrMethod.Hash;
+			uint parentHash = cursor.ParentFunctionOrMethod.GetDeclId();
 			ClangSharp.Interop.CXCursor parentCursor = GetParentDeclCursor(cursor);
 			VisitCursor(parentCursor);
 
 			FriendDecl decl = new FriendDecl()
 			{
 				Usr = usr,
-				DeclHash = cursor.Hash,
-				ParentDeclHash = parentCursor.Hash,
+				DeclHash = cursor.GetDeclId(),
+				ParentDeclHash = parentCursor.GetDeclId(),
 				ParentUniqueDeclKey = CreateUniqueDeclKey(parentCursor),
 				Meta = CreateMetaData(cursor),
 #if DEBUG
@@ -2875,7 +2949,7 @@ public class EnumDecl : TypeDecl
 				switch(fiendDecl.kind)
 				{
 					case ClangSharp.Interop.CXCursorKind.CXCursor_ClassDecl:
-						RecordDecl parentClassDecl = GetDecl<RecordDecl>(parentCursor.Hash);
+						RecordDecl parentClassDecl = GetDecl<RecordDecl>(parentCursor.GetDeclId());
 						if(parentClassDecl.ReflectionGenerateKind != ReflectionGenerateKind.IgnoreReflection &&
 							fiendDecl.GetFQN().Contains("nox::reflection::ReflectionGeneratedHolder") == true)
 						{
@@ -2890,7 +2964,7 @@ public class EnumDecl : TypeDecl
 		private void ParseNoDeclFound(in ClangSharp.Interop.CXCursor cursor)
 		{
 			string usr = cursor.GetNormalizedUsr();
-			uint hash = cursor.Hash;
+			uint hash = cursor.GetDeclId();
 			if (ContainsDecl(hash) == true)
 			{
 				return;
@@ -2899,7 +2973,7 @@ public class EnumDecl : TypeDecl
 			AddDecl(new NoFoundDecl()
 			{
 				Usr = usr,
-				DeclHash = cursor.Hash,
+				DeclHash = cursor.GetDeclId(),
 				ParentDeclHash = 0,
 				ParentUniqueDeclKey = default,
 				Meta = CreateMetaData(cursor),
@@ -2914,7 +2988,7 @@ public class EnumDecl : TypeDecl
 		private void ParseFunctionDecl(in ClangSharp.Interop.CXCursor cursor)
 		{
 			string usr = cursor.GetNormalizedUsr();
-			uint hash = cursor.Hash;
+			uint hash = cursor.GetDeclId();
 			if (ContainsDecl(hash) == true)
 			{
 				return;
@@ -2927,7 +3001,7 @@ public class EnumDecl : TypeDecl
 			}
 
 			ClangSharp.Interop.CXCursor parentCursor = GetParentDeclCursor(cursor);
-			uint parentDeclHash = parentCursor.Hash;
+			uint parentDeclHash = parentCursor.GetDeclId();
 
 			ClangSharp.Interop.CXType thisType = cursor.Type;
 			ClangSharp.Interop.CXType returnType = cursor.ReturnType;
@@ -3077,7 +3151,7 @@ public class EnumDecl : TypeDecl
     private void ParseVariableDecl(in ClangSharp.Interop.CXCursor cursor)
     {
 			string usr = cursor.GetNormalizedUsr();
-			uint hash = cursor.Hash;
+			uint hash = cursor.GetDeclId();
 			if (ContainsDecl(hash) == true)
 			{
 				return;
@@ -3095,7 +3169,7 @@ public class EnumDecl : TypeDecl
 			}
 
 			ClangSharp.Interop.CXCursor parentCursor = GetParentDeclCursor(cursor);
-			uint parentDeclHash = parentCursor.Hash;
+			uint parentDeclHash = parentCursor.GetDeclId();
 
 			ClangSharp.Interop.CXType type = cursor.Type;
 			TypeInfo typeInfo = GetOrCreateTypeInfo(cursor.Type);
@@ -3321,7 +3395,7 @@ public class EnumDecl : TypeDecl
 									Name = type.Declaration.Spelling.CString,
 									FullName = type.GetFQN(),
 									Namespace = type.GetNamespace(),
-									DeclHash = type.Declaration.Hash,
+									DeclHash = type.Declaration.GetDeclId(),
 									TypeKind = typeKind,
 									TemplateArgumentList = CreateTemplateArguments(type),
 									Size = type.SizeOf,
@@ -3338,7 +3412,7 @@ public class EnumDecl : TypeDecl
 									Name = type.Declaration.Spelling.CString,
 									FullName = type.GetFQN(),
 									Namespace = type.GetNamespace(),
-									DeclHash = type.Declaration.Hash,
+									DeclHash = type.Declaration.GetDeclId(),
 									TypeKind = typeKind,
 									Size = type.SizeOf,
 									Alignment = type.AlignOf,
@@ -3357,7 +3431,7 @@ public class EnumDecl : TypeDecl
 						Name = type.Declaration.Spelling.CString,
 						FullName = type.GetFQN(),
 						Namespace = type.GetNamespace(),
-						DeclHash = type.Declaration.Hash,
+						DeclHash = type.Declaration.GetDeclId(),
 						TypeKind = typeKind,
 						Size = type.SizeOf,
 						Alignment = type.AlignOf,
@@ -3424,7 +3498,7 @@ public class EnumDecl : TypeDecl
                     FullName = type.GetFQN(),
                     Namespace = type.GetNamespace(),
                     PointeeType = GetOrCreateTypeInfo(type.PointeeType),
-                    DeclHash = type.Declaration.Hash,
+                    DeclHash = type.Declaration.GetDeclId(),
 						TypeKind = typeKind,
 						Size = type.SizeOf,
 						Alignment = type.AlignOf,
@@ -3442,7 +3516,7 @@ public class EnumDecl : TypeDecl
                     FullName = type.GetFQN(),
                     Namespace = type.GetNamespace(),
                     PointeeType = GetOrCreateTypeInfo(type.PointeeType),
-						DeclHash = type.Declaration.Hash,
+						DeclHash = type.Declaration.GetDeclId(),
 						TypeKind = typeKind,
 						Size = type.SizeOf,
 						Alignment = type.AlignOf,
@@ -3459,7 +3533,7 @@ public class EnumDecl : TypeDecl
 					//	FullName = type.CanonicalType.Spelling.CString,
 					//	Namespace = type.GetNamespace(),
 					//	PointeeType = GetOrCreateTypeInfo(type.CanonicalType),
-					//	DeclHash = type.Declaration.Hash,
+					//	DeclHash = type.Declaration.GetDeclId(),
 					//	TypeKind = typeKind,
 					//};
 					//break;
@@ -3472,7 +3546,7 @@ public class EnumDecl : TypeDecl
                     FullName = type.GetFQN(),
                     Namespace = type.GetNamespace(),
                     PointeeType = GetOrCreateTypeInfo(type.CanonicalType),
-						DeclHash = type.Declaration.Hash,
+						DeclHash = type.Declaration.GetDeclId(),
 						TypeKind = typeKind,
 						Size = type.SizeOf,
 						Alignment = type.AlignOf,
@@ -3485,7 +3559,7 @@ public class EnumDecl : TypeDecl
 						Name = type.Spelling.CString,
 						FullName = type.GetFQN(),
 						Namespace = type.GetNamespace(),
-						DeclHash = type.Declaration.Hash,
+						DeclHash = type.Declaration.GetDeclId(),
 						TypeKind = typeKind,
 						Size = type.SizeOf,
 						Alignment = type.AlignOf,
@@ -3511,7 +3585,7 @@ public class EnumDecl : TypeDecl
 							Name = type.Declaration.Spelling.CString,
 							FullName = type.GetFQN(),
 							Namespace = type.GetNamespace(),
-							DeclHash = type.Declaration.Hash,
+							DeclHash = type.Declaration.GetDeclId(),
 							TypeKind = typeKind,
 							Size = type.SizeOf,
 							Alignment = type.AlignOf,
@@ -3740,7 +3814,7 @@ public class EnumDecl : TypeDecl
 
 		private DeclBase GetParentDecl(ClangSharp.Interop.CXCursor cursor)
     {
-			return GetDecl(GetParentDeclCursor(cursor).Hash);
+			return GetDecl(GetParentDeclCursor(cursor).GetDeclId());
 		}
 
     private AttributeDecl[] CreateAttributeDeclList(in ClangSharp.Interop.CXCursor cursor)
@@ -3753,7 +3827,7 @@ public class EnumDecl : TypeDecl
         for(uint i = 0; i < numAttr; i++)
         {
 				ClangSharp.Interop.CXCursor attrCursor = cursor.GetAttr(i);
-				uint hash = attrCursor.Hash;
+				uint hash = attrCursor.GetDeclId();
 
 				string value = attrCursor.Spelling.CString;
 
@@ -3819,7 +3893,7 @@ public class EnumDecl : TypeDecl
             VisitCursor(baseCursor);
             GetOrCreateTypeInfo(baseCursor.Type);
 
-            BaseSpecifierDecl baseSpecifierDecl = baseTypeList[i] = GetDecl< BaseSpecifierDecl>(baseCursor.Hash);
+            BaseSpecifierDecl baseSpecifierDecl = baseTypeList[i] = GetDecl< BaseSpecifierDecl>(baseCursor.GetDeclId());
             if (baseSpecifierDecl.PointeeDeclHash == 0)
             {
                 continue;
