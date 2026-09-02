@@ -5,36 +5,60 @@
 #include "pch.h"
 #include "test.h"
 
+#include "entity_ecs_test.h"
 #include "../world.h"
 #include "../entity_system.h"
 #include "../entity_logic.h"
+#include "../entity_type_registry.h"
 #include "../../kernel/assertion.h"
+
+namespace nox::test::ecs::manual
+{
+	/// @brief 生成器が名前を書けない型のための手動購読経路の検証用。
+	/// @details .cppに閉じているためリフレクション生成コードからは見えない。
+	///          nox::EntityLogicMethodTableの特殊化を手書きすれば同じ記述子が作れる。
+	class ManualHealthLogic final : public nox::EntityLogic<nox::test::ecs::manual::ManualHealthLogic>
+	{
+	public:
+		inline ManualHealthLogic(nox::World& world, const nox::EntityId entity)noexcept :
+			nox::EntityLogic<nox::test::ecs::manual::ManualHealthLogic>(world, entity)
+		{
+		}
+
+		void Tick(nox::test::ecs::TestHealth& health)
+		{
+			++tick_count;
+			--health.value;
+		}
+
+		nox::int32 tick_count = 0;
+	};
+}
+
+//	明示的特殊化はnoxを囲む名前空間に書く必要があるため、グローバルスコープに置く。
+template<>
+struct nox::EntityLogicMethodTable<nox::test::ecs::manual::ManualHealthLogic>
+{
+	static constexpr nox::EntityLogicMethodDescriptor k_methods[]{
+		nox::MakeEntityLogicMethodDescriptor<
+			&nox::test::ecs::manual::ManualHealthLogic::Tick,
+			nox::SystemPhaseType::Update>("Tick"),
+	};
+
+	[[nodiscard]] static constexpr std::span<const nox::EntityLogicMethodDescriptor> GetMethods()noexcept
+	{
+		return std::span<const nox::EntityLogicMethodDescriptor>(k_methods);
+	}
+};
 
 namespace
 {
-	struct TestPosition : nox::IComponentData
-	{
-		nox::float32 x;
-		nox::float32 y;
-	};
-
-	struct TestVelocity : nox::IComponentData
-	{
-		nox::float32 x;
-		nox::float32 y;
-	};
-
-	struct TestHealth : nox::IComponentData
-	{
-		nox::int32 value;
-	};
-
-	class TestCounterService final : public nox::Service
-	{
-		NOX_DECLARE_OBJECT(TestCounterService, nox::Service);
-	public:
-		nox::int32 call_count = 0;
-	};
+	using nox::test::ecs::TestCounterService;
+	using nox::test::ecs::TestHealth;
+	using nox::test::ecs::TestPosition;
+	using nox::test::ecs::TestVelocity;
+	using nox::test::ecs::TestMoveSystem;
+	using nox::test::ecs::TestPlayerLogic;
 
 #pragma region シグネチャ解析のコンパイル時検証
 
@@ -90,74 +114,29 @@ namespace
 
 #pragma endregion
 
-#pragma region テスト用EntitySystem / EntityLogic
-
-	/// @brief 定義しただけでWorldに購読されるSystem。関数名はOnUpdateで固定。
-	class TestMoveSystem final : public nox::EntitySystem<TestMoveSystem>
+	[[nodiscard]] const nox::EntitySystemTypeDescriptor* FindEntitySystemType(const std::string_view name)noexcept
 	{
-		NOX_DECLARE_ENTITY_SYSTEM(TestMoveSystem);
-	public:
-		void OnUpdate(nox::EntityId entity, TestPosition& position, const TestVelocity& velocity)
+		for (const nox::EntitySystemTypeDescriptor* const descriptor : nox::GetEntitySystemTypes())
 		{
-			position.x += velocity.x;
-			position.y += velocity.y;
-			last_entity = entity;
-			++processed_count;
-		}
-
-		nox::int32 processed_count = 0;
-		nox::EntityId last_entity{ 0u };
-	};
-
-	/// @brief 必須ComponentDataは基底のテンプレート引数ではなく、メソッド群の引数から導出される。
-	/// @details メソッド名は任意、引数リストも任意。ここでは
-	///          「ComponentDataのみ」「Serviceをポインタで」「Serviceを参照で」の3形を並べている。
-	class TestPlayerLogic final : public nox::EntityLogic<TestPlayerLogic>
-	{
-	public:
-		inline TestPlayerLogic(nox::World& world, const nox::EntityId entity)noexcept :
-			nox::EntityLogic<TestPlayerLogic>(world, entity)
-		{
-		}
-
-		void Process0(TestPosition& position, const TestHealth& health)
-		{
-			//	個別の状態は普通のメンバとして持てる(ComponentData化しなくてよい)。
-			++process0_count;
-			position.x += static_cast<nox::float32>(health.value);
-		}
-
-		void Process1(TestPosition& position, TestCounterService* service)
-		{
-			//	Serviceをポインタで受けた場合、未登録ならnullptrが渡る。
-			++process1_count;
-			position.y += 1.0f;
-			if (service != nullptr)
+			if (descriptor->name.find(name) != std::string_view::npos)
 			{
-				++service->call_count;
+				return descriptor;
 			}
 		}
+		return nullptr;
+	}
 
-		void Process2(TestPosition& position, const TestVelocity& velocity, TestCounterService& service)
+	[[nodiscard]] const nox::EntityLogicTypeDescriptor* FindEntityLogicType(const std::string_view name)noexcept
+	{
+		for (const nox::EntityLogicTypeDescriptor* const descriptor : nox::GetEntityLogicTypes())
 		{
-			//	Serviceを参照で受けた場合、未登録なら呼び出しごと打ち切られる(nullは渡らない)。
-			//	TestVelocityはProcess2だけが宣言しているが、必須ComponentDataに算入される。
-			++process2_count;
-			position.x += velocity.x;
-			++service.call_count;
+			if (descriptor->name.find(name) != std::string_view::npos)
+			{
+				return descriptor;
+			}
 		}
-
-		nox::int32 process0_count = 0;
-		nox::int32 process1_count = 0;
-		nox::int32 process2_count = 0;
-
-		NOX_DECLARE_ENTITY_LOGIC(TestPlayerLogic,
-			NOX_ENTITY_LOGIC_METHOD(Update, &TestPlayerLogic::Process0),
-			NOX_ENTITY_LOGIC_METHOD(Update, &TestPlayerLogic::Process1),
-			NOX_ENTITY_LOGIC_METHOD(Update, &TestPlayerLogic::Process2));
-	};
-
-#pragma endregion
+		return nullptr;
+	}
 
 	void TestComponentTypeRegistry()
 	{
@@ -266,15 +245,10 @@ namespace
 
 	void TestEntitySystemExecution(nox::World& world)
 	{
-		//	定義しただけで型記述子が登録されている。
-		bool registered = false;
-		for (const nox::EntitySystemTypeDescriptor* descriptor = nox::detail::GetEntitySystemTypeListHead();
-			descriptor != nullptr;
-			descriptor = descriptor->next)
-		{
-			registered = registered || (descriptor->execute == nullptr ? false : descriptor->name.find("TestMoveSystem") != std::string_view::npos);
-		}
-		NOX_ASSERT(registered, u"EntitySystemが自動登録されていません");
+		//	ヘッダに定義しただけで、生成コードの表に型記述子が載っている。
+		const nox::EntitySystemTypeDescriptor* const registered = FindEntitySystemType("TestMoveSystem");
+		NOX_ASSERT(registered != nullptr, u"EntitySystemが自動登録されていません");
+		NOX_ASSERT(registered != nullptr && registered->execute != nullptr, u"EntitySystemの実行本体が束縛されていません");
 
 		nox::FixedVector<nox::EntityId, 4> entities;
 		for (nox::uint32 entity_index = 0u; entity_index < 4u; ++entity_index)
@@ -312,16 +286,7 @@ namespace
 
 	void TestEntityLogicLifecycle(nox::World& world)
 	{
-		const nox::EntityLogicTypeDescriptor* logic_descriptor = nullptr;
-		for (const nox::EntityLogicTypeDescriptor* descriptor = nox::detail::GetEntityLogicTypeListHead();
-			descriptor != nullptr;
-			descriptor = descriptor->next)
-		{
-			if (descriptor->name.find("TestPlayerLogic") != std::string_view::npos)
-			{
-				logic_descriptor = descriptor;
-			}
-		}
+		const nox::EntityLogicTypeDescriptor* const logic_descriptor = FindEntityLogicType("TestPlayerLogic");
 		NOX_ASSERT(logic_descriptor != nullptr, u"EntityLogicが自動登録されていません");
 		if (logic_descriptor == nullptr)
 		{
@@ -388,6 +353,46 @@ namespace
 
 		world.DestroyEntity(entity);
 	}
+
+	/// @brief 生成器が名前を書けない型でも、手書きの特殊化で同じ経路に載る。
+	/// @details Worldの表は経由せず、記述子を直接組み立てて呼び出す。
+	void TestManualEntityLogicMethodTable(nox::World& world)
+	{
+		using ManualLogic = nox::test::ecs::manual::ManualHealthLogic;
+
+		static constexpr nox::EntityLogicTypeDescriptor k_descriptor =
+			nox::MakeEntityLogicTypeDescriptor<ManualLogic>();
+
+		NOX_ASSERT(k_descriptor.get_methods().size() == 1u, u"手書きのメソッド表が読めていません");
+		NOX_ASSERT(k_descriptor.make_required_mask() == nox::MakeComponentMask<TestHealth>(),
+			u"手書きのメソッド表から必須ComponentDataが導出されていません");
+		//	Worldの表には載らない(生成器から見えない型のため)。
+		NOX_ASSERT(FindEntityLogicType("ManualHealthLogic") == nullptr,
+			u"生成コードから見えないはずの型が表に載っています");
+
+		nox::EntityLogicStorage storage(k_descriptor);
+		const nox::EntityId entity = world.CreateEntity();
+		world.AddComponent<TestHealth>(entity)->value = 7;
+
+		storage.CreateInstance(world, entity);
+		NOX_ASSERT(storage.GetEntries().size() == 1u, u"手書き経路でインスタンスが生成されていません");
+
+		const nox::EntityLogicStorage::Entry& entry = storage.GetEntries()[0];
+		k_descriptor.get_methods()[0].invoke(
+			entry.instance,
+			world,
+			*world.TryGetArchetype(entry.entity),
+			world.GetArchetypeLocation(entry.entity),
+			entry.entity);
+
+		NOX_ASSERT(static_cast<ManualLogic*>(entry.instance)->tick_count == 1,
+			u"手書き経路のメソッドが呼ばれていません");
+		NOX_ASSERT(world.TryGetComponent<TestHealth>(entity)->value == 6,
+			u"手書き経路の書き込み結果が不正です");
+
+		storage.DestroyInstance(entity);
+		world.DestroyEntity(entity);
+	}
 }
 
 void nox::test::TestEntityEcs()
@@ -399,4 +404,5 @@ void nox::test::TestEntityEcs()
 	TestWorldStructuralChange(world);
 	TestEntitySystemExecution(world);
 	TestEntityLogicLifecycle(world);
+	TestManualEntityLogicMethodTable(world);
 }

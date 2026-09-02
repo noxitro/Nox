@@ -5,34 +5,7 @@
 #include "pch.h"
 #include "entity_logic.h"
 
-namespace nox::detail
-{
-	namespace
-	{
-		/// @brief 登録済みEntityLogic型の連結リスト。記述子自身がノードなのでヒープを使わない。
-		const nox::EntityLogicTypeDescriptor* g_entity_logic_type_list_head = nullptr;
-	}
-}
-
-void nox::detail::RegisterEntityLogicType(nox::EntityLogicTypeDescriptor& descriptor)noexcept
-{
-	//	静的初期化中に呼ばれる。この時点では単一スレッドなので同期は不要。
-	const bool already_registered =
-		(&descriptor == nox::detail::g_entity_logic_type_list_head) || (descriptor.next != nullptr);
-	NOX_ASSERT(already_registered == false, u8"EntityLogic型が二重に登録されました");
-	if (already_registered)
-	{
-		return;
-	}
-
-	descriptor.next = nox::detail::g_entity_logic_type_list_head;
-	nox::detail::g_entity_logic_type_list_head = &descriptor;
-}
-
-const nox::EntityLogicTypeDescriptor* nox::detail::GetEntityLogicTypeListHead()noexcept
-{
-	return nox::detail::g_entity_logic_type_list_head;
-}
+//	型の購読はリフレクション生成コードが行うため、ここに実行時の登録処理は無い。
 
 nox::EntityLogicStorage::EntityLogicStorage(const nox::EntityLogicTypeDescriptor& descriptor) :
 	descriptor_(descriptor),

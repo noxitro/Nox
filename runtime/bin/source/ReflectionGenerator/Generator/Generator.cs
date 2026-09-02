@@ -65,6 +65,8 @@ public class Generator
 		private string _BaseDirectory = string.Empty;
 
     private string _AdditionalModuleIncludeStr = string.Empty;
+
+    private bool _HasError = false;
     #endregion
 
     #region 公開プロパティ
@@ -195,6 +197,22 @@ public class Generator
             }
 
 				GenerateDeclaration();
+
+				//  EntitySystem / EntityLogic の購読テーブルを生成する
+				EntityTypeGenerator entityTypeGenerator = new EntityTypeGenerator()
+				{
+					OutputDirectory = _BaseDirectory,
+					Configuration = Configuration,
+					Platform = Platform,
+					ConfigurationDefine = ConfigurationDefine,
+					PlatformDefine = PlatformDefine,
+					AdditionalIncludeStr = _AdditionalModuleIncludeStr,
+				};
+				entityTypeGenerator.Generate(NamespaceDeclList);
+				if (entityTypeGenerator.HasError)
+				{
+					_HasError = true;
+				}
 			}
 
         //  モジュールごとのソースファイルを生成
@@ -301,7 +319,7 @@ public class Generator
         //            );
         //#endif
 
-        return true;
+        return _HasError == false;
     }
     #endregion
 

@@ -19,7 +19,14 @@
 #include	"entity_query.h"
 #include	"entity_system.h"
 #include	"entity_logic.h"
+#include	"entity_logic_attribute.h"
+#include	"entity_type_registry.h"
 #include	"local_transform.h"
+
+#if !NOX_MASTER
+//	ECSセルフテスト用の型。ヘッダに定義するだけで購読されることの実証を兼ねる。
+#include	"test/entity_ecs_test.h"
+#endif // !NOX_MASTER
 
 //	editor_remote
 #include	"dev/remote/remote_system.g.h"

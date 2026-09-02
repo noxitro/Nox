@@ -231,19 +231,20 @@ namespace ReflectionGenerator.Parser2;
 			}
 
 		//	Util.Assert(rootSpecializedCursorTemplate.TemplatedDecl.IsNull == false, "TemplatedDecl is null");
-			string name = $"{cursor.Spelling.CString}<";
+			//	空の可変長パックは実引数を1つも生まないため、区切りのカンマごと落とす
+			List<string> templateArgumentNameList = new List<string>((int)numTemplateArgument);
 			for (uint i = 0; i < numTemplateArgument; ++i)
 			{
-				if (i > 0)
-				{
-					name += ", ";
-				}
-
 				ClangSharp.Interop.CX_TemplateArgument templateArgument = cursor.GetTemplateArgument(i);
-				name += GetNameTemplateArgument(templateArgument);
+				string templateArgumentName = GetNameTemplateArgument(templateArgument);
+				if (string.IsNullOrEmpty(templateArgumentName))
+				{
+					continue;
+				}
+				templateArgumentNameList.Add(templateArgumentName);
 			}
 
-			name += ">";
+			string name = $"{cursor.Spelling.CString}<{string.Join(", ", templateArgumentNameList)}>";
 			return name;
 		}
 

@@ -6,6 +6,7 @@
 #include "world.h"
 
 #include "engine_module.h"
+#include "entity_type_registry.h"
 #include "log_id.h"
 
 namespace nox
@@ -470,9 +471,7 @@ void nox::World::ExecutePhase(const nox::SystemPhaseType phase_type)
 
 void nox::World::CreateEntitySystems()
 {
-	for (const nox::EntitySystemTypeDescriptor* descriptor = nox::detail::GetEntitySystemTypeListHead();
-		descriptor != nullptr;
-		descriptor = descriptor->next)
+	for (const nox::EntitySystemTypeDescriptor* const descriptor : nox::GetEntitySystemTypes())
 	{
 		nox::EntitySystemBase* const entity_system = descriptor->create();
 		if (entity_system == nullptr)
@@ -489,6 +488,11 @@ void nox::World::CreateEntitySystems()
 
 		entity_systems_.push_back(entity_system);
 		entity_system_phase_table_[nox::util::ToUnderlying(descriptor->phase)].push_back(entity_system);
+
+#if !NOX_MASTER
+		//	「ヘッダに定義しただけで購読される」ことを起動ログで確認できるようにする。
+		NOX_INFO_LINE(nox::log_id::CoreCommon, u8"EntitySystem購読: {0}", descriptor->name);
+#endif // !NOX_MASTER
 	}
 }
 
@@ -504,9 +508,7 @@ void nox::World::ExecuteEntitySystemPhase(const nox::SystemPhaseType phase_type)
 
 void nox::World::CreateEntityLogicStorages()
 {
-	for (const nox::EntityLogicTypeDescriptor* descriptor = nox::detail::GetEntityLogicTypeListHead();
-		descriptor != nullptr;
-		descriptor = descriptor->next)
+	for (const nox::EntityLogicTypeDescriptor* const descriptor : nox::GetEntityLogicTypes())
 	{
 #if !NOX_MASTER
 		//	必須ComponentDataはメソッド群から導出されるので包含関係は自動的に成り立つ。
@@ -516,6 +518,10 @@ void nox::World::CreateEntityLogicStorages()
 #endif // !NOX_MASTER
 
 		entity_logic_storages_.push_back(new nox::EntityLogicStorage(*descriptor));
+
+#if !NOX_MASTER
+		NOX_INFO_LINE(nox::log_id::CoreCommon, u8"EntityLogic購読: {0}", descriptor->name);
+#endif // !NOX_MASTER
 	}
 }
 

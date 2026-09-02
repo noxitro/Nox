@@ -209,9 +209,16 @@ namespace ReflectionGenerator;
 
 			};
 
+			bool generateSucceeded;
 			using (new ScopeProfiler() { Tag = "Generate" })
 			{
-				generator.Generate();
+				generateSucceeded = generator.Generate();
+			}
+
+			if (generateSucceeded == false)
+			{
+				Trace.ErrorLine(null, "コード生成に失敗しました");
+				return 1;
 			}
 
 			//	ツールで参照するためのバイナリファイルを出力

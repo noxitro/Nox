@@ -8,11 +8,16 @@
 ///          更新メソッドは引数リストがそのままアクセス宣言になる(EntitySystemと同じ規則)ため、
 ///          OOP的に書いてもSystemと同じ依存解析に載る。
 ///
+///          更新メソッドの購読は NOX_ATTR(nox::attr::EntityLogicMethod(フェーズ)) を付けるだけでよい。
+///          リフレクション生成コードが nox::EntityLogicMethodTable の明示的特殊化を書き出し、
+///          nox::GetEntityLogicTypes() の表に載せる。
+///
 ///          使い分け: 大量に湧くもの(弾・パーティクル・群れ)はEntitySystem、
 ///          少数の主要個体(プレイヤー・ボス・UI)はEntityLogic。
 #pragma once
 #include	"entity_query.h"
 #include	"system_phase_type.h"
+#include	"entity_logic_attribute.h"
 
 namespace nox
 {
@@ -37,6 +42,7 @@ namespace nox
 	};
 
 	/// @brief EntityLogic型ごとに1つだけ作られる静的記述子。
+	/// @details 全メンバが定数式で埋まるため定数初期化される。
 	struct EntityLogicTypeDescriptor final
 	{
 		/// @brief インスタンス生成に必要なComponentDataのマスク。
@@ -50,15 +56,15 @@ namespace nox
 		nox::uint32 instance_size;
 		nox::uint32 instance_alignment;
 		std::string_view name;
-		/// @brief 静的初期化順に繋がれる次の記述子。
-		const nox::EntityLogicTypeDescriptor* next;
 	};
 
-	namespace detail
-	{
-		void RegisterEntityLogicType(nox::EntityLogicTypeDescriptor& descriptor)noexcept;
-		[[nodiscard]] const nox::EntityLogicTypeDescriptor* GetEntityLogicTypeListHead()noexcept;
-	}
+	/// @brief EntityLogic型の更新メソッド表。
+	/// @details 一次テンプレートは宣言のみ。リフレクション生成コードが型ごとに
+	///          明示的特殊化(static constexpr k_methods[] と GetMethods())を定義する。
+	///          生成器が名前を書けない型(クラステンプレート・無名名前空間)は、
+	///          この特殊化を手書きすれば同じ経路に載せられる。
+	template<class TLogic>
+	struct EntityLogicMethodTable;
 
 	/// @brief 単一EntityLogic型のインスタンス置き場。
 	/// @details インスタンスはブロック単位でまとめて確保し、破棄後はフリーリストへ戻す。
@@ -110,7 +116,7 @@ namespace nox
 	};
 
 	/// @brief ECSの上にOOPを載せるための基底。
-	/// @details インスタンスが存在するための必須ComponentDataは、登録した更新メソッドの引数から
+	/// @details インスタンスが存在するための必須ComponentDataは、購読した更新メソッドの引数から
 	///          自動的に導出される(全メソッドが宣言したComponentDataの和集合)。
 	///          基底のテンプレート引数に型を並べ直す必要はなく、メソッドの引数リストが唯一の宣言になる。
 	/// @tparam TDerived CRTPの派生型。
@@ -124,33 +130,11 @@ namespace nox
 		[[nodiscard]] inline nox::EntityId GetEntity()const noexcept { return entity_; }
 		[[nodiscard]] inline nox::World& GetWorld()const noexcept { return *world_; }
 
-		/// @brief 型記述子。EntityLogicRegistrarが静的初期化時に参照する。
-		[[nodiscard]] static nox::EntityLogicTypeDescriptor& GetTypeDescriptor()noexcept
+		/// @brief どのメソッドも宣言しないが必須にしたいComponentDataのマスク。
+		/// @details ComponentTypeIndexは実行時に採番されるため定数式にはならない。
+		[[nodiscard]] static nox::ComponentMask MakeExtraRequiredMask()noexcept
 		{
-			static nox::EntityLogicTypeDescriptor descriptor{
-				.make_required_mask = []()noexcept
-					{
-						//	必須ComponentData = 登録された全メソッドが宣言したComponentDataの和集合。
-						//	メソッドを足せば必要な条件も自動で広がるので、宣言が二重管理にならない。
-						nox::ComponentMask mask = nox::MakeComponentMask<ExtraRequiredComponents...>();
-						for (const nox::EntityLogicMethodDescriptor& method : TDerived::GetEntityLogicMethods())
-						{
-							mask.Merge(method.make_read_write_mask());
-						}
-						return mask;
-					},
-				.construct = [](void* memory, nox::World& world, nox::EntityId entity) -> void*
-					{
-						return new(memory) TDerived(world, entity);
-					},
-				.destruct = [](void* instance)noexcept { static_cast<TDerived*>(instance)->~TDerived(); },
-				.get_methods = []()noexcept { return TDerived::GetEntityLogicMethods(); },
-				.instance_size = static_cast<nox::uint32>(sizeof(TDerived)),
-				.instance_alignment = static_cast<nox::uint32>(alignof(TDerived)),
-				.name = nox::util::GetTypeName<TDerived>(),
-				.next = nullptr,
-			};
-			return descriptor;
+			return nox::MakeComponentMask<ExtraRequiredComponents...>();
 		}
 
 	protected:
@@ -171,7 +155,7 @@ namespace nox
 		nox::EntityId entity_;
 	};
 
-	/// @brief 更新メソッド1つ分の記述子を作る。NOX_ENTITY_LOGIC_METHODが使う。
+	/// @brief 更新メソッド1つ分の記述子を作る。生成コードと手書きの特殊化が共通で使う。
 	/// @details 引数リストは任意。EntityId / ComponentDataの参照 / Serviceの参照・ポインタ を自由に並べられる。
 	///          ここで宣言したComponentDataがEntityLogicの必須ComponentDataに算入される。
 	template<auto MethodPointer, nox::SystemPhaseType _Phase>
@@ -201,37 +185,38 @@ namespace nox
 		};
 	}
 
-	/// @brief 静的初期化時に型記述子を登録する。NOX_DECLARE_ENTITY_LOGICが埋め込む。
+	/// @brief EntityLogic型の記述子を作る。
+	/// @details nox::EntityLogicMethodTable<TLogic> だけを読む。CRTP基底には何も持たせない。
 	template<class TLogic>
-	struct EntityLogicRegistrar final
+	[[nodiscard]] constexpr nox::EntityLogicTypeDescriptor MakeEntityLogicTypeDescriptor()noexcept
 	{
-		inline EntityLogicRegistrar()noexcept
-		{
-			nox::detail::RegisterEntityLogicType(TLogic::GetTypeDescriptor());
-		}
-	};
+		using MethodTable = nox::EntityLogicMethodTable<TLogic>;
+
+		//	必須マスクが空だと全entityに付いてしまうため、メソッド0個は誤りとみなす。
+		static_assert(MethodTable::GetMethods().empty() == false,
+			"EntityLogicには nox::attr::EntityLogicMethod を付けた更新メソッドが1つ以上必要です");
+
+		return nox::EntityLogicTypeDescriptor{
+			.make_required_mask = []()noexcept
+				{
+					//	必須ComponentData = 購読された全メソッドが宣言したComponentDataの和集合。
+					//	メソッドを足せば必要な条件も自動で広がるので、宣言が二重管理にならない。
+					nox::ComponentMask mask = TLogic::MakeExtraRequiredMask();
+					for (const nox::EntityLogicMethodDescriptor& method : MethodTable::GetMethods())
+					{
+						mask.Merge(method.make_read_write_mask());
+					}
+					return mask;
+				},
+			.construct = [](void* memory, nox::World& world, nox::EntityId entity) -> void*
+				{
+					return new(memory) TLogic(world, entity);
+				},
+			.destruct = [](void* instance)noexcept { static_cast<TLogic*>(instance)->~TLogic(); },
+			.get_methods = []()noexcept { return MethodTable::GetMethods(); },
+			.instance_size = static_cast<nox::uint32>(sizeof(TLogic)),
+			.instance_alignment = static_cast<nox::uint32>(alignof(TLogic)),
+			.name = nox::util::GetTypeName<TLogic>(),
+		};
+	}
 }
-
-/// @brief EntityLogicの更新メソッドを宣言する。NOX_DECLARE_ENTITY_LOGICの引数に並べる。
-/// @param phase_type nox::SystemPhaseTypeの列挙子名(Init / Start / Update / Terminate)。
-/// @param method_pointer &ClassName::MethodName 形式のメンバ関数ポインタ。
-#define NOX_ENTITY_LOGIC_METHOD(phase_type, method_pointer)									\
-	::nox::MakeEntityLogicMethodDescriptor<method_pointer, ::nox::SystemPhaseType::phase_type>(#method_pointer)
-//	end define
-
-/// @brief EntityLogicを購読させる。クラス本体に1行書くだけでWorldが自動生成・自動破棄・自動実行する。
-/// @details 更新メソッドの宣言より後ろに置くこと。静的初期化で記述子が連結リストに繋がるため、
-///          明示的な登録呼び出しは不要。
-#define NOX_DECLARE_ENTITY_LOGIC(type, ...)														\
-	public:																						\
-		[[nodiscard]] static ::std::span<const ::nox::EntityLogicMethodDescriptor>				\
-			GetEntityLogicMethods()noexcept														\
-		{																						\
-			static constexpr ::nox::EntityLogicMethodDescriptor k_methods[]{ __VA_ARGS__ };		\
-			return ::std::span<const ::nox::EntityLogicMethodDescriptor>(k_methods);				\
-		}																						\
-	private:																					\
-		friend struct ::nox::EntityLogicRegistrar<type>;										\
-		static inline const ::nox::EntityLogicRegistrar<type> k_nox_entity_logic_registrar_{};	\
-	public:
-//	end define
