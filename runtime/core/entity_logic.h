@@ -58,6 +58,22 @@ namespace nox
 		std::string_view name;
 	};
 
+	template<class TLogic>
+	[[nodiscard]] constexpr nox::EntityLogicTypeDescriptor MakeEntityLogicTypeDescriptor()noexcept;
+
+	/// @brief EntityLogicの構築をエンジンに限定するためのpasskey。
+	/// @details コンストラクタがprivateで、nox::MakeEntityLogicTypeDescriptor()だけがfriend。
+	///          そのため EntityLogic の派生型のコンストラクタをpublicにしても、
+	///          記述子のconstruct経由(=エンジン)以外からは実体を作れない。
+	class EntityLogicKey final
+	{
+	private:
+		inline constexpr EntityLogicKey()noexcept = default;
+
+		template<class TLogic>
+		friend constexpr nox::EntityLogicTypeDescriptor nox::MakeEntityLogicTypeDescriptor()noexcept;
+	};
+
 	/// @brief EntityLogic型の更新メソッド表。
 	/// @details 一次テンプレートは宣言のみ。リフレクション生成コードが型ごとに
 	///          明示的特殊化(static constexpr k_methods[] と GetMethods())を定義する。
@@ -138,7 +154,8 @@ namespace nox
 		}
 
 	protected:
-		inline EntityLogic(nox::World& world, const nox::EntityId entity)noexcept :
+		//	passkeyは派生型からそのまま受け流すだけ。エンジン以外から実体を作らせないための鍵。
+		inline EntityLogic(nox::EntityLogicKey, nox::World& world, const nox::EntityId entity)noexcept :
 			world_(&world),
 			entity_(entity)
 		{
@@ -155,8 +172,11 @@ namespace nox
 		nox::EntityId entity_;
 	};
 
-	/// @brief 更新メソッド1つ分の記述子を作る。生成コードと手書きの特殊化が共通で使う。
-	/// @details 引数リストは任意。EntityId / ComponentDataの参照 / Serviceの参照・ポインタ を自由に並べられる。
+	/// @brief 更新メソッド1つ分の記述子を作る。手書きの特殊化(エスケープハッチ)用。
+	/// @details メソッドのアドレスを通常の文脈で取るため、publicなメソッドにしか使えない。
+	///          生成コードは nox::detail::MakeEntityLogicMethodDescriptorViaTag を使う。
+	///
+	///          引数リストは任意。EntityId / ComponentDataの参照 / Serviceの参照・ポインタ を自由に並べられる。
 	///          ここで宣言したComponentDataがEntityLogicの必須ComponentDataに算入される。
 	template<auto MethodPointer, nox::SystemPhaseType _Phase>
 	[[nodiscard]] constexpr nox::EntityLogicMethodDescriptor MakeEntityLogicMethodDescriptor(const std::string_view name)noexcept
@@ -210,13 +230,83 @@ namespace nox
 				},
 			.construct = [](void* memory, nox::World& world, nox::EntityId entity) -> void*
 				{
-					return new(memory) TLogic(world, entity);
+					return new(memory) TLogic(nox::EntityLogicKey{}, world, entity);
 				},
 			.destruct = [](void* instance)noexcept { static_cast<TLogic*>(instance)->~TLogic(); },
 			.get_methods = []()noexcept { return MethodTable::GetMethods(); },
 			.instance_size = static_cast<nox::uint32>(sizeof(TLogic)),
 			.instance_alignment = static_cast<nox::uint32>(alignof(TLogic)),
 			.name = nox::util::GetTypeName<TLogic>(),
+		};
+	}
+}
+
+namespace nox::gen
+{
+	/// @brief private な更新メソッドを、対象クラスにfriendを足さずに購読へ載せるための実行サンク。
+	/// @details [temp.explicit] により、明示的実体化の宣言に現れる名前にはアクセス検査が適用されない。
+	///          そのため生成コードは private なメソッドのアドレスをテンプレート実引数として渡せる。
+	///          この実体化が Tag に宣言された friend 関数(=実行サンク)を定義する。
+	///          サンク本体はテンプレート実引数の値を使うだけで、private な名前を綴らない。
+	///
+	///          MSVC はこの形で定義した friend を定数評価できないため、記述子側は定数式で friend を
+	///          呼ばず、invokeラムダの中から実行時に呼ぶ。呼び出しは静的に束縛されインライン化される。
+	///
+	///          Tag と同じ名前空間に置く必要がある(クラス内で定義したfriendは最も内側の
+	///          名前空間のメンバになるため、nox::detail に置くと Tag の宣言と別物になり未解決になる)。
+	/// @tparam Tag 生成コードが宣言するメソッド1つ分のタグ型。
+	/// @tparam MethodPointer 対象メソッドへのメンバ関数ポインタ。
+	template<class Tag, auto MethodPointer>
+	struct PrivateEntityLogicMethodInvoker final
+	{
+		using OwnerType = typename nox::EntityMethodTraits<decltype(MethodPointer)>::OwnerType;
+		using Signature = typename nox::EntityMethodTraits<decltype(MethodPointer)>::Signature;
+
+		//	依存型を引数に取る friend のため、汎用リフレクションの対象からは外す。
+		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
+		friend void InvokeEntityLogicMethod(
+			Tag,
+			void* instance,
+			nox::World& world,
+			nox::Archetype& archetype,
+			const nox::ArchetypeLocation location,
+			const nox::EntityId entity)
+		{
+			nox::detail::EntityInvokerOf<Signature>::InvokeSingle(
+				world, archetype, location, entity, *static_cast<OwnerType*>(instance), MethodPointer);
+		}
+	};
+}
+
+namespace nox::detail
+{
+	/// @brief 更新メソッド1つ分の記述子を、生成コードのタグ経由で作る。
+	/// @details メソッドが public でも private でも同じ経路に載る。記述子はメソッド名を一切綴らず、
+	///          Tag が持つ型情報(所有型・メンバ関数ポインタ型)だけを読む。
+	/// @tparam Tag 生成コードが宣言したタグ型。OwnerType / MethodPointerType / Signature を持つ。
+	template<class Tag, nox::SystemPhaseType _Phase>
+	[[nodiscard]] constexpr nox::EntityLogicMethodDescriptor MakeEntityLogicMethodDescriptorViaTag(const std::string_view name)noexcept
+	{
+		using Signature = typename Tag::Signature;
+
+		//	引数リストの妥当性検査は手書き経路と同一。
+		static_assert(nox::detail::ValidateEntityMethod<typename Tag::MethodPointerType>());
+
+		return nox::EntityLogicMethodDescriptor{
+			.invoke = [](
+				void* instance,
+				nox::World& world,
+				nox::Archetype& archetype,
+				const nox::ArchetypeLocation location,
+				const nox::EntityId entity)
+				{
+					//	定数評価されるのはラムダ→関数ポインタ変換だけ。friendの呼び出しは実行時。
+					InvokeEntityLogicMethod(Tag{}, instance, world, archetype, location, entity);
+				},
+			.make_read_write_mask = []()noexcept { return Signature::GetReadWriteMask(); },
+			.make_write_mask = []()noexcept { return Signature::GetWriteMask(); },
+			.name = name,
+			.phase = _Phase,
 		};
 	}
 }

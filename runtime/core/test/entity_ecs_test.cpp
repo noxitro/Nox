@@ -20,8 +20,8 @@ namespace nox::test::ecs::manual
 	class ManualHealthLogic final : public nox::EntityLogic<nox::test::ecs::manual::ManualHealthLogic>
 	{
 	public:
-		inline ManualHealthLogic(nox::World& world, const nox::EntityId entity)noexcept :
-			nox::EntityLogic<nox::test::ecs::manual::ManualHealthLogic>(world, entity)
+		inline ManualHealthLogic(const nox::EntityLogicKey key, nox::World& world, const nox::EntityId entity)noexcept :
+			nox::EntityLogic<nox::test::ecs::manual::ManualHealthLogic>(key, world, entity)
 		{
 		}
 

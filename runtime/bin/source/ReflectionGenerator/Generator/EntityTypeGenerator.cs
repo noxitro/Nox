@@ -20,6 +20,12 @@ public sealed class EntityTypeGenerator
     private const string ENTITY_SYSTEM_BASE_PREFIX = "nox::EntitySystem<";
     private const string ENTITY_LOGIC_BASE_PREFIX = "nox::EntityLogic<";
     private const string ENTITY_LOGIC_METHOD_ATTRIBUTE = "nox::attr::EntityLogicMethod";
+    private const string ENTITY_LOGIC_KEY_TYPE = "nox::EntityLogicKey";
+
+    /// <summary>
+    /// 生成コードが宣言する、更新メソッド1つ分のタグ型の接頭辞
+    /// </summary>
+    private const string METHOD_TAG_PREFIX = "EntityLogicMethodTag_";
 
     /// <summary>
     /// 型ごとの出力ファイル名の接頭辞。Directory.Build.targets のワイルドカードと対応する
@@ -178,13 +184,7 @@ public sealed class EntityTypeGenerator
                 continue;
             }
 
-            if (functionDecl.AccessLevel != AccessLevel.Public)
-            {
-                Error(functionDecl, $"nox::attr::EntityLogicMethodを付けたメソッドはpublicである必要があります: {functionDecl.FullName}");
-                valid = false;
-                continue;
-            }
-
+            //  privateでもよい (明示的実体化のテンプレート実引数はアクセス検査の対象外)
             methodList.Add(new EntityMethodInfo()
             {
                 Name = functionDecl.Name,
@@ -202,9 +202,9 @@ public sealed class EntityTypeGenerator
                 return;
             }
 
-            if (IsConstructorPublic(recordDecl) == false)
+            if (HasEntityLogicConstructor(recordDecl) == false)
             {
-                Error(recordDecl, $"EntityLogicの(nox::World&, nox::EntityId)コンストラクタはpublicである必要があります: {recordDecl.FullName}");
+                Error(recordDecl, $"EntityLogicには public な (nox::EntityLogicKey, nox::World&, nox::EntityId) コンストラクタが必要です: {recordDecl.FullName}");
                 valid = false;
             }
         }
@@ -254,7 +254,13 @@ public sealed class EntityTypeGenerator
             || recordDecl.Namespace.Contains("(anonymous", StringComparison.Ordinal);
     }
 
-    private static bool IsConstructorPublic(Parser2.RecordDecl recordDecl)
+    /// <summary>
+    /// 第一引数に nox::EntityLogicKey を取る public なコンストラクタがあるか
+    /// </summary>
+    /// <remarks>
+    /// passkey を取るため、コンストラクタが public でもエンジン以外からは実体を作れない。
+    /// </remarks>
+    private static bool HasEntityLogicConstructor(Parser2.RecordDecl recordDecl)
     {
         bool found = false;
         foreach (Parser2.FunctionDecl functionDecl in recordDecl.FunctionList)
@@ -274,7 +280,18 @@ public sealed class EntityTypeGenerator
             }
 
             found = true;
-            if (functionDecl.AccessLevel == AccessLevel.Public)
+            if (functionDecl.AccessLevel != AccessLevel.Public)
+            {
+                continue;
+            }
+
+            ReadOnlySpan<Parser2.FunctionDecl.ArgumentInfo> argumentSpan = functionDecl.ArgumentSpan;
+            if (argumentSpan.Length <= 0)
+            {
+                continue;
+            }
+
+            if (argumentSpan[0].TypeInfo.FullName.Contains(ENTITY_LOGIC_KEY_TYPE, StringComparison.Ordinal))
             {
                 return true;
             }
@@ -318,6 +335,56 @@ public sealed class EntityTypeGenerator
             codeWriter.WriteLine($"extern const nox::EntityLogicTypeDescriptor {GetLogicDescriptorName(entityType)};");
         }
         codeWriter.WriteLine("}");
+    }
+
+    private static string GetMethodTagName(EntityTypeInfo entityType, int methodIndex)
+    {
+        return $"{METHOD_TAG_PREFIX}{entityType.SafeName}_{methodIndex.ToString()}";
+    }
+
+    /// <summary>
+    /// 更新メソッド1つにつき、タグ型と実行サンクの明示的実体化を書き出す
+    /// </summary>
+    /// <remarks>
+    /// 明示的実体化の宣言に現れる名前はアクセス検査の対象外 ([temp.explicit]) なので、
+    /// private なメソッドでも対象クラスに friend を足さずに購読できる。
+    /// public / private で経路を分けず、常にこの形で出力する。
+    /// </remarks>
+    private static void WriteMethodTags(CodeWriter codeWriter, EntityTypeInfo entityType)
+    {
+        codeWriter.WriteLine("namespace nox::gen");
+        codeWriter.WriteLine("{");
+        using (codeWriter.Indent())
+        {
+            for (int i = 0; i < entityType.MethodList.Count; ++i)
+            {
+                EntityMethodInfo method = entityType.MethodList[i];
+                string tagName = GetMethodTagName(entityType, i);
+
+                codeWriter.WriteLine($"struct {tagName}");
+                codeWriter.WriteLine("{");
+                using (codeWriter.Indent())
+                {
+                    codeWriter.WriteLine($"using OwnerType = {entityType.FullName};");
+                    //  オーバーロードで曖昧にならないよう、必ず正確なメンバ関数ポインタ型へキャストする
+                    codeWriter.WriteLine($"using MethodPointerType = nox::ToMemberFunctionPointerType<{method.FunctionTypeFullName}, {entityType.FullName}>;");
+                    codeWriter.WriteLine("using Signature = typename nox::EntityMethodTraits<MethodPointerType>::Signature;");
+                    codeWriter.WriteLine($"friend void InvokeEntityLogicMethod({tagName}, void*, nox::World&, nox::Archetype&, nox::ArchetypeLocation, nox::EntityId);");
+                }
+                codeWriter.WriteLine("};");
+            }
+        }
+        codeWriter.WriteLine("}");
+        codeWriter.WriteNewLine();
+
+        for (int i = 0; i < entityType.MethodList.Count; ++i)
+        {
+            EntityMethodInfo method = entityType.MethodList[i];
+            string tagName = GetMethodTagName(entityType, i);
+            string methodPointer = $"static_cast<nox::gen::{tagName}::MethodPointerType>(&{entityType.FullName}::{method.Name})";
+
+            codeWriter.WriteLine($"template struct nox::gen::PrivateEntityLogicMethodInvoker<nox::gen::{tagName}, {methodPointer}>;");
+        }
     }
 
     private void Error(Parser2.DeclBase decl, string message)
@@ -399,6 +466,9 @@ public sealed class EntityTypeGenerator
             }
             codeWriter.WriteNewLine();
 
+            WriteMethodTags(codeWriter, entityType);
+            codeWriter.WriteNewLine();
+
             codeWriter.WriteLine("template<>");
             codeWriter.WriteLine($"struct nox::EntityLogicMethodTable<{entityType.FullName}>");
             codeWriter.WriteLine("{");
@@ -410,13 +480,11 @@ public sealed class EntityTypeGenerator
                     for (int i = 0; i < entityType.MethodList.Count; ++i)
                     {
                         EntityMethodInfo method = entityType.MethodList[i];
-
-                        //  オーバーロードで曖昧にならないよう、必ず正確なメンバ関数ポインタ型へキャストする
-                        string memberFunctionPointerType = $"nox::ToMemberFunctionPointerType<{method.FunctionTypeFullName}, {entityType.FullName}>";
-                        string methodPointer = $"static_cast<{memberFunctionPointerType}>(&{entityType.FullName}::{method.Name})";
+                        string tagName = GetMethodTagName(entityType, i);
                         string phase = $"k_entity_logic_method_attribute_{entityType.SafeName}_{i.ToString()}.GetPhase()";
 
-                        codeWriter.WriteLine($"nox::MakeEntityLogicMethodDescriptor<{methodPointer}, {phase}>(\"{method.Name}\"),");
+                        //  記述子はメソッド名を綴らず、タグ型が持つ型情報だけを読む
+                        codeWriter.WriteLine($"nox::detail::MakeEntityLogicMethodDescriptorViaTag<nox::gen::{tagName}, {phase}>(\"{method.Name}\"),");
                     }
                 }
                 codeWriter.WriteLine("};");

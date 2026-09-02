@@ -57,14 +57,21 @@ namespace nox::test::ecs
 	/// @brief 必須ComponentDataは基底のテンプレート引数ではなく、メソッド群の引数から導出される。
 	/// @details メソッド名は任意、引数リストも任意。ここでは
 	///          「ComponentDataのみ」「Serviceをポインタで」「Serviceを参照で」の3形を並べている。
+	///          更新メソッドはprivateのままでよい(friend宣言も不要)。コンストラクタは
+	///          passkeyを取るためpublicでもエンジン以外からは実体を作れない。
 	class TestPlayerLogic final : public nox::EntityLogic<nox::test::ecs::TestPlayerLogic>
 	{
 	public:
-		inline TestPlayerLogic(nox::World& world, const nox::EntityId entity)noexcept :
-			nox::EntityLogic<nox::test::ecs::TestPlayerLogic>(world, entity)
+		inline TestPlayerLogic(const nox::EntityLogicKey key, nox::World& world, const nox::EntityId entity)noexcept :
+			nox::EntityLogic<nox::test::ecs::TestPlayerLogic>(key, world, entity)
 		{
 		}
 
+		nox::int32 process0_count = 0;
+		nox::int32 process1_count = 0;
+		nox::int32 process2_count = 0;
+
+	private:
 		NOX_ATTR(nox::attr::EntityLogicMethod(nox::SystemPhaseType::Update))
 		void Process0(nox::test::ecs::TestPosition& position, const nox::test::ecs::TestHealth& health)
 		{
@@ -97,9 +104,5 @@ namespace nox::test::ecs
 			position.x += velocity.x;
 			++service.call_count;
 		}
-
-		nox::int32 process0_count = 0;
-		nox::int32 process1_count = 0;
-		nox::int32 process2_count = 0;
 	};
 }
