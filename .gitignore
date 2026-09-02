@@ -157,3 +157,8 @@
 /runtime/bin/ReflectionGenerator.deps.json
 /runtime/bin/ReflectionGenerator.runtimeconfig.json
 /runtime/kernel/test/build
+
+/runtime/bin/source/CustomTask/bin/
+
+# ローカル専用のビルド設定 (vcpkg の場所などの上書き)
+/runtime/Directory.Build.user.props

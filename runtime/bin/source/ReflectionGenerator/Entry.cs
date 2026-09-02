@@ -85,15 +85,53 @@ namespace ReflectionGenerator;
     #region 非公開メソッド
 		internal static int Run(string[] args)
 		{
-			return MainProcess2();
+			//	前処理データ(バイナリ)の置き場所は %TEMP% ではなくソースツリー内なので、
+			//	MSBuild 側と同じ引数からパスを決める必要がある。
+			Dictionary<string, string> optionDict = ParseOptions(args);
+
+			if (optionDict.TryGetValue("out", out string? outputGenerateDir) == false
+				|| optionDict.TryGetValue("platform", out string? platform) == false
+				|| optionDict.TryGetValue("config", out string? configuration) == false)
+			{
+				Trace.ErrorLine(null, "引数が足りません: -out <生成出力ディレクトリ> -platform <プラットフォーム> -config <構成> は必須です");
+				return 1;
+			}
+
+			return MainProcess2(outputGenerateDir, platform, configuration);
 		}
 
-		private static int MainProcess2()
+		/// <summary>
+		/// -name value 形式のコマンドライン引数を辞書にする
+		/// </summary>
+		private static Dictionary<string, string> ParseOptions(string[] args)
+		{
+			Dictionary<string, string> optionDict = new(StringComparer.OrdinalIgnoreCase);
+
+			for (int i = 0; i < args.Length; ++i)
+			{
+				if (args[i].StartsWith("-", StringComparison.Ordinal) == false)
+				{
+					continue;
+				}
+
+				if (i + 1 >= args.Length)
+				{
+					break;
+				}
+
+				optionDict[args[i].Substring(1)] = args[i + 1];
+				++i;
+			}
+
+			return optionDict;
+		}
+
+		private static int MainProcess2(string outputGenerateDir, string platform, string configuration)
 		{
 			Nox.CustomTask.Data data;
 			try
 			{
-				data = Nox.CustomTask.Util.GetData();
+				data = Nox.CustomTask.Util.GetData(outputGenerateDir, platform, configuration);
 			}
 			catch (System.Exception e)
 			{

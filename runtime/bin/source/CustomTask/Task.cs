@@ -167,7 +167,8 @@ public class Task : Microsoft.Build.Utilities.Task
 			UseRtti = UseRtti,
 		};
 
-		string path = Util.GetBinFilePath();
+		string path = Util.GetBinFilePath(OutputGenerateDir, Platform, Configuration);
+		System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path));
 		WriteToFile(path, data);
 
 		return true;

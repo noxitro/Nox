@@ -1,14 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Label="PropertySheets" />
+  <!-- 追跡外のローカル設定 (存在すれば取り込む)。vcpkg の場所などをここで上書きできる -->
+  <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.user.props" Condition="Exists('$(MSBuildThisFileDirectory)..\Directory.Build.user.props')" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <OutDir>$(SolutionDir)build\$(SolutionName)\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)build\intermediate\$(SolutionName)\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <_PropertySheetDisplayName>nox_common</_PropertySheetDisplayName>
     <LinkIncremental>true</LinkIncremental>
-    <!-- vcpkg (manifest mode) installed tree at repository root -->
-    <NoxVcpkgInstalledDir>$(MSBuildThisFileDirectory)..\..\vcpkg_installed\$(Platform)-windows\</NoxVcpkgInstalledDir>
+    <!--
+      vcpkg (manifest mode) installed tree.
+      既定はリポジトリ直下の vcpkg_installed。複数の git worktree で 1 つのインストール済みツリーを
+      共有できるよう、追跡ファイルを編集せずに差し替えられるようにしてある。優先順位は
+        1. 環境変数 NOX_VCPKG_INSTALLED_DIR
+        2. 追跡外の runtime\Directory.Build.user.props で設定した NoxVcpkgInstalledRoot
+        3. 既定 (リポジトリ直下の vcpkg_installed)
+      指すのは triplet ディレクトリの親 (x64-windows の 1 つ上) であることに注意。
+    -->
+    <NoxVcpkgInstalledRoot Condition="'$(NOX_VCPKG_INSTALLED_DIR)' != ''">$(NOX_VCPKG_INSTALLED_DIR)</NoxVcpkgInstalledRoot>
+    <NoxVcpkgInstalledRoot Condition="'$(NoxVcpkgInstalledRoot)' == ''">$(MSBuildThisFileDirectory)..\..\vcpkg_installed</NoxVcpkgInstalledRoot>
+    <NoxVcpkgInstalledDir>$([MSBuild]::EnsureTrailingSlash('$(NoxVcpkgInstalledRoot)'))$(Platform)-windows\</NoxVcpkgInstalledDir>
     <NoxVcpkgLibDir Condition="'$(Configuration)'=='Debug'">$(NoxVcpkgInstalledDir)debug\lib</NoxVcpkgLibDir>
     <NoxVcpkgLibDir Condition="'$(NoxVcpkgLibDir)'==''">$(NoxVcpkgInstalledDir)lib</NoxVcpkgLibDir>
   </PropertyGroup>
