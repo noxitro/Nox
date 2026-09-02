@@ -13,4 +13,5 @@ void nox::test::Test()
 	nox::test::TestDelegate();
 	nox::test::TestEntityCommandBuffer();
 	nox::test::TestEntityEcs();
+	nox::test::TestJobSystem();
 }

@@ -278,6 +278,9 @@
     <ClCompile Include="test\entity_ecs_test.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="test\job_system_test.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
     <ClCompile Include="engine_module.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>

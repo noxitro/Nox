@@ -40,6 +40,26 @@ nox::uint8 nox::os::GetHardwareConcurrency()
 #endif // NOX_WINDOWS
 }
 
+nox::uint32 nox::os::GetLogicalProcessorCount()noexcept
+{
+#if NOX_WINDOWS
+	//	プロセッサグループを跨ぐ環境でも正しい数を返す。
+	const ::DWORD count = ::GetActiveProcessorCount(ALL_PROCESSOR_GROUPS);
+	if (count != 0u)
+	{
+		return static_cast<nox::uint32>(count);
+	}
+
+	::SYSTEM_INFO system_info;
+	::GetSystemInfo(&system_info);
+	return system_info.dwNumberOfProcessors != 0u
+		? static_cast<nox::uint32>(system_info.dwNumberOfProcessors)
+		: 1u;
+#else
+	return 1u;
+#endif // NOX_WINDOWS
+}
+
 void* nox::os::detail::GetProcAddressImpl(void* const moduleHandle, const char* const procNamePtr)
 {
 	::FARPROC const proc = ::GetProcAddress(

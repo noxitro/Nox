@@ -74,6 +74,10 @@
 #include	"io/stream_reader.h"
 //	end io
 
+//	job
+#include	"job_system.h"
+//	end job
+
 //	diagnostics
 #include	"parallel_execute_checker.h"
 //	end diagnostics

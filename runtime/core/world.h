@@ -11,6 +11,7 @@
 #include	"entity_logic.h"
 #include	"updater_graph.h"
 #include	"service.h"
+#include	"../kernel/job_system.h"
 
 namespace nox
 {
@@ -33,6 +34,8 @@ namespace nox
 		static constexpr nox::uint32 k_entity_command_capacity = 1024u;
 		static constexpr nox::uint32 k_max_service_count = 64u;
 		static constexpr nox::uint32 k_initial_archetype_capacity = 64u;
+		/// @brief 1レイヤーに載せられるノード数の上限。ジョブ配列をスタックに置くために固定する。
+		static constexpr nox::uint32 k_max_nodes_per_layer = 256u;
 
 		/// @brief 実行ノード
 		struct SystemExecuteNode
@@ -68,6 +71,14 @@ namespace nox
 		struct EntityRecordPage
 		{
 			std::array<nox::World::EntityRecord, k_entity_record_page_size> records;
+		};
+
+		/// @brief ノード1つ分のジョブコンテキスト。ディスパッチ毎にスタック上へ作る。
+		/// @details 関数ポインタ + void* しか渡せないので、Worldとノードをここで束ねる。
+		struct NodeJobContext
+		{
+			nox::World* world;
+			const nox::UpdaterNode* node;
 		};
 	public:
 		World();
@@ -188,6 +199,10 @@ namespace nox
 		void ExecuteUpdaterGraphPhase(nox::SystemPhaseType phase_type);
 		/// @brief ノード1つを実行する。stage 2bではこの関数をそのままワーカーへ渡す。
 		void ExecuteNode(const nox::UpdaterNode& node);
+		/// @brief ExecuteNodeをジョブとして呼ぶためのthunk。contextはNodeJobContext*。
+		static void ExecuteNodeJob(void* context);
+		/// @brief レイヤーのノードを直列に実行する。
+		void ExecuteLayerNodesSerial(std::span<const nox::UpdaterNode> nodes);
 		/// @brief entityのComponentData構成が変わったので、EntityLogicの生成/破棄を追従させる。
 		void RefreshEntityLogics(nox::EntityId entity, const nox::Archetype* archetype);
 
@@ -207,6 +222,8 @@ namespace nox
 		void LeaveNodeAccessScope(const nox::UpdaterNodeAccess& access)noexcept;
 		/// @brief Serviceの型に対応するチェッカー。未登録のServiceならnullptr。
 		[[nodiscard]] nox::util::RWParallelExecuteChecker* TryGetServiceExecuteChecker(const nox::reflection::Type* type)noexcept;
+		/// @brief 検出時のメッセージに載せる名前を、全チェッカーへ割り当てる。
+		void SetupExecuteCheckerNames()noexcept;
 #endif // !NOX_MASTER
 
 		[[nodiscard]]
@@ -263,6 +280,12 @@ namespace nox
 
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
 		nox::UpdaterGraph updater_graph_;
+
+		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
+		nox::JobSystem job_system_;
+
+		/// @brief --serial-updater が指定されていたか。trueならワーカーを1本も作らない。
+		const bool serial_updater_;
 
 #if !NOX_MASTER
 		//	依存解析の誤りを即座に検出するためのチェッカー。ComponentTypeIndexごと / Service登録順ごとに1つ持つ。

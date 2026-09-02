@@ -88,6 +88,23 @@ namespace nox
 			return false;
 		}
 
+		/// @brief 同じServiceを複数回宣言している場合の、実効的な書き込み権限。
+		/// @details 1つでも非constで受けていればそのノードはWriterとして扱う。
+		[[nodiscard]] bool is_service_write_access(
+			const std::span<const nox::ServiceAccess> accesses,
+			const nox::uint32 index)noexcept
+		{
+			bool write = false;
+			for (nox::uint32 other_index = 0u; other_index < accesses.size(); ++other_index)
+			{
+				if (accesses[other_index].type == accesses[index].type)
+				{
+					write = write || accesses[other_index].write;
+				}
+			}
+			return write;
+		}
+
 		struct RuntimeGraphTextBuilder
 		{
 			std::array<nox::char8, 3072> buffer{};
@@ -146,6 +163,8 @@ nox::World::World() :
 	entity_systems_(),
 	entity_logic_storages_(),
 	updater_graph_(),
+	job_system_(),
+	serial_updater_(nox::os::ContainsCommandLineArgKey(u"--serial-updater")),
 	services_(),
 	modules_(),
 	systems_(),
@@ -165,6 +184,9 @@ nox::World::World() :
 
 nox::World::~World()
 {
+	//	ノードを触るものを片付ける前に、必ずワーカーを止めて回収する。
+	job_system_.Finalize();
+
 	for (nox::EntityLogicStorage* const storage : entity_logic_storages_)
 	{
 		delete storage;
@@ -319,9 +341,21 @@ void nox::World::Init()
 		std::span<nox::EntityLogicStorage* const>(entity_logic_storages_.data(), entity_logic_storages_.size()));
 
 #if !NOX_MASTER
+	//	Rebuildまで来ればノードが宣言したComponentData型は全て登録済みなので、ここで名前を配れる。
+	SetupExecuteCheckerNames();
 	TraceExecuteNodeList();
 	updater_graph_.Trace();
 #endif // !NOX_MASTER
+
+	//	--serial-updater が付いていればワーカー0本。Dispatchは呼び出しスレッド上で回る。
+	const nox::uint32 worker_count = serial_updater_ ? 0u : nox::JobSystem::GetDefaultWorkerCount();
+	job_system_.Initialize(worker_count);
+
+	NOX_INFO_LINE(nox::log_id::CoreCommon,
+		u8"UpdaterGraph実行モード: {0} ワーカー数={1} 論理プロセッサ数={2}",
+		serial_updater_ ? u8"直列(--serial-updater)" : u8"並列",
+		job_system_.GetWorkerCount(),
+		nox::os::GetLogicalProcessorCount());
 }
 
 void nox::World::Update()
@@ -518,17 +552,62 @@ void nox::World::CreateEntitySystems()
 	}
 }
 
+void nox::World::ExecuteLayerNodesSerial(const std::span<const nox::UpdaterNode> nodes)
+{
+	for (const nox::UpdaterNode& node : nodes)
+	{
+		ExecuteNode(node);
+	}
+}
+
+void nox::World::ExecuteNodeJob(void* const context)
+{
+	auto* const job_context = static_cast<nox::World::NodeJobContext*>(context);
+	job_context->world->ExecuteNode(*job_context->node);
+}
+
 void nox::World::ExecuteUpdaterGraphPhase(const nox::SystemPhaseType phase_type)
 {
-	//	レイヤーは「小さいほど先」。同一レイヤーのノードは宣言上衝突しないので同時実行してよいが、
-	//	この段階ではまだ直列に回す(スレッドは stage 2b で入る)。
-	//	確保は一切走らない。ノード列もレイヤー境界もInitで構築済み。
+	//	レイヤーは「小さいほど先」。同一レイヤー内のノードは依存解析上互いに衝突しないので、
+	//	そのままワーカーへ配ってよい。レイヤー間は直列のまま(次のレイヤーは前のレイヤーの完了が前提)。
+	//	確保は一切走らない。ノード列もレイヤー境界もInitで構築済みで、ジョブ配列はスタック上の固定長。
 	const nox::uint32 layer_count = updater_graph_.GetLayerCount(phase_type);
+	const bool parallel_enabled = (job_system_.GetWorkerCount() != 0u);
+
 	for (nox::uint32 layer_index = 0u; layer_index < layer_count; ++layer_index)
 	{
-		for (const nox::UpdaterNode& node : updater_graph_.GetLayerNodes(phase_type, layer_index))
+		const std::span<const nox::UpdaterNode> nodes = updater_graph_.GetLayerNodes(phase_type, layer_index);
+
+		//	1つしか無いレイヤーを配っても往復コストが乗るだけなので、その場で回す。
+		if (parallel_enabled == false || nodes.size() <= 1u)
 		{
-			ExecuteNode(node);
+			ExecuteLayerNodesSerial(nodes);
+			continue;
+		}
+
+		NOX_ASSERT(nodes.size() <= k_max_nodes_per_layer,
+			u8"1レイヤーのノード数が上限を超えました 上限={0} 実際={1}",
+			k_max_nodes_per_layer, static_cast<nox::uint32>(nodes.size()));
+
+		const nox::uint32 job_count = std::min(static_cast<nox::uint32>(nodes.size()), k_max_nodes_per_layer);
+
+		std::array<nox::World::NodeJobContext, k_max_nodes_per_layer> job_contexts{};
+		std::array<nox::Job, k_max_nodes_per_layer> jobs{};
+		for (nox::uint32 index = 0u; index < job_count; ++index)
+		{
+			job_contexts[index] = nox::World::NodeJobContext{ .world = this, .node = &nodes[index] };
+			jobs[index] = nox::Job{ .func = &nox::World::ExecuteNodeJob, .context = &job_contexts[index] };
+		}
+
+		nox::JobCounter counter{ 0u };
+		job_system_.Dispatch(std::span<const nox::Job>(jobs.data(), job_count), counter);
+		//	待つ側(ゲームスレッド)も自分でジョブを引いて働く。
+		job_system_.Wait(counter);
+
+		//	上限を超えた分は取りこぼさずここで直列実行する(アサート済みの異常系)。
+		if (job_count < nodes.size())
+		{
+			ExecuteLayerNodesSerial(nodes.subspan(job_count));
 		}
 	}
 }
@@ -738,15 +817,43 @@ nox::util::RWParallelExecuteChecker* nox::World::TryGetServiceExecuteChecker(con
 	return nullptr;
 }
 
+void nox::World::SetupExecuteCheckerNames()noexcept
+{
+	//	ComponentDataは登録順の密なインデックスなので、未登録に当たった時点で以降も未登録。
+	for (nox::uint32 index = 0u; index < nox::k_max_component_type_count; ++index)
+	{
+		const nox::ComponentTypeInfo* const type_info =
+			nox::detail::TryGetComponentTypeInfo(static_cast<nox::ComponentTypeIndex>(index));
+		if (type_info == nullptr)
+		{
+			break;
+		}
+		component_execute_checkers_[index].SetName(type_info->name);
+	}
+
+	for (nox::uint32 index = 0u; index < services_.GetLength(); ++index)
+	{
+		service_execute_checkers_[index].SetName(services_.GetStorage()[index].type->GetTypeName());
+	}
+}
+
 void nox::World::EnterNodeAccessScope(const nox::UpdaterNodeAccess& access)noexcept
 {
-	//	RWParallelExecuteCheckerは現状read/writeを区別せず、Enterが重なった時点で検出する。
-	//	読み取り同士を並列に走らせるstage 2bでは、チェッカー側をRW対応にする必要がある。
+	//	宣言のうち「書き込みが含まれるもの」だけWriteで入る。読み取りだけならReadなので、
+	//	同じComponentDataを読むノード同士は並列に走ってもチェッカーは沈黙する。
 	const std::source_location location = std::source_location::current();
-	access.read_write_mask.ForEachIndex([this, &location](const nox::ComponentTypeIndex type_index)noexcept
+	access.read_write_mask.ForEachIndex([this, &access, &location](const nox::ComponentTypeIndex type_index)noexcept
 		{
-			component_execute_checkers_[type_index].Enter(
-				nox::util::detail::ParallelExecuteCheckOption::SourceLocation, location);
+			if (access.write_mask.Test(type_index))
+			{
+				component_execute_checkers_[type_index].EnterWrite(
+					nox::util::detail::ParallelExecuteCheckOption::SourceLocation, location);
+			}
+			else
+			{
+				component_execute_checkers_[type_index].EnterRead(
+					nox::util::detail::ParallelExecuteCheckOption::SourceLocation, location);
+			}
 		});
 
 	for (nox::uint32 index = 0u; index < access.service_accesses.size(); ++index)
@@ -758,18 +865,35 @@ void nox::World::EnterNodeAccessScope(const nox::UpdaterNodeAccess& access)noexc
 
 		nox::util::RWParallelExecuteChecker* const checker =
 			TryGetServiceExecuteChecker(access.service_accesses[index].type);
-		if (checker != nullptr)
+		if (checker == nullptr)
 		{
-			checker->Enter(nox::util::detail::ParallelExecuteCheckOption::SourceLocation, location);
+			continue;
+		}
+
+		if (is_service_write_access(access.service_accesses, index))
+		{
+			checker->EnterWrite(nox::util::detail::ParallelExecuteCheckOption::SourceLocation, location);
+		}
+		else
+		{
+			checker->EnterRead(nox::util::detail::ParallelExecuteCheckOption::SourceLocation, location);
 		}
 	}
 }
 
 void nox::World::LeaveNodeAccessScope(const nox::UpdaterNodeAccess& access)noexcept
 {
-	access.read_write_mask.ForEachIndex([this](const nox::ComponentTypeIndex type_index)noexcept
+	//	Enterと完全に対でなければならない。判定条件はEnterと同じものを使う。
+	access.read_write_mask.ForEachIndex([this, &access](const nox::ComponentTypeIndex type_index)noexcept
 		{
-			component_execute_checkers_[type_index].Exit();
+			if (access.write_mask.Test(type_index))
+			{
+				component_execute_checkers_[type_index].ExitWrite();
+			}
+			else
+			{
+				component_execute_checkers_[type_index].ExitRead();
+			}
 		});
 
 	for (nox::uint32 index = 0u; index < access.service_accesses.size(); ++index)
@@ -781,9 +905,18 @@ void nox::World::LeaveNodeAccessScope(const nox::UpdaterNodeAccess& access)noexc
 
 		nox::util::RWParallelExecuteChecker* const checker =
 			TryGetServiceExecuteChecker(access.service_accesses[index].type);
-		if (checker != nullptr)
+		if (checker == nullptr)
 		{
-			checker->Exit();
+			continue;
+		}
+
+		if (is_service_write_access(access.service_accesses, index))
+		{
+			checker->ExitWrite();
+		}
+		else
+		{
+			checker->ExitRead();
 		}
 	}
 }

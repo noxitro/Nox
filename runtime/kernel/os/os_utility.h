@@ -22,6 +22,11 @@ namespace nox::os
 	*/
 	uint8 GetHardwareConcurrency();
 
+	/// @brief 論理プロセッサ数を取得する
+	/// @details GetHardwareConcurrencyはuint8で飽和するため、64論理プロセッサを超える環境も
+	///          扱えるようにこちらを使う。取得に失敗した場合は1を返す(0は返さない)。
+	uint32 GetLogicalProcessorCount()noexcept;
+
 	namespace detail
 	{
 		[[nodiscard]] void* GetProcAddressImpl(void* const moduleHandle, const char* const procNamePtr);

@@ -11,4 +11,5 @@ namespace nox::test
 	void TestDelegate();
 	void TestEntityCommandBuffer();
 	void TestEntityEcs();
+	void TestJobSystem();
 } 

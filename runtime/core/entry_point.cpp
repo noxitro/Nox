@@ -35,6 +35,8 @@ nox::int32 nox::EntryPoint(const std::span<const nox::char16* const> args)
 #if !NOX_MASTER
 	//	ECS基盤のセルフテスト。Archetypeストレージと引数リストの束縛が壊れていれば起動時点で落ちる。
 	nox::test::TestEntityEcs();
+	//	ジョブシステムのセルフテスト。配分・完了待ち・0ワーカーのフォールバックを起動時に確認する。
+	nox::test::TestJobSystem();
 #endif // !NOX_MASTER
 
 	{

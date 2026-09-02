@@ -429,6 +429,10 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="test\job_system_test.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="entity.cpp">
       <SubType>
       </SubType>
