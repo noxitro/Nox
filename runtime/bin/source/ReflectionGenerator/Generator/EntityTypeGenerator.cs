@@ -13,6 +13,13 @@ namespace ReflectionGenerator.Generator;
 /// ヘッダにクラスを定義するだけで購読されるようにするため、型ごとの .g.cpp と
 /// それらを集約するテーブル .g.cpp を書き出す。記述子は全て constexpr で、
 /// 動的初期化は一切発生しない。
+///
+/// [指針] 生成器は「人間が公開エンジンAPIだけを使って手で書けるコード」しか書かない。
+/// 生成器は判断をしない。C++ で検査できることは全て C++ 側の static_assert で検査する。
+/// したがってこの生成器の仕事は「型を数え上げ、属性の付いたメソッドを数え上げる」だけであり、
+/// コンストラクタの形・引数の妥当性・フェーズ値の解釈などには一切踏み込まない。
+/// 生成時エラーにするのは「生成器がそもそもコードを書けない」場合(無名名前空間・クラステンプレート・
+/// EntityLogic 以外への属性付与)に限る。
 /// </remarks>
 public sealed class EntityTypeGenerator
 {
@@ -20,7 +27,6 @@ public sealed class EntityTypeGenerator
     private const string ENTITY_SYSTEM_BASE_PREFIX = "nox::EntitySystem<";
     private const string ENTITY_LOGIC_BASE_PREFIX = "nox::EntityLogic<";
     private const string ENTITY_LOGIC_METHOD_ATTRIBUTE = "nox::attr::EntityLogicMethod";
-    private const string ENTITY_LOGIC_KEY_TYPE = "nox::EntityLogicKey";
 
     /// <summary>
     /// 生成コードが宣言する、更新メソッド1つ分のタグ型の接頭辞
@@ -193,20 +199,11 @@ public sealed class EntityTypeGenerator
             });
         }
 
-        if (kind.Value == EntityTypeKind.Logic)
+        if (kind.Value == EntityTypeKind.Logic && methodList.Count <= 0)
         {
-            if (methodList.Count <= 0)
-            {
-                //  購読対象が無いだけなので、失敗はさせずに知らせる
-                Warning(recordDecl, $"nox::EntityLogicを継承していますが、nox::attr::EntityLogicMethodを付けたメソッドが1つもないため購読されません: {recordDecl.FullName}");
-                return;
-            }
-
-            if (HasEntityLogicConstructor(recordDecl) == false)
-            {
-                Error(recordDecl, $"EntityLogicには public な (nox::EntityLogicKey, nox::World&, nox::EntityId) コンストラクタが必要です: {recordDecl.FullName}");
-                valid = false;
-            }
+            //  購読対象が無いだけなので、失敗はさせずに知らせる
+            Warning(recordDecl, $"nox::EntityLogicを継承していますが、nox::attr::EntityLogicMethodを付けたメソッドが1つもないため購読されません: {recordDecl.FullName}");
+            return;
         }
 
         if (valid == false)
@@ -252,53 +249,6 @@ public sealed class EntityTypeGenerator
             || recordDecl.FullName.Contains("::::", StringComparison.Ordinal)
             || recordDecl.FullName.StartsWith("::", StringComparison.Ordinal)
             || recordDecl.Namespace.Contains("(anonymous", StringComparison.Ordinal);
-    }
-
-    /// <summary>
-    /// 第一引数に nox::EntityLogicKey を取る public なコンストラクタがあるか
-    /// </summary>
-    /// <remarks>
-    /// passkey を取るため、コンストラクタが public でもエンジン以外からは実体を作れない。
-    /// </remarks>
-    private static bool HasEntityLogicConstructor(Parser2.RecordDecl recordDecl)
-    {
-        bool found = false;
-        foreach (Parser2.FunctionDecl functionDecl in recordDecl.FunctionList)
-        {
-            if (functionDecl.Name != recordDecl.Name)
-            {
-                continue;
-            }
-
-            if (functionDecl.FunctionAttributeFlags.IsAnyOn(
-                Parser2.FunctionAttributeFlag.DefaultConstructor |
-                Parser2.FunctionAttributeFlag.CopyConstructor |
-                Parser2.FunctionAttributeFlag.MoveConstructor |
-                Parser2.FunctionAttributeFlag.Destructor))
-            {
-                continue;
-            }
-
-            found = true;
-            if (functionDecl.AccessLevel != AccessLevel.Public)
-            {
-                continue;
-            }
-
-            ReadOnlySpan<Parser2.FunctionDecl.ArgumentInfo> argumentSpan = functionDecl.ArgumentSpan;
-            if (argumentSpan.Length <= 0)
-            {
-                continue;
-            }
-
-            if (argumentSpan[0].TypeInfo.FullName.Contains(ENTITY_LOGIC_KEY_TYPE, StringComparison.Ordinal))
-            {
-                return true;
-            }
-        }
-
-        //  コンストラクタが取れなかった場合は判断できないので通す (C++側でコンパイルエラーになる)
-        return found == false;
     }
 
     private static string? TryGetEntityLogicMethodAttribute(Parser2.FunctionDecl functionDecl)

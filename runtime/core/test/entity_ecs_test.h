@@ -7,6 +7,7 @@
 ///          の表を書き出すため、「ヘッダに定義するだけ」が成立していることの実証を兼ねる。
 #pragma once
 #include	"../component_type.h"
+#include	"../entity_commands.h"
 #include	"../service.h"
 #include	"../entity_system.h"
 #include	"../entity_logic.h"
@@ -56,20 +57,16 @@ namespace nox::test::ecs
 
 	/// @brief 必須ComponentDataは基底のテンプレート引数ではなく、メソッド群の引数から導出される。
 	/// @details メソッド名は任意、引数リストも任意。ここでは
-	///          「ComponentDataのみ」「Serviceをポインタで」「Serviceを参照で」の3形を並べている。
-	///          更新メソッドはprivateのままでよい(friend宣言も不要)。コンストラクタは
-	///          passkeyを取るためpublicでもエンジン以外からは実体を作れない。
+	///          「ComponentDataのみ」「Serviceをポインタで」「Serviceを参照で」「EntityCommands」の4形を並べている。
+	///          更新メソッドはprivateのままでよい(friend宣言も不要)。
+	///          コンストラクタは書かない(エンジンがデフォルト構築してentityを束縛する)。
 	class TestPlayerLogic final : public nox::EntityLogic<nox::test::ecs::TestPlayerLogic>
 	{
 	public:
-		inline TestPlayerLogic(const nox::EntityLogicKey key, nox::World& world, const nox::EntityId entity)noexcept :
-			nox::EntityLogic<nox::test::ecs::TestPlayerLogic>(key, world, entity)
-		{
-		}
-
 		nox::int32 process0_count = 0;
 		nox::int32 process1_count = 0;
 		nox::int32 process2_count = 0;
+		bool last_alive = false;
 
 	private:
 		NOX_ATTR(nox::attr::EntityLogicMethod(nox::SystemPhaseType::Update))
@@ -103,6 +100,14 @@ namespace nox::test::ecs
 			++process2_count;
 			position.x += velocity.x;
 			++service.call_count;
+		}
+
+		NOX_ATTR(nox::attr::EntityLogicMethod(nox::SystemPhaseType::Update))
+		void Process3(nox::EntityId entity, nox::EntityCommands& commands)
+		{
+			//	WorldはEntityLogicに保持されない。フェーズ中に許される操作は引数で受け取る。
+			//	ComponentDataを1つも宣言していないため、必須ComponentDataは広がらない。
+			last_alive = commands.IsAlive(entity);
 		}
 	};
 }

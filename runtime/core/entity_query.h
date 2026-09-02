@@ -68,6 +68,11 @@ namespace nox
 			{
 				return *(static_cast<typename Traits::RawType*>(base) + row);
 			}
+			else if constexpr (Traits::k_kind == nox::EntityParameterKind::Commands)
+			{
+				//	呼び出し1回につき1つ、スタック上に作った実体を全行で共有する。
+				return *static_cast<nox::EntityCommands*>(base);
+			}
 			else if constexpr (std::is_reference_v<Parameter>)
 			{
 				//	Service&。解決に失敗した場合はここへ来る前に呼び出しが打ち切られている。
@@ -104,6 +109,17 @@ namespace nox
 			{
 				out_base = nullptr;
 				return true;
+			}
+		}
+
+		/// @brief nox::EntityCommands引数へ、呼び出し単位の実体を束縛する。
+		/// @details Chunkにも行にも依存しないため、Serviceと同じく列挙ごとに1回だけ書き込む。
+		template<class Parameter>
+		inline void BindEntityCommandsBase(nox::EntityCommands& commands, void*& out_base)noexcept
+		{
+			if constexpr (nox::EntityParameterTraits<Parameter>::k_kind == nox::EntityParameterKind::Commands)
+			{
+				out_base = &commands;
 			}
 		}
 
@@ -144,6 +160,12 @@ namespace nox
 			}
 
 			template<size_t... Indices>
+			static void BindCommands(nox::EntityCommands& commands, BaseArray& bases, std::index_sequence<Indices...>)noexcept
+			{
+				(nox::detail::BindEntityCommandsBase<ParameterAt<Indices>>(commands, bases[Indices]), ...);
+			}
+
+			template<size_t... Indices>
 			[[nodiscard]] static bool ResolveColumns(
 				nox::Archetype& archetype,
 				const nox::uint32 chunk_index,
@@ -175,10 +197,13 @@ namespace nox
 			{
 				constexpr auto k_indices = std::make_index_sequence<k_parameter_count>{};
 				BaseArray bases{};
+				//	Worldへの薄いビュー。ポインタ1つ分なので確保も解放も走らない。
+				nox::EntityCommands commands(world);
 				if (ResolveServices(world, bases, k_indices) == false)
 				{
 					return;
 				}
+				BindCommands(commands, bases, k_indices);
 
 				for (nox::Archetype* const archetype : query.GetMatchedArchetypes())
 				{
@@ -217,10 +242,12 @@ namespace nox
 			{
 				constexpr auto k_indices = std::make_index_sequence<k_parameter_count>{};
 				BaseArray bases{};
+				nox::EntityCommands commands(world);
 				if (ResolveServices(world, bases, k_indices) == false)
 				{
 					return;
 				}
+				BindCommands(commands, bases, k_indices);
 				if (ResolveColumns(archetype, location.chunk_index, bases, k_indices) == false)
 				{
 					NOX_ASSERT(false, u8"EntityLogicが宣言したComponentDataの列を解決できませんでした");

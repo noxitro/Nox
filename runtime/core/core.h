@@ -14,6 +14,7 @@
 #include	"asset_ref.h"
 #include	"world.h"
 #include	"component_type.h"
+#include	"entity_commands.h"
 #include	"entity_access.h"
 #include	"archetype.h"
 #include	"entity_query.h"

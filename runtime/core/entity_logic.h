@@ -12,6 +12,12 @@
 ///          リフレクション生成コードが nox::EntityLogicMethodTable の明示的特殊化を書き出し、
 ///          nox::GetEntityLogicTypes() の表に載せる。
 ///
+///          [生成器との境界]
+///          生成器は「人間が公開APIだけを使って手で書けるコード」しか書かない。判断は一切しない。
+///          C++で検査できることは全てC++側の static_assert で検査する。
+///          そのため生成器がやることは「型を数え上げ、属性の付いたメソッドを数え上げる」だけであり、
+///          コンストラクタの形・引数の妥当性・フェーズの解釈などはこのヘッダ側の責務になる。
+///
 ///          使い分け: 大量に湧くもの(弾・パーティクル・群れ)はEntitySystem、
 ///          少数の主要個体(プレイヤー・ボス・UI)はEntityLogic。
 #pragma once
@@ -47,7 +53,7 @@ namespace nox
 	{
 		/// @brief インスタンス生成に必要なComponentDataのマスク。
 		nox::ComponentMask(*make_required_mask)()noexcept;
-		/// @brief 確保済みメモリ上へのインスタンス構築。
+		/// @brief 確保済みメモリ上へのインスタンス構築。デフォルト構築してentityを束縛するところまで行う。
 		void* (*construct)(void* memory, nox::World& world, nox::EntityId entity);
 		/// @brief インスタンス破棄。仮想デストラクタの代わり。
 		void (*destruct)(void* instance)noexcept;
@@ -61,18 +67,12 @@ namespace nox
 	template<class TLogic>
 	[[nodiscard]] constexpr nox::EntityLogicTypeDescriptor MakeEntityLogicTypeDescriptor()noexcept;
 
-	/// @brief EntityLogicの構築をエンジンに限定するためのpasskey。
-	/// @details コンストラクタがprivateで、nox::MakeEntityLogicTypeDescriptor()だけがfriend。
-	///          そのため EntityLogic の派生型のコンストラクタをpublicにしても、
-	///          記述子のconstruct経由(=エンジン)以外からは実体を作れない。
-	class EntityLogicKey final
+	namespace detail
 	{
-	private:
-		inline constexpr EntityLogicKey()noexcept = default;
-
-		template<class TLogic>
-		friend constexpr nox::EntityLogicTypeDescriptor nox::MakeEntityLogicTypeDescriptor()noexcept;
-	};
+		/// @brief 生成直後のインスタンスへentityを束縛するための橋渡し。
+		/// @details 二段階構築(デフォルト構築 → 束縛)にするため、基底のentity_はこの型にだけ開く。
+		struct EntityLogicBinder;
+	}
 
 	/// @brief EntityLogic型の更新メソッド表。
 	/// @details 一次テンプレートは宣言のみ。リフレクション生成コードが型ごとに
@@ -135,6 +135,14 @@ namespace nox
 	/// @details インスタンスが存在するための必須ComponentDataは、購読した更新メソッドの引数から
 	///          自動的に導出される(全メソッドが宣言したComponentDataの和集合)。
 	///          基底のテンプレート引数に型を並べ直す必要はなく、メソッドの引数リストが唯一の宣言になる。
+	///
+	///          派生型はコンストラクタを書かなくてよい(書いてはいけない訳ではないが、
+	///          デフォルト構築可能である必要がある)。エンジンはデフォルト構築した直後に
+	///          entityを束縛する二段階構築を行うため、派生型自身のコンストラクタの中では
+	///          GetEntity() はまだ有効ではない。状態の初期化はメンバ初期化子で完結させること。
+	///
+	///          Worldへの参照は保持しない。フェーズ実行中にWorldへ出せる操作は
+	///          更新メソッドの引数に nox::EntityCommands& を並べて受け取る。
 	/// @tparam TDerived CRTPの派生型。
 	/// @tparam ExtraRequiredComponents どのメソッドも引数に取らないが、存在を必須にしたいComponentData
 	///         (タグ用)。通常は指定しない。
@@ -143,8 +151,8 @@ namespace nox
 	class EntityLogic
 	{
 	public:
+		/// @brief 束縛されたentity。派生型のコンストラクタの中ではまだ有効ではない。
 		[[nodiscard]] inline nox::EntityId GetEntity()const noexcept { return entity_; }
-		[[nodiscard]] inline nox::World& GetWorld()const noexcept { return *world_; }
 
 		/// @brief どのメソッドも宣言しないが必須にしたいComponentDataのマスク。
 		/// @details ComponentTypeIndexは実行時に採番されるため定数式にはならない。
@@ -154,12 +162,8 @@ namespace nox
 		}
 
 	protected:
-		//	passkeyは派生型からそのまま受け流すだけ。エンジン以外から実体を作らせないための鍵。
-		inline EntityLogic(nox::EntityLogicKey, nox::World& world, const nox::EntityId entity)noexcept :
-			world_(&world),
-			entity_(entity)
-		{
-		}
+		//	派生型にコンストラクタを書かせないための既定。entityは構築後に束縛される。
+		inline EntityLogic()noexcept = default;
 
 		//	記述子のdestruct経由でのみ破棄されるため非virtual。
 		inline ~EntityLogic() = default;
@@ -168,15 +172,39 @@ namespace nox
 		EntityLogic& operator=(const EntityLogic&) = delete;
 
 	private:
-		nox::World* world_;
-		nox::EntityId entity_;
+		friend struct nox::detail::EntityLogicBinder;
+
+		nox::EntityId entity_{};
 	};
+
+	namespace detail
+	{
+		struct EntityLogicBinder final
+		{
+			/// @brief デフォルト構築済みのインスタンスへentityを束縛する。
+			/// @details 基底のprivateメンバへ触れるのはこの型だけ。呼ぶのは記述子のconstructのみで、
+			///          いかなる更新メソッドよりも先に必ず実行される。
+			template<class TLogic>
+			static inline void Bind(TLogic& logic, const nox::EntityId entity)noexcept
+			{
+				logic.entity_ = entity;
+			}
+		};
+
+		/// @brief 生成直後のEntityLogicへentityを束縛する。エンジン専用。
+		template<class TLogic>
+		inline void BindEntityLogic(TLogic& logic, const nox::EntityId entity)noexcept
+		{
+			nox::detail::EntityLogicBinder::Bind(logic, entity);
+		}
+	}
 
 	/// @brief 更新メソッド1つ分の記述子を作る。手書きの特殊化(エスケープハッチ)用。
 	/// @details メソッドのアドレスを通常の文脈で取るため、publicなメソッドにしか使えない。
 	///          生成コードは nox::detail::MakeEntityLogicMethodDescriptorViaTag を使う。
 	///
-	///          引数リストは任意。EntityId / ComponentDataの参照 / Serviceの参照・ポインタ を自由に並べられる。
+	///          引数リストは任意。EntityId / ComponentDataの参照 / Serviceの参照・ポインタ /
+	///          nox::EntityCommands& を自由に並べられる。
 	///          ここで宣言したComponentDataがEntityLogicの必須ComponentDataに算入される。
 	template<auto MethodPointer, nox::SystemPhaseType _Phase>
 	[[nodiscard]] constexpr nox::EntityLogicMethodDescriptor MakeEntityLogicMethodDescriptor(const std::string_view name)noexcept
@@ -216,6 +244,10 @@ namespace nox
 		static_assert(MethodTable::GetMethods().empty() == false,
 			"EntityLogicには nox::attr::EntityLogicMethod を付けた更新メソッドが1つ以上必要です");
 
+		//	二段階構築の前提。生成器では検査しない(C++で検査できることはC++で検査する)。
+		static_assert(std::is_default_constructible_v<TLogic>,
+			"EntityLogicの派生型はデフォルト構築可能である必要があります(コンストラクタは書かなくてよい)");
+
 		return nox::EntityLogicTypeDescriptor{
 			.make_required_mask = []()noexcept
 				{
@@ -228,9 +260,12 @@ namespace nox
 					}
 					return mask;
 				},
-			.construct = [](void* memory, nox::World& world, nox::EntityId entity) -> void*
+			.construct = [](void* memory, nox::World&, const nox::EntityId entity) -> void*
 				{
-					return new(memory) TLogic(nox::EntityLogicKey{}, world, entity);
+					//	二段階構築。デフォルト構築してから、どの更新メソッドより先にentityを束縛する。
+					auto* const logic = new(memory) TLogic();
+					nox::detail::BindEntityLogic(*logic, entity);
+					return logic;
 				},
 			.destruct = [](void* instance)noexcept { static_cast<TLogic*>(instance)->~TLogic(); },
 			.get_methods = []()noexcept { return MethodTable::GetMethods(); },

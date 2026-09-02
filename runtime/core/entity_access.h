@@ -7,6 +7,7 @@
 #pragma once
 #include	"component_type.h"
 #include	"entity.h"
+#include	"entity_commands.h"
 #include	"service.h"
 
 namespace nox
@@ -28,6 +29,8 @@ namespace nox
 		ServiceRead,
 		/// @brief Service* (読み書き)
 		ServiceWrite,
+		/// @brief nox::EntityCommands& (フェーズ実行中に許されるWorld操作)
+		Commands,
 	};
 
 	/// @brief ComponentDataとして引数に取れる型。
@@ -96,6 +99,16 @@ namespace nox
 	{
 		static constexpr nox::EntityParameterKind k_kind = nox::EntityParameterKind::ServiceRead;
 		using RawType = std::remove_cv_t<T>;
+	};
+
+	//	EntityCommandsはComponentDataでもServiceでもないため、マスクにも各種カウントにも算入されない。
+	//	constでは Destroy を呼べず宣言として意味を成さないので、const参照の特殊化は用意しない
+	//	(= Invalid のまま残り、ValidateEntityMethodがコンパイルエラーにする)。
+	template<>
+	struct EntityParameterTraits<nox::EntityCommands&>
+	{
+		static constexpr nox::EntityParameterKind k_kind = nox::EntityParameterKind::Commands;
+		using RawType = nox::EntityCommands;
 	};
 
 	namespace detail
@@ -294,7 +307,7 @@ namespace nox
 	};
 
 	/// @brief System / EntityLogic のメソッドとして妥当な形か。
-	/// @details 戻り値void・引数は EntityId / ComponentData参照 / Serviceポインタ のみ。
+	/// @details 戻り値void・引数は EntityId / ComponentData参照 / Serviceポインタ・参照 / nox::EntityCommands& のみ。
 	template<class MethodPointerType>
 	concept EntityMethod =
 		requires { typename nox::EntityMethodTraits<MethodPointerType>::Signature; } &&
@@ -310,7 +323,7 @@ namespace nox
 				"戻り値voidの非静的メンバ関数を指定してください");
 			using Signature = typename nox::EntityMethodTraits<MethodPointerType>::Signature;
 			static_assert(Signature::k_all_parameters_valid,
-				"引数は nox::EntityId / ComponentDataの参照 / Serviceのポインタ のいずれかのみ指定できます");
+				"引数は nox::EntityId / ComponentDataの参照 / Serviceのポインタ・参照 / nox::EntityCommands& のいずれかのみ指定できます");
 			static_assert(Signature::k_entity_parameter_count <= 1u,
 				"nox::EntityIdは1つまでしか指定できません");
 			static_assert(Signature::k_entity_parameter_is_leading,

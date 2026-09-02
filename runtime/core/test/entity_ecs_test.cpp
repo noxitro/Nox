@@ -20,11 +20,6 @@ namespace nox::test::ecs::manual
 	class ManualHealthLogic final : public nox::EntityLogic<nox::test::ecs::manual::ManualHealthLogic>
 	{
 	public:
-		inline ManualHealthLogic(const nox::EntityLogicKey key, nox::World& world, const nox::EntityId entity)noexcept :
-			nox::EntityLogic<nox::test::ecs::manual::ManualHealthLogic>(key, world, entity)
-		{
-		}
-
 		void Tick(nox::test::ecs::TestHealth& health)
 		{
 			++tick_count;
@@ -101,6 +96,16 @@ namespace
 	//	Serviceは引数に並べてもComponentDataの宣言には算入されない(Queryの必須条件を変えない)。
 	static_assert(nox::EntitySignature<TestPosition&, TestCounterService&>::k_component_parameter_count == 1u);
 	static_assert(nox::EntitySignature<TestPosition&, TestCounterService&>::k_service_parameter_count == 1u);
+
+	//	nox::EntityCommandsは引数として並べられるが、ComponentDataにもServiceにも算入されない。
+	static_assert(nox::EntitySignature<nox::EntityId, TestPosition&, nox::EntityCommands&>::k_is_valid);
+	static_assert(nox::EntitySignature<nox::EntityCommands&>::k_component_parameter_count == 0u);
+	static_assert(nox::EntitySignature<nox::EntityCommands&>::k_service_parameter_count == 0u);
+	//	constではDestroyを呼べず宣言として意味を成さないため、const参照では受けられない。
+	static_assert(nox::EntitySignature<const nox::EntityCommands&>::k_all_parameters_valid == false);
+
+	//	EntityLogicの基底はentityだけを持つ(Worldへの参照は保持しない)。
+	static_assert(sizeof(nox::EntityLogic<TestPlayerLogic>) == 8u);
 
 	//	引数リストがそのままメソッドの宣言として解釈される。
 	struct SignatureProbe
@@ -293,8 +298,8 @@ namespace
 			return;
 		}
 
-		//	必須ComponentDataは3つのメソッドの引数の和集合になる。
-		//	Process2だけが宣言しているTestVelocityも含まれ、Serviceは含まれない。
+		//	必須ComponentDataは全メソッドの引数の和集合になる。
+		//	Process2だけが宣言しているTestVelocityも含まれ、Service / EntityCommands は含まれない。
 		const nox::ComponentMask required_mask = logic_descriptor->make_required_mask();
 		const nox::ComponentMask expected_mask = nox::MakeComponentMask<TestPosition, TestHealth, TestVelocity>();
 		NOX_ASSERT(required_mask == expected_mask,
@@ -340,6 +345,8 @@ namespace
 		auto* const logic = static_cast<TestPlayerLogic*>(storage.GetEntries()[0].instance);
 		NOX_ASSERT(logic->process0_count == 1 && logic->process1_count == 1 && logic->process2_count == 1,
 			u"EntityLogicの各メソッドが1回ずつ呼ばれていません");
+		//	nox::EntityCommands&を引数に並べたメソッドへ、Worldへのビューが束縛されている。
+		NOX_ASSERT(logic->last_alive, u"nox::EntityCommandsが引数として届いていません");
 		//	Process0でHealthの3、Process2でVelocityの2が足される。
 		NOX_ASSERT(world.TryGetComponent<TestPosition>(entity)->x == 10.0f,
 			u"EntityLogicの書き込み結果が不正です");
