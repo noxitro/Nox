@@ -102,6 +102,24 @@ namespace nox
 			return false;
 		}
 
+		/// @brief 立っているビットのインデックスだけを昇順で列挙する。
+		/// @details ワード単位で下位ビットから舐めるため、走査コストは立っているビット数に比例する。
+		///          確保も間接呼び出しも走らない(呼び出し側のラムダはインライン展開される)。
+		template<class Function>
+		inline constexpr void ForEachIndex(Function&& function)const noexcept
+		{
+			for (nox::uint32 word_index = 0u; word_index < k_word_count; ++word_index)
+			{
+				nox::uint64 word = words_[word_index];
+				while (word != 0ull)
+				{
+					const nox::uint32 bit_index = static_cast<nox::uint32>(std::countr_zero(word));
+					word &= (word - 1ull);
+					function(static_cast<nox::ComponentTypeIndex>((word_index * k_bits_per_word) + bit_index));
+				}
+			}
+		}
+
 		[[nodiscard]] inline constexpr bool operator==(const ComponentMask& other)const noexcept
 		{
 			for (nox::uint32 word_index = 0u; word_index < k_word_count; ++word_index)

@@ -10,6 +10,7 @@
 #include "../entity_system.h"
 #include "../entity_logic.h"
 #include "../entity_type_registry.h"
+#include "../updater_graph.h"
 #include "../../kernel/assertion.h"
 
 namespace nox::test::ecs::manual
@@ -361,6 +362,115 @@ namespace
 		world.DestroyEntity(entity);
 	}
 
+	/// @brief UpdaterGraphのレイヤリングを、Worldを介さず宣言だけで検証する。
+	/// @details 宣言はスタック上に手で組み立てる。ヒープも確保しないので、実行経路と同じ条件で走る。
+	void TestUpdaterGraphLayering()
+	{
+		//	Serviceは型情報のアドレスで同一性を見る。ここでは1種類だけ使う。
+		static constexpr nox::ServiceAccess k_service_write[]{
+			nox::ServiceAccess{ .type = &nox::reflection::Typeof<TestCounterService>(), .write = true },
+		};
+		static constexpr nox::ServiceAccess k_service_read[]{
+			nox::ServiceAccess{ .type = &nox::reflection::Typeof<TestCounterService>(), .write = false },
+		};
+
+		constexpr nox::uint32 k_logic_group = 0u;
+
+		//	登録順に並べる。衝突辺は必ず登録順の小さい方から大きい方へ張られる。
+		const std::array<nox::UpdaterNodeAccess, 8> accesses{
+			//	n0: S1 Positionを書く。先行ノードがないのでlayer 0。
+			nox::UpdaterNodeAccess{
+				.read_write_mask = nox::MakeComponentMask<TestPosition>(),
+				.write_mask = nox::MakeComponentMask<TestPosition>(),
+			},
+			//	n1: S2 Positionを読む。S1と衝突してlayer 1。
+			nox::UpdaterNodeAccess{
+				.read_write_mask = nox::MakeComponentMask<TestPosition>(),
+			},
+			//	n2: S3 Healthを書く。誰とも衝突しないのでlayer 0。
+			nox::UpdaterNodeAccess{
+				.read_write_mask = nox::MakeComponentMask<TestHealth>(),
+				.write_mask = nox::MakeComponentMask<TestHealth>(),
+			},
+			//	n3: S4 PositionとHealthを読む。S1(layer0)とS3(layer0)に衝突。S2とは読み同士なので衝突しない → layer 1。
+			nox::UpdaterNodeAccess{
+				.read_write_mask = nox::MakeComponentMask<TestPosition, TestHealth>(),
+			},
+			//	n4: L1.Process0 Positionを書く。S2(layer1)・S4(layer1)の読みと衝突 → layer 2。
+			nox::UpdaterNodeAccess{
+				.read_write_mask = nox::MakeComponentMask<TestPosition>(),
+				.write_mask = nox::MakeComponentMask<TestPosition>(),
+				.group_index = k_logic_group,
+			},
+			//	n5: L1.Process1 Healthを読む。宣言はProcess0と重ならないが、同一EntityLogic型なので必ず後続 → layer 3。
+			nox::UpdaterNodeAccess{
+				.read_write_mask = nox::MakeComponentMask<TestHealth>(),
+				.group_index = k_logic_group,
+			},
+			//	n6: S5 Serviceを書く。ComponentDataに触れないのでlayer 0。
+			nox::UpdaterNodeAccess{
+				.service_accesses = std::span<const nox::ServiceAccess>(k_service_write),
+			},
+			//	n7: S6 Serviceを読む。S5と衝突 → layer 1。
+			nox::UpdaterNodeAccess{
+				.service_accesses = std::span<const nox::ServiceAccess>(k_service_read),
+			},
+		};
+
+		std::array<nox::uint32, 8> layer_indices{};
+		const nox::uint32 layer_count = nox::BuildUpdaterLayerIndices(
+			std::span<const nox::UpdaterNodeAccess>(accesses),
+			std::span<nox::uint32>(layer_indices));
+
+		NOX_ASSERT(layer_indices[0] == 0u, u"書き込みだけのノードは先頭レイヤーに置かれるはずです");
+		NOX_ASSERT(layer_indices[1] == 1u, u"書き込みを読むノードが直列化されていません");
+		NOX_ASSERT(layer_indices[2] == 0u, u"衝突しないノードが不要に直列化されています");
+		NOX_ASSERT(layer_indices[3] == 1u, u"読み同士が衝突扱いになっています");
+		NOX_ASSERT(layer_indices[4] == 2u, u"読み手の後ろに書き手が置かれていません");
+		NOX_ASSERT(layer_indices[5] == 3u, u"同一EntityLogic型のメソッドが直列化されていません");
+		NOX_ASSERT(layer_indices[6] == 0u, u"Serviceだけを触るノードの配置が不正です");
+		NOX_ASSERT(layer_indices[7] == 1u, u"同一Serviceへの書き込みと読み取りが直列化されていません");
+		NOX_ASSERT(layer_count == 4u, u"レイヤー数が不正です");
+
+		//	衝突判定そのものの規則。読み同士は並列、書きが絡めば直列。
+		NOX_ASSERT(nox::ConflictsUpdaterNodeAccess(accesses[1], accesses[3]) == false,
+			u"読み同士が衝突しています");
+		NOX_ASSERT(nox::ConflictsUpdaterNodeAccess(accesses[0], accesses[1]),
+			u"同一ComponentDataのRWが衝突していません");
+		NOX_ASSERT(nox::ConflictsUpdaterNodeAccess(accesses[4], accesses[5]),
+			u"同一EntityLogic型のメソッドが衝突していません");
+		NOX_ASSERT(nox::ConflictsUpdaterNodeAccess(accesses[6], accesses[7]),
+			u"同一Serviceのwrite/readが衝突していません");
+	}
+
+	/// @brief 引数リストからServiceのアクセス宣言が導出される。
+	void TestServiceAccessDeclaration()
+	{
+		using WriteSignature = nox::EntitySignature<TestPosition&, TestCounterService*>;
+		using ReadSignature = nox::EntitySignature<const TestCounterService&>;
+
+		const std::span<const nox::ServiceAccess> write_accesses = WriteSignature::GetServiceAccesses();
+		NOX_ASSERT(write_accesses.size() == 1u, u"Serviceのアクセス宣言が導出されていません");
+		NOX_ASSERT(write_accesses[0].type == &nox::reflection::Typeof<TestCounterService>(),
+			u"Serviceの型情報が一致しません");
+		NOX_ASSERT(write_accesses[0].write, u"非constのServiceが書き込み扱いになっていません");
+
+		const std::span<const nox::ServiceAccess> read_accesses = ReadSignature::GetServiceAccesses();
+		NOX_ASSERT(read_accesses.size() == 1u, u"const参照のServiceが宣言に載っていません");
+		NOX_ASSERT(read_accesses[0].write == false, u"const参照のServiceが書き込み扱いになっています");
+
+		//	ComponentDataとEntityCommandsはServiceの宣言に算入されない。
+		NOX_ASSERT((nox::EntitySignature<TestPosition&, nox::EntityCommands&>::GetServiceAccesses().empty()),
+			u"Service以外の引数がServiceの宣言に混ざっています");
+
+		//	記述子経由でも同じ宣言が読める。
+		const nox::EntitySystemTypeDescriptor* const move_system = FindEntitySystemType("TestMoveSystem");
+		NOX_ASSERT(move_system != nullptr && move_system->get_service_accesses != nullptr,
+			u"EntitySystemの記述子にServiceの宣言が載っていません");
+		NOX_ASSERT(move_system != nullptr && move_system->get_service_accesses().empty(),
+			u"Serviceを宣言していないSystemにServiceの宣言が載っています");
+	}
+
 	/// @brief 生成器が名前を書けない型でも、手書きの特殊化で同じ経路に載る。
 	/// @details Worldの表は経由せず、記述子を直接組み立てて呼び出す。
 	void TestManualEntityLogicMethodTable(nox::World& world)
@@ -406,6 +516,9 @@ void nox::test::TestEntityEcs()
 {
 	TestComponentTypeRegistry();
 	TestArchetypeStorage();
+
+	TestServiceAccessDeclaration();
+	TestUpdaterGraphLayering();
 
 	nox::World world;
 	TestWorldStructuralChange(world);

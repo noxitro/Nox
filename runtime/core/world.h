@@ -9,6 +9,7 @@
 #include	"archetype.h"
 #include	"entity_system.h"
 #include	"entity_logic.h"
+#include	"updater_graph.h"
 #include	"service.h"
 
 namespace nox
@@ -34,7 +35,7 @@ namespace nox
 		static constexpr nox::uint32 k_initial_archetype_capacity = 64u;
 
 		/// @brief 実行ノード
-		struct ExecuteNode
+		struct SystemExecuteNode
 		{
 			std::reference_wrapper<nox::SystemBase> instance;
 			std::reference_wrapper<const nox::SystemBase::SystemPhase> phase;
@@ -180,9 +181,13 @@ namespace nox
 		void DestroyEntityImmediate(nox::EntityId entity)noexcept;
 
 		void CreateEntitySystems();
-		void ExecuteEntitySystemPhase(nox::SystemPhaseType phase_type);
 		void CreateEntityLogicStorages();
-		void ExecuteEntityLogicPhase(nox::SystemPhaseType phase_type);
+		/// @brief UpdaterGraphのレイヤー順にノードを実行する。
+		/// @details 現段階は「レイヤー順・レイヤー内は登録順」の直列実行。
+		///          同一レイヤーのノードは互いに衝突しないため、stage 2bではこのループが配分点になる。
+		void ExecuteUpdaterGraphPhase(nox::SystemPhaseType phase_type);
+		/// @brief ノード1つを実行する。stage 2bではこの関数をそのままワーカーへ渡す。
+		void ExecuteNode(const nox::UpdaterNode& node);
 		/// @brief entityのComponentData構成が変わったので、EntityLogicの生成/破棄を追従させる。
 		void RefreshEntityLogics(nox::EntityId entity, const nox::Archetype* archetype);
 
@@ -195,6 +200,13 @@ namespace nox
 
 #if !NOX_MASTER
 		void TraceExecuteNodeList()const;
+
+		/// @brief ノードが宣言したComponentData / Serviceの並列実行チェックに入る。
+		void EnterNodeAccessScope(const nox::UpdaterNodeAccess& access)noexcept;
+		/// @brief EnterNodeAccessScopeで入ったチェックから抜ける。
+		void LeaveNodeAccessScope(const nox::UpdaterNodeAccess& access)noexcept;
+		/// @brief Serviceの型に対応するチェッカー。未登録のServiceならnullptr。
+		[[nodiscard]] nox::util::RWParallelExecuteChecker* TryGetServiceExecuteChecker(const nox::reflection::Type* type)noexcept;
 #endif // !NOX_MASTER
 
 		[[nodiscard]]
@@ -250,7 +262,18 @@ namespace nox
 		nox::Vector<nox::EntityLogicStorage*> entity_logic_storages_;
 
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
-		std::array<nox::Vector<nox::EntitySystemBase*>, nox::util::ToUnderlying(nox::SystemPhaseType::_Max)> entity_system_phase_table_;
+		nox::UpdaterGraph updater_graph_;
+
+#if !NOX_MASTER
+		//	依存解析の誤りを即座に検出するためのチェッカー。ComponentTypeIndexごと / Service登録順ごとに1つ持つ。
+		//	直列実行の現段階では決して発火しない。stage 2bで並列化したときに、宣言と実アクセスの
+		//	食い違いをその場で落とすための土台。
+		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
+		std::array<nox::util::RWParallelExecuteChecker, k_max_component_type_count> component_execute_checkers_;
+
+		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
+		std::array<nox::util::RWParallelExecuteChecker, k_max_service_count> service_execute_checkers_;
+#endif // !NOX_MASTER
 
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
 		nox::FixedVector<nox::World::ServiceEntry, k_max_service_count> services_;
@@ -258,6 +281,6 @@ namespace nox
 		nox::Vector<nox::EngineModule*> modules_;
 		nox::Vector<nox::SystemBase*> systems_;
 		nox::UnorderedMap<const nox::reflection::Type*, nox::SystemBase*> system_map_;
-		std::array<nox::Vector<ExecuteNode>, nox::util::ToUnderlying(nox::SystemPhaseType::_Max)> system_phase_table_;
+		std::array<nox::Vector<SystemExecuteNode>, nox::util::ToUnderlying(nox::SystemPhaseType::_Max)> system_phase_table_;
 	};
 }

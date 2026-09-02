@@ -71,6 +71,23 @@ namespace nox
 			}
 		}
 
+		/// @brief 同じServiceを2回宣言している場合、2回目以降はチェッカーに入らないための判定。
+		/// @details RWParallelExecuteCheckerは同一スレッドからの再入も並列とみなすため、
+		///          1ノード内での重複Enterを避ける必要がある。
+		[[nodiscard]] bool is_duplicated_service_access(
+			const std::span<const nox::ServiceAccess> accesses,
+			const nox::uint32 index)noexcept
+		{
+			for (nox::uint32 earlier_index = 0u; earlier_index < index; ++earlier_index)
+			{
+				if (accesses[earlier_index].type == accesses[index].type)
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+
 		struct RuntimeGraphTextBuilder
 		{
 			std::array<nox::char8, 3072> buffer{};
@@ -128,7 +145,7 @@ nox::World::World() :
 	archetypes_(),
 	entity_systems_(),
 	entity_logic_storages_(),
-	entity_system_phase_table_{},
+	updater_graph_(),
 	services_(),
 	modules_(),
 	systems_(),
@@ -295,8 +312,15 @@ void nox::World::Init()
 	CreateEntitySystems();
 	CreateEntityLogicStorages();
 
+	//	EntitySystem / EntityLogicの集合が確定してからUpdaterGraphを組む。
+	//	以降この集合が変わったら Rebuild を呼び直すこと。
+	updater_graph_.Rebuild(
+		std::span<nox::EntitySystemBase* const>(entity_systems_.data(), entity_systems_.size()),
+		std::span<nox::EntityLogicStorage* const>(entity_logic_storages_.data(), entity_logic_storages_.size()));
+
 #if !NOX_MASTER
 	TraceExecuteNodeList();
+	updater_graph_.Trace();
 #endif // !NOX_MASTER
 }
 
@@ -446,7 +470,7 @@ void nox::World::BuildExecuteNodeList(std::span<nox::SystemBase*> system_list)
 					continue;
 				}
 
-				dest.push_back(ExecuteNode{ nodes[i].instance, nodes[i].phase, layer_index });
+				dest.push_back(SystemExecuteNode{ nodes[i].instance, nodes[i].phase, layer_index });
 			}
 		}
 	}
@@ -454,15 +478,14 @@ void nox::World::BuildExecuteNodeList(std::span<nox::SystemBase*> system_list)
 
 void nox::World::ExecutePhase(const nox::SystemPhaseType phase_type)
 {
-	const nox::Vector<ExecuteNode>& layers = system_phase_table_[nox::util::ToUnderlying(phase_type)];
+	const nox::Vector<SystemExecuteNode>& layers = system_phase_table_[nox::util::ToUnderlying(phase_type)];
 	is_executing_system_phase_.store(true, std::memory_order_release);
-	for (const ExecuteNode& layer : layers)
+	for (const SystemExecuteNode& layer : layers)
 	{
 		std::invoke(layer.phase.get().func, &layer.instance.get(), *this);
 	}
 
-	ExecuteEntitySystemPhase(phase_type);
-	ExecuteEntityLogicPhase(phase_type);
+	ExecuteUpdaterGraphPhase(phase_type);
 
 	//	将来の並列ディスパッチでは、このplaybackポイントまでに全Systemジョブをjoinする必要がある。
 	FlushEntityCommands();
@@ -487,7 +510,6 @@ void nox::World::CreateEntitySystems()
 		}
 
 		entity_systems_.push_back(entity_system);
-		entity_system_phase_table_[nox::util::ToUnderlying(descriptor->phase)].push_back(entity_system);
 
 #if !NOX_MASTER
 		//	「ヘッダに定義しただけで購読される」ことを起動ログで確認できるようにする。
@@ -496,14 +518,54 @@ void nox::World::CreateEntitySystems()
 	}
 }
 
-void nox::World::ExecuteEntitySystemPhase(const nox::SystemPhaseType phase_type)
+void nox::World::ExecuteUpdaterGraphPhase(const nox::SystemPhaseType phase_type)
 {
-	//	同一フェーズ内は、宣言(引数リスト)から導出したマスクが衝突しない限り並列実行できる。
-	//	現状は登録順の直列実行だが、依存解析の入力は既に揃っている。
-	for (nox::EntitySystemBase* const entity_system : entity_system_phase_table_[nox::util::ToUnderlying(phase_type)])
+	//	レイヤーは「小さいほど先」。同一レイヤーのノードは宣言上衝突しないので同時実行してよいが、
+	//	この段階ではまだ直列に回す(スレッドは stage 2b で入る)。
+	//	確保は一切走らない。ノード列もレイヤー境界もInitで構築済み。
+	const nox::uint32 layer_count = updater_graph_.GetLayerCount(phase_type);
+	for (nox::uint32 layer_index = 0u; layer_index < layer_count; ++layer_index)
 	{
-		entity_system->Execute(*this);
+		for (const nox::UpdaterNode& node : updater_graph_.GetLayerNodes(phase_type, layer_index))
+		{
+			ExecuteNode(node);
+		}
 	}
+}
+
+void nox::World::ExecuteNode(const nox::UpdaterNode& node)
+{
+#if !NOX_MASTER
+	//	宣言したComponentData / Serviceを実行中だけ占有する。直列実行では決して発火しない。
+	EnterNodeAccessScope(node.access);
+#endif // !NOX_MASTER
+
+	switch (node.kind)
+	{
+	case nox::UpdaterNodeKind::EntitySystem:
+		node.system->Execute(*this);
+		break;
+
+	case nox::UpdaterNodeKind::EntityLogicMethod:
+		for (const nox::EntityLogicStorage::Entry& entry : node.storage->GetEntries())
+		{
+			const auto* const entity_record = TryGetEntityRecord(entry.entity.index);
+			if (entity_record == nullptr || entity_record->archetype == nullptr)
+			{
+				continue;
+			}
+			node.method->invoke(entry.instance, *this, *entity_record->archetype, entity_record->location, entry.entity);
+		}
+		break;
+
+	default:
+		NOX_ASSERT(false, u8"未知のUpdaterNodeKindです");
+		break;
+	}
+
+#if !NOX_MASTER
+	LeaveNodeAccessScope(node.access);
+#endif // !NOX_MASTER
 }
 
 void nox::World::CreateEntityLogicStorages()
@@ -542,31 +604,6 @@ void nox::World::RefreshEntityLogics(const nox::EntityId entity, const nox::Arch
 	}
 }
 
-void nox::World::ExecuteEntityLogicPhase(const nox::SystemPhaseType phase_type)
-{
-	for (nox::EntityLogicStorage* const storage : entity_logic_storages_)
-	{
-		const std::span<const nox::EntityLogicMethodDescriptor> methods = storage->GetDescriptor().get_methods();
-		for (const nox::EntityLogicMethodDescriptor& method : methods)
-		{
-			if (method.phase != phase_type)
-			{
-				continue;
-			}
-
-			for (const nox::EntityLogicStorage::Entry& entry : storage->GetEntries())
-			{
-				const auto* const entity_record = TryGetEntityRecord(entry.entity.index);
-				if (entity_record == nullptr || entity_record->archetype == nullptr)
-				{
-					continue;
-				}
-				method.invoke(entry.instance, *this, *entity_record->archetype, entity_record->location, entry.entity);
-			}
-		}
-	}
-}
-
 void nox::World::RegisterSystem(nox::SystemBase& system)
 {
 	const nox::reflection::Type& type = system.GetType();
@@ -597,8 +634,8 @@ nox::U8FixedString<3072> nox::World::BuildRuntimeDependencyGraphText()const
 	for (nox::uint32 phase_type_index = 0; phase_type_index < nox::util::ToUnderlying(nox::SystemPhaseType::_Max); ++phase_type_index)
 	{
 		const nox::SystemPhaseType phase_type = static_cast<nox::SystemPhaseType>(phase_type_index);
-		const nox::Vector<ExecuteNode>& execute_nodes = system_phase_table_[phase_type_index];
-		for (const ExecuteNode& execute_node : execute_nodes)
+		const nox::Vector<SystemExecuteNode>& execute_nodes = system_phase_table_[phase_type_index];
+		for (const SystemExecuteNode& execute_node : execute_nodes)
 		{
 			const nox::uint32 id = static_cast<nox::uint32>(phase_nodes.size());
 			const nox::uint32 graph_layer = (phase_type_index * 8u) + execute_node.layer_index;
@@ -681,6 +718,76 @@ nox::U8FixedString<3072> nox::World::BuildRuntimeDependencyGraphText()const
 	return graph_text;
 }
 
+nox::util::RWParallelExecuteChecker* nox::World::TryGetServiceExecuteChecker(const nox::reflection::Type* const type)noexcept
+{
+	if (type == nullptr)
+	{
+		return nullptr;
+	}
+
+	//	Serviceの登録数は上限64なので線形走査で足りる。確保は走らない。
+	for (nox::uint32 service_index = 0u; service_index < services_.GetLength(); ++service_index)
+	{
+		if (services_.GetStorage()[service_index].type == type)
+		{
+			return &service_execute_checkers_[service_index];
+		}
+	}
+
+	//	未登録のServiceは実体がないので守る対象もない。
+	return nullptr;
+}
+
+void nox::World::EnterNodeAccessScope(const nox::UpdaterNodeAccess& access)noexcept
+{
+	//	RWParallelExecuteCheckerは現状read/writeを区別せず、Enterが重なった時点で検出する。
+	//	読み取り同士を並列に走らせるstage 2bでは、チェッカー側をRW対応にする必要がある。
+	const std::source_location location = std::source_location::current();
+	access.read_write_mask.ForEachIndex([this, &location](const nox::ComponentTypeIndex type_index)noexcept
+		{
+			component_execute_checkers_[type_index].Enter(
+				nox::util::detail::ParallelExecuteCheckOption::SourceLocation, location);
+		});
+
+	for (nox::uint32 index = 0u; index < access.service_accesses.size(); ++index)
+	{
+		if (is_duplicated_service_access(access.service_accesses, index))
+		{
+			continue;
+		}
+
+		nox::util::RWParallelExecuteChecker* const checker =
+			TryGetServiceExecuteChecker(access.service_accesses[index].type);
+		if (checker != nullptr)
+		{
+			checker->Enter(nox::util::detail::ParallelExecuteCheckOption::SourceLocation, location);
+		}
+	}
+}
+
+void nox::World::LeaveNodeAccessScope(const nox::UpdaterNodeAccess& access)noexcept
+{
+	access.read_write_mask.ForEachIndex([this](const nox::ComponentTypeIndex type_index)noexcept
+		{
+			component_execute_checkers_[type_index].Exit();
+		});
+
+	for (nox::uint32 index = 0u; index < access.service_accesses.size(); ++index)
+	{
+		if (is_duplicated_service_access(access.service_accesses, index))
+		{
+			continue;
+		}
+
+		nox::util::RWParallelExecuteChecker* const checker =
+			TryGetServiceExecuteChecker(access.service_accesses[index].type);
+		if (checker != nullptr)
+		{
+			checker->Exit();
+		}
+	}
+}
+
 void nox::World::TraceExecuteNodeList()const
 {
 	for (nox::uint8 phase_index = 0; phase_index < nox::util::ToUnderlying(nox::SystemPhaseType::_Max); ++phase_index)
@@ -693,7 +800,7 @@ void nox::World::TraceExecuteNodeList()const
 		}
 
 		NOX_INFO_LINE(nox::log_id::CoreCommon, u"Phase: {0}", current_phase_type);
-		for (const ExecuteNode& node : layers)
+		for (const SystemExecuteNode& node : layers)
 		{
 			NOX_INFO_LINE(nox::log_id::CoreCommon, u"  Layer {0}: {1}", node.layer_index, node.phase.get().name);
 		}

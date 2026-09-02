@@ -32,6 +32,8 @@ namespace nox
 		nox::ComponentMask(*make_read_write_mask)()noexcept;
 		/// @brief 書き込みするComponentDataのマスク。依存解析に使う。
 		nox::ComponentMask(*make_write_mask)()noexcept;
+		/// @brief 読み書きするServiceの一覧。依存解析に使う。確保は走らない。
+		std::span<const nox::ServiceAccess>(*get_service_accesses)()noexcept;
 		/// @brief 実行本体。TDerived::OnUpdateへ静的に束縛されている。
 		void (*execute)(nox::EntitySystemBase&, nox::World&);
 		std::string_view name;
@@ -96,6 +98,7 @@ namespace nox
 			.destroy = [](nox::EntitySystemBase* instance)noexcept { delete static_cast<TSystem*>(instance); },
 			.make_read_write_mask = []()noexcept { return Signature::GetReadWriteMask(); },
 			.make_write_mask = []()noexcept { return Signature::GetWriteMask(); },
+			.get_service_accesses = []()noexcept { return Signature::GetServiceAccesses(); },
 			.execute = &nox::detail::ExecuteEntitySystem<TSystem>,
 			.name = nox::util::GetTypeName<TSystem>(),
 			.phase = TSystem::k_phase,

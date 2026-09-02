@@ -21,6 +21,7 @@
 #include	"entity_system.h"
 #include	"entity_logic.h"
 #include	"entity_logic_attribute.h"
+#include	"updater_graph.h"
 #include	"entity_type_registry.h"
 #include	"local_transform.h"
 

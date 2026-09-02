@@ -33,6 +33,17 @@ namespace nox
 		Commands,
 	};
 
+	/// @brief 引数リストが宣言したService1つ分のアクセス権限。
+	/// @details ComponentDataのようなdense indexを持たないため、型情報のアドレスで同一性を見る。
+	///          UpdaterGraphの依存解析(同一Serviceへの書き込みが絡めば直列化)の入力になる。
+	struct ServiceAccess final
+	{
+		/// @brief Serviceの型情報。アドレスがそのまま型の同一性を表す。
+		const nox::reflection::Type* type;
+		/// @brief 非constで受けている(=書き込み権限がある)か。
+		bool write;
+	};
+
 	/// @brief ComponentDataとして引数に取れる型。
 	template<class T>
 	concept ComponentDataParameter = nox::IsComponentDataType<std::remove_cv_t<T>>();
@@ -142,6 +153,24 @@ namespace nox
 				{
 					mask.Set(nox::ComponentTypeIndexOf<typename Traits<Parameter>::RawType>());
 				}
+			}
+		}
+
+		/// @brief ServiceAccessを1つ書き出す。Service以外の引数では何もしない。
+		/// @details nox::reflection::Typeof<T>() は静的記憶域を持つ定数オブジェクトへの参照を返すため、
+		///          そのアドレスは定数式になる。よってこの配列は定数初期化でき、動的初期化もヒープも使わない。
+		template<class Parameter, size_t Count>
+		static constexpr void AppendServiceAccess(
+			std::array<nox::ServiceAccess, Count>& accesses,
+			nox::uint32& index)noexcept
+		{
+			if constexpr (nox::detail::IsServiceParameterKind(Traits<Parameter>::k_kind))
+			{
+				accesses[index] = nox::ServiceAccess{
+					.type = &nox::reflection::Typeof<typename Traits<Parameter>::RawType>(),
+					.write = (Traits<Parameter>::k_kind == nox::EntityParameterKind::ServiceWrite),
+				};
+				++index;
 			}
 		}
 
@@ -262,6 +291,22 @@ namespace nox
 			return mask;
 		}
 
+		/// @brief 引数リストが宣言したServiceのアクセス権限一覧。
+		/// @details ComponentDataと違いdense indexを持たないので、マスクではなく型情報の配列で返す。
+		///          配列は定数初期化された関数内staticなので、呼び出しても確保は走らない。
+		///          EntityCommandsは何も算入しない。
+		[[nodiscard]] static std::span<const nox::ServiceAccess> GetServiceAccesses()noexcept
+		{
+			static constexpr std::array<nox::ServiceAccess, k_service_parameter_count> k_accesses = []()constexpr noexcept
+				{
+					std::array<nox::ServiceAccess, k_service_parameter_count> accesses{};
+					nox::uint32 index = 0u;
+					(AppendServiceAccess<Parameters>(accesses, index), ...);
+					return accesses;
+				}();
+
+			return std::span<const nox::ServiceAccess>(k_accesses.data(), k_accesses.size());
+		}
 	};
 
 	/// @brief 2つのシグネチャが同一フェーズ内で並列実行できるか。

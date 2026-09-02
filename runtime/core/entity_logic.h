@@ -43,6 +43,8 @@ namespace nox
 		nox::ComponentMask(*make_read_write_mask)()noexcept;
 		/// @brief 書き込みするComponentDataのマスク。
 		nox::ComponentMask(*make_write_mask)()noexcept;
+		/// @brief 読み書きするServiceの一覧。依存解析に使う。確保は走らない。
+		std::span<const nox::ServiceAccess>(*get_service_accesses)()noexcept;
 		std::string_view name;
 		nox::SystemPhaseType phase;
 	};
@@ -228,6 +230,7 @@ namespace nox
 				},
 			.make_read_write_mask = []()noexcept { return Signature::GetReadWriteMask(); },
 			.make_write_mask = []()noexcept { return Signature::GetWriteMask(); },
+			.get_service_accesses = []()noexcept { return Signature::GetServiceAccesses(); },
 			.name = name,
 			.phase = _Phase,
 		};
@@ -340,6 +343,7 @@ namespace nox::detail
 				},
 			.make_read_write_mask = []()noexcept { return Signature::GetReadWriteMask(); },
 			.make_write_mask = []()noexcept { return Signature::GetWriteMask(); },
+			.get_service_accesses = []()noexcept { return Signature::GetServiceAccesses(); },
 			.name = name,
 			.phase = _Phase,
 		};
