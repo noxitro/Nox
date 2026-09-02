@@ -509,14 +509,10 @@ void nox::World::CreateEntityLogicStorages()
 		descriptor = descriptor->next)
 	{
 #if !NOX_MASTER
-		//	更新メソッドが宣言したComponentDataは、必ず必須ComponentDataに含まれていなければならない。
-		//	含まれていないと、インスタンスが存在するのに列が引けないentityが生じる。
-		const nox::ComponentMask required_mask = descriptor->make_required_mask();
-		for (const nox::EntityLogicMethodDescriptor& method : descriptor->get_methods())
-		{
-			NOX_ASSERT(required_mask.Contains(method.make_read_write_mask()),
-				u8"EntityLogicの更新メソッドが必須ComponentDataの外を宣言しています: {0}", method.name);
-		}
+		//	必須ComponentDataはメソッド群から導出されるので包含関係は自動的に成り立つ。
+		//	空になるのは「ComponentDataを1つも宣言していない」場合で、全entityに付いてしまうため誤りとみなす。
+		NOX_ASSERT(descriptor->make_required_mask().IsEmpty() == false,
+			u8"EntityLogicがComponentDataを1つも宣言していません: {0}", descriptor->name);
 #endif // !NOX_MASTER
 
 		entity_logic_storages_.push_back(new nox::EntityLogicStorage(*descriptor));

@@ -81,6 +81,23 @@ namespace nox
 		using RawType = std::remove_cv_t<T>;
 	};
 
+	//	Serviceは参照でも受けられる。ComponentDataの T& / const T& 特殊化とは制約が排他なので
+	//	曖昧にならない(ServiceはObject派生で仮想デストラクタを持つため、IsComponentDataTypeを満たし得ない)。
+	//	参照で受けた場合は未登録時にnullを渡せないため、呼び出し側が実行を打ち切る。
+	template<nox::ServiceParameter T>
+	struct EntityParameterTraits<T&>
+	{
+		static constexpr nox::EntityParameterKind k_kind = nox::EntityParameterKind::ServiceWrite;
+		using RawType = std::remove_cv_t<T>;
+	};
+
+	template<nox::ServiceParameter T>
+	struct EntityParameterTraits<const T&>
+	{
+		static constexpr nox::EntityParameterKind k_kind = nox::EntityParameterKind::ServiceRead;
+		using RawType = std::remove_cv_t<T>;
+	};
+
 	namespace detail
 	{
 		[[nodiscard]] inline constexpr bool IsComponentParameterKind(const nox::EntityParameterKind kind)noexcept

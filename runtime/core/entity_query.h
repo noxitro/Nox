@@ -68,24 +68,42 @@ namespace nox
 			{
 				return *(static_cast<typename Traits::RawType*>(base) + row);
 			}
+			else if constexpr (std::is_reference_v<Parameter>)
+			{
+				//	Service&。解決に失敗した場合はここへ来る前に呼び出しが打ち切られている。
+				return *static_cast<std::remove_reference_t<Parameter>*>(base);
+			}
 			else
 			{
+				//	Service*。未登録ならnullptrがそのまま渡る(呼び出された側で判定できる)。
 				return static_cast<Parameter>(base);
 			}
 		}
 
 		/// @brief Service引数を解決する。Chunkに依存しないのでForEachごとに1回だけ呼ぶ。
+		/// @return 実行を続行してよいか。参照で受けるServiceが未登録の場合のみfalse。
 		template<class Parameter>
-		[[nodiscard]] inline void* ResolveEntityServiceBase(nox::World& world)noexcept
+		[[nodiscard]] inline bool ResolveEntityServiceBase(nox::World& world, void*& out_base)noexcept
 		{
 			using Traits = nox::EntityParameterTraits<Parameter>;
 			if constexpr (nox::detail::IsServiceParameterKind(Traits::k_kind))
 			{
-				return nox::detail::TryGetServiceOfWorld(world, nox::reflection::Typeof<typename Traits::RawType>());
+				out_base = nox::detail::TryGetServiceOfWorld(world, nox::reflection::Typeof<typename Traits::RawType>());
+				if constexpr (std::is_reference_v<Parameter>)
+				{
+					//	参照にnullは渡せない。未登録は宣言と実態の食い違いなので実行ごと打ち切る。
+					NOX_ASSERT(out_base != nullptr, u8"参照で宣言されたServiceがWorldに登録されていません");
+					return out_base != nullptr;
+				}
+				else
+				{
+					return true;
+				}
 			}
 			else
 			{
-				return nullptr;
+				out_base = nullptr;
+				return true;
 			}
 		}
 
@@ -120,9 +138,9 @@ namespace nox
 			using ParameterAt = std::tuple_element_t<Index, ParameterTuple>;
 
 			template<size_t... Indices>
-			static void ResolveServices(nox::World& world, BaseArray& bases, std::index_sequence<Indices...>)noexcept
+			[[nodiscard]] static bool ResolveServices(nox::World& world, BaseArray& bases, std::index_sequence<Indices...>)noexcept
 			{
-				((bases[Indices] = nox::detail::ResolveEntityServiceBase<ParameterAt<Indices>>(world)), ...);
+				return (nox::detail::ResolveEntityServiceBase<ParameterAt<Indices>>(world, bases[Indices]) && ... && true);
 			}
 
 			template<size_t... Indices>
@@ -157,7 +175,10 @@ namespace nox
 			{
 				constexpr auto k_indices = std::make_index_sequence<k_parameter_count>{};
 				BaseArray bases{};
-				ResolveServices(world, bases, k_indices);
+				if (ResolveServices(world, bases, k_indices) == false)
+				{
+					return;
+				}
 
 				for (nox::Archetype* const archetype : query.GetMatchedArchetypes())
 				{
@@ -196,7 +217,10 @@ namespace nox
 			{
 				constexpr auto k_indices = std::make_index_sequence<k_parameter_count>{};
 				BaseArray bases{};
-				ResolveServices(world, bases, k_indices);
+				if (ResolveServices(world, bases, k_indices) == false)
+				{
+					return;
+				}
 				if (ResolveColumns(archetype, location.chunk_index, bases, k_indices) == false)
 				{
 					NOX_ASSERT(false, u8"EntityLogicが宣言したComponentDataの列を解決できませんでした");

@@ -67,9 +67,16 @@ namespace
 	//	ComponentDataはポインタでなく参照で受ける(値渡し・ポインタ渡しは宣言として認めない)。
 	static_assert(nox::EntitySignature<TestPosition*>::k_all_parameters_valid == false);
 	static_assert(nox::EntitySignature<TestPosition>::k_all_parameters_valid == false);
-	//	Serviceはポインタで受ける。
+	//	Serviceはポインタでも参照でも受けられる。constの有無が読み書き権限になるのはComponentDataと同じ。
 	static_assert(nox::EntitySignature<TestCounterService*>::k_is_valid);
 	static_assert(nox::EntitySignature<const TestCounterService*>::k_is_valid);
+	static_assert(nox::EntitySignature<TestCounterService&>::k_is_valid);
+	static_assert(nox::EntitySignature<const TestCounterService&>::k_is_valid);
+	static_assert(nox::EntityParameterTraits<TestCounterService&>::k_kind == nox::EntityParameterKind::ServiceWrite);
+	static_assert(nox::EntityParameterTraits<const TestCounterService&>::k_kind == nox::EntityParameterKind::ServiceRead);
+	//	Serviceは引数に並べてもComponentDataの宣言には算入されない(Queryの必須条件を変えない)。
+	static_assert(nox::EntitySignature<TestPosition&, TestCounterService&>::k_component_parameter_count == 1u);
+	static_assert(nox::EntitySignature<TestPosition&, TestCounterService&>::k_service_parameter_count == 1u);
 
 	//	引数リストがそのままメソッドの宣言として解釈される。
 	struct SignatureProbe
@@ -102,26 +109,52 @@ namespace
 		nox::EntityId last_entity{ 0u };
 	};
 
-	/// @brief 宣言したComponentDataが揃ったentityごとに1インスタンス自動生成されるロジック。
-	class TestPlayerLogic final : public nox::EntityLogic<TestPlayerLogic, TestPosition, TestHealth>
+	/// @brief 必須ComponentDataは基底のテンプレート引数ではなく、メソッド群の引数から導出される。
+	/// @details メソッド名は任意、引数リストも任意。ここでは
+	///          「ComponentDataのみ」「Serviceをポインタで」「Serviceを参照で」の3形を並べている。
+	class TestPlayerLogic final : public nox::EntityLogic<TestPlayerLogic>
 	{
 	public:
 		inline TestPlayerLogic(nox::World& world, const nox::EntityId entity)noexcept :
-			nox::EntityLogic<TestPlayerLogic, TestPosition, TestHealth>(world, entity)
+			nox::EntityLogic<TestPlayerLogic>(world, entity)
 		{
 		}
 
-		void OnUpdate(TestPosition& position, const TestHealth& health)
+		void Process0(TestPosition& position, const TestHealth& health)
 		{
 			//	個別の状態は普通のメンバとして持てる(ComponentData化しなくてよい)。
-			++tick_count;
+			++process0_count;
 			position.x += static_cast<nox::float32>(health.value);
 		}
 
-		nox::int32 tick_count = 0;
+		void Process1(TestPosition& position, TestCounterService* service)
+		{
+			//	Serviceをポインタで受けた場合、未登録ならnullptrが渡る。
+			++process1_count;
+			position.y += 1.0f;
+			if (service != nullptr)
+			{
+				++service->call_count;
+			}
+		}
+
+		void Process2(TestPosition& position, const TestVelocity& velocity, TestCounterService& service)
+		{
+			//	Serviceを参照で受けた場合、未登録なら呼び出しごと打ち切られる(nullは渡らない)。
+			//	TestVelocityはProcess2だけが宣言しているが、必須ComponentDataに算入される。
+			++process2_count;
+			position.x += velocity.x;
+			++service.call_count;
+		}
+
+		nox::int32 process0_count = 0;
+		nox::int32 process1_count = 0;
+		nox::int32 process2_count = 0;
 
 		NOX_DECLARE_ENTITY_LOGIC(TestPlayerLogic,
-			NOX_ENTITY_LOGIC_METHOD(Update, &TestPlayerLogic::OnUpdate));
+			NOX_ENTITY_LOGIC_METHOD(Update, &TestPlayerLogic::Process0),
+			NOX_ENTITY_LOGIC_METHOD(Update, &TestPlayerLogic::Process1),
+			NOX_ENTITY_LOGIC_METHOD(Update, &TestPlayerLogic::Process2));
 	};
 
 #pragma endregion
@@ -295,22 +328,30 @@ namespace
 			return;
 		}
 
-		//	更新メソッドの宣言は必須ComponentDataの部分集合でなければならない。
+		//	必須ComponentDataは3つのメソッドの引数の和集合になる。
+		//	Process2だけが宣言しているTestVelocityも含まれ、Serviceは含まれない。
 		const nox::ComponentMask required_mask = logic_descriptor->make_required_mask();
-		for (const nox::EntityLogicMethodDescriptor& method : logic_descriptor->get_methods())
-		{
-			NOX_ASSERT(required_mask.Contains(method.make_read_write_mask()),
-				u"EntityLogicのメソッドが必須ComponentDataの外を宣言しています");
-		}
+		const nox::ComponentMask expected_mask = nox::MakeComponentMask<TestPosition, TestHealth, TestVelocity>();
+		NOX_ASSERT(required_mask == expected_mask,
+			u"必須ComponentDataがメソッドの引数から導出されていません");
+
+		auto* const counter_service = new TestCounterService();
+		world.RegisterService(*counter_service);
+		NOX_ASSERT(world.TryGetService<TestCounterService>() == counter_service, u"Serviceが引けません");
 
 		nox::EntityLogicStorage storage(*logic_descriptor);
 		const nox::EntityId entity = world.CreateEntity();
 
 		//	必須ComponentDataが揃うまでインスタンスは作られない。
 		world.AddComponent<TestPosition>(entity)->x = 5.0f;
-		NOX_ASSERT(storage.Contains(entity) == false, u"必須ComponentDataが欠けた状態でインスタンスが作られました");
-
 		world.AddComponent<TestHealth>(entity)->value = 3;
+		NOX_ASSERT(world.TryGetArchetype(entity)->GetMask().Contains(required_mask) == false,
+			u"必須ComponentDataがまだ揃っていないはずです");
+
+		world.AddComponent<TestVelocity>(entity)->x = 2.0f;
+		NOX_ASSERT(world.TryGetArchetype(entity)->GetMask().Contains(required_mask),
+			u"必須ComponentDataが揃っていません");
+
 		storage.CreateInstance(world, entity);
 		NOX_ASSERT(storage.Contains(entity), u"EntityLogicのインスタンスが生成されていません");
 		NOX_ASSERT(storage.GetEntries().size() == 1u, u"EntityLogicのインスタンス数が不正です");
@@ -325,14 +366,22 @@ namespace
 				method.invoke(
 					entry.instance,
 					world,
-					*const_cast<nox::Archetype*>(world.TryGetArchetype(entry.entity)),
+					*world.TryGetArchetype(entry.entity),
 					world.GetArchetypeLocation(entry.entity),
 					entry.entity);
-				NOX_ASSERT(logic->tick_count == 1, u"EntityLogicのメソッドが呼ばれていません");
 			}
 		}
-		NOX_ASSERT(world.TryGetComponent<TestPosition>(entity)->x == 8.0f,
+
+		auto* const logic = static_cast<TestPlayerLogic*>(storage.GetEntries()[0].instance);
+		NOX_ASSERT(logic->process0_count == 1 && logic->process1_count == 1 && logic->process2_count == 1,
+			u"EntityLogicの各メソッドが1回ずつ呼ばれていません");
+		//	Process0でHealthの3、Process2でVelocityの2が足される。
+		NOX_ASSERT(world.TryGetComponent<TestPosition>(entity)->x == 10.0f,
 			u"EntityLogicの書き込み結果が不正です");
+		NOX_ASSERT(world.TryGetComponent<TestPosition>(entity)->y == 1.0f,
+			u"Serviceをポインタで受けるメソッドの書き込み結果が不正です");
+		//	ポインタ経由と参照経由で同じServiceインスタンスに届いている。
+		NOX_ASSERT(counter_service->call_count == 2, u"Serviceが引数として届いていません");
 
 		storage.DestroyInstance(entity);
 		NOX_ASSERT(storage.Contains(entity) == false, u"EntityLogicのインスタンスが破棄されていません");

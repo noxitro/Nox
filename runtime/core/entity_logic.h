@@ -110,15 +110,17 @@ namespace nox
 	};
 
 	/// @brief ECSの上にOOPを載せるための基底。
+	/// @details インスタンスが存在するための必須ComponentDataは、登録した更新メソッドの引数から
+	///          自動的に導出される(全メソッドが宣言したComponentDataの和集合)。
+	///          基底のテンプレート引数に型を並べ直す必要はなく、メソッドの引数リストが唯一の宣言になる。
 	/// @tparam TDerived CRTPの派生型。
-	/// @tparam RequiredComponents インスタンスが存在するために必要なComponentData。
-	template<class TDerived, class... RequiredComponents>
-		requires(sizeof...(RequiredComponents) > 0u && (nox::IsComponentDataType<RequiredComponents>() && ...))
+	/// @tparam ExtraRequiredComponents どのメソッドも引数に取らないが、存在を必須にしたいComponentData
+	///         (タグ用)。通常は指定しない。
+	template<class TDerived, class... ExtraRequiredComponents>
+		requires((nox::IsComponentDataType<ExtraRequiredComponents>() && ...))
 	class EntityLogic
 	{
 	public:
-		using RequiredSignature = nox::EntitySignature<RequiredComponents&...>;
-
 		[[nodiscard]] inline nox::EntityId GetEntity()const noexcept { return entity_; }
 		[[nodiscard]] inline nox::World& GetWorld()const noexcept { return *world_; }
 
@@ -126,7 +128,17 @@ namespace nox
 		[[nodiscard]] static nox::EntityLogicTypeDescriptor& GetTypeDescriptor()noexcept
 		{
 			static nox::EntityLogicTypeDescriptor descriptor{
-				.make_required_mask = []()noexcept { return nox::MakeComponentMask<RequiredComponents...>(); },
+				.make_required_mask = []()noexcept
+					{
+						//	必須ComponentData = 登録された全メソッドが宣言したComponentDataの和集合。
+						//	メソッドを足せば必要な条件も自動で広がるので、宣言が二重管理にならない。
+						nox::ComponentMask mask = nox::MakeComponentMask<ExtraRequiredComponents...>();
+						for (const nox::EntityLogicMethodDescriptor& method : TDerived::GetEntityLogicMethods())
+						{
+							mask.Merge(method.make_read_write_mask());
+						}
+						return mask;
+					},
 				.construct = [](void* memory, nox::World& world, nox::EntityId entity) -> void*
 					{
 						return new(memory) TDerived(world, entity);
@@ -160,7 +172,8 @@ namespace nox
 	};
 
 	/// @brief 更新メソッド1つ分の記述子を作る。NOX_ENTITY_LOGIC_METHODが使う。
-	/// @details 引数リストが宣言したComponentDataは、必ずEntityLogicの必須ComponentDataに含まれている必要がある。
+	/// @details 引数リストは任意。EntityId / ComponentDataの参照 / Serviceの参照・ポインタ を自由に並べられる。
+	///          ここで宣言したComponentDataがEntityLogicの必須ComponentDataに算入される。
 	template<auto MethodPointer, nox::SystemPhaseType _Phase>
 	[[nodiscard]] constexpr nox::EntityLogicMethodDescriptor MakeEntityLogicMethodDescriptor(const std::string_view name)noexcept
 	{

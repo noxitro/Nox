@@ -45,6 +45,15 @@ namespace nox
 			words_[index / k_bits_per_word] |= (1ull << (index % k_bits_per_word));
 		}
 
+		/// @brief otherのビットを取り込む(和集合)。
+		inline constexpr void Merge(const ComponentMask& other)noexcept
+		{
+			for (nox::uint32 word_index = 0u; word_index < k_word_count; ++word_index)
+			{
+				words_[word_index] |= other.words_[word_index];
+			}
+		}
+
 		inline constexpr void Reset(const nox::ComponentTypeIndex index)noexcept
 		{
 			words_[index / k_bits_per_word] &= ~(1ull << (index % k_bits_per_word));
