@@ -5,6 +5,9 @@
 #include	"os.h"
 #include	"atomic.h"
 #include	"thread.h"
+#include	"assertion.h"
+#include	"unicode_converter.h"
+#include	"preprocessor/util.h"
 
 #if NOX_WINDOWS
 #include	<Psapi.h>
