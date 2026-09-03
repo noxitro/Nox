@@ -566,6 +566,62 @@ void nox::World::ExecuteNodeJob(void* const context)
 	job_context->world->ExecuteNode(*job_context->node);
 }
 
+void nox::World::ExecuteEntitySystemChunkJob(void* const context)
+{
+	auto* const job_context = static_cast<nox::World::ChunkJobContext*>(context);
+	job_context->system->ExecuteChunk(*job_context->world, *job_context->archetype, job_context->chunk_index);
+}
+
+void nox::World::ExecuteEntitySystemParallel(nox::EntitySystemBase& system)
+{
+	//	Chunkは互いに素なメモリブロックなので、2つのワーカーが同じバイトへ触ることはない。
+	//	ノード同士の排他は呼び出し元(ExecuteNode)が既に取っている。
+	//	確保は一切走らない。ジョブ配列もChunk参照配列もスタック上の固定長で、
+	//	上限を超えるChunk数は同じ配列を使い回すバッチへ分けて配る。
+	const nox::EntityQuery& query = system.GetQuery();
+	const nox::uint32 total_chunk_count = query.GetTotalChunkCount();
+
+	//	1つ以下なら配っても往復コストが乗るだけなので、その場で回す。
+	if (total_chunk_count <= 1u || job_system_.GetWorkerCount() == 0u)
+	{
+		system.Execute(*this);
+		return;
+	}
+
+	std::array<nox::EntityChunkRef, k_max_chunk_jobs_per_dispatch> chunk_refs{};
+	std::array<nox::World::ChunkJobContext, k_max_chunk_jobs_per_dispatch> job_contexts{};
+	std::array<nox::Job, k_max_chunk_jobs_per_dispatch> jobs{};
+
+	for (nox::uint32 start = 0u; start < total_chunk_count; start += k_max_chunk_jobs_per_dispatch)
+	{
+		const nox::uint32 job_count = query.FillChunkRefs(
+			start, std::span<nox::EntityChunkRef>(chunk_refs));
+		if (job_count == 0u)
+		{
+			break;
+		}
+
+		for (nox::uint32 index = 0u; index < job_count; ++index)
+		{
+			job_contexts[index] = nox::World::ChunkJobContext{
+				.world = this,
+				.system = &system,
+				.archetype = chunk_refs[index].archetype,
+				.chunk_index = chunk_refs[index].chunk_index,
+			};
+			jobs[index] = nox::Job{
+				.func = &nox::World::ExecuteEntitySystemChunkJob,
+				.context = &job_contexts[index],
+			};
+		}
+
+		nox::JobCounter counter{ 0u };
+		job_system_.Dispatch(std::span<const nox::Job>(jobs.data(), job_count), counter);
+		//	待つ側(配った本人)も自分でジョブを引いて働く。
+		job_system_.Wait(counter);
+	}
+}
+
 void nox::World::ExecuteUpdaterGraphPhase(const nox::SystemPhaseType phase_type)
 {
 	//	レイヤーは「小さいほど先」。同一レイヤー内のノードは依存解析上互いに衝突しないので、
@@ -616,13 +672,35 @@ void nox::World::ExecuteNode(const nox::UpdaterNode& node)
 {
 #if !NOX_MASTER
 	//	宣言したComponentData / Serviceを実行中だけ占有する。直列実行では決して発火しない。
+	//
+	//	【stage 2cでのチェッカーの意味】
+	//	スコープはノード単位で「配る側のスレッド」が1回だけ取る。Chunkジョブの中では取り直さない。
+	//	RWチェッカーはWriteを取ったスレッドIDを覚える方式なので、もし各Chunkジョブが取り直すと
+	//	「同一ノードの並列Chunk同士」が互いに違反として誤検出されてしまうため。
+	//	結果として、チェッカーが依然として証明するのは
+	//	  ・ノード対ノード(レイヤー内並列)の宣言違反 … 従来どおり検出できる
+	//	  ・ノードが宣言していないComponentData / Serviceへの、他ノードからの同時アクセス … 検出できる
+	//	証明しなくなったのは
+	//	  ・1つのノードの内部、Chunkジョブ同士の競合 … 検出できない
+	//	    (Chunkが互いに素なメモリであることと、k_parallel_for_eachを宣言したSystemが
+	//	     entity間で共有される状態に触れないこと、の2点で担保する。後者はSystem作者の責務。
+	//	     nox::IsParallelForEachEntitySystem のコメントに条件を明記してある)
 	EnterNodeAccessScope(node.access);
 #endif // !NOX_MASTER
 
 	switch (node.kind)
 	{
 	case nox::UpdaterNodeKind::EntitySystem:
-		node.system->Execute(*this);
+		//	Chunk並列を宣言したSystemだけ、自分の列挙をさらにワーカーへ配る。
+		//	--serial-updater はワーカー数0なので、この判定で自動的に直列へ落ちる。
+		if (node.system->GetDescriptor().parallel_for_each && job_system_.GetWorkerCount() != 0u)
+		{
+			ExecuteEntitySystemParallel(*node.system);
+		}
+		else
+		{
+			node.system->Execute(*this);
+		}
 		break;
 
 	case nox::UpdaterNodeKind::EntityLogicMethod:

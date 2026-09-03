@@ -12,6 +12,15 @@ namespace nox
 {
 	class World;
 
+	/// @brief Queryがマッチした「Archetype内の1Chunk」への参照。
+	/// @details Chunk同士は完全に独立したメモリなので、これがそのまま並列実行の分割単位になる。
+	///          POD。所有もしないしコピーも自明なので、スタック上の固定長配列へそのまま並べられる。
+	struct EntityChunkRef final
+	{
+		nox::Archetype* archetype;
+		nox::uint32 chunk_index;
+	};
+
 	/// @brief 必須ComponentDataを満たすArchetypeの集合。
 	/// @details 照合はArchetypeが増えたときにだけ走る。毎フレームのコストはマッチ済み配列の走査だけ。
 	class EntityQuery final
@@ -43,6 +52,55 @@ namespace nox
 		[[nodiscard]] inline std::span<nox::Archetype* const> GetMatchedArchetypes()const noexcept
 		{
 			return std::span(matched_archetypes_.data(), matched_archetypes_.size());
+		}
+
+		/// @brief 走査対象になるChunk(entityが1行以上あるもの)の総数。
+		/// @details 空Chunkは数えない。ジョブ1つ分の仕事が無いものを配っても往復コストが乗るだけのため。
+		[[nodiscard]] inline nox::uint32 GetTotalChunkCount()const noexcept
+		{
+			nox::uint32 total = 0u;
+			for (const nox::Archetype* const archetype : matched_archetypes_)
+			{
+				const nox::uint32 chunk_count = archetype->GetChunkCount();
+				for (nox::uint32 chunk_index = 0u; chunk_index < chunk_count; ++chunk_index)
+				{
+					total += (archetype->GetChunkEntityCount(chunk_index) != 0u) ? 1u : 0u;
+				}
+			}
+			return total;
+		}
+
+		/// @brief 空でないChunk参照を、GetTotalChunkCount順で[start, start + out.size())の範囲だけ書き出す。
+		/// @details 呼び出し側が用意したspanへ書くだけで確保は一切走らない。
+		///          出力容量より多くのChunkがある場合は、startをずらして複数回に分けて呼ぶ。
+		/// @return 実際に書き出した数。
+		[[nodiscard]] inline nox::uint32 FillChunkRefs(
+			const nox::uint32 start,
+			const std::span<nox::EntityChunkRef> out)const noexcept
+		{
+			nox::uint32 scanned = 0u;
+			nox::uint32 written = 0u;
+			for (nox::Archetype* const archetype : matched_archetypes_)
+			{
+				const nox::uint32 chunk_count = archetype->GetChunkCount();
+				for (nox::uint32 chunk_index = 0u; chunk_index < chunk_count; ++chunk_index)
+				{
+					if (archetype->GetChunkEntityCount(chunk_index) == 0u)
+					{
+						continue;
+					}
+					if (scanned++ < start)
+					{
+						continue;
+					}
+					if (written >= out.size())
+					{
+						return written;
+					}
+					out[written++] = nox::EntityChunkRef{ .archetype = archetype, .chunk_index = chunk_index };
+				}
+			}
+			return written;
 		}
 
 	private:
@@ -187,6 +245,58 @@ namespace nox
 				(owner.*method)(nox::detail::BindEntityArgument<ParameterAt<Indices>>(bases[Indices], entity, row)...);
 			}
 
+			/// @brief Chunk1つ分の行ループ。Service/EntityCommandsは解決済みでbasesに載っている前提。
+			/// @details 直列経路とChunk並列経路のどちらもここを通る。走らせるコードを1本に保つための分離。
+			template<class Owner, class MethodPointerType>
+			static void InvokeChunkRows(
+				BaseArray& bases,
+				nox::Archetype& archetype,
+				const nox::uint32 chunk_index,
+				Owner& owner,
+				MethodPointerType method)
+			{
+				constexpr auto k_indices = std::make_index_sequence<k_parameter_count>{};
+				const nox::uint32 entity_count = archetype.GetChunkEntityCount(chunk_index);
+				if (entity_count == 0u)
+				{
+					return;
+				}
+				if (ResolveColumns(archetype, chunk_index, bases, k_indices) == false)
+				{
+					NOX_ASSERT(false, u8"Queryにマッチしたarchetypeで列の解決に失敗しました");
+					return;
+				}
+
+				const nox::EntityId* const entities = archetype.GetEntityArray(chunk_index);
+				for (nox::uint32 row = 0u; row < entity_count; ++row)
+				{
+					InvokeRow(owner, method, bases, entities[row], row, k_indices);
+				}
+			}
+
+			/// @brief Chunkを1つだけ処理する。Chunk並列実行の1ジョブ分に相当する。
+			/// @details Service解決とEntityCommandsの束縛はChunkに依存しないので、ジョブごとに独立して行う。
+			///          EntityCommandsはWorldへのポインタ1つのビューで、破棄予約はロックフリーの
+			///          コマンドバッファへ積まれるため、複数スレッドから同時に使っても安全。
+			template<class Owner, class MethodPointerType>
+			static void ForEachEntityInChunk(
+				nox::World& world,
+				nox::Archetype& archetype,
+				const nox::uint32 chunk_index,
+				Owner& owner,
+				MethodPointerType method)
+			{
+				constexpr auto k_indices = std::make_index_sequence<k_parameter_count>{};
+				BaseArray bases{};
+				nox::EntityCommands commands(world);
+				if (ResolveServices(world, bases, k_indices) == false)
+				{
+					return;
+				}
+				BindCommands(commands, bases, k_indices);
+				InvokeChunkRows(bases, archetype, chunk_index, owner, method);
+			}
+
 			/// @brief Queryにマッチした全entityに対してmethodを呼ぶ。
 			template<class Owner, class MethodPointerType>
 			static void ForEachEntity(
@@ -210,22 +320,7 @@ namespace nox
 					const nox::uint32 chunk_count = archetype->GetChunkCount();
 					for (nox::uint32 chunk_index = 0u; chunk_index < chunk_count; ++chunk_index)
 					{
-						const nox::uint32 entity_count = archetype->GetChunkEntityCount(chunk_index);
-						if (entity_count == 0u)
-						{
-							continue;
-						}
-						if (ResolveColumns(*archetype, chunk_index, bases, k_indices) == false)
-						{
-							NOX_ASSERT(false, u8"Queryにマッチしたarchetypeで列の解決に失敗しました");
-							continue;
-						}
-
-						const nox::EntityId* const entities = archetype->GetEntityArray(chunk_index);
-						for (nox::uint32 row = 0u; row < entity_count; ++row)
-						{
-							InvokeRow(owner, method, bases, entities[row], row, k_indices);
-						}
+						InvokeChunkRows(bases, *archetype, chunk_index, owner, method);
 					}
 				}
 			}

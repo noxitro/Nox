@@ -11,7 +11,9 @@
 #include "../entity_logic.h"
 #include "../entity_type_registry.h"
 #include "../updater_graph.h"
+#include "../log_id.h"
 #include "../../kernel/assertion.h"
+#include "../../kernel/job_system.h"
 
 namespace nox::test::ecs::manual
 {
@@ -54,7 +56,14 @@ namespace
 	using nox::test::ecs::TestPosition;
 	using nox::test::ecs::TestVelocity;
 	using nox::test::ecs::TestMoveSystem;
+	using nox::test::ecs::TestParallelAddSystem;
 	using nox::test::ecs::TestPlayerLogic;
+
+	//	Chunk並列の宣言はオプトイン。宣言していない型は既定でfalseのままでなければならない。
+	static_assert(nox::IsParallelForEachEntitySystem<TestParallelAddSystem>());
+	static_assert(nox::IsParallelForEachEntitySystem<TestMoveSystem>() == false);
+	static_assert(nox::k_entity_system_type_descriptor<TestParallelAddSystem>.parallel_for_each);
+	static_assert(nox::k_entity_system_type_descriptor<TestMoveSystem>.parallel_for_each == false);
 
 #pragma region シグネチャ解析のコンパイル時検証
 
@@ -290,6 +299,166 @@ namespace
 		world.DestroyEntity(ignored);
 	}
 
+	/// @brief Worldがstage 2cで通る経路をそのまま組み立ててSystemを1回走らせる。
+	/// @details nox::World::ExecuteEntitySystemParallel と同じ部品(Queryのchunk列挙 → 記述子の
+	///          execute_chunk → JobSystemのDispatch/Wait)を、テストからワーカー数を切り替えられる形で並べたもの。
+	///          Worldのjob_system_はInit()でしか起動されないため、テストは自前のJobSystemを持つ。
+	void ExecuteEntitySystemChunkParallel(
+		nox::World& world,
+		nox::EntitySystemBase& system,
+		nox::JobSystem& job_system)
+	{
+		static constexpr nox::uint32 k_max_chunk_jobs = 256u;
+
+		struct ChunkJobContext
+		{
+			nox::World* world;
+			nox::EntitySystemBase* system;
+			nox::Archetype* archetype;
+			nox::uint32 chunk_index;
+		};
+
+		const nox::EntityQuery& query = system.GetQuery();
+		const nox::uint32 total_chunk_count = query.GetTotalChunkCount();
+		if (total_chunk_count <= 1u || job_system.GetWorkerCount() == 0u)
+		{
+			system.Execute(world);
+			return;
+		}
+
+		std::array<nox::EntityChunkRef, k_max_chunk_jobs> chunk_refs{};
+		std::array<ChunkJobContext, k_max_chunk_jobs> contexts{};
+		std::array<nox::Job, k_max_chunk_jobs> jobs{};
+
+		for (nox::uint32 start = 0u; start < total_chunk_count; start += k_max_chunk_jobs)
+		{
+			const nox::uint32 job_count = query.FillChunkRefs(start, std::span<nox::EntityChunkRef>(chunk_refs));
+			if (job_count == 0u)
+			{
+				break;
+			}
+
+			for (nox::uint32 index = 0u; index < job_count; ++index)
+			{
+				contexts[index] = ChunkJobContext{
+					.world = &world,
+					.system = &system,
+					.archetype = chunk_refs[index].archetype,
+					.chunk_index = chunk_refs[index].chunk_index,
+				};
+				jobs[index] = nox::Job{
+					.func = [](void* const context)
+						{
+							auto* const job_context = static_cast<ChunkJobContext*>(context);
+							job_context->system->ExecuteChunk(
+								*job_context->world, *job_context->archetype, job_context->chunk_index);
+						},
+					.context = &contexts[index],
+				};
+			}
+
+			nox::JobCounter counter{ 0u };
+			job_system.Dispatch(std::span<const nox::Job>(jobs.data(), job_count), counter);
+			job_system.Wait(counter);
+		}
+	}
+
+	/// @brief 複数Chunkにまたがるentity群を、ワーカー0本 / 既定本数の双方で処理して結果が一致することを見る。
+	void TestParallelForEachEntitySystem(nox::World& world)
+	{
+		const nox::EntitySystemTypeDescriptor* const registered = FindEntitySystemType("TestParallelAddSystem");
+		NOX_ASSERT(registered != nullptr, u"Chunk並列SystemがWorldの表に載っていません");
+		NOX_ASSERT(registered != nullptr && registered->parallel_for_each,
+			u"k_parallel_for_eachの宣言が記述子に伝わっていません");
+		NOX_ASSERT(registered != nullptr && registered->execute_chunk != nullptr,
+			u"Chunk単位の実行本体が束縛されていません");
+
+		//	Chunk容量はArchetypeが決めるので、まず1つ作って容量を読む。
+		const nox::EntityId probe = world.CreateEntity();
+		world.AddComponent<TestPosition>(probe)->x = 0.0f;
+		world.AddComponent<TestVelocity>(probe)->x = 1.0f;
+
+		nox::Archetype* const archetype = world.TryGetArchetype(probe);
+		NOX_ASSERT(archetype != nullptr, u"Archetypeが引けません");
+		if (archetype == nullptr)
+		{
+			world.DestroyEntity(probe);
+			return;
+		}
+
+		//	1Chunkに収まらない数を作る。複数Chunkに割れていることは後段でGetChunkCountを見て確認する。
+		const nox::uint32 entity_count = archetype->GetChunkCapacity() + 5u;
+
+		nox::Vector<nox::EntityId> entities;
+		entities.reserve(entity_count);
+		entities.push_back(probe);
+		for (nox::uint32 index = 1u; index < entity_count; ++index)
+		{
+			const nox::EntityId entity = world.CreateEntity();
+			entities.push_back(entity);
+			world.AddComponent<TestPosition>(entity)->x = 0.0f;
+			world.AddComponent<TestVelocity>(entity)->x = 1.0f;
+		}
+
+		TestParallelAddSystem system;
+		world.BuildQuery(system.GetQuery(), system.GetDescriptor().make_read_write_mask());
+
+		const nox::uint32 chunk_count = system.GetQuery().GetTotalChunkCount();
+		NOX_ASSERT(chunk_count >= 2u, u"複数Chunkにまたがっていません(テストの前提が崩れています)");
+
+		//	chunk参照の列挙は「空でないChunkをちょうど1回ずつ」でなければならない。
+		std::array<nox::EntityChunkRef, 64> refs{};
+		const nox::uint32 filled = system.GetQuery().FillChunkRefs(0u, std::span<nox::EntityChunkRef>(refs));
+		NOX_ASSERT(filled == chunk_count, u"chunk参照の列挙数が総数と一致しません");
+		for (nox::uint32 i = 0u; i < filled; ++i)
+		{
+			for (nox::uint32 j = i + 1u; j < filled; ++j)
+			{
+				NOX_ASSERT(
+					(refs[i].archetype != refs[j].archetype) || (refs[i].chunk_index != refs[j].chunk_index),
+					u"同じChunkが2回列挙されています(二重更新になります)");
+			}
+		}
+
+		//	ワーカー0本(--serial-updater相当)。この場合はDispatchが呼び出しスレッドで全部回す。
+		{
+			nox::JobSystem serial_job_system;
+			serial_job_system.Initialize(0u);
+			NOX_ASSERT(serial_job_system.GetWorkerCount() == 0u, u"ワーカー0本の指定が効いていません");
+			ExecuteEntitySystemChunkParallel(world, system, serial_job_system);
+			serial_job_system.Finalize();
+		}
+
+		for (nox::uint32 index = 0u; index < entity_count; ++index)
+		{
+			NOX_ASSERT(world.TryGetComponent<TestPosition>(entities[index])->x == 1.0f,
+				u"ワーカー0本のChunk実行で、全entityがちょうど1回だけ更新されていません");
+		}
+
+		//	既定ワーカー数。Chunkがワーカーへ配られる。結果は0本のときと完全に一致しなければならない。
+		{
+			nox::JobSystem parallel_job_system;
+			parallel_job_system.Initialize(nox::JobSystem::GetDefaultWorkerCount());
+			ExecuteEntitySystemChunkParallel(world, system, parallel_job_system);
+			parallel_job_system.Finalize();
+		}
+
+		for (nox::uint32 index = 0u; index < entity_count; ++index)
+		{
+			NOX_ASSERT(world.TryGetComponent<TestPosition>(entities[index])->x == 2.0f,
+				u"並列Chunk実行で、全entityがちょうど1回だけ更新されていません");
+		}
+
+		NOX_INFO_LINE(nox::log_id::CoreCommon,
+			u8"Chunk並列テスト: entity={0} chunk={1} chunk容量={2} ワーカー={3}",
+			entity_count, chunk_count, archetype->GetChunkCapacity(), nox::JobSystem::GetDefaultWorkerCount());
+
+		for (nox::uint32 index = 0u; index < entity_count; ++index)
+		{
+			world.DestroyEntity(entities[index]);
+		}
+	}
+
 	void TestEntityLogicLifecycle(nox::World& world)
 	{
 		const nox::EntityLogicTypeDescriptor* const logic_descriptor = FindEntityLogicType("TestPlayerLogic");
@@ -523,6 +692,7 @@ void nox::test::TestEntityEcs()
 	nox::World world;
 	TestWorldStructuralChange(world);
 	TestEntitySystemExecution(world);
+	TestParallelForEachEntitySystem(world);
 	TestEntityLogicLifecycle(world);
 	TestManualEntityLogicMethodTable(world);
 }

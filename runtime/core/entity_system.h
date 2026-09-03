@@ -36,8 +36,13 @@ namespace nox
 		std::span<const nox::ServiceAccess>(*get_service_accesses)()noexcept;
 		/// @brief 実行本体。TDerived::OnUpdateへ静的に束縛されている。
 		void (*execute)(nox::EntitySystemBase&, nox::World&);
+		/// @brief Chunk1つ分だけの実行本体。executeと同じくTDerived::OnUpdateへ静的に束縛されている。
+		/// @details parallel_for_eachがtrueのとき、Worldがこれをジョブとしてワーカーへ配る。
+		void (*execute_chunk)(nox::EntitySystemBase&, nox::World&, nox::Archetype&, nox::uint32 chunk_index);
 		std::string_view name;
 		nox::SystemPhaseType phase;
+		/// @brief OnUpdateをChunk単位で並列実行してよいか。 nox::IsParallelForEachEntitySystem を参照。
+		bool parallel_for_each;
 	};
 
 	/// @brief EntitySystemの非テンプレート基底。Worldはこの型でのみ保持する。
@@ -49,6 +54,12 @@ namespace nox
 		EntitySystemBase& operator=(const EntitySystemBase&) = delete;
 
 		inline void Execute(nox::World& world) { descriptor_.execute(*this, world); }
+
+		/// @brief Chunk1つ分だけ実行する。Chunk並列実行の1ジョブ分。
+		inline void ExecuteChunk(nox::World& world, nox::Archetype& archetype, const nox::uint32 chunk_index)
+		{
+			descriptor_.execute_chunk(*this, world, archetype, chunk_index);
+		}
 
 		/// @brief 仮想デストラクタの代わり。記述子が具象型を知っている。
 		inline void Destroy()noexcept { descriptor_.destroy(this); }
@@ -83,6 +94,47 @@ namespace nox
 			auto& derived = static_cast<TSystem&>(self);
 			nox::detail::EntityInvokerOf<Signature>::ForEachEntity(world, self.GetQuery(), derived, &TSystem::OnUpdate);
 		}
+
+		/// @brief TSystem::OnUpdateへ静的に束縛された、Chunk1つ分の実行本体。
+		template<class TSystem>
+		void ExecuteEntitySystemChunk(
+			nox::EntitySystemBase& self,
+			nox::World& world,
+			nox::Archetype& archetype,
+			const nox::uint32 chunk_index)
+		{
+			using Signature = typename TSystem::template SignatureOf<>;
+			auto& derived = static_cast<TSystem&>(self);
+			nox::detail::EntityInvokerOf<Signature>::ForEachEntityInChunk(
+				world, archetype, chunk_index, derived, &TSystem::OnUpdate);
+		}
+	}
+
+	/// @brief TSystemが `static constexpr bool k_parallel_for_each` でChunk並列実行を宣言しているか。
+	/// @details 宣言が無い型は既定でfalse。マクロも生成器も要らず、クラス定義を見れば分かる形にしてある。
+	///
+	///          trueにしてよい条件(System作者が満たすべき責務):
+	///            - OnUpdateの結果が「entityを処理する順序」に依存しないこと。
+	///            - 宣言したComponentData / Service 以外の、entity間で共有される状態に触れないこと。
+	///              とくに **System自身のメンバへの書き込みは安全ではない**。Chunkごとのジョブは
+	///              同一のSystemインスタンス上で同時に走るため、メンバのインクリメントも代入も競合する。
+	///              例えば nox::test::ecs::TestMoveSystem の processed_count / last_entity は
+	///              まさにこの種の状態であり、あのSystemはk_parallel_for_eachを宣言してはならない。
+	///            - 同一Chunk内・Chunk間の他の行を覗かないこと(引数で渡された行だけを触ること)。
+	///
+	///          逆に安全なのは「宣言したComponentDataの、自分の行だけを読み書きする」形。
+	///          Chunkは互いに素なメモリなので、この形なら2つのワーカーが同じバイトに触ることはない。
+	template<class TSystem>
+	[[nodiscard]] constexpr bool IsParallelForEachEntitySystem()noexcept
+	{
+		if constexpr (requires { { TSystem::k_parallel_for_each } -> std::convertible_to<bool>; })
+		{
+			return static_cast<bool>(TSystem::k_parallel_for_each);
+		}
+		else
+		{
+			return false;
+		}
 	}
 
 	/// @brief EntitySystem型の記述子を作る。
@@ -100,8 +152,10 @@ namespace nox
 			.make_write_mask = []()noexcept { return Signature::GetWriteMask(); },
 			.get_service_accesses = []()noexcept { return Signature::GetServiceAccesses(); },
 			.execute = &nox::detail::ExecuteEntitySystem<TSystem>,
+			.execute_chunk = &nox::detail::ExecuteEntitySystemChunk<TSystem>,
 			.name = nox::util::GetTypeName<TSystem>(),
 			.phase = TSystem::k_phase,
+			.parallel_for_each = nox::IsParallelForEachEntitySystem<TSystem>(),
 		};
 	}
 

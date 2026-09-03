@@ -36,6 +36,10 @@ namespace nox
 		static constexpr nox::uint32 k_initial_archetype_capacity = 64u;
 		/// @brief 1レイヤーに載せられるノード数の上限。ジョブ配列をスタックに置くために固定する。
 		static constexpr nox::uint32 k_max_nodes_per_layer = 256u;
+		/// @brief 1回のディスパッチで配れるChunkジョブ数の上限。
+		/// @details ジョブ配列をスタック上の固定長で持つための上限。Queryのマッチ数がこれを超える場合は
+		///          この単位のバッチへ分けて配る(確保は一切しない)。
+		static constexpr nox::uint32 k_max_chunk_jobs_per_dispatch = 256u;
 
 		/// @brief 実行ノード
 		struct SystemExecuteNode
@@ -79,6 +83,15 @@ namespace nox
 		{
 			nox::World* world;
 			const nox::UpdaterNode* node;
+		};
+
+		/// @brief Chunk1つ分のジョブコンテキスト。ディスパッチ毎にスタック上へ作る。
+		struct ChunkJobContext
+		{
+			nox::World* world;
+			nox::EntitySystemBase* system;
+			nox::Archetype* archetype;
+			nox::uint32 chunk_index;
 		};
 	public:
 		World();
@@ -203,6 +216,12 @@ namespace nox
 		static void ExecuteNodeJob(void* context);
 		/// @brief レイヤーのノードを直列に実行する。
 		void ExecuteLayerNodesSerial(std::span<const nox::UpdaterNode> nodes);
+		/// @brief EntitySystemの列挙をChunk単位でワーカーへ配る(stage 2c)。
+		/// @details ノードの排他はExecuteNodeが既に取っている前提。Chunk同士は互いに素なメモリなので、
+		///          この内側では追加の排他は要らない。
+		void ExecuteEntitySystemParallel(nox::EntitySystemBase& system);
+		/// @brief ExecuteChunkをジョブとして呼ぶためのthunk。contextはChunkJobContext*。
+		static void ExecuteEntitySystemChunkJob(void* context);
 		/// @brief entityのComponentData構成が変わったので、EntityLogicの生成/破棄を追従させる。
 		void RefreshEntityLogics(nox::EntityId entity, const nox::Archetype* archetype);
 

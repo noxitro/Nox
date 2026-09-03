@@ -55,6 +55,25 @@ namespace nox::test::ecs
 		nox::EntityId last_entity{ 0u };
 	};
 
+	/// @brief Chunk単位の並列列挙を宣言したSystem(stage 2c)。
+	/// @details k_parallel_for_each を宣言できるのは「宣言したComponentDataの、自分の行だけ」を
+	///          触るSystemに限られる。このSystemはpositionへの加算しかせず、
+	///          自身のメンバも他entityの行も読まないため条件を満たす。
+	///
+	///          対照的に nox::test::ecs::TestMoveSystem は processed_count / last_entity という
+	///          entity間で共有されるメンバを更新するので、並列化の宣言をしてはならない。
+	class TestParallelAddSystem final : public nox::EntitySystem<nox::test::ecs::TestParallelAddSystem>
+	{
+	public:
+		/// @brief Chunk単位で並列に走ってよい、という宣言。既定はfalse。
+		static constexpr bool k_parallel_for_each = true;
+
+		void OnUpdate(nox::test::ecs::TestPosition& position, const nox::test::ecs::TestVelocity& velocity)
+		{
+			position.x += velocity.x;
+		}
+	};
+
 	/// @brief 必須ComponentDataは基底のテンプレート引数ではなく、メソッド群の引数から導出される。
 	/// @details メソッド名は任意、引数リストも任意。ここでは
 	///          「ComponentDataのみ」「Serviceをポインタで」「Serviceを参照で」「EntityCommands」の4形を並べている。
