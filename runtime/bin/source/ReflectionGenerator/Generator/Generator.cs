@@ -1112,13 +1112,18 @@ public class Generator
 								codeWriter.WriteLine(variableTypeDeclStr);
 								codeWriter.WriteLine(classTypeDeclStr);
 
-								codeWriter.WriteLine("if constexpr(std::is_assignable_v<VariableType&, const std::remove_reference_t<VariableType>&>)");
+								//	代入可否の判定は nox::reflection::detail::ReflectionAssignFromVoid が持つ。
+								//	if constexpr を非ジェネリックラムダの本体に直接書くと破棄側の分岐も
+								//	意味検査されてしまうため、必ず関数テンプレート越しに呼ぶこと。
+								//	代入先がビットフィールドの場合に参照で束縛できないので、
+								//	代入式自体はジェネリックラムダに包んで渡す。
+								codeWriter.WriteLine("nox::reflection::detail::ReflectionAssignFromVoid<VariableType>(value, [instance](const auto& assign_value)");
 								codeWriter.WriteLine("{");
 								using (codeWriter.Indent())
 								{
-									codeWriter.WriteLine($"static_cast<ClassType*>(instance)->{variableInfo.FullName} = *static_cast <const std::remove_reference_t<VariableType>*> (value);");
+									codeWriter.WriteLine($"static_cast<ClassType*>(instance)->{variableInfo.FullName} = assign_value;");
 								}
-								codeWriter.WriteLine("}");
+								codeWriter.WriteLine("});");
 							}
 							codeWriter.WriteLine("},");
 						}
@@ -1141,21 +1146,10 @@ public class Generator
                             codeWriter.WriteLine(variableTypeDeclStr);
                             codeWriter.WriteLine(classTypeDeclStr);
 
-                            codeWriter.WriteLine("using OptionalValueType = typename nox::reflection::ReflectionOptional<VariableType>::value_type;");
-                            codeWriter.WriteLine("if constexpr (std::is_copy_constructible_v<OptionalValueType>)");
-                            codeWriter.WriteLine("{");
-                            using (codeWriter.Indent())
-                            {
-                                codeWriter.WriteLine($"return static_cast <const ClassType*> (instance)->{variableInfo.FullName};");
-                            }
-                            codeWriter.WriteLine("}");
-                            codeWriter.WriteLine("else");
-                            codeWriter.WriteLine("{");
-                            using (codeWriter.Indent())
-                            {
-                                codeWriter.WriteLine("return std::nullopt;");
-                            }
-                            codeWriter.WriteLine("}");
+                            //	複製可否の判定は nox::reflection::detail::ReflectionMakeOptional が持つ。
+                            //	if constexpr を非ジェネリックラムダの本体に直接書くと破棄側の分岐も
+                            //	意味検査されてしまうため、必ず関数テンプレート越しに呼ぶこと。
+                            codeWriter.WriteLine($"return nox::reflection::detail::ReflectionMakeOptional<nox::reflection::ReflectionOptional<VariableType>>(static_cast <const ClassType*> (instance)->{variableInfo.FullName});");
                         }
                         codeWriter.WriteLine("},");
                     }
@@ -1349,13 +1343,16 @@ public class Generator
                         {
                             codeWriter.WriteLine(variableTypeDeclStr);
 
-                            codeWriter.WriteLine("if constexpr (std::is_assignable_v<VariableType&, const std::remove_reference_t<VariableType>&>)");
+                            //	代入可否の判定は nox::reflection::detail::ReflectionAssignFromVoid が持つ。
+                            //	if constexpr を非ジェネリックラムダの本体に直接書くと破棄側の分岐も
+                            //	意味検査されてしまうため、必ず関数テンプレート越しに呼ぶこと。
+                            codeWriter.WriteLine("nox::reflection::detail::ReflectionAssignFromVoid<VariableType>(value, [](const auto& assign_value)");
                             codeWriter.WriteLine("{");
                             using (codeWriter.Indent())
                             {
-                                codeWriter.WriteLine($"{variableInfo.FullName} = *static_cast<const std::remove_reference_t<VariableType>*>(value);");
+                                codeWriter.WriteLine($"{variableInfo.FullName} = assign_value;");
                             }
-                            codeWriter.WriteLine("}");
+                            codeWriter.WriteLine("});");
                         }
                         codeWriter.WriteLine("},");
                     }
@@ -1377,21 +1374,10 @@ public class Generator
                         {
                             codeWriter.WriteLine(variableTypeDeclStr);
 
-                            codeWriter.WriteLine("using OptionalValueType = typename nox::reflection::ReflectionOptional<VariableType>::value_type;");
-                            codeWriter.WriteLine("if constexpr (std::is_copy_constructible_v<OptionalValueType>)");
-                            codeWriter.WriteLine("{");
-                            using (codeWriter.Indent())
-                            {
-                                codeWriter.WriteLine($"return {variableInfo.FullName};");
-                            }
-                            codeWriter.WriteLine("}");
-                            codeWriter.WriteLine("else");
-                            codeWriter.WriteLine("{");
-                            using (codeWriter.Indent())
-                            {
-                                codeWriter.WriteLine("return std::nullopt;");
-                            }
-                            codeWriter.WriteLine("}");
+                            //	複製可否の判定は nox::reflection::detail::ReflectionMakeOptional が持つ。
+                            //	if constexpr を非ジェネリックラムダの本体に直接書くと破棄側の分岐も
+                            //	意味検査されてしまうため、必ず関数テンプレート越しに呼ぶこと。
+                            codeWriter.WriteLine($"return nox::reflection::detail::ReflectionMakeOptional<nox::reflection::ReflectionOptional<VariableType>>({variableInfo.FullName});");
                         }
                         codeWriter.WriteLine("},");
                     }

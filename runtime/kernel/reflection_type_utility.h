@@ -23,6 +23,54 @@ namespace nox::reflection
 		>
 	>;
 
+	namespace detail
+	{
+		///	@brief			変数の値を ReflectionOptional へ複製する (生成コードの getter 実装)
+		///	@tparam	TOptional	戻り値となる nox::reflection::ReflectionOptional<VariableType>
+		///	@tparam	TValue		変数を参照した式の型 (転送参照で推論させる)
+		///	@param	value		変数を参照した式
+		///	@return				複製できる型なら値、複製できない型なら std::nullopt
+		///	@details
+		///		複製できない型 (nox::StopWatch, std::atomic_bool, nox::os::Thread 等) を弾く
+		///		if constexpr は、必ず「テンプレートの中」に置かなければならない。
+		///		非テンプレートな関数 (生成コードの非ジェネリックラムダ) の中に直接書くと、
+		///		[stmt.if]/2 の緩和が効かず、破棄される側の分岐も完全に意味検査されてしまう。
+		///		MSVC はこの検査を怠るため通るが、clang-cl では複製不可の型でエラーになる。
+		template<class TOptional, class TValue>
+		[[nodiscard]]
+		inline constexpr TOptional ReflectionMakeOptional(TValue&& value)
+		{
+			if constexpr (std::is_copy_constructible_v<typename TOptional::value_type>)
+			{
+				return TOptional(std::forward<TValue>(value));
+			}
+			else
+			{
+				return std::nullopt;
+			}
+		}
+
+		///	@brief			型消去された値を変数へ代入する (生成コードの setter 実装)
+		///	@tparam	TVariable	変数の型 (decltype(変数) そのもの。参照メンバなら T&)
+		///	@tparam	TAssign		代入を行う呼び出し可能物。const 参照を1つ受け取る
+		///	@param	value		代入元の値を指すポインタ
+		///	@param	assign		代入式を包んだジェネリックラムダ
+		///	@details
+		///		代入可能でない型の場合は何もしない (従来どおり無言で無視する)。
+		///		代入式そのものを呼び出し側のジェネリックラムダに持たせているのは、
+		///		代入先がビットフィールドの場合に参照で束縛できないため。
+		///		ジェネリックラムダの本体はテンプレートなので、ここで呼ばれない限り実体化されない。
+		template<class TVariable, class TAssign>
+		inline constexpr void ReflectionAssignFromVoid(void* value, TAssign&& assign)
+		{
+			using RawType = std::remove_reference_t<TVariable>;
+			if constexpr (std::is_assignable_v<TVariable&, const RawType&>)
+			{
+				assign(*static_cast<const RawType*>(value));
+			}
+		}
+	}
+
 	///**
 	//	 * @brief タイプ識別から名前を取得
 	//	 * @param typeKind

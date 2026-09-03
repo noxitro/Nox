@@ -15,6 +15,19 @@ namespace nox
 	class SystemBase : public nox::Object
 	{
 		friend class World;
+
+		//	派生システムの生成コードから protected な入れ子型 (SystemPhase / PhaseRegister) を
+		//	綴れるようにする。
+		//	NOX_DECLARE_REFLECTION が張る friend は ReflectionGeneratedHolder<その型> だけなので、
+		//	例えば ReflectionGeneratedHolder<nox::AssetManager> は AssetManager の private には
+		//	届いても、基底 SystemBase の protected には届かない ([class.access.base]:
+		//	protected は「N のメンバか friend」または「N から派生した P のメンバ」でのみ許される。
+		//	派生クラスの friend は含まれない)。
+		//	GetPhaseRegisterList() の戻り値型が std::span<const PhaseRegister> であるため、
+		//	生成コードがこの型を綴れないとリフレクション情報を出力できない。
+		template<class T> requires(std::is_class_v<T> || std::is_enum_v<T> || std::is_union_v<T>)
+		friend struct ::nox::reflection::gen::ReflectionGeneratedHolder;
+
 		NOX_DECLARE_OBJECT(SystemBase, nox::Object);
 	protected:
 		struct SystemPhase
