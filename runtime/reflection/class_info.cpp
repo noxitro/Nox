@@ -3,9 +3,27 @@
 #include	"pch.h"
 #include	"class_info.h"
 
+#include	"reflection_object.h"
 #include	"function_info.h"
 #include	"variable_info.h"
 #include	"database.h"
+
+const class nox::reflection::ReflectionObject* nox::reflection::ClassInfo::GetAttribute(const nox::reflection::Type& type)const noexcept
+{
+	if (attribute_list_ == nullptr || attribute_length_ == 0)
+	{
+		return nullptr;
+	}
+	for (std::uint8_t i = 0; i < attribute_length_; ++i)
+	{
+		const nox::reflection::ReflectionObject& attribute = attribute_list_[i];
+		if (attribute.GetType() == type)
+		{
+			return &attribute;
+		}
+	}
+	return nullptr;
+}
 
 const nox::reflection::ClassInfo& nox::reflection::ClassInfo::GetExternalClassTypeInfo()const noexcept
 {
