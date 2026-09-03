@@ -65,7 +65,15 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <ClCompile />
+    <ClCompile>
+      <!--
+        生成されたリフレクションコードはUnityビルドでまとめられるため、
+        1つの翻訳単位のセクション数がCOFFの上限を超えることがある。
+        束ね方はファイルの列挙順に依存し環境によって変わるため、
+        ローカルでは通るのにCIで C1128 になった。/bigobj で上限を引き上げる。
+      -->
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -78,7 +86,15 @@
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <ClCompile />
+    <ClCompile>
+      <!--
+        生成されたリフレクションコードはUnityビルドでまとめられるため、
+        1つの翻訳単位のセクション数がCOFFの上限を超えることがある。
+        束ね方はファイルの列挙順に依存し環境によって変わるため、
+        ローカルでは通るのにCIで C1128 になった。/bigobj で上限を引き上げる。
+      -->
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -89,7 +105,15 @@
     <PreBuildEvent />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'">
-    <ClCompile />
+    <ClCompile>
+      <!--
+        生成されたリフレクションコードはUnityビルドでまとめられるため、
+        1つの翻訳単位のセクション数がCOFFの上限を超えることがある。
+        束ね方はファイルの列挙順に依存し環境によって変わるため、
+        ローカルでは通るのにCIで C1128 になった。/bigobj で上限を引き上げる。
+      -->
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
