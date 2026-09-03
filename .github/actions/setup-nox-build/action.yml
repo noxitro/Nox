@@ -1,0 +1,134 @@
+# ============================================================
+# Nox ビルド前提のセットアップ (composite action)
+#
+# Build ジョブと Test ジョブで全く同じ前準備が要るので、
+# 重複を避けてここへ切り出してある。やることは 3 つ。
+#
+#   1. MSBuild (Visual Studio 2026) を PATH に載せる
+#   2. vcpkg (manifest モード) の依存を復元する
+#   3. C# 製のコード生成器を建てて runtime/bin へ配置する
+#
+# 3 が要るのは、生成器のバイナリが .gitignore 済みで
+# リポジトリに入っていないため。詳細は各ステップのコメントを参照。
+# ============================================================
+
+name: Setup Nox build prerequisites
+description: MSBuild の解決・vcpkg 復元・C# コード生成器の配置までを行う
+
+runs:
+  using: composite
+  steps:
+    # -------------------------------------------------------
+    # MSBuild の解決
+    #
+    # runtime 配下の vcxproj は PlatformToolset=v145、つまり
+    # Visual Studio 2026 のツールセットを指定している。
+    # windows-latest (windows-2025) は 2026-06 に VS2026 入りの
+    # イメージへ移行済みなので vswhere -latest でそれが取れる。
+    # VS2022 のイメージ (windows-2022) では v145 が無く失敗する。
+    #
+    # microsoft/setup-msbuild を使わず vswhere を直接叩くのは、
+    # 「どの VS が選ばれたか」をログに残して切り分けやすくするため。
+    # -------------------------------------------------------
+    - name: Locate MSBuild (Visual Studio 2026 / v145)
+      shell: pwsh
+      run: |
+        $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+        $vsPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath |
+          Select-Object -First 1
+        $msbuild = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -find 'MSBuild\**\Bin\amd64\MSBuild.exe' |
+          Select-Object -First 1
+        if (-not $msbuild) { throw 'MSBuild が見つからない (Visual Studio が入っていないイメージ?)' }
+        Write-Host "Visual Studio : $vsPath"
+        Write-Host "MSBuild       : $msbuild"
+        & $msbuild -version -nologo
+        # 以降のステップでは `msbuild` と打つだけで済むよう PATH へ追加する
+        Split-Path $msbuild | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+    # -------------------------------------------------------
+    # .NET SDK
+    #
+    # ReflectionGenerator / RuntimeTypeDB は net10.0、
+    # CustomTask は netstandard2.0 (ビルドには .NET 10 SDK を使う)。
+    # ランナーイメージにも 10.x は入っているが、イメージ更新で
+    # 消えたときに黙って壊れないよう明示的に固定しておく。
+    # -------------------------------------------------------
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    # -------------------------------------------------------
+    # vcpkg (manifest モード) の復元
+    #
+    # runtime/property_sheet/nox_common.props は installed tree を
+    #   1. 環境変数 NOX_VCPKG_INSTALLED_DIR
+    #   2. 追跡外の runtime/Directory.Build.user.props
+    #   3. 既定のリポジトリ直下 <repo>/vcpkg_installed
+    # の順で解決し、末尾に <Platform>-windows\ を付ける。
+    # CI では余計な仕掛けを増やさず 3 の既定パスへそのまま入れる。
+    #
+    # キャッシュ対象を vcpkg_installed/x64-windows に絞っているのは、
+    # --x-install-root の下に掘られる blds/pkgs (中間生成物) まで
+    # 抱え込むとキャッシュが無駄に太るため。ヒット時は vcpkg 自体を
+    # 動かさないので status DB が無くても困らない。
+    # -------------------------------------------------------
+    - name: Restore vcpkg cache
+      id: vcpkg-cache
+      uses: actions/cache@v4
+      with:
+        path: vcpkg_installed/x64-windows
+        key: vcpkg-x64-windows-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+
+    - name: vcpkg install (manifest mode)
+      if: steps.vcpkg-cache.outputs.cache-hit != 'true'
+      shell: pwsh
+      run: |
+        # ランナーイメージ同梱の vcpkg。baseline は vcpkg-configuration.json が固定する
+        & "$env:VCPKG_INSTALLATION_ROOT\vcpkg.exe" install `
+          --triplet x64-windows `
+          --x-install-root "$env:GITHUB_WORKSPACE\vcpkg_installed"
+        if ($LASTEXITCODE -ne 0) { throw "vcpkg install に失敗 (exit $LASTEXITCODE)" }
+
+    # -------------------------------------------------------
+    # C# 製コード生成器のビルドと配置
+    #
+    # runtime/bin/*.dll / *.exe は .gitignore 済みでリポジトリに無い。
+    # 配置しないと次の 2 つが起きる。
+    #   - reflection_generated/Directory.Build.targets の UsingTask が
+    #     bin\CustomTask.dll を読めず MSBuild がエラーになる
+    #   - entity_type_*.g.cpp が生成されず、nox::GetEntitySystemTypes() /
+    #     GetEntityLogicTypes() が未定義のままリンクエラーになる
+    #     (Exec は Exists 条件付きなので警告止まりで、原因が見えにくい)
+    #
+    # 順序が重要: ReflectionGenerator.csproj は ..\..\CustomTask.dll を
+    # HintPath で参照しているので、CustomTask を先に建てて配置する。
+    #
+    # 配置は「出力ディレクトリを丸ごとコピー」する。README には exe/dll/pdb
+    # だけと書いてあるが、dotnet build の出力は単一ファイルではなく、
+    # ClangSharp / MessagePack / Microsoft.Build と runtimes\win-x64 の
+    # libclang ネイティブが揃って初めて動く。
+    # -------------------------------------------------------
+    - name: Build and deploy the C# reflection code generator
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $src = 'runtime/bin/source'
+
+        # 1. CustomTask (MSBuild カスタムタスク兼、前処理データの読み書き)
+        dotnet build "$src/CustomTask/CustomTask.csproj" -c Debug -v minimal
+        if ($LASTEXITCODE -ne 0) { throw "CustomTask のビルドに失敗 (exit $LASTEXITCODE)" }
+        Copy-Item -Force "$src/CustomTask/bin/Debug/netstandard2.0/CustomTask.dll" 'runtime/bin/'
+
+        # 2. ReflectionGenerator (+ ProjectReference の RuntimeTypeDB)
+        dotnet build "$src/ReflectionGenerator/ReflectionGenerator.csproj" -c Debug -v minimal
+        if ($LASTEXITCODE -ne 0) { throw "ReflectionGenerator のビルドに失敗 (exit $LASTEXITCODE)" }
+        Copy-Item -Force -Recurse "$src/ReflectionGenerator/bin/Debug/net10.0/*" 'runtime/bin/'
+
+        # 期待どおり置けたか確認する。ここで落としておかないと、
+        # 後段で「よく分からないリンクエラー」に化けて原因が追いにくい
+        foreach ($f in 'CustomTask.dll', 'ReflectionGenerator.exe', 'ReflectionGenerator.dll') {
+          if (-not (Test-Path "runtime/bin/$f")) { throw "runtime/bin/$f が配置されていない" }
+        }
+        Write-Host '--- runtime/bin ---'
+        Get-ChildItem 'runtime/bin' -Name

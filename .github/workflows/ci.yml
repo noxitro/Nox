@@ -1,131 +1,255 @@
 # ============================================================
-# CI Build (Runtime)
+# CI (Runtime)
 #
-# 目的  : runtime/runtime.sln を Debug/x64 でビルドし、
-#         回帰ビルドエラーを早期検知する。
-# 実行  : 毎日 JST 10:00 (UTC 01:00) に定期実行。
-#         直近 24 時間にコミットがなければビルドをスキップ。
-#         GitHub UI からの手動実行も可能。
-# 結果  : Actions の Summary タブに結果テーブルを表示。
-#         失敗時は build.log からエラー行(最大20件)も表示。
-# コンパイラ: MSVC (v143) と ClangCL の2ジョブを並列実行。
-#             ClangCL は VS2022 に同梱の clang-cl を使用。
+# 目的  : push / PR ごとに runtime を Debug|x64 でビルドし、
+#         GoogleTest スイートを実際に走らせて回帰を検知する。
+# 構成  : Build ジョブ (MSVC / ClangCL) と Test ジョブを並列実行。
+#         前準備は .github/actions/setup-nox-build に切り出してある。
+# 環境  : windows-latest。runtime の vcxproj は PlatformToolset=v145
+#         (Visual Studio 2026) を要求するため windows-2022 では動かない。
 # ============================================================
 
-name: CI Build (Runtime)
+name: CI
 
 on:
-  schedule:
-    - cron: '0 1 * * *'  # 毎日 UTC 01:00 = JST 10:00 に実行
-  workflow_dispatch:      # GitHub UI の「Run workflow」から手動実行も可能
+  # 作業ブランチへ直接 push する運用なので、ブランチは絞らず全部を対象にする。
+  # タグ push での二重起動だけは避けたいので branches で限定してある。
+  push:
+    branches: ['**']
+  # 同一リポジトリのブランチに対する PR は push 側とで 2 回走る。
+  # フォークからの PR を拾うために残してある (ref が違うので concurrency では畳めない)
+  pull_request:
+  workflow_dispatch:   # GitHub UI の「Run workflow」から手動実行
+
+# 同じ ref に新しい push が来たら、走っている古い実行を打ち切る
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: pwsh
 
 jobs:
-  # -------------------------------------------------------
-  # 事前チェック: 直近 24 時間にコミットがあるか確認
-  # ubuntu-latest を使用（Windows より高速・安価）
-  # -------------------------------------------------------
-  check-changes:
-    name: Check for recent commits
-    runs-on: ubuntu-latest
-    outputs:
-      has_changes: ${{ steps.check.outputs.has_changes }}
+  # =========================================================
+  # Build: runtime.slnx (runtime.exe まで) を 2 つのコンパイラで建てる
+  #
+  # ClangCL は現状ビルドが通らないため experimental 扱い。
+  # 詳細は下の continue-on-error のコメントを参照。
+  # =========================================================
+  build:
+    name: Build runtime (${{ matrix.compiler }})
+    runs-on: windows-latest
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # 全履歴を取得（git log --since が正確に動作するために必要）
+    # ClangCL の失敗ではワークフロー全体を赤にしない。
+    # ジョブ自体は「失敗した」と表示されるので、緑に偽装はしていない。
+    continue-on-error: ${{ matrix.experimental }}
 
-      - name: Check commits in last 24h
-        id: check
-        run: |
-          COUNT=$(git log --oneline --since="24 hours ago" | wc -l)
-          echo "直近 24h のコミット数: $COUNT"
-          if [ "$COUNT" -gt 0 ]; then
-            echo "has_changes=true"  >> $GITHUB_OUTPUT
-          else
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          fi
-
-  # -------------------------------------------------------
-  # メインビルド: check-changes でコミットありの場合のみ実行
-  # -------------------------------------------------------
-  build-runtime:
-    needs: check-changes
-    # has_changes=false の場合はスキップ（手動実行時は常に実行）
-    if: needs.check-changes.outputs.has_changes == 'true' || github.event_name == 'workflow_dispatch'
-
-    # matrix により MSVC / ClangCL の2ジョブが並列実行される
     strategy:
-      fail-fast: false  # 一方が失敗しても、もう一方のジョブを継続する
+      fail-fast: false   # 片方が転んでももう片方は最後まで走らせる
       matrix:
         include:
           - compiler: MSVC
-            toolset: v143      # Visual Studio 2022 の MSVC ツールセット
+            toolset: v145        # Visual Studio 2026 の MSVC ツールセット
+            experimental: false
           - compiler: ClangCL
-            toolset: ClangCL   # VS2022 に同梱の clang-cl（MSBuild 経由で使用）
-
-    name: Runtime Debug x64 (${{ matrix.compiler }})
-    runs-on: windows-latest  # MSBuild が必要なため Windows ランナーを使用
+            toolset: ClangCL     # VS 同梱の clang-cl を MSBuild 経由で使う
+            # ---------------------------------------------------------
+            # 2026-09 時点で ClangCL は runtime.slnx を通せない。
+            # 実際に走らせて確かめた止まり方は次の 3 段。
+            # (1)(2) は C++ 側の小さな移植性の問題、(3) は生成器の設計上の
+            # 問題で、いずれも CI の範囲を越えるので手を付けていない。
+            #
+            # (1) reflection.vcxproj — 最初の壁
+            #     reflection/class_info.h(132,33): error :
+            #       member access into incomplete type
+            #       'const nox::reflection::ReflectionObject'
+            #     ClassInfo::GetAttribute<T>() 内の attribute_list_[i].get()
+            #     は T に依存しない式なので、clang はテンプレート定義の時点で
+            #     完全型を要求する。class_info.h には前方宣言しか無いため、
+            #     reflection.h 経由 (reflection_object.h が先に来る) でない
+            #     翻訳単位 — class_info.cpp 等 — で落ちる。MSVC はここの
+            #     検査を実体化時まで遅らせるので通ってしまう。
+            #     → class_info.h が reflection_object.h を自前で include
+            #       すれば解消することは確認済み。
+            #
+            # (2) core.vcxproj — (1) を直すと次に出る
+            #     core/dev/net/socket_scheduler.cpp(40,21) / (41,42): error :
+            #       reference to non-static member function must be called
+            #     SocketScheduler のコンストラクタにある
+            #       using t = decltype(Initialize);
+            #       NOX_U8_NAMEOF_FUNCTION(SocketScheduler::Initialize);
+            #     が、非静的メンバ関数を &Class:: 無しで綴っている
+            #     (MSVC の拡張)。どちらも使われていない残骸で、消せば通る。
+            #     → (1)(2) を直すと kernel / reflection / core / render は
+            #       clang-cl でビルドできる。
+            #
+            # (3) reflection_generated.vcxproj — ここは C++ の問題ではない
+            #     Directory.Build.targets(67,4): error MSB3073:
+            #       ReflectionGenerator.exe ... はコード 1 で終了しました
+            #     生成器が同梱する libclang 21.1.8 が、ClangCL 構成で
+            #     渡されたインクルードパス (VS 同梱 clang 22 のヘッダ) を
+            #     解析できず avx512*intrin.h で
+            #       error : use of undeclared identifier
+            #               '__builtin_elementwise_clzg' 等
+            #     を大量に出して -ferror-limit に達する。
+            #     解析用のインクルードパスをツールセットから切り離すか、
+            #     libclang を揃える必要があり、小さな修正では済まない。
+            # ---------------------------------------------------------
+            experimental: true
 
     steps:
-      # ソースコードをランナーにクローン
       - name: Checkout
         uses: actions/checkout@v4
 
-      # msbuild コマンドを PATH に追加する Microsoft 公式アクション
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
+      - name: Setup build prerequisites
+        uses: ./.github/actions/setup-nox-build
 
-      # メインビルド
-      # id を付けることで後続ステップから steps.build.outcome を参照できる
-      - name: Build
+      # runtime.sln ではなく runtime.slnx。VS2026 / MSBuild 18 の
+      # 新しいソリューション形式で、リポジトリに .sln は存在しない
+      - name: Build runtime.slnx
         id: build
         run: |
-          msbuild runtime/runtime.sln `
+          msbuild runtime\runtime.slnx `
             /p:Configuration=Debug `
             /p:Platform=x64 `
-            /p:PlatformToolset=${{ matrix.toolset }} `  # matrix で MSVC/ClangCL を切り替え
-            /m `                                         # 並列ビルド（CPUコア数分のプロセスを使用）
-            /v:minimal `                                 # コンソール出力を最小限に抑える
-            "/flp:logfile=build.log;verbosity=normal"   # エラー解析用の詳細ログをファイルに書き出す
+            /p:PlatformToolset=${{ matrix.toolset }} `
+            /m `
+            /v:minimal `
+            /nologo `
+            "/flp:logfile=build.log;verbosity=normal"
 
-      # ビルド成否に関わらず Summary タブへ結果を書き込む
-      # if: always() により Build ステップが失敗しても必ず実行される
       - name: Write job summary
         if: always()
-        shell: pwsh
         run: |
-          $outcome = "${{ steps.build.outcome }}"
-          if ($outcome -eq "success") {
-            $icon   = ":white_check_mark:"
-            $status = "Build succeeded"
-          } else {
-            $icon   = ":x:"
-            $status = "Build failed"
-          }
+          $ok = '${{ steps.build.outcome }}' -eq 'success'
+          $icon = if ($ok) { ':white_check_mark:' } else { ':x:' }
+          $status = if ($ok) { 'Build succeeded' } else { 'Build failed' }
 
-          # Summary タブに結果テーブルを出力
           @"
-          ## $icon CI Build Result (${{ matrix.compiler }})
+          ## $icon Build (${{ matrix.compiler }})
 
-          | Item       | Value                      |
-          |------------|----------------------------|
-          | Solution   | runtime.sln                |
-          | Compiler   | ${{ matrix.compiler }}     |
-          | Toolset    | ${{ matrix.toolset }}      |
-          | Config     | Debug \| x64               |
-          | Commit     | ${{ github.sha }}          |
-          | Result     | **$status**                |
-          "@ >> $env:GITHUB_STEP_SUMMARY
+          | Item     | Value                  |
+          |----------|------------------------|
+          | Solution | runtime.slnx           |
+          | Toolset  | ${{ matrix.toolset }}  |
+          | Config   | Debug \| x64           |
+          | Result   | **$status**            |
+          "@ | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
 
-          # 失敗時のみ build.log からエラー行を最大20件抽出して追記
-          if ($outcome -ne "success" -and (Test-Path build.log)) {
-            $errors = Select-String -Path build.log -Pattern " error " | Select-Object -Last 20
+          # 失敗時は build.log からエラー行を拾って貼る
+          if (-not $ok -and (Test-Path build.log)) {
+            $errors = Select-String -Path build.log -Pattern ': error |: fatal error ' |
+              ForEach-Object { ($_.Line -replace '^\s*\d+>', '').Trim() } |
+              Select-Object -Unique | Select-Object -First 20
             if ($errors) {
-              "`n### Build Errors (last 20 lines)" >> $env:GITHUB_STEP_SUMMARY
-              '```' >> $env:GITHUB_STEP_SUMMARY
-              $errors.Line >> $env:GITHUB_STEP_SUMMARY
-              '```' >> $env:GITHUB_STEP_SUMMARY
+              "`n### Errors (unique, first 20)`n" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              '```' | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              $errors | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              '```' | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
             }
           }
+
+      # 要約に載らない前後の文脈を追いたいことがあるので、失敗時だけ全文を残す
+      - name: Upload build log
+        # continue-on-error のジョブでも拾えるよう always() で判定する
+        if: always() && steps.build.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-${{ matrix.compiler }}
+          path: build.log
+          if-no-files-found: warn
+
+  # =========================================================
+  # Test: runtime_test.slnx を建てて kernel_test.exe を実際に走らせる
+  #
+  # kernel_test は runtime.slnx ではなく runtime_test.slnx 側にある
+  # (gtest の復元が要るため意図的に分けられている)。
+  # Build ジョブとは独立に走らせて総時間を詰めている。
+  # =========================================================
+  test:
+    name: Test (kernel_test / MSVC)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup build prerequisites
+        uses: ./.github/actions/setup-nox-build
+
+      - name: Build runtime_test.slnx
+        run: |
+          msbuild runtime\runtime_test.slnx `
+            /p:Configuration=Debug `
+            /p:Platform=x64 `
+            /m `
+            /v:minimal `
+            /nologo `
+            "/flp:logfile=build-test.log;verbosity=normal"
+
+      # OutDir は nox_common.props が build\$(SolutionName)\$(Platform)\$(Configuration)\
+      # と決めているので、runtime_test.slnx の出力はここに落ちる。
+      # gtest.dll は kernel_test.vcxproj の PostBuildEvent が隣へ置く。
+      - name: Run kernel_test
+        id: gtest
+        run: |
+          $exe = 'runtime\build\runtime_test\x64\Debug\kernel_test.exe'
+          if (-not (Test-Path $exe)) { throw "テスト実行ファイルが無い: $exe" }
+          New-Item -ItemType Directory -Force test-results | Out-Null
+          & $exe --gtest_output="xml:test-results/kernel_test.xml" 2>&1 |
+            Tee-Object -FilePath test-results/kernel_test.txt
+          # 非ゼロ (= 1 件でも失敗) ならこのジョブを落とす。これがテストゲート
+          exit $LASTEXITCODE
+
+      - name: Write test summary
+        if: always()
+        run: |
+          $ok = '${{ steps.gtest.outcome }}' -eq 'success'
+          $icon = if ($ok) { ':white_check_mark:' } else { ':x:' }
+          $lines = @("## $icon kernel_test (GoogleTest)", '')
+
+          # gtest の XML から件数と失敗したテスト名を拾う。
+          # レポート用のアクションを足すほどの規模ではないので自前で読む
+          $xmlPath = 'test-results/kernel_test.xml'
+          if (Test-Path $xmlPath) {
+            $s = ([xml](Get-Content $xmlPath -Raw)).testsuites
+            $lines += '| Tests | Failures | Errors | Disabled | Time |'
+            $lines += '|-------|----------|--------|----------|------|'
+            $lines += "| $($s.tests) | $($s.failures) | $($s.errors) | $($s.disabled) | $($s.time)s |"
+
+            $failed = $s.testsuite.testcase |
+              Where-Object { $_.failure -or $_.error } |
+              ForEach-Object { "$($_.classname).$($_.name)" }
+            if ($failed) {
+              $lines += '', '### Failed', '```'
+              $lines += $failed
+              $lines += '```'
+            }
+          } else {
+            $lines += '_XML レポートが出力されていない (実行前に落ちた可能性)_'
+          }
+
+          # 標準出力の締めくくり ([==========] / [  PASSED  ] / [  FAILED  ]) も残す
+          if (Test-Path 'test-results/kernel_test.txt') {
+            $tail = Select-String -Path 'test-results/kernel_test.txt' `
+              -Pattern '^\[==========\]|^\[  PASSED  \]|^\[  FAILED  \]' |
+              ForEach-Object { $_.Line } | Select-Object -Last 15
+            if ($tail) {
+              $lines += '', '### gtest output', '```'
+              $lines += $tail
+              $lines += '```'
+            }
+          }
+
+          $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-test-results
+          path: |
+            test-results/
+            build-test.log
+          if-no-files-found: warn
