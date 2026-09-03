@@ -16,7 +16,8 @@ namespace ReflectionGenerator;
 		{
 			RuntimeTypeDB.TypeDB typeDB = new RuntimeTypeDB.TypeDB();
 			typeDB.NamespaceList = CreateNamespaceDeclList(namespaceDeclList);
-			RuntimeTypeDB.Util.Serialize(typeDB, customTaskData.Platform, customTaskData.Configuration);
+			//	%TEMP% ではなくソースツリーごとの生成出力ディレクトリへ置く (worktree/構成の同時ビルド対策)
+			RuntimeTypeDB.Util.Serialize(typeDB, customTaskData.OutputGenerateDir, customTaskData.Platform, customTaskData.Configuration);
 		}
 
 		private static RuntimeTypeDB.AttributeDecl[] CreateAttributeList(ReadOnlySpan<Parser2.AttributeDecl> sourceSpan)

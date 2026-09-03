@@ -20,6 +20,14 @@ Copy-Item -Force `
   "..\..\"
 ```
 
+`RuntimeTypeDB` (`../RuntimeTypeDB/RuntimeTypeDB.csproj`) を変更したときは `runtime/bin/RuntimeTypeDB.dll` も同時に入れ替えること (`ReflectionGenerator.csproj` の ProjectReference なので、同じ `bin/Debug/net10.0/` に出ている)。
+
+```powershell
+Copy-Item -Force ".\bin\Debug\net10.0\RuntimeTypeDB.dll", ".\bin\Debug\net10.0\RuntimeTypeDB.pdb" "..\..\"
+```
+
+なお Editor (`Editor/Core/Core.csproj`) はこの DLL を `runtime/bin/source/RuntimeTypeDB/bin/Release/net10.0/RuntimeTypeDB.dll` から参照している。TypeDB の読み書きに手を入れたときは **Release 構成もビルドし直さないと Editor 側が古い実装のまま**になる。
+
 `Nox.CustomTask` (`../CustomTask/CustomTask.csproj`) を変更したときは `runtime/bin/CustomTask.dll` も更新すること。ReflectionGenerator はこの DLL を参照しており、前処理データの読み書きを両者で共有しているため、**必ず両方を同時に入れ替える**。
 
 ```powershell
@@ -47,6 +55,28 @@ runtime/reflection_generated/gen/NoxReflectionPreData.<Platform>.<Configuration>
   -out "<repo>\runtime\reflection_generated\gen"
 ```
 
+## TypeDB (ツールが読むバイナリ) の置き場所
+
+生成の最後に `RuntimeTypeDBHelper.Serialize` が型情報を MessagePack で書き出す。これも以前は `%TEMP%\RuntimeTypeDB.bin` という 1 台に 1 つしかない固定パスで、複数 worktree / Debug と Release の同時ビルドが互いを上書きしていた。現在は前処理データと同じ方針で、生成出力ディレクトリの下へ構成別に置く。
+
+```
+runtime/reflection_generated/gen/RuntimeTypeDB.<Platform>.<Configuration>.bin
+```
+
+読み手 (Editor) はビルドしたツリーの場所を知らないため、書き手が `%TEMP%` へ**実体のフルパスだけを書いたポインタファイル**を毎回置き直す。
+
+```
+%TEMP%\RuntimeTypeDB.<Platform>.<Configuration>.path.txt
+```
+
+`ReflectionGenerator.RuntimeTypeDB.Util` の解決順は次のとおり。
+
+1. 明示指定 (`Deserialize(outputGenerateDir, platform, configuration)` / `Serialize` の引数)
+2. 環境変数 `NOX_RUNTIME_TYPEDB_DIR` (生成出力ディレクトリを指す)
+3. `%TEMP%` のポインタファイル (最後にビルドしたツリーが指される)
+
+複数ツリーを行き来するときは、Editor 側のプロセスに `NOX_RUNTIME_TYPEDB_DIR` を設定して読み先を固定するのが確実である。
+
 ## vcpkg の場所の上書き
 
 `runtime/property_sheet/nox_common.props` の `NoxVcpkgInstalledDir` は、既定ではリポジトリ直下の `vcpkg_installed` を指す。worktree ごとに入れ直さずに 1 つのインストール済みツリーを共有できるよう、追跡ファイルを編集せずに次の優先順位で差し替えられる。
@@ -73,8 +103,8 @@ runtime/reflection_generated/gen/NoxReflectionPreData.<Platform>.<Configuration>
 ### エラー (ビルドを止める)
 
 - **無名名前空間の型** — 生成コードが型名を綴れないため購読できない。名前付き名前空間へ移すか、`nox::EntityLogicMethodTable` の特殊化を手書きする。
-- **クラステンプレート** — 同じく購読できない。特殊化を手書きする。(現状のパーサはクラステンプレートを生成器へ渡さないため、この検査は実際には発火しない。テンプレートの Logic は黙って購読されないだけで、誤ったコードは生成されない。)
-- **`nox::attr::EntityLogicMethod` を EntityLogic 以外のメソッドに付けた** — 属性は EntityLogic 専用。なお `EntitySystem` でも `EntityLogic` でもない素のクラスに付けた場合は、そもそも生成器の対象外なので何も言わずに無視される。エラーになるのは `EntitySystem` の派生型に付けたときである。
+- **クラステンプレート** — 同じく購読できない。特殊化を手書きする。パーサはクラステンプレートの宣言を `IDeclarationContainer.TemplateRecordList` に載せ、生成器はそこを見て診断する (メンバまでは走査していないので、名前・基底・ソース位置だけを当てにする)。基底が依存型で `BaseSpecifierDecl` を作れないため、`TemplateClassDecl.BaseTypeNameList` に基底の綴りだけを別途持たせている。
+- **`nox::attr::EntityLogicMethod` を EntityLogic 以外のメソッドに付けた** — 属性は EntityLogic 専用。`EntitySystem` の派生型でも、`EntitySystem` でも `EntityLogic` でもない素のクラスでもエラーになる。属性の数え上げは基底に関わらず行い、購読対象かどうかはその後で判定する (黙って無視すると、更新メソッドが呼ばれない理由が分からなくなるため)。
 
 ### 警告 (ビルドは通る)
 

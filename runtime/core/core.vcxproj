@@ -202,6 +202,10 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="test\test_types.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="entry_point.h">
       <SubType>
       </SubType>

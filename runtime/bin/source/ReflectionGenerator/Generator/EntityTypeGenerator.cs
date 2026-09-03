@@ -106,6 +106,11 @@ public sealed class EntityTypeGenerator
             {
                 CollectRecord(recordDecl, entityTypeList);
             }
+
+            foreach (Parser2.TemplateClassDecl templateClassDecl in namespaceDecl.TemplateRecordList)
+            {
+                CollectTemplateRecord(templateClassDecl, entityTypeList);
+            }
         }
 
         //  出力順を安定させる (決定性)
@@ -142,6 +147,11 @@ public sealed class EntityTypeGenerator
             CollectRecord(child, entityTypeList);
         }
 
+        foreach (Parser2.TemplateClassDecl child in recordDecl.TemplateRecordList)
+        {
+            CollectTemplateRecord(child, entityTypeList);
+        }
+
         if (recordDecl.IsDefinition == false)
         {
             return;
@@ -152,9 +162,41 @@ public sealed class EntityTypeGenerator
             return;
         }
 
-        EntityTypeKind? kind = GetEntityTypeKind(recordDecl);
+        EntityTypeKind? kind = GetEntityTypeKind(recordDecl.BaseSpan);
+
+        //  属性の数え上げは基底に関わらず行う。
+        //  EntityLogic以外へ付けた属性を「対象外だから」と黙って捨てると、
+        //  更新メソッドが呼ばれない理由が誰にも分からなくなるため。
+        List<EntityMethodInfo> methodList = new();
+        bool valid = true;
+
+        foreach (Parser2.FunctionDecl functionDecl in recordDecl.FunctionList)
+        {
+            string? attributeExpression = TryGetEntityLogicMethodAttribute(functionDecl);
+            if (attributeExpression == null)
+            {
+                continue;
+            }
+
+            if (kind != EntityTypeKind.Logic)
+            {
+                Error(functionDecl, $"nox::attr::EntityLogicMethodはEntityLogicのメソッドにのみ付けられます: {functionDecl.FullName}");
+                valid = false;
+                continue;
+            }
+
+            //  privateでもよい (明示的実体化のテンプレート実引数はアクセス検査の対象外)
+            methodList.Add(new EntityMethodInfo()
+            {
+                Name = functionDecl.Name,
+                FunctionTypeFullName = functionDecl.TypeInfo.FullName,
+                AttributeExpression = attributeExpression,
+            });
+        }
+
         if (kind.HasValue == false)
         {
+            //  EntitySystem/EntityLogicのどちらでもない型。付け間違いがあれば上で報告済み
             return;
         }
 
@@ -169,33 +211,6 @@ public sealed class EntityTypeGenerator
         {
             Error(recordDecl, $"クラステンプレートは購読できません。nox::EntityLogicMethodTableの特殊化を手書きしてください: {recordDecl.FullName}");
             return;
-        }
-
-        List<EntityMethodInfo> methodList = new();
-        bool valid = true;
-
-        foreach (Parser2.FunctionDecl functionDecl in recordDecl.FunctionList)
-        {
-            string? attributeExpression = TryGetEntityLogicMethodAttribute(functionDecl);
-            if (attributeExpression == null)
-            {
-                continue;
-            }
-
-            if (kind.Value != EntityTypeKind.Logic)
-            {
-                Error(functionDecl, $"nox::attr::EntityLogicMethodはEntityLogicのメソッドにのみ付けられます: {functionDecl.FullName}");
-                valid = false;
-                continue;
-            }
-
-            //  privateでもよい (明示的実体化のテンプレート実引数はアクセス検査の対象外)
-            methodList.Add(new EntityMethodInfo()
-            {
-                Name = functionDecl.Name,
-                FunctionTypeFullName = functionDecl.TypeInfo.FullName,
-                AttributeExpression = attributeExpression,
-            });
         }
 
         if (kind.Value == EntityTypeKind.Logic && methodList.Count <= 0)
@@ -219,9 +234,48 @@ public sealed class EntityTypeGenerator
         });
     }
 
-    private static EntityTypeKind? GetEntityTypeKind(Parser2.RecordDecl recordDecl)
+    /// <summary>
+    /// クラステンプレートを診断する
+    /// </summary>
+    /// <remarks>
+    /// パーサはクラステンプレートのメンバまでは走査していない。ここで当てにしてよいのは
+    /// 名前・基底・ソース位置だけなので、購読は試みずエラーを出して終わる。
+    /// </remarks>
+    private void CollectTemplateRecord(Parser2.TemplateClassDecl templateClassDecl, List<EntityTypeInfo> entityTypeList)
     {
-        foreach (Parser2.BaseSpecifierDecl baseDecl in recordDecl.BaseSpan)
+        //  入れ子の型も対象にする
+        foreach (Parser2.RecordDecl child in templateClassDecl.RecordList)
+        {
+            CollectRecord(child, entityTypeList);
+        }
+
+        foreach (Parser2.TemplateClassDecl child in templateClassDecl.TemplateRecordList)
+        {
+            CollectTemplateRecord(child, entityTypeList);
+        }
+
+        if (templateClassDecl.IsDefinition == false)
+        {
+            return;
+        }
+
+        if (templateClassDecl.ReflectionGenerateKind == Parser2.ReflectionGenerateKind.IgnoreReflection)
+        {
+            return;
+        }
+
+        if (GetEntityTypeKind(templateClassDecl.BaseSpan).HasValue == false
+            && GetEntityTypeKind(templateClassDecl.BaseTypeNameSpan).HasValue == false)
+        {
+            return;
+        }
+
+        Error(templateClassDecl, $"クラステンプレートは購読できません。nox::EntityLogicMethodTableの特殊化を手書きしてください: {templateClassDecl.FullName}");
+    }
+
+    private static EntityTypeKind? GetEntityTypeKind(ReadOnlySpan<Parser2.BaseSpecifierDecl> baseSpan)
+    {
+        foreach (Parser2.BaseSpecifierDecl baseDecl in baseSpan)
         {
             //  テンプレート実引数は解釈しない。生成したC++側が T::k_phase 等を自分で読む
             if (ContainsBasePrefix(baseDecl, ENTITY_SYSTEM_BASE_PREFIX))
@@ -229,6 +283,25 @@ public sealed class EntityTypeGenerator
                 return EntityTypeKind.System;
             }
             if (ContainsBasePrefix(baseDecl, ENTITY_LOGIC_BASE_PREFIX))
+            {
+                return EntityTypeKind.Logic;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// 基底の綴りだけから種別を判定する (クラステンプレート用)
+    /// </summary>
+    private static EntityTypeKind? GetEntityTypeKind(ReadOnlySpan<string> baseTypeNameSpan)
+    {
+        foreach (string baseTypeName in baseTypeNameSpan)
+        {
+            if (baseTypeName.Contains(ENTITY_SYSTEM_BASE_PREFIX, StringComparison.Ordinal))
+            {
+                return EntityTypeKind.System;
+            }
+            if (baseTypeName.Contains(ENTITY_LOGIC_BASE_PREFIX, StringComparison.Ordinal))
             {
                 return EntityTypeKind.Logic;
             }

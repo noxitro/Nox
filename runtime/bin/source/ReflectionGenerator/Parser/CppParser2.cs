@@ -834,6 +834,16 @@ namespace ReflectionGenerator.Parser2;
 	public interface IDeclarationContainer
 	{
 		List<RecordDecl> RecordList { get; }
+
+		/// <summary>
+		/// クラステンプレートの宣言。RecordList には入らない (実体化された特殊化だけが RecordDecl になる)
+		/// </summary>
+		/// <remarks>
+		/// 生成器がクラステンプレートを診断できるようにするためだけに保持している。
+		/// メンバは走査していないので、名前・基底・ソース位置しか当てにしてはいけない。
+		/// </remarks>
+		List<TemplateClassDecl> TemplateRecordList { get; }
+
 		List<FunctionDecl> FunctionList { get; }
 		List<VariableDecl> VariableList { get; }
 		List<EnumDecl> EnumList { get; }
@@ -1254,6 +1264,7 @@ public class TypeDecl : NamedDecl
 	{
 		public List<NamespaceDecl> NamespaceList { get; } = [];
     public List<RecordDecl> RecordList { get; } = [];
+    public List<TemplateClassDecl> TemplateRecordList { get; } = [];
     public List<FunctionDecl> FunctionList { get; } = [];
     public List<VariableDecl> VariableList { get; } = [];
     public List<EnumDecl> EnumList { get; } = [];
@@ -1279,6 +1290,18 @@ public class NamespaceNode : IDeclarationContainer
                 classList.AddRange(child.RecordList);
             }
             return classList;
+        }
+    }
+    public List<TemplateClassDecl> TemplateRecordList
+    {
+        get
+        {
+            List<TemplateClassDecl> templateClassList = new List<TemplateClassDecl>();
+            foreach (NamespaceDecl child in NamespaceDeclList)
+            {
+                templateClassList.AddRange(child.TemplateRecordList);
+            }
+            return templateClassList;
         }
     }
     public List<FunctionDecl> FunctionList
@@ -1338,6 +1361,7 @@ public class NamespaceNode : IDeclarationContainer
 	{
 		public RecordTypeInfo? TypeInfo { get; init; }
 		public List<RecordDecl> RecordList { get; } = new List<RecordDecl>();
+		public List<TemplateClassDecl> TemplateRecordList { get; } = new List<TemplateClassDecl>();
 		public List<FunctionDecl> FunctionList { get; } = new List<FunctionDecl>();
 		public List<VariableDecl> VariableList { get; } = new List<VariableDecl>();
 		public List<EnumDecl> EnumList { get; } = new List<EnumDecl>();
@@ -1411,6 +1435,7 @@ public class NamespaceNode : IDeclarationContainer
 
     public RecordTypeInfo? TypeInfo { get; init; }
     public List<RecordDecl> RecordList { get; } = new List<RecordDecl>();
+    public List<TemplateClassDecl> TemplateRecordList { get; } = new List<TemplateClassDecl>();
     public List<FunctionDecl> FunctionList { get; } = new List<FunctionDecl>();
     public List<VariableDecl> VariableList { get; } = new List<VariableDecl>();
     public List<EnumDecl> EnumList { get; } = new List<EnumDecl>();
@@ -1427,6 +1452,17 @@ public class NamespaceNode : IDeclarationContainer
     public required TemplateArgumentInfo[] TemplateArgumentList { private get; init; }
 		public ReadOnlySpan<TemplateArgumentInfo> TemplateArgumentSpan => TemplateArgumentList;
 		public required int NumDefaultArgument { get; init; }
+
+		/// <summary>
+		/// 基底の綴り
+		/// </summary>
+		/// <remarks>
+		/// クラステンプレートのカーソルは NumBases が 0 を返し、基底が依存型なので
+		/// BaseList (BaseSpecifierDecl) を作れない。診断で基底名を見たいだけなので、
+		/// 子カーソルから綴りだけを集めて持つ。
+		/// </remarks>
+		public required string[] BaseTypeNameList { private get; init; }
+		public ReadOnlySpan<string> BaseTypeNameSpan => BaseTypeNameList;
 	}
 
 	public class FunctionDecl : TypeDecl
@@ -2031,6 +2067,12 @@ public class EnumDecl : TypeDecl
 							}
 
 							break;
+						case TemplateClassDecl declImpl:
+							//	NOTE:	クラステンプレートは購読も反射もできないが、
+							//			生成器が「購読できない」と診断できるようにコンテナへ持たせる
+							container.TemplateRecordList.Add(declImpl);
+
+							break;
 						case FunctionDecl declImpl:
 							container.FunctionList.Add(declImpl);
 
@@ -2547,6 +2589,37 @@ public class EnumDecl : TypeDecl
 			}
     }
 
+		/// <summary>
+		/// クラステンプレートの基底の綴りを集める
+		/// </summary>
+		/// <remarks>
+		/// ClassTemplate カーソルは NumBases が 0 を返すため CreateBaseSpecifierDeclList では基底を取れない。
+		/// ここでは宣言を登録せず、子カーソルの CXXBaseSpecifier から型の綴りだけを取り出す。
+		/// 依存型を解決しないので、得られるのは「書かれたとおりの名前」である。
+		/// </remarks>
+		private static string[] CreateTemplateBaseTypeNameList(in ClangSharp.Interop.CXCursor cursor)
+		{
+			List<string> baseTypeNameList = new();
+			foreach (ClangSharp.Interop.CXCursor child in cursor.GetChildren())
+			{
+				if (child.kind != ClangSharp.Interop.CXCursorKind.CXCursor_CXXBaseSpecifier)
+				{
+					continue;
+				}
+
+				string typeName = child.Type.Spelling.CString;
+				if (string.IsNullOrEmpty(typeName) == true)
+				{
+					typeName = child.Spelling.CString;
+				}
+				if (string.IsNullOrEmpty(typeName) == false)
+				{
+					baseTypeNameList.Add(typeName);
+				}
+			}
+			return baseTypeNameList.Count <= 0 ? [] : baseTypeNameList.ToArray();
+		}
+
 		private void ParseTemplateRecordDecl(in ClangSharp.Interop.CXCursor cursor)
 		{
 			string usr = cursor.GetNormalizedUsr();
@@ -2613,6 +2686,7 @@ public class EnumDecl : TypeDecl
 				AttributeList = CreateAttributeDeclList(cursor),
 				TemplateArgumentList = templateArgumentList,
 				NumDefaultArgument = numDefaultArgument,
+				BaseTypeNameList = CreateTemplateBaseTypeNameList(cursor),
 				//TypeInfo = typeInfo,
 				BaseList = baseTypeList,
 				IsNoxObject = inheritedFromNoxObject,

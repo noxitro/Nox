@@ -268,68 +268,167 @@ namespace ReflectionGenerator.RuntimeTypeDB;
 		public NamespaceDecl[] NamespaceList { get; set; } = [];
 	}
 
+	/// <summary>
+	/// TypeDB バイナリの読み書き
+	/// </summary>
+	/// <remarks>
+	/// 以前は %TEMP%\RuntimeTypeDB.bin という 1 台に 1 つしかない固定パスだった。
+	/// 同じリポジトリの複数 worktree、あるいは同じツリーの Debug/Release を同時にビルドすると
+	/// 互いのファイルを上書きしてしまうため、リフレクション前処理データ
+	/// (Nox.CustomTask.Util.GetBinFilePath) と同じ方針に揃える。
+	///
+	///   * 実体はソースツリーごとの生成出力ディレクトリ (ReflectionGenerator.exe の -out) の下
+	///   * プラットフォーム/構成をファイル名に含める
+	///     runtime/reflection_generated/gen/RuntimeTypeDB.&lt;Platform&gt;.&lt;Configuration&gt;.bin
+	///
+	/// 読み手 (Editor) はビルドしたツリーの場所を知らないので、書き手が %TEMP% に
+	/// 「実体の在り処だけを書いた」ポインタファイルを毎回置き直す。読み手は
+	/// 明示指定 → 環境変数 → ポインタファイル の順で解決する。
+	/// </remarks>
 	public static class Util
 	{
-		private const string FileName = "RuntimeTypeDB.bin";
-		private const int MaxPathLength = 1024;
+		private const string FILE_BASE_NAME = "RuntimeTypeDB";
+		private const string FILE_EXTENSION = ".bin";
 
-		private static string GetPath(ReadOnlySpan<char> platform, ReadOnlySpan<char> configuration)
+		/// <summary>
+		/// %TEMP% に置く、実体のフルパスだけを書いたテキストファイルの拡張子
+		/// </summary>
+		private const string POINTER_FILE_EXTENSION = ".path.txt";
+
+		/// <summary>
+		/// 実体の置き場所を明示的に上書きする環境変数。ポインタファイルより優先される
+		/// </summary>
+		public const string OUTPUT_DIRECTORY_ENVIRONMENT_VARIABLE = "NOX_RUNTIME_TYPEDB_DIR";
+
+		private static string GetFileName(ReadOnlySpan<char> platform, ReadOnlySpan<char> configuration)
 		{
-			ReadOnlySpan<char> directory = System.IO.Path.GetTempPath();
-
-			string path = $"{directory}/{FileName}";
-			return System.IO.Path.GetFullPath(path);
+			return string.Concat(FILE_BASE_NAME, ".", platform.ToString(), ".", configuration.ToString(), FILE_EXTENSION);
 		}
 
-		public static ReadOnlySpan<char> GetPath2(Span<char> dest, ReadOnlySpan<char> platform, ReadOnlySpan<char> configuration)
+		/// <summary>
+		/// TypeDB バイナリの実体のパスを組み立てる
+		/// </summary>
+		/// <param name="outputGenerateDir">生成出力ディレクトリ (ReflectionGenerator.exe の -out)</param>
+		public static string GetFilePath(string outputGenerateDir, ReadOnlySpan<char> platform, ReadOnlySpan<char> configuration)
 		{
-			// GetTempPath は string を返すのでここだけはヒープ確保
-			string directoryString = System.IO.Path.GetTempPath();
-			ReadOnlySpan<char> directory = directoryString.AsSpan();
-			ReadOnlySpan<char> fileSpan = FileName.AsSpan();
+			if (string.IsNullOrEmpty(outputGenerateDir) == true)
+			{
+				throw new ArgumentException("outputGenerateDir が空です。", nameof(outputGenerateDir));
+			}
 
-			int requiredLen = directory.Length + fileSpan.Length;
-			if (requiredLen > dest.Length)
-				throw new ArgumentException("dest が短すぎます。", nameof(dest));
-
-			directory.CopyTo(dest);
-			fileSpan.CopyTo(dest[directory.Length..]);
-
-			return dest[..requiredLen];
+			return System.IO.Path.GetFullPath(System.IO.Path.Combine(outputGenerateDir, GetFileName(platform, configuration)));
 		}
 
-		public static void Serialize(TypeDB data, ReadOnlySpan<char> platform, ReadOnlySpan<char> configuration)
+		/// <summary>
+		/// 実体の在り処を指すポインタファイルのパス
+		/// </summary>
+		public static string GetPointerFilePath(ReadOnlySpan<char> platform, ReadOnlySpan<char> configuration)
 		{
-			Span<char> pathBuffer = stackalloc char[MaxPathLength];
+			string fileName = string.Concat(FILE_BASE_NAME, ".", platform.ToString(), ".", configuration.ToString(), POINTER_FILE_EXTENSION);
+			return System.IO.Path.GetFullPath(System.IO.Path.Combine(System.IO.Path.GetTempPath(), fileName));
+		}
 
-			ReadOnlySpan<char> path = GetPath2(pathBuffer, platform, configuration);
+		/// <summary>
+		/// 読み手向けのパス解決。明示指定 → 環境変数 → ポインタファイル の順
+		/// </summary>
+		/// <returns>解決できなければ null</returns>
+		public static string? ResolveFilePath(string? outputGenerateDir, ReadOnlySpan<char> platform, ReadOnlySpan<char> configuration)
+		{
+			if (string.IsNullOrEmpty(outputGenerateDir) == false)
+			{
+				return GetFilePath(outputGenerateDir!, platform, configuration);
+			}
 
-			using (System.IO.FileStream fs = new System.IO.FileStream(path.ToString(), System.IO.FileMode.Create))
+			string? environmentDirectory = Environment.GetEnvironmentVariable(OUTPUT_DIRECTORY_ENVIRONMENT_VARIABLE);
+			if (string.IsNullOrEmpty(environmentDirectory) == false)
+			{
+				return GetFilePath(environmentDirectory!, platform, configuration);
+			}
+
+			string pointerFilePath = GetPointerFilePath(platform, configuration);
+			if (System.IO.File.Exists(pointerFilePath) == false)
+			{
+				return null;
+			}
+
+			string filePath = System.IO.File.ReadAllText(pointerFilePath).Trim();
+			return string.IsNullOrEmpty(filePath) ? null : filePath;
+		}
+
+		/// <summary>
+		/// シリアライズ
+		/// </summary>
+		/// <param name="outputGenerateDir">生成出力ディレクトリ (ReflectionGenerator.exe の -out)</param>
+		public static void Serialize(TypeDB data, string outputGenerateDir, ReadOnlySpan<char> platform, ReadOnlySpan<char> configuration)
+		{
+			string path = GetFilePath(outputGenerateDir, platform, configuration);
+
+			System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
+
+			using (System.IO.FileStream fs = new System.IO.FileStream(path, System.IO.FileMode.Create))
 			{
 				MessagePack.MessagePackSerializer.Serialize(fs, data);
 			}
+
+			WritePointerFile(path, platform, configuration);
+		}
+
+		/// <summary>
+		/// デシリアライズ (読み手がツリーの場所を知らない場合)
+		/// </summary>
+		/// <param name="platform">プラットフォーム</param>
+		/// <param name="configuration">構成</param>
+		public static TypeDB? Deserialize(ReadOnlySpan<char> platform, ReadOnlySpan<char> configuration)
+		{
+			return Deserialize(null, platform, configuration);
 		}
 
 		/// <summary>
 		/// デシリアライズ
 		/// </summary>
-		/// <param name="platform">プラットフォーム</param>
-		/// <param name="configuration">構成</param>
-		/// <returns></returns>
-		public static TypeDB? Deserialize(ReadOnlySpan<char> platform, ReadOnlySpan<char> configuration)
+		/// <param name="outputGenerateDir">生成出力ディレクトリ。null/空なら環境変数とポインタファイルから解決する</param>
+		public static TypeDB? Deserialize(string? outputGenerateDir, ReadOnlySpan<char> platform, ReadOnlySpan<char> configuration)
 		{
-			Span<char> pathBuffer = stackalloc char[MaxPathLength];
-
-			ReadOnlySpan<char> path = GetPath2(pathBuffer, platform, configuration);
-			if (System.IO.File.Exists(path.ToString()) == false)
+			string? path = ResolveFilePath(outputGenerateDir, platform, configuration);
+			if (path == null)
 			{
-				System.Console.WriteLine($"TypeDB file not found: {path.ToString()}");
+				System.Console.WriteLine(
+					$"TypeDB file not found: 場所を解決できませんでした。ReflectionGeneratorでビルドするか、環境変数 {OUTPUT_DIRECTORY_ENVIRONMENT_VARIABLE} に生成出力ディレクトリを設定してください。");
 				return null;
 			}
 
-			using (System.IO.FileStream fs = new System.IO.FileStream(path.ToString(), System.IO.FileMode.Open))
+			if (System.IO.File.Exists(path) == false)
+			{
+				System.Console.WriteLine($"TypeDB file not found: {path}");
+				return null;
+			}
+
+			using (System.IO.FileStream fs = new System.IO.FileStream(path, System.IO.FileMode.Open))
 			{
 				return MessagePack.MessagePackSerializer.Deserialize<TypeDB>(fs);
+			}
+		}
+
+		/// <summary>
+		/// %TEMP% のポインタファイルを置き直す
+		/// </summary>
+		/// <remarks>
+		/// 中身は実体のフルパス 1 行だけ。データそのものではないので、
+		/// 複数ツリーが取り合っても壊れるものは無い (最後にビルドしたツリーが指される)。
+		/// 特定のツリーへ固定したいときは環境変数で上書きする。
+		/// </remarks>
+		private static void WritePointerFile(string filePath, ReadOnlySpan<char> platform, ReadOnlySpan<char> configuration)
+		{
+			try
+			{
+				System.IO.File.WriteAllText(GetPointerFilePath(platform, configuration), filePath);
+			}
+			catch (System.IO.IOException)
+			{
+				//	他のビルドが同時に書いていても実体は無事なので、ここは落とさない
+			}
+			catch (UnauthorizedAccessException)
+			{
 			}
 		}
 	}
