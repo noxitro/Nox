@@ -17,7 +17,7 @@
 #pragma comment(lib, "Dbghelp.lib")
 #endif // NITRO_WIN64
 
-#include	"os/mutex.h"
+#include	"os/static_lock.h"
 #include	"os/os_utility.h"
 #include	"string_format.h"
 #include	"log_id.h"
@@ -39,8 +39,16 @@ namespace nox
 
 		static constinit inline void* mHandlePtr = nullptr;
 
-		//
-		nox::os::Mutex g_resolve_mutex;
+		/// @brief		dbghelpの呼び出しを直列化するロック
+		/// @details	nox::stack_walker::Traceは公開APIで、名前空間スコープのオブジェクトの
+		///				コンストラクタ/デストラクタからも呼べる。動的初期化が必要な
+		///				nox::os::Mutexではこのモジュールの初期化子より前・
+		///				静的デストラクタの後にアクセス違反になっていた。
+		///				MEMO:	ロック区間はdbghelp呼び出し・文字コード変換・ログ出力だけで、
+		///						NOX_ASSERTもスタック採取も走らない
+		///						(NOX_ASSERT経路はGetStackListを見るだけでこのロックを取らない)。
+		///						よって非再帰ロックで問題ない。
+		constinit nox::os::StaticLock g_resolve_mutex;
 
 		//	関数
 		inline bool	ResolveStack(std::span<nox::stack_walker::StackFrame> stack_table)

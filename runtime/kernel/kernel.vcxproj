@@ -293,6 +293,7 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="os\static_lock.h" />
     <ClInclude Include="os\thread.h" />
     <ClInclude Include="os\window.h" />
     <ClInclude Include="os\windows.h" />

@@ -138,6 +138,9 @@
     <ClInclude Include="os\network.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="os\static_lock.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
     <ClInclude Include="os\os.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>

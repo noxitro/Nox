@@ -4,7 +4,7 @@
 #include	"../algorithm.h"
 
 #include	"../os/thread.h"
-#include    "../os/windows.h"
+#include    "../os/static_lock.h"
 #include    "../os/atomic.h"
 #include    "../os/os_utility.h"
 #include    "../log_id.h"
@@ -75,27 +75,11 @@ namespace nox::memory
 		/// @brief		ヒープ情報を接続する時用のロック
 		/// @details	グローバルoperator new/deleteを経由するため、このロックはプロセスの
 		///				どの時点(静的初期化中・静的デストラクタ後)でも取得され得る。
-		///				nox::os::Mutex(::CRITICAL_SECTIONラッパ)は動的初期化が必要で、
-		///				このTUの初期化子が走る前にロックすると未初期化のCRITICAL_SECTIONを
-		///				踏んでアクセス違反になる。デストラクタ(DeleteCriticalSection)後も同様。
-		///				::SRWLOCKはSRWLOCK_INITが{0}でゼロ初期化のみで完成し、
-		///				初期化関数も破棄処理も不要なため、constinitで完全に安全にできる。
+		///				動的初期化が必要なnox::os::Mutexでは成立しないので、
+		///				constinitで完成するnox::os::StaticLockを使う(詳細はos/static_lock.h)。
 		///				MEMO:	ロック区間内では連結リストのポインタ操作しか行わず、
 		///						メモリ確保/解放への再入は発生しないので非再帰ロックで問題ない。
-		constinit ::SRWLOCK heap_list_lock_ = SRWLOCK_INIT;
-
-		/// @brief ヒープ情報リスト用のスコープロック
-		class ScopedHeapListLock final
-		{
-		public:
-			inline ScopedHeapListLock()noexcept { ::AcquireSRWLockExclusive(&nox::memory::heap_list_lock_); }
-			inline ~ScopedHeapListLock()noexcept { ::ReleaseSRWLockExclusive(&nox::memory::heap_list_lock_); }
-
-			ScopedHeapListLock(const ScopedHeapListLock&) = delete;
-			ScopedHeapListLock(ScopedHeapListLock&&) = delete;
-			ScopedHeapListLock& operator=(const ScopedHeapListLock&) = delete;
-			ScopedHeapListLock& operator=(ScopedHeapListLock&&) = delete;
-		};
+		constinit nox::os::StaticLock heap_list_lock_;
 
         /// @brief ヒープ情報の先頭
         constinit HeapInfo* head_heap_info_ptr_ = nullptr;
@@ -406,7 +390,7 @@ namespace nox::memory
 
             // 連結リストに接続
             {
-                nox::memory::ScopedHeapListLock lock;
+                nox::os::ScopedLock lock(nox::memory::heap_list_lock_);
 
                 if (nox::memory::head_heap_info_ptr_ == nullptr)
                 {
@@ -536,7 +520,7 @@ void* nox::memory::Allocate(const size_t size, size_t align_mask, const Instance
 
     //  連結
     {
-		nox::memory::ScopedHeapListLock lock;
+		nox::os::ScopedLock lock(nox::memory::heap_list_lock_);
 
         if (nox::memory::head_heap_info_ptr_ == nullptr)
         {
@@ -575,7 +559,7 @@ void	nox::memory::Deallocate(nox::not_null<void*> ptr)
     }
 
     {
-        nox::memory::ScopedHeapListLock lock;
+        nox::os::ScopedLock lock(nox::memory::heap_list_lock_);
 
         if (&heap_info == head_heap_info_ptr_)
         {

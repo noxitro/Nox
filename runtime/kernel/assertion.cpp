@@ -7,7 +7,7 @@
 #include	<stacktrace>
 
 #include	"memory/stl_allocate_adapter.h"
-#include	"os/mutex.h"
+#include	"os/static_lock.h"
 #include	"preprocessor/util.h"
 #include	"unicode_converter.h"
 
@@ -19,7 +19,15 @@ namespace nox
 {
 	namespace
 	{
-		nox::os::Mutex kMutex;
+		/// @brief		アサート表示を直列化するロック
+		/// @details	NOX_ASSERTはアロケータ内部を含めプロセスのどの時点でも発火し得るため、
+		///				動的初期化が必要なnox::os::Mutexでは静的初期化中のアサートが
+		///				アサート機構そのものの中でアクセス違反になっていた。
+		///				MEMO:	ロック区間は::_wassertの呼び出しだけで、
+		///						そこからnox側のコード(NOX_ASSERT/ログ/スタック採取)へは
+		///						戻ってこないため、非再帰ロックで問題ない。
+		///						スタック採取とメッセージ整形はロック取得より手前で終えている。
+		constinit nox::os::StaticLock kMutex;
 
 		inline constexpr bool is_high_surrogate(const nox::char16 c) { return (c >= 0xD800) && (c < 0xDC00); }
 

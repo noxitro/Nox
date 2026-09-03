@@ -9,14 +9,23 @@
 #include	"convert_string.h"
 #include	"string_format.h"
 
-#include	"os/mutex.h"
+#include	"os/static_lock.h"
 #include	"preprocessor/util.h"
 
 namespace nox
 {
 	namespace
 	{
-		nox::os::Mutex singleton_mutex_;
+		/// @brief		シングルトン連結リスト用のロック
+		/// @details	シングルトンは名前空間スコープのオブジェクトから生成され得るため、
+		///				Register/Unregisterはこのモジュールの初期化子より前にも
+		///				静的デストラクタの途中にも呼ばれる。動的初期化が必要な
+		///				nox::os::Mutexではその時点でアクセス違反になっていた。
+		///				MEMO:	ロック区間で行うのは連結リストのポインタ操作と
+		///						Unregister先頭のNOX_ASSERTだけ。アサート経路は
+		///						シングルトンの登録/解除へ戻ってこないため、
+		///						非再帰ロックで問題ない。
+		constinit nox::os::StaticLock singleton_mutex_;
 	}
 }
 
