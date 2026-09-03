@@ -31,6 +31,23 @@
 		<CppVersion>-std=c++2b</CppVersion>
 	</PropertyGroup>
 
+	<!--
+		リフレクション解析用のシステムインクルードパス。
+
+		リフレクション情報は「どの型・メンバが存在するか」を表すものであり、
+		ビルドに使うコンパイラによって変わってはならない。
+		$(IncludePath) は選択中のツールセットが決めるため使わない。
+		ClangCL では先頭に VS 同梱 clang の組み込みヘッダ
+		(VC\Tools\Llvm\x64\lib\clang\<major>\include) が差し込まれるが、
+		ReflectionGenerator.exe が解析に使うのは同梱版とはバージョンの異なる
+		libclang (ClangSharp) なので、新しい組み込み関数を知らずに解析が失敗する。
+		そのため $(PlatformToolset) に依存しない MSVC + Windows SDK の
+		インクルードパスだけを明示的に渡す(この2つはどのツールセットでも同じ値)。
+	-->
+	<PropertyGroup>
+		<ReflectionParseIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath)</ReflectionParseIncludePath>
+	</PropertyGroup>
+
 	<!--変数定義end-->
 	
   <!-- 独自ターゲット -->
@@ -40,7 +57,7 @@
     <!-- カスタムタスクを呼び出す -->
 	  <Nox.CustomTask.Task
 		  SourceFiles="@(ClCompile)"
-		  AdditionalIncludeDirectories="$(IncludePath);%(ClCompile.AdditionalIncludeDirectories)"
+		  AdditionalIncludeDirectories="$(ReflectionParseIncludePath);%(ClCompile.AdditionalIncludeDirectories)"
 		  PreprocessorMacro="%(ClCompile.PreprocessorDefinitions)"
 		  AdditionalOptions="%(ClCompile.AdditionalOptions)"
 		  SolutionDir="$(SolutionDir)"
@@ -63,9 +80,20 @@
 		  UseRtti="%(ClCompile.RuntimeTypeInfo)"
 		  />
 
-	  <!-- ReflectionGenerator.exe 呼び出し -->
+	  <!--
+		  ReflectionGenerator.exe 呼び出し
+
+		  C++ ビルドでは MSBuild が環境変数 INCLUDE に $(IncludePath) を書き出しており、
+		  子プロセスにもそのまま引き継がれる。libclang は MSVC 互換ドライバとして
+		  INCLUDE をシステムインクルードパスとして読むため、-I を明示していても
+		  ClangCL のときは VS 同梱 clang の組み込みヘッダを拾ってしまう。
+		  解析結果をツールセットに依存させないため、INCLUDE も
+		  $(ReflectionParseIncludePath) で上書きする(MSVC のときは同じ値になる)。
+		  ; を含む値を 1 項目として渡すためにエスケープしている。
+	  -->
 	  <Exec
 		Condition="Exists('$(SolutionDir)bin\ReflectionGenerator.exe')"
+		EnvironmentVariables="INCLUDE=$([MSBuild]::Escape('$(ReflectionParseIncludePath)'))"
 		Command="&quot;$(SolutionDir)bin\ReflectionGenerator.exe&quot; -project &quot;$(ProjectPath)&quot; -solution &quot;$(SolutionPath)&quot; -config &quot;$(Configuration)&quot; -platform &quot;$(Platform)&quot; -out &quot;$(ProjectDir)gen&quot;" />
 
 	  <!-- 生成された per-type ファイルを取り込む -->

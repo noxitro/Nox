@@ -55,6 +55,19 @@ runtime/reflection_generated/gen/NoxReflectionPreData.<Platform>.<Configuration>
   -out "<repo>\runtime\reflection_generated\gen"
 ```
 
+## 解析に使うインクルードパス (ツールセット非依存)
+
+リフレクション情報は「どの型・メンバが存在するか」を表すものであり、ビルドに使う C++ コンパイラによって変わってはならない。そのため解析用のシステムインクルードパスは `$(PlatformToolset)` に依存させず、`Directory.Build.targets` の `ReflectionParseIncludePath` (= `$(VC_IncludePath);$(WindowsSDK_IncludePath)`) に固定している。`$(IncludePath)` は選択中のツールセットが決める値なので使わない。
+
+ツールセットの値が漏れ込む経路は 2 つあり、両方を塞ぐ必要がある。
+
+1. カスタムタスクへ渡す `AdditionalIncludeDirectories` (前処理データ経由で `-I` になる)
+2. `ReflectionGenerator.exe` を起動する `Exec` の環境変数 `INCLUDE` — C++ ビルド中の MSBuild は `INCLUDE` に `$(IncludePath)` を書き出しており、libclang は MSVC 互換ドライバとしてこれをシステムインクルードパスとして読む。`-I` を明示しても此処から拾ってしまうため `Exec` の `EnvironmentVariables` で上書きしている。
+
+塞がないと `PlatformToolset=ClangCL` のとき VS 同梱 clang の組み込みヘッダ (`VC\Tools\Llvm\x64\lib\clang\<major>\include`) が解析対象に入る。生成器が解析に使う libclang (ClangSharp) は同梱版とバージョンが異なるため、新しい組み込み関数 (`__builtin_elementwise_fshl` など) を知らずに解析が失敗する。
+
+MSVC でビルドした場合 `ReflectionParseIncludePath` は `$(IncludePath)` と同じ値になるので、生成結果は変わらない。
+
 ## TypeDB (ツールが読むバイナリ) の置き場所
 
 生成の最後に `RuntimeTypeDBHelper.Serialize` が型情報を MessagePack で書き出す。これも以前は `%TEMP%\RuntimeTypeDB.bin` という 1 台に 1 つしかない固定パスで、複数 worktree / Debug と Release の同時ビルドが互いを上書きしていた。現在は前処理データと同じ方針で、生成出力ディレクトリの下へ構成別に置く。
