@@ -119,6 +119,7 @@ namespace nox::reflection
 		[[nodiscard]] inline	constexpr	std::uint8_t	GetAttributeListLength()const noexcept { return attribute_length_; }
 		[[nodiscard]] inline	constexpr	const std::span<const std::reference_wrapper<const reflection::ReflectionObject>> GetAttributeList()const noexcept { return std::span(attribute_list_, attribute_length_); }
 		[[nodiscard]] inline	constexpr	const nox::reflection::ReflectionObject& GetAttribute(const std::uint8_t index)const noexcept { return nox::util::At(attribute_list_, attribute_length_, index); }
+		[[nodiscard]] const nox::reflection::ReflectionObject* GetAttribute(const nox::reflection::Type& type)const noexcept;
 
 		template<class T> requires
 			(
@@ -127,14 +128,7 @@ namespace nox::reflection
 				)
 		[[nodiscard]] inline	constexpr	const T* GetAttribute()const noexcept
 		{
-			for (std::int32_t i = 0; i < attribute_length_; ++i)
-			{
-				if (attribute_list_[i].get().GetType() == nox::reflection::Typeof<T>())
-				{
-					return static_cast<const T*>(&attribute_list_[i].get());
-				}
-			}
-			return nullptr;
+			return static_cast<const T*>(this->GetAttribute(nox::reflection::Typeof<T>()));
 		}
 
 		[[nodiscard]] inline constexpr std::uint8_t GetBaseTypeLength()const noexcept { return base_type_length_; }
