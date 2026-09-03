@@ -37,8 +37,6 @@ std::span<const nox::SystemBase::PhaseRegister> nox::dev::net::SocketScheduler::
 
 nox::dev::net::SocketScheduler::SocketScheduler()
 {
-	using t = decltype(Initialize);
-	NOX_U8_NAMEOF_FUNCTION(SocketScheduler::Initialize);
 }
 
 nox::dev::net::SocketScheduler::~SocketScheduler()
