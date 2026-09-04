@@ -3,6 +3,7 @@
 //	written from RuntimeRemoteCodeGenerator
 
 #include	"pch.h"
+#if	NOX_DEVELOP
 #include	"remote_log.g.h"
 #include	"codegen_preamble.h"
 
@@ -19,3 +20,4 @@ void nox::dev::editor_remote::SendLog::OnDeserialize(nox::dev::editor_remote::So
 {
 	NOX_ASSERT(false, u8"送信専用Queryです");
 }
+#endif	//	NOX_DEVELOP

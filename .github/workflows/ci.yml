@@ -1,10 +1,14 @@
 # ============================================================
 # CI (Runtime)
 #
-# 目的  : push / PR ごとに runtime を Debug|x64 / Release|x64 でビルドし、
-#         GoogleTest スイートを実際に走らせて回帰を検知する。
-# 構成  : Build ジョブ (MSVC / ClangCL x Debug / Release) と
+# 目的  : push / PR ごとに runtime を Debug|x64 / Release|x64 / Master|x64 で
+#         ビルドし、GoogleTest スイートを実際に走らせて回帰を検知する。
+# 構成  : Build ジョブ (MSVC / ClangCL x Debug / Release / Master) と
 #         Test ジョブ (Debug のみ) を並列実行。
+#         Test を Debug に限っているのは、reflection_generated の pch.h /
+#         reflect.cpp が runtime/core/test/test_types.h を #if !NOX_MASTER で
+#         囲っており、Master ではテスト型のリフレクションが生成されず
+#         core_test が成立しないため。
 #         前準備は .github/actions/setup-nox-build に切り出してある。
 # 環境  : windows-latest。runtime の vcxproj は PlatformToolset=v145
 #         (Visual Studio 2026) を要求するため windows-2022 では動かない。
@@ -34,7 +38,7 @@ defaults:
 jobs:
   # =========================================================
   # Build: runtime.slnx (runtime.exe まで) を
-  #        2 つのコンパイラ x 2 構成 (Debug / Release) で建てる
+  #        2 つのコンパイラ x 3 構成 (Debug / Release / Master) で建てる
   #
   # ClangCL は経緯から experimental 扱いのまま。
   # 詳細は下の continue-on-error のコメントを参照。
@@ -50,13 +54,20 @@ jobs:
     strategy:
       fail-fast: false   # 片方が転んでももう片方は最後まで走らせる
       matrix:
-        # compiler x configuration の直積 (4 ジョブ)。
+        # compiler x configuration の直積 (6 ジョブ)。
         # Release を足したのは、Debug しか建てていなかったせいで
         # NOX_INFO_LINE / NOX_ERROR_LINE の無効化側が 2 引数固定のまま
         # 壊れていた (C4002) のに誰も気付けなかったため。
         # #if NOX_DEBUG の外側は Debug ビルドでは一切コンパイルされない。
+        #
+        # Master を足したのも同じ理由。出荷構成なのに一度も建てていなかった
+        # せいで、dev 機能 (editor_remote / remote log / socket stream) の
+        # ヘッダが #if NOX_DEVELOP で消えるのに対応する .cpp が無防備なまま
+        # 残り、core.vcxproj だけで 193 件のエラーになっていた。
+        # Master は NOX_DEVELOP / #if !NOX_MASTER の外側しか通らないので、
+        # Debug / Release では検出できない。
         compiler: [MSVC, ClangCL]
-        configuration: [Debug, Release]
+        configuration: [Debug, Release, Master]
         include:
           - compiler: MSVC
             toolset: v145        # Visual Studio 2026 の MSVC ツールセット
@@ -69,7 +80,8 @@ jobs:
             #
             # 下に挙げた (1)(2)(3) はいずれも本ブランチで解消済みで、
             # ローカル (Visual Studio 2026 / MSBuild 18) では
-            # Debug|x64 / Release|x64 とも exit 0 になることを確認した。
+            # Debug|x64 / Release|x64 / Master|x64 のいずれも
+            # exit 0 になることを確認した。
             # ただし CI ランナー上ではまだ一度も緑を確認していないため、
             # 実績が出るまでは experimental: true を維持する。
             # CI で安定して通ることが確認できたら false へ落とすこと。

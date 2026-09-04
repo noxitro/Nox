@@ -3,6 +3,7 @@
 ///	@file	socket_stream_writer.cpp
 ///	@brief	socket_stream_writer
 #include	"pch.h"
+#if NOX_DEVELOP
 #include	"socket_stream_writer.h"
 
 #include	"editor_remote_server.h"
@@ -182,3 +183,4 @@ nox::uint32 nox::dev::editor_remote::SocketStreamWriter::WriteLeb128ToEnd(nox::u
 
 	return static_cast<nox::uint32>(count);
 }
+#endif // NOX_DEVELOP

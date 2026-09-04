@@ -3,6 +3,7 @@
 ///	@file	editor_remote_entity.cpp
 ///	@brief	editor_remote_entity
 #include	"pch.h"
+#if NOX_DEVELOP
 #include	"editor_remote_entity.h"
 
 #include	"editor_remote_client.h"
@@ -26,3 +27,4 @@ void nox::dev::editor_remote::EditorRemoteEntity::Deserialize(SocketStreamReader
 	reader.Read(id_);
 	this->OnDeserialize(reader);
 }
+#endif // NOX_DEVELOP

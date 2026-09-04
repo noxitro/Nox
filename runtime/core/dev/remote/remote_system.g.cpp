@@ -3,6 +3,7 @@
 //	written from RuntimeRemoteCodeGenerator
 
 #include	"pch.h"
+#if	NOX_DEVELOP
 #include	"remote_system.g.h"
 #include	"codegen_preamble.h"
 
@@ -201,3 +202,4 @@ void nox::dev::editor_remote::EndSyncQuery::OnDeserialize(nox::dev::editor_remot
 {
 	reader.Read(remote_instance_id_);
 }
+#endif	//	NOX_DEVELOP
