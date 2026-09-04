@@ -13,6 +13,21 @@ namespace nox
 {
 	namespace
 	{
+		/// @brief 遅延構造変更の記録先を表すスレッドローカルな束縛。
+		/// @details 「今このスレッドが実行しているノード」を指す。worldが一致しない、
+		///          あるいはノード番号が確保済み本数を超えている場合はノード外バッファへ落とす。
+		///          スレッドローカルにしてあるのは、記録側(nox::EntityCommands)が
+		///          Worldへのポインタ1つしか持たない薄いビューだからである。
+		///          ここに置かなければ、System / EntityLogic の引数リストか
+		///          コンストラクタに「自分がどのノードか」を書かせることになる。
+		struct NodeCommandBinding
+		{
+			const nox::World* world = nullptr;
+			nox::uint32 node_index = 0u;
+		};
+
+		thread_local NodeCommandBinding t_node_command_binding{};
+
 		[[nodiscard]]
 		constexpr bool is_live_generation(nox::uint32 generation) noexcept
 		{
@@ -143,6 +158,22 @@ namespace nox
 	}
 }
 
+nox::WorldNodeCommandScope::WorldNodeCommandScope(const nox::World& world, const nox::uint32 node_index)noexcept :
+	previous_world_(nox::t_node_command_binding.world),
+	previous_node_index_(nox::t_node_command_binding.node_index)
+{
+	//	必ず保存・復元する。ジョブを配った側のスレッドは Wait の内側で別ノードのジョブを引くため、
+	//	set/clear だと戻ってきたときに束縛が失われる。
+	nox::t_node_command_binding.world = &world;
+	nox::t_node_command_binding.node_index = node_index;
+}
+
+nox::WorldNodeCommandScope::~WorldNodeCommandScope()noexcept
+{
+	nox::t_node_command_binding.world = previous_world_;
+	nox::t_node_command_binding.node_index = previous_node_index_;
+}
+
 nox::World::World() :
 	free_entity_head_(make_free_entity_head(k_invalid_entity_index, 0u)),
 	next_entity_index_(0u),
@@ -158,7 +189,9 @@ nox::World::World() :
 	studio_mode_(nox::os::ContainsCommandLineArgKey(u"--studio")),
 	kill_(false),
 	structural_change_state_(0u),
-	entity_command_buffer_(),
+	out_of_node_command_buffer_(),
+	node_command_buffers_(nullptr),
+	node_command_buffer_count_(0u),
 	archetypes_(),
 	entity_systems_(),
 	entity_logic_storages_(),
@@ -186,6 +219,11 @@ nox::World::~World()
 {
 	//	ノードを触るものを片付ける前に、必ずワーカーを止めて回収する。
 	job_system_.Finalize();
+
+	//	ワーカーが止まった後なら、記録先が消えても誰も触らない。
+	delete[] node_command_buffers_;
+	node_command_buffers_ = nullptr;
+	node_command_buffer_count_ = 0u;
 
 	for (nox::EntityLogicStorage* const storage : entity_logic_storages_)
 	{
@@ -339,6 +377,35 @@ void nox::World::Init()
 	updater_graph_.Rebuild(
 		std::span<nox::EntitySystemBase* const>(entity_systems_.data(), entity_systems_.size()),
 		std::span<nox::EntityLogicStorage* const>(entity_logic_storages_.data(), entity_logic_storages_.size()));
+
+	//	遅延構造変更の記録先をノード単位に分ける。
+	//
+	//	確保するのは「nox::EntityCommands& を宣言したノード」のぶんだけでよい。
+	//	宣言していないノードは1コマンドも積めないことが引数リストから分かるので、
+	//	そこへ空バッファを割り当てるのは丸ごと無駄になる。
+	//	依存解析を駆動しているのと同じシグネチャ解析を、確保にもそのまま使っている。
+	//
+	//	バッファ番号はフェーズ内で一意なので、必要な本数は
+	//	「フェーズごとの本数の最大値」で足りる(フェーズ同士は同時に走らない)。
+	//	確保はここ1回だけ。以降フレーム中には走らない。
+	{
+		nox::uint32 max_buffer_count = 0u;
+		for (nox::uint8 phase_index = 0u; phase_index < nox::util::ToUnderlying(nox::SystemPhaseType::_Max); ++phase_index)
+		{
+			const nox::SystemPhaseType phase_type = static_cast<nox::SystemPhaseType>(phase_index);
+			max_buffer_count = std::max(max_buffer_count, updater_graph_.GetCommandBufferCount(phase_type));
+		}
+		ReserveNodeEntityCommandBuffers(max_buffer_count);
+
+		//	引数の数は既存のログ行と揃えてある。新しい引数個数で NOX_INFO_LINE を実体化すると、
+		//	kernel/string_format.h 側の既存警告(-Wmissing-braces)がその実体化ぶんだけ増えるため。
+		//	フェーズごとのノード数との対比は nox::UpdaterGraph::Trace() が出す。
+		NOX_INFO_LINE(nox::log_id::CoreCommon,
+			u8"EntityCommandBuffer: {0}本 x コマンド{1}件 = 合計{2}B",
+			node_command_buffer_count_,
+			k_entity_command_capacity,
+			static_cast<nox::uint32>(node_command_buffer_count_ * sizeof(nox::World::EntityCommandBufferType)));
+	}
 
 #if !NOX_MASTER
 	//	Rebuildまで来ればノードが宣言したComponentData型は全て登録済みなので、ここで名前を配れる。
@@ -571,10 +638,12 @@ void nox::World::ExecuteNodeJob(void* const context)
 void nox::World::ExecuteEntitySystemChunkJob(void* const context)
 {
 	auto* const job_context = static_cast<nox::World::ChunkJobContext*>(context);
+	//	ジョブを引いたのが配り元とは別のワーカーでも、記録先は配り元のノードのままでなければならない。
+	const nox::WorldNodeCommandScope command_scope(*job_context->world, job_context->node_index);
 	job_context->system->ExecuteChunk(*job_context->world, *job_context->archetype, job_context->chunk_index);
 }
 
-void nox::World::ExecuteEntitySystemParallel(nox::EntitySystemBase& system)
+void nox::World::ExecuteEntitySystemParallel(nox::EntitySystemBase& system, const nox::uint32 node_index)
 {
 	//	Chunkは互いに素なメモリブロックなので、2つのワーカーが同じバイトへ触ることはない。
 	//	ノード同士の排他は呼び出し元(ExecuteNode)が既に取っている。
@@ -610,6 +679,7 @@ void nox::World::ExecuteEntitySystemParallel(nox::EntitySystemBase& system)
 				.system = &system,
 				.archetype = chunk_refs[index].archetype,
 				.chunk_index = chunk_refs[index].chunk_index,
+				.node_index = node_index,
 			};
 			jobs[index] = nox::Job{
 				.func = &nox::World::ExecuteEntitySystemChunkJob,
@@ -672,6 +742,12 @@ void nox::World::ExecuteUpdaterGraphPhase(const nox::SystemPhaseType phase_type)
 
 void nox::World::ExecuteNode(const nox::UpdaterNode& node)
 {
+	//	このノードが出す遅延構造変更の記録先を束ねる。Playbackはバッファ番号順に回るので、
+	//	どのワーカーが先に走ったかはPlaybackの順序に影響しない。
+	//	System / EntityLogic の書き手には何の記述も増えない(束縛はここで完結する)。
+	//	構造変更を出さないノードには記録先が無く、番号は無効値のまま渡る。
+	const nox::WorldNodeCommandScope command_scope(*this, node.command_buffer_index);
+
 #if !NOX_MASTER
 	//	宣言したComponentData / Serviceを実行中だけ占有する。直列実行では決して発火しない。
 	//
@@ -697,7 +773,7 @@ void nox::World::ExecuteNode(const nox::UpdaterNode& node)
 		//	--serial-updater はワーカー数0なので、この判定で自動的に直列へ落ちる。
 		if (node.system->GetDescriptor().parallel_for_each && job_system_.GetWorkerCount() != 0u)
 		{
-			ExecuteEntitySystemParallel(*node.system);
+			ExecuteEntitySystemParallel(*node.system, node.command_buffer_index);
 		}
 		else
 		{
@@ -1193,6 +1269,15 @@ nox::EntityId nox::World::CreateEntityDuringPhase()noexcept
 
 	//	Idの払い出しはEntityRecord 1件で完結し、Archetypeにも他entityの行にも触れない。
 	//	だから列挙中でもその場で返してよい(遅延させる必要があるのは構造の変更だけ)。
+	//
+	//	【既知の残課題: 払い出されるIdの「値」は決定的ではない】
+	//	コマンドバッファをノード単位に分けたことで、Playbackの順序と、その結果できる
+	//	Archetypeの行の並び・ComponentDataの値は決定的になった。
+	//	しかしId自体は共通のフリーリスト/連番から取るため、レイヤー内の複数ノードが
+	//	並列にCreateすると、どのノードがどの番号を取るかはrunごとに入れ替わる。
+	//	つまり「どの行にどのId番号が載るか」は再現しない。
+	//	Idをhash・乱数seed・シリアライズのキーに使うと、そこは再現しないことになる。
+	//	潰すにはノード単位のIdレンジ払い出し(各ノードが自分の区間から取る)が要る。
 	return CreateEntityImmediate();
 }
 
@@ -1281,26 +1366,118 @@ bool nox::World::IsEntityGenerationLive(const nox::EntityId entity)const noexcep
 		entity_record->generation.load(std::memory_order_acquire) == entity.generation;
 }
 
-void nox::World::AbortOnEntityCommandOverflow()noexcept
+void nox::World::ReserveNodeEntityCommandBuffers(const nox::uint32 node_count)
+{
+	NOX_ASSERT(GetStructuralChangePermission() == nox::StructuralChangePermission::Allowed,
+		u8"フェーズ実行中・列挙中にコマンドバッファを確保し直すことはできません");
+	if (node_count <= node_command_buffer_count_)
+	{
+		//	既に足りている。確保し直すとhigh-water markまで失われる。
+		return;
+	}
+
+	//	ノード集合はInitで確定して以降動かないので、ここは実質1回きり。
+	//	既存分を作り直すことになるが、Playback前の状態でしか呼べないため取りこぼしは起きない。
+	delete[] node_command_buffers_;
+	node_command_buffers_ = new nox::World::EntityCommandBufferType[node_count];
+	node_command_buffer_count_ = node_count;
+}
+
+nox::World::EntityCommandBufferType& nox::World::GetCurrentEntityCommandBuffer()noexcept
+{
+	const nox::NodeCommandBinding binding = nox::t_node_command_binding;
+	if (binding.world != this)
+	{
+		//	ノードに束縛されていない経路(旧SystemPhase / リフレクション経由 / ツール・テストの自前列挙)。
+		//	いずれも並列ディスパッチの外なので、この1本の中でも順序は決定的になる。
+		return out_of_node_command_buffer_;
+	}
+
+	if (binding.node_index >= node_command_buffer_count_)
+	{
+		//	nox::EntityCommands& を宣言していないノードが、宣言の外側から遅延構造変更を出している。
+		//	(例: World参照を握ったServiceがQueue系を直接呼ぶ)
+		//	このノードには記録先が無いのでノード外バッファへ落ちるが、そこは並列実行の
+		//	前提が置けないため、2つのノードが同時にやると順序が決まらない。
+		//	宣言と実装の食い違いなので、開発中に気づけるようにしておく。
+		NOX_ASSERT(false,
+			u8"nox::EntityCommands& を宣言していないノードが遅延構造変更を記録しました。"
+			u8"引数リストに nox::EntityCommands& を宣言してください");
+		return out_of_node_command_buffer_;
+	}
+	return node_command_buffers_[binding.node_index];
+}
+
+nox::uint32 nox::World::GetEntityCommandPeakLength()const noexcept
+{
+	nox::uint32 peak = out_of_node_command_buffer_.GetPeakLength();
+	for (nox::uint32 index = 0u; index < node_command_buffer_count_; ++index)
+	{
+		peak = std::max(peak, node_command_buffers_[index].GetPeakLength());
+	}
+	return peak;
+}
+
+nox::uint32 nox::World::GetEntityCommandPeakPayloadLength()const noexcept
+{
+	nox::uint32 peak = out_of_node_command_buffer_.GetPeakPayloadLength();
+	for (nox::uint32 index = 0u; index < node_command_buffer_count_; ++index)
+	{
+		peak = std::max(peak, node_command_buffers_[index].GetPeakPayloadLength());
+	}
+	return peak;
+}
+
+nox::uint32 nox::World::GetNodeEntityCommandPeakLength(const nox::uint32 node_index)const noexcept
+{
+	if (node_index >= node_command_buffer_count_)
+	{
+		return 0u;
+	}
+	return node_command_buffers_[node_index].GetPeakLength();
+}
+
+nox::uint32 nox::World::GetNodeEntityCommandPeakPayloadLength(const nox::uint32 node_index)const noexcept
+{
+	if (node_index >= node_command_buffer_count_)
+	{
+		return 0u;
+	}
+	return node_command_buffers_[node_index].GetPeakPayloadLength();
+}
+
+nox::uint32 nox::World::GetOutOfNodeEntityCommandPeakLength()const noexcept
+{
+	return out_of_node_command_buffer_.GetPeakLength();
+}
+
+void nox::World::AbortOnEntityCommandOverflow(const nox::World::EntityCommandBufferType& buffer)noexcept
 {
 	NOX_ASSERT(false,
 		u8"EntityCommandBuffer capacity exceeded: commands={0}/{1}, payload={2}/{3}",
-		entity_command_buffer_.GetLength(),
+		buffer.GetLength(),
 		k_entity_command_capacity,
-		entity_command_buffer_.GetPayloadLength(),
+		buffer.GetPayloadLength(),
 		k_entity_command_payload_bytes);
 
 	//	Masterでは NOX_ASSERT もログも消えるため、素の std::abort() だと理由が何も残らない。
 	//	volatile なローカルはスタック上に必ず実体化されるので、クラッシュダンプから読める。
 	//	確保もグローバル変数も増やさずに、落ちた理由だけを持っていける。
-	volatile const nox::uint32 overflow_command_length = entity_command_buffer_.GetLength();
+	volatile const nox::uint32 overflow_command_length = buffer.GetLength();
 	volatile const nox::uint32 overflow_command_capacity = k_entity_command_capacity;
-	volatile const nox::uint32 overflow_payload_length = entity_command_buffer_.GetPayloadLength();
+	volatile const nox::uint32 overflow_payload_length = buffer.GetPayloadLength();
 	volatile const nox::uint32 overflow_payload_capacity = k_entity_command_payload_bytes;
+	//	どのノードのバッファで溢れたのかもダンプから読めるようにする。
+	//	ノード番号は nox::UpdaterNode::order_index で、起動ログのUpdaterGraphの n<番号> と一致する。
+	volatile const nox::uint32 overflow_node_index =
+		(&buffer == &out_of_node_command_buffer_)
+		? std::numeric_limits<nox::uint32>::max()
+		: static_cast<nox::uint32>(&buffer - node_command_buffers_);
 	(void)overflow_command_length;
 	(void)overflow_command_capacity;
 	(void)overflow_payload_length;
 	(void)overflow_payload_capacity;
+	(void)overflow_node_index;
 
 	std::abort();
 }
@@ -1312,10 +1489,11 @@ bool nox::World::QueueDestroyEntity(const nox::EntityId entity)noexcept
 		return false;
 	}
 
-	const bool queued = entity_command_buffer_.TryDestroy(entity);
+	nox::World::EntityCommandBufferType& buffer = GetCurrentEntityCommandBuffer();
+	const bool queued = buffer.TryDestroy(entity);
 	if (queued == false)
 	{
-		AbortOnEntityCommandOverflow();
+		AbortOnEntityCommandOverflow(buffer);
 	}
 	return queued;
 }
@@ -1330,11 +1508,12 @@ bool nox::World::QueueAddComponent(
 		return false;
 	}
 
-	const bool queued = entity_command_buffer_.TryAddComponent(entity, type_info, source);
+	nox::World::EntityCommandBufferType& buffer = GetCurrentEntityCommandBuffer();
+	const bool queued = buffer.TryAddComponent(entity, type_info, source);
 	//	コマンド枠かペイロード枠のどちらかが尽きている。構造変更を黙って落とすほうが後で困るので、即座に落とす。
 	if (queued == false)
 	{
-		AbortOnEntityCommandOverflow();
+		AbortOnEntityCommandOverflow(buffer);
 	}
 	return queued;
 }
@@ -1348,10 +1527,11 @@ bool nox::World::QueueRemoveComponent(
 		return false;
 	}
 
-	const bool queued = entity_command_buffer_.TryRemoveComponent(entity, type_info);
+	nox::World::EntityCommandBufferType& buffer = GetCurrentEntityCommandBuffer();
+	const bool queued = buffer.TryRemoveComponent(entity, type_info);
 	if (queued == false)
 	{
-		AbortOnEntityCommandOverflow();
+		AbortOnEntityCommandOverflow(buffer);
 	}
 	return queued;
 }
@@ -1368,12 +1548,24 @@ void nox::World::FlushEntityCommands()noexcept
 		std::abort();
 	}
 
-	entity_command_buffer_.BeginPlayback();
+	//	記録先はノードごとに分かれている。再生は「ノード外 → ノード番号順」の固定順で回す。
+	//	ノード番号はUpdaterGraphの登録順(=トポロジカル順)で構築時に決まるため、
+	//	どのワーカーがどのノードを先に走らせたかはここに一切影響しない。
+	PlaybackEntityCommandBuffer(out_of_node_command_buffer_);
+	for (nox::uint32 node_index = 0u; node_index < node_command_buffer_count_; ++node_index)
+	{
+		PlaybackEntityCommandBuffer(node_command_buffers_[node_index]);
+	}
+}
+
+void nox::World::PlaybackEntityCommandBuffer(nox::World::EntityCommandBufferType& buffer)noexcept
+{
+	buffer.BeginPlayback();
 	nox::uint32 command_index = 0u;
-	while (command_index < entity_command_buffer_.GetLength())
+	while (command_index < buffer.GetLength())
 	{
 		nox::EntityCommand command{};
-		const bool ready = entity_command_buffer_.TryGet(command_index++, command);
+		const bool ready = buffer.TryGet(command_index++, command);
 		NOX_ASSERT(ready, u8"EntityCommandBuffer command was not published");
 		if (ready == false)
 		{
@@ -1395,7 +1587,7 @@ void nox::World::FlushEntityCommands()noexcept
 			}
 
 			void* const destination = AddComponentImmediate(nox::EntityId{ command.entity_raw }, *command.type_info);
-			const void* const payload = entity_command_buffer_.TryGetPayload(command);
+			const void* const payload = buffer.TryGetPayload(command);
 			if (destination != nullptr && payload != nullptr)
 			{
 				//	ComponentDataは常にtrivially copyableなのでmemcpyで足りる。
@@ -1417,7 +1609,7 @@ void nox::World::FlushEntityCommands()noexcept
 			break;
 		}
 	}
-	entity_command_buffer_.Clear();
+	buffer.Clear();
 }
 
 bool nox::World::IsAlive(nox::EntityId entity)const noexcept

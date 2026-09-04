@@ -252,7 +252,8 @@ nox::uint32 nox::BuildUpdaterLayerIndices(
 
 nox::UpdaterGraph::UpdaterGraph() :
 	phase_nodes_{},
-	phase_layer_offsets_{}
+	phase_layer_offsets_{},
+	phase_command_buffer_counts_{}
 {
 }
 
@@ -278,8 +279,12 @@ void nox::UpdaterGraph::RebuildPhase(
 	nox::Vector<nox::uint32>& dest_offsets = phase_layer_offsets_[phase_index];
 	dest_nodes.clear();
 	dest_offsets.clear();
+	phase_command_buffer_counts_[phase_index] = 0u;
 
 	//	登録順 = systemsの並び → storagesの並び → メソッド表の並び。
+	//	コマンドバッファ番号は「遅延構造変更を出しうるノードだけ」に、この登録順で詰めて振る。
+	//	昇順に振るので、番号順の再生とノード登録順の再生は同じ並びになる。
+	nox::uint32 command_buffer_index = 0u;
 	nox::Vector<nox::UpdaterNode> nodes;
 	for (nox::EntitySystemBase* const system : systems)
 	{
@@ -297,6 +302,9 @@ void nox::UpdaterGraph::RebuildPhase(
 		node.kind = nox::UpdaterNodeKind::EntitySystem;
 		node.system = system;
 		node.order_index = static_cast<nox::uint32>(nodes.size());
+		node.command_buffer_index = descriptor.emits_structural_change
+			? command_buffer_index++
+			: nox::k_invalid_updater_command_buffer_index;
 		nodes.push_back(node);
 	}
 
@@ -320,9 +328,14 @@ void nox::UpdaterGraph::RebuildPhase(
 			node.storage = storage;
 			node.method = &method;
 			node.order_index = static_cast<nox::uint32>(nodes.size());
+			node.command_buffer_index = method.emits_structural_change
+				? command_buffer_index++
+				: nox::k_invalid_updater_command_buffer_index;
 			nodes.push_back(node);
 		}
 	}
+
+	phase_command_buffer_counts_[phase_index] = command_buffer_index;
 
 	if (nodes.empty())
 	{
@@ -375,6 +388,11 @@ nox::uint32 nox::UpdaterGraph::GetLayerCount(const nox::SystemPhaseType phase_ty
 	return offsets.empty() ? 0u : static_cast<nox::uint32>(offsets.size() - 1u);
 }
 
+nox::uint32 nox::UpdaterGraph::GetCommandBufferCount(const nox::SystemPhaseType phase_type)const noexcept
+{
+	return phase_command_buffer_counts_[nox::util::ToUnderlying(phase_type)];
+}
+
 std::span<const nox::UpdaterNode> nox::UpdaterGraph::GetLayerNodes(
 	const nox::SystemPhaseType phase_type,
 	const nox::uint32 layer_index)const noexcept
@@ -405,10 +423,16 @@ void nox::UpdaterGraph::Trace()const
 			continue;
 		}
 
+		//	引数の数は既存のログ行と揃えてある。新しい引数個数で NOX_INFO_LINE を実体化すると、
+		//	kernel/string_format.h 側の既存警告(-Wmissing-braces)がその実体化ぶんだけ増えるため。
 		NOX_INFO_LINE(nox::log_id::CoreCommon, u8"UpdaterGraph Phase: {0} (nodes={1}, layers={2})",
 			to_updater_phase_name(phase_type),
 			static_cast<nox::uint32>(nodes.size()),
 			GetLayerCount(phase_type));
+		NOX_INFO_LINE(nox::log_id::CoreCommon, u8"  Phase {0}: コマンドバッファ={1}本 / ノード={2}",
+			to_updater_phase_name(phase_type),
+			GetCommandBufferCount(phase_type),
+			static_cast<nox::uint32>(nodes.size()));
 
 		for (const nox::UpdaterNode& node : nodes)
 		{

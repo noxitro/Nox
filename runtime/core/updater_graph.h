@@ -30,6 +30,9 @@ namespace nox
 	/// @brief インスタンス状態を共有しないことを表すグループ番号。
 	inline constexpr nox::uint32 k_invalid_updater_group_index = std::numeric_limits<nox::uint32>::max();
 
+	/// @brief 遅延構造変更を出さない(= nox::EntityCommands& を宣言していない)ノードの記録先番号。
+	inline constexpr nox::uint32 k_invalid_updater_command_buffer_index = std::numeric_limits<nox::uint32>::max();
+
 	/// @brief ノード1つ分のアクセス宣言。依存解析の唯一の入力。
 	/// @details Worldを介さずに組み立てられるため、テストから直接レイヤリングを検証できる。
 	struct UpdaterNodeAccess final
@@ -77,6 +80,14 @@ namespace nox
 		nox::uint32 order_index = 0u;
 		/// @brief 小さいほど先に実行。同一レイヤーは同時実行可能。
 		nox::uint32 layer_index = 0u;
+		/// @brief 遅延構造変更の記録先バッファ番号。出さないノードは k_invalid_updater_command_buffer_index。
+		/// @details nox::EntityCommands& を宣言したノードにだけ、登録順に詰めて振る。
+		///          大半のノードは構造変更を出さないため、order_indexをそのまま使うと
+		///          「一度も使われない空バッファ」をノード数ぶん抱えることになる。
+		///
+		///          詰めても順序は保たれる。番号は登録順の昇順に振られるので、
+		///          「バッファ番号順の再生」と「ノード登録順の再生」は同じ並びになる。
+		nox::uint32 command_buffer_index = nox::k_invalid_updater_command_buffer_index;
 	};
 
 	/// @brief フェーズごとの実行ノードとレイヤー境界。
@@ -101,6 +112,9 @@ namespace nox
 
 		[[nodiscard]] nox::uint32 GetLayerCount(nox::SystemPhaseType phase_type)const noexcept;
 
+		/// @brief フェーズ内で遅延構造変更を出しうるノードの数(= 必要なコマンドバッファの本数)。
+		[[nodiscard]] nox::uint32 GetCommandBufferCount(nox::SystemPhaseType phase_type)const noexcept;
+
 		/// @brief 指定レイヤーのノード群。互いに衝突しないため、そのまま並列に配れる。
 		[[nodiscard]] std::span<const nox::UpdaterNode> GetLayerNodes(
 			nox::SystemPhaseType phase_type,
@@ -122,5 +136,7 @@ namespace nox
 		std::array<nox::Vector<nox::UpdaterNode>, nox::util::ToUnderlying(nox::SystemPhaseType::_Max)> phase_nodes_;
 		/// @brief フェーズごとのレイヤー開始位置。要素数は レイヤー数 + 1(末尾番兵)。
 		std::array<nox::Vector<nox::uint32>, nox::util::ToUnderlying(nox::SystemPhaseType::_Max)> phase_layer_offsets_;
+		/// @brief フェーズごとの、遅延構造変更を出しうるノード数。
+		std::array<nox::uint32, nox::util::ToUnderlying(nox::SystemPhaseType::_Max)> phase_command_buffer_counts_;
 	};
 }

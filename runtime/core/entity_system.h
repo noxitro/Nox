@@ -43,6 +43,10 @@ namespace nox
 		nox::SystemPhaseType phase;
 		/// @brief OnUpdateをChunk単位で並列実行してよいか。 nox::IsParallelForEachEntitySystem を参照。
 		bool parallel_for_each;
+		/// @brief このSystemが遅延構造変更を出しうるか(= nox::EntityCommands& を宣言しているか)。
+		/// @details 引数リストから導出される。宣言していないSystemは1コマンドも積めないので、
+		///          Worldはこのノードのぶんのコマンドバッファを確保しない。
+		bool emits_structural_change;
 	};
 
 	/// @brief EntitySystemの非テンプレート基底。Worldはこの型でのみ保持する。
@@ -124,6 +128,18 @@ namespace nox
 	///
 	///          逆に安全なのは「宣言したComponentDataの、自分の行だけを読み書きする」形。
 	///          Chunkは互いに素なメモリなので、この形なら2つのワーカーが同じバイトに触ることはない。
+	///
+	///          【nox::EntityCommands& と併記できない理由】
+	///          遅延構造変更のコマンドバッファは「ノード1つにつき1本」であり、
+	///          同一ノードのChunkジョブ全員がそこへ積む。つまりコマンドバッファは
+	///          上記の「entity間で共有される状態」そのもので、積まれる順序は
+	///          ワーカーのスケジュールで毎フレーム変わる。
+	///          Playback順が変われば、たとえ競合コマンドが無くてもArchetypeへの
+	///          行の挿入順が変わるため、次フレームの列挙順まで変わる。
+	///          そこで宣言の矛盾としてコンパイル時に弾く
+	///          (nox::MakeEntitySystemTypeDescriptor の static_assert)。
+	///          Chunk単位のサブバッファを持たせれば両立できるが、
+	///          Chunk数は実行時にしか決まらないため固定確保と噛み合わない。将来の課題として切り離す。
 	template<class TSystem>
 	[[nodiscard]] constexpr bool IsParallelForEachEntitySystem()noexcept
 	{
@@ -144,6 +160,14 @@ namespace nox
 	{
 		using Signature = typename TSystem::template SignatureOf<>;
 		static_assert(nox::detail::ValidateEntityMethod<decltype(&TSystem::OnUpdate)>());
+		//	Chunk並列の宣言と、遅延構造変更を出す宣言(nox::EntityCommands&)は両立しない。
+		//	理由は nox::IsParallelForEachEntitySystem のコメントを参照。
+		static_assert(
+			nox::IsParallelForEachEntitySystem<TSystem>() == false ||
+			Signature::k_commands_parameter_count == 0u,
+			"k_parallel_for_each を宣言したSystemは nox::EntityCommands& を受け取れません"
+			"(Chunkジョブ間でコマンドの順序が決まらないため)。"
+			"構造変更を出すなら k_parallel_for_each を外してください");
 
 		return nox::EntitySystemTypeDescriptor{
 			.create = []() -> nox::EntitySystemBase* { return new TSystem(); },
@@ -156,6 +180,7 @@ namespace nox
 			.name = nox::util::GetTypeName<TSystem>(),
 			.phase = TSystem::k_phase,
 			.parallel_for_each = nox::IsParallelForEachEntitySystem<TSystem>(),
+			.emits_structural_change = (Signature::k_commands_parameter_count != 0u),
 		};
 	}
 
