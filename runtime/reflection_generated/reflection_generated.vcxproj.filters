@@ -30,187 +30,187 @@
     <ClCompile Include="reflect.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_0.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_0.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_1.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_1.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_2.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_2.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_3.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_3.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_4.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_4.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_5.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_5.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_6.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_6.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_7.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_7.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_8.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_8.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_9.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_9.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_10.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_10.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_11.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_11.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_12.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_12.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_13.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_13.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_14.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_14.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_15.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_15.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_16.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_16.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_17.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_17.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_18.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_18.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_19.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_19.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_20.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_20.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_21.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_21.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_22.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_22.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_23.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_23.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_24.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_24.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_25.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_25.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_26.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_26.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_27.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_27.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_28.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_28.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\class_decl_29.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\class_decl_29.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\gen_x64_Debug.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\gen_$(Platform)_$(Configuration).g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_0.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_0.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_1.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_1.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_2.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_2.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_3.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_3.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_4.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_4.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_5.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_5.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_6.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_6.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_7.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_7.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_8.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_8.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_9.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_9.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_10.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_10.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_11.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_11.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_12.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_12.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_13.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_13.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_14.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_14.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_15.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_15.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_16.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_16.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_17.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_17.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_18.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_18.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_19.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_19.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_20.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_20.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_21.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_21.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_22.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_22.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_23.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_23.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_24.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_24.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_25.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_25.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_26.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_26.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_27.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_27.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_28.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_28.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="gen\x64\Debug\global_decl_29.g.cpp">
+    <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_29.g.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
@@ -233,7 +233,7 @@
     <ClInclude Include="reflect.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="gen\x64\Debug\gen_x64_Debug.g.h">
+    <ClInclude Include="gen\$(Platform)\$(Configuration)\gen_$(Platform)_$(Configuration).g.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
