@@ -174,6 +174,72 @@ nox::WorldNodeCommandScope::~WorldNodeCommandScope()noexcept
 	nox::t_node_command_binding.node_index = previous_node_index_;
 }
 
+nox::uint32 nox::ResolveUpdaterWorkerCount(
+	const std::span<const nox::char16* const> command_line_args,
+	const nox::uint32 default_worker_count)noexcept
+{
+	static constexpr std::u16string_view k_serial_key = u"--serial-updater";
+	//	キーに '=' まで含めているのは、値の切り出しを starts_with 1回で閉じるため。
+	//	'=' を含めないと "--updater-workersX" のような別の引数まで拾ってしまう。
+	static constexpr std::u16string_view k_workers_key = u"--updater-workers=";
+
+	//	--serial-updater は「1本も作らない」の明示指定。--updater-workers より強い。
+	//	先に全体を舐めるので、並び順に関係なくこちらが勝つ。
+	for (const nox::char16* const command_line_arg : command_line_args)
+	{
+		if (command_line_arg == nullptr)
+		{
+			continue;
+		}
+		if (std::u16string_view(command_line_arg).starts_with(k_serial_key))
+		{
+			return 0u;
+		}
+	}
+
+	for (const nox::char16* const command_line_arg : command_line_args)
+	{
+		if (command_line_arg == nullptr)
+		{
+			continue;
+		}
+
+		const std::u16string_view command_line_arg_view(command_line_arg);
+		if (command_line_arg_view.starts_with(k_workers_key) == false)
+		{
+			continue;
+		}
+
+		const std::u16string_view value = command_line_arg_view.substr(k_workers_key.size());
+		if (value.empty())
+		{
+			//	"--updater-workers=" だけ。値の書き忘れなので既定へ落とす。
+			return default_worker_count;
+		}
+
+		//	10進の非負整数だけを受ける。ヒープも例外も使わないので自前で読む。
+		nox::uint32 parsed = 0u;
+		for (const nox::char16 character : value)
+		{
+			if ((character < u'0') || (character > u'9'))
+			{
+				//	数字でない文字が混ざっていたら指定そのものを無視して既定へ落とす。
+				//	黙って0本(=直列)にすると、打ち間違いが性能低下として表れて原因が見えない。
+				return default_worker_count;
+			}
+			parsed = (parsed * 10u) + static_cast<nox::uint32>(character - u'0');
+			if (parsed > nox::JobSystem::k_max_worker_count)
+			{
+				//	方針ではなく桁あふれ対策。ここで打ち切らないとuint32を回り込む。
+				return nox::JobSystem::k_max_worker_count;
+			}
+		}
+		return parsed;
+	}
+
+	return default_worker_count;
+}
+
 nox::World::World() :
 	free_entity_head_(make_free_entity_head(k_invalid_entity_index, 0u)),
 	next_entity_index_(0u),
@@ -197,7 +263,9 @@ nox::World::World() :
 	entity_logic_storages_(),
 	updater_graph_(),
 	job_system_(),
-	serial_updater_(nox::os::ContainsCommandLineArgKey(u"--serial-updater")),
+	updater_worker_count_(nox::ResolveUpdaterWorkerCount(
+		nox::os::GetCommandLineArgList(),
+		nox::JobSystem::GetDefaultWorkerCount())),
 	services_(),
 	modules_(),
 	systems_(),
@@ -414,13 +482,12 @@ void nox::World::Init()
 	updater_graph_.Trace();
 #endif // !NOX_MASTER
 
-	//	--serial-updater が付いていればワーカー0本。Dispatchは呼び出しスレッド上で回る。
-	const nox::uint32 worker_count = serial_updater_ ? 0u : nox::JobSystem::GetDefaultWorkerCount();
-	job_system_.Initialize(worker_count);
+	//	ワーカー0本ならDispatchは呼び出しスレッド上で回る。決め方はResolveUpdaterWorkerCountを参照。
+	job_system_.Initialize(updater_worker_count_);
 
 	NOX_INFO_LINE(nox::log_id::CoreCommon,
 		u8"UpdaterGraph実行モード: {0} ワーカー数={1} 論理プロセッサ数={2}",
-		serial_updater_ ? u8"直列(--serial-updater)" : u8"並列",
+		(updater_worker_count_ == 0u) ? u8"直列" : u8"並列",
 		job_system_.GetWorkerCount(),
 		nox::os::GetLogicalProcessorCount());
 }

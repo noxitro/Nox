@@ -70,6 +70,28 @@ namespace nox
 		nox::uint32 previous_node_index_;
 	};
 
+	/// @brief コマンドライン引数列から、UpdaterGraphを回すワーカー数を決める。
+	/// @details 決め方(優先順):
+	///            1. --serial-updater      … 0本。Dispatchは呼び出しスレッド上で回る
+	///            2. --updater-workers=N   … N本。0を渡せば --serial-updater と同じ直列になる
+	///            3. どちらも無い / 値が壊れている … default_worker_count をそのまま返す
+	///
+	///          「並列化が実際に効いているか」を出荷構成でも測るための入口。
+	///          直列(0)と既定の2点しか選べないと、スケールするかどうかが数字で言えない。
+	///
+	///          既定値を引数で受け取り、コマンドラインの取得(nox::os)にも
+	///          nox::JobSystem にも触れない純粋関数にしてある。副作用が無いので
+	///          World を組み立てずに引数列を並べるだけで検証できる。
+	///
+	///          Nを nox::JobSystem::k_max_worker_count で頭打ちにするのは方針ではなく
+	///          桁あふれ対策(解析途中の値がuint32を超えないようにする)。
+	///          ハードウェアに合わせた最終的な丸めは nox::JobSystem::Initialize が行う。
+	/// @param command_line_args nox::os::GetCommandLineArgList() が返す並び。
+	/// @param default_worker_count 指定が無いときに使う値。
+	[[nodiscard]] nox::uint32 ResolveUpdaterWorkerCount(
+		std::span<const nox::char16* const> command_line_args,
+		nox::uint32 default_worker_count)noexcept;
+
 	class World final: public nox::Object
 	{
 		NOX_DECLARE_OBJECT(World, nox::Object);
@@ -557,8 +579,9 @@ namespace nox
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
 		nox::JobSystem job_system_;
 
-		/// @brief --serial-updater が指定されていたか。trueならワーカーを1本も作らない。
-		const bool serial_updater_;
+		/// @brief UpdaterGraphを回すワーカー数。0ならスレッドを1本も作らず直列実行になる。
+		/// @details コマンドラインで決まる。決め方は nox::ResolveUpdaterWorkerCount を参照。
+		const nox::uint32 updater_worker_count_;
 
 #if !NOX_MASTER
 		//	依存解析の誤りを即座に検出するためのチェッカー。ComponentTypeIndexごと / Service登録順ごとに1つ持つ。
