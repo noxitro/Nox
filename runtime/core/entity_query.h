@@ -110,6 +110,38 @@ namespace nox
 
 	namespace detail
 	{
+		//	entity_query.h が world.h に依存しないための橋渡し(TryGetServiceOfWorldと同じ理由)。
+		void EnterEntityIterationOfWorld(nox::World& world)noexcept;
+		void LeaveEntityIterationOfWorld(nox::World& world)noexcept;
+
+		/// @brief 列挙している間だけ、即時系の構造変更をブロックするスコープ。
+		/// @details Archetypeの再配置(swap-remove / Archetype間移動)は、列挙側が握っている
+		///          列ポインタと行番号を壊す。列挙の開始と終了をWorldへ伝えることで、
+		///          その間の即時系呼び出しを nox::World::GetStructuralChangePermission() が弾ける。
+		///
+		///          入れ子でも並列でも成立する。Worldの状態はatomicなカウンタなので、
+		///          Chunk並列で複数ワーカーが同時に出入りしても破綻しない。
+		class EntityIterationScope final
+		{
+		public:
+			inline explicit EntityIterationScope(nox::World& world)noexcept :
+				world_(world)
+			{
+				nox::detail::EnterEntityIterationOfWorld(world_);
+			}
+
+			inline ~EntityIterationScope()noexcept
+			{
+				nox::detail::LeaveEntityIterationOfWorld(world_);
+			}
+
+			EntityIterationScope(const EntityIterationScope&) = delete;
+			EntityIterationScope& operator=(const EntityIterationScope&) = delete;
+
+		private:
+			nox::World& world_;
+		};
+
 		/// @brief 列の先頭アドレスと行から実引数を作る。
 		template<class Parameter>
 		[[nodiscard]] inline Parameter BindEntityArgument(
@@ -287,6 +319,8 @@ namespace nox
 				MethodPointerType method)
 			{
 				constexpr auto k_indices = std::make_index_sequence<k_parameter_count>{};
+				//	このChunkを列挙している間、即時系の構造変更を弾く。
+				const nox::detail::EntityIterationScope iteration_scope(world);
 				BaseArray bases{};
 				nox::EntityCommands commands(world);
 				if (ResolveServices(world, bases, k_indices) == false)
@@ -306,6 +340,9 @@ namespace nox
 				MethodPointerType method)
 			{
 				constexpr auto k_indices = std::make_index_sequence<k_parameter_count>{};
+				//	列挙している間、即時系の構造変更を弾く。Archetypeの再配置が起きると
+				//	この下のループが握る列ポインタと行番号が壊れるため。
+				const nox::detail::EntityIterationScope iteration_scope(world);
 				BaseArray bases{};
 				//	Worldへの薄いビュー。ポインタ1つ分なので確保も解放も走らない。
 				nox::EntityCommands commands(world);
@@ -336,6 +373,8 @@ namespace nox
 				MethodPointerType method)
 			{
 				constexpr auto k_indices = std::make_index_sequence<k_parameter_count>{};
+				//	1entityでも、解決した列ポインタと行番号を握ったままユーザーコードを呼ぶ点は同じ。
+				const nox::detail::EntityIterationScope iteration_scope(world);
 				BaseArray bases{};
 				nox::EntityCommands commands(world);
 				if (ResolveServices(world, bases, k_indices) == false)

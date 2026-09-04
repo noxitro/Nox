@@ -157,7 +157,7 @@ nox::World::World() :
 	enabled_vsync_(true),
 	studio_mode_(nox::os::ContainsCommandLineArgKey(u"--studio")),
 	kill_(false),
-	is_executing_system_phase_(false),
+	structural_change_state_(0u),
 	entity_command_buffer_(),
 	archetypes_(),
 	entity_systems_(),
@@ -513,7 +513,8 @@ void nox::World::BuildExecuteNodeList(std::span<nox::SystemBase*> system_list)
 void nox::World::ExecutePhase(const nox::SystemPhaseType phase_type)
 {
 	const nox::Vector<SystemExecuteNode>& layers = system_phase_table_[nox::util::ToUnderlying(phase_type)];
-	is_executing_system_phase_.store(true, std::memory_order_release);
+	//	フェーズ実行中は即時系の構造変更を禁じる。列挙深度(下位ビット)には触れない。
+	structural_change_state_.fetch_or(k_structural_change_phase_bit, std::memory_order_seq_cst);
 	for (const SystemExecuteNode& layer : layers)
 	{
 		std::invoke(layer.phase.get().func, &layer.instance.get(), *this);
@@ -522,8 +523,9 @@ void nox::World::ExecutePhase(const nox::SystemPhaseType phase_type)
 	ExecuteUpdaterGraphPhase(phase_type);
 
 	//	将来の並列ディスパッチでは、このplaybackポイントまでに全Systemジョブをjoinする必要がある。
+	//	ここに来た時点で列挙は全て閉じているので、構造を動かしてよい。
 	FlushEntityCommands();
-	is_executing_system_phase_.store(false, std::memory_order_release);
+	structural_change_state_.fetch_and(~k_structural_change_phase_bit, std::memory_order_seq_cst);
 }
 
 void nox::World::CreateEntitySystems()
@@ -1113,14 +1115,89 @@ void nox::World::PushFreeEntityIndex(nox::uint32 index) noexcept
 	}
 }
 
+nox::StructuralChangePermission nox::World::GetStructuralChangePermission()const noexcept
+{
+	const nox::uint32 state = structural_change_state_.load(std::memory_order_seq_cst);
+	if (state == 0u)
+	{
+		return nox::StructuralChangePermission::Allowed;
+	}
+
+	//	列挙のほうが具体的な理由なので優先して返す。
+	if ((state & k_structural_change_iteration_mask) != 0u)
+	{
+		return nox::StructuralChangePermission::DeniedDuringIteration;
+	}
+	return nox::StructuralChangePermission::DeniedDuringPhase;
+}
+
+bool nox::World::EnsureImmediateStructuralChangeAllowed()const noexcept
+{
+	const nox::StructuralChangePermission permission = GetStructuralChangePermission();
+	NOX_ASSERT(permission != nox::StructuralChangePermission::DeniedDuringPhase,
+		u8"フェーズ実行中に即時系の構造変更は呼べません。nox::EntityCommands(遅延系)を使用してください");
+	NOX_ASSERT(permission != nox::StructuralChangePermission::DeniedDuringIteration,
+		u8"entityの列挙中に即時系の構造変更は呼べません。nox::EntityCommands(遅延系)を使用してください");
+	return permission == nox::StructuralChangePermission::Allowed;
+}
+
+bool nox::World::EnsureDeferredStructuralChangeAllowed()const noexcept
+{
+	//	遅延系は即時系のちょうど裏返し。反映点(Playback)が来ることが前提なので、
+	//	フェーズ実行中でも列挙中でもないときに積むのは記録漏れの兆候として弾く。
+	const bool allowed = (structural_change_state_.load(std::memory_order_seq_cst) != 0u);
+	NOX_ASSERT(allowed, u8"遅延系の構造変更は、フェーズ実行中または列挙中にのみ記録できます");
+	return allowed;
+}
+
+void nox::World::EnterEntityIteration()noexcept
+{
+	//	acq_rel。入場を他スレッドのacquireロードへ見せるにはreleaseが要り(acquireのRMWでは
+	//	カウンタ増加がhappens-beforeしない)、退場との対でacquireも要る。
+	//	なおseq_cstにはしていない。理由は world.h の structural_change_state_ の注記を参照。
+	structural_change_state_.fetch_add(1u, std::memory_order_seq_cst);
+}
+
+void nox::World::LeaveEntityIteration()noexcept
+{
+	NOX_ASSERT(IsIteratingEntities(), u8"対応するEnterEntityIterationがありません");
+	structural_change_state_.fetch_sub(1u, std::memory_order_seq_cst);
+}
+
+void nox::detail::EnterEntityIterationOfWorld(nox::World& world)noexcept
+{
+	world.EnterEntityIteration();
+}
+
+void nox::detail::LeaveEntityIterationOfWorld(nox::World& world)noexcept
+{
+	world.LeaveEntityIteration();
+}
+
 nox::EntityId nox::World::CreateEntity()
 {
-	NOX_ASSERT(is_executing_system_phase_.load(std::memory_order_acquire) == false, u8"SystemからのEntity生成はサポートされていません");
-	if (is_executing_system_phase_.load(std::memory_order_acquire))
+	if (EnsureImmediateStructuralChangeAllowed() == false)
 	{
 		return nox::EntityId{ 0u };
 	}
 
+	return CreateEntityImmediate();
+}
+
+nox::EntityId nox::World::CreateEntityDuringPhase()noexcept
+{
+	if (EnsureDeferredStructuralChangeAllowed() == false)
+	{
+		return nox::EntityId{ 0u };
+	}
+
+	//	Idの払い出しはEntityRecord 1件で完結し、Archetypeにも他entityの行にも触れない。
+	//	だから列挙中でもその場で返してよい(遅延させる必要があるのは構造の変更だけ)。
+	return CreateEntityImmediate();
+}
+
+nox::EntityId nox::World::CreateEntityImmediate()
+{
 	nox::uint32 index = TryPopFreeEntityIndex();
 	if (index != k_invalid_entity_index)
 	{
@@ -1162,8 +1239,7 @@ nox::EntityId nox::World::CreateEntity()
 
 void nox::World::DestroyEntity(nox::EntityId entity)
 {
-	NOX_ASSERT(is_executing_system_phase_.load(std::memory_order_acquire) == false, u8"SystemからのEntity破棄にはQueueDestroyEntityを使用してください");
-	if (is_executing_system_phase_.load(std::memory_order_acquire))
+	if (EnsureImmediateStructuralChangeAllowed() == false)
 	{
 		return;
 	}
@@ -1198,25 +1274,100 @@ void nox::World::DestroyEntityImmediate(const nox::EntityId entity)noexcept
 	PushFreeEntityIndex(entity.index);
 }
 
+bool nox::World::IsEntityGenerationLive(const nox::EntityId entity)const noexcept
+{
+	const auto* const entity_record = TryGetEntityRecord(entity.index);
+	return entity_record != nullptr &&
+		entity_record->generation.load(std::memory_order_acquire) == entity.generation;
+}
+
+void nox::World::AbortOnEntityCommandOverflow()noexcept
+{
+	NOX_ASSERT(false,
+		u8"EntityCommandBuffer capacity exceeded: commands={0}/{1}, payload={2}/{3}",
+		entity_command_buffer_.GetLength(),
+		k_entity_command_capacity,
+		entity_command_buffer_.GetPayloadLength(),
+		k_entity_command_payload_bytes);
+
+	//	Masterでは NOX_ASSERT もログも消えるため、素の std::abort() だと理由が何も残らない。
+	//	volatile なローカルはスタック上に必ず実体化されるので、クラッシュダンプから読める。
+	//	確保もグローバル変数も増やさずに、落ちた理由だけを持っていける。
+	volatile const nox::uint32 overflow_command_length = entity_command_buffer_.GetLength();
+	volatile const nox::uint32 overflow_command_capacity = k_entity_command_capacity;
+	volatile const nox::uint32 overflow_payload_length = entity_command_buffer_.GetPayloadLength();
+	volatile const nox::uint32 overflow_payload_capacity = k_entity_command_payload_bytes;
+	(void)overflow_command_length;
+	(void)overflow_command_capacity;
+	(void)overflow_payload_length;
+	(void)overflow_payload_capacity;
+
+	std::abort();
+}
+
 bool nox::World::QueueDestroyEntity(const nox::EntityId entity)noexcept
 {
-	NOX_ASSERT(is_executing_system_phase_.load(std::memory_order_acquire), u8"QueueDestroyEntityはSystem実行中のみ使用できます");
-	if (is_executing_system_phase_.load(std::memory_order_acquire) == false)
+	if (EnsureDeferredStructuralChangeAllowed() == false)
 	{
 		return false;
 	}
 
 	const bool queued = entity_command_buffer_.TryDestroy(entity);
-	NOX_ASSERT(queued, u8"EntityCommandBuffer capacity exceeded: {0}", k_entity_command_capacity);
 	if (queued == false)
 	{
-		std::abort();
+		AbortOnEntityCommandOverflow();
+	}
+	return queued;
+}
+
+bool nox::World::QueueAddComponent(
+	const nox::EntityId entity,
+	const nox::ComponentTypeInfo& type_info,
+	const void* const source)noexcept
+{
+	if (EnsureDeferredStructuralChangeAllowed() == false)
+	{
+		return false;
+	}
+
+	const bool queued = entity_command_buffer_.TryAddComponent(entity, type_info, source);
+	//	コマンド枠かペイロード枠のどちらかが尽きている。構造変更を黙って落とすほうが後で困るので、即座に落とす。
+	if (queued == false)
+	{
+		AbortOnEntityCommandOverflow();
+	}
+	return queued;
+}
+
+bool nox::World::QueueRemoveComponent(
+	const nox::EntityId entity,
+	const nox::ComponentTypeInfo& type_info)noexcept
+{
+	if (EnsureDeferredStructuralChangeAllowed() == false)
+	{
+		return false;
+	}
+
+	const bool queued = entity_command_buffer_.TryRemoveComponent(entity, type_info);
+	if (queued == false)
+	{
+		AbortOnEntityCommandOverflow();
 	}
 	return queued;
 }
 
 void nox::World::FlushEntityCommands()noexcept
 {
+	//	Playbackは実データを動かすので、列挙が1つでも開いていたら踏んではならない。
+	//	ここでreturnして見送ると、積まれたコマンドが次フェーズ終端まで持ち越される。
+	//	それは「遅延生成のIDを即時にする」判断で決定性が壊れるとして退けた繰り越しそのものなので、
+	//	異常系として残さない。溢れと同じく即座に落とす(Masterでもアサートが消えるだけで挙動は同じ)。
+	NOX_ASSERT(IsIteratingEntities() == false, u8"entityの列挙中にPlaybackはできません");
+	if (IsIteratingEntities())
+	{
+		std::abort();
+	}
+
 	entity_command_buffer_.BeginPlayback();
 	nox::uint32 command_index = 0u;
 	while (command_index < entity_command_buffer_.GetLength())
@@ -1234,6 +1385,33 @@ void nox::World::FlushEntityCommands()noexcept
 		case nox::EntityCommandType::Destroy:
 			DestroyEntityImmediate(nox::EntityId{ command.entity_raw });
 			break;
+
+		case nox::EntityCommandType::AddComponent:
+		{
+			NOX_ASSERT(command.type_info != nullptr, u8"AddComponentコマンドに型情報がありません");
+			if (command.type_info == nullptr)
+			{
+				break;
+			}
+
+			void* const destination = AddComponentImmediate(nox::EntityId{ command.entity_raw }, *command.type_info);
+			const void* const payload = entity_command_buffer_.TryGetPayload(command);
+			if (destination != nullptr && payload != nullptr)
+			{
+				//	ComponentDataは常にtrivially copyableなのでmemcpyで足りる。
+				std::memcpy(destination, payload, command.payload_size);
+			}
+			break;
+		}
+
+		case nox::EntityCommandType::RemoveComponent:
+			NOX_ASSERT(command.type_info != nullptr, u8"RemoveComponentコマンドに型情報がありません");
+			if (command.type_info != nullptr)
+			{
+				RemoveComponentImmediate(nox::EntityId{ command.entity_raw }, *command.type_info);
+			}
+			break;
+
 		default:
 			NOX_ASSERT(false, u8"Unknown entity command");
 			break;
@@ -1258,17 +1436,31 @@ bool nox::World::IsAlive(nox::EntityId entity)const noexcept
 
 void* nox::World::AddComponent(const nox::EntityId entity, const nox::ComponentTypeInfo& type_info)
 {
-	NOX_ASSERT(is_executing_system_phase_.load(std::memory_order_acquire) == false,
-		u8"System実行中の構造変更はサポートされていません");
-	if (is_executing_system_phase_.load(std::memory_order_acquire))
+	if (EnsureImmediateStructuralChangeAllowed() == false)
 	{
 		return nullptr;
 	}
 
+	//	stale handleの検出は即時系の入口だけで行う。
+	//	AddComponentImmediateはPlaybackとも共通なので、あちらで落とすと
+	//	「同一フェーズ内でDestroyされたentityへのAdd」という遅延系では正常な競合まで
+	//	巻き込んでしまう(DeferredAddOnEntityDestroyedInSamePhaseIsSkipped を参照)。
+	//	Masterでは NOX_ASSERT ごと消えるので、検査用のローカルも一緒に消えるよう
+	//	IsEntityGenerationLive() の呼び出しをアサートの中へ畳んでおく
+	//	(外に出すと未参照ローカルとしてMasterだけ警告が出る)。
+	NOX_ASSERT(IsEntityGenerationLive(entity),
+		u8"破棄済みのentityにComponentDataを追加しようとしました: index={0}", entity.index);
+
+	return AddComponentImmediate(entity, type_info);
+}
+
+void* nox::World::AddComponentImmediate(const nox::EntityId entity, const nox::ComponentTypeInfo& type_info)
+{
 	auto* const entity_record = TryGetEntityRecord(entity.index);
 	if (entity_record == nullptr || entity_record->generation.load(std::memory_order_acquire) != entity.generation)
 	{
-		NOX_ASSERT(false, u8"破棄済みのentityにComponentDataを追加しようとしました: index={0}", entity.index);
+		//	Playbackから来た場合、同一フェーズ内で先にDestroyが再生されただけなので黙って捨てる。
+		//	RemoveComponentImmediateが昔から同じ扱いをしている。
 		return nullptr;
 	}
 
@@ -1289,13 +1481,16 @@ void* nox::World::AddComponent(const nox::EntityId entity, const nox::ComponentT
 
 void nox::World::RemoveComponent(const nox::EntityId entity, const nox::ComponentTypeInfo& type_info)
 {
-	NOX_ASSERT(is_executing_system_phase_.load(std::memory_order_acquire) == false,
-		u8"System実行中の構造変更はサポートされていません");
-	if (is_executing_system_phase_.load(std::memory_order_acquire))
+	if (EnsureImmediateStructuralChangeAllowed() == false)
 	{
 		return;
 	}
 
+	RemoveComponentImmediate(entity, type_info);
+}
+
+void nox::World::RemoveComponentImmediate(const nox::EntityId entity, const nox::ComponentTypeInfo& type_info)
+{
 	auto* const entity_record = TryGetEntityRecord(entity.index);
 	if (entity_record == nullptr ||
 		entity_record->generation.load(std::memory_order_acquire) != entity.generation ||

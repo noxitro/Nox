@@ -20,6 +20,26 @@ namespace nox
 	class SystemBase;
 	class EngineModule;
 
+	/// @brief 即時系の構造変更API(CreateEntity / DestroyEntity / AddComponent / RemoveComponent)を
+	///        「今」呼んでよいかどうか。
+	/// @details 即時系はArchetype間の物理移動とswap-removeを伴うため、列挙中に呼ぶと
+	///          列挙側が握っている列ポインタと行番号が壊れる。
+	///
+	///          このenumを返す nox::World::GetStructuralChangePermission() が、
+	///          即時系4本すべてが実際に分岐している唯一の判定点である。
+	///          アサートは「なぜ弾かれたか」を開発者へ伝えるだけで、弾く判断自体はこの値が行う。
+	///          そのためテストからはこの値を直接見れば、アサートを発火させずに
+	///          制約が働いていることを確認できる。
+	enum class StructuralChangePermission : nox::uint8
+	{
+		/// @brief 即時系を呼んでよい。
+		Allowed,
+		/// @brief フェーズ(System / EntityLogic)実行中。遅延系(nox::EntityCommands)を使うこと。
+		DeniedDuringPhase,
+		/// @brief entityの列挙中。列挙が終わるまで構造を変えられない。
+		DeniedDuringIteration,
+	};
+
 	class World final: public nox::Object
 	{
 		NOX_DECLARE_OBJECT(World, nox::Object);
@@ -31,7 +51,20 @@ namespace nox
 		static constexpr nox::uint32 k_max_entity_count = k_entity_record_page_size * k_max_entity_page_count;
 		static constexpr nox::uint32 k_invalid_entity_index = std::numeric_limits<nox::uint32>::max();
 		static constexpr nox::uint32 k_initial_live_generation = 1u;
-		static constexpr nox::uint32 k_entity_command_capacity = 1024u;
+		/// @brief 1フェーズで積める遅延構造変更の上限。
+		/// @details 弾1発の生成が Create + Add×2〜3 でおよそ3コマンドなので、
+		///          1024だと340発/フレームで溢れて abort する。それでは実用に足りないため4096にした。
+		///          溢れは黙って捨てずに落とす設計なので、
+		///          出荷前に GetEntityCommandPeakLength() で実測して裏を取ること。
+		static constexpr nox::uint32 k_entity_command_capacity = 4096u;
+		/// @brief 遅延Addが運ぶComponentData初期値の総バイト数。
+		/// @details Worldに直接埋め込む固定長で、確保は一切走らない。1コマンドあたり64Bを見込む。
+		static constexpr nox::uint32 k_entity_command_payload_bytes = k_entity_command_capacity * 64u;
+		/// @brief structural_change_state_のビット割り当て。
+		/// @details 「フェーズ実行中」と「列挙の入れ子深度」を1ワードに詰めるので、
+		///          即時系の判定はatomicロード1回で済む。
+		static constexpr nox::uint32 k_structural_change_phase_bit = 0x80000000u;
+		static constexpr nox::uint32 k_structural_change_iteration_mask = ~k_structural_change_phase_bit;
 		static constexpr nox::uint32 k_max_service_count = 64u;
 		static constexpr nox::uint32 k_initial_archetype_capacity = 64u;
 		/// @brief 1レイヤーに載せられるノード数の上限。ジョブ配列をスタックに置くために固定する。
@@ -127,10 +160,89 @@ namespace nox
 		nox::U8FixedString<3072> BuildRuntimeDependencyGraphText()const;
 #endif // !NOX_MASTER
 
+#pragma region 構造変更(即時系)
+		/// @brief entityを生成する。列挙中・フェーズ実行中は呼べない。
 		nox::EntityId CreateEntity();
+		/// @brief entityを即座に破棄する。列挙中・フェーズ実行中は呼べない。
 		void DestroyEntity(nox::EntityId entity);
-		[[nodiscard]] bool QueueDestroyEntity(nox::EntityId entity)noexcept;
 		bool IsAlive(nox::EntityId entity)const noexcept;
+
+		/// @brief 即時系の構造変更を今呼んでよいか。
+		/// @details 即時系4本(CreateEntity / DestroyEntity / AddComponent / RemoveComponent)が
+		///          実際に分岐している唯一の判定点。アサートは理由を伝えるだけで、
+		///          弾く判断そのものはこの値が行う。
+		///
+		///          Master構成でも生き続ける。NOX_ASSERTはMasterで消えるが、
+		///          早期returnまで消すと「Debugでは安全にno-opになる操作がMasterではArchetypeを
+		///          壊す」という構成間の挙動差になるため。コストはatomicロード1回で、
+		///          Archetype間の実データ移動に比べれば無視できる。
+		[[nodiscard]] nox::StructuralChangePermission GetStructuralChangePermission()const noexcept;
+
+		[[nodiscard]] inline bool IsExecutingSystemPhase()const noexcept
+		{
+			return (structural_change_state_.load(std::memory_order_seq_cst) & k_structural_change_phase_bit) != 0u;
+		}
+
+		[[nodiscard]] inline bool IsIteratingEntities()const noexcept
+		{
+			return (structural_change_state_.load(std::memory_order_seq_cst) & k_structural_change_iteration_mask) != 0u;
+		}
+
+		/// @brief entityの列挙に入る。この間、即時系の構造変更は弾かれる。
+		/// @details 入れ子にできる。Chunk並列では各ワーカーが独立に出入りするので、
+		///          CASではなくfetch_add/subで回す。
+		///
+		///          フェーズ内での並列実行に対する本命の防御はフェーズbitのほうで、
+		///          このカウンタが主に拾うのは「フェーズの外で列挙している間の即時系呼び出し」。
+		///          詳細は structural_change_state_ の注記を参照。
+		void EnterEntityIteration()noexcept;
+		void LeaveEntityIteration()noexcept;
+#pragma endregion
+
+#pragma region 構造変更(遅延系)
+		//	いずれもフェーズ実行中または列挙中にのみ記録できる。
+		//	即時系が呼べないときのための系統なので、両者の可否はちょうど相補になっている。
+		//	通常は nox::EntityCommands 経由で呼ばれる。
+
+		/// @brief フェーズ実行中・列挙中にentityのIdだけを即座に払い出す。
+		/// @details EntityRecordを1件触るだけでArchetypeにも他entityの行にも触れないため、
+		///          列挙中のポインタと行番号を壊さない。ComponentDataはQueueAddComponentで積む。
+		nox::EntityId CreateEntityDuringPhase()noexcept;
+		[[nodiscard]] bool QueueDestroyEntity(nox::EntityId entity)noexcept;
+		/// @brief ComponentDataの追加を予約する。sourceが非nullならその初期値を複製して運ぶ。
+		[[nodiscard]] bool QueueAddComponent(
+			nox::EntityId entity,
+			const nox::ComponentTypeInfo& type_info,
+			const void* source)noexcept;
+		[[nodiscard]] bool QueueRemoveComponent(nox::EntityId entity, const nox::ComponentTypeInfo& type_info)noexcept;
+
+		/// @brief コマンドバッファがこれまでに使った最大コマンド数 / ペイロードバイト数。
+		/// @details 溢れたら abort する設計なので、容量を根拠づけるための実測窓口。
+		///          全構成で使える(Masterで容量を詰めるときにも要るため)。
+		[[nodiscard]] inline nox::uint32 GetEntityCommandPeakLength()const noexcept
+		{
+			return entity_command_buffer_.GetPeakLength();
+		}
+
+		[[nodiscard]] inline nox::uint32 GetEntityCommandPeakPayloadLength()const noexcept
+		{
+			return entity_command_buffer_.GetPeakPayloadLength();
+		}
+
+		[[nodiscard]] static inline constexpr nox::uint32 GetEntityCommandCapacity()noexcept
+		{
+			return k_entity_command_capacity;
+		}
+
+		[[nodiscard]] static inline constexpr nox::uint32 GetEntityCommandPayloadCapacity()noexcept
+		{
+			return k_entity_command_payload_bytes;
+		}
+
+		/// @brief 積まれた構造変更をまとめて反映する(Playbackポイント)。
+		/// @details フェーズ終端でWorld自身が呼ぶ。列挙中は呼べない。
+		void FlushEntityCommands()noexcept;
+#pragma endregion
 
 #pragma region ComponentData
 		/// @brief ComponentDataを追加する。Archetype間の移動を伴うため列挙中・System実行中は呼べない。
@@ -201,8 +313,24 @@ namespace nox
 		void BuildExecuteNodeList(std::span<nox::SystemBase*> system_list);
 		void ExecutePhase(const nox::SystemPhaseType phase_type);
 		void RegisterSystem(nox::SystemBase& system);
-		void FlushEntityCommands()noexcept;
+
+		/// @brief 制約を検査せずに構造を変える本体。Playbackと即時系の共通の実装。
+		[[nodiscard]] nox::EntityId CreateEntityImmediate();
 		void DestroyEntityImmediate(nox::EntityId entity)noexcept;
+		[[nodiscard]] void* AddComponentImmediate(nox::EntityId entity, const nox::ComponentTypeInfo& type_info);
+		void RemoveComponentImmediate(nox::EntityId entity, const nox::ComponentTypeInfo& type_info);
+
+		/// @brief entityのハンドルが今も生きているか(stale handleの検出用)。
+		[[nodiscard]] bool IsEntityGenerationLive(nox::EntityId entity)const noexcept;
+
+		/// @brief コマンドバッファが溢れたときに、理由を残して落とす。
+		/// @details 構造変更を黙って捨てるのも次フレームへ繰り越すのも、後から原因を追えなくなる。
+		[[noreturn]] void AbortOnEntityCommandOverflow()noexcept;
+
+		/// @brief 即時系を呼んでよいか検査し、駄目なら理由をアサートで伝える。
+		[[nodiscard]] bool EnsureImmediateStructuralChangeAllowed()const noexcept;
+		/// @brief 遅延系を記録してよいか(=フェーズ実行中または列挙中か)検査する。
+		[[nodiscard]] bool EnsureDeferredStructuralChangeAllowed()const noexcept;
 
 		void CreateEntitySystems();
 		void CreateEntityLogicStorages();
@@ -285,8 +413,32 @@ namespace nox
 
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
 		std::atomic_bool kill_;
-		std::atomic_bool is_executing_system_phase_;
-		nox::EntityCommandBuffer<k_entity_command_capacity> entity_command_buffer_;
+		/// @brief 即時系の構造変更をブロックしている要因。
+		/// @details bit31 = フェーズ実行中 / bit0..30 = 列挙スコープの入れ子深度。
+		///          1ワードに詰めてあるので、即時系の判定はロード1回で済む。
+		///
+		///          【2つのビットの役割の違い】
+		///          並列実行に対する本命の防御は bit31(フェーズ)のほう。ExecutePhaseが
+		///          ワーカーへ配る前にメインスレッドで立て、Wait後に落とすため、
+		///          JobSystemのDispatch/Wait自体が同期点になり、全ワーカーから確実に見える。
+		///
+		///          列挙カウンタ(下位ビット)が主に拾うのは、フェーズの外で列挙している間の誤用
+		///          (Systemを直接Executeするツールやテスト、EntityLogicの単体呼び出しなど)。
+		///          フェーズ内ではbit31が先に立っているので、こちらは二重の網でしかない。
+		///
+		///          【memory_orderをseq_cstにしてある理由】
+		///          acq_relだと、列挙側のカウンタ増加と即時系側のロードとの間に
+		///          store-load順序(Dekker型)が入らず、「並列列挙中の即時系を必ず弾ける」とは言えない。
+		///          seq_cstなら全seq_cst操作に単一の全順序が入るため、見え方の遅れによる取りこぼしは無くなる
+		///          (それでも「即時系の呼び出しが本当に列挙開始より前」の場合は弾かれないが、
+		///           それは可視性の問題ではなく実際の事象順序なので正しい挙動)。
+		///
+		///          コストは実質ゼロ。この変数への書き込みは全てRMW(fetch_add/sub/or/and)で、
+		///          x64では lock xadd 等、ARM64では ldaxr/stlxr となり acq_rel と同じ命令。
+		///          ロード側も x64 では plain mov、ARM64 では ldar で acquire と同じ命令になる。
+		///          「速度優先」を崩さずに保証だけ強くできるので、弱める理由が無い。
+		std::atomic<nox::uint32> structural_change_state_;
+		nox::EntityCommandBuffer<k_entity_command_capacity, k_entity_command_payload_bytes> entity_command_buffer_;
 
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
 		nox::Vector<nox::Archetype*> archetypes_;

@@ -19,6 +19,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="core_self_test.cpp" />
+    <ClCompile Include="entity_structural_change_test.cpp" />
     <ClCompile Include="reflection_variable_test.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="test_new_delete.cpp" />
