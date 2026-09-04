@@ -201,13 +201,31 @@ namespace ReflectionGenerator;
 					"runtime"
 					];
 
-				ReadOnlySpan<string> ignoreModuleList = [
+				//	生成コードの先頭へ「<プロジェクト名>.h」の include を書き出さない
+				//	プロジェクトは 2 種類ある。性質が違うので分けてある。
+
+				//	(1) reflection_generated の pch.h から既に見えているモジュール。
+				//	    二重に include する必要が無いだけで、ヘッダ自体は存在する。
+				ReadOnlySpan<string> visibleFromPchModuleList = [
 						"unknown",
 						"kernel",
 						"core",
 						"reflection",
 						"reflection_generated",
 						];
+
+				//	(2) テスト実行ファイル。モジュールではないので
+				//	    「全部入りヘッダ」(<プロジェクト名>.h) をそもそも持たない。
+				//	    include を書き出すと存在しないファイルを指し、
+				//	    生成コード全ファイルが C1083 で落ちる
+				//	    (runtime_test.slnx から生成器を走らせたときに実際に踏んだ)。
+				//
+				//	    名前を 1 つずつ列挙するとテストプロジェクトを増やすたびに
+				//	    ここへの追記が要り、忘れると「存在しないヘッダを include」という
+				//	    原因の見えにくい壊れ方をする。そのためサフィックスで一律に弾く。
+				//	    runtime 配下のテストプロジェクトは kernel_test / core_test のように
+				//	    "_test" 終わりで統一されている (新規に足すときもこの規約に従うこと)。
+				const string testProjectSuffix = "_test";
 
 				foreach (string projectPath in GetProjectPathsFromSlnx(data.SolutionPath))
 				{
@@ -222,13 +240,17 @@ namespace ReflectionGenerator;
 					relative = relative.Replace("vcxproj", "h");
 					relative = relative.Replace("\\", "/");
 
+					bool isModule =
+						visibleFromPchModuleList.Contains(fileNameWithoutExtension) == false &&
+						fileNameWithoutExtension.EndsWith(testProjectSuffix, StringComparison.Ordinal) == false;
+
 					moduleInfoList.Add(new Generator.Generator.ARTIFACT_INFO()
 					{
 						Build = false,
 						ReBuild = false,
 						ArtifactName = fileNameWithoutExtension,
 						RelativePath = relative,
-						IsModule = !ignoreModuleList.Contains(fileNameWithoutExtension),
+						IsModule = isModule,
 					});
 				}
 			}

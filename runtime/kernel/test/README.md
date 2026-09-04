@@ -148,10 +148,15 @@ TEST(TestSuiteName, TestName)
 
 ## CI での扱い
 
-現状 `.github/workflows/ci.yml` は `runtime` のビルドのみを行っており、
-`runtime_test.slnx` のビルドおよびテスト実行は含まれていません。
-CI に組み込む場合は、gtest を含む vcpkg のリストアが CI 環境で
-成功することを確認したうえでステップを追加してください。
+`.github/workflows/ci.yml` の `test` ジョブが `runtime_test.slnx` を建て、
+`kernel_test.exe` と `core_test.exe` の両方を実行します。
+どちらか 1 本でも失敗すればジョブが落ちます。
+
+## core のテストについて
+
+`core` / `reflection` に依存するテストは `kernel_test` には入れません
+（kernel の単体テストがエンジン全部とコード生成器を引きずってしまうため）。
+`runtime/core_test/` に別プロジェクトがあります。
 
 ## 現在のテストカバレッジ
 

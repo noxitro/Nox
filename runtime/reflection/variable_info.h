@@ -201,11 +201,17 @@ namespace nox::reflection
 		template<class TInstanceType, class TValueType>
 		inline constexpr bool TrySetValue(TInstanceType&& instance, TValueType&& value)const
 		{
+			//	TInstanceType / TValueType は転送参照なので、左辺値を渡すと T& に、
+			//	const 左辺値なら const T& に推論される。
+			//	保持クラスの型 (containing_type_) も変数の型 (type_) も修飾なしで持っているので、
+			//	コンパイル時に修飾を落としてから Type を引く。
+			//	(Type::GetRemoveAllModifiersType() は修飾が無い型に対しては
+			//	 無効型を返す仕様なので、実行時に剥がすことはできない)
 			return TrySetValueMemberImpl(
 				const_cast<void*>(static_cast<const void*>(&instance)),
-				nox::reflection::Typeof<TInstanceType>(),
+				nox::reflection::Typeof<std::remove_cvref_t<TInstanceType>>(),
 				const_cast<void*>(static_cast<const void*>(&value)),
-				nox::reflection::Typeof<TValueType>()
+				nox::reflection::Typeof<std::remove_cvref_t<TValueType>>()
 			);
 		}
 
@@ -214,7 +220,7 @@ namespace nox::reflection
 		{
 			return TrySetValueGlobalImpl(
 				const_cast<void*>(static_cast<const void*>(&value)),
-				nox::reflection::Typeof<TValueType>()
+				nox::reflection::Typeof<std::remove_cvref_t<TValueType>>()
 			);
 		}
 
@@ -254,17 +260,10 @@ namespace nox::reflection
 		template<class R, class _InstanceType>
 		inline	constexpr	nox::reflection::ReflectionOptional<R>	TryGetValue(_InstanceType&& owner_instance)const
 		{
-			if (IsStatic() == true)
-			{
-				return std::nullopt;
-			}
-
-			if (type_.IsConvertible(nox::reflection::Typeof<R>()) == false)
-			{
-				return std::nullopt;
-			}
-
-			if (this->containing_type_.IsConvertible(nox::reflection::Typeof<_InstanceType>()) == false)
+			//	_InstanceType は転送参照なので、左辺値を渡すと T& に推論される。
+			//	保持クラスの型 (containing_type_) は修飾なしの T なので、
+			//	コンパイル時に修飾を落としてから Type を引く (setter 側と同じ)。
+			if (CheckMemberParams(nox::reflection::Typeof<R>(), nox::reflection::Typeof<std::remove_cvref_t<_InstanceType>>()) == false)
 			{
 				return std::nullopt;
 			}
@@ -281,12 +280,7 @@ namespace nox::reflection
 		template<class R>
 		inline	constexpr	nox::reflection::ReflectionOptional<R>	TryGetValue()const
 		{
-			if (IsStatic() == false)
-			{
-				return std::nullopt;
-			}
-
-			if (type_.IsConvertible(nox::reflection::Typeof<R>()) == false)
+			if (CheckParams(nox::reflection::Typeof<R>()) == false)
 			{
 				return std::nullopt;
 			}
@@ -298,20 +292,20 @@ namespace nox::reflection
 			});
 		}
 
+		/// @brief		メンバ変数のアドレスを取得する
+		/// @details	インスタンスを受け取る以上、対象はメンバ変数でなければならない。
+		///				静的変数のときは union が保持しているのは引数 0 個の
+		///				getter_address_global_func_ なので、ここから呼んではならない。
 		template<class _InstanceType>
 		inline void* TryGetValueAddress(_InstanceType&& owner_instance)const
 		{
-			if (IsStatic() == false)
+			if (IsStatic() == true)
 			{
 				return nullptr;
 			}
 
-			if (type_.IsConvertible(nox::reflection::Typeof<std::remove_const_t<void*>>()) == false)
-			{
-				return nullptr;
-			}
-
-			if (this->containing_type_.IsConvertible(nox::reflection::Typeof<_InstanceType>()) == false)
+			//	TryGetValue と同じく、コンパイル時に修飾を落としてから同一性を見る
+			if (nox::reflection::Typeof<std::remove_cvref_t<_InstanceType>>() != containing_type_)
 			{
 				return nullptr;
 			}
@@ -338,8 +332,12 @@ namespace nox::reflection
 			}
 		}
 #pragma region 呼び出しチェック関数
-		/// @brief メンバ関数アクセス時のチェック
-		/// @return 
+		/// @brief		メンバ変数アクセス時のチェック
+		/// @param		out_type			取り出す型
+		/// @param		owner_class_type	渡されたインスタンスの型。
+		///									**呼び出し側が修飾を落として渡すこと**
+		///									(Type::GetRemoveAllModifiersType() は修飾が無い型に対して
+		///									 無効型を返す仕様なので、ここで実行時に剥がすことはできない)
 		inline	constexpr	bool	CheckMemberParams(const Type& out_type, const Type& owner_class_type)const noexcept
 		{
 			if (IsStatic() == true)
@@ -352,7 +350,7 @@ namespace nox::reflection
 				return false;
 			}
 
-			if (owner_class_type.GetRemoveAllModifiersType() != containing_type_)
+			if (owner_class_type != containing_type_)
 			{
 				return false;
 			}
@@ -382,6 +380,8 @@ namespace nox::reflection
 #pragma endregion
 
 #pragma region 変数設定の内部実装
+		/// @param	owner_class_type	渡されたインスタンスの型。呼び出し側が修飾を落として渡すこと
+		/// @param	value_type			渡された値の型。呼び出し側が修飾を落として渡すこと
 		inline constexpr bool TrySetValueMemberImpl(void* instance, const Type& owner_class_type, void* value, const Type& value_type)const
 		{
 			if (setter_member_func_ == nullptr)
@@ -394,7 +394,7 @@ namespace nox::reflection
 				return false;
 			}
 
-			if (owner_class_type.GetRemoveAllModifiersType() != containing_type_)
+			if (owner_class_type != containing_type_)
 			{
 				return false;
 			}
