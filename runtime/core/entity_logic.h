@@ -47,6 +47,10 @@ namespace nox
 		std::span<const nox::ServiceAccess>(*get_service_accesses)()noexcept;
 		std::string_view name;
 		nox::SystemPhaseType phase;
+		/// @brief このメソッドが遅延構造変更を出しうるか(= nox::EntityCommands& を宣言しているか)。
+		/// @details 引数リストから導出される。宣言していないメソッドは1コマンドも積めないので、
+		///          Worldはこのメソッドのぶんのコマンドバッファを確保しない。
+		bool emits_structural_change;
 	};
 
 	/// @brief EntityLogic型ごとに1つだけ作られる静的記述子。
@@ -233,6 +237,7 @@ namespace nox
 			.get_service_accesses = []()noexcept { return Signature::GetServiceAccesses(); },
 			.name = name,
 			.phase = _Phase,
+			.emits_structural_change = (Signature::k_commands_parameter_count != 0u),
 		};
 	}
 
@@ -346,6 +351,7 @@ namespace nox::detail
 			.get_service_accesses = []()noexcept { return Signature::GetServiceAccesses(); },
 			.name = name,
 			.phase = _Phase,
+			.emits_structural_change = (Signature::k_commands_parameter_count != 0u),
 		};
 	}
 }

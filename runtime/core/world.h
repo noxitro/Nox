@@ -19,6 +19,7 @@ namespace nox
 	class Component;
 	class SystemBase;
 	class EngineModule;
+	class World;
 
 	/// @brief 即時系の構造変更API(CreateEntity / DestroyEntity / AddComponent / RemoveComponent)を
 	///        「今」呼んでよいかどうか。
@@ -40,6 +41,35 @@ namespace nox
 		DeniedDuringIteration,
 	};
 
+	/// @brief 遅延構造変更の記録先を「今このスレッドが実行しているノード」へ束ねるスコープ。
+	/// @details 遅延系のコマンドバッファは「構造変更を出しうるノード」1本ずつあり、
+	///          Playbackはその登録順に回る。
+	///          記録側(nox::EntityCommands)は引数リストにWorldしか持たないので、
+	///          「どのノードのバッファへ積むか」はスレッドローカルな束縛で伝える。
+	///          こうしておくと、EntityLogic / EntitySystem の書き手には何の記述も増えない。
+	///
+	///          入れ子を必ず保存・復元する。ジョブを配った側のスレッドは Wait の内側でも
+	///          別ノードのジョブを引いて働くため、単純な set/clear では束縛が壊れる。
+	///
+	///          エンジン(nox::World::ExecuteNode とChunkジョブのthunk)が使う。
+	///          テストからノード実行を模すためにも使えるよう公開してある。
+	class WorldNodeCommandScope final
+	{
+	public:
+		/// @brief node_indexは nox::UpdaterNode::command_buffer_index (フェーズ内で一意)。
+		/// @details 構造変更を出さないノードは nox::k_invalid_updater_command_buffer_index を渡す。
+		///          その状態で記録しようとした場合はアサートで弾かれる(宣言と実装の食い違い)。
+		WorldNodeCommandScope(const nox::World& world, nox::uint32 node_index)noexcept;
+		~WorldNodeCommandScope()noexcept;
+
+		WorldNodeCommandScope(const WorldNodeCommandScope&) = delete;
+		WorldNodeCommandScope& operator=(const WorldNodeCommandScope&) = delete;
+
+	private:
+		const nox::World* previous_world_;
+		nox::uint32 previous_node_index_;
+	};
+
 	class World final: public nox::Object
 	{
 		NOX_DECLARE_OBJECT(World, nox::Object);
@@ -51,15 +81,30 @@ namespace nox
 		static constexpr nox::uint32 k_max_entity_count = k_entity_record_page_size * k_max_entity_page_count;
 		static constexpr nox::uint32 k_invalid_entity_index = std::numeric_limits<nox::uint32>::max();
 		static constexpr nox::uint32 k_initial_live_generation = 1u;
-		/// @brief 1フェーズで積める遅延構造変更の上限。
-		/// @details 弾1発の生成が Create + Add×2〜3 でおよそ3コマンドなので、
-		///          1024だと340発/フレームで溢れて abort する。それでは実用に足りないため4096にした。
-		///          溢れは黙って捨てずに落とす設計なので、
-		///          出荷前に GetEntityCommandPeakLength() で実測して裏を取ること。
-		static constexpr nox::uint32 k_entity_command_capacity = 4096u;
-		/// @brief 遅延Addが運ぶComponentData初期値の総バイト数。
-		/// @details Worldに直接埋め込む固定長で、確保は一切走らない。1コマンドあたり64Bを見込む。
+		/// @brief コマンドバッファ1本が積める遅延構造変更の上限。
+		/// @details 1本 = UpdaterGraphのノード1つ分。フェーズ全体の予算ではない。
+		///
+		///          弾1発の生成が Create + Add×2〜3 でおよそ3コマンドなので、1024なら
+		///          「1つのSystem(またはEntityLogicメソッド)が1フェーズで341発生成できる」に相当する。
+		///          60fpsで毎フレーム341発を出し続けるSystemは実在しない規模なので、ここを起点にした。
+		///          ノード単位に分ける前は4096だったが、あれは全ノードの合計に対する予算だった。
+		///          分割後の1本は1ノード分しか受けないので、同じ数字を持ち回る必要が無い。
+		///
+		///          既知の限界: 「1つのノードが1フレームで大量に破棄する」形は生成より数が出る。
+		///          画面上の全entityを1ノードで一括Destroyするような設計(いわゆるボム)は
+		///          entity数がそのままコマンド数になるため、ここを超え得る。
+		///          その場合は破棄をフレームに分散させるか、この定数を上げること。
+		///
+		///          溢れは黙って捨てずに落とす設計なので、出荷前に
+		///          GetEntityCommandPeakLength() で実測して裏を取ること。
+		static constexpr nox::uint32 k_entity_command_capacity = 1024u;
+		/// @brief 遅延Addが運ぶComponentData初期値の総バイト数(コマンドバッファ1本あたり)。
+		/// @details 1コマンドあたり64Bを見込む。ComponentDataは実測でTransform相当が最大級なので、
+		///          64Bあれば全コマンドがAddでも足りる。
 		static constexpr nox::uint32 k_entity_command_payload_bytes = k_entity_command_capacity * 64u;
+		/// @brief コマンドバッファ1本の型。ノードごとに1本ずつ持つ。
+		using EntityCommandBufferType =
+			nox::EntityCommandBuffer<k_entity_command_capacity, k_entity_command_payload_bytes>;
 		/// @brief structural_change_state_のビット割り当て。
 		/// @details 「フェーズ実行中」と「列挙の入れ子深度」を1ワードに詰めるので、
 		///          即時系の判定はatomicロード1回で済む。
@@ -125,6 +170,8 @@ namespace nox
 			nox::EntitySystemBase* system;
 			nox::Archetype* archetype;
 			nox::uint32 chunk_index;
+			/// @brief 配り元のノード番号。ジョブを引いたワーカーが記録先を束ね直すために要る。
+			nox::uint32 node_index;
 		};
 	public:
 		World();
@@ -216,18 +263,37 @@ namespace nox
 			const void* source)noexcept;
 		[[nodiscard]] bool QueueRemoveComponent(nox::EntityId entity, const nox::ComponentTypeInfo& type_info)noexcept;
 
+		/// @brief ノード用コマンドバッファを確保する。Initがグラフを組んでから1回だけ呼ぶ。
+		/// @details 確保はここだけ。フレーム中には一切走らない。
+		///          既に同数以上を確保済みなら何もしない。
+		///
+		///          必要な本数は「ノード数」ではなく「nox::EntityCommands& を宣言したノードの数」。
+		///          宣言していないノードは1コマンドも積めないことが引数リストから分かるので、
+		///          そこへ空バッファを割り当てない。ノード数が増えるほど効く。
+		void ReserveNodeEntityCommandBuffers(nox::uint32 node_count);
+
+		/// @brief 確保済みのノード用コマンドバッファの本数。
+		[[nodiscard]] inline nox::uint32 GetNodeEntityCommandBufferCount()const noexcept
+		{
+			return node_command_buffer_count_;
+		}
+
 		/// @brief コマンドバッファがこれまでに使った最大コマンド数 / ペイロードバイト数。
 		/// @details 溢れたら abort する設計なので、容量を根拠づけるための実測窓口。
 		///          全構成で使える(Masterで容量を詰めるときにも要るため)。
-		[[nodiscard]] inline nox::uint32 GetEntityCommandPeakLength()const noexcept
-		{
-			return entity_command_buffer_.GetPeakLength();
-		}
+		///
+		///          引数なしの版は「1本あたりの最大値のうち最大のもの」を返す。
+		///          容量は1本ごとに効くので、合計ではなく最大を見るのが容量判断の正しい指標になる。
+		[[nodiscard]] nox::uint32 GetEntityCommandPeakLength()const noexcept;
+		[[nodiscard]] nox::uint32 GetEntityCommandPeakPayloadLength()const noexcept;
 
-		[[nodiscard]] inline nox::uint32 GetEntityCommandPeakPayloadLength()const noexcept
-		{
-			return entity_command_buffer_.GetPeakPayloadLength();
-		}
+		/// @brief ノード1本ぶんのhigh-water mark。node_indexは nox::UpdaterNode::command_buffer_index。
+		/// @details 未確保の番号を渡した場合は0を返す。
+		[[nodiscard]] nox::uint32 GetNodeEntityCommandPeakLength(nox::uint32 node_index)const noexcept;
+		[[nodiscard]] nox::uint32 GetNodeEntityCommandPeakPayloadLength(nox::uint32 node_index)const noexcept;
+
+		/// @brief ノードの外(=どのノードにも束縛されていない状態)で積まれたコマンドのhigh-water mark。
+		[[nodiscard]] nox::uint32 GetOutOfNodeEntityCommandPeakLength()const noexcept;
 
 		[[nodiscard]] static inline constexpr nox::uint32 GetEntityCommandCapacity()noexcept
 		{
@@ -241,6 +307,17 @@ namespace nox
 
 		/// @brief 積まれた構造変更をまとめて反映する(Playbackポイント)。
 		/// @details フェーズ終端でWorld自身が呼ぶ。列挙中は呼べない。
+		///
+		///          【Playback順が決定的である根拠】
+		///          コマンドバッファは「遅延構造変更を出しうるノード」1つにつき1本あり、再生は
+		///          「ノード外バッファ → バッファ0 → バッファ1 → …」の固定順で回す。
+		///          バッファ番号は nox::UpdaterNode::command_buffer_index で、
+		///          UpdaterGraphの登録順に昇順で詰めて振られる。
+		///          これは構築時に決まりフレーム間で動かない(かつ衝突辺が必ず
+		///          小さい番号から大きい番号へ張られるためトポロジカル順でもある)。
+		///          よって「どのワーカーがどのノードを先に走らせたか」はPlaybackの順序に影響しない。
+		///          ノード外バッファを先頭に置いているのは、そこへ積まれるのが
+		///          UpdaterGraphのディスパッチより前に走る旧SystemPhaseなど、時間的に先行する経路だから。
 		void FlushEntityCommands()noexcept;
 #pragma endregion
 
@@ -323,9 +400,18 @@ namespace nox
 		/// @brief entityのハンドルが今も生きているか(stale handleの検出用)。
 		[[nodiscard]] bool IsEntityGenerationLive(nox::EntityId entity)const noexcept;
 
+		/// @brief 今このスレッドが積むべきコマンドバッファ。
+		/// @details nox::WorldNodeCommandScope で束縛されていればそのノードのもの、
+		///          束縛が無い(またはこのWorldのものでない)ならノード外バッファ。
+		[[nodiscard]] nox::World::EntityCommandBufferType& GetCurrentEntityCommandBuffer()noexcept;
+
+		/// @brief コマンドバッファ1本を再生して空にする。
+		void PlaybackEntityCommandBuffer(nox::World::EntityCommandBufferType& buffer)noexcept;
+
 		/// @brief コマンドバッファが溢れたときに、理由を残して落とす。
 		/// @details 構造変更を黙って捨てるのも次フレームへ繰り越すのも、後から原因を追えなくなる。
-		[[noreturn]] void AbortOnEntityCommandOverflow()noexcept;
+		[[noreturn]] void AbortOnEntityCommandOverflow(
+			const nox::World::EntityCommandBufferType& buffer)noexcept;
 
 		/// @brief 即時系を呼んでよいか検査し、駄目なら理由をアサートで伝える。
 		[[nodiscard]] bool EnsureImmediateStructuralChangeAllowed()const noexcept;
@@ -347,7 +433,7 @@ namespace nox
 		/// @brief EntitySystemの列挙をChunk単位でワーカーへ配る(stage 2c)。
 		/// @details ノードの排他はExecuteNodeが既に取っている前提。Chunk同士は互いに素なメモリなので、
 		///          この内側では追加の排他は要らない。
-		void ExecuteEntitySystemParallel(nox::EntitySystemBase& system);
+		void ExecuteEntitySystemParallel(nox::EntitySystemBase& system, nox::uint32 node_index);
 		/// @brief ExecuteChunkをジョブとして呼ぶためのthunk。contextはChunkJobContext*。
 		static void ExecuteEntitySystemChunkJob(void* context);
 		/// @brief entityのComponentData構成が変わったので、EntityLogicの生成/破棄を追従させる。
@@ -438,7 +524,23 @@ namespace nox
 		///          ロード側も x64 では plain mov、ARM64 では ldar で acquire と同じ命令になる。
 		///          「速度優先」を崩さずに保証だけ強くできるので、弱める理由が無い。
 		std::atomic<nox::uint32> structural_change_state_;
-		nox::EntityCommandBuffer<k_entity_command_capacity, k_entity_command_payload_bytes> entity_command_buffer_;
+		/// @brief どのノードにも束縛されていない状態で積まれたコマンドの受け皿。
+		/// @details 旧SystemPhase(system_phase_table_)の実行中や、ツール・テストが
+		///          自前で列挙している間に積まれたぶんがここへ入る。いずれもUpdaterGraphの
+		///          並列ディスパッチの外なので、この1本の中の順序も決定的になる。
+		///          Worldに埋め込む固定長。Initを呼ばないWorld(テスト等)でも必ず存在する。
+		nox::World::EntityCommandBufferType out_of_node_command_buffer_;
+		/// @brief ノードごとのコマンドバッファ。要素番号は nox::UpdaterNode::command_buffer_index。
+		/// @details Initで一度だけ確保する。フレーム中の確保・解放は無い。
+		///          Worldへ固定長配列で埋め込まないのは、ノード数がプロジェクト次第で
+		///          「上限ぶんを常に抱える」形になるため。実際に要る本数だけ持つほうが素直に軽い。
+		///          本数は「nox::EntityCommands& を宣言したノードの数」で、
+		///          ノード総数より通常かなり少ない。
+		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
+		nox::World::EntityCommandBufferType* node_command_buffers_;
+
+		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
+		nox::uint32 node_command_buffer_count_;
 
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
 		nox::Vector<nox::Archetype*> archetypes_;

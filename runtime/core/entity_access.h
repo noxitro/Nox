@@ -238,6 +238,12 @@ namespace nox
 		static constexpr nox::uint32 k_service_parameter_count =
 			((nox::detail::IsServiceParameterKind(Traits<Parameters>::k_kind) ? 1u : 0u) + ... + 0u);
 
+		/// @brief nox::EntityCommands& を受けている引数の数。
+		/// @details 遅延構造変更を出す宣言そのもの。Chunk並列(k_parallel_for_each)との
+		///          両立可否をコンパイル時に判定するために数える。
+		static constexpr nox::uint32 k_commands_parameter_count =
+			((Traits<Parameters>::k_kind == nox::EntityParameterKind::Commands ? 1u : 0u) + ... + 0u);
+
 		/// @brief EntityIdは省略可能だが、書く場合は必ず先頭1つ。
 		static constexpr bool k_entity_parameter_is_leading =
 			(k_entity_parameter_count == 0u) ||
