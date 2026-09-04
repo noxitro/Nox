@@ -24,6 +24,36 @@ kernel の単体テストがエンジン全部とコード生成器を引きず�
 | `test_new_delete.cpp` | gtest の DLL とヒープを揃えるための標準 `operator new` / `delete`（`kernel/test/README.md` の説明と同じ理由。これが無いと `main` 到達前に落ちる） |
 | `core_self_test.cpp` | `core/test/*.cpp` にある `NOX_ASSERT` ベースのセルフテストを gtest のケースとして走らせる |
 | `reflection_variable_test.cpp` | `nox::reflection::VariableInfo` の getter / setter / アドレス取得の回帰テスト |
+| `updater_graph_layering_test.cpp` | `UpdaterGraph` の衝突判定とレイヤリングの検証。時間に依存しない |
+| `updater_graph_benchmark.cpp` | 並列化が実際に効くかの実測。全ケース `DISABLED_` で CI では走らない |
+| `updater_worker_count_test.cpp` | `--serial-updater` / `--updater-workers=N` の解析規則の検証 |
+
+### UpdaterGraph のテストについて
+
+`updater_graph_layering_test.cpp` は `nox::ConflictsUpdaterNodeAccess` /
+`nox::BuildUpdaterLayerIndices` / `nox::UpdaterGraph::Rebuild` を直接叩く。
+いずれも public かつ `World` 非依存なので、`World::Init()` が private でも検証できる
+（`updater_graph.h` にもその意図が書いてある）。
+
+EntityLogic の更新メソッドは通常リフレクション生成コードが購読するが、ここでは
+`nox::EntityLogicMethodTable` の手書き特殊化（`entity_logic.h` が用意している
+エスケープハッチ）を使っている。おかげでテスト専用の型を `core/test/test_types.h` へ
+足す必要がなく、Master でテスト型のリフレクションが生成されない事情とも無関係でいられる。
+
+`updater_graph_benchmark.cpp` は実行時間に依存するので CI に載せない。手で測るときは:
+
+```cmd
+build\runtime_test\x64\Release\core_test.exe --gtest_also_run_disabled_tests --gtest_filter=UpdaterGraphBenchmark.*
+```
+
+ワーカー数を振って中央値を表で出す。`runtime.exe` 側で同じことをするには
+`--serial-updater`（0本）か `--updater-workers=N` を渡す。
+
+その解析は `nox::ResolveUpdaterWorkerCount`（`world.h`。`World` のメンバではなく
+自由関数）が担う。「引数列 + 既定値」だけを見る純粋関数なので、
+`World` を組み立てず、プロセスの実引数にも論理プロセッサ数にも依存せずに
+`updater_worker_count_test.cpp` から全分岐を踏める。
+テスト都合で `World` の公開範囲は広げていない。
 
 ## リフレクションのテスト用型について
 

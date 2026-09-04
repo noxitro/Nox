@@ -22,6 +22,9 @@
     <ClCompile Include="entity_command_playback_test.cpp" />
     <ClCompile Include="entity_structural_change_test.cpp" />
     <ClCompile Include="reflection_variable_test.cpp" />
+    <ClCompile Include="updater_graph_layering_test.cpp" />
+    <ClCompile Include="updater_graph_benchmark.cpp" />
+    <ClCompile Include="updater_worker_count_test.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="test_new_delete.cpp" />
     <ClCompile Include="pch.cpp">
