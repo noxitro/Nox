@@ -40,16 +40,12 @@ jobs:
   # Build: runtime.slnx (runtime.exe まで) を
   #        2 つのコンパイラ x 3 構成 (Debug / Release / Master) で建てる
   #
-  # ClangCL は経緯から experimental 扱いのまま。
-  # 詳細は下の continue-on-error のコメントを参照。
+  # MSVC / ClangCL のどちらも必須ゲート。片方だけを信用しない理由は
+  # matrix の ClangCL のコメントを参照。
   # =========================================================
   build:
     name: Build runtime (${{ matrix.compiler }} / ${{ matrix.configuration }})
     runs-on: windows-latest
-
-    # ClangCL の失敗ではワークフロー全体を赤にしない。
-    # ジョブ自体は「失敗した」と表示されるので、緑に偽装はしていない。
-    continue-on-error: ${{ matrix.experimental }}
 
     strategy:
       fail-fast: false   # 片方が転んでももう片方は最後まで走らせる
@@ -71,60 +67,32 @@ jobs:
         include:
           - compiler: MSVC
             toolset: v145        # Visual Studio 2026 の MSVC ツールセット
-            experimental: false
           - compiler: ClangCL
             toolset: ClangCL     # VS 同梱の clang-cl を MSBuild 経由で使う
             # ---------------------------------------------------------
-            # ClangCL は長らく runtime.slnx を通せず、その名残で
-            # experimental (continue-on-error) 扱いのまま置いてある。
+            # ClangCL は長らく runtime.slnx を通せず experimental
+            # (continue-on-error) 扱いだったが、本ブランチで全ての壁を
+            # 解消したので必須ゲートへ格上げした。
             #
-            # 下に挙げた (1)(2)(3) はいずれも本ブランチで解消済みで、
-            # ローカル (Visual Studio 2026 / MSBuild 18) では
-            # Debug|x64 / Release|x64 / Master|x64 のいずれも
-            # exit 0 になることを確認した。
-            # ただし CI ランナー上ではまだ一度も緑を確認していないため、
-            # 実績が出るまでは experimental: true を維持する。
-            # CI で安定して通ることが確認できたら false へ落とすこと。
+            # 格上げした理由は「通るようになったから」ではなく、
+            # clang が MSVC の見逃す非適合を実際に拾ったから。
             #
-            # --- 以下は解消済みの経緯 (記録として残す) ---
+            #   - 生成コードの setter/getter が非ジェネリックラムダの
+            #     本体に if constexpr を直書きしており、破棄側の分岐も
+            #     意味検査される結果コピー不可の型で落ちていた。
+            #     つまりガードが実質機能していなかった (MSVC は素通り)
+            #   - database.cpp の未使用変数群、updater_graph.cpp の
+            #     未出力関数など、MSVC が報告しない実在の無駄
             #
-            # (1) reflection.vcxproj — 最初の壁
-            #     reflection/class_info.h(132,33): error :
-            #       member access into incomplete type
-            #       'const nox::reflection::ReflectionObject'
-            #     ClassInfo::GetAttribute<T>() 内の attribute_list_[i].get()
-            #     は T に依存しない式なので、clang はテンプレート定義の時点で
-            #     完全型を要求する。class_info.h には前方宣言しか無いため、
-            #     reflection.h 経由 (reflection_object.h が先に来る) でない
-            #     翻訳単位 — class_info.cpp 等 — で落ちる。MSVC はここの
-            #     検査を実体化時まで遅らせるので通ってしまう。
-            #     → class_info.h が reflection_object.h を自前で include
-            #       すれば解消することは確認済み。
+            # continue-on-error に戻すと、この検出力がそのまま死ぬ。
+            # 落ちたときは原因を直すこと。無効化で回避しないこと。
             #
-            # (2) core.vcxproj — (1) を直すと次に出る
-            #     core/dev/net/socket_scheduler.cpp(40,21) / (41,42): error :
-            #       reference to non-static member function must be called
-            #     SocketScheduler のコンストラクタにある
-            #       using t = decltype(Initialize);
-            #       NOX_U8_NAMEOF_FUNCTION(SocketScheduler::Initialize);
-            #     が、非静的メンバ関数を &Class:: 無しで綴っている
-            #     (MSVC の拡張)。どちらも使われていない残骸で、消せば通る。
-            #     → (1)(2) を直すと kernel / reflection / core / render は
-            #       clang-cl でビルドできる。
-            #
-            # (3) reflection_generated.vcxproj — ここは C++ の問題ではない
-            #     Directory.Build.targets(67,4): error MSB3073:
-            #       ReflectionGenerator.exe ... はコード 1 で終了しました
-            #     生成器が同梱する libclang 21.1.8 が、ClangCL 構成で
-            #     渡されたインクルードパス (VS 同梱 clang 22 のヘッダ) を
-            #     解析できず avx512*intrin.h で
-            #       error : use of undeclared identifier
-            #               '__builtin_elementwise_clzg' 等
-            #     を大量に出して -ferror-limit に達する。
-            #     解析用のインクルードパスをツールセットから切り離すか、
-            #     libclang を揃える必要があり、小さな修正では済まない。
+            # 解消済みの壁の詳細は下記コミットを参照:
+            #   58d1476 SocketScheduler の MSVC 拡張依存の残骸を削除
+            #   ca35cb7 ClassInfo の不完全型参照 (class_info.h)
+            #   ed5755c 生成器の解析インクルードパスをツールセットから分離
+            #   cf894a1 生成コードの if constexpr を関数テンプレートへ移動
             # ---------------------------------------------------------
-            experimental: true
 
     steps:
       - name: Checkout
@@ -180,7 +148,7 @@ jobs:
 
       # 要約に載らない前後の文脈を追いたいことがあるので、失敗時だけ全文を残す
       - name: Upload build log
-        # continue-on-error のジョブでも拾えるよう always() で判定する
+        # ジョブが落ちた後でも走らせたいので always() で判定する
         if: always() && steps.build.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
