@@ -1,9 +1,10 @@
 # ============================================================
 # CI (Runtime)
 #
-# 目的  : push / PR ごとに runtime を Debug|x64 でビルドし、
+# 目的  : push / PR ごとに runtime を Debug|x64 / Release|x64 でビルドし、
 #         GoogleTest スイートを実際に走らせて回帰を検知する。
-# 構成  : Build ジョブ (MSVC / ClangCL) と Test ジョブを並列実行。
+# 構成  : Build ジョブ (MSVC / ClangCL x Debug / Release) と
+#         Test ジョブ (Debug のみ) を並列実行。
 #         前準備は .github/actions/setup-nox-build に切り出してある。
 # 環境  : windows-latest。runtime の vcxproj は PlatformToolset=v145
 #         (Visual Studio 2026) を要求するため windows-2022 では動かない。
@@ -32,13 +33,14 @@ defaults:
 
 jobs:
   # =========================================================
-  # Build: runtime.slnx (runtime.exe まで) を 2 つのコンパイラで建てる
+  # Build: runtime.slnx (runtime.exe まで) を
+  #        2 つのコンパイラ x 2 構成 (Debug / Release) で建てる
   #
-  # ClangCL は現状ビルドが通らないため experimental 扱い。
+  # ClangCL は経緯から experimental 扱いのまま。
   # 詳細は下の continue-on-error のコメントを参照。
   # =========================================================
   build:
-    name: Build runtime (${{ matrix.compiler }})
+    name: Build runtime (${{ matrix.compiler }} / ${{ matrix.configuration }})
     runs-on: windows-latest
 
     # ClangCL の失敗ではワークフロー全体を赤にしない。
@@ -48,6 +50,13 @@ jobs:
     strategy:
       fail-fast: false   # 片方が転んでももう片方は最後まで走らせる
       matrix:
+        # compiler x configuration の直積 (4 ジョブ)。
+        # Release を足したのは、Debug しか建てていなかったせいで
+        # NOX_INFO_LINE / NOX_ERROR_LINE の無効化側が 2 引数固定のまま
+        # 壊れていた (C4002) のに誰も気付けなかったため。
+        # #if NOX_DEBUG の外側は Debug ビルドでは一切コンパイルされない。
+        compiler: [MSVC, ClangCL]
+        configuration: [Debug, Release]
         include:
           - compiler: MSVC
             toolset: v145        # Visual Studio 2026 の MSVC ツールセット
@@ -55,10 +64,17 @@ jobs:
           - compiler: ClangCL
             toolset: ClangCL     # VS 同梱の clang-cl を MSBuild 経由で使う
             # ---------------------------------------------------------
-            # 2026-09 時点で ClangCL は runtime.slnx を通せない。
-            # 実際に走らせて確かめた止まり方は次の 3 段。
-            # (1)(2) は C++ 側の小さな移植性の問題、(3) は生成器の設計上の
-            # 問題で、いずれも CI の範囲を越えるので手を付けていない。
+            # ClangCL は長らく runtime.slnx を通せず、その名残で
+            # experimental (continue-on-error) 扱いのまま置いてある。
+            #
+            # 下に挙げた (1)(2)(3) はいずれも本ブランチで解消済みで、
+            # ローカル (Visual Studio 2026 / MSBuild 18) では
+            # Debug|x64 / Release|x64 とも exit 0 になることを確認した。
+            # ただし CI ランナー上ではまだ一度も緑を確認していないため、
+            # 実績が出るまでは experimental: true を維持する。
+            # CI で安定して通ることが確認できたら false へ落とすこと。
+            #
+            # --- 以下は解消済みの経緯 (記録として残す) ---
             #
             # (1) reflection.vcxproj — 最初の壁
             #     reflection/class_info.h(132,33): error :
@@ -111,7 +127,7 @@ jobs:
         id: build
         run: |
           msbuild runtime\runtime.slnx `
-            /p:Configuration=Debug `
+            /p:Configuration=${{ matrix.configuration }} `
             /p:Platform=x64 `
             /p:PlatformToolset=${{ matrix.toolset }} `
             /m `
@@ -127,14 +143,14 @@ jobs:
           $status = if ($ok) { 'Build succeeded' } else { 'Build failed' }
 
           @"
-          ## $icon Build (${{ matrix.compiler }})
+          ## $icon Build (${{ matrix.compiler }} / ${{ matrix.configuration }})
 
-          | Item     | Value                  |
-          |----------|------------------------|
-          | Solution | runtime.slnx           |
-          | Toolset  | ${{ matrix.toolset }}  |
-          | Config   | Debug \| x64           |
-          | Result   | **$status**            |
+          | Item     | Value                                |
+          |----------|--------------------------------------|
+          | Solution | runtime.slnx                         |
+          | Toolset  | ${{ matrix.toolset }}                |
+          | Config   | ${{ matrix.configuration }} \| x64    |
+          | Result   | **$status**                          |
           "@ | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
 
           # 失敗時は build.log からエラー行を拾って貼る
@@ -156,7 +172,7 @@ jobs:
         if: always() && steps.build.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
-          name: build-log-${{ matrix.compiler }}
+          name: build-log-${{ matrix.compiler }}-${{ matrix.configuration }}
           path: build.log
           if-no-files-found: warn
 
