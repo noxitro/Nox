@@ -12,3 +12,4 @@
 #pragma once
 
 #include	"entity_ecs_test.h"
+#include	"reflection_variable_test_types.h"

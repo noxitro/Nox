@@ -161,14 +161,19 @@ jobs:
           if-no-files-found: warn
 
   # =========================================================
-  # Test: runtime_test.slnx を建てて kernel_test.exe を実際に走らせる
+  # Test: runtime_test.slnx を建てて GoogleTest の exe を実際に走らせる
   #
-  # kernel_test は runtime.slnx ではなく runtime_test.slnx 側にある
+  # テスト用の exe は runtime.slnx ではなく runtime_test.slnx 側にある
   # (gtest の復元が要るため意図的に分けられている)。
   # Build ジョブとは独立に走らせて総時間を詰めている。
+  #
+  #   - kernel_test : kernel だけに依存する下層のテスト
+  #   - core_test   : core / reflection / reflection_generated に依存するテスト
+  #                   (リフレクションの getter/setter は生成コードを実際に
+  #                    走らせないと検証できないので、生成器も動く)
   # =========================================================
   test:
-    name: Test (kernel_test / MSVC)
+    name: Test (kernel_test + core_test / MSVC)
     runs-on: windows-latest
 
     steps:
@@ -190,56 +195,67 @@ jobs:
 
       # OutDir は nox_common.props が build\$(SolutionName)\$(Platform)\$(Configuration)\
       # と決めているので、runtime_test.slnx の出力はここに落ちる。
-      # gtest.dll は kernel_test.vcxproj の PostBuildEvent が隣へ置く。
-      - name: Run kernel_test
+      # gtest.dll は各テスト vcxproj の PostBuildEvent が隣へ置く。
+      - name: Run GoogleTest suites
         id: gtest
         run: |
-          $exe = 'runtime\build\runtime_test\x64\Debug\kernel_test.exe'
-          if (-not (Test-Path $exe)) { throw "テスト実行ファイルが無い: $exe" }
+          $outDir = 'runtime\build\runtime_test\x64\Debug'
           New-Item -ItemType Directory -Force test-results | Out-Null
-          & $exe --gtest_output="xml:test-results/kernel_test.xml" 2>&1 |
-            Tee-Object -FilePath test-results/kernel_test.txt
-          # 非ゼロ (= 1 件でも失敗) ならこのジョブを落とす。これがテストゲート
-          exit $LASTEXITCODE
+
+          $failed = @()
+          foreach ($name in 'kernel_test', 'core_test') {
+            $exe = Join-Path $outDir "$name.exe"
+            if (-not (Test-Path $exe)) { throw "テスト実行ファイルが無い: $exe" }
+            & $exe --gtest_output="xml:test-results/$name.xml" 2>&1 |
+              Tee-Object -FilePath "test-results/$name.txt"
+            if ($LASTEXITCODE -ne 0) { $failed += "$name (exit $LASTEXITCODE)" }
+          }
+
+          # 1 本でも失敗したらこのジョブを落とす。これがテストゲート
+          if ($failed.Count -gt 0) { throw ("失敗したテスト: " + ($failed -join ', ')) }
 
       - name: Write test summary
         if: always()
         run: |
           $ok = '${{ steps.gtest.outcome }}' -eq 'success'
           $icon = if ($ok) { ':white_check_mark:' } else { ':x:' }
-          $lines = @("## $icon kernel_test (GoogleTest)", '')
+          $lines = @("## $icon GoogleTest", '')
 
           # gtest の XML から件数と失敗したテスト名を拾う。
           # レポート用のアクションを足すほどの規模ではないので自前で読む
-          $xmlPath = 'test-results/kernel_test.xml'
-          if (Test-Path $xmlPath) {
-            $s = ([xml](Get-Content $xmlPath -Raw)).testsuites
-            $lines += '| Tests | Failures | Errors | Disabled | Time |'
-            $lines += '|-------|----------|--------|----------|------|'
-            $lines += "| $($s.tests) | $($s.failures) | $($s.errors) | $($s.disabled) | $($s.time)s |"
+          foreach ($name in 'kernel_test', 'core_test') {
+            $lines += "### $name", ''
+            $xmlPath = "test-results/$name.xml"
+            if (Test-Path $xmlPath) {
+              $s = ([xml](Get-Content $xmlPath -Raw)).testsuites
+              $lines += '| Tests | Failures | Errors | Disabled | Time |'
+              $lines += '|-------|----------|--------|----------|------|'
+              $lines += "| $($s.tests) | $($s.failures) | $($s.errors) | $($s.disabled) | $($s.time)s |"
 
-            $failed = $s.testsuite.testcase |
-              Where-Object { $_.failure -or $_.error } |
-              ForEach-Object { "$($_.classname).$($_.name)" }
-            if ($failed) {
-              $lines += '', '### Failed', '```'
-              $lines += $failed
-              $lines += '```'
+              $failed = $s.testsuite.testcase |
+                Where-Object { $_.failure -or $_.error } |
+                ForEach-Object { "$($_.classname).$($_.name)" }
+              if ($failed) {
+                $lines += '', '#### Failed', '```'
+                $lines += $failed
+                $lines += '```'
+              }
+            } else {
+              $lines += '_XML レポートが出力されていない (実行前に落ちた可能性)_'
             }
-          } else {
-            $lines += '_XML レポートが出力されていない (実行前に落ちた可能性)_'
-          }
 
-          # 標準出力の締めくくり ([==========] / [  PASSED  ] / [  FAILED  ]) も残す
-          if (Test-Path 'test-results/kernel_test.txt') {
-            $tail = Select-String -Path 'test-results/kernel_test.txt' `
-              -Pattern '^\[==========\]|^\[  PASSED  \]|^\[  FAILED  \]' |
-              ForEach-Object { $_.Line } | Select-Object -Last 15
-            if ($tail) {
-              $lines += '', '### gtest output', '```'
-              $lines += $tail
-              $lines += '```'
+            # 標準出力の締めくくり ([==========] / [  PASSED  ] / [  FAILED  ]) も残す
+            if (Test-Path "test-results/$name.txt") {
+              $tail = Select-String -Path "test-results/$name.txt" `
+                -Pattern '^\[==========\]|^\[  PASSED  \]|^\[  FAILED  \]' |
+                ForEach-Object { $_.Line } | Select-Object -Last 15
+              if ($tail) {
+                $lines += '', '#### gtest output', '```'
+                $lines += $tail
+                $lines += '```'
+              }
             }
+            $lines += ''
           }
 
           $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
@@ -248,7 +264,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: kernel-test-results
+          name: gtest-results
           path: |
             test-results/
             build-test.log
