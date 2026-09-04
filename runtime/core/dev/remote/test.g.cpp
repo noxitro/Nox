@@ -3,6 +3,7 @@
 ///	@file	test.cpp
 ///	@brief	test
 #include	"pch.h"
+#if	NOX_DEVELOP
 #include	"test.g.h"
 #include	"../socket_stream_writer.h"
 #include	"../socket_stream_reader.h"
@@ -31,3 +32,4 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 
 	return response;
 }
+#endif	//	NOX_DEVELOP

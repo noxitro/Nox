@@ -379,7 +379,9 @@ void nox::dev::net::Server::Shutdown()
 
 void nox::dev::net::Server::Disconnect(const nox::dev::net::raw_socket_t socket)
 {
+#if !NOX_MASTER
 	NOX_LOCAL_SCOPE(nox::util::ParallelExecuteCheckScope(pe_checker_clients_));
+#endif // !NOX_MASTER
 
 	auto it = std::find_if(client_list_.begin(), client_list_.end(), [socket](const PeerContext& context) {
 		return context.socket == socket;

@@ -5,6 +5,11 @@
 #pragma once
 #include	"../../system.h"
 #include	"dev_net_definition.h"
+//	RegisterEntity / UnregisterEntity のリフレクション生成コードは引数の完全型を要求する。
+//	前方宣言だけだと、editor_remote_server.h (NOX_DEVELOP 限定) 経由で server.h / client.h が
+//	来ない Master 構成で不完全型のまま参照されて壊れるので、ここで直接取り込む。
+#include	"server.h"
+#include	"client.h"
 
 namespace nox
 {
@@ -13,9 +18,6 @@ namespace nox
 
 namespace nox::dev::net
 {
-	class Server;
-	class Client;
-
 	class SocketScheduler : public nox::SystemBase
 	{
 		NOX_DECLARE_OBJECT(nox::dev::net::SocketScheduler, nox::SystemBase);

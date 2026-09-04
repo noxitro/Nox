@@ -3,6 +3,7 @@
 /// @file	log_service.cpp
 /// @brief	log_service
 #include "pch.h"
+#if NOX_DEVELOP
 
 #include <limits>
 
@@ -200,3 +201,4 @@ void nox::LogService::LogHandler(const nox::debug::LogHandlerArgs& args)
 {
 	AddLog(args.message, args.callstack, args.channel, args.level);
 }
+#endif // NOX_DEVELOP

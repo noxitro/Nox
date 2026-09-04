@@ -3,6 +3,7 @@
 ///	@file	socket_stream_reader.cpp
 ///	@brief	socket_stream_reader
 #include	"pch.h"
+#if NOX_DEVELOP
 #include	"socket_stream_reader.h"
 
 #include	"editor_remote_server.h"
@@ -325,3 +326,4 @@ void nox::dev::editor_remote::SocketStreamReader::SkipHeader()
 	}
 	NOX_ASSERT(false, u"LEB128 デコードエラー: 長すぎるエンコーディング");
 }
+#endif // NOX_DEVELOP

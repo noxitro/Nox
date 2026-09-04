@@ -454,6 +454,8 @@ public class RuntimeRemoteCodeGenerator
 
 				codeWriter.WriteIncludePch();
 
+				//	.g.h が丸ごと NOX_DEVELOP で消えるので、実装側も同じ条件で消す
+				codeWriter.WriteLinePPIf("NOX_DEVELOP");
 				codeWriter.WriteLineInclude($"{fileName}.g.h");
 
 				//	codegen_preamble.hがあれば、includeしておく
@@ -522,6 +524,8 @@ public class RuntimeRemoteCodeGenerator
 						}
 					}
 				}
+
+				codeWriter.WriteLinePPEndIf("NOX_DEVELOP");
 			}
 
 			//	user定義cppの部分を無いなら作成する
@@ -535,6 +539,8 @@ public class RuntimeRemoteCodeGenerator
 					codeWriter.WriteLineCopyRight();
 					codeWriter.WriteNewLine();
 					codeWriter.WriteIncludePch();
+					//	.g.h と同じ条件で消す
+					codeWriter.WriteLinePPIf("NOX_DEVELOP");
 					codeWriter.WriteLineInclude($"{fileName}.g.h");
 					
 					var dataList = data.TypeInfoList;
@@ -566,6 +572,8 @@ public class RuntimeRemoteCodeGenerator
 							}
 						}
 					}
+
+					codeWriter.WriteLinePPEndIf("NOX_DEVELOP");
 				}
 			}
 		}
