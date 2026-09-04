@@ -3,8 +3,8 @@
 #
 # 目的  : push / PR ごとに runtime を Debug|x64 / Release|x64 / Master|x64 で
 #         ビルドし、GoogleTest スイートを実際に走らせて回帰を検知する。
-# 構成  : Build ジョブ (MSVC / ClangCL x Debug / Release / Master) と
-#         Test ジョブ (Debug のみ) を並列実行。
+# 構成  : Build ジョブ (MSVC / ClangCL x Debug / Release / Master)、
+#         Test ジョブ (Debug のみ)、Editor ジョブを並列実行。
 #         Test を Debug に限っているのは、reflection_generated の pch.h /
 #         reflect.cpp が runtime/core/test/test_types.h を #if !NOX_MASTER で
 #         囲っており、Master ではテスト型のリフレクションが生成されず
@@ -264,4 +264,69 @@ jobs:
           path: |
             test-results/
             build-test.log
+          if-no-files-found: warn
+
+  # =========================================================
+  # Editor: C# (WPF) 側の Editor/Studio.slnx を建てる
+  #
+  # ここが無かったせいで、Editor/Core/Core.csproj が RuntimeTypeDB を
+  # .gitignore 済みの Release 出力への HintPath で参照しており
+  # clone 直後は必ず壊れる、という状態に誰も気付けなかった。
+  # (導入コミットから発覚まで手付かず。ローカルにたまたま古い DLL が
+  #  残っているマシンでだけ通っていた)
+  #
+  # runtime とは依存が全く別 (MSBuild / vcpkg / v145 のいずれも不要で
+  # .NET SDK だけで建つ) ので、setup-nox-build は使わず独立させている。
+  # Debug と Release の両方を建てるのは、構成ごとに参照解決が変わる
+  # 類の破損を今度こそ拾うため。
+  # =========================================================
+  editor:
+    name: Build Editor (C#)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # --no-incremental を付けているのは、参照解決の破損は差分ビルドだと
+      # 前回の出力が残っていて見逃されることがあるため
+      - name: Build Editor/Studio.slnx
+        id: build
+        run: |
+          $failed = @()
+          foreach ($cfg in 'Debug', 'Release') {
+            dotnet build Editor\Studio.slnx -c $cfg --no-incremental -v minimal 2>&1 |
+              Tee-Object -FilePath "editor-$cfg.log"
+            if ($LASTEXITCODE -ne 0) { $failed += "$cfg (exit $LASTEXITCODE)" }
+          }
+          if ($failed.Count -gt 0) { throw ("失敗した構成: " + ($failed -join ', ')) }
+
+      - name: Write job summary
+        if: always()
+        run: |
+          $ok = '${{ steps.build.outcome }}' -eq 'success'
+          $icon = if ($ok) { ':white_check_mark:' } else { ':x:' }
+          $lines = @("## $icon Editor (C#)", '')
+
+          foreach ($cfg in 'Debug', 'Release') {
+            $log = "editor-$cfg.log"
+            if (-not (Test-Path $log)) { continue }
+            # dotnet build の締めくくり (「N 個の警告」「N エラー」) を拾う
+            $tail = Get-Content $log | Select-String -Pattern '警告|エラー|Warning\(s\)|Error\(s\)' |
+              ForEach-Object { $_.Line.Trim() } | Select-Object -Last 2
+            $lines += "- **$cfg**: $($tail -join ' / ')"
+          }
+          $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+      - name: Upload build log
+        if: always() && steps.build.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: editor-build-log
+          path: editor-*.log
           if-no-files-found: warn
