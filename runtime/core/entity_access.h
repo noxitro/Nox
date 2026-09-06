@@ -321,44 +321,68 @@ namespace nox
 	inline constexpr bool CanRunConcurrently =
 		SignatureA::template IsUnwrittenBy<SignatureB>() && SignatureB::template IsUnwrittenBy<SignatureA>();
 
-	/// @brief メンバ関数ポインタから引数リストを取り出す。
-	template<class T>
-	struct EntityMethodTraits;
-
-	template<class ClassType, class... Parameters>
-	struct EntityMethodTraits<void(ClassType::*)(Parameters...)>
+	namespace detail
 	{
-		using OwnerType = ClassType;
-		using Signature = nox::EntitySignature<Parameters...>;
-		static constexpr bool k_is_const = false;
-	};
+		/// @brief std::tuple の要素をそのまま nox::EntitySignature の引数リストへ移し替える。
+		template<class TupleType>
+		struct EntitySignatureFromTuple;
 
-	template<class ClassType, class... Parameters>
-	struct EntityMethodTraits<void(ClassType::*)(Parameters...)const>
-	{
-		using OwnerType = ClassType;
-		using Signature = nox::EntitySignature<Parameters...>;
-		static constexpr bool k_is_const = true;
-	};
+		template<class... Parameters>
+		struct EntitySignatureFromTuple<std::tuple<Parameters...>>
+		{
+			using Type = nox::EntitySignature<Parameters...>;
+		};
 
-	template<class ClassType, class... Parameters>
-	struct EntityMethodTraits<void(ClassType::*)(Parameters...)noexcept>
-	{
-		using OwnerType = ClassType;
-		using Signature = nox::EntitySignature<Parameters...>;
-		static constexpr bool k_is_const = false;
-	};
+		/// @brief 更新メソッドとして受け付けるメンバ関数ポインタか。
+		/// @details 形の網羅 (const / volatile / noexcept / 参照修飾の24通り) は
+		///          nox::detail::FunctionSignature に任せ、ここは受け入れ条件だけを見る。
+		///          volatile を弾くのは、記述子が保持するのが非volatileのインスタンスであり、
+		///          volatileアクセスの前提は UpdaterGraph のジョブ分配とも噛み合わないため。
+		///          参照修飾を弾くのは、呼び出しが常に保持済みインスタンスのlvalueに対して
+		///          行われるため && は呼び出し不能で、& も宣言として区別する意味が無いため。
+		template<class T>
+		[[nodiscard]] consteval bool IsEntityMethodPointer()noexcept
+		{
+			if constexpr (std::is_member_function_pointer_v<T>)
+			{
+				return std::is_void_v<nox::FunctionResultType<T>> &&
+					nox::IsFunctionVolatileValue<T> == false &&
+					nox::IsFunctionLValueReference<T> == false &&
+					nox::IsFunctionRValueReference<T> == false;
+			}
+			else
+			{
+				return false;
+			}
+		}
 
-	template<class ClassType, class... Parameters>
-	struct EntityMethodTraits<void(ClassType::*)(Parameters...)const noexcept>
-	{
-		using OwnerType = ClassType;
-		using Signature = nox::EntitySignature<Parameters...>;
-		static constexpr bool k_is_const = true;
-	};
+		/// @brief 受け入れ条件を満たしたときだけ OwnerType / Signature を持つ。
+		/// @details 満たさない場合は空になるので、nox::EntityMethod の requires 節が
+		///          ハードエラーにならずにfalseを返せる。
+		template<class MethodPointerType, bool Accepted>
+		struct EntityMethodTraitsImpl
+		{
+		};
+
+		template<class MethodPointerType>
+		struct EntityMethodTraitsImpl<MethodPointerType, true>
+		{
+			using OwnerType = nox::FunctionClassType<MethodPointerType>;
+			using Signature = typename nox::detail::EntitySignatureFromTuple<
+				nox::FunctionArgsTupleType<MethodPointerType>>::Type;
+			static constexpr bool k_is_const = nox::IsFunctionConstValue<MethodPointerType>;
+		};
+	}
+
+	/// @brief メンバ関数ポインタから所有型と引数リストを取り出す。
+	/// @details 形ごとの特殊化は手書きせず、nox::detail::FunctionSignature の分解結果を読み替える。
+	template<class MethodPointerType>
+	using EntityMethodTraits = nox::detail::EntityMethodTraitsImpl<
+		MethodPointerType, nox::detail::IsEntityMethodPointer<MethodPointerType>()>;
 
 	/// @brief System / EntityLogic のメソッドとして妥当な形か。
-	/// @details 戻り値void・引数は EntityId / ComponentData参照 / Serviceポインタ・参照 / nox::EntityCommands& のみ。
+	/// @details 戻り値void・volatile / 参照修飾なしの非静的メンバ関数で、引数は
+	///          EntityId / ComponentData参照 / Serviceポインタ・参照 / nox::EntityCommands& のみ。
 	template<class MethodPointerType>
 	concept EntityMethod =
 		requires { typename nox::EntityMethodTraits<MethodPointerType>::Signature; } &&
@@ -366,22 +390,40 @@ namespace nox
 
 	namespace detail
 	{
-		/// @brief コンパイルエラーを引数の不備ごとに切り分けて出す。
+		/// @brief コンパイルエラーを不備ごとに切り分けて出す。
 		template<class MethodPointerType>
 		consteval bool ValidateEntityMethod()noexcept
 		{
-			static_assert(requires { typename nox::EntityMethodTraits<MethodPointerType>::Signature; },
-				"戻り値voidの非静的メンバ関数を指定してください");
-			using Signature = typename nox::EntityMethodTraits<MethodPointerType>::Signature;
-			static_assert(Signature::k_all_parameters_valid,
-				"引数は nox::EntityId / ComponentDataの参照 / Serviceのポインタ・参照 / nox::EntityCommands& のいずれかのみ指定できます");
-			static_assert(Signature::k_entity_parameter_count <= 1u,
-				"nox::EntityIdは1つまでしか指定できません");
-			static_assert(Signature::k_entity_parameter_is_leading,
-				"nox::EntityIdは第一引数にのみ指定できます");
-			static_assert(Signature::k_has_unique_components,
-				"同じComponentDataを複数の引数で宣言することはできません");
-			return Signature::k_is_valid;
+			static_assert(std::is_member_function_pointer_v<MethodPointerType>,
+				"非静的メンバ関数へのポインタを指定してください");
+
+			if constexpr (std::is_member_function_pointer_v<MethodPointerType>)
+			{
+				static_assert(std::is_void_v<nox::FunctionResultType<MethodPointerType>>,
+					"更新メソッドの戻り値は void にしてください");
+				static_assert(nox::IsFunctionVolatileValue<MethodPointerType> == false,
+					"volatile修飾したメソッドは更新メソッドにできません");
+				static_assert(
+					nox::IsFunctionLValueReference<MethodPointerType> == false &&
+					nox::IsFunctionRValueReference<MethodPointerType> == false,
+					"参照修飾(& / &&)したメソッドは更新メソッドにできません");
+
+				if constexpr (nox::detail::IsEntityMethodPointer<MethodPointerType>())
+				{
+					using Signature = typename nox::EntityMethodTraits<MethodPointerType>::Signature;
+					static_assert(Signature::k_all_parameters_valid,
+						"引数は nox::EntityId / ComponentDataの参照 / Serviceのポインタ・参照 / nox::EntityCommands& のいずれかのみ指定できます");
+					static_assert(Signature::k_entity_parameter_count <= 1u,
+						"nox::EntityIdは1つまでしか指定できません");
+					static_assert(Signature::k_entity_parameter_is_leading,
+						"nox::EntityIdは第一引数にのみ指定できます");
+					static_assert(Signature::k_has_unique_components,
+						"同じComponentDataを複数の引数で宣言することはできません");
+					return Signature::k_is_valid;
+				}
+			}
+
+			return false;
 		}
 	}
 }
