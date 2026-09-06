@@ -90,7 +90,8 @@ jobs:
         #   setter/getter が非ジェネリックラムダ本体に if constexpr を
         #   直書きしてガードが実質機能していなかった件など。
         #   落ちたときは原因を直すこと。無効化で回避しないこと。
-        #   解消済みの壁: 58d1476 / ca35cb7 / ed5755c / cf894a1
+        #   解消済みの壁: c342965 / 6552cb3 / 137397f / 008d27e
+        #   (2026-09 の履歴書き換えで SHA が変わっている)
         compiler: [MSVC, ClangCL]
         configuration: [Debug, Release, Master]
         # include: は使わない。matrix を一時的に絞りたくなったとき、既存の
