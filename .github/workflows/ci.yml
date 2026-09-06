@@ -1,10 +1,16 @@
 # ============================================================
 # CI (Runtime)
 #
-# 目的  : push / PR ごとに runtime を Debug|x64 / Release|x64 / Master|x64 で
-#         ビルドし、GoogleTest スイートを実際に走らせて回帰を検知する。
-# 構成  : Build ジョブ (MSVC / ClangCL x Debug / Release / Master)、
-#         Test ジョブ (Debug のみ)、Editor ジョブを並列実行。
+# 目的  : push ごとに runtime をビルドし、GoogleTest スイートを実際に
+#         走らせて回帰を検知する。
+# 構成  : push       -> Build (MSVC / Debug) + Test + Editor
+#         dispatch   -> Build (MSVC / ClangCL x Debug / Release / Master)
+#                       + Test + Editor
+#         windows-latest は無料枠を 2 倍で消費する。6 並列を毎 push で
+#         建てると 1 push あたり約 160 分で、月 2,000 分の無料枠
+#         (アカウント全体で共有) がこのリポジトリだけで尽きる。
+#         構成そのものは消していない。配布前・マージ前に Actions の
+#         「Run workflow」から 6 並列を手動で回すこと。
 #         Test を Debug に限っているのは、reflection_generated の pch.h /
 #         reflect.cpp が runtime/core/test/test_types.h を #if !NOX_MASTER で
 #         囲っており、Master ではテスト型のリフレクションが生成されず
@@ -21,9 +27,16 @@ on:
   # タグ push での二重起動だけは避けたいので branches で限定してある。
   push:
     branches: ['**']
-  # 同一リポジトリのブランチに対する PR は push 側とで 2 回走る。
-  # フォークからの PR を拾うために残してある (ref が違うので concurrency では畳めない)
-  pull_request:
+    # 文書だけの変更で windows ランナーを起こさない
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
+  # pull_request は外した。このリポジトリは private でフォークが存在せず、
+  # 同一リポジトリのブランチへの PR は push 側と合わせて毎回 2 倍消費していた。
+  # (ref が違うので concurrency でも畳めない)。フォーク PR を受ける必要が
+  # 出たら、その時に pull_request を戻すこと。
   workflow_dispatch:   # GitHub UI の「Run workflow」から手動実行
 
 # 同じ ref に新しい push が来たら、走っている古い実行を打ち切る
@@ -46,6 +59,7 @@ jobs:
   build:
     name: Build runtime (${{ matrix.compiler }} / ${{ matrix.configuration }})
     runs-on: windows-latest
+    timeout-minutes: 30
 
     strategy:
       fail-fast: false   # 片方が転んでももう片方は最後まで走らせる
@@ -62,38 +76,35 @@ jobs:
         # 残り、core.vcxproj だけで 193 件のエラーになっていた。
         # Master は NOX_DEVELOP / #if !NOX_MASTER の外側しか通らないので、
         # Debug / Release では検出できない。
-        compiler: [MSVC, ClangCL]
-        configuration: [Debug, Release, Master]
-        include:
-          - compiler: MSVC
-            toolset: v145        # Visual Studio 2026 の MSVC ツールセット
-          - compiler: ClangCL
-            toolset: ClangCL     # VS 同梱の clang-cl を MSBuild 経由で使う
-            # ---------------------------------------------------------
-            # ClangCL は長らく runtime.slnx を通せず experimental
-            # (continue-on-error) 扱いだったが、本ブランチで全ての壁を
-            # 解消したので必須ゲートへ格上げした。
-            #
-            # 格上げした理由は「通るようになったから」ではなく、
-            # clang が MSVC の見逃す非適合を実際に拾ったから。
-            #
-            #   - 生成コードの setter/getter が非ジェネリックラムダの
-            #     本体に if constexpr を直書きしており、破棄側の分岐も
-            #     意味検査される結果コピー不可の型で落ちていた。
-            #     つまりガードが実質機能していなかった (MSVC は素通り)
-            #   - database.cpp の未使用変数群、updater_graph.cpp の
-            #     未出力関数など、MSVC が報告しない実在の無駄
-            #
-            # continue-on-error に戻すと、この検出力がそのまま死ぬ。
-            # 落ちたときは原因を直すこと。無効化で回避しないこと。
-            #
-            # 解消済みの壁の詳細は下記コミットを参照:
-            #   58d1476 SocketScheduler の MSVC 拡張依存の残骸を削除
-            #   ca35cb7 ClassInfo の不完全型参照 (class_info.h)
-            #   ed5755c 生成器の解析インクルードパスをツールセットから分離
-            #   cf894a1 生成コードの if constexpr を関数テンプレートへ移動
-            # ---------------------------------------------------------
-
+        # push / PR では MSVC x Debug の 1 ジョブだけを回す。
+        # windows-latest は無料枠を 2 倍で消費するので、6 並列を毎 push で
+        # 建てると 1 push で 160 分近く溶ける (実測)。無料枠は月 2,000 分の
+        # アカウント共有なので、これだけで枠が尽きる。
+        #
+        # 下に書いてある Release / Master / ClangCL の検出力は本物で、
+        # 消すと実際に見逃す。だから消さずに workflow_dispatch へ移した。
+        # 配布前やマージ前は Actions の「Run workflow」から 6 並列を回すこと。
+        #
+        # --- 各構成を残している理由 (dispatch 時に効く) ---
+        # Release: Debug しか建てていなかったせいで NOX_INFO_LINE /
+        #   NOX_ERROR_LINE の無効化側が 2 引数固定のまま壊れていた (C4002)
+        #   のに気付けなかった。#if NOX_DEBUG の外側は Debug では
+        #   一切コンパイルされない。
+        # Master: 出荷構成なのに一度も建てておらず、dev 機能
+        #   (editor_remote / remote log / socket stream) のヘッダが
+        #   #if NOX_DEVELOP で消えるのに .cpp が無防備なまま残り、
+        #   core.vcxproj だけで 193 件のエラーになっていた。
+        # ClangCL: MSVC が見逃す非適合を実際に拾う。生成コードの
+        #   setter/getter が非ジェネリックラムダ本体に if constexpr を
+        #   直書きしてガードが実質機能していなかった件など。
+        #   落ちたときは原因を直すこと。無効化で回避しないこと。
+        #   解消済みの壁: 58d1476 / ca35cb7 / ed5755c / cf894a1
+        compiler: ${{ github.event_name == 'workflow_dispatch' && fromJSON('["MSVC","ClangCL"]') || fromJSON('["MSVC"]') }}
+        configuration: ${{ github.event_name == 'workflow_dispatch' && fromJSON('["Debug","Release","Master"]') || fromJSON('["Debug"]') }}
+        # include: は使わない。matrix の値を絞ったとき、既存の組み合わせに
+        # マージできない include エントリは「新しいジョブを増やす」ので、
+        # compiler を [MSVC] に絞っても ClangCL のジョブが復活してしまう。
+        # toolset は compiler から素直に導出する (下の Build ステップ)。
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -109,7 +120,7 @@ jobs:
           msbuild runtime\runtime.slnx `
             /p:Configuration=${{ matrix.configuration }} `
             /p:Platform=x64 `
-            /p:PlatformToolset=${{ matrix.toolset }} `
+            /p:PlatformToolset=${{ matrix.compiler == 'MSVC' && 'v145' || 'ClangCL' }} `
             /m `
             /v:minimal `
             /nologo `
@@ -128,7 +139,7 @@ jobs:
           | Item     | Value                                |
           |----------|--------------------------------------|
           | Solution | runtime.slnx                         |
-          | Toolset  | ${{ matrix.toolset }}                |
+          | Toolset  | ${{ matrix.compiler == 'MSVC' && 'v145' || 'ClangCL' }} |
           | Config   | ${{ matrix.configuration }} \| x64    |
           | Result   | **$status**                          |
           "@ | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
@@ -171,6 +182,7 @@ jobs:
   test:
     name: Test (kernel_test + core_test / MSVC)
     runs-on: windows-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -209,6 +221,16 @@ jobs:
 
           # 1 本でも失敗したらこのジョブを落とす。これがテストゲート
           if ($failed.Count -gt 0) { throw ("失敗したテスト: " + ($failed -join ', ')) }
+
+      # gtest は「1 件も走らなくても」 exit 0 を返す。テスト登録の漏れや
+      # フィルタの書き間違いでスイートが丸ごと消えても緑になり、
+      # 「通った」と誤読される。件数を数えるのが唯一の証明。
+      # 実測は kernel_test 15 + core_test 78 = 93 件。その 9 割を下限に置く。
+      - name: 実行件数を確かめる
+        if: always()
+        shell: pwsh
+        run: |
+          python .github/scripts/check-test-results.py test-results --min 83 --label GoogleTest
 
       - name: Write test summary
         if: always()
@@ -283,6 +305,7 @@ jobs:
   editor:
     name: Build Editor (C#)
     runs-on: windows-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -330,3 +353,125 @@ jobs:
           name: editor-build-log
           path: editor-*.log
           if-no-files-found: warn
+
+  # =========================================================
+  # Notify: 転んだとき / 転んだ状態から戻ったときだけ Discord に流す
+  #
+  # GitHub 既定のメール通知の置き換え。成功が続いている間は無言なので、
+  # 流れてきた時点で「見るべきものがある」と判断できる。
+  #
+  # webhook は org secret DISCORD_WEBHOOK_URL を参照する。未設定の
+  # リポジトリでは黙ってスキップし、CI 自体は落とさない。
+  #
+  # pull_request を除外しているのは、同一リポジトリのブランチなら push 側で
+  # 同じ内容が流れるため。フォークからの PR ではそもそも secret が読めない。
+  # =========================================================
+  notify:
+    name: Notify Discord
+    needs: [build, test, editor]
+    # 判定は step 側で needs.*.result を見るので、ここでは always() で拾うだけ。
+    if: always() && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read   # 直前の実行結果 (復旧判定) と失敗ジョブ一覧の取得に要る
+
+    steps:
+      # 今回の結果と「直前の完了実行」の結果を突き合わせて、
+      # failure / recovered / none のどれかに落とす。
+      - name: Decide whether to notify
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          $results = ($env:RESULTS -split '\s+') | Where-Object { $_ }
+          Write-Host "needs results: $($results -join ', ')"
+
+          $kind = 'none'
+          if ($results -contains 'cancelled') {
+            # concurrency の打ち切り。人為的な中断なので通知しない
+            Write-Host 'cancelled が含まれるので通知しない'
+          }
+          elseif ($results -contains 'failure') {
+            $kind = 'failure'
+          }
+          else {
+            # 全部 success (skipped 含む)。直前の完了実行が failure なら復旧
+            $repo = $env:GITHUB_REPOSITORY
+            $branch = [uri]::EscapeDataString($env:GITHUB_REF_NAME)
+            $runId = [int64]$env:GITHUB_RUN_ID
+            $prev = gh api "repos/$repo/actions/workflows/ci.yml/runs?branch=$branch&status=completed&per_page=20" `
+              --jq '[.workflow_runs[] | {id, conclusion}]' | ConvertFrom-Json |
+              Where-Object { $_.id -lt $runId -and $_.conclusion -in @('success', 'failure') } |
+              Select-Object -First 1
+
+            if ($prev -and $prev.conclusion -eq 'failure') {
+              $kind = 'recovered'
+              Write-Host "直前の完了実行 (run $($prev.id)) が failure だったので復旧通知"
+            } else {
+              Write-Host "直前の完了実行: $(if ($prev) { $prev.conclusion } else { 'なし' })。通知しない"
+            }
+          }
+
+          "kind=$kind" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Post to Discord
+        if: steps.decide.outputs.kind != 'none'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          KIND: ${{ steps.decide.outputs.kind }}
+        run: |
+          if (-not $env:WEBHOOK) {
+            Write-Host '::warning::DISCORD_WEBHOOK_URL が未設定なので通知をスキップする'
+            exit 0
+          }
+
+          $repo   = $env:GITHUB_REPOSITORY
+          $runId  = $env:GITHUB_RUN_ID
+          $sha    = $env:GITHUB_SHA
+          $runUrl = "$env:GITHUB_SERVER_URL/$repo/actions/runs/$runId"
+
+          # コミットの件名。push 以外 (schedule / workflow_dispatch) でも取れるよう
+          # イベントペイロードではなく API から引く
+          $subject = (gh api "repos/$repo/commits/$sha" --jq '.commit.message' 2>$null) -split "`n" | Select-Object -First 1
+          if (-not $subject) { $subject = '(コミットメッセージ取得失敗)' }
+
+          $fields = @(
+            @{ name = 'ブランチ'; value = "``$env:GITHUB_REF_NAME``"; inline = $true }
+            @{ name = 'きっかけ'; value = "``$env:GITHUB_EVENT_NAME``"; inline = $true }
+            @{ name = 'コミット'; value = "[``$($sha.Substring(0,7))``]($env:GITHUB_SERVER_URL/$repo/commit/$sha) $subject"; inline = $false }
+          )
+
+          if ($env:KIND -eq 'failure') {
+            $title = ":x: CI 失敗 — $repo"
+            $color = 14687012   # 赤
+            $failed = gh api "repos/$repo/actions/runs/$runId/jobs?per_page=100" `
+              --jq '.jobs[] | select(.conclusion == "failure") | .name'
+            if ($failed) {
+              $fields += @{ name = '落ちたジョブ'; value = (($failed | ForEach-Object { "- $_" }) -join "`n"); inline = $false }
+            }
+          } else {
+            $title = ":white_check_mark: CI 復旧 — $repo"
+            $color = 3055683    # 緑
+          }
+
+          $payload = @{
+            username = 'GitHub Actions'
+            embeds = @(
+              @{
+                title       = $title
+                url         = $runUrl
+                color       = $color
+                fields      = $fields
+                footer      = @{ text = "$env:GITHUB_WORKFLOW #$env:GITHUB_RUN_NUMBER" }
+                timestamp   = (Get-Date).ToUniversalTime().ToString('o')
+              }
+            )
+          } | ConvertTo-Json -Depth 6 -Compress
+
+          Invoke-RestMethod -Uri $env:WEBHOOK -Method Post `
+            -ContentType 'application/json; charset=utf-8' -Body $payload | Out-Null
+          Write-Host "Discord に通知した ($env:KIND)"
