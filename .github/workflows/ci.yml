@@ -3,21 +3,21 @@
 #
 # 目的  : push ごとに runtime をビルドし、GoogleTest スイートを実際に
 #         走らせて回帰を検知する。
-# 構成  : push       -> Build (MSVC / Debug) + Test + Editor
-#         dispatch   -> Build (MSVC / ClangCL x Debug / Release / Master)
-#                       + Test + Editor
-#         windows-latest は無料枠を 2 倍で消費する。6 並列を毎 push で
-#         建てると 1 push あたり約 160 分で、月 2,000 分の無料枠
-#         (アカウント全体で共有) がこのリポジトリだけで尽きる。
-#         構成そのものは消していない。配布前・マージ前に Actions の
-#         「Run workflow」から 6 並列を手動で回すこと。
+# 構成  : Build (MSVC / ClangCL x Debug / Release / Master の 6 並列)、
+#         Test ジョブ (Debug のみ)、Editor ジョブを並列実行。
 #         Test を Debug に限っているのは、reflection_generated の pch.h /
 #         reflect.cpp が runtime/core/test/test_types.h を #if !NOX_MASTER で
 #         囲っており、Master ではテスト型のリフレクションが生成されず
 #         core_test が成立しないため。
 #         前準備は .github/actions/setup-nox-build に切り出してある。
-# 環境  : windows-latest。runtime の vcxproj は PlatformToolset=v145
+# 環境  : windows。runtime の vcxproj は PlatformToolset=v145
 #         (Visual Studio 2026) を要求するため windows-2022 では動かない。
+# 費用  : windows-latest は無料枠を 2 倍で消費する。6 並列 + Test + Editor で
+#         1 push あたり約 160 請求分 (実測)。無料枠は月 2,000 分で
+#         アカウント全体の共有なので、月 12 push 前後で枠が尽きる。
+#         枠を気にせず回すには、セルフホストランナーを登録して
+#         リポジトリ変数 NOX_RUNNER=self-hosted を設定する
+#         (セルフホストの実行時間は無料枠を消費しない)。
 # ============================================================
 
 name: CI
@@ -58,22 +58,26 @@ jobs:
   # =========================================================
   build:
     name: Build runtime (${{ matrix.compiler }} / ${{ matrix.configuration }})
-    runs-on: windows-latest
+    # 既定は GitHub ホストの windows-latest。リポジトリ変数 NOX_RUNNER を
+    # 設定するとそちらへ回す (例: NOX_RUNNER=self-hosted)。セルフホストの
+    # 実行時間は無料枠を消費しないので、6 構成を毎 push で建てるならこれ。
+    # 手元は VS2026 (v145) が入っている前提。
+    runs-on: ${{ vars.NOX_RUNNER || 'windows-latest' }}
     timeout-minutes: 30
 
     strategy:
       fail-fast: false   # 片方が転んでももう片方は最後まで走らせる
       matrix:
-        # push では MSVC x Debug の 1 ジョブだけを回す。
-        # windows-latest は無料枠を 2 倍で消費するので、6 並列を毎 push で
-        # 建てると 1 push で 160 分近く溶ける (実測)。無料枠は月 2,000 分の
-        # アカウント共有なので、これだけで枠が尽きる。
+        # compiler x configuration の直積 (6 ジョブ)。このリポジトリは
+        # 重要なので、push のたびに 6 構成すべてを建てる。
         #
-        # 下に書いてある Release / Master / ClangCL の検出力は本物で、
-        # 消すと実際に見逃す。だから消さずに workflow_dispatch へ移した。
-        # 配布前やマージ前は Actions の「Run workflow」から 6 並列を回すこと。
+        # ただし windows-latest は無料枠を 2 倍で消費し、6 並列 + Test +
+        # Editor で 1 push あたり約 160 請求分かかる (実測)。無料枠は
+        # 月 2,000 分でアカウント全体の共有なので、月 12 push 前後で
+        # 枠を使い切る。これを本気で回すならセルフホストランナーを
+        # 登録すること (下の runs-on を参照。セルフホストは無制限で無料)。
         #
-        # --- 各構成を残している理由 (dispatch 時に効く) ---
+        # --- 各構成を建てている理由 ---
         # Release: Debug しか建てていなかったせいで NOX_INFO_LINE /
         #   NOX_ERROR_LINE の無効化側が 2 引数固定のまま壊れていた (C4002)
         #   のに気付けなかった。#if NOX_DEBUG の外側は Debug では
@@ -87,11 +91,11 @@ jobs:
         #   直書きしてガードが実質機能していなかった件など。
         #   落ちたときは原因を直すこと。無効化で回避しないこと。
         #   解消済みの壁: 58d1476 / ca35cb7 / ed5755c / cf894a1
-        compiler: ${{ github.event_name == 'workflow_dispatch' && fromJSON('["MSVC","ClangCL"]') || fromJSON('["MSVC"]') }}
-        configuration: ${{ github.event_name == 'workflow_dispatch' && fromJSON('["Debug","Release","Master"]') || fromJSON('["Debug"]') }}
-        # include: は使わない。matrix の値を絞ったとき、既存の組み合わせに
-        # マージできない include エントリは「新しいジョブを増やす」ので、
-        # compiler を [MSVC] に絞っても ClangCL のジョブが復活してしまう。
+        compiler: [MSVC, ClangCL]
+        configuration: [Debug, Release, Master]
+        # include: は使わない。matrix を一時的に絞りたくなったとき、既存の
+        # 組み合わせにマージできない include エントリは「新しいジョブを
+        # 増やす」ので、compiler を [MSVC] にしても ClangCL が復活する。
         # toolset は compiler から素直に導出する (下の Build ステップ)。
     steps:
       - name: Checkout
@@ -169,7 +173,11 @@ jobs:
   # =========================================================
   test:
     name: Test (kernel_test + core_test / MSVC)
-    runs-on: windows-latest
+    # 既定は GitHub ホストの windows-latest。リポジトリ変数 NOX_RUNNER を
+    # 設定するとそちらへ回す (例: NOX_RUNNER=self-hosted)。セルフホストの
+    # 実行時間は無料枠を消費しないので、6 構成を毎 push で建てるならこれ。
+    # 手元は VS2026 (v145) が入っている前提。
+    runs-on: ${{ vars.NOX_RUNNER || 'windows-latest' }}
     timeout-minutes: 30
 
     steps:
@@ -292,7 +300,11 @@ jobs:
   # =========================================================
   editor:
     name: Build Editor (C#)
-    runs-on: windows-latest
+    # 既定は GitHub ホストの windows-latest。リポジトリ変数 NOX_RUNNER を
+    # 設定するとそちらへ回す (例: NOX_RUNNER=self-hosted)。セルフホストの
+    # 実行時間は無料枠を消費しないので、6 構成を毎 push で建てるならこれ。
+    # 手元は VS2026 (v145) が入っている前提。
+    runs-on: ${{ vars.NOX_RUNNER || 'windows-latest' }}
     timeout-minutes: 20
 
     steps:
