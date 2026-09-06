@@ -8,6 +8,7 @@
 #include "../reflection_type_definition.h"
 #include "../reflection_type_utility.h"
 #include "../type_traits/function_signature.h"
+#include "../type_traits/type_name.h"
 
 namespace
 {
@@ -22,6 +23,42 @@ namespace
 
 	void FreeFunction() noexcept {}
 	int g_free_value = 0;
+}
+
+//	型名の正規化を確かめるための型。綴りを期待値に固定したいので、
+//	ツールセットで綴りが割れる無名名前空間には置かない。
+struct TypeNameProbe
+{
+	int value{};
+};
+
+namespace type_name_probe
+{
+	struct Nested
+	{
+		struct Value
+		{
+			int value{};
+		};
+
+		enum class Kind : nox::uint8
+		{
+			A,
+		};
+	};
+
+	template<class T>
+	struct Box
+	{
+		T value{};
+	};
+
+	template<class T, class U>
+	struct Pair
+	{
+		T first{};
+		U second{};
+	};
 }
 
 // 基本型のテスト
@@ -83,5 +120,33 @@ TEST(KernelBasicTest, MemberFieldsAreNotMarkedStatic)
 	EXPECT_TRUE(nox::util::IsBitAnd(
 		nox::reflection::GetFieldAttributeFlags<FreeField>(),
 		nox::reflection::VariableAttributeFlag::Static));
+}
+
+//	nox::util::GetTypeName は MSVC / clang-cl で同じ綴りになるよう正規化してある。
+//	期待値をリテラルで書けること自体が、ツールセット間で一致している証拠になる
+//	(修正前は MSVC が "struct TypeNameProbe"、clang-cl が " TypeNameProbe" を返していた)。
+TEST(KernelBasicTest, TypeNameIsNormalizedAcrossToolsets)
+{
+	EXPECT_EQ(nox::util::GetTypeName<TypeNameProbe>(), "TypeNameProbe");
+	EXPECT_EQ(nox::util::GetTypeName<type_name_probe::Nested::Value>(), "type_name_probe::Nested::Value");
+	EXPECT_EQ(nox::util::GetTypeName<type_name_probe::Nested::Kind>(), "type_name_probe::Nested::Kind");
+	EXPECT_EQ(nox::util::GetTypeName<type_name_probe::Box<TypeNameProbe>>(), "type_name_probe::Box<TypeNameProbe>");
+	EXPECT_EQ(
+		(nox::util::GetTypeName<type_name_probe::Pair<nox::int32, type_name_probe::Nested::Kind>>()),
+		"type_name_probe::Pair<int,type_name_probe::Nested::Kind>");
+	EXPECT_EQ(nox::util::GetTypeName<TypeNameProbe*>(), "TypeNameProbe*");
+	EXPECT_EQ(nox::util::GetTypeName<const TypeNameProbe&>(), "const TypeNameProbe&");
+	EXPECT_EQ(nox::util::GetTypeName<const TypeNameProbe* const*>(), "const TypeNameProbe*const*");
+	EXPECT_EQ(nox::util::GetTypeName<nox::int64>(), "long long");
+	EXPECT_EQ(nox::util::GetTypeName<nox::uint64>(), "unsigned long long");
+	EXPECT_EQ(nox::util::GetTypeName<void>(), "void");
+}
+
+//	型IDは正規化済みの型名のCRC32。ツールセットによらず同じ値になる。
+TEST(KernelBasicTest, UniqueTypeIdIsCrc32OfTypeName)
+{
+	EXPECT_EQ(nox::util::GetUniqueTypeID<TypeNameProbe>(), nox::util::Crc32(nox::util::GetTypeName<TypeNameProbe>()));
+	EXPECT_EQ(nox::util::GetUniqueTypeID<nox::int64>(), nox::util::Crc32(nox::util::GetTypeName<nox::int64>()));
+	EXPECT_NE(nox::util::GetUniqueTypeID<TypeNameProbe>(), nox::util::GetUniqueTypeID<type_name_probe::Nested::Value>());
 }
 
