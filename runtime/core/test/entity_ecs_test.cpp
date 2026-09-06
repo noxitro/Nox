@@ -127,6 +127,40 @@ namespace
 		nox::EntityMethodTraits<decltype(&SignatureProbe::Process00)>::Signature,
 		nox::EntitySignature<nox::EntityId, TestPosition&, TestCounterService*>>);
 
+	//	const / noexcept は付けられる。const性は k_is_const に出る。
+	struct QualifiedProbe
+	{
+		void Plain(TestPosition& position);
+		void Const(const TestPosition& position)const;
+		void Noexcept(TestPosition& position)noexcept;
+		void ConstNoexcept(const TestPosition& position)const noexcept;
+	};
+	static_assert(nox::EntityMethod<decltype(&QualifiedProbe::Plain)>);
+	static_assert(nox::EntityMethod<decltype(&QualifiedProbe::Const)>);
+	static_assert(nox::EntityMethod<decltype(&QualifiedProbe::Noexcept)>);
+	static_assert(nox::EntityMethod<decltype(&QualifiedProbe::ConstNoexcept)>);
+	static_assert(nox::EntityMethodTraits<decltype(&QualifiedProbe::Plain)>::k_is_const == false);
+	static_assert(nox::EntityMethodTraits<decltype(&QualifiedProbe::Const)>::k_is_const);
+	static_assert(nox::EntityMethodTraits<decltype(&QualifiedProbe::ConstNoexcept)>::k_is_const);
+	static_assert(std::same_as<
+		nox::EntityMethodTraits<decltype(&QualifiedProbe::ConstNoexcept)>::OwnerType, QualifiedProbe>);
+
+	//	更新メソッドにできない形。concept評価がハードエラーにならずfalseになること。
+	struct RejectedProbe
+	{
+		int NonVoidReturn(TestPosition& position);
+		void Volatile(TestPosition& position)volatile;
+		void LValueRefQualified(TestPosition& position)&;
+		void RValueRefQualified(TestPosition& position)&&;
+	};
+	static_assert(nox::EntityMethod<decltype(&RejectedProbe::NonVoidReturn)> == false);
+	static_assert(nox::EntityMethod<decltype(&RejectedProbe::Volatile)> == false);
+	static_assert(nox::EntityMethod<decltype(&RejectedProbe::LValueRefQualified)> == false);
+	static_assert(nox::EntityMethod<decltype(&RejectedProbe::RValueRefQualified)> == false);
+	//	メンバ関数ポインタ以外を渡してもハードエラーにしない。
+	static_assert(nox::EntityMethod<nox::int32> == false);
+	static_assert(nox::EntityMethod<void(*)(TestPosition&)> == false);
+
 #pragma endregion
 
 	[[nodiscard]] const nox::EntitySystemTypeDescriptor* FindEntitySystemType(const std::string_view name)noexcept
