@@ -64,19 +64,7 @@ jobs:
     strategy:
       fail-fast: false   # 片方が転んでももう片方は最後まで走らせる
       matrix:
-        # compiler x configuration の直積 (6 ジョブ)。
-        # Release を足したのは、Debug しか建てていなかったせいで
-        # NOX_INFO_LINE / NOX_ERROR_LINE の無効化側が 2 引数固定のまま
-        # 壊れていた (C4002) のに誰も気付けなかったため。
-        # #if NOX_DEBUG の外側は Debug ビルドでは一切コンパイルされない。
-        #
-        # Master を足したのも同じ理由。出荷構成なのに一度も建てていなかった
-        # せいで、dev 機能 (editor_remote / remote log / socket stream) の
-        # ヘッダが #if NOX_DEVELOP で消えるのに対応する .cpp が無防備なまま
-        # 残り、core.vcxproj だけで 193 件のエラーになっていた。
-        # Master は NOX_DEVELOP / #if !NOX_MASTER の外側しか通らないので、
-        # Debug / Release では検出できない。
-        # push / PR では MSVC x Debug の 1 ジョブだけを回す。
+        # push では MSVC x Debug の 1 ジョブだけを回す。
         # windows-latest は無料枠を 2 倍で消費するので、6 並列を毎 push で
         # 建てると 1 push で 160 分近く溶ける (実測)。無料枠は月 2,000 分の
         # アカウント共有なので、これだけで枠が尽きる。
