@@ -90,6 +90,7 @@
                                    VerticalAlignment="Center"
                                    Margin="0,0,4,0" />
                         <ComboBox AutomationProperties.AutomationId="NoxStudio.Trace.LevelFilter"
+                                  AutomationProperties.Name="Trace level filter"
                                   Width="110"
                                   ItemsSource="{Binding LevelFilters}"
                                   SelectedItem="{Binding SelectedLevelFilter}"
@@ -105,6 +106,7 @@
                     </StackPanel>
                     <TextBox Grid.Column="2"
                              AutomationProperties.AutomationId="NoxStudio.Trace.SearchBox"
+                             AutomationProperties.Name="Search trace"
                              Height="24"
                              VerticalContentAlignment="Center"
                              Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
@@ -135,11 +137,48 @@
                 </Grid>
             </Border>
 
-            <ListView AutomationProperties.AutomationId="NoxStudio.Trace.List"
-                      ItemsSource="{Binding FilteredItems}"
-                      Background="{DynamicResource Nox.Brush.SurfaceBackground}"
-                      Foreground="{DynamicResource Nox.Brush.TextHeading}"
-                      BorderThickness="0">
+            <Grid Background="{DynamicResource Nox.Brush.SurfaceBackground}">
+                <TextBlock AutomationProperties.AutomationId="NoxStudio.Trace.EmptyState"
+                           AutomationProperties.Name="No trace entries match the current filters."
+                           Text="No trace entries match the current filters."
+                           Foreground="{DynamicResource Nox.Brush.TextMuted}"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           MaxWidth="340"
+                           Margin="24"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Panel.ZIndex="2"
+                           IsHitTestVisible="False">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding FilteredItems.IsEmpty}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <ListView AutomationProperties.AutomationId="NoxStudio.Trace.List"
+                          ItemsSource="{Binding FilteredItems}"
+                          Background="{DynamicResource Nox.Brush.SurfaceBackground}"
+                          Foreground="{DynamicResource Nox.Brush.TextHeading}"
+                          BorderThickness="0"
+                          Panel.ZIndex="1"
+                          ScrollViewer.CanContentScroll="True"
+                          VirtualizingPanel.IsVirtualizing="True"
+                          VirtualizingPanel.VirtualizationMode="Recycling">
+                    <ListView.Style>
+                        <Style TargetType="ListView" BasedOn="{StaticResource {x:Type ListView}}">
+                            <Style.Triggers>
+                                <Trigger Property="HasItems" Value="False">
+                                    <Setter Property="Background" Value="Transparent" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ListView.Style>
                 <ListView.ContextMenu>
                     <ContextMenu Background="{DynamicResource Nox.Brush.MenuBackground}"
                                  BorderBrush="{DynamicResource Nox.Brush.ControlBorder}"
@@ -173,7 +212,8 @@
                             <GridViewColumn Header="Message" DisplayMemberBinding="{Binding Message}" Width="360" />
                         </GridView>
                 </ListView.View>
-            </ListView>
+                </ListView>
+            </Grid>
         </DockPanel>
     </Border>
 </UserControl>

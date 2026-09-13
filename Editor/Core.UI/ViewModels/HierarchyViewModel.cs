@@ -229,6 +229,20 @@ namespace Core.UI.ViewModels;
 				return;
 			}
 
+			int descendantCount = CountNodes(SelectedNode.Model) - 1;
+			string descendantWarning = descendantCount == 0
+				? string.Empty
+				: $"\n\nThis also deletes {descendantCount} descendant node(s).";
+			System.Windows.MessageBoxResult result = Core.UI.MessageBox.ShowDialog(
+				$"Delete \"{SelectedNode.Name}\"?{descendantWarning}\n\nThis action cannot be undone.",
+				"Delete hierarchy node",
+				System.Windows.MessageBoxImage.Warning,
+				System.Windows.MessageBoxButton.YesNo);
+			if (result != System.Windows.MessageBoxResult.Yes)
+			{
+				return;
+			}
+
 			Core.SceneHierarchyNode? parent = SelectedNode.Model.Parent;
 			if (_SceneHierarchy.Remove(SelectedNode.Model))
 			{

@@ -91,6 +91,7 @@
                                        Margin="0,0,8,0" />
                             <TextBox Grid.Column="1"
                                      AutomationProperties.AutomationId="NoxStudio.Hierarchy.SearchBox"
+                                     AutomationProperties.Name="Search hierarchy"
                                      Style="{StaticResource NoxHierarchySearchTextBoxStyle}"
                                      Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}"
                                      ToolTip="名前または種類で検索" />
@@ -105,7 +106,8 @@
                                 SelectedItem="{Binding SelectedAutoSyncOption, Mode=TwoWay}"
                                DisplayMemberPath="DisplayName"
                                Style="{StaticResource NoxHierarchyComboBoxStyle}"
-                               AutomationProperties.AutomationId="NoxStudio.Hierarchy.AutoSyncInterval">
+                               AutomationProperties.AutomationId="NoxStudio.Hierarchy.AutoSyncInterval"
+                               AutomationProperties.Name="Inspector synchronization interval">
                         <ComboBox.Resources>
                             <StaticResource x:Key="{x:Static SystemColors.WindowBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
                             <StaticResource x:Key="{x:Static SystemColors.WindowTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
@@ -136,6 +138,9 @@
                       BorderThickness="0"
                       Foreground="{DynamicResource Nox.Brush.TextHeading}"
                       Padding="4"
+                      ScrollViewer.CanContentScroll="True"
+                      VirtualizingPanel.IsVirtualizing="True"
+                      VirtualizingPanel.VirtualizationMode="Recycling"
                       PreviewKeyDown="OnHierarchyPreviewKeyDown"
                       SelectedItemChanged="OnSelectedItemChanged">
                 <TreeView.Resources>
@@ -216,6 +221,7 @@
                         <MenuItem Header="Delete"
                                   AutomationProperties.AutomationId="NoxStudio.Hierarchy.Context.Delete"
                                   Command="{Binding PlacementTarget.DataContext.DeleteSelectedCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+                                  InputGestureText="Delete"
                                   ToolTip="選択中ノードを削除" />
                     </ContextMenu>
                 </TreeView.ContextMenu>

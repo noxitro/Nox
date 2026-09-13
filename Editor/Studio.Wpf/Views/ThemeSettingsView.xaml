@@ -4,6 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:prism="http://prismlibrary.com/"
+             xmlns:noxui="clr-namespace:NoxUI;assembly=NoxUI"
              xmlns:vm="clr-namespace:Studio.Wpf.ViewModels"
              xmlns:local="clr-namespace:Studio.Wpf.Views"
              mc:Ignorable="d"
@@ -72,11 +73,14 @@
                 </Grid>
             </Border>
 
-            <Grid Margin="12">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Auto">
+            <Grid Margin="12"
+                  MinWidth="900">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="280" />
-                    <ColumnDefinition Width="340" />
-                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="2.4*" />
+                    <ColumnDefinition Width="3*" />
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0"
@@ -166,7 +170,7 @@
                                             <Run Text="{Binding HexValue}" />
                                         </TextBlock>
                                     </StackPanel>
-                                </Grid>
+                                                    </Grid>
                             </DataTemplate>
                         </ListView.ItemTemplate>
                     </ListView>
@@ -205,6 +209,7 @@
                                        Foreground="{DynamicResource Nox.Brush.TextMuted}"
                                        VerticalAlignment="Center" />
                             <TextBox Grid.Column="1"
+                                     AutomationProperties.Name="Custom theme name"
                                      Style="{StaticResource ThemeSettingsTextBoxStyle}"
                                      Text="{Binding CustomThemeName, UpdateSourceTrigger=PropertyChanged}" />
 
@@ -215,6 +220,7 @@
                                        Margin="0,8,0,0" />
                             <ComboBox Grid.Row="1"
                                       Grid.Column="1"
+                                      AutomationProperties.Name="Base theme"
                                       Margin="0,8,0,0"
                                       ItemsSource="{Binding BuiltInThemes}"
                                       SelectedItem="{Binding SelectedBaseTheme, Mode=TwoWay}"
@@ -271,6 +277,7 @@
                                        VerticalAlignment="Center" />
                             <TextBox Grid.Row="6"
                                      Grid.Column="1"
+                                     AutomationProperties.Name="Brush hexadecimal color"
                                      Style="{StaticResource ThemeSettingsTextBoxStyle}"
                                      Text="{Binding SelectedBrush.HexValue, UpdateSourceTrigger=PropertyChanged}" />
                             <Button Grid.Row="6"
@@ -306,6 +313,7 @@
                                            Foreground="{DynamicResource Nox.Brush.TextSubtle}"
                                            VerticalAlignment="Center" />
                                 <TextBox Grid.Column="1"
+                                         AutomationProperties.Name="Alpha channel"
                                          Style="{StaticResource ThemeSettingsTextBoxStyle}"
                                          Text="{Binding SelectedBrush.Alpha, UpdateSourceTrigger=LostFocus}" />
                                 <TextBlock Grid.Column="3"
@@ -313,6 +321,7 @@
                                            Foreground="{DynamicResource Nox.Brush.TextSubtle}"
                                            VerticalAlignment="Center" />
                                 <TextBox Grid.Column="4"
+                                         AutomationProperties.Name="Red channel"
                                          Style="{StaticResource ThemeSettingsTextBoxStyle}"
                                          Text="{Binding SelectedBrush.Red, UpdateSourceTrigger=LostFocus}" />
                                 <TextBlock Grid.Column="6"
@@ -320,6 +329,7 @@
                                            Foreground="{DynamicResource Nox.Brush.TextSubtle}"
                                            VerticalAlignment="Center" />
                                 <TextBox Grid.Column="7"
+                                         AutomationProperties.Name="Green channel"
                                          Style="{StaticResource ThemeSettingsTextBoxStyle}"
                                          Text="{Binding SelectedBrush.Green, UpdateSourceTrigger=LostFocus}" />
                                 <TextBlock Grid.Column="9"
@@ -327,6 +337,7 @@
                                            Foreground="{DynamicResource Nox.Brush.TextSubtle}"
                                            VerticalAlignment="Center" />
                                 <TextBox Grid.Column="10"
+                                         AutomationProperties.Name="Blue channel"
                                          Style="{StaticResource ThemeSettingsTextBoxStyle}"
                                          Text="{Binding SelectedBrush.Blue, UpdateSourceTrigger=LostFocus}" />
                             </Grid>
@@ -336,6 +347,8 @@
                                        Grid.ColumnSpan="2"
                                        Margin="0,10,0,0"
                                        Foreground="{DynamicResource Nox.Brush.ErrorText}"
+                                       AutomationProperties.LiveSetting="Polite"
+                                       noxui:LiveRegionBehavior.AnnounceText="{Binding SelectedBrush.ErrorText}"
                                        Text="{Binding SelectedBrush.ErrorText}" />
 
                             <TextBlock Grid.Row="9"
@@ -349,6 +362,7 @@
                     </Border>
                 </DockPanel>
             </Grid>
+            </ScrollViewer>
         </DockPanel>
     </Border>
 </UserControl>

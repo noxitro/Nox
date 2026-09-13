@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using System.ComponentModel;
 using Core.UI.ViewModels;
 
 namespace Core.UI.Views;
@@ -27,4 +28,12 @@ public partial class MessageBoxWindow : Window
     {
         Close();
     }
+
+	private void OnWindowClosing(object? sender, CancelEventArgs e)
+	{
+		if (DataContext is MessageBoxWindowViewModel viewModel)
+		{
+			e.Cancel = viewModel.TryCloseFromWindow() == false;
+		}
+	}
 	}

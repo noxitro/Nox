@@ -49,6 +49,88 @@ public sealed class EditorSmokeTests
 	}
 
 	[Fact]
+	public void PrimaryControlsExposeAccessibleNames()
+	{
+		using TestWorkspace workspace = TestWorkspace.Create();
+		using EditorApp editor = EditorApp.Launch(workspace.RootPath);
+
+		Assert.Equal("Search hierarchy", FindByAutomationId(editor.MainWindow, "NoxStudio.Hierarchy.SearchBox").Name);
+		Assert.Equal("Inspector synchronization interval", FindByAutomationId(editor.MainWindow, "NoxStudio.Hierarchy.AutoSyncInterval").Name);
+		Assert.Equal("Search assets", FindByAutomationId(editor.MainWindow, "NoxStudio.AssetBrowser.SearchBox").Name);
+		Assert.Equal("Asset view mode", FindByAutomationId(editor.MainWindow, "NoxStudio.AssetBrowser.ViewModeCombo").Name);
+		Assert.Equal("Trace level filter", FindByAutomationId(editor.MainWindow, "NoxStudio.Trace.LevelFilter").Name);
+		Assert.Equal("Search trace", FindByAutomationId(editor.MainWindow, "NoxStudio.Trace.SearchBox").Name);
+		FindByAutomationId(editor.MainWindow, "NoxStudio.Trace.SearchBox").AsTextBox().Text = "impeccable-no-matching-trace";
+		Assert.Equal(
+			"No trace entries match the current filters.",
+			FindByAutomationId(editor.MainWindow, "NoxStudio.Trace.EmptyState").Name);
+	}
+
+	[Fact]
+	public void HierarchyDeleteCanBeCancelled()
+	{
+		using TestWorkspace workspace = TestWorkspace.Create();
+		using EditorApp editor = EditorApp.Launch(workspace.RootPath);
+
+		AutomationElement hierarchyTree = FindByAutomationId(editor.MainWindow, "NoxStudio.Hierarchy.Tree");
+		AutomationElement camera = WaitForDescendantByName(hierarchyTree, "Main Camera");
+		camera.Click();
+		FlaUI.Core.Input.Keyboard.Press(FlaUI.Core.WindowsAPI.VirtualKeyShort.DELETE);
+
+		Assert.NotNull(WaitForDesktopElementByName(editor, "Delete hierarchy node"));
+		WaitForDesktopElementByName(editor, "No").Click();
+
+		Assert.NotNull(WaitForDescendantByName(hierarchyTree, "Main Camera"));
+	}
+
+	[Theory]
+	[InlineData(System.Windows.MessageBoxButton.OK, "OK", System.Windows.MessageBoxResult.OK)]
+	[InlineData(System.Windows.MessageBoxButton.OKCancel, "OK", System.Windows.MessageBoxResult.OK)]
+	[InlineData(System.Windows.MessageBoxButton.YesNo, "Yes", System.Windows.MessageBoxResult.Yes)]
+	[InlineData(System.Windows.MessageBoxButton.YesNoCancel, "Yes", System.Windows.MessageBoxResult.Yes)]
+	public void MessageBoxPrimaryButtonUsesStandardResult(
+		System.Windows.MessageBoxButton style,
+		string expectedText,
+		System.Windows.MessageBoxResult expectedResult)
+	{
+		Core.UI.ViewModels.MessageBoxWindowViewModel viewModel = new()
+		{
+			Title = "Test",
+			Message = "Test",
+			Level = System.Windows.MessageBoxImage.Information,
+			Style = style,
+			Callback = _ => { },
+		};
+
+		Assert.Equal(expectedText, viewModel.PrimaryButtonText);
+		viewModel.PrimaryCommand.Execute();
+		Assert.Equal(expectedResult, viewModel.Result);
+	}
+
+	[Theory]
+	[InlineData(System.Windows.MessageBoxButton.OK, true, System.Windows.MessageBoxResult.OK)]
+	[InlineData(System.Windows.MessageBoxButton.OKCancel, true, System.Windows.MessageBoxResult.Cancel)]
+	[InlineData(System.Windows.MessageBoxButton.YesNo, false, System.Windows.MessageBoxResult.None)]
+	[InlineData(System.Windows.MessageBoxButton.YesNoCancel, true, System.Windows.MessageBoxResult.Cancel)]
+	public void MessageBoxWindowCloseUsesStandardResult(
+		System.Windows.MessageBoxButton style,
+		bool expectedCanClose,
+		System.Windows.MessageBoxResult expectedResult)
+	{
+		Core.UI.ViewModels.MessageBoxWindowViewModel viewModel = new()
+		{
+			Title = "Test",
+			Message = "Test",
+			Level = System.Windows.MessageBoxImage.Information,
+			Style = style,
+			Callback = _ => { },
+		};
+
+		Assert.Equal(expectedCanClose, viewModel.TryCloseFromWindow());
+		Assert.Equal(expectedResult, viewModel.Result);
+	}
+
+	[Fact]
 	public void HierarchyRootAddSelectsNewEntityNodeInInspector()
 	{
 		using TestWorkspace workspace = TestWorkspace.Create();

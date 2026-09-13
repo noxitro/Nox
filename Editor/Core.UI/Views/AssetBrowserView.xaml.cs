@@ -73,6 +73,17 @@ namespace Core.UI.Views;
 
 		private void OnAssetBrowserPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
 		{
+			if (e.Key == System.Windows.Input.Key.Enter &&
+				e.OriginalSource is not System.Windows.Controls.TextBox &&
+				sender is System.Windows.Controls.ListView or System.Windows.Controls.ListBox &&
+				DataContext is Core.UI.ViewModels.AssetBrowserViewModel { SelectedAsset.IsRenaming: false } openViewModel &&
+				openViewModel.OpenInExplorerCommand.CanExecute())
+			{
+				openViewModel.OpenInExplorerCommand.Execute();
+				e.Handled = true;
+				return;
+			}
+
 			if (e.Key != System.Windows.Input.Key.F2 ||
 				e.OriginalSource is System.Windows.Controls.TextBox ||
 				DataContext is not Core.UI.ViewModels.AssetBrowserViewModel viewModel)

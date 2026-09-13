@@ -48,11 +48,39 @@
                 </Grid>
             </Border>
 
-            <ListView ItemsSource="{Binding Instances}"
-                      Background="{DynamicResource Nox.Brush.SurfaceBackground}"
-                      Foreground="{DynamicResource Nox.Brush.TextPrimary}"
-                      BorderThickness="0"
-                      AutomationProperties.AutomationId="NoxStudio.RemoteInstanceManager.List">
+            <Grid Background="{DynamicResource Nox.Brush.SurfaceBackground}">
+                <TextBlock AutomationProperties.AutomationId="NoxStudio.RemoteInstanceManager.EmptyState"
+                           AutomationProperties.Name="No remote instances. Start or connect Runtime, then refresh."
+                           Text="No remote instances. Start or connect Runtime, then refresh."
+                           Foreground="{DynamicResource Nox.Brush.TextMuted}"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           MaxWidth="360"
+                           Margin="24"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Panel.ZIndex="2"
+                           IsHitTestVisible="False">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Instances.Count}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <ListView ItemsSource="{Binding Instances}"
+                          Background="Transparent"
+                          Foreground="{DynamicResource Nox.Brush.TextPrimary}"
+                          BorderThickness="0"
+                          Panel.ZIndex="1"
+                          AutomationProperties.AutomationId="NoxStudio.RemoteInstanceManager.List"
+                          ScrollViewer.CanContentScroll="True"
+                          VirtualizingPanel.IsVirtualizing="True"
+                          VirtualizingPanel.VirtualizationMode="Recycling">
                 <ListView.Resources>
                     <StaticResource x:Key="{x:Static SystemColors.ControlBrushKey}" ResourceKey="Nox.Brush.SurfaceBackground" />
                     <StaticResource x:Key="{x:Static SystemColors.ControlTextBrushKey}" ResourceKey="Nox.Brush.TextPrimary" />
@@ -72,7 +100,8 @@
                         <GridViewColumn Header="Status" DisplayMemberBinding="{Binding Status}" Width="110" />
                     </GridView>
                 </ListView.View>
-            </ListView>
+                </ListView>
+            </Grid>
         </DockPanel>
     </Border>
 </UserControl>

@@ -204,10 +204,25 @@
         <Setter Property="Padding" Value="6,2" />
     </Style>
 
+    <Style x:Key="Nox.FocusVisualStyle">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Rectangle Margin="2"
+                               Stroke="{DynamicResource Nox.Brush.Accent}"
+                               StrokeThickness="2"
+                               StrokeDashArray="1,1"
+                               SnapsToDevicePixels="True" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style TargetType="{x:Type Button}">
         <Setter Property="Background" Value="{DynamicResource Nox.Brush.ControlBackground}" />
         <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.GridLine}" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Nox.FocusVisualStyle}" />
     </Style>
 
     <Style x:Key="Nox.CommandButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource {x:Type Button}}">
@@ -300,6 +315,7 @@
         <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorder}" />
         <Setter Property="Padding" Value="2" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Nox.FocusVisualStyle}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type CheckBox}">
@@ -441,7 +457,7 @@
                                IsOpen="{TemplateBinding IsDropDownOpen}"
                                AllowsTransparency="True"
                                Focusable="False"
-                               PopupAnimation="Fade">
+                               PopupAnimation="None">
                             <Border x:Name="PopupBorder"
                                     Margin="0,2,0,0"
                                     MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
@@ -546,6 +562,7 @@
     <Style TargetType="{x:Type TreeViewItem}">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Nox.FocusVisualStyle}" />
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Background" Value="{DynamicResource Nox.Brush.ControlBackgroundHover}" />
@@ -579,7 +596,7 @@
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Nox.FocusVisualStyle}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ListViewItem}">

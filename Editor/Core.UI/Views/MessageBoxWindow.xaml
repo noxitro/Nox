@@ -14,6 +14,7 @@
         Background="{DynamicResource Nox.Brush.WindowBackground}"
         Foreground="{DynamicResource Nox.Brush.TextPrimary}"
         ShowInTaskbar="False"
+        Closing="OnWindowClosing"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:MessageBoxWindowViewModel, IsDesignTimeCreatable=True}"
         Title="{Binding Title}"
@@ -86,6 +87,7 @@
                                Foreground="{DynamicResource Nox.Brush.TextPrimary}"/>
                     <Button HorizontalAlignment="Right"
                             Content="×"
+                            AutomationProperties.Name="Close dialog"
                             Style="{StaticResource MessageBoxCaptionButtonStyle}"
                             Click="CloseButton_Click"/>
                 </Grid>
@@ -110,7 +112,7 @@
             <StackPanel Grid.Row="4"
                      Orientation="Horizontal"
                      HorizontalAlignment="Right">
-                <Button Content="Yes" Command="{Binding YesCommand}" IsDefault="True">
+                <Button Content="{Binding PrimaryButtonText}" Command="{Binding PrimaryCommand}" IsDefault="True">
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource MessageBoxButtonStyle}">
                             <Setter Property="Visibility" Value="Collapsed"/>

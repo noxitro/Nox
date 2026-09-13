@@ -140,6 +140,7 @@
 
                     <TextBox Grid.Column="1"
                              AutomationProperties.AutomationId="NoxStudio.AssetBrowser.SearchBox"
+                             AutomationProperties.Name="Search assets"
                              Height="28"
                              MinWidth="260"
                               Style="{StaticResource Nox.SearchTextBoxStyle}"
@@ -154,7 +155,8 @@
                               SelectedItem="{Binding SelectedViewMode, Mode=TwoWay}"
                               DisplayMemberPath="DisplayName"
                               Style="{StaticResource NoxAssetBrowserComboBoxStyle}"
-                              AutomationProperties.AutomationId="NoxStudio.AssetBrowser.ViewModeCombo">
+                              AutomationProperties.AutomationId="NoxStudio.AssetBrowser.ViewModeCombo"
+                              AutomationProperties.Name="Asset view mode">
                         <ComboBox.Resources>
                             <StaticResource x:Key="{x:Static SystemColors.WindowBrushKey}" ResourceKey="Nox.Brush.MenuBackground" />
                             <StaticResource x:Key="{x:Static SystemColors.WindowTextBrushKey}" ResourceKey="Nox.Brush.TextHeading" />
@@ -194,7 +196,10 @@
                           Background="{DynamicResource Nox.Brush.SurfaceBackground}"
                           Foreground="{DynamicResource Nox.Brush.TextHeading}"
                           BorderThickness="0"
-                           Padding="4"
+                          Padding="4"
+                          ScrollViewer.CanContentScroll="True"
+                          VirtualizingPanel.IsVirtualizing="True"
+                          VirtualizingPanel.VirtualizationMode="Recycling"
                           PreviewKeyDown="OnAssetBrowserPreviewKeyDown"
                            SelectedItemChanged="OnSelectedItemChanged">
                     <TreeView.Resources>
@@ -259,16 +264,46 @@
                     </Border>
 
                     <Grid Background="{DynamicResource Nox.Brush.SurfaceBackground}">
+                        <TextBlock AutomationProperties.AutomationId="NoxStudio.AssetBrowser.EmptyState"
+                                   AutomationProperties.Name="No assets found. Add files under Assets or clear the current search."
+                                   Text="No assets found. Add files under Assets or clear the current search."
+                                   Foreground="{DynamicResource Nox.Brush.TextMuted}"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   MaxWidth="360"
+                                   Margin="24"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Panel.ZIndex="2"
+                                   IsHitTestVisible="False">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Assets.Count}" Value="0">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                         <ListView AutomationProperties.AutomationId="NoxStudio.AssetBrowser.AssetList"
-                                  Style="{StaticResource DetailsViewStyle}"
                                   ItemsSource="{Binding Assets}"
                                   SelectedItem="{Binding SelectedAsset, Mode=TwoWay}"
                                   ItemContainerStyle="{StaticResource AssetListViewItemStyle}"
                                   Background="{DynamicResource Nox.Brush.SurfaceBackground}"
                                   Foreground="{DynamicResource Nox.Brush.TextHeading}"
                                   BorderThickness="0"
+                                  ScrollViewer.CanContentScroll="True"
+                                  VirtualizingPanel.IsVirtualizing="True"
+                                  VirtualizingPanel.VirtualizationMode="Recycling"
                                   PreviewKeyDown="OnAssetBrowserPreviewKeyDown"
                                   MouseDoubleClick="OnAssetDoubleClick">
+                            <ListView.Style>
+                                <Style TargetType="ListView" BasedOn="{StaticResource DetailsViewStyle}">
+                                   <Setter Property="Panel.ZIndex" Value="1" />
+                                </Style>
+                            </ListView.Style>
                             <ListView.View>
                                 <GridView>
                                     <GridViewColumn Header="Name" Width="240">
@@ -321,7 +356,6 @@
                         </ListView>
 
                         <ListBox AutomationProperties.AutomationId="NoxStudio.AssetBrowser.ThumbnailList"
-                                 Style="{StaticResource ThumbnailViewStyle}"
                                  ItemsSource="{Binding Assets}"
                                  SelectedItem="{Binding SelectedAsset, Mode=TwoWay}"
                                  Background="{DynamicResource Nox.Brush.SurfaceBackground}"
@@ -332,6 +366,11 @@
                                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                   PreviewKeyDown="OnAssetBrowserPreviewKeyDown"
                                   MouseDoubleClick="OnAssetDoubleClick">
+                            <ListBox.Style>
+                                <Style TargetType="ListBox" BasedOn="{StaticResource ThumbnailViewStyle}">
+                                    <Setter Property="Panel.ZIndex" Value="1" />
+                                </Style>
+                            </ListBox.Style>
                             <ListBox.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <WrapPanel />

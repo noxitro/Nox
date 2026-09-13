@@ -34,6 +34,16 @@ namespace Core.UI.Views;
 
 		private void OnHierarchyPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
 		{
+			if (e.Key == System.Windows.Input.Key.Delete &&
+				e.OriginalSource is not System.Windows.Controls.TextBox &&
+				DataContext is Core.UI.ViewModels.HierarchyViewModel deleteViewModel &&
+				deleteViewModel.DeleteSelectedCommand.CanExecute())
+			{
+				deleteViewModel.DeleteSelectedCommand.Execute();
+				e.Handled = true;
+				return;
+			}
+
 			if (e.Key != System.Windows.Input.Key.F2 ||
 				e.OriginalSource is System.Windows.Controls.TextBox ||
 				DataContext is not Core.UI.ViewModels.HierarchyViewModel viewModel)
