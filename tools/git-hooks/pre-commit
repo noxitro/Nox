@@ -1,0 +1,23 @@
+#!/bin/sh
+# ステージされた内容だけを見る。速いのでコミットのたびに走らせてよい。
+set -u
+DIR=$(dirname "$0")
+
+# コミットする identity が noreply になっているか。履歴を浄化した意味を
+# 保つために、ここで個人メールでのコミットを止める。
+email=$(git config user.email 2>/dev/null || true)
+case "$email" in
+  *@users.noreply.github.com|*@github.com) ;;
+  "")
+    echo "pre-commit: user.email が未設定。git config user.email を設定すること" >&2
+    exit 1 ;;
+  *)
+    echo "pre-commit: user.email が '$email' になっている。" >&2
+    echo "  公開リポジトリなので noreply アドレスを使うこと:" >&2
+    echo "    git config user.email '38311969+noxitro@users.noreply.github.com'" >&2
+    exit 1 ;;
+esac
+
+git diff --cached --name-only --diff-filter=ACM -z |
+  while IFS= read -r -d '' p; do printf '%s\t:%s\n' "$p" "$p"; done |
+  sh "$DIR/scan.sh" || exit 1
