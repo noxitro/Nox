@@ -188,7 +188,23 @@ void nox::JobSystem::Dispatch(const std::span<const nox::Job> jobs, nox::JobCoun
 	}
 	queue_mutex_.Unlock();
 
-	::WakeAllConditionVariable(&job_available_);
+	//	起こすのは積めたジョブの本数まで。WakeAll だと 4 本積んだだけでもワーカー全員が
+	//	起きて、大半が「何も無い」と分かって寝直す(thundering herd)。
+	//	空ジョブ 4 本の Dispatch + Wait が 4 ワーカーで 0.65us、31 ワーカーで 27us まで
+	//	膨らんでいた原因がこれ。起こし損ねても取りこぼさない: ワーカーは
+	//	queue_mutex_ を取った上で head_ == tail_ を再確認してから眠る。
+	//	Wait も条件変数では眠らない(YieldProcessor で回る)ので待ち手が取り残されることもない。
+	if (enqueued_count >= static_cast<size_t>(worker_count_))
+	{
+		::WakeAllConditionVariable(&job_available_);
+	}
+	else
+	{
+		for (size_t index = 0u; index < enqueued_count; ++index)
+		{
+			::WakeConditionVariable(&job_available_);
+		}
+	}
 
 	if (enqueued_count != jobs.size())
 	{
