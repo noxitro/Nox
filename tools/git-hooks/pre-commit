@@ -21,3 +21,6 @@ esac
 git diff --cached --name-only --diff-filter=ACM -z |
   while IFS= read -r -d '' p; do printf '%s\t:%s\n' "$p" "$p"; done |
   sh "$DIR/scan.sh" || exit 1
+
+# 組み込みパターンで拾えないものを gitleaks に見てもらう。
+sh "$DIR/gitleaks.sh" --staged || exit 1

@@ -60,5 +60,18 @@ sh tools/git-hooks/install.sh
 `git config --unset core.hooksPath`。誤検出は `.githooks-allow` に
 パスを 1 行で足して除外する (理由をコメントで残すこと)。
 
-同じ検査は CI の `secret-scan` ジョブでも走る。手元のフックを
+検査は 2 段になっている。`scan.sh` がこのリポジトリ固有のもの
+(ビルド成果物の混入、ローカル絶対パス、個人メール) を見て、
+`gitleaks` が汎用の秘密情報を見る。gitleaks は任意だが、入れると
+検出できるトークン形式が大幅に増えるので推奨する。
+
+```sh
+winget install Gitleaks.Gitleaks
+```
+
+同じ検査は CI の `Secret scan` ワークフローでも走る。手元のフックを
 入れ忘れても、push された内容はそちらで検査される。
+
+ただし CI は push の後に走るので、流出そのものは防げない。
+外に出る前に止まるのは `pre-push` と、GitHub 側の push protection
+(Settings > Code security) の 2 つだけ。

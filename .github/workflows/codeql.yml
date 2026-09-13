@@ -1,0 +1,52 @@
+# CodeQL による静的解析。公開リポジトリでは無料。
+#
+# C++ 側は runtime のビルドが必要で、そこは MSVC/ClangCL 前提の
+# Windows ビルドになる。CodeQL の C++ 解析は Linux ランナーでの
+# autobuild が現実的でないので、ここでは C# (Editor) だけを対象に
+# している。C++ を入れるなら windows ランナーで manual build mode を
+# 組む必要があり、無料枠の消費も大きいので別途判断すること。
+
+name: CodeQL
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  schedule:
+    # 依存やルールの更新で新しく見つかるものがあるので週次でも回す
+    - cron: '21 4 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (C#)
+    runs-on: windows-latest
+    timeout-minutes: 60
+    permissions:
+      security-events: write   # 解析結果を Security タブに書き込む
+      contents: read
+      actions: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+
+      # Editor だけを建てる。runtime (C++) は対象外。
+      - name: Build Editor
+        run: dotnet build Editor/Studio.Wpf/Studio.Wpf.csproj -c Debug
+
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:csharp"

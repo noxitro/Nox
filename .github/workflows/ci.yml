@@ -50,51 +50,6 @@ defaults:
 
 jobs:
   # =========================================================
-  # Secrets: 公開リポジトリなので、push された中身に秘密情報や
-  #          ローカル絶対パスが混ざっていないかを毎回見る。
-  #
-  # 手元では tools/git-hooks の pre-commit / pre-push が同じ検査を
-  # しているが、クラウド側から直接 push
-  # してくる経路はそのフックを通らない。ここが最後の網になる。
-  #
-  # push 後に走るので流出そのものは防げない。防ぐのは GitHub の
-  # push protection (Settings > Code security) の役目で、ここは
-  # そちらが拾わない種類 (成果物の混入・ローカルパス) を見ている。
-  # =========================================================
-  secret-scan:
-    name: Secret scan
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0   # 差分を取るため全履歴
-
-      - name: Scan pushed files
-        shell: bash
-        run: |
-          set -uo pipefail
-          before='${{ github.event.before }}'
-          if [ "${{ github.event_name }}" = "push" ] && [ -n "$before" ] && [ "$before" != "0000000000000000000000000000000000000000" ] && git cat-file -e "$before" 2>/dev/null; then
-            files=$(git diff --name-only "$before" "${{ github.sha }}")
-            echo "差分 $before..${{ github.sha }} を検査する"
-          else
-            files=$(git ls-tree -r --name-only HEAD)
-            echo "全ツリーを検査する (初回 push か、遡れない push)"
-          fi
-          if [ -z "$files" ]; then echo "対象ファイルなし"; exit 0; fi
-          echo "$files" | wc -l | xargs echo "検査対象:"
-          TAB=$(printf '\t')
-          echo "$files" | while IFS= read -r f; do
-            if [ -n "$f" ] && git cat-file -e "HEAD:$f" 2>/dev/null; then
-              echo "${f}${TAB}HEAD:${f}"
-            fi
-          done | sh tools/git-hooks/scan.sh
-
-  # =========================================================
   # Build: runtime.slnx (runtime.exe まで) を
   #        2 つのコンパイラ x 3 構成 (Debug / Release / Master) で建てる
   #
@@ -414,7 +369,7 @@ jobs:
   # =========================================================
   notify:
     name: Notify Discord
-    needs: [secret-scan, build, test, editor]
+    needs: [build, test, editor]
     # 判定は step 側で needs.*.result を見るので、ここでは always() で拾うだけ。
     if: always() && github.event_name != 'pull_request'
     runs-on: ubuntu-latest

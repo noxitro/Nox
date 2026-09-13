@@ -1,0 +1,25 @@
+# Dependabot の更新対象。公開リポジトリなので無料で使える。
+#
+# vcpkg は Dependabot が対応していないエコシステムなので、
+# C++ 側の依存 (fmt / gtest / ms-gsl) はここでは追えない。
+# 手動か、vcpkg.json のバージョン固定を別途見ること。
+
+version: 2
+updates:
+  # GitHub Actions 自体の更新。actions/checkout@v4 のような
+  # 参照が古くなるのを拾う。
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "ci"
+
+  # .NET (Editor 側)。NuGet の参照を追う。
+  - package-ecosystem: nuget
+    directory: /Editor
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "editor"
+    open-pull-requests-limit: 5
