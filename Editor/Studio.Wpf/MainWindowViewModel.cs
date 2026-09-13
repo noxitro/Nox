@@ -27,7 +27,7 @@ namespace Studio.Wpf.ViewModels;
 		}
 
 		public MainWindowViewModel()
-			: this(Prism.Ioc.ContainerLocator.Container.Resolve<Studio.Wpf.Themes.IThemeService>())
+			: this(NoxUI.ServiceLocator.Resolve<Studio.Wpf.Themes.IThemeService>())
 		{
 		}
 

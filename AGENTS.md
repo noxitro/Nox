@@ -128,7 +128,10 @@ dotnet build Editor/Studio.slnx
 
 - ViewModel 基底は `NoxUI.ViewModelBase` を使用。
 - コマンドは `NoxUI.ViewModelCommand` を使用。
-- Prism の依存は NoxUI 側に閉じ込める。
+- MVVM ツールキット (CommunityToolkit.Mvvm) への依存は NoxUI 側に閉じ込める。他プロジェクトから `CommunityToolkit.*` を直接参照しない。
+- ViewModel でない通知オブジェクト (サービス等) の基底は `NoxUI.ObservableBase`。
+- DI は `Microsoft.Extensions.DependencyInjection`。登録は `App.ConfigureServices` と各 `Core.UI.EntryBase.RegisterTypes`、View と ViewModel の結線は `noxui:ViewModelLocator.AutoWireViewModel="True"` (規約: `Views.X` → `ViewModels.XViewModel`)。
+- `NoxUI.ServiceLocator` は XAML 生成の View と引数なしコンストラクタが要る場所だけで使う。コンストラクタ注入で済むところでは使わない。
 
 ## WPF テーマ適用規約
 

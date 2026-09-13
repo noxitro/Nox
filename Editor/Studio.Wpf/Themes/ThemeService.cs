@@ -10,7 +10,6 @@ using System.Windows;
 using System.Windows.Markup;
 using System.Windows.Media;
 using AvalonDock.Themes;
-using Prism.Mvvm;
 using Studio.Wpf.Themes.Variants;
 
 namespace Studio.Wpf.Themes;
@@ -18,7 +17,7 @@ namespace Studio.Wpf.Themes;
 /// <summary>
 /// アプリケーションテーマサービス。
 /// </summary>
-public sealed class ThemeService : BindableBase, IThemeService
+public sealed class ThemeService : NoxUI.ObservableBase, IThemeService
 {
     private const string DefaultThemeKey = "Nox";
     private static readonly string[] CustomThemeKeys = ["Custom1", "Custom2", "Custom3", "Custom4"];
