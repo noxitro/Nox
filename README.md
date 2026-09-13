@@ -21,8 +21,25 @@
 
 ### 要件 (Prerequisites)
 - **Windows 10 / 11**
-- **Visual Studio** (C++ ワークロード)
-- **.NET SDK** (6.0 以降)
+- **Visual Studio 2026** (C++ ワークロード)
+  - Runtime の各プロジェクトは PlatformToolset `v145` を指定しています。
+  - ソリューションは `.slnx` 形式のため、MSBuild 18 以降が必要です（`.sln` はリポジトリに存在しません）。
+- **.NET SDK 10.0 以降**
+  - Editor / ビルドツールは **.NET 10** (`net10.0` / `net10.0-windows`) を対象としています。
+  - リフレクション生成器が依存する Roslyn アナライザ部分のみ `netstandard2.0` です。
+
+### 対応コンパイラ (Toolchain)
+
+Runtime は **C++23** (`/std:c++latest`) の x64 ビルドで、以下 2 つのツールセットを**どちらも公式サポート**しています。
+
+| ツールセット | PlatformToolset | CI での扱い |
+| --- | --- | --- |
+| MSVC | `v145` | 必須ゲート (Debug / Release / Master) |
+| clang-cl (VS 同梱) | `ClangCL` | 必須ゲート (Debug / Release / Master) |
+
+- CI は `compiler x configuration` の直積 6 ジョブで `runtime.slnx` をビルドします。
+- **clang-cl も必須ゲートです。** MSVC が素通りさせる非適合コード（実質機能していない `if constexpr` ガード、未使用変数、未出力関数など）を実際に検出した実績があるため、`continue-on-error` には戻さない方針です。ClangCL ジョブが落ちた場合は無効化で回避せず、原因を修正してください。
+- ユニットテスト（`runtime_test.slnx`）の実行は MSVC ツールチェーンのみです。
 
 ### ビルド手順
 
