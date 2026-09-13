@@ -162,3 +162,58 @@
 
 # ローカル専用のビルド設定 (vcpkg の場所などの上書き)
 /runtime/Directory.Build.user.props
+
+# ---------------------------------------------------------------------------
+# ビルド / IDE 生成物の網羅指定
+#
+# ここから下は、上の個別パス列挙で取りこぼしたものを面で受け止めるための指定。
+# 新しいプロジェクトを足すたびに個別パスを書き足す運用をやめるために入れた。
+#
+# 注意: `bin/` は一律に無視してはいけない。runtime/bin/ はビルド出力ではなく
+#       ReflectionGenerator などツール群のソース置き場で、追跡が必要。
+#       同じ理由で runtime/bin/MakeAllIncludeHeader.exe は *.exe 指定の例外と
+#       して追跡し続けている (app.vcxproj のプリビルドが呼ぶ)。
+# ---------------------------------------------------------------------------
+
+# MSBuild / .NET の中間出力
+**/obj/
+**/x64/Debug/
+**/x64/Release/
+**/Debug/
+**/Release/
+
+# Visual Studio のローカル状態 (インデックス DB や Browse.VC.db を含む。
+# これらはローカル絶対パスとソース断片を埋め込むので公開リポジトリに置かない)
+**/.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.VC.db
+*.VC.VC.opendb
+*.db-wal
+*.db-shm
+
+# C++ / C# のビルド副産物
+*.pdb
+*.idb
+*.ilk
+*.iobj
+*.ipdb
+*.exp
+*.ipch
+*.aps
+*.tlog
+**/*.tlog/
+*.Build.CppClean.log
+*.cache
+
+# 前処理済みソース (巨大でローカルパスを含む)
+*.i
+*.ifc
+
+# ローカルのビルドログ
+build-*.log
+
+# 例外: ビルドが実際に呼ぶツールバイナリは追跡し続ける
+!runtime/bin/MakeAllIncludeHeader.exe
