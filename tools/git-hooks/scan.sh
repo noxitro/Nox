@@ -51,7 +51,7 @@ while IFS="$(printf '\t')" read -r path obj; do
   # --- 3. サイズ -------------------------------------------------------------
   size=$(git cat-file -s "$obj" 2>/dev/null || echo 0)
   if [ "$size" -gt "$MAX_BYTES" ]; then
-    note SIZE "$path" "$((size / 1024 / 1024)) MB — 5MB 超。成果物の混入を疑うこと"
+    note SIZE "$path" "$((size / 1024)) KB — 上限 $((MAX_BYTES / 1024)) KB を超過。成果物の混入を疑うこと"
   fi
 
   # --- 4. 中身 ---------------------------------------------------------------
