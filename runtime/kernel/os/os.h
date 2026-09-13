@@ -48,11 +48,32 @@ namespace nox::os
 		return nox::os::GetCommandLineArgList()[index];
 	}
 
+	///	@brief		指定した引数列から、キーに対応する値を取り出す。
+	///	@details	キーの直後が区切り文字 ('=' または ':') か終端のときだけ一致とみなす。
+	///				「キーで始まる」だけの判定にすると --foo が --foobar にも一致してしまうため。
+	///
+	///				返る値に区切り文字は含めない。--foo=bar なら "bar"。
+	///				--foo のように値が無い場合は空文字列を返す (キーは在ったので nullopt にはしない)。
+	///				キーが見つからなければ nullopt。
+	///
+	///				プロセスの実引数に依存しないので、この形はテストから直接叩ける。
+	///	@param		command_line_args	走査する引数列。nullptr 要素は読み飛ばす
+	///	@param		key					探すキー。区切り文字は含めない
+	[[nodiscard]] std::optional<std::u16string_view> TryGetCommandLineArgValue(
+		std::span<const nox::char16* const> command_line_args,
+		std::u16string_view key)noexcept;
+
+	///	@brief		指定した引数列にキーが存在するか。判定規則は TryGetCommandLineArgValue と同じ。
+	[[nodiscard]] bool ContainsCommandLineArgKey(
+		std::span<const nox::char16* const> command_line_args,
+		std::u16string_view arg)noexcept;
+
 	/// @brief		コマンドライン引数本体、または=で区切られたコマンドライン引数のキーが存在するか
 	/// @details	例：コマンドライン引数が「--foo=bar」の場合、ContainsCommandLineArgKey(u"--foo")はtrueを返す
 	bool ContainsCommandLineArgKey(std::u16string_view arg)noexcept;
 
-	/// @brief =で区切られたコマンドライン引数を取得します
+	/// @brief		=で区切られたコマンドライン引数の値を取得します
+	/// @details	区切り文字は値に含めない。判定規則は TryGetCommandLineArgValue を参照。
 	/// @param key
 	std::optional<std::u16string_view> GetCommandLineArgValue(std::u16string_view key)noexcept;
 
