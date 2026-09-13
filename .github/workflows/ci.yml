@@ -6,7 +6,7 @@
 # 構成  : Build (MSVC / ClangCL x Debug / Release / Master の 6 並列)、
 #         Test ジョブ (Debug のみ)、Editor ジョブを並列実行。
 #         Test を Debug に限っているのは、reflection_generated の pch.h /
-#         reflect.cpp が runtime/core/test/test_types.h を #if !NOX_MASTER で
+#         reflect.cpp が runtime/core/test_support/test_types.h を #if !NOX_MASTER で
 #         囲っており、Master ではテスト型のリフレクションが生成されず
 #         core_test が成立しないため。
 #         前準備は .github/actions/setup-nox-build に切り出してある。

@@ -1,8 +1,8 @@
 //	Copyright (C) 2026 NOX ENGINE All rights reserved.
 
 ///	@file	core_self_test.cpp
-///	@brief	core/test/ にあった NOX_ASSERT ベースのセルフテストを GoogleTest から走らせる。
-///	@details	core/test/*.cpp は core.vcxproj でビルドされてはいるものの、
+///	@brief	core/test_support/ にあった NOX_ASSERT ベースのセルフテストを GoogleTest から走らせる。
+///	@details	core/test_support/*.cpp は core.vcxproj でビルドされてはいるものの、
 ///				gtest ではなく NOX_ASSERT で書かれており、
 ///				呼び出し元は runtime.exe の nox::EntryPoint だけだった
 ///				(しかも TestEntityEcs / TestJobSystem の 2 本しか呼ばれていない)。
@@ -16,8 +16,8 @@
 
 #include	"pch.h"
 
-#include	"../core/test/test.h"
-#include	"../core/test/test_reflection.h"
+#include	"../test_support/test.h"
+#include	"../test_support/test_reflection.h"
 
 TEST(CoreSelfTest, Reflection)
 {

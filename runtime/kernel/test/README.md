@@ -156,7 +156,7 @@ TEST(TestSuiteName, TestName)
 
 `core` / `reflection` に依存するテストは `kernel_test` には入れません
 （kernel の単体テストがエンジン全部とコード生成器を引きずってしまうため）。
-`runtime/core_test/` に別プロジェクトがあります。
+`runtime/core/test/` に別プロジェクトがあります。
 
 ## 現在のテストカバレッジ
 

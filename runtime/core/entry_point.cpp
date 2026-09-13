@@ -11,7 +11,7 @@
 #include	"log_service.h"
 
 #if !NOX_MASTER
-#include	"test/test.h"
+#include	"test_support/test.h"
 #endif // !NOX_MASTER
 
 nox::int32 nox::EntryPoint(const std::span<const nox::char16* const> args)

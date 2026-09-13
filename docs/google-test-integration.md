@@ -15,14 +15,32 @@
 
 これにより、ビルド時に自動的に Google Test がインストールされます。
 
-### 2. テストプロジェクト (kernel_test)
+### 2. テストプロジェクトの配置
+
+テストプロジェクトは**テスト対象のモジュール配下の `test/`** に置く。
+
+| プロジェクト | 場所 | 依存 |
+|---|---|---|
+| `kernel_test` | `runtime/kernel/test/` | `kernel` のみ |
+| `core_test` | `runtime/core/test/` | `kernel` / `reflection` / `core` / `reflection_generated` |
+
+ユニットテストを対象コードと同居させるのは Chromium のスタイルガイドおよび
+Pitchfork Layout の Merged Test Placement に沿った形。なお
+`runtime/core/test_support/` は `core.vcxproj` がビルドする core 内部のコードで、
+テストプロジェクトではない（旧セルフテスト本体と、生成器に見せるテスト用型）。
+
+プロジェクト名は `_test` 終わりで統一する。ReflectionGenerator が
+このサフィックスでテスト実行ファイルを判別し、「全部入りヘッダ」の
+include 生成から除外している（`bin/source/ReflectionGenerator/Entry.cs`）。
+
+#### kernel_test
 
 **場所**: `runtime/kernel/test/`
 
 **構成ファイル**:
 - `kernel_test.vcxproj`: Visual Studio プロジェクトファイル
 - `kernel_test.vcxproj.filters`: ソースファイルのフィルタリング設定
-- `stdafx.h` / `stdafx.cpp`: プリコンパイル済みヘッダー
+- `pch.h` / `pch.cpp`: プリコンパイル済みヘッダー
 - `main.cpp`: テストエントリポイント（Google Test の初期化）
 - `README.md`: テストの使い方とドキュメント
 
@@ -33,13 +51,13 @@
 ### 3. テスト専用ソリューション
 
 - **`runtime/runtime_test.slnx`**: テスト専用のソリューションファイル（新規作成）
-  - kernel プロジェクトと kernel_test プロジェクトのみを含む
+  - kernel / core 側のモジュールと、`kernel_test` / `core_test` を含む
   - 通常のソリューション（runtime.sln/runtime.slnx）には影響しない
   - CI でのみ使用される
 
 ### 4. GitHub Actions CI
 
-**ファイル**: `.github/workflows/cibuild_runtime.yml`
+**ファイル**: `.github/workflows/ci.yml`
 
 **追加された機能**:
 1. vcpkg のセットアップ（Google Test のインストールのため）
@@ -47,7 +65,8 @@
 3. テスト実行ステップ
    - runtime_test.slnx ビルド時のみ実行
    - MSVC ツールチェーンのみ（clang は除外）
-   - すべての構成（Debug, Release, Master）で実行
+   - Debug のみで実行（Master は `test_types.h` が `#if !NOX_MASTER` で外れ、
+     テスト型のリフレクションが生成されないため core_test が成立しない）
 4. テスト結果のアップロード（XML 形式）
 
 **注意**: 通常のソリューション（runtime.slnx）はテストプロジェクトを含まないため、ビルドマトリクスに両方のソリューションが含まれています。
@@ -88,7 +107,7 @@ GitHub にプッシュまたは PR を作成すると、自動的に実行され
 3. Google Test のマクロを使用してテストを記述：
 
 ```cpp
-#include "stdafx.h"
+#include "pch.h"
 #include "../your_header.h"
 
 TEST(TestSuiteName, TestName)
@@ -114,7 +133,7 @@ TEST(TestSuiteName, TestName)
 - **依存関係**: kernel.lib
 
 ### ビルド設定
-- プリコンパイル済みヘッダー: stdafx.h
+- プリコンパイル済みヘッダー: pch.h
 - インクルードパス: `$(ProjectDir);$(ProjectDir)..`
 - vcpkg 統合: 有効
 

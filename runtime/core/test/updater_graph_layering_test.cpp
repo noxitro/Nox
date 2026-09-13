@@ -37,13 +37,13 @@
 
 //	core_test の pch.h は gtest しか載せていない (test_new_delete.cpp の都合)。
 //	core のヘッダは kernel / reflection の基盤型に依存するので、main.cpp と同じ順で先に入れる。
-#include	"../kernel/kernel.h"
-#include	"../reflection/reflection.h"
+#include	"../../kernel/kernel.h"
+#include	"../../reflection/reflection.h"
 
-#include	"../core/updater_graph.h"
-#include	"../core/entity_system.h"
-#include	"../core/entity_logic.h"
-#include	"../core/service.h"
+#include	"../updater_graph.h"
+#include	"../entity_system.h"
+#include	"../entity_logic.h"
+#include	"../service.h"
 
 namespace nox::test::updater_graph
 {
@@ -140,7 +140,7 @@ namespace nox::test::updater_graph
 	//	更新メソッドの購読は通常リフレクション生成コードが行うが、
 	//	nox::EntityLogicMethodTable の手書き特殊化 (entity_logic.h が明記している
 	//	エスケープハッチ) を使えば生成器を通さずに同じ経路へ載せられる。
-	//	core_test 専用の型を core/test/test_types.h へ足さずに済み、
+	//	core_test 専用の型を core/test_support/test_types.h へ足さずに済み、
 	//	Master でテスト型のリフレクションが生成されない問題とも無関係でいられる。
 	//	=================================================================================
 

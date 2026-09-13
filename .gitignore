@@ -140,7 +140,6 @@
 /Editor/Studio.Wpf.UITests/bin/Debug/net10.0-windows
 /Editor/Studio.Wpf.UITests/obj
 /Assets
-/runtime/kernel/test/build/intermediate/x64/Debug/kernel_test
 /runtime/reflection_generated/gen
 /runtime/bin/source/NoxLib/.vs
 /runtime/bin/source/NoxLib/NoxLib/x64/Debug
@@ -156,7 +155,8 @@
 # ReflectionGenerator の実行時生成物
 /runtime/bin/ReflectionGenerator.deps.json
 /runtime/bin/ReflectionGenerator.runtimeconfig.json
-/runtime/kernel/test/build
+# モジュール配下のテストプロジェクトを単体ビルドしたときの出力
+/runtime/*/test/build/
 
 /runtime/bin/source/CustomTask/bin/
 

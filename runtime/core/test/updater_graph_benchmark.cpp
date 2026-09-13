@@ -38,14 +38,14 @@
 
 #include	"pch.h"
 
-#include	"../kernel/kernel.h"
-#include	"../kernel/job_system.h"
-#include	"../kernel/stop_watch.h"
-#include	"../reflection/reflection.h"
+#include	"../../kernel/kernel.h"
+#include	"../../kernel/job_system.h"
+#include	"../../kernel/stop_watch.h"
+#include	"../../reflection/reflection.h"
 
-#include	"../core/world.h"
-#include	"../core/updater_graph.h"
-#include	"../core/entity_system.h"
+#include	"../world.h"
+#include	"../updater_graph.h"
+#include	"../entity_system.h"
 
 #include	<cmath>
 #include	<cstdio>

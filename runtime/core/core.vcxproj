@@ -198,15 +198,15 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="test\entity_ecs_test.h">
+    <ClInclude Include="test_support\entity_ecs_test.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="test\test_types.h">
+    <ClInclude Include="test_support\test_types.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="test\reflection_variable_test_types.h">
+    <ClInclude Include="test_support\reflection_variable_test_types.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -274,23 +274,23 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="test\delegate_test.h">
+    <ClInclude Include="test_support\delegate_test.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="test\test.h">
+    <ClInclude Include="test_support\test.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="test\test_reflection.h">
+    <ClInclude Include="test_support\test_reflection.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="test\type_id_test.h">
+    <ClInclude Include="test_support\type_id_test.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="test\utility.h">
+    <ClInclude Include="test_support\utility.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -429,15 +429,15 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="test\entity_command_buffer_test.cpp">
+    <ClCompile Include="test_support\entity_command_buffer_test.cpp">
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="test\entity_ecs_test.cpp">
+    <ClCompile Include="test_support\entity_ecs_test.cpp">
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="test\job_system_test.cpp">
+    <ClCompile Include="test_support\job_system_test.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -536,23 +536,23 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="test\delegate_test.cpp">
+    <ClCompile Include="test_support\delegate_test.cpp">
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="test\type_id_test.cpp">
+    <ClCompile Include="test_support\type_id_test.cpp">
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="test\test.cpp">
+    <ClCompile Include="test_support\test.cpp">
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="test\test_reflection.cpp">
+    <ClCompile Include="test_support\test_reflection.cpp">
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="test\utility.cpp">
+    <ClCompile Include="test_support\utility.cpp">
       <SubType>
       </SubType>
     </ClCompile>

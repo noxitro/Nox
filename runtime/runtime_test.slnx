@@ -23,7 +23,7 @@
   <Project Path="kernel/test/kernel_test.vcxproj" Id="b7f3c1a6-8e2d-4f5a-9c3b-1d4e5f6a7b8c">
     <BuildDependency Project="kernel/kernel.vcxproj" />
   </Project>
-  <Project Path="core_test/core_test.vcxproj" Id="c4b91f2a-3d76-4e58-8a01-6f2b9d5c7e34">
+  <Project Path="core/test/core_test.vcxproj" Id="c4b91f2a-3d76-4e58-8a01-6f2b9d5c7e34">
     <BuildDependency Project="core/core.vcxproj" />
     <BuildDependency Project="kernel/kernel.vcxproj" />
     <BuildDependency Project="reflection/reflection.vcxproj" />
