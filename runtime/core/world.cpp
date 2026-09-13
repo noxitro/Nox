@@ -179,65 +179,48 @@ nox::uint32 nox::ResolveUpdaterWorkerCount(
 	const nox::uint32 default_worker_count)noexcept
 {
 	static constexpr std::u16string_view k_serial_key = u"--serial-updater";
-	//	キーに '=' まで含めているのは、値の切り出しを starts_with 1回で閉じるため。
-	//	'=' を含めないと "--updater-workersX" のような別の引数まで拾ってしまう。
-	static constexpr std::u16string_view k_workers_key = u"--updater-workers=";
+	static constexpr std::u16string_view k_workers_key = u"--updater-workers";
 
 	//	--serial-updater は「1本も作らない」の明示指定。--updater-workers より強い。
 	//	先に全体を舐めるので、並び順に関係なくこちらが勝つ。
-	for (const nox::char16* const command_line_arg : command_line_args)
+	if (nox::os::ContainsCommandLineArgKey(command_line_args, k_serial_key) == true)
 	{
-		if (command_line_arg == nullptr)
-		{
-			continue;
-		}
-		if (std::u16string_view(command_line_arg).starts_with(k_serial_key))
-		{
-			return 0u;
-		}
+		return 0u;
 	}
 
-	for (const nox::char16* const command_line_arg : command_line_args)
+	//	キーの照合と値の切り出しは nox::os 側に寄せてある。
+	//	"--updater-workersX" のような別の引数を拾わないこと、区切り文字を値に含めないことは
+	//	TryGetCommandLineArgValue が保証する。
+	const std::optional<std::u16string_view> value =
+		nox::os::TryGetCommandLineArgValue(command_line_args, k_workers_key);
+	if (value.has_value() == false)
 	{
-		if (command_line_arg == nullptr)
-		{
-			continue;
-		}
+		return default_worker_count;
+	}
+	if (value->empty() == true)
+	{
+		//	"--updater-workers" や "--updater-workers=" だけ。値の書き忘れなので既定へ落とす。
+		return default_worker_count;
+	}
 
-		const std::u16string_view command_line_arg_view(command_line_arg);
-		if (command_line_arg_view.starts_with(k_workers_key) == false)
+	//	10進の非負整数だけを受ける。ヒープも例外も使わないので自前で読む。
+	nox::uint32 parsed = 0u;
+	for (const nox::char16 character : *value)
+	{
+		if ((character < u'0') || (character > u'9'))
 		{
-			continue;
-		}
-
-		const std::u16string_view value = command_line_arg_view.substr(k_workers_key.size());
-		if (value.empty())
-		{
-			//	"--updater-workers=" だけ。値の書き忘れなので既定へ落とす。
+			//	数字でない文字が混ざっていたら指定そのものを無視して既定へ落とす。
+			//	黙って0本(=直列)にすると、打ち間違いが性能低下として表れて原因が見えない。
 			return default_worker_count;
 		}
-
-		//	10進の非負整数だけを受ける。ヒープも例外も使わないので自前で読む。
-		nox::uint32 parsed = 0u;
-		for (const nox::char16 character : value)
+		parsed = (parsed * 10u) + static_cast<nox::uint32>(character - u'0');
+		if (parsed > nox::JobSystem::k_max_worker_count)
 		{
-			if ((character < u'0') || (character > u'9'))
-			{
-				//	数字でない文字が混ざっていたら指定そのものを無視して既定へ落とす。
-				//	黙って0本(=直列)にすると、打ち間違いが性能低下として表れて原因が見えない。
-				return default_worker_count;
-			}
-			parsed = (parsed * 10u) + static_cast<nox::uint32>(character - u'0');
-			if (parsed > nox::JobSystem::k_max_worker_count)
-			{
-				//	方針ではなく桁あふれ対策。ここで打ち切らないとuint32を回り込む。
-				return nox::JobSystem::k_max_worker_count;
-			}
+			//	方針ではなく桁あふれ対策。ここで打ち切らないとuint32を回り込む。
+			return nox::JobSystem::k_max_worker_count;
 		}
-		return parsed;
 	}
-
-	return default_worker_count;
+	return parsed;
 }
 
 nox::World::World() :

@@ -79,30 +79,75 @@ std::span<const nox::char16* const> nox::os::GetCommandLineArgList() noexcept
 	return nox::os::command_line_args_;
 }
 
+namespace
+{
+	//	キーと値の区切りに使える文字。
+	[[nodiscard]] inline constexpr bool IsCommandLineArgSeparator(const nox::char16 character)noexcept
+	{
+		return (character == u'=') || (character == u':');
+	}
+
+	///	@brief		引数がキーに一致するなら、キーの直後(区切り文字を含む)を返す。
+	///	@details	「キーで始まる」だけの判定では --foo が --foobar にも一致してしまうので、
+	///				キーの直後が区切り文字か終端であることまで確かめる。
+	[[nodiscard]] inline std::optional<std::u16string_view> TryMatchCommandLineArgKey(
+		const std::u16string_view command_line_arg,
+		const std::u16string_view key)noexcept
+	{
+		if (command_line_arg.starts_with(key) == false)
+		{
+			return std::nullopt;
+		}
+
+		const std::u16string_view remainder = command_line_arg.substr(key.size());
+		if ((remainder.empty() == true) || (IsCommandLineArgSeparator(remainder.front()) == true))
+		{
+			return remainder;
+		}
+		return std::nullopt;
+	}
+}
+
+std::optional<std::u16string_view> nox::os::TryGetCommandLineArgValue(
+	const std::span<const nox::char16* const> command_line_args,
+	const std::u16string_view key)noexcept
+{
+	for (const nox::char16* const command_line_arg : command_line_args)
+	{
+		if (command_line_arg == nullptr)
+		{
+			continue;
+		}
+
+		const std::optional<std::u16string_view> remainder =
+			TryMatchCommandLineArgKey(std::u16string_view(command_line_arg), key);
+		if (remainder.has_value() == false)
+		{
+			continue;
+		}
+
+		//	区切り文字は値に含めない。--foo=bar なら "bar" を返す。
+		//	--foo だけなら値は空文字列 (キーは在ったので nullopt にはしない)。
+		return (remainder->empty() == true) ? *remainder : remainder->substr(1u);
+	}
+	return std::nullopt;
+}
+
+bool nox::os::ContainsCommandLineArgKey(
+	const std::span<const nox::char16* const> command_line_args,
+	const std::u16string_view arg)noexcept
+{
+	return nox::os::TryGetCommandLineArgValue(command_line_args, arg).has_value();
+}
+
 bool nox::os::ContainsCommandLineArgKey(std::u16string_view arg)noexcept
 {
-	for (const nox::char16* const& command_line_arg : nox::os::command_line_args_)
-	{
-		const std::u16string_view command_line_arg_view(command_line_arg);
-		if (command_line_arg_view.starts_with(arg) == true)
-		{
-			return true;
-		}
-	}
-	return false;
+	return nox::os::ContainsCommandLineArgKey(nox::os::command_line_args_, arg);
 }
 
 std::optional<std::u16string_view> nox::os::GetCommandLineArgValue(std::u16string_view key)noexcept
 {
-	for (const nox::char16* const& command_line_arg : nox::os::command_line_args_)
-	{
-		const std::u16string_view command_line_arg_view(command_line_arg);
-		if (command_line_arg_view.starts_with(key) == true)
-		{
-			return command_line_arg_view.substr(key.size());
-		}
-	}
-	return std::nullopt;
+	return nox::os::TryGetCommandLineArgValue(nox::os::command_line_args_, key);
 }
 
 nox::StlU16String	nox::os::GetDirectoryUTF8()
