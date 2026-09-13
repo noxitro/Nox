@@ -6,77 +6,80 @@
 # git cat-file にそのまま渡せる形 (pre-commit なら ":path"、pre-push なら
 # "<sha>:path")。検出したら理由を表示して終了コード 1 を返す。
 #
+# 初回 push では数千ファイルが流れてくるので、中身の検査は
+# git cat-file --batch 一発にまとめてある。何か見つかったときだけ、
+# 場所を特定するために個別に読み直す (遅い経路は異常時しか通らない)。
+#
 # 誤検出を握り潰したいときは .githooks-allow に 1 行 1 パスで書く。
 set -u
 
 ROOT=$(git rev-parse --show-toplevel)
 ALLOW="$ROOT/.githooks-allow"
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT INT TERM
 FOUND=0
 MAX_BYTES=$((5 * 1024 * 1024))
 
 note() { FOUND=1; printf '  [%s] %s\n    %s\n' "$1" "$2" "$3" >&2; }
 
-allowed() {
-  [ -f "$ALLOW" ] || return 1
-  grep -Fxq "$1" "$ALLOW" 2>/dev/null
-}
+# 秘密情報。誤検出の少ない、発行元が特定できる形式だけを並べている。
+SECRET_RE='BEGIN (RSA|OPENSSH|DSA|EC|PGP) PRIVATE KEY|gh[pousr]_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{30}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|xox[abprs]-[0-9A-Za-z-]{10}|sk-ant-[A-Za-z0-9_-]{20}|(mongodb\+srv|mongodb|postgresql|postgres|mysql|redis|amqp)://[^:/[:space:]]+:[^@[:space:]]+@'
+# 個人情報。履歴から除去済みなので、再流入をここで止める。
+PERSONAL_RE='[A-Za-z]:[\/]{1,2}Users[\/]{1,2}[A-Za-z0-9._-]+|[A-Za-z0-9._%+-]+@(gmail|outlook|yahoo|icloud|hotmail)\.[A-Za-z.]{2,}'
 
+cat > "$TMP/in.txt"
+[ -s "$TMP/in.txt" ] || exit 0
+
+# --- 1. パスによる判定 (サブプロセスを起こさないので速い) -------------------
+: > "$TMP/objs.txt"
 while IFS="$(printf '\t')" read -r path obj; do
   [ -n "$path" ] || continue
-  allowed "$path" && continue
+  if [ -f "$ALLOW" ] && grep -Fxq "$path" "$ALLOW" 2>/dev/null; then continue; fi
 
-  # --- 1. パスによる判定: ビルド / IDE 生成物 -------------------------------
-  # このリポジトリで実際に何度も混入してきたもの。.gitignore をすり抜けて
-  # git add -f された場合にここで止める。
   case "$path" in
+    # このリポジトリで実際に何度も混入してきたもの。.gitignore をすり抜けて
+    # git add -f された場合にここで止める。
     */obj/*|obj/*|*/.vs/*|.vs/*|*/x64/Debug/*|*/x64/Release/*|*.tlog/*)
       note ARTIFACT "$path" "ビルド/IDE 生成物。ローカル絶対パスを埋め込むため公開不可" ;;
     *.pdb|*.idb|*.ilk|*.iobj|*.ipdb|*.exp|*.suo|*.user|*.cache|*.ifc|*.i)
       note ARTIFACT "$path" "ビルド副産物。.gitignore を確認すること" ;;
-    *.VC.db|*.db-wal|*.db-shm|*Browse.VC.db)
+    *.VC.db|*.db-wal|*.db-shm)
       note ARTIFACT "$path" "Visual Studio のローカル DB。ソース断片とパスを含む" ;;
-  esac
-
-  # --- 2. 資格情報らしいファイル名 -------------------------------------------
-  case "$path" in
     *.pem|*.key|*.pfx|*.p12|*.jks|*.keystore|*.snk|*.ppk|*.ovpn|.netrc|*.npmrc)
       note CREDENTIAL-FILE "$path" "鍵・証明書の拡張子" ;;
     .env|.env.*|*/.env|*/.env.*|id_rsa|id_dsa|id_ecdsa|id_ed25519|*/id_rsa|*/id_ed25519)
       note CREDENTIAL-FILE "$path" "秘密情報を置く定番のファイル名" ;;
   esac
+  printf '%s\t%s\n' "$path" "$obj" >> "$TMP/objs.txt"
+done < "$TMP/in.txt"
+[ -s "$TMP/objs.txt" ] || { [ "$FOUND" -eq 0 ] && exit 0; }
 
-  # 本体が読めないものはここまで
-  git cat-file -e "$obj" 2>/dev/null || continue
+# --- 2. サイズ (batch-check 一発) -------------------------------------------
+cut -f2 "$TMP/objs.txt" | git cat-file --batch-check='%(objectname) %(objecttype) %(objectsize)' 2>/dev/null \
+  | paste -d'\t' - "$TMP/objs.txt" 2>/dev/null \
+  | while IFS="$(printf '\t')" read -r info path _obj; do
+      set -- $info
+      [ "${2:-}" = "blob" ] || continue
+      [ "${3:-0}" -gt "$MAX_BYTES" ] || continue
+      printf '%s\t%s\n' "$path" "$3"
+    done > "$TMP/big.txt"
+while IFS="$(printf '\t')" read -r path size; do
+  [ -n "$path" ] || continue
+  note SIZE "$path" "$((size / 1024)) KB — 上限 $((MAX_BYTES / 1024)) KB を超過。成果物の混入を疑うこと"
+done < "$TMP/big.txt"
 
-  # --- 3. サイズ -------------------------------------------------------------
-  size=$(git cat-file -s "$obj" 2>/dev/null || echo 0)
-  if [ "$size" -gt "$MAX_BYTES" ]; then
-    note SIZE "$path" "$((size / 1024)) KB — 上限 $((MAX_BYTES / 1024)) KB を超過。成果物の混入を疑うこと"
-  fi
-
-  # --- 4. 中身 ---------------------------------------------------------------
-  body=$(git cat-file blob "$obj" 2>/dev/null) || continue
-
-  # 高信頼な秘密情報。誤検出が少ないものだけを並べている。
-  hit=$(printf '%s' "$body" | grep -a -o -E \
-    -e 'BEGIN (RSA|OPENSSH|DSA|EC|PGP) PRIVATE KEY' \
-    -e 'gh[pousr]_[A-Za-z0-9]{36}' \
-    -e 'github_pat_[A-Za-z0-9_]{30}' \
-    -e 'AKIA[0-9A-Z]{16}' \
-    -e 'AIza[0-9A-Za-z_-]{35}' \
-    -e 'xox[abprs]-[0-9A-Za-z-]{10}' \
-    -e 'sk-ant-[A-Za-z0-9_-]{20}' \
-    -e '(mongodb\+srv|mongodb|postgresql|postgres|mysql|redis|amqp)://[^:/[:space:]]+:[^@[:space:]]+@' \
-    2>/dev/null | head -1)
-  [ -n "$hit" ] && note SECRET "$path" "$(printf '%s' "$hit" | cut -c1-40)…"
-
-  # 個人情報。履歴から除去済みなので、再流入をここで止める。
-  hit=$(printf '%s' "$body" | grep -a -o -E \
-    -e '[A-Za-z]:[\/]{1,2}Users[\/]{1,2}[A-Za-z0-9._-]+' \
-    -e '[A-Za-z0-9._%+-]+@(gmail|outlook|yahoo|icloud|hotmail)\.[A-Za-z.]{2,}' \
-    2>/dev/null | head -1)
-  [ -n "$hit" ] && note PERSONAL "$path" "$hit — ローカル絶対パス / 個人メールの露出"
-done
+# --- 3. 中身 (まず全体を一度だけ走査する) -----------------------------------
+if cut -f2 "$TMP/objs.txt" | git cat-file --batch 2>/dev/null \
+     | grep -a -q -E "$SECRET_RE|$PERSONAL_RE"; then
+  # ここに来るのは異常時だけなので、個別に読み直して場所を特定する。
+  while IFS="$(printf '\t')" read -r path obj; do
+    body=$(git cat-file blob "$obj" 2>/dev/null) || continue
+    hit=$(printf '%s' "$body" | grep -a -o -E "$SECRET_RE" 2>/dev/null | head -1)
+    [ -n "$hit" ] && note SECRET "$path" "$(printf '%s' "$hit" | cut -c1-40)…"
+    hit=$(printf '%s' "$body" | grep -a -o -E "$PERSONAL_RE" 2>/dev/null | head -1)
+    [ -n "$hit" ] && note PERSONAL "$path" "$hit — ローカル絶対パス / 個人メールの露出"
+  done < "$TMP/objs.txt"
+fi
 
 if [ "$FOUND" -ne 0 ]; then
   cat >&2 <<'MSG'
