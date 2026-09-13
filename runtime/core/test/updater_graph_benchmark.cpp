@@ -1,4 +1,5 @@
-//	Copyright (C) 2026 NOX ENGINE All rights reserved.
+//	Copyright (c) 2023-2026 noxitro
+//	SPDX-License-Identifier: MIT
 
 ///	@file	updater_graph_benchmark.cpp
 ///	@brief	UpdaterGraph の2種類の並列化が実際に効くかの実測。assert は一切しない。

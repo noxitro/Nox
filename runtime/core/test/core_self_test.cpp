@@ -1,4 +1,5 @@
-//	Copyright (C) 2026 NOX ENGINE All rights reserved.
+//	Copyright (c) 2023-2026 noxitro
+//	SPDX-License-Identifier: MIT
 
 ///	@file	core_self_test.cpp
 ///	@brief	core/test_support/ にあった NOX_ASSERT ベースのセルフテストを GoogleTest から走らせる。

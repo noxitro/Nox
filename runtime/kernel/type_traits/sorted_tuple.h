@@ -1,4 +1,5 @@
-// Copyright (C) 2026 NOX ENGINE All rights reserved.
+// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
 
 /// @file	sorted_tuple.h
 /// @brief	コンパイル時にタプルの要素型を比較器で並べ替える SortedTuple

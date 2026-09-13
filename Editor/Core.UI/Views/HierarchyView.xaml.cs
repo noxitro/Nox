@@ -1,4 +1,7 @@
-﻿using System.Windows;
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;

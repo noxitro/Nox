@@ -1,4 +1,6 @@
-﻿
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
 namespace ReflectionGenerator.RuntimeTypeDB;
 
 	//	NOTE:	Enum定義関連は、ReflectionGenerator/Parser/CppParser2.csと合わせる

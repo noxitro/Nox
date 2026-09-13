@@ -1,4 +1,5 @@
-﻿//	Copyright (C) 2023 NOX ENGINE All Rights Rserved.
+﻿//	Copyright (c) 2023-2026 noxitro
+//	SPDX-License-Identifier: MIT
 
 ///	@file	attribute_common.h
 ///	@brief	パッケージ環境（非開発環境）に含める属性

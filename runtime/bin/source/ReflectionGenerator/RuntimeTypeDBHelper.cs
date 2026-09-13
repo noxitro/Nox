@@ -1,4 +1,7 @@
-﻿using MessagePack.Resolvers;
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+using MessagePack.Resolvers;
 using System;
 using System.Collections.Generic;
 using System.Linq;

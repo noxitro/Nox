@@ -1,4 +1,7 @@
-﻿///	@file	field_signature.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	field_signature.h
 ///	@brief	field_signature
 #pragma once
 

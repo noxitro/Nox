@@ -1,4 +1,5 @@
-﻿//	Copyright (c) 2026 NOX ENGINE All rights reserved.
+﻿//	Copyright (c) 2023-2026 noxitro
+//	SPDX-License-Identifier: MIT
 
 ///	@file	ring_buffer.cpp
 ///	@brief	ring_buffer

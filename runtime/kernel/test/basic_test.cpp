@@ -1,4 +1,5 @@
-//	Copyright (C) 2024 NOX ENGINE All Rights Rserved.
+//	Copyright (c) 2023-2026 noxitro
+//	SPDX-License-Identifier: MIT
 
 ///	@file	basic_test.cpp
 ///	@brief	kernel の基本機能テスト

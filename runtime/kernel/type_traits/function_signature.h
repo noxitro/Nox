@@ -1,4 +1,7 @@
-﻿///	@file	function_signature.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	function_signature.h
 ///	@brief	関数の特殊化
 #pragma once
 

@@ -1,4 +1,7 @@
-﻿///	@file	memory_util.cpp
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	memory_util.cpp
 ///	@brief	memory_util
 #include	"pch.h"
 #include	"memory_util.h"

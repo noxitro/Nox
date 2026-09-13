@@ -1,4 +1,7 @@
-﻿#pragma once
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+#pragma once
 #include	"memory_definition.h"
 
 namespace nox::memory

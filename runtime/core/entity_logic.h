@@ -1,4 +1,5 @@
-// Copyright (C) 2026 NOX ENGINE All rights reserved.
+// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
 
 /// @file	entity_logic.h
 /// @brief	ECSの上にOOPの書き味を載せるための基底。

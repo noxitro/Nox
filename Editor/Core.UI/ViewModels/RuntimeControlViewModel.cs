@@ -1,4 +1,7 @@
-﻿namespace Core.UI.ViewModels;
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+namespace Core.UI.ViewModels;
 
 	/// <summary>
 	/// runtimeの再生ボタンなど

@@ -1,4 +1,7 @@
-﻿using Core.Net;
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+using Core.Net;
 using Nox.Extensions;
 using System;
 using System.Collections.Concurrent;

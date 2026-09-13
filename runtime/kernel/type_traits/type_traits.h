@@ -1,4 +1,7 @@
-﻿///	@file		type_traits.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file		type_traits.h
 ///	@brief		type_traits
 #pragma once
 #include    <type_traits>

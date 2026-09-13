@@ -1,4 +1,7 @@
-﻿///	@file	details.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	details.h
 ///	@brief	details
 #pragma once
 #include	<cstdint>

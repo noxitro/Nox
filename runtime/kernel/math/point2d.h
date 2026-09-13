@@ -1,4 +1,7 @@
-﻿///	@file	point2d.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	point2d.h
 ///	@brief	point2d
 #pragma once
 

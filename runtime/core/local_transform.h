@@ -1,4 +1,5 @@
-// Copyright (C) 2026 NOX ENGINE All rights reserved.
+// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
 
 /// @file	local_transform.h
 /// @brief	local_transform

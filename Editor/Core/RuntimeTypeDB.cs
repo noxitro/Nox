@@ -1,4 +1,7 @@
-﻿using Nox;
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+using Nox;
 using Nox.Extensions;
 using System;
 using System.Collections.Generic;

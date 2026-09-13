@@ -1,4 +1,7 @@
-﻿using System.Collections.ObjectModel;
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows.Data;
 

@@ -1,4 +1,7 @@
-﻿///	@file	mutex.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	mutex.h
 ///	@brief	mutex
 #pragma once
 #include	"../basic_definition.h"

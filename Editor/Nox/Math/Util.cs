@@ -1,4 +1,7 @@
-﻿namespace Nox.Math;
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+namespace Nox.Math;
 
 	public static class Util
 	{

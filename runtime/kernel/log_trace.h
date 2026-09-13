@@ -1,4 +1,7 @@
-﻿///	@file	log_trace.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	log_trace.h
 ///	@brief	ログ出力
 #pragma once
 

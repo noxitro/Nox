@@ -1,4 +1,5 @@
-//	Copyright (C) 2026 NOX ENGINE All rights reserved.
+//	Copyright (c) 2023-2026 noxitro
+//	SPDX-License-Identifier: MIT
 
 ///	@file	job_system_dispatch_test.cpp
 ///	@brief	nox::JobSystem の Dispatch / Wait が、ワーカーを起こす数を絞っても取りこぼさないことの確認。

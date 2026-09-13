@@ -1,4 +1,5 @@
-﻿//	Copyright (C) 2026 NOX ENGINE All Rights Rserved.
+﻿//	Copyright (c) 2023-2026 noxitro
+//	SPDX-License-Identifier: MIT
 
 ///	@file	codegen_preamble.h
 ///	@brief	.g.cppでインクルードするヘッダ

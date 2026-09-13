@@ -1,3 +1,6 @@
+// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
 using Core.RuntimeAttributes;
 using Nox.Extensions;
 using System;

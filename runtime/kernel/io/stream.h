@@ -1,4 +1,5 @@
-﻿//	Copyright (C) 2025 NOX ENGINE All rights reserved.
+﻿//	Copyright (c) 2023-2026 noxitro
+//	SPDX-License-Identifier: MIT
 
 ///	@file	stream.h
 ///	@brief	.NET 風 Stream 抽象と実装（NOX型/アロケータ・例外非依存・NOX_ASSERT使用）

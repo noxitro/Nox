@@ -1,4 +1,7 @@
-﻿///	@file	advanced_definition.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	advanced_definition.h
 ///	@brief	advanced_definition
 #pragma once
 #include	"basic_definition.h"

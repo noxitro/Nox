@@ -1,4 +1,7 @@
-﻿///	@file	assertion.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	assertion.h
 ///	@brief	assertion
 #pragma once
 #include	"basic_definition.h"

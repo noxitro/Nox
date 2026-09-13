@@ -1,4 +1,5 @@
-// Copyright (C) 2026 NOX ENGINE All rights reserved.
+// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
 
 /// @file	archetype.h
 /// @brief	ComponentDataの組み合わせごとに連続配置するSoAストレージ。

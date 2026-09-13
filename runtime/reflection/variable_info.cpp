@@ -1,4 +1,7 @@
-﻿///	@file	field_info.cpp
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	field_info.cpp
 ///	@brief	field_info
 #include	"pch.h"
 #include	"variable_info.h"

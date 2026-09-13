@@ -1,4 +1,7 @@
-﻿using Microsoft.Build.Logging;
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+using Microsoft.Build.Logging;
 using ReflectionGenerator.Parser;
 using System;
 using System.Collections.Generic;

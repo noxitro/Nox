@@ -1,4 +1,7 @@
-﻿///	@file	convert_string.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	convert_string.h
 ///	@brief	convert_string
 #pragma once
 #include	"basic_definition.h"

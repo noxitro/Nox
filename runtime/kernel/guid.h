@@ -1,4 +1,5 @@
-﻿//	Copyright (C) 2025 NOX ENGINE All Rights Rserved.
+﻿//	Copyright (c) 2023-2026 noxitro
+//	SPDX-License-Identifier: MIT
 
 ///	@file	guid.h
 ///	@brief	guid

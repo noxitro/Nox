@@ -1,4 +1,7 @@
-﻿///	@file	vector3d.cpp
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	vector3d.cpp
 ///	@brief	vector3d
 #include	"pch.h"
 #include	"vector3d.h"

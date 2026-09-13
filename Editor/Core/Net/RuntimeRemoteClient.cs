@@ -1,4 +1,7 @@
-﻿using Microsoft.VisualStudio.TextManager.Interop;
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+using Microsoft.VisualStudio.TextManager.Interop;
 using Nox.Utility;
 using System;
 using System.Collections.Generic;

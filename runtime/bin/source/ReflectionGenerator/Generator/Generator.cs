@@ -1,4 +1,7 @@
-﻿using ClangSharp;
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+using ClangSharp;
 using static ReflectionGenerator.Parser2.ParseExtensions;
 using static ReflectionGenerator.Parser.ClangSharpExtension;
 using System;

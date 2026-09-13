@@ -1,4 +1,7 @@
-﻿///	@file	vector2d.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	vector2d.h
 ///	@brief	vector2d
 #pragma once
 #include	"point2d.h"

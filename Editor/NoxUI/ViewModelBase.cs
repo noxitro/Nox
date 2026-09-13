@@ -1,4 +1,7 @@
-﻿namespace NoxUI;
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+namespace NoxUI;
 
 	public abstract class ViewModelBase : Prism.Mvvm.BindableBase, System.IDisposable
 	{

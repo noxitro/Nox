@@ -1,4 +1,7 @@
-﻿///	@file	concepts.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	concepts.h
 ///	@brief	他に依存しないconcept群
 #pragma once
 #include	<type_traits>

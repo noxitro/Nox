@@ -1,4 +1,5 @@
-﻿//	Copyright (C) 2023 NOX ENGINE All Rights Rserved.
+﻿//	Copyright (c) 2023-2026 noxitro
+//	SPDX-License-Identifier: MIT
 
 ///	@file	quaternion_util.cpp
 ///	@brief	quaternion_util

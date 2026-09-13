@@ -1,4 +1,7 @@
-﻿///	@file	intrusive_ptr.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	intrusive_ptr.h
 ///	@brief	intrusive_ptr
 #pragma once
 #include	"type_traits/type_name.h"

@@ -1,4 +1,5 @@
-//	Copyright (C) 2026 NOX ENGINE All rights reserved.
+//	Copyright (c) 2023-2026 noxitro
+//	SPDX-License-Identifier: MIT
 
 ///	@file	entity_command_playback_test.cpp
 ///	@brief	遅延構造変更のPlaback順が、記録順に依存せず決定的であることの検証。

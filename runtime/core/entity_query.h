@@ -1,4 +1,5 @@
-// Copyright (C) 2026 NOX ENGINE All rights reserved.
+// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
 
 /// @file	entity_query.h
 /// @brief	宣言したComponentDataを持つentityの列挙と、引数リストへのバインド。

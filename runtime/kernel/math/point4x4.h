@@ -1,4 +1,7 @@
-﻿///	@file	point4x4.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	point4x4.h
 ///	@brief	point4x4
 #pragma once
 #include	"point4d.h"

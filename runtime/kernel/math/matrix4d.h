@@ -1,4 +1,7 @@
-﻿///	@file	matrix4d.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	matrix4d.h
 ///	@brief	matrix4d
 #pragma once
 

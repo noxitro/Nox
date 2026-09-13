@@ -1,4 +1,7 @@
-﻿///	@file	reflection.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	reflection.h
 ///	@brief	reflection
 #pragma once
 

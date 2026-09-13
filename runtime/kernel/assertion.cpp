@@ -1,4 +1,7 @@
-﻿///	@file	assertion.cpp
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	assertion.cpp
 ///	@brief	assertion
 #include	"assertion.h"
 #include	"pch.h"

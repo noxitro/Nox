@@ -1,4 +1,7 @@
-﻿///	@file	quaternion.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	quaternion.h
 ///	@brief	quaternion
 #pragma once
 

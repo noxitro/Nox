@@ -1,4 +1,7 @@
-﻿///	@file	intrusive_ptr.cpp
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	intrusive_ptr.cpp
 ///	@brief	intrusive_ptr
 #include	"pch.h"
 #include	"intrusive_ptr.h"

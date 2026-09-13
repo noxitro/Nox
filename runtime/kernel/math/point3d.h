@@ -1,4 +1,7 @@
-﻿///	@file	point3d.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	point3d.h
 ///	@brief	point3d
 #pragma once
 

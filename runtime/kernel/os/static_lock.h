@@ -1,4 +1,7 @@
-﻿///	@file	static_lock.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	static_lock.h
 ///	@brief	静的初期化中/静的デストラクタ後でも使えるロック
 #pragma once
 #include	"windows.h"

@@ -1,4 +1,7 @@
-﻿///	@file	vector4d.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	vector4d.h
 ///	@brief	vector4d
 #pragma once
 #include	"vector3d.h"

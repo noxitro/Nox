@@ -1,4 +1,7 @@
-﻿///	@file	basic_definition.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	basic_definition.h
 ///	@brief	汎用的に使う定義など
 #pragma once
 

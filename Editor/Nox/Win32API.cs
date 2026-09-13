@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+using System;
 using System.Runtime.InteropServices;
 
 namespace Nox;

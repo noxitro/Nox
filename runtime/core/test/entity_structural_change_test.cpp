@@ -1,4 +1,5 @@
-//	Copyright (C) 2026 NOX ENGINE All rights reserved.
+//	Copyright (c) 2023-2026 noxitro
+//	SPDX-License-Identifier: MIT
 
 ///	@file	entity_structural_change_test.cpp
 ///	@brief	構造変更2系統(即時系 / 遅延系)の境界と、即時系にかかる制約の検証。

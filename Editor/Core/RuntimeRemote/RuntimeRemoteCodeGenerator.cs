@@ -1,4 +1,7 @@
-﻿using Microsoft.VisualStudio.Shell.Interop;
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+using Microsoft.VisualStudio.Shell.Interop;
 using Nox;
 using Nox.Extensions;
 using System;

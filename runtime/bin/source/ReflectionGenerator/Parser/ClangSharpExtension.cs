@@ -1,4 +1,7 @@
-﻿using ClangSharp;
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+using ClangSharp;
 using ClangSharp.Interop;
 using System;
 using System.Collections.Generic;

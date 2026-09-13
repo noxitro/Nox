@@ -1,4 +1,7 @@
-﻿export module noxmath;
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+export module noxmath;
 
 namespace nox
 {

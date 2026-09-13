@@ -1,4 +1,5 @@
-// Copyright (C) 2026 NOX ENGINE All rights reserved.
+// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
 
 /// @file	test_types.h
 /// @brief	リフレクション生成器に見せる、coreのテスト用型の集約ヘッダ。

@@ -1,4 +1,7 @@
-﻿///	@file	matrix3d.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	matrix3d.h
 ///	@brief	matrix3d
 #pragma once
 #include	"../basic_type.h"

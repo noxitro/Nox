@@ -1,4 +1,5 @@
-// Copyright (C) 2026 NOX ENGINE All rights reserved.
+// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
 
 /// @file	entity_type_registry.h
 /// @brief	購読済みEntitySystem / EntityLogic型の一覧。

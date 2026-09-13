@@ -1,4 +1,7 @@
-﻿#include	"pch.h"
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+#include	"pch.h"
 #include	"stl_allocate_adapter.h"
 
 #include	"nox_memory.h"

@@ -1,4 +1,7 @@
-﻿///	@file	function.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	function.h
 ///	@brief	function
 #pragma once
 #include	<tuple>

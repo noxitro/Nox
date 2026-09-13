@@ -1,4 +1,7 @@
-﻿///	@file	mutex_x64.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	mutex_x64.h
 ///	@brief	mutex_x64
 #pragma once
 #include	"../windows.h"

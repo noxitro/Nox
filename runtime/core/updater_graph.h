@@ -1,4 +1,5 @@
-// Copyright (C) 2026 NOX ENGINE All rights reserved.
+// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
 
 /// @file	updater_graph.h
 /// @brief	同一フェーズ内の実行順(レイヤー)を、引数リストから導出した宣言だけで決めるグラフ。

@@ -1,4 +1,5 @@
-//	Copyright (C) 2026 NOX ENGINE All rights reserved.
+//	Copyright (c) 2023-2026 noxitro
+//	SPDX-License-Identifier: MIT
 
 ///	@file	updater_graph_layering_test.cpp
 ///	@brief	UpdaterGraph の衝突判定とレイヤリングの検証。時間には一切依存しない。

@@ -1,4 +1,7 @@
-﻿///	@file	math.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	math.h
 ///	@brief	math
 #pragma once
 

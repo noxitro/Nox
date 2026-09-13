@@ -1,4 +1,5 @@
-﻿//	Copyright (c) 2025 NOX ENGINE All rights reserved.
+﻿//	Copyright (c) 2023-2026 noxitro
+//	SPDX-License-Identifier: MIT
 
 ///	@file	remote_host.cpp
 ///	@brief	remote_host

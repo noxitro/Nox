@@ -1,4 +1,7 @@
-﻿///	@file	color.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	color.h
 ///	@brief	color
 #pragma once
 #include	<array>

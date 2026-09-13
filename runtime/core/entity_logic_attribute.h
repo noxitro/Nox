@@ -1,4 +1,5 @@
-﻿//	Copyright (C) 2026 NOX ENGINE All rights reserved.
+﻿//	Copyright (c) 2023-2026 noxitro
+//	SPDX-License-Identifier: MIT
 
 ///	@file	entity_logic_attribute.h
 ///	@brief	entity_logic_attribute

@@ -1,4 +1,7 @@
-﻿///	@file	crc32.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	crc32.h
 ///	@brief	crc32
 #pragma once
 #include	<string_view>

@@ -1,4 +1,5 @@
-// Copyright (C) 2026 NOX ENGINE All rights reserved.
+// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
 
 /// @file	reflection_variable_test_types.h
 /// @brief	nox::reflection::VariableInfo の getter / setter を検証するためのテスト用型。

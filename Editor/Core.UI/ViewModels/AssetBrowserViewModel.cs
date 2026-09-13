@@ -1,3 +1,6 @@
+// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
 using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -543,7 +546,7 @@ namespace Core.UI.ViewModels;
 		private static string CreateScriptHeaderContent(string fileName, string baseName, string className)
 		{
 			return
-				$"//\tCopyright (C) 2023 NOX ENGINE All Rights Rserved.{Environment.NewLine}{Environment.NewLine}" +
+				$"// Copyright (c) 2023-{DateTime.Now.Year} noxitro{Environment.NewLine}// SPDX-License-Identifier: MIT{Environment.NewLine}{Environment.NewLine}" +
 				$"///\t@file\t{fileName}{Environment.NewLine}" +
 				$"///\t@brief\t{baseName}{Environment.NewLine}" +
 				$"#pragma once{Environment.NewLine}{Environment.NewLine}" +
@@ -561,7 +564,7 @@ namespace Core.UI.ViewModels;
 		private static string CreateScriptSourceContent(string fileName, string headerFileName)
 		{
 			return
-				$"//\tCopyright (C) 2023 NOX ENGINE All Rights Rserved.{Environment.NewLine}{Environment.NewLine}" +
+				$"// Copyright (c) 2023-{DateTime.Now.Year} noxitro{Environment.NewLine}// SPDX-License-Identifier: MIT{Environment.NewLine}{Environment.NewLine}" +
 				$"///\t@file\t{fileName}{Environment.NewLine}" +
 				$"///\t@brief\t{Path.GetFileNameWithoutExtension(fileName)}{Environment.NewLine}" +
 				$"#include\t\"pch.h\"{Environment.NewLine}" +

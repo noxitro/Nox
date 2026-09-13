@@ -1,4 +1,7 @@
-﻿///	@file	user_defined_compound_type_info.cpp
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	user_defined_compound_type_info.cpp
 ///	@brief	user_defined_compound_type_info
 #include	"pch.h"
 #include	"class_info.h"

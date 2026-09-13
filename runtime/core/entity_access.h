@@ -1,4 +1,5 @@
-// Copyright (C) 2026 NOX ENGINE All rights reserved.
+// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
 
 /// @file	entity_access.h
 /// @brief	System / EntityLogic の関数シグネチャからアクセス権限を導出する型レベル基盤。

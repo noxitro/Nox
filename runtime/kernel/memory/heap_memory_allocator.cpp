@@ -1,4 +1,5 @@
-﻿//	Copyright (c) 2026 NOX ENGINE All rights reserved.
+﻿//	Copyright (c) 2023-2026 noxitro
+//	SPDX-License-Identifier: MIT
 
 ///	@file	heap_memory_allocator.cpp
 ///	@brief	heap_memory_allocator

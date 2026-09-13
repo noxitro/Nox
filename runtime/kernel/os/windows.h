@@ -1,4 +1,7 @@
-﻿///	@file	x64.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	x64.h
 ///	@brief	x64
 #pragma once
 #include	"../basic_definition.h"

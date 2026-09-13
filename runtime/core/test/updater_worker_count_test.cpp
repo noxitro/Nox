@@ -1,4 +1,5 @@
-//	Copyright (C) 2026 NOX ENGINE All rights reserved.
+//	Copyright (c) 2023-2026 noxitro
+//	SPDX-License-Identifier: MIT
 
 ///	@file	updater_worker_count_test.cpp
 ///	@brief	UpdaterGraph のワーカー数をコマンドラインから決める規則の検証。

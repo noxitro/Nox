@@ -1,4 +1,7 @@
-﻿///	@file	object_pointer_signature.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	object_pointer_signature.h
 ///	@brief	変数ポインタのシグネチャ解析
 #pragma once
 #include	"concepts.h"

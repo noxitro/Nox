@@ -1,4 +1,7 @@
-﻿///	@file	class_info.h
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	class_info.h
 ///	@brief	クラス情報
 #pragma once
 

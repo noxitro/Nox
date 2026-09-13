@@ -1,4 +1,5 @@
-﻿//	Copyright (C) 2025 NOX ENGINE All rights reserved.
+﻿//	Copyright (c) 2023-2026 noxitro
+//	SPDX-License-Identifier: MIT
 
 ///	@file	algorithm_lite.h
 ///	@brief	依存関係が極力ないアルゴリズム系ユーティリティ

@@ -1,4 +1,7 @@
-﻿///	@file	log_trace.cpp
+﻿// Copyright (c) 2023-2026 noxitro
+// SPDX-License-Identifier: MIT
+
+///	@file	log_trace.cpp
 ///	@brief	log_trace
 #include	"pch.h"
 #include	"log_trace.h"
