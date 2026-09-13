@@ -1,0 +1,5 @@
+# git blame から除外する機械的な一斉変更。
+# 使い方: git config blame.ignoreRevsFile .git-blame-ignore-revs (GitHub は自動で参照する)
+
+# license: 全ソースのヘッダを SPDX 形式に統一
+3b20ab32e2648f11ae9aa8fbcabd561e33f0bca1
