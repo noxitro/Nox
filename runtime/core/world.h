@@ -509,7 +509,6 @@ namespace nox
 		std::array<nox::Atomic<nox::World::EntityRecordPage*>, k_max_entity_page_count> entity_record_pages_;
 
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
-		std::mutex entity_record_page_mutex_;
 
 		nox::StopWatch stop_watch_;
 		nox::uint32 frame_counter_;
