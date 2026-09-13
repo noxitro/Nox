@@ -217,3 +217,12 @@ build-*.log
 
 # 例外: ビルドが実際に呼ぶツールバイナリは追跡し続ける
 !runtime/bin/MakeAllIncludeHeader.exe
+
+# ローカル専用の作業メモ・エディタ設定 (追跡しない)
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+.claude/
+.agents/
+copilot-prompts.md
+**/.github/copilot-instructions.md
