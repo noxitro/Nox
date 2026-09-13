@@ -20,6 +20,7 @@
   <ItemGroup>
     <ClCompile Include="core_self_test.cpp" />
     <ClCompile Include="entity_command_playback_test.cpp" />
+    <ClCompile Include="job_system_dispatch_test.cpp" />
     <ClCompile Include="entity_structural_change_test.cpp" />
     <ClCompile Include="reflection_variable_test.cpp" />
     <ClCompile Include="updater_graph_layering_test.cpp" />
