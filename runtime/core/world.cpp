@@ -228,7 +228,6 @@ nox::World::World() :
 	next_entity_index_(0u),
 	first_entity_record_page_(),
 	entity_record_pages_{},
-	entity_record_page_mutex_(),
 	stop_watch_(),
 	frame_counter_(0u),
 	elapsed_milli_seconds_(0.0f),
@@ -1181,12 +1180,27 @@ nox::World::EntityRecord* nox::World::EnsureEntityRecord(nox::uint32 index)
 	auto* entity_record_page = entity_record_pages_[page_index].load(std::memory_order_acquire);
 	if (entity_record_page == nullptr)
 	{
-		std::lock_guard<std::mutex> lock(entity_record_page_mutex_);
-		entity_record_page = entity_record_pages_[page_index].load(std::memory_order_relaxed);
-		if (entity_record_page == nullptr)
+		//	ここは唯一フレーム中に確保が走りうる経路。1024体ごとに1回、
+		//	entity数が増えている間だけなので償却はされるが、フェーズ実行中に踏むと
+		//	ワーカースレッド上での確保になり、そのフレームだけレイテンシが伸びる。
+		//	黙って払うと気づけないので、踏んだことが分かるようにしておく。
+		//	潰すならロード時に必要ぶんを先に確保する口が要る。
+		NOX_ASSERT(IsExecutingSystemPhase() == false,
+			u8"フェーズ実行中にEntityRecordPageを確保しました index={0} page={1}", index, page_index);
+
+		//	OSロックを持たずに公開する。CASに負けた側は自分のページを捨てて勝者のものを使う。
+		//	std::mutexを使うと、ジョブから呼ばれたときにワーカースレッドがOS待ちに入る。
+		auto* const created_page = new EntityRecordPage();
+		nox::World::EntityRecordPage* expected = nullptr;
+		if (entity_record_pages_[page_index].compare_exchange_strong(
+			expected, created_page, std::memory_order_acq_rel, std::memory_order_acquire) == true)
 		{
-			entity_record_page = new EntityRecordPage();
-			entity_record_pages_[page_index].store(entity_record_page, std::memory_order_release);
+			entity_record_page = created_page;
+		}
+		else
+		{
+			delete created_page;
+			entity_record_page = expected;
 		}
 	}
 
