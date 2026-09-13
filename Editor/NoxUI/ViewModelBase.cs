@@ -3,7 +3,7 @@
 
 namespace NoxUI;
 
-	public abstract class ViewModelBase : Prism.Mvvm.BindableBase, System.IDisposable
+	public abstract class ViewModelBase : ObservableBase, System.IDisposable
 	{
 //		public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
 

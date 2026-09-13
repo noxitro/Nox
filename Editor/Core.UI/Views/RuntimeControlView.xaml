@@ -5,11 +5,11 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:Core.UI.Views"
              xmlns:vm="clr-namespace:Core.UI.ViewModels"
-             xmlns:prism="http://prismlibrary.com/"
+             xmlns:noxui="clr-namespace:NoxUI;assembly=NoxUI"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:RuntimeControlViewModel, IsDesignTimeCreatable=False}"
              d:DesignHeight="64" d:DesignWidth="1200"
-             prism:ViewModelLocator.AutoWireViewModel="True"
+             noxui:ViewModelLocator.AutoWireViewModel="True"
              AutomationProperties.AutomationId="NoxStudio.RuntimeControlView">
 
     <UserControl.Resources>

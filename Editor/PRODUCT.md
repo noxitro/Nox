@@ -30,7 +30,7 @@ Editor と Runtime を別プロセスに保ちながら、RemoteObject と明示
 
 - Windows 専用。WPF、.NET 10、AvalonDock を維持する。
 - ViewModel 基底は `NoxUI.ViewModelBase`、コマンドは `NoxUI.ViewModelCommand` を使用する。
-- Prism 依存は NoxUI 側へ閉じ込める。
+- MVVM ツールキット (CommunityToolkit.Mvvm) への依存は NoxUI 側へ閉じ込める。DI は Microsoft.Extensions.DependencyInjection。
 - テーマ色は `Nox.Brush.*` の `DynamicResource` から解決し、View や code-behind で色を直接生成しない。
 - Editor と Runtime のプロセス分離、明示的 Sync、RemoteInstanceId の符号規約を維持する。
 - 連続フレーム中の不要な通信、監視、動的メモリ確保を避ける。

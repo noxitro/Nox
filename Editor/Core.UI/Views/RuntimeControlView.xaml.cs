@@ -25,6 +25,6 @@ namespace Core.UI.Views;
 		{
 			InitializeComponent();
 
-		//	DataContext = NoxUI.PrismHelper.ResolveDataContext<Core.UI.ViewModels.RuntimeControlViewModel>();
+		//	DataContext = NoxUI.ServiceLocator.Resolve<Core.UI.ViewModels.RuntimeControlViewModel>();
 		}
 	}

@@ -4,15 +4,17 @@
 using System.Configuration;
 using System.Data;
 using System.Windows;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Studio.Wpf;
 
 	/// <summary>
 	/// Interaction logic for App.xaml
 	/// </summary>
-	public partial class App : Prism.Unity.PrismApplication
+	public partial class App : Application
 	{
 		private List<Core.UI.EntryBase> UIEntryList = new();
+		private ServiceProvider? _ServiceProvider;
 
 		public App()
 		{
@@ -83,36 +85,38 @@ namespace Studio.Wpf;
 			Core.EngineModule.Instance.InvokeStart();
 
 			base.OnStartup(e);
+
+			// DI コンテナを組み立ててからシェルを出す。順序は Prism 時代と同じで、
+			// EngineModule の起動 (InvokeStart) が先、登録 (ConfigureServices) が後。
+			ServiceCollection services = new();
+			ConfigureServices(services);
+			_ServiceProvider = services.BuildServiceProvider();
+			NoxUI.ServiceLocator.Current = _ServiceProvider;
+
+			MainWindow shell = _ServiceProvider.GetRequiredService<MainWindow>();
+			MainWindow = shell;
+			shell.Show();
 		}
 
 		protected override void OnExit(ExitEventArgs e)
 		{
 			Core.EngineModule.DeleteInstance();
+			NoxUI.ServiceLocator.Current = null;
+			_ServiceProvider?.Dispose();
 			base.OnExit(e);
 		}
 
-		[System.Runtime.Versioning.SupportedOSPlatform("windows10.0")]
-		protected override Window CreateShell()
-		{
-			return Container.Resolve<MainWindow>();
-		}
-
-		[System.Runtime.Versioning.SupportedOSPlatform("windows10.0")]
-		protected override void ConfigureViewModelLocator()
-		{
-			base.ConfigureViewModelLocator();
-
-		}
-
-		protected override void RegisterTypes(IContainerRegistry containerRegistry)
+		private void ConfigureServices(IServiceCollection services)
 		{
 			//	テーマサービス（シングルトン）
-			containerRegistry.RegisterSingleton<Studio.Wpf.Themes.IThemeService, Studio.Wpf.Themes.ThemeService>();
-        containerRegistry.Register<Studio.Wpf.ViewModels.ThemeSettingsViewModel>();
+			services.AddSingleton<Studio.Wpf.Themes.IThemeService, Studio.Wpf.Themes.ThemeService>();
+			services.AddTransient<Studio.Wpf.ViewModels.ThemeSettingsViewModel>();
+			services.AddTransient<Studio.Wpf.ViewModels.MainWindowViewModel>();
+			services.AddTransient<MainWindow>();
 
 			foreach(var entry in UIEntryList)
 			{
-				entry.RegisterTypes(containerRegistry);
+				entry.RegisterTypes(services);
 			}
 		}
 

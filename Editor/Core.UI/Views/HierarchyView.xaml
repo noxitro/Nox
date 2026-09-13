@@ -4,12 +4,12 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:Core.UI.Views"
-             xmlns:prism="http://prismlibrary.com/"
+             xmlns:noxui="clr-namespace:NoxUI;assembly=NoxUI"
              xmlns:vm="clr-namespace:Core.UI.ViewModels"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="320"
              d:DataContext="{d:DesignInstance vm:HierarchyViewModel, IsDesignTimeCreatable=False}"
-             prism:ViewModelLocator.AutoWireViewModel="True"
+             noxui:ViewModelLocator.AutoWireViewModel="True"
              AutomationProperties.AutomationId="NoxStudio.HierarchyView">
     <UserControl.Resources>
         <Style x:Key="NoxHierarchyTextBoxStyle"

@@ -1,0 +1,80 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="a621e305-b22e-422c-80a5-928bea743c0e" name="arlen@NOX 2026-09-14 08:48:22" runUser="NOX\arlen" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-09-14T08:48:22.9446061+09:00" queuing="2026-09-14T08:48:22.9446063+09:00" start="2026-09-14T08:47:51.3560920+09:00" finish="2026-09-14T08:48:46.2052666+09:00" />
+  <TestSettings name="default" id="50ea0a4a-eb7b-49b9-ab55-e76dd9744867">
+    <Deployment runDeploymentRoot="arlen_NOX_2026-09-14_08_48_22" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="28d1a327-5cc2-42dd-aed2-780811b3012e" testId="5de0d0c3-a7f1-e060-1b03-02549c1ac771" testName="Studio.Wpf.UITests.EditorSmokeTests.RebootButtonLaunchesRuntimeAndHostsWindowInRuntimeView" computerName="NOX" duration="00:00:31.1853025" startTime="2026-09-14T08:47:51.7243963+09:00" endTime="2026-09-14T08:48:22.9185987+09:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="28d1a327-5cc2-42dd-aed2-780811b3012e">
+      <Output>
+        <ErrorInfo>
+          <Message>System.InvalidOperationException : Hierarchy context-menu item was not shown.</Message>
+          <StackTrace>   at Studio.Wpf.UITests.EditorSmokeTests.CreateRootEntityFromHierarchyContextMenu(EditorApp editor) in E:\dev\github.com\noxitro\Nox-wt-prism\Editor\Studio.Wpf.UITests\EditorSmokeTests.cs:line 378&#xD;
+   at Studio.Wpf.UITests.EditorSmokeTests.RebootButtonLaunchesRuntimeAndHostsWindowInRuntimeView() in E:\dev\github.com\noxitro\Nox-wt-prism\Editor\Studio.Wpf.UITests\EditorSmokeTests.cs:line 275&#xD;
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="38edf2c6-c852-40e5-bcc2-18cc82f8d55a" testId="30d58139-3a35-00df-166a-c31554b64865" testName="Studio.Wpf.UITests.EditorSmokeTests.TransformInspectorFieldsStaySyncedAfterRuntimeRoundTrip" computerName="NOX" duration="00:00:23.2398838" startTime="2026-09-14T08:48:22.9322311+09:00" endTime="2026-09-14T08:48:46.1589189+09:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="38edf2c6-c852-40e5-bcc2-18cc82f8d55a">
+      <Output>
+        <ErrorInfo>
+          <Message>System.InvalidOperationException : Element not found. Name=Transform</Message>
+          <StackTrace>   at Studio.Wpf.UITests.EditorSmokeTests.WaitForDescendantByName(AutomationElement root, String name) in E:\dev\github.com\noxitro\Nox-wt-prism\Editor\Studio.Wpf.UITests\EditorSmokeTests.cs:line 364&#xD;
+   at Studio.Wpf.UITests.EditorSmokeTests.TransformInspectorFieldsStaySyncedAfterRuntimeRoundTrip() in E:\dev\github.com\noxitro\Nox-wt-prism\Editor\Studio.Wpf.UITests\EditorSmokeTests.cs:line 315&#xD;
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Studio.Wpf.UITests.EditorSmokeTests.TransformInspectorFieldsStaySyncedAfterRuntimeRoundTrip" storage="e:\dev\github.com\noxitro\nox-wt-prism\editor\studio.wpf.uitests\bin\debug\net10.0-windows\studio.wpf.uitests.dll" id="30d58139-3a35-00df-166a-c31554b64865">
+      <Execution id="38edf2c6-c852-40e5-bcc2-18cc82f8d55a" />
+      <TestMethod codeBase="E:\dev\github.com\noxitro\Nox-wt-prism\Editor\Studio.Wpf.UITests\bin\Debug\net10.0-windows\Studio.Wpf.UITests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Studio.Wpf.UITests.EditorSmokeTests" name="TransformInspectorFieldsStaySyncedAfterRuntimeRoundTrip" />
+    </UnitTest>
+    <UnitTest name="Studio.Wpf.UITests.EditorSmokeTests.RebootButtonLaunchesRuntimeAndHostsWindowInRuntimeView" storage="e:\dev\github.com\noxitro\nox-wt-prism\editor\studio.wpf.uitests\bin\debug\net10.0-windows\studio.wpf.uitests.dll" id="5de0d0c3-a7f1-e060-1b03-02549c1ac771">
+      <Execution id="28d1a327-5cc2-42dd-aed2-780811b3012e" />
+      <TestMethod codeBase="E:\dev\github.com\noxitro\Nox-wt-prism\Editor\Studio.Wpf.UITests\bin\Debug\net10.0-windows\Studio.Wpf.UITests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Studio.Wpf.UITests.EditorSmokeTests" name="RebootButtonLaunchesRuntimeAndHostsWindowInRuntimeView" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="5de0d0c3-a7f1-e060-1b03-02549c1ac771" executionId="28d1a327-5cc2-42dd-aed2-780811b3012e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="30d58139-3a35-00df-166a-c31554b64865" executionId="38edf2c6-c852-40e5-bcc2-18cc82f8d55a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="一覧に存在しない結果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="読み込まれたすべての結果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="2" executed="2" passed="0" failed="2" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.12)&#xD;
+[xUnit.net 00:00:00.04]   Discovering: Studio.Wpf.UITests&#xD;
+[xUnit.net 00:00:00.07]   Discovered:  Studio.Wpf.UITests&#xD;
+[xUnit.net 00:00:00.08]   Starting:    Studio.Wpf.UITests&#xD;
+[xUnit.net 00:00:31.29]       System.InvalidOperationException : Hierarchy context-menu item was not shown.&#xD;
+[xUnit.net 00:00:31.29]       Stack Trace:&#xD;
+[xUnit.net 00:00:31.29]         E:\dev\github.com\noxitro\Nox-wt-prism\Editor\Studio.Wpf.UITests\EditorSmokeTests.cs(378,0): at Studio.Wpf.UITests.EditorSmokeTests.CreateRootEntityFromHierarchyContextMenu(EditorApp editor)&#xD;
+[xUnit.net 00:00:31.29]         E:\dev\github.com\noxitro\Nox-wt-prism\Editor\Studio.Wpf.UITests\EditorSmokeTests.cs(275,0): at Studio.Wpf.UITests.EditorSmokeTests.RebootButtonLaunchesRuntimeAndHostsWindowInRuntimeView()&#xD;
+[xUnit.net 00:00:31.29]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+[xUnit.net 00:00:31.29]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:00:54.53]       System.InvalidOperationException : Element not found. Name=Transform&#xD;
+[xUnit.net 00:00:54.53]       Stack Trace:&#xD;
+[xUnit.net 00:00:54.53]         E:\dev\github.com\noxitro\Nox-wt-prism\Editor\Studio.Wpf.UITests\EditorSmokeTests.cs(364,0): at Studio.Wpf.UITests.EditorSmokeTests.WaitForDescendantByName(AutomationElement root, String name)&#xD;
+[xUnit.net 00:00:54.53]         E:\dev\github.com\noxitro\Nox-wt-prism\Editor\Studio.Wpf.UITests\EditorSmokeTests.cs(315,0): at Studio.Wpf.UITests.EditorSmokeTests.TransformInspectorFieldsStaySyncedAfterRuntimeRoundTrip()&#xD;
+[xUnit.net 00:00:54.53]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+[xUnit.net 00:00:54.53]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:00:54.53]   Finished:    Studio.Wpf.UITests&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="NOX" outcome="Error" timestamp="2026-09-14T08:48:22.9205191+09:00">
+        <Text>[xUnit.net 00:00:31.29]     Studio.Wpf.UITests.EditorSmokeTests.RebootButtonLaunchesRuntimeAndHostsWindowInRuntimeView [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="NOX" outcome="Error" timestamp="2026-09-14T08:48:46.1594278+09:00">
+        <Text>[xUnit.net 00:00:54.53]     Studio.Wpf.UITests.EditorSmokeTests.TransformInspectorFieldsStaySyncedAfterRuntimeRoundTrip [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>
