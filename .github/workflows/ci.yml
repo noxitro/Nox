@@ -184,9 +184,9 @@ jobs:
   #                    走らせないと検証できないので、生成器も動く)
   # =========================================================
   test:
-    # Dependabot でも飛ばさない。このジョブは FlaUI を含んでおり、Editor の
-    # NuGet 更新 (AvalonDock のような UI ライブラリ) が実際に起動して動くかを
-    # 確かめられるのはここだけ。1 ジョブなので費用も知れている。
+    # Dependabot でも飛ばさない。この matrix の MSVC/Debug の脚が FlaUI を
+    # 含んでおり、Editor の NuGet 更新 (AvalonDock のような UI ライブラリ) が
+    # 実際に起動して動くかを確かめられるのはそこだけ。
     name: Test (GoogleTest ${{ matrix.compiler }} / ${{ matrix.configuration }})
     # 既定は GitHub ホストの windows-latest。リポジトリ変数 NOX_RUNNER を
     # 設定するとそちらへ回す (例: NOX_RUNNER=self-hosted)。セルフホストの
