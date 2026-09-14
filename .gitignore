@@ -225,3 +225,6 @@ TestResults/
 # Editor がカレントディレクトリ名で生成する空のプロジェクト設定。追跡するのはルートの Nox.noxproj.json だけ
 /*.noxproj.json
 !/Nox.noxproj.json
+
+# Python の実行キャッシュ (.github/scripts)
+__pycache__/

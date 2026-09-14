@@ -1,5 +1,10 @@
 # 🚀 Nox Game Engine
 
+[![CI](https://github.com/noxitro/Nox/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/noxitro/Nox/actions/workflows/ci.yml)
+[![Secret scan](https://github.com/noxitro/Nox/actions/workflows/secret-scan.yml/badge.svg?branch=master)](https://github.com/noxitro/Nox/actions/workflows/secret-scan.yml)
+[![CodeQL](https://github.com/noxitro/Nox/actions/workflows/codeql.yml/badge.svg?branch=master)](https://github.com/noxitro/Nox/actions/workflows/codeql.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 **Nox** は、Windows プラットフォームに特化した **ArchetypeベースのECS** を採用するハイパフォーマンスゲームエンジンです。
 ランタイム（C++）と WPF ベースのエディタ（C#）はプロセス分離されており、Editor の安定性を保ちながら、フレームループ中の**ゼロアロケーション**を徹底することで、予測可能なリアルタイム性能を実現します。
 
