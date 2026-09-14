@@ -4,17 +4,14 @@
 
 ## 重要事項
 
-**テストプロジェクトは通常のソリューション（runtime.slnx）には含まれていません。**
+**テストプロジェクトは `runtime.slnx` の `tests` フォルダに入っています。**
 
-テスト専用の `runtime_test.slnx` を使用してビルドします。
-
-理由は 2 つあります。
-
-1. 通常の開発作業時にテストプロジェクトの読み込みによる影響を避けるため。
-2. `kernel_test` は Google Test に依存しており、`runtime.slnx` に含めると
-   gtest が入っていない環境（クローン直後で vcpkg のリストアが済んでいない等）で
-   ソリューション全体のビルドが壊れてしまうため。
-   `runtime.slnx` 自体は gtest に依存させない方針。
+以前はテスト専用の `runtime_test.slnx` に分けていましたが、統合しました。
+分けていた理由（gtest が無い環境でソリューション全体が壊れる）は成立しません。
+gtest はリポジトリルートの `vcpkg.json` の依存に入っていて、`runtime.slnx` を
+建てれば vcpkg のマニフェストモードが他の依存と一緒に復元するためです。
+ソリューションが 2 つあると、プロジェクト追加を片方だけに入れて
+追従漏れが起きる方が実害が大きいので統合しています。
 
 ## テストフレームワーク
 
@@ -76,33 +73,33 @@ exe と gtest.dll が同じ CRT ヒープを共有する状態になります。
 
 ### Visual Studio でのビルド
 
-1. `runtime/runtime_test.slnx` を開く（**注意**: runtime.slnx ではありません）
-2. `kernel_test` プロジェクトを選択
+1. `runtime/runtime.slnx` を開く
+2. `tests` フォルダの `kernel_test` プロジェクトを選択
 3. ビルド実行
 
 ### コマンドラインでのビルド
 
 ```cmd
 cd runtime
-msbuild runtime_test.slnx -p:Configuration=Debug -p:Platform=x64 -m
+msbuild runtime.slnx -p:Configuration=Debug -p:Platform=x64 -m
 ```
 
 vcpkg のインストール先を差し替える場合:
 
 ```cmd
 set NOX_VCPKG_INSTALLED_DIR=E:\path\to\vcpkg_installed
-msbuild runtime_test.slnx -p:Configuration=Debug -p:Platform=x64 -m
+msbuild runtime.slnx -p:Configuration=Debug -p:Platform=x64 -m
 ```
 
 ## テストの実行
 
-出力先は `runtime\build\runtime_test\x64\Debug\` です
+出力先は `runtime\build\runtime\x64\Debug\` です
 （`OutDir` は `$(SolutionDir)build\$(SolutionName)\$(Platform)\$(Configuration)\`）。
 `gtest.dll` は PostBuildEvent で同じディレクトリにコピー済みなので、
 そのまま実行できます。
 
 ```cmd
-runtime\build\runtime_test\x64\Debug\kernel_test.exe
+runtime\build\runtime\x64\Debug\kernel_test.exe
 ```
 
 終了コードは、全テスト成功で 0、失敗があれば 1 です。
@@ -148,7 +145,7 @@ TEST(TestSuiteName, TestName)
 
 ## CI での扱い
 
-`.github/workflows/ci.yml` の `test` ジョブが `runtime_test.slnx` を建て、
+`.github/workflows/ci.yml` の `test` ジョブが `runtime.slnx` を Debug で建て、
 `kernel_test.exe` と `core_test.exe` の両方を実行します。
 どちらか 1 本でも失敗すればジョブが落ちます。
 

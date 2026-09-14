@@ -28,8 +28,8 @@ kernel の単体テストがエンジン全部とコード生成器を引きず�
   リフレクションの getter / setter は **生成コードを実際に走らせないと検証できない**ので、
   こちらはビルド時に `ReflectionGenerator.exe` が動く。
 
-どちらも `runtime/runtime_test.slnx` に入っている（`runtime.slnx` には入れない。
-理由は `kernel/test/README.md` を参照）。
+どちらも `runtime/runtime.slnx` の `tests` フォルダに入っている
+（かつて分けていた `runtime_test.slnx` を統合した経緯は `kernel/test/README.md` を参照）。
 
 ## 中身
 
@@ -58,7 +58,7 @@ EntityLogic の更新メソッドは通常リフレクション生成コード�
 `updater_graph_benchmark.cpp` は実行時間に依存するので CI に載せない。手で測るときは:
 
 ```cmd
-build\runtime_test\x64\Release\core_test.exe --gtest_also_run_disabled_tests --gtest_filter=UpdaterGraphBenchmark.*
+build\runtime\x64\Release\core_test.exe --gtest_also_run_disabled_tests --gtest_filter=UpdaterGraphBenchmark.*
 ```
 
 ワーカー数を振って中央値を表で出す。`runtime.exe` 側で同じことをするには
@@ -85,8 +85,8 @@ build\runtime_test\x64\Release\core_test.exe --gtest_also_run_disabled_tests --g
 
 ```cmd
 cd runtime
-msbuild runtime_test.slnx -p:Configuration=Debug -p:Platform=x64 -m
-build\runtime_test\x64\Debug\core_test.exe
+msbuild runtime.slnx -p:Configuration=Debug -p:Platform=x64 -m
+build\runtime\x64\Debug\core_test.exe
 ```
 
 `main` が `nox::reflection::Initialize()` を呼ぶので、

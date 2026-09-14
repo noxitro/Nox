@@ -169,11 +169,13 @@ jobs:
           if-no-files-found: warn
 
   # =========================================================
-  # Test: runtime_test.slnx を建てて GoogleTest の exe を実際に走らせ、続けて
+  # Test: runtime.slnx を建てて GoogleTest の exe を実際に走らせ、続けて
   #       Editor を建てて FlaUI の UI テストを回す (後半の理由はステップのコメント)
   #
-  # テスト用の exe は runtime.slnx ではなく runtime_test.slnx 側にある
-  # (gtest の復元が要るため意図的に分けられている)。
+  # テストプロジェクトは runtime.slnx の /tests/ フォルダに同居している。
+  # かつては gtest の復元を分けるために runtime_test.slnx を切っていたが、
+  # gtest は vcpkg.json の依存に入っていて全ジョブで等しく復元されるので、
+  # 分ける理由は無い。2 つあると片方だけ直して追従漏れが起きる。
   # Build ジョブとは独立に走らせて総時間を詰めている。
   #
   #   - kernel_test : kernel だけに依存する下層のテスト
@@ -200,9 +202,9 @@ jobs:
       - name: Setup build prerequisites
         uses: ./.github/actions/setup-nox-build
 
-      - name: Build runtime_test.slnx
+      - name: Build runtime.slnx (Debug)
         run: |
-          msbuild runtime\runtime_test.slnx `
+          msbuild runtime\runtime.slnx `
             /p:Configuration=Debug `
             /p:Platform=x64 `
             /m `
@@ -211,12 +213,12 @@ jobs:
             "/flp:logfile=build-test.log;verbosity=normal"
 
       # OutDir は nox_common.props が build\$(SolutionName)\$(Platform)\$(Configuration)\
-      # と決めているので、runtime_test.slnx の出力はここに落ちる。
+      # と決めているので、runtime.slnx の出力はここに落ちる。
       # gtest.dll は各テスト vcxproj の PostBuildEvent が隣へ置く。
       - name: Run GoogleTest suites
         id: gtest
         run: |
-          $outDir = 'runtime\build\runtime_test\x64\Debug'
+          $outDir = 'runtime\build\runtime\x64\Debug'
           New-Item -ItemType Directory -Force test-results | Out-Null
 
           $failed = @()
@@ -234,12 +236,12 @@ jobs:
       # gtest は「1 件も走らなくても」 exit 0 を返す。テスト登録の漏れや
       # フィルタの書き間違いでスイートが丸ごと消えても緑になり、
       # 「通った」と誤読される。件数を数えるのが唯一の証明。
-      # 実測は kernel_test 15 + core_test 78 = 93 件。その 9 割を下限に置く。
+      # 実測は kernel_test 21 + core_test 81 = 102 件。その 9 割を下限に置く。
       - name: 実行件数を確かめる
         if: always()
         shell: pwsh
         run: |
-          python .github/scripts/check-test-results.py test-results --min 83 --label GoogleTest
+          python .github/scripts/check-test-results.py test-results --min 91 --label GoogleTest
 
       - name: Write test summary
         if: always()
@@ -308,7 +310,7 @@ jobs:
       #
       # このジョブに同居させている理由: Editor は起動時に ReflectionGenerator が
       # 書き出す RuntimeTypeDB.x64.Debug.bin (約 150MB) を読む。それは上の
-      # runtime_test.slnx (Debug) のビルドで生成済みなので、別ジョブに分けて
+      # runtime.slnx (Debug) のビルドで生成済みなので、別ジョブに分けて
       # 巨大なアーティファクトを受け渡すより、ここで続けて走らせる方が安い。
       # 場所は環境変数 NOX_RUNTIME_TYPEDB_DIR で明示し、%TEMP% のポインタ
       # ファイルには頼らない。
@@ -322,7 +324,7 @@ jobs:
         if: always()
         run: |
           $bin = 'runtime/reflection_generated/gen/RuntimeTypeDB.x64.Debug.bin'
-          if (-not (Test-Path $bin)) { throw "TypeDB が無い: $bin (runtime_test.slnx の Debug ビルドで生成されるはず)" }
+          if (-not (Test-Path $bin)) { throw "TypeDB が無い: $bin (runtime.slnx の Debug ビルドで生成されるはず)" }
           Write-Host ("TypeDB: {0} ({1:N0} bytes)" -f $bin, (Get-Item $bin).Length)
 
       # テストは Editor/Studio.Wpf/bin/Debug/net10.0-windows/Studio.Wpf.exe を

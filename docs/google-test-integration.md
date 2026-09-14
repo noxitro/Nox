@@ -4,7 +4,10 @@
 
 このPRでは、kernel.vcxproj プロジェクトに Google Test を導入し、GitHub Actions で自動テストを実行する CI を構築しました。
 
-**重要**: テストプロジェクトは通常のソリューションファイル（runtime.sln/runtime.slnx）には含まれていません。テスト専用の `runtime_test.slnx` を使用してビルドします。これにより、通常の開発作業時にテストプロジェクトの読み込みによる影響を避けることができます。
+**テストプロジェクトは `runtime/runtime.slnx` の `/tests/` フォルダに含まれています。**
+以前はテスト専用の `runtime_test.slnx` に分けていましたが、gtest は `vcpkg.json` の
+依存に入っていてどのビルドでも等しく復元されるため、分ける理由がありませんでした。
+ソリューションが 2 つあると片方だけを直して追従漏れが起きるので統合しています。
 
 ## 実装内容
 
@@ -48,12 +51,12 @@ include 生成から除外している（`bin/source/ReflectionGenerator/Entry.c
 - `basic_test.cpp`: 基本型のサイズ検証、ポインタ型のテスト
 - `math_test.cpp`: Vec2/Vec3 のテスト（構築、演算）
 
-### 3. テスト専用ソリューション
+### 3. ソリューションへの登録
 
-- **`runtime/runtime_test.slnx`**: テスト専用のソリューションファイル（新規作成）
-  - kernel / core 側のモジュールと、`kernel_test` / `core_test` を含む
-  - 通常のソリューション（runtime.sln/runtime.slnx）には影響しない
-  - CI でのみ使用される
+- **`runtime/runtime.slnx`**: `/tests/` フォルダに `kernel_test` / `core_test` を置く
+  - それぞれのテスト対象プロジェクトを `BuildDependency` に持つ
+  - 出力は `runtime/build/runtime/x64/<Configuration>/` に落ちる
+    （`OutDir` が `build\$(SolutionName)\...` のため、ランタイム本体と同じ場所）
 
 ### 4. GitHub Actions CI
 
@@ -61,15 +64,13 @@ include 生成から除外している（`bin/source/ReflectionGenerator/Entry.c
 
 **追加された機能**:
 1. vcpkg のセットアップ（Google Test のインストールのため）
-2. テスト専用ソリューション（runtime_test.slnx）をビルドマトリクスに追加
+2. Test ジョブで `runtime.slnx` を Debug でビルド
 3. テスト実行ステップ
-   - runtime_test.slnx ビルド時のみ実行
+   - Test ジョブでのみ実行
    - MSVC ツールチェーンのみ（clang は除外）
    - Debug のみで実行（Master は `test_types.h` が `#if !NOX_MASTER` で外れ、
      テスト型のリフレクションが生成されないため core_test が成立しない）
 4. テスト結果のアップロード（XML 形式）
-
-**注意**: 通常のソリューション（runtime.slnx）はテストプロジェクトを含まないため、ビルドマトリクスに両方のソリューションが含まれています。
 
 ## トリガー
 
@@ -84,15 +85,15 @@ CI は以下の場合に自動実行されます：
 ### ローカルでの実行
 
 #### Visual Studio から
-1. `runtime/runtime_test.slnx` を開く（**注意**: runtime.slnx ではありません）
-2. `kernel_test` プロジェクトをビルド
+1. `runtime/runtime.slnx` を開く
+2. `tests` フォルダの `kernel_test` プロジェクトをビルド
 3. 実行可能ファイルを直接実行、またはテストエクスプローラーから実行
 
 #### コマンドライン
 ```cmd
 cd runtime
-msbuild runtime_test.slnx /p:Configuration=Debug /p:Platform=x64
-runtime\build\runtime_test\x64\Debug\kernel_test.exe
+msbuild runtime.slnx /p:Configuration=Debug /p:Platform=x64
+build\runtime\x64\Debug\kernel_test.exe
 ```
 
 ### CI での実行

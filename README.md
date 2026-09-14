@@ -44,7 +44,7 @@ Runtime は **C++23** (`/std:c++latest`) の x64 ビルドで、以下 2 つの�
 
 - CI は `compiler x configuration` の直積 6 ジョブで `runtime.slnx` をビルドします。
 - **clang-cl も必須ゲートです。** MSVC が素通りさせる非適合コード（実質機能していない `if constexpr` ガード、未使用変数、未出力関数など）を実際に検出した実績があるため、`continue-on-error` には戻さない方針です。ClangCL ジョブが落ちた場合は無効化で回避せず、原因を修正してください。
-- ユニットテスト（`runtime_test.slnx`）の実行は MSVC ツールチェーンのみです。
+- ユニットテスト（`runtime.slnx` の `tests` フォルダ）の実行は MSVC ツールチェーンのみです。
 
 ### ビルド手順
 
