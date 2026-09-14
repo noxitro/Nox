@@ -429,6 +429,25 @@ jobs:
           }
           $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
 
+      # Studio.Wpf.exe が起動直後に落ちた場合、FlaUI 側には「プロセスが居ない」
+      # としか残らない。理由は Windows のイベントログ (.NET Runtime の未処理例外、
+      # Application Error) にあるので、直近分を拾って summary とアーティファクトに残す。
+      - name: Collect crash diagnostics
+        if: always()
+        run: |
+          $since = (Get-Date).AddMinutes(-30)
+          $events = Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $since } -ErrorAction SilentlyContinue |
+            Where-Object { $_.ProviderName -in '.NET Runtime', 'Application Error', 'Windows Error Reporting' } |
+            Select-Object -First 20
+          New-Item -ItemType Directory -Force TestResults | Out-Null
+          $out = foreach ($e in $events) { "=== [$($e.TimeCreated)] $($e.ProviderName) (Id $($e.Id))"; $e.Message; '' }
+          if (-not $out) { $out = @('(該当するイベントなし)') }
+          $out | Out-File -FilePath TestResults/crash-events.txt -Encoding utf8
+          $lines = @('', '### Crash diagnostics (Application event log)', '', '```')
+          $lines += ($out | Select-Object -First 80)
+          $lines += '```'
+          $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
       # trx は実行ユーザー名と絶対パスを含むので、リポジトリには入れず
       # アーティファクトにだけ残す (.gitignore でも除外している)
       - name: Upload test results
