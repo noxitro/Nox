@@ -167,7 +167,8 @@ jobs:
           if-no-files-found: warn
 
   # =========================================================
-  # Test: runtime_test.slnx を建てて GoogleTest の exe を実際に走らせる
+  # Test: runtime_test.slnx を建てて GoogleTest の exe を実際に走らせ、続けて
+  #       Editor を建てて FlaUI の UI テストを回す (後半の理由はステップのコメント)
   #
   # テスト用の exe は runtime.slnx ではなく runtime_test.slnx 側にある
   # (gtest の復元が要るため意図的に分けられている)。
@@ -181,7 +182,7 @@ jobs:
   test:
     # Dependabot の actions 更新ブランチでは重いジョブを飛ばす (on: のコメント参照)
     if: ${{ !startsWith(github.ref, 'refs/heads/dependabot/') }}
-    name: Test (kernel_test + core_test / MSVC)
+    name: Test (GoogleTest + Editor FlaUI / MSVC)
     # 既定は GitHub ホストの windows-latest。リポジトリ変数 NOX_RUNNER を
     # 設定するとそちらへ回す (例: NOX_RUNNER=self-hosted)。セルフホストの
     # 実行時間は無料枠を消費しないので、6 構成を毎 push で建てるならこれ。
@@ -293,6 +294,107 @@ jobs:
             build-test.log
           if-no-files-found: warn
 
+
+      # ---------------------------------------------------------
+      # Editor UI test (FlaUI, MIT)
+      #
+      # Studio.Wpf.exe を実際に起動し、主要パネルの表示・テーマ切替・
+      # Hierarchy / Inspector / AssetBrowser の操作を UI Automation で確かめる。
+      # ビルドが通っても「起動したら DataContext が繋がっていない」類の破損は
+      # ここでしか拾えない。
+      #
+      # このジョブに同居させている理由: Editor は起動時に ReflectionGenerator が
+      # 書き出す RuntimeTypeDB.x64.Debug.bin (約 150MB) を読む。それは上の
+      # runtime_test.slnx (Debug) のビルドで生成済みなので、別ジョブに分けて
+      # 巨大なアーティファクトを受け渡すより、ここで続けて走らせる方が安い。
+      # 場所は環境変数 NOX_RUNTIME_TYPEDB_DIR で明示し、%TEMP% のポインタ
+      # ファイルには頼らない。
+      #
+      # Runtime 連携の 2 件 (Reboot ボタン / Transform の往復) は runtime.exe の
+      # attach 待ちで落ちる既知の問題があるため除外している。直したら外すこと。
+      # GitHub ホストの windows ランナーは対話デスクトップを持つので FlaUI が動く。
+      # セルフホストへ回す場合はサービスではなく対話セッションで動かすこと。
+      # ---------------------------------------------------------
+      - name: Verify RuntimeTypeDB exists
+        if: always()
+        run: |
+          $bin = 'runtime/reflection_generated/gen/RuntimeTypeDB.x64.Debug.bin'
+          if (-not (Test-Path $bin)) { throw "TypeDB が無い: $bin (runtime_test.slnx の Debug ビルドで生成されるはず)" }
+          Write-Host ("TypeDB: {0} ({1:N0} bytes)" -f $bin, (Get-Item $bin).Length)
+
+      # テストは Editor/Studio.Wpf/bin/Debug/net10.0-windows/Studio.Wpf.exe を
+      # リポジトリルートからの相対で探すので、Debug で建てる
+      - name: Build Editor/Studio.slnx (Debug)
+        if: always()
+        run: |
+          dotnet build Editor/Studio.slnx -c Debug --no-incremental -v minimal
+          if ($LASTEXITCODE -ne 0) { throw "Editor のビルドに失敗 (exit $LASTEXITCODE)" }
+
+      - name: Run FlaUI tests
+        if: always()
+        id: flaui
+        env:
+          NOX_RUNTIME_TYPEDB_DIR: ${{ github.workspace }}/runtime/reflection_generated/gen
+        run: |
+          dotnet test Editor/Studio.Wpf.UITests/Studio.Wpf.UITests.csproj -c Debug --no-build -v minimal `
+            --filter "FullyQualifiedName!~RebootButtonLaunchesRuntime&FullyQualifiedName!~TransformInspectorFieldsStaySynced" `
+            --blame-hang-timeout 5m `
+            --logger "trx;LogFileName=flaui.trx" --results-directory flaui-results
+          if ($LASTEXITCODE -ne 0) { throw "FlaUI テストに失敗 (exit $LASTEXITCODE)" }
+
+      # trx を読んで件数を要約する。0 件の緑は緑ではないので、実行数も見る
+      - name: Write FlaUI summary
+        if: always()
+        run: |
+          $ok = '${{ steps.flaui.outcome }}' -eq 'success'
+          $icon = if ($ok) { ':white_check_mark:' } else { ':x:' }
+          $lines = @('', "## $icon Editor UI test (FlaUI)", '')
+          $trx = Get-ChildItem flaui-results -Filter *.trx -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($trx) {
+            [xml]$x = Get-Content $trx.FullName
+            $c = $x.TestRun.ResultSummary.Counters
+            $lines += "| 実行 | 合格 | 失敗 | 合計 |"
+            $lines += "| --- | --- | --- | --- |"
+            $lines += "| $($c.executed) | $($c.passed) | $($c.failed) | $($c.total) |"
+            $bad = $x.TestRun.Results.UnitTestResult | Where-Object { $_.outcome -ne 'Passed' }
+            foreach ($r in $bad) { $lines += "- ``$($r.testName)``: $($r.outcome)" }
+            if ([int]$c.executed -lt 10) { $lines += ''; $lines += ':warning: 実行数が少なすぎる。フィルタか検出の設定を疑うこと。' }
+          } else {
+            $lines += ':warning: trx が見つからない (テストランナーが起動していない)'
+          }
+          $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+      # Studio.Wpf.exe が起動直後に落ちた場合、FlaUI 側には「プロセスが居ない」
+      # としか残らない。理由は Windows のイベントログ (.NET Runtime の未処理例外、
+      # Application Error) にあるので、直近分を拾って summary とアーティファクトに残す。
+      - name: Collect Editor crash diagnostics
+        if: always()
+        run: |
+          $since = (Get-Date).AddMinutes(-30)
+          $events = Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $since } -ErrorAction SilentlyContinue |
+            Where-Object { $_.ProviderName -in '.NET Runtime', 'Application Error', 'Windows Error Reporting' } |
+            Select-Object -First 20
+          New-Item -ItemType Directory -Force flaui-results | Out-Null
+          $out = foreach ($e in $events) { "=== [$($e.TimeCreated)] $($e.ProviderName) (Id $($e.Id))"; $e.Message; '' }
+          if (-not $out) { $out = @('(該当するイベントなし)') }
+          $out | Out-File -FilePath flaui-results/crash-events.txt -Encoding utf8
+          if ($events) {
+            $lines = @('', '### Editor crash diagnostics (Application event log)', '', '```')
+            $lines += ($out | Select-Object -First 60)
+            $lines += '```'
+            $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          }
+
+      # trx は実行ユーザー名と絶対パスを含むので、リポジトリには入れず
+      # アーティファクトにだけ残す (.gitignore でも除外している)
+      - name: Upload FlaUI results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flaui-results
+          path: flaui-results/
+          if-no-files-found: warn
+
   # =========================================================
   # Editor: C# (WPF) 側の Editor/Studio.slnx を建てる
   #
@@ -364,101 +466,6 @@ jobs:
           if-no-files-found: warn
 
   # =========================================================
-  # Editor UI test: FlaUI (MIT) で実際に Studio.Wpf.exe を起動し、主要パネルの
-  #   表示・テーマ切替・Hierarchy / Inspector / AssetBrowser の操作を UI
-  #   Automation 経由で確かめる。ビルドが通っても「起動したら DataContext が
-  #   繋がっていない」類の破損は、ここでしか拾えない。
-  #
-  # Runtime 連携の 2 件 (Reboot ボタン / Transform の往復) は runtime.exe の
-  # attach 待ちで落ちる既知の問題があるため除外している。Runtime 側を直したら
-  # フィルタから外すこと。
-  # GitHub ホストの windows ランナーは対話デスクトップを持つので FlaUI が動く。
-  # セルフホストへ回す場合はサービスではなく対話セッションで動かすこと。
-  # =========================================================
-  editor-ui-test:
-    name: Editor UI test (FlaUI)
-    # Dependabot の actions 更新ブランチでは重いジョブを飛ばす (on: のコメント参照)
-    if: ${{ !startsWith(github.ref, 'refs/heads/dependabot/') }}
-    runs-on: ${{ vars.NOX_RUNNER || 'windows-latest' }}
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
-
-      # テストは Editor/Studio.Wpf/bin/Debug/net10.0-windows/Studio.Wpf.exe を
-      # リポジトリルートからの相対で探すので、Debug で建てる
-      - name: Build Editor/Studio.slnx (Debug)
-        run: |
-          dotnet build Editor\Studio.slnx -c Debug --no-incremental -v minimal
-          if ($LASTEXITCODE -ne 0) { throw "Editor のビルドに失敗 (exit $LASTEXITCODE)" }
-
-      - name: Run FlaUI tests
-        id: test
-        run: |
-          dotnet test Editor\Studio.Wpf.UITests\Studio.Wpf.UITests.csproj -c Debug --no-build -v minimal `
-            --filter "FullyQualifiedName!~RebootButtonLaunchesRuntime&FullyQualifiedName!~TransformInspectorFieldsStaySynced" `
-            --blame-hang-timeout 5m `
-            --logger "trx;LogFileName=flaui.trx" --results-directory TestResults
-          if ($LASTEXITCODE -ne 0) { throw "FlaUI テストに失敗 (exit $LASTEXITCODE)" }
-
-      # trx を読んで件数を要約する。0 件の緑は緑ではないので、実行数も見る
-      - name: Write job summary
-        if: always()
-        run: |
-          $ok = '${{ steps.test.outcome }}' -eq 'success'
-          $icon = if ($ok) { ':white_check_mark:' } else { ':x:' }
-          $lines = @("## $icon Editor UI test (FlaUI)", '')
-          $trx = Get-ChildItem TestResults -Filter *.trx -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($trx) {
-            [xml]$x = Get-Content $trx.FullName
-            $c = $x.TestRun.ResultSummary.Counters
-            $lines += "| 実行 | 合格 | 失敗 | 合計 |"
-            $lines += "| --- | --- | --- | --- |"
-            $lines += "| $($c.executed) | $($c.passed) | $($c.failed) | $($c.total) |"
-            $bad = $x.TestRun.Results.UnitTestResult | Where-Object { $_.outcome -ne 'Passed' }
-            foreach ($r in $bad) { $lines += "- ``$($r.testName)``: $($r.outcome)" }
-            if ([int]$c.executed -lt 10) { $lines += ''; $lines += ':warning: 実行数が少なすぎる。フィルタか検出の設定を疑うこと。' }
-          } else {
-            $lines += ':warning: trx が見つからない (テストランナーが起動していない)'
-          }
-          $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-
-      # Studio.Wpf.exe が起動直後に落ちた場合、FlaUI 側には「プロセスが居ない」
-      # としか残らない。理由は Windows のイベントログ (.NET Runtime の未処理例外、
-      # Application Error) にあるので、直近分を拾って summary とアーティファクトに残す。
-      - name: Collect crash diagnostics
-        if: always()
-        run: |
-          $since = (Get-Date).AddMinutes(-30)
-          $events = Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $since } -ErrorAction SilentlyContinue |
-            Where-Object { $_.ProviderName -in '.NET Runtime', 'Application Error', 'Windows Error Reporting' } |
-            Select-Object -First 20
-          New-Item -ItemType Directory -Force TestResults | Out-Null
-          $out = foreach ($e in $events) { "=== [$($e.TimeCreated)] $($e.ProviderName) (Id $($e.Id))"; $e.Message; '' }
-          if (-not $out) { $out = @('(該当するイベントなし)') }
-          $out | Out-File -FilePath TestResults/crash-events.txt -Encoding utf8
-          $lines = @('', '### Crash diagnostics (Application event log)', '', '```')
-          $lines += ($out | Select-Object -First 80)
-          $lines += '```'
-          $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-
-      # trx は実行ユーザー名と絶対パスを含むので、リポジトリには入れず
-      # アーティファクトにだけ残す (.gitignore でも除外している)
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: flaui-results
-          path: TestResults/
-          if-no-files-found: warn
-
-  # =========================================================
   # Notify: 転んだとき / 転んだ状態から戻ったときだけ Discord に流す
   #
   # GitHub 既定のメール通知の置き換え。成功が続いている間は無言なので、
@@ -472,7 +479,7 @@ jobs:
   # =========================================================
   notify:
     name: Notify Discord
-    needs: [build, test, editor, editor-ui-test]
+    needs: [build, test, editor]
     # 判定は step 側で needs.*.result を見るので、ここでは always() で拾うだけ。
     if: always() && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
