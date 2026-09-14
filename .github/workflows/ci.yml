@@ -187,13 +187,25 @@ jobs:
     # Dependabot でも飛ばさない。このジョブは FlaUI を含んでおり、Editor の
     # NuGet 更新 (AvalonDock のような UI ライブラリ) が実際に起動して動くかを
     # 確かめられるのはここだけ。1 ジョブなので費用も知れている。
-    name: Test (GoogleTest + Editor FlaUI / MSVC)
+    name: Test (GoogleTest ${{ matrix.compiler }} / ${{ matrix.configuration }})
     # 既定は GitHub ホストの windows-latest。リポジトリ変数 NOX_RUNNER を
     # 設定するとそちらへ回す (例: NOX_RUNNER=self-hosted)。セルフホストの
     # 実行時間は無料枠を消費しないので、6 構成を毎 push で建てるならこれ。
     # 手元は VS2026 (v145) が入っている前提。
     runs-on: ${{ vars.NOX_RUNNER || 'windows-latest' }}
-    timeout-minutes: 30
+    timeout-minutes: 40
+
+    # テストの「実行」も 4 通りで見る。ビルドが通るだけでは、Release の
+    # 最適化で初めて出る競合や未定義動作、ツールセット差 (MSVC が見逃す
+    # 非適合を ClangCL が拾う) を踏めないため。
+    # Master は入れていない。NOX_ASSERT が消える構成で、テストは
+    # アサートの発火を期待するものを含むので前提が変わる。コンパイルの
+    # 検証は build ジョブ (6 構成) が全ツールセット x 全構成で見ている。
+    strategy:
+      fail-fast: false   # 片方が転んでももう片方は最後まで走らせる
+      matrix:
+        compiler: [MSVC, ClangCL]
+        configuration: [Debug, Release]
 
     steps:
       - name: Checkout
@@ -202,11 +214,12 @@ jobs:
       - name: Setup build prerequisites
         uses: ./.github/actions/setup-nox-build
 
-      - name: Build runtime.slnx (Debug)
+      - name: Build runtime.slnx
         run: |
           msbuild runtime\runtime.slnx `
-            /p:Configuration=Debug `
+            /p:Configuration=${{ matrix.configuration }} `
             /p:Platform=x64 `
+            /p:PlatformToolset=${{ matrix.compiler == 'MSVC' && 'v145' || 'ClangCL' }} `
             /m `
             /v:minimal `
             /nologo `
@@ -218,7 +231,7 @@ jobs:
       - name: Run GoogleTest suites
         id: gtest
         run: |
-          $outDir = 'runtime\build\runtime\x64\Debug'
+          $outDir = 'runtime\build\runtime\x64\${{ matrix.configuration }}'
           New-Item -ItemType Directory -Force test-results | Out-Null
 
           $failed = @()
@@ -248,7 +261,7 @@ jobs:
         run: |
           $ok = '${{ steps.gtest.outcome }}' -eq 'success'
           $icon = if ($ok) { ':white_check_mark:' } else { ':x:' }
-          $lines = @("## $icon GoogleTest", '')
+          $lines = @("## $icon GoogleTest (${{ matrix.compiler }} / ${{ matrix.configuration }})", '')
 
           # gtest の XML から件数と失敗したテスト名を拾う。
           # レポート用のアクションを足すほどの規模ではないので自前で読む
@@ -293,7 +306,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: gtest-results
+          name: gtest-results-${{ matrix.compiler }}-${{ matrix.configuration }}
           path: |
             test-results/
             build-test.log
@@ -315,13 +328,16 @@ jobs:
       # 場所は環境変数 NOX_RUNTIME_TYPEDB_DIR で明示し、%TEMP% のポインタ
       # ファイルには頼らない。
       #
+      # この matrix のうち MSVC/Debug の脚でだけ走らせる。Editor が読む TypeDB は
+      # Debug 構成のものだけで、4 脚で回しても同じことを 4 回するだけになるため。
+      #
       # Runtime 連携の 2 件 (Reboot ボタン / Transform の往復) は runtime.exe の
       # attach 待ちで落ちる既知の問題があるため除外している。直したら外すこと。
       # GitHub ホストの windows ランナーは対話デスクトップを持つので FlaUI が動く。
       # セルフホストへ回す場合はサービスではなく対話セッションで動かすこと。
       # ---------------------------------------------------------
       - name: Verify RuntimeTypeDB exists
-        if: always()
+        if: ${{ always() && matrix.compiler == 'MSVC' && matrix.configuration == 'Debug' }}
         run: |
           $bin = 'runtime/reflection_generated/gen/RuntimeTypeDB.x64.Debug.bin'
           if (-not (Test-Path $bin)) { throw "TypeDB が無い: $bin (runtime.slnx の Debug ビルドで生成されるはず)" }
@@ -330,13 +346,13 @@ jobs:
       # テストは Editor/Studio.Wpf/bin/Debug/net10.0-windows/Studio.Wpf.exe を
       # リポジトリルートからの相対で探すので、Debug で建てる
       - name: Build Editor/Studio.slnx (Debug)
-        if: always()
+        if: ${{ always() && matrix.compiler == 'MSVC' && matrix.configuration == 'Debug' }}
         run: |
           dotnet build Editor/Studio.slnx -c Debug --no-incremental -v minimal
           if ($LASTEXITCODE -ne 0) { throw "Editor のビルドに失敗 (exit $LASTEXITCODE)" }
 
       - name: Run FlaUI tests
-        if: always()
+        if: ${{ always() && matrix.compiler == 'MSVC' && matrix.configuration == 'Debug' }}
         id: flaui
         env:
           NOX_RUNTIME_TYPEDB_DIR: ${{ github.workspace }}/runtime/reflection_generated/gen
@@ -349,7 +365,7 @@ jobs:
 
       # trx を読んで件数を要約する。0 件の緑は緑ではないので、実行数も見る
       - name: Write FlaUI summary
-        if: always()
+        if: ${{ always() && matrix.compiler == 'MSVC' && matrix.configuration == 'Debug' }}
         run: |
           $ok = '${{ steps.flaui.outcome }}' -eq 'success'
           $icon = if ($ok) { ':white_check_mark:' } else { ':x:' }
@@ -373,7 +389,7 @@ jobs:
       # としか残らない。理由は Windows のイベントログ (.NET Runtime の未処理例外、
       # Application Error) にあるので、直近分を拾って summary とアーティファクトに残す。
       - name: Collect Editor crash diagnostics
-        if: always()
+        if: ${{ always() && matrix.compiler == 'MSVC' && matrix.configuration == 'Debug' }}
         run: |
           $since = (Get-Date).AddMinutes(-30)
           $events = Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $since } -ErrorAction SilentlyContinue |
@@ -393,7 +409,7 @@ jobs:
       # trx は実行ユーザー名と絶対パスを含むので、リポジトリには入れず
       # アーティファクトにだけ残す (.gitignore でも除外している)
       - name: Upload FlaUI results
-        if: always()
+        if: ${{ always() && matrix.compiler == 'MSVC' && matrix.configuration == 'Debug' }}
         uses: actions/upload-artifact@v4
         with:
           name: flaui-results
