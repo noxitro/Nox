@@ -106,7 +106,7 @@ jobs:
         # toolset は compiler から素直に導出する (下の Build ステップ)。
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup build prerequisites
         uses: ./.github/actions/setup-nox-build
@@ -192,7 +192,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup build prerequisites
         uses: ./.github/actions/setup-nox-build
@@ -420,7 +420,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
