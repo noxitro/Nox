@@ -15,11 +15,14 @@
 
 //	third party
 
-//  fmtライブラリ
+//  fmt ライブラリ (vcpkg)。探索パスは nox_common.props の NoxVcpkgLibDir
+//  (Debug は debug\lib、それ以外は lib) が通しているので、名前だけ書く。
+//  以前はリポジトリ同梱の bin/x64/<構成>/ を直接指していたが、fmt を vcpkg へ
+//  移した際にここだけ残り、同梱ファイルを消した時点でリンクできなくなった。
 #if NOX_DEBUG
-#pragma comment(lib, "./bin/x64/Debug/fmtd.lib")
+#pragma comment(lib, "fmtd.lib")
 #else
-#pragma comment(lib, "./bin/x64/Release/fmt.lib")
+#pragma comment(lib, "fmt.lib")
 #endif
 
 #if NOX_WIN64
