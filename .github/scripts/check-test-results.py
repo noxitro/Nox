@@ -23,6 +23,12 @@ def main() -> int:
     ap.add_argument("--label", default="テスト")
     args = ap.parse_args()
 
+    # Windows ランナーの標準出力は cp1252 になることがあり、日本語を含む表示で
+    # UnicodeEncodeError を起こして本体の判定より先に落ちる。UTF-8 に固定する。
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
     files = sorted(glob.glob(os.path.join(args.directory, "**", "*.xml"), recursive=True))
     if not files:
         print(f"::error::{args.label}: 結果 XML が 1 つも無い ({args.directory})。")
