@@ -160,7 +160,7 @@ jobs:
       - name: Upload build log
         # ジョブが落ちた後でも走らせたいので always() で判定する
         if: always() && steps.build.outcome == 'failure'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-log-${{ matrix.compiler }}-${{ matrix.configuration }}
           path: build.log
@@ -286,7 +286,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: gtest-results
           path: |
@@ -389,7 +389,7 @@ jobs:
       # アーティファクトにだけ残す (.gitignore でも除外している)
       - name: Upload FlaUI results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: flaui-results
           path: flaui-results/
@@ -459,7 +459,7 @@ jobs:
 
       - name: Upload build log
         if: always() && steps.build.outcome == 'failure'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: editor-build-log
           path: editor-*.log
