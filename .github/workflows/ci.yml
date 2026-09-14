@@ -38,9 +38,9 @@ on:
   # 公開後もフォーク PR は受けていない。受けるなら pull_request を戻し、
   # secrets を触る notify ジョブがフォークで動かないことを確認すること。
   #
-  # Dependabot のブランチでは runtime の 6 構成ビルドとテストを飛ばす
-  # (各ジョブの if を参照)。actions のバージョン更新に C++ の全構成は過剰で、
-  # checkout / setup-dotnet の更新は Build Editor だけで検証できる。
+  # Dependabot のうち Editor の NuGet 更新 (dependabot/nuget/**) では runtime の
+  # 6 構成ビルドだけ飛ばす。C# の依存が C++ ランタイムに影響しないため。
+  # actions の更新は CI 自身を書き換えるので何も飛ばさない (各ジョブの if を参照)。
   workflow_dispatch:   # GitHub UI の「Run workflow」から手動実行
 
 # 同じ ref に新しい push が来たら、走っている古い実行を打ち切る
@@ -61,8 +61,10 @@ jobs:
   # matrix の ClangCL のコメントを参照。
   # =========================================================
   build:
-    # Dependabot の actions 更新ブランチでは重いジョブを飛ばす (on: のコメント参照)
-    if: ${{ !startsWith(github.ref, 'refs/heads/dependabot/') }}
+    # Editor の NuGet 更新は C++ ランタイムに影響しないので 6 構成を飛ばす。
+    # actions の更新は setup-nox-build (vcpkg キャッシュ / MSBuild 探索) を
+    # 通るので飛ばさない。壊れたまま master へ入ると全構成が落ちる。
+    if: ${{ !startsWith(github.ref, 'refs/heads/dependabot/nuget/') }}
     name: Build runtime (${{ matrix.compiler }} / ${{ matrix.configuration }})
     # 既定は GitHub ホストの windows-latest。リポジトリ変数 NOX_RUNNER を
     # 設定するとそちらへ回す (例: NOX_RUNNER=self-hosted)。セルフホストの
@@ -180,8 +182,9 @@ jobs:
   #                    走らせないと検証できないので、生成器も動く)
   # =========================================================
   test:
-    # Dependabot の actions 更新ブランチでは重いジョブを飛ばす (on: のコメント参照)
-    if: ${{ !startsWith(github.ref, 'refs/heads/dependabot/') }}
+    # Dependabot でも飛ばさない。このジョブは FlaUI を含んでおり、Editor の
+    # NuGet 更新 (AvalonDock のような UI ライブラリ) が実際に起動して動くかを
+    # 確かめられるのはここだけ。1 ジョブなので費用も知れている。
     name: Test (GoogleTest + Editor FlaUI / MSVC)
     # 既定は GitHub ホストの windows-latest。リポジトリ変数 NOX_RUNNER を
     # 設定するとそちらへ回す (例: NOX_RUNNER=self-hosted)。セルフホストの
