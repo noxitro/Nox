@@ -27,6 +27,19 @@ SECRET_RE='BEGIN (RSA|OPENSSH|DSA|EC|PGP) PRIVATE KEY|gh[pousr]_[A-Za-z0-9]{36}|
 # 個人情報。履歴から除去済みなので、再流入をここで止める。
 PERSONAL_RE='[A-Za-z]:[\/]{1,2}Users[\/]{1,2}[A-Za-z0-9._-]+|[A-Za-z0-9._%+-]+@(gmail|outlook|yahoo|icloud|hotmail)\.[A-Za-z.]{2,}'
 
+# このマシンのユーザー名・ホスト名。テスト結果 (.trx の runUser="HOST\user") や
+# ログに紛れ込む形で実際に混入したので、値を固定せず実行環境から取る。
+# 大文字小文字は揃わない (hostname は小文字、Windows の表示は大文字) ので -i で見る。
+re_escape() { printf '%s' "$1" | sed 's/[][\.*^$/]/\\&/g'; }
+ME=$(id -un 2>/dev/null || printf '%s' "${USERNAME:-}")
+HOST=$(hostname 2>/dev/null || printf '%s' "${COMPUTERNAME:-}")
+LOCAL_RE=''
+if [ -n "$ME" ]; then
+  ME_RE=$(re_escape "$ME")
+  LOCAL_RE="[\/]Users[\/]${ME_RE}([^A-Za-z0-9_]|\$)|[\/]${ME_RE}[\/]"
+  [ -n "$HOST" ] && LOCAL_RE="${LOCAL_RE}|$(re_escape "$HOST")[\/]{1,2}${ME_RE}([^A-Za-z0-9_]|\$)"
+fi
+
 cat > "$TMP/in.txt"
 [ -s "$TMP/in.txt" ] || exit 0
 
@@ -45,6 +58,8 @@ while IFS="$(printf '\t')" read -r path obj; do
       note ARTIFACT "$path" "ビルド副産物。.gitignore を確認すること" ;;
     *.VC.db|*.db-wal|*.db-shm)
       note ARTIFACT "$path" "Visual Studio のローカル DB。ソース断片とパスを含む" ;;
+    *.trx|TestResults/*|*/TestResults/*)
+      note ARTIFACT "$path" "テスト実行の出力。実行ユーザー名 (runUser) と絶対パスを含む" ;;
     *.pem|*.key|*.pfx|*.p12|*.jks|*.keystore|*.snk|*.ppk|*.ovpn|.netrc|*.npmrc)
       note CREDENTIAL-FILE "$path" "鍵・証明書の拡張子" ;;
     .env|.env.*|*/.env|*/.env.*|id_rsa|id_dsa|id_ecdsa|id_ed25519|*/id_rsa|*/id_ed25519)
@@ -69,8 +84,9 @@ while IFS="$(printf '\t')" read -r path size; do
 done < "$TMP/big.txt"
 
 # --- 3. 中身 (まず全体を一度だけ走査する) -----------------------------------
-if cut -f2 "$TMP/objs.txt" | git cat-file --batch 2>/dev/null \
-     | grep -a -q -E "$SECRET_RE|$PERSONAL_RE"; then
+cut -f2 "$TMP/objs.txt" | git cat-file --batch 2>/dev/null > "$TMP/blobs.bin"
+if grep -a -q -E "$SECRET_RE|$PERSONAL_RE" "$TMP/blobs.bin" \
+   || { [ -n "$LOCAL_RE" ] && grep -a -q -i -E "$LOCAL_RE" "$TMP/blobs.bin"; }; then
   # ここに来るのは異常時だけなので、個別に読み直して場所を特定する。
   while IFS="$(printf '\t')" read -r path obj; do
     body=$(git cat-file blob "$obj" 2>/dev/null) || continue
@@ -78,6 +94,10 @@ if cut -f2 "$TMP/objs.txt" | git cat-file --batch 2>/dev/null \
     [ -n "$hit" ] && note SECRET "$path" "$(printf '%s' "$hit" | cut -c1-40)…"
     hit=$(printf '%s' "$body" | grep -a -o -E "$PERSONAL_RE" 2>/dev/null | head -1)
     [ -n "$hit" ] && note PERSONAL "$path" "$hit — ローカル絶対パス / 個人メールの露出"
+    if [ -n "$LOCAL_RE" ]; then
+      hit=$(printf '%s' "$body" | grep -a -o -i -E "$LOCAL_RE" 2>/dev/null | head -1)
+      [ -n "$hit" ] && note PERSONAL "$path" "$hit — このマシンのユーザー名 / ホスト名の露出"
+    fi
   done < "$TMP/objs.txt"
 fi
 
