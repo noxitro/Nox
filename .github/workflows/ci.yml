@@ -12,12 +12,12 @@
 #         前準備は .github/actions/setup-nox-build に切り出してある。
 # 環境  : windows。runtime の vcxproj は PlatformToolset=v145
 #         (Visual Studio 2026) を要求するため windows-2022 では動かない。
-# 費用  : windows-latest は無料枠を 2 倍で消費する。6 並列 + Test + Editor で
-#         1 push あたり約 160 請求分 (実測)。無料枠は月 2,000 分で
-#         アカウント全体の共有なので、月 12 push 前後で枠が尽きる。
-#         枠を気にせず回すには、セルフホストランナーを登録して
-#         リポジトリ変数 NOX_RUNNER=self-hosted を設定する
-#         (セルフホストの実行時間は無料枠を消費しない)。
+# 費用  : 公開リポジトリなので GitHub ホストランナーは無料 (実行の usage で
+#         billable が 0 ms になっているのを確認済み)。private に戻すと
+#         windows-latest は無料枠を 2 倍で消費し、6 並列 + Test + Editor で
+#         1 push あたり約 160 請求分かかる (public 化前の実測)。その場合は
+#         セルフホストランナーを登録してリポジトリ変数 NOX_RUNNER=self-hosted
+#         を設定する (セルフホストの実行時間は無料枠を消費しない)。
 # ============================================================
 
 name: CI
@@ -43,10 +43,18 @@ on:
   # actions の更新は CI 自身を書き換えるので何も飛ばさない (各ジョブの if を参照)。
   workflow_dispatch:   # GitHub UI の「Run workflow」から手動実行
 
-# 同じ ref に新しい push が来たら、走っている古い実行を打ち切る
+# 同じ ref に新しい push が来たら、走っている古い実行を打ち切る。
+# ただし master は打ち切らない。master へ連続 push すると完了した結果が
+# 虫食いになり (実際に run #49〜#51 が cancelled で終わっている)、
+# 「master の最新は緑か」も notify の復旧判定も答えられなくなるため。
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+# GITHUB_TOKEN は既定で読み取りに絞る。書き込みが要るジョブ (notify の
+# actions: read など) はジョブ側で個別に広げる。
+permissions:
+  contents: read
 
 defaults:
   run:
@@ -79,11 +87,7 @@ jobs:
         # compiler x configuration の直積 (6 ジョブ)。このリポジトリは
         # 重要なので、push のたびに 6 構成すべてを建てる。
         #
-        # ただし windows-latest は無料枠を 2 倍で消費し、6 並列 + Test +
-        # Editor で 1 push あたり約 160 請求分かかる (実測)。無料枠は
-        # 月 2,000 分でアカウント全体の共有なので、月 12 push 前後で
-        # 枠を使い切る。これを本気で回すならセルフホストランナーを
-        # 登録すること (下の runs-on を参照。セルフホストは無制限で無料)。
+        # 費用はファイル冒頭の「費用」を参照 (公開リポジトリなので今は無料)。
         #
         # --- 各構成を建てている理由 ---
         # Release: Debug しか建てていなかったせいで NOX_INFO_LINE /

@@ -54,7 +54,7 @@ runs:
     # 消えたときに黙って壊れないよう明示的に固定しておく。
     # -------------------------------------------------------
     - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v6
       with:
         dotnet-version: '10.0.x'
 
@@ -75,7 +75,7 @@ runs:
     # -------------------------------------------------------
     - name: Restore vcpkg cache
       id: vcpkg-cache
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: vcpkg_installed/x64-windows
         key: vcpkg-x64-windows-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
