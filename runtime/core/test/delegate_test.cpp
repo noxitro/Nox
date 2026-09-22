@@ -4,6 +4,9 @@
 ///	@file	delegate_test.cpp
 ///	@brief	delegate_test
 #include	"pch.h"
+
+#include	"../../kernel/kernel.h"
+#include	"../../reflection/reflection.h"
 #include	"test.h"
 
 #include	"../../kernel/assertion.h"

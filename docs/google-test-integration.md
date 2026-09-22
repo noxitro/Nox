@@ -28,9 +28,10 @@
 | `core_test` | `runtime/core/test/` | `kernel` / `reflection` / `core` / `reflection_generated` |
 
 ユニットテストを対象コードと同居させるのは Chromium のスタイルガイドおよび
-Pitchfork Layout の Merged Test Placement に沿った形。なお
-`runtime/core/test_support/` は `core.vcxproj` がビルドする core 内部のコードで、
-テストプロジェクトではない（旧セルフテスト本体と、生成器に見せるテスト用型）。
+Pitchfork Layout の Merged Test Placement に沿った形。かつて core 内部に
+`runtime/core/test_support/` があり、`core.vcxproj` が旧セルフテスト本体を
+core 本体へ混ぜてビルドしていたが、起動時テストの廃止に伴い
+`runtime/core/test/` へ統合した。
 
 プロジェクト名は `_test` 終わりで統一する。ReflectionGenerator が
 このサフィックスでテスト実行ファイルを判別し、「全部入りヘッダ」の
