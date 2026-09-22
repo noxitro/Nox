@@ -65,8 +65,8 @@ public static class CodeWriterExtension_Generator
 
     public static void WriteLineCopyRight(this BaseCodeWriter codeWriter)
     {
-        codeWriter.WriteLine($"// Copyright (c) 2023-{DateTime.Now.Year} noxitro");
-        codeWriter.WriteLine("// SPDX-License-Identifier: MIT");
+        codeWriter.WriteLine($"//\tCopyright (c) 2023-{DateTime.Now.Year} noxitro");
+        codeWriter.WriteLine("//\tSPDX-License-Identifier: MIT");
     }
 
     public static void WriteIncludePch(this BaseCodeWriter codeWriter)

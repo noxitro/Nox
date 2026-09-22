@@ -71,6 +71,7 @@ namespace MakeAllIncludeHeader;
 			string headerFilePath = Path.GetFullPath(string.Format($"{outputDirectory}/{allIncludeFileName}.h"));
 			using (CodeWriter codeWriter = new CodeWriter(headerFilePath))
 			{
+				WriteCopyRight(codeWriter);
 				foreach (string includeFileName in includeFileNameList)
 				{
 					codeWriter.WriteLine(string.Format("#include\t\"{0}\"", includeFileName));
@@ -82,12 +83,23 @@ namespace MakeAllIncludeHeader;
 
 			using (CodeWriter codeWriter = new CodeWriter(filePath))
 			{
+				WriteCopyRight(codeWriter);
 				codeWriter.WriteLine("#include\t\"stdafx.h\"");
 				codeWriter.WriteNewLine();
 				codeWriter.WriteLine($"#include\t\"{allIncludeFileName}.h\"");
 			}
 
 			return true;
+		}
+
+		/// <summary>
+		/// ライセンスヘッダ (ReflectionGenerator の WriteLineCopyRight と同じ表記)
+		/// </summary>
+		private static void WriteCopyRight(CodeWriter codeWriter)
+		{
+			codeWriter.WriteLine($"//\tCopyright (c) 2023-{DateTime.Now.Year} noxitro");
+			codeWriter.WriteLine("//\tSPDX-License-Identifier: MIT");
+			codeWriter.WriteNewLine();
 		}
 
 		static void Main(string[] args)
