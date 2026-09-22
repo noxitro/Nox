@@ -9,4 +9,6 @@
 ///				kernel の new_delete.h と同居させたくないため。
 #pragma once
 
-#include	<gtest/gtest.h>
+#pragma warning(push, 0)
+#include <gtest/gtest.h>
+#pragma warning(pop)

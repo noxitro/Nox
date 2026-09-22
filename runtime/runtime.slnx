@@ -12,6 +12,20 @@
       <BuildDependency Project="reflection/reflection.vcxproj" />
     </Project>
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="core/test/core_test.vcxproj" Id="c4b91f2a-3d76-4e58-8a01-6f2b9d5c7e34">
+      <BuildDependency Project="core/core.vcxproj" />
+      <BuildDependency Project="kernel/kernel.vcxproj" />
+      <BuildDependency Project="reflection/reflection.vcxproj" />
+      <BuildDependency Project="reflection_generated/reflection_generated.vcxproj" />
+      <Build Project="false" />
+    </Project>
+    <Project Path="kernel/test/kernel_test.vcxproj" Id="b7f3c1a6-8e2d-4f5a-9c3b-1d4e5f6a7b8c">
+      <BuildDependency Project="kernel/kernel.vcxproj" />
+      <Build Project="false" />
+    </Project>
+    <Project Path="test_support/test_support.vcxitems" Id="5b55ef87-eaf3-4ab8-abe3-1df15b3b88c1" />
+  </Folder>
   <Project Path="app/app.vcxproj" Id="e21d57c8-c4b7-4702-9f36-12c332b64433" />
   <Project Path="core/core.vcxproj" Id="0d108199-d079-4739-83ad-ce83c4d53332">
     <BuildDependency Project="kernel/kernel.vcxproj" />
@@ -33,15 +47,4 @@
     <BuildDependency Project="kernel/kernel.vcxproj" />
     <BuildDependency Project="reflection/reflection.vcxproj" />
   </Project>
-  <Folder Name="/tests/">
-    <Project Path="kernel/test/kernel_test.vcxproj" Id="b7f3c1a6-8e2d-4f5a-9c3b-1d4e5f6a7b8c">
-      <BuildDependency Project="kernel/kernel.vcxproj" />
-    </Project>
-    <Project Path="core/test/core_test.vcxproj" Id="c4b91f2a-3d76-4e58-8a01-6f2b9d5c7e34">
-      <BuildDependency Project="core/core.vcxproj" />
-      <BuildDependency Project="kernel/kernel.vcxproj" />
-      <BuildDependency Project="reflection/reflection.vcxproj" />
-      <BuildDependency Project="reflection_generated/reflection_generated.vcxproj" />
-    </Project>
-  </Folder>
 </Solution>
