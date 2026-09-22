@@ -64,20 +64,27 @@ include 生成から除外している（`bin/source/ReflectionGenerator/Entry.c
 
 **追加された機能**:
 1. vcpkg のセットアップ（Google Test のインストールのため）
-2. Test ジョブで `runtime.slnx` を Debug でビルド
+2. `Build & test` マトリクスジョブで `runtime.slnx` をビルド
 3. テスト実行ステップ
-   - Test ジョブでのみ実行
-   - MSVC ツールチェーンのみ（clang は除外）
-   - Debug のみで実行（Master は `test_types.h` が `#if !NOX_MASTER` で外れ、
+   - 独立したジョブではなく、各マトリクスジョブの中で実行する
+     （同じ構成を 2 回建てないため。かつては Build ジョブと Test ジョブに
+     分かれており、Debug のフルビルドが 1 push につき 2 回走っていた）
+   - MSVC / ClangCL の両方、Debug / Release の両方で実行
+   - Master では実行しない（`test_types.h` が `#if !NOX_MASTER` で外れ、
      テスト型のリフレクションが生成されないため core_test が成立しない）
-4. テスト結果のアップロード（XML 形式）
+4. テスト結果のアップロード（XML 形式。アーティファクト名は
+   `gtest-results-<コンパイラ>-<構成>`）
 
 ## トリガー
 
 CI は以下の場合に自動実行されます：
 
 1. **コミット時**: すべてのブランチへの push
-2. **プルリクエスト**: すべてのブランチへの PR
+   （`**.md` / `docs/**` だけの変更は除く）
+2. **手動実行**: GitHub UI の「Run workflow」
+
+`pull_request` トリガーは使っていません。同一リポジトリのブランチへの PR は
+push 側と合わせて毎回 2 倍走り、ref が違うので concurrency でも畳めないためです。
 3. **手動実行**: GitHub Actions の UI から workflow_dispatch で手動実行可能
 
 ## テストの実行方法
@@ -98,8 +105,9 @@ build\runtime\x64\Debug\kernel_test.exe
 
 ### CI での実行
 
-GitHub にプッシュまたは PR を作成すると、自動的に実行されます。
-テスト結果は GitHub Actions の Artifacts としてダウンロード可能です。
+GitHub にプッシュすると自動的に実行されます。
+テスト結果は GitHub Actions の Artifacts としてダウンロード可能です
+（`gtest-results-<コンパイラ>-<構成>`）。
 
 ## テストの追加方法
 

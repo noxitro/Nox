@@ -3,12 +3,14 @@
 #
 # 目的  : push ごとに runtime をビルドし、GoogleTest スイートを実際に
 #         走らせて回帰を検知する。
-# 構成  : Build (MSVC / ClangCL x Debug / Release / Master の 6 並列)、
-#         Test ジョブ (Debug のみ)、Editor ジョブを並列実行。
-#         Test を Debug に限っているのは、reflection_generated の pch.h /
-#         reflect.cpp が runtime/core/test_support/test_types.h を #if !NOX_MASTER で
-#         囲っており、Master ではテスト型のリフレクションが生成されず
-#         core_test が成立しないため。
+# 構成  : Build & test (MSVC / ClangCL x Debug / Release / Master の 6 並列) と
+#         Editor ジョブを並列実行。GoogleTest と FlaUI は独立したジョブではなく、
+#         マトリクスジョブの中で走る。同じ構成を 2 回建てないため。
+#         GoogleTest は Master 以外の 4 ジョブ、FlaUI は MSVC/Debug の 1 ジョブ。
+#         Master だけテストを飛ばしているのは、reflection_generated の pch.h /
+#         reflect.cpp が test_support のテスト型を #if !NOX_MASTER で囲っており、
+#         Master ではテスト型のリフレクションが生成されず core_test が
+#         成立しないため。
 #         前準備は .github/actions/setup-nox-build に切り出してある。
 # 環境  : windows。runtime の vcxproj は PlatformToolset=v145
 #         (Visual Studio 2026) を要求するため windows-2022 では動かない。
@@ -62,24 +64,37 @@ defaults:
 
 jobs:
   # =========================================================
-  # Build: runtime.slnx (runtime.exe まで) を
-  #        2 つのコンパイラ x 3 構成 (Debug / Release / Master) で建てる
+  # Build & test: runtime.slnx を 2 コンパイラ x 3 構成で建て、
+  #               そのジョブの中で GoogleTest と FlaUI まで走らせる
   #
-  # MSVC / ClangCL のどちらも必須ゲート。片方だけを信用しない理由は
-  # matrix の ClangCL のコメントを参照。
+  # かつては Build ジョブ (6 構成) と Test ジョブ (Debug) が別々だった。
+  # そのせいで Debug のフルビルドが 1 push につき 2 回走り、Test ジョブが
+  # 10〜13 分でクリティカルパスになっていた。テストを Debug と Release の
+  # 両方で回したくなると、この重複は構成の数だけ増える。
+  #
+  # マトリクスジョブは「その構成のライブラリを建て終わった状態」なので、
+  # テストのビルドと実行をそこへ足せば重複は構造的に消える。実測で
+  # テストのビルドは約 30 秒、実行は数秒なので、各ジョブへの上乗せは僅か。
+  # 副作用として、これまで MSVC/Debug でしか走っていなかった GoogleTest が
+  # ClangCL と Release でも走るようになる (最適化や /GL で初めて出る不具合は
+  # Debug では原理的に拾えない)。FlaUI は Debug のままで、理由はそのステップの
+  # コメントを参照 (Editor 側に構成を指定する口が無い)。
+  #
+  # Master でテストを走らせないのは、reflection_generated の pch.h /
+  # reflect.cpp が test_support のテスト型を #if !NOX_MASTER で囲っており、
+  # テスト型のリフレクションが生成されないため。ビルド自体は通るが
+  # 成立しない。
   # =========================================================
   build:
-    # Editor の NuGet 更新は C++ ランタイムに影響しないので 6 構成を飛ばす。
-    # actions の更新は setup-nox-build (vcpkg キャッシュ / MSBuild 探索) を
-    # 通るので飛ばさない。壊れたまま master へ入ると全構成が落ちる。
-    if: ${{ !startsWith(github.ref, 'refs/heads/dependabot/nuget/') }}
-    name: Build runtime (${{ matrix.compiler }} / ${{ matrix.configuration }})
+    name: Build & test (${{ matrix.compiler }} / ${{ matrix.configuration }})
     # 既定は GitHub ホストの windows-latest。リポジトリ変数 NOX_RUNNER を
     # 設定するとそちらへ回す (例: NOX_RUNNER=self-hosted)。セルフホストの
     # 実行時間は無料枠を消費しないので、6 構成を毎 push で建てるならこれ。
     # 手元は VS2026 (v145) が入っている前提。
     runs-on: ${{ vars.NOX_RUNNER || 'windows-latest' }}
-    timeout-minutes: 30
+    # ビルド + テスト + Editor + FlaUI まで 1 ジョブで通すので、
+    # 分かれていたころ (30) より余裕を持たせる。実測は MSVC/Debug で約 10 分。
+    timeout-minutes: 40
 
     strategy:
       fail-fast: false   # 片方が転んでももう片方は最後まで走らせる
@@ -104,12 +119,22 @@ jobs:
         #   落ちたときは原因を直すこと。無効化で回避しないこと。
         #   解消済みの壁: c342965 / 6552cb3 / 137397f / 008d27e
         #   (2026-09 の履歴書き換えで SHA が変わっている)
-        compiler: [MSVC, ClangCL]
-        configuration: [Debug, Release, Master]
-        # include: は使わない。matrix を一時的に絞りたくなったとき、既存の
-        # 組み合わせにマージできない include エントリは「新しいジョブを
-        # 増やす」ので、compiler を [MSVC] にしても ClangCL が復活する。
-        # toolset は compiler から素直に導出する (下の Build ステップ)。
+        #
+        # --- dependabot/nuget のときだけ縮める ---
+        # Editor の NuGet 更新は C++ ランタイムに影響しないので、C++ 専用の
+        # 構成 (ClangCL / Release / Master) は建てない。ただし丸ごと飛ばすと
+        # FlaUI も一緒に消える。AvalonDock のような UI ライブラリの更新が
+        # 実際に起動して動くかを確かめられるのはそこだけなので、
+        # MSVC/Debug の 1 ジョブだけは残す。
+        # actions の更新は setup-nox-build を通るので何も飛ばさない。
+        #
+        # ジョブ側の if: では matrix コンテキストを読めないので、matrix 自体を
+        # 式で切り替える。include: は使わない (既存の組み合わせにマージ
+        # できない include エントリは「新しいジョブを増やす」ため、
+        # compiler を絞ったつもりで ClangCL が復活する)。
+        compiler: ${{ fromJSON(startsWith(github.ref, 'refs/heads/dependabot/nuget/') && '["MSVC"]' || '["MSVC","ClangCL"]') }}
+        configuration: ${{ fromJSON(startsWith(github.ref, 'refs/heads/dependabot/nuget/') && '["Debug"]' || '["Debug","Release","Master"]') }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -131,6 +156,166 @@ jobs:
             /nologo `
             "/flp:logfile=build.log;verbosity=normal"
 
+      # ---------------------------------------------------------
+      # GoogleTest
+      #
+      #   - kernel_test : kernel だけに依存する下層のテスト
+      #   - core_test   : core / reflection / reflection_generated に依存する
+      #                   テスト (リフレクションの getter/setter は生成コードを
+      #                   実際に走らせないと検証できないので、生成器も動く)
+      #
+      # 両者は runtime.slnx で <Build Project="false" /> が付いていて、
+      # 上のソリューションビルドでは建たない。Release では
+      # nox_release.props の WholeProgramOptimization で全プロジェクトに /GL が
+      # 付き、コード生成がリンク時まで遅れる。このとき link.exe は一時ファイル
+      # (*.g.asm) を「.obj の出身プロジェクト」の中間ディレクトリへ書くので、
+      # reflection_generated.lib を共有する runtime.exe と core_test.exe を /m で
+      # 同時にリンクすると同じパスを取り合って落ちる
+      # (C1083 Permission denied -> LNK1257)。msbuild の呼び出しを分ければ
+      # 時間的に重ならないので、構成によらずこの衝突は起きない。
+      # ---------------------------------------------------------
+      - name: Build test projects
+        if: matrix.configuration != 'Master'
+        run: |
+          # vcxproj を直接建てると MSBuild はソリューション由来のプロパティを
+          # 設定しない ($(SolutionPath) は *Undefined* という文字列になる)。
+          # 3 つとも実際に使われているので、ソリューションビルドと同じ値を渡す。
+          #
+          #   SolutionDir  : nox_common.props の OutDir / IntDir の起点。
+          #                  渡さないと出力先がずれて次のステップが exe を見失う
+          #   SolutionName : 同上 (build\<SolutionName>\... に入る)
+          #   SolutionPath : reflection_generated/Directory.Build.targets が
+          #                  ReflectionGenerator へ -solution として渡す。
+          #                  *Undefined* のままだと IOException で落ちる
+          #
+          # 参照先 (core / kernel / reflection / reflection_generated) は直前の
+          # ソリューションビルドで出来ているので建て直さない。プロパティの値が
+          # ソリューションビルドと文字列として一致しないと最新判定が外れて
+          # 全部作り直しになり、このステップだけで 4 分以上かかっていた。
+          # BuildProjectReferences=false でも参照先の出力パスは解決されるので、
+          # リンク入力は変わらない。
+          #
+          # 区切りを / にしてあるのは、SolutionDir の末尾が \ だと引数の
+          # 引用符がエスケープ扱いになって壊れるため。Windows は混在を許す。
+          $solutionDir  = (Resolve-Path 'runtime').Path.Replace('\', '/') + '/'
+          $solutionPath = $solutionDir + 'runtime.slnx'
+
+          $projects = @(
+            'runtime\kernel\test\kernel_test.vcxproj',
+            'runtime\core\test\core_test.vcxproj'
+          )
+          foreach ($proj in $projects) {
+            msbuild $proj `
+              /p:Configuration=${{ matrix.configuration }} `
+              /p:Platform=x64 `
+              /p:PlatformToolset=${{ matrix.compiler == 'MSVC' && 'v145' || 'ClangCL' }} `
+              "/p:SolutionDir=$solutionDir" `
+              /p:SolutionName=runtime `
+              "/p:SolutionPath=$solutionPath" `
+              /p:BuildProjectReferences=false `
+              /m `
+              /v:minimal `
+              /nologo
+            if ($LASTEXITCODE -ne 0) { throw "テストプロジェクトのビルドに失敗: $proj" }
+          }
+
+      # OutDir は nox_common.props が build\$(SolutionName)\$(Platform)\$(Configuration)\
+      # と決めているので、runtime.slnx の出力はここに落ちる。
+      # gtest.dll は各テスト vcxproj の PostBuildEvent が隣へ置く。
+      - name: Run GoogleTest suites
+        id: gtest
+        if: matrix.configuration != 'Master'
+        run: |
+          $outDir = 'runtime\build\runtime\x64\${{ matrix.configuration }}'
+          New-Item -ItemType Directory -Force test-results | Out-Null
+
+          $failed = @()
+          foreach ($name in 'kernel_test', 'core_test') {
+            $exe = Join-Path $outDir "$name.exe"
+            if (-not (Test-Path $exe)) { throw "テスト実行ファイルが無い: $exe" }
+            & $exe --gtest_output="xml:test-results/$name.xml" 2>&1 |
+              Tee-Object -FilePath "test-results/$name.txt"
+            if ($LASTEXITCODE -ne 0) { $failed += "$name (exit $LASTEXITCODE)" }
+          }
+
+          # 1 本でも失敗したらこのジョブを落とす。これがテストゲート
+          if ($failed.Count -gt 0) { throw ("失敗したテスト: " + ($failed -join ', ')) }
+
+      # gtest は「1 件も走らなくても」 exit 0 を返す。テスト登録の漏れや
+      # フィルタの書き間違いでスイートが丸ごと消えても緑になり、
+      # 「通った」と誤読される。件数を数えるのが唯一の証明。
+      # 実測は kernel_test 21 + core_test 81 = 102 件。その 9 割を下限に置く。
+      - name: 実行件数を確かめる
+        if: always() && matrix.configuration != 'Master'
+        shell: pwsh
+        run: |
+          python .github/scripts/check-test-results.py test-results --min 91 --label GoogleTest
+
+      # ---------------------------------------------------------
+      # Editor UI test (FlaUI, MIT)
+      #
+      # Studio.Wpf.exe を実際に起動し、主要パネルの表示・テーマ切替・
+      # Hierarchy / Inspector / AssetBrowser の操作を UI Automation で確かめる。
+      # ビルドが通っても「起動したら DataContext が繋がっていない」類の破損は
+      # ここでしか拾えない。
+      #
+      # このジョブに同居させている理由: Editor は起動時に ReflectionGenerator が
+      # 書き出す RuntimeTypeDB.x64.<構成>.bin (約 150MB) を読む。それは上の
+      # runtime.slnx のビルドで生成済みなので、別ジョブに分けて巨大な
+      # アーティファクトを受け渡すより、ここで続けて走らせる方が安い。
+      # 場所は環境変数 NOX_RUNTIME_TYPEDB_DIR で明示し、%TEMP% のポインタ
+      # ファイルには頼らない。
+      #
+      # ClangCL では走らせない。FlaUI が見るのは C# 側の挙動で、C++ の
+      # ツールセットには依存しないため、2 回回しても得るものが無い。
+      #
+      # Debug 限定なのは Editor 側の制約。Editor/Core/Runtime.cs の
+      # ConfigurationType が既定値 Debug のまま固定で、外から差し替える口が
+      # 無いため、Editor は自身がどの構成で建てられたかに関係なく
+      # RuntimeTypeDB.x64.Debug.bin を要求する。Release だけを建てたジョブには
+      # RuntimeTypeDB.x64.Release.bin しか無く、起動時に
+      # InvalidOperationException で落ちる。Release でも回すなら
+      # ConfigurationType を外から指定できるようにするのが先。
+      #
+      # Runtime 連携の 2 件 (Reboot ボタン / Transform の往復) は runtime.exe の
+      # attach 待ちで落ちる既知の問題があるため除外している。直したら外すこと。
+      # GitHub ホストの windows ランナーは対話デスクトップを持つので FlaUI が動く。
+      # セルフホストへ回す場合はサービスではなく対話セッションで動かすこと。
+      # ---------------------------------------------------------
+      - name: Verify RuntimeTypeDB exists
+        if: always() && matrix.compiler == 'MSVC' && matrix.configuration == 'Debug'
+        run: |
+          $bin = 'runtime/reflection_generated/gen/RuntimeTypeDB.x64.${{ matrix.configuration }}.bin'
+          if (-not (Test-Path $bin)) { throw "TypeDB が無い: $bin (runtime.slnx の ${{ matrix.configuration }} ビルドで生成されるはず)" }
+          Write-Host ("TypeDB: {0} ({1:N0} bytes)" -f $bin, (Get-Item $bin).Length)
+
+      # FlaUI は Editor/Studio.Wpf/bin/<構成>/net10.0-windows/Studio.Wpf.exe を
+      # リポジトリルートからの相対で探す (EditorApp.ResolveBuildConfiguration が
+      # テスト自身の出力ディレクトリから構成名を導く) ので、同じ構成で建てる。
+      - name: Build Editor/Studio.slnx
+        if: always() && matrix.compiler == 'MSVC' && matrix.configuration == 'Debug'
+        run: |
+          dotnet build Editor/Studio.slnx -c ${{ matrix.configuration }} --no-incremental -v minimal
+          if ($LASTEXITCODE -ne 0) { throw "Editor のビルドに失敗 (exit $LASTEXITCODE)" }
+
+      - name: Run FlaUI tests
+        if: always() && matrix.compiler == 'MSVC' && matrix.configuration == 'Debug'
+        id: flaui
+        env:
+          NOX_RUNTIME_TYPEDB_DIR: ${{ github.workspace }}/runtime/reflection_generated/gen
+        run: |
+          dotnet test Editor/Studio.Wpf.UITests/Studio.Wpf.UITests.csproj -c ${{ matrix.configuration }} --no-build -v minimal `
+            --filter "FullyQualifiedName!~RebootButtonLaunchesRuntime&FullyQualifiedName!~TransformInspectorFieldsStaySynced" `
+            --blame-hang-timeout 5m `
+            --logger "trx;LogFileName=flaui.trx" --results-directory flaui-results
+          if ($LASTEXITCODE -ne 0) { throw "FlaUI テストに失敗 (exit $LASTEXITCODE)" }
+
+      # ---------------------------------------------------------
+      # 要約とアーティファクト
+      #
+      # アーティファクト名にはマトリクスの値を必ず含めること。6 ジョブが
+      # 同じ名前で上げると upload-artifact が衝突して落ちる。
+      # ---------------------------------------------------------
       - name: Write job summary
         if: always()
         run: |
@@ -162,159 +347,12 @@ jobs:
             }
           }
 
-      # 要約に載らない前後の文脈を追いたいことがあるので、失敗時だけ全文を残す
-      - name: Upload build log
-        # ジョブが落ちた後でも走らせたいので always() で判定する
-        if: always() && steps.build.outcome == 'failure'
-        uses: actions/upload-artifact@v7
-        with:
-          name: build-log-${{ matrix.compiler }}-${{ matrix.configuration }}
-          path: build.log
-          if-no-files-found: warn
-
-  # =========================================================
-  # Test: runtime.slnx を建てて GoogleTest の exe を実際に走らせ、続けて
-  #       Editor を建てて FlaUI の UI テストを回す (後半の理由はステップのコメント)
-  #
-  # テストプロジェクトは runtime.slnx の /tests/ フォルダに同居している。
-  # かつては gtest の復元を分けるために runtime_test.slnx を切っていたが、
-  # gtest は vcpkg.json の依存に入っていて全ジョブで等しく復元されるので、
-  # 分ける理由は無い。2 つあると片方だけ直して追従漏れが起きる。
-  # Build ジョブとは独立に走らせて総時間を詰めている。
-  #
-  # ただし両者は runtime.slnx で <Build Project="false" /> が付いていて、
-  # ソリューションビルドでは建たない。Release で runtime.exe と同時に
-  # リンクされると LTCG が衝突するためで、理由はビルドステップのコメント参照。
-  # ここでは msbuild を分けて明示的に建てる。
-  #
-  #   - kernel_test : kernel だけに依存する下層のテスト
-  #   - core_test   : core / reflection / reflection_generated に依存するテスト
-  #                   (リフレクションの getter/setter は生成コードを実際に
-  #                    走らせないと検証できないので、生成器も動く)
-  # =========================================================
-  test:
-    # Dependabot でも飛ばさない。このジョブは FlaUI を含んでおり、Editor の
-    # NuGet 更新 (AvalonDock のような UI ライブラリ) が実際に起動して動くかを
-    # 確かめられるのはここだけ。1 ジョブなので費用も知れている。
-    name: Test (GoogleTest + Editor FlaUI / MSVC)
-    # 既定は GitHub ホストの windows-latest。リポジトリ変数 NOX_RUNNER を
-    # 設定するとそちらへ回す (例: NOX_RUNNER=self-hosted)。セルフホストの
-    # 実行時間は無料枠を消費しないので、6 構成を毎 push で建てるならこれ。
-    # 手元は VS2026 (v145) が入っている前提。
-    runs-on: ${{ vars.NOX_RUNNER || 'windows-latest' }}
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup build prerequisites
-        uses: ./.github/actions/setup-nox-build
-
-      - name: Build runtime.slnx (Debug)
-        run: |
-          msbuild runtime\runtime.slnx `
-            /p:Configuration=Debug `
-            /p:Platform=x64 `
-            /m `
-            /v:minimal `
-            /nologo `
-            "/flp:logfile=build-test.log;verbosity=normal"
-
-      # kernel_test / core_test は runtime.slnx では Build=false なので、
-      # 上のソリューションビルドでは建たない。ここで個別に建てる。
-      #
-      # 分けているのは LTCG のため。Release では nox_release.props の
-      # WholeProgramOptimization で全プロジェクトに /GL が付き、コード生成が
-      # リンク時まで遅れる。このとき link.exe は一時ファイル (*.g.asm) を
-      # 「.obj の出身プロジェクト」の中間ディレクトリへ書くので、
-      # reflection_generated.lib を共有する runtime.exe と core_test.exe を
-      # /m で同時にリンクすると同じパスを取り合って落ちる
-      # (C1083 Permission denied -> LNK1257)。msbuild の呼び出しを分ければ
-      # 時間的に重ならないので、構成によらずこの衝突は起きない。
-      #
-      # ライブラリは上のソリューションビルドで出来ているので、ここは
-      # テスト自身のコンパイルとリンクだけで済む。
-      - name: Build test projects (Debug)
-        run: |
-          # vcxproj を直接建てると MSBuild はソリューション由来のプロパティを
-          # 設定しない ($(SolutionPath) は *Undefined* という文字列になる)。
-          # 3 つとも実際に使われているので、ソリューションビルドと同じ値を渡す。
-          #
-          #   SolutionDir  : nox_common.props の OutDir / IntDir の起点。
-          #                  渡さないと出力先がずれて次のステップが exe を見失う
-          #   SolutionName : 同上 (build\<SolutionName>\... に入る)
-          #   SolutionPath : reflection_generated/Directory.Build.targets が
-          #                  ReflectionGenerator へ -solution として渡す。
-          #                  *Undefined* のままだと IOException で落ちる
-          #
-          # 参照先 (core / kernel / reflection / reflection_generated) は直前の
-          # ソリューションビルドで出来ているので建て直さない。プロパティの値が
-          # ソリューションビルドと文字列として一致しないと最新判定が外れて
-          # 全部作り直しになり、このステップだけで 4 分以上かかっていた。
-          # BuildProjectReferences=false でも参照先の出力パスは解決されるので、
-          # リンク入力は変わらない。
-          #
-          # 区切りを / にしてあるのは、SolutionDir の末尾が \ だと引数の
-          # 引用符がエスケープ扱いになって壊れるため。Windows は混在を許す。
-          $solutionDir  = (Resolve-Path 'runtime').Path.Replace('\', '/') + '/'
-          $solutionPath = $solutionDir + 'runtime.slnx'
-
-          $projects = @(
-            'runtime\kernel\test\kernel_test.vcxproj',
-            'runtime\core\test\core_test.vcxproj'
-          )
-          foreach ($proj in $projects) {
-            msbuild $proj `
-              /p:Configuration=Debug `
-              /p:Platform=x64 `
-              "/p:SolutionDir=$solutionDir" `
-              /p:SolutionName=runtime `
-              "/p:SolutionPath=$solutionPath" `
-              /p:BuildProjectReferences=false `
-              /m `
-              /v:minimal `
-              /nologo
-            if ($LASTEXITCODE -ne 0) { throw "テストプロジェクトのビルドに失敗: $proj" }
-          }
-
-      # OutDir は nox_common.props が build\$(SolutionName)\$(Platform)\$(Configuration)\
-      # と決めているので、runtime.slnx の出力はここに落ちる。
-      # gtest.dll は各テスト vcxproj の PostBuildEvent が隣へ置く。
-      - name: Run GoogleTest suites
-        id: gtest
-        run: |
-          $outDir = 'runtime\build\runtime\x64\Debug'
-          New-Item -ItemType Directory -Force test-results | Out-Null
-
-          $failed = @()
-          foreach ($name in 'kernel_test', 'core_test') {
-            $exe = Join-Path $outDir "$name.exe"
-            if (-not (Test-Path $exe)) { throw "テスト実行ファイルが無い: $exe" }
-            & $exe --gtest_output="xml:test-results/$name.xml" 2>&1 |
-              Tee-Object -FilePath "test-results/$name.txt"
-            if ($LASTEXITCODE -ne 0) { $failed += "$name (exit $LASTEXITCODE)" }
-          }
-
-          # 1 本でも失敗したらこのジョブを落とす。これがテストゲート
-          if ($failed.Count -gt 0) { throw ("失敗したテスト: " + ($failed -join ', ')) }
-
-      # gtest は「1 件も走らなくても」 exit 0 を返す。テスト登録の漏れや
-      # フィルタの書き間違いでスイートが丸ごと消えても緑になり、
-      # 「通った」と誤読される。件数を数えるのが唯一の証明。
-      # 実測は kernel_test 21 + core_test 81 = 102 件。その 9 割を下限に置く。
-      - name: 実行件数を確かめる
-        if: always()
-        shell: pwsh
-        run: |
-          python .github/scripts/check-test-results.py test-results --min 91 --label GoogleTest
-
       - name: Write test summary
-        if: always()
+        if: always() && matrix.configuration != 'Master'
         run: |
           $ok = '${{ steps.gtest.outcome }}' -eq 'success'
           $icon = if ($ok) { ':white_check_mark:' } else { ':x:' }
-          $lines = @("## $icon GoogleTest", '')
+          $lines = @('', "## $icon GoogleTest (${{ matrix.compiler }} / ${{ matrix.configuration }})", '')
 
           # gtest の XML から件数と失敗したテスト名を拾う。
           # レポート用のアクションを足すほどの規模ではないので自前で読む
@@ -355,71 +393,13 @@ jobs:
 
           $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
 
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: gtest-results
-          path: |
-            test-results/
-            build-test.log
-          if-no-files-found: warn
-
-
-      # ---------------------------------------------------------
-      # Editor UI test (FlaUI, MIT)
-      #
-      # Studio.Wpf.exe を実際に起動し、主要パネルの表示・テーマ切替・
-      # Hierarchy / Inspector / AssetBrowser の操作を UI Automation で確かめる。
-      # ビルドが通っても「起動したら DataContext が繋がっていない」類の破損は
-      # ここでしか拾えない。
-      #
-      # このジョブに同居させている理由: Editor は起動時に ReflectionGenerator が
-      # 書き出す RuntimeTypeDB.x64.Debug.bin (約 150MB) を読む。それは上の
-      # runtime.slnx (Debug) のビルドで生成済みなので、別ジョブに分けて
-      # 巨大なアーティファクトを受け渡すより、ここで続けて走らせる方が安い。
-      # 場所は環境変数 NOX_RUNTIME_TYPEDB_DIR で明示し、%TEMP% のポインタ
-      # ファイルには頼らない。
-      #
-      # Runtime 連携の 2 件 (Reboot ボタン / Transform の往復) は runtime.exe の
-      # attach 待ちで落ちる既知の問題があるため除外している。直したら外すこと。
-      # GitHub ホストの windows ランナーは対話デスクトップを持つので FlaUI が動く。
-      # セルフホストへ回す場合はサービスではなく対話セッションで動かすこと。
-      # ---------------------------------------------------------
-      - name: Verify RuntimeTypeDB exists
-        if: always()
-        run: |
-          $bin = 'runtime/reflection_generated/gen/RuntimeTypeDB.x64.Debug.bin'
-          if (-not (Test-Path $bin)) { throw "TypeDB が無い: $bin (runtime.slnx の Debug ビルドで生成されるはず)" }
-          Write-Host ("TypeDB: {0} ({1:N0} bytes)" -f $bin, (Get-Item $bin).Length)
-
-      # テストは Editor/Studio.Wpf/bin/Debug/net10.0-windows/Studio.Wpf.exe を
-      # リポジトリルートからの相対で探すので、Debug で建てる
-      - name: Build Editor/Studio.slnx (Debug)
-        if: always()
-        run: |
-          dotnet build Editor/Studio.slnx -c Debug --no-incremental -v minimal
-          if ($LASTEXITCODE -ne 0) { throw "Editor のビルドに失敗 (exit $LASTEXITCODE)" }
-
-      - name: Run FlaUI tests
-        if: always()
-        id: flaui
-        env:
-          NOX_RUNTIME_TYPEDB_DIR: ${{ github.workspace }}/runtime/reflection_generated/gen
-        run: |
-          dotnet test Editor/Studio.Wpf.UITests/Studio.Wpf.UITests.csproj -c Debug --no-build -v minimal `
-            --filter "FullyQualifiedName!~RebootButtonLaunchesRuntime&FullyQualifiedName!~TransformInspectorFieldsStaySynced" `
-            --blame-hang-timeout 5m `
-            --logger "trx;LogFileName=flaui.trx" --results-directory flaui-results
-          if ($LASTEXITCODE -ne 0) { throw "FlaUI テストに失敗 (exit $LASTEXITCODE)" }
-
       # trx を読んで件数を要約する。0 件の緑は緑ではないので、実行数も見る
       - name: Write FlaUI summary
-        if: always()
+        if: always() && matrix.compiler == 'MSVC' && matrix.configuration == 'Debug'
         run: |
           $ok = '${{ steps.flaui.outcome }}' -eq 'success'
           $icon = if ($ok) { ':white_check_mark:' } else { ':x:' }
-          $lines = @('', "## $icon Editor UI test (FlaUI)", '')
+          $lines = @('', "## $icon Editor UI test (FlaUI / ${{ matrix.configuration }})", '')
           $trx = Get-ChildItem flaui-results -Filter *.trx -ErrorAction SilentlyContinue | Select-Object -First 1
           if ($trx) {
             [xml]$x = Get-Content $trx.FullName
@@ -439,7 +419,7 @@ jobs:
       # としか残らない。理由は Windows のイベントログ (.NET Runtime の未処理例外、
       # Application Error) にあるので、直近分を拾って summary とアーティファクトに残す。
       - name: Collect Editor crash diagnostics
-        if: always()
+        if: always() && matrix.compiler == 'MSVC' && matrix.configuration == 'Debug'
         run: |
           $since = (Get-Date).AddMinutes(-30)
           $events = Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $since } -ErrorAction SilentlyContinue |
@@ -456,13 +436,31 @@ jobs:
             $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
           }
 
+      # 要約に載らない前後の文脈を追いたいことがあるので、失敗時だけ全文を残す
+      - name: Upload build log
+        # ジョブが落ちた後でも走らせたいので always() で判定する
+        if: always() && steps.build.outcome == 'failure'
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-log-${{ matrix.compiler }}-${{ matrix.configuration }}
+          path: build.log
+          if-no-files-found: warn
+
+      - name: Upload test results
+        if: always() && matrix.configuration != 'Master'
+        uses: actions/upload-artifact@v7
+        with:
+          name: gtest-results-${{ matrix.compiler }}-${{ matrix.configuration }}
+          path: test-results/
+          if-no-files-found: warn
+
       # trx は実行ユーザー名と絶対パスを含むので、リポジトリには入れず
       # アーティファクトにだけ残す (.gitignore でも除外している)
       - name: Upload FlaUI results
-        if: always()
+        if: always() && matrix.compiler == 'MSVC' && matrix.configuration == 'Debug'
         uses: actions/upload-artifact@v7
         with:
-          name: flaui-results
+          name: flaui-results-${{ matrix.configuration }}
           path: flaui-results/
           if-no-files-found: warn
 
@@ -479,6 +477,14 @@ jobs:
   # .NET SDK だけで建つ) ので、setup-nox-build は使わず独立させている。
   # Debug と Release の両方を建てるのは、構成ごとに参照解決が変わる
   # 類の破損を今度こそ拾うため。
+  #
+  # build マトリクスの MSVC ジョブも FlaUI の前に Editor を建てるので、
+  # 通常の push では C# のビルドが二重になる。それでも残しているのは 2 つ理由がある。
+  #   - 速い。C# だけなら 1 分半で分かる。build マトリクスは 8〜10 分かかる
+  #   - dependabot/nuget では build マトリクスが MSVC/Debug だけに縮むので、
+  #     Release の C# ビルドを担保できるのがここだけになる
+  # 重複するのは dotnet build 2 回ぶん (約 45 秒) で、消した Debug の
+  # フルビルド (約 7 分) とは桁が違う。
   # =========================================================
   editor:
     name: Build Editor (C#)
@@ -550,7 +556,7 @@ jobs:
   # =========================================================
   notify:
     name: Notify Discord
-    needs: [build, test, editor]
+    needs: [build, editor]
     # 判定は step 側で needs.*.result を見るので、ここでは always() で拾うだけ。
     if: always() && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
