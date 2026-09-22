@@ -108,7 +108,7 @@ jobs:
         # toolset は compiler から素直に導出する (下の Build ステップ)。
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup build prerequisites
         uses: ./.github/actions/setup-nox-build
@@ -162,7 +162,7 @@ jobs:
       - name: Upload build log
         # ジョブが落ちた後でも走らせたいので always() で判定する
         if: always() && steps.build.outcome == 'failure'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-log-${{ matrix.compiler }}-${{ matrix.configuration }}
           path: build.log
@@ -197,7 +197,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup build prerequisites
         uses: ./.github/actions/setup-nox-build
@@ -291,7 +291,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: gtest-results
           path: |
@@ -394,7 +394,7 @@ jobs:
       # アーティファクトにだけ残す (.gitignore でも除外している)
       - name: Upload FlaUI results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: flaui-results
           path: flaui-results/
@@ -425,10 +425,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
@@ -464,7 +464,7 @@ jobs:
 
       - name: Upload build log
         if: always() && steps.build.outcome == 'failure'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: editor-build-log
           path: editor-*.log
