@@ -12,12 +12,12 @@
 #         前準備は .github/actions/setup-nox-build に切り出してある。
 # 環境  : windows。runtime の vcxproj は PlatformToolset=v145
 #         (Visual Studio 2026) を要求するため windows-2022 では動かない。
-# 費用  : windows-latest は無料枠を 2 倍で消費する。6 並列 + Test + Editor で
-#         1 push あたり約 160 請求分 (実測)。無料枠は月 2,000 分で
-#         アカウント全体の共有なので、月 12 push 前後で枠が尽きる。
-#         枠を気にせず回すには、セルフホストランナーを登録して
-#         リポジトリ変数 NOX_RUNNER=self-hosted を設定する
-#         (セルフホストの実行時間は無料枠を消費しない)。
+# 費用  : 公開リポジトリなので GitHub ホストランナーは無料 (実行の usage で
+#         billable が 0 ms になっているのを確認済み)。private に戻すと
+#         windows-latest は無料枠を 2 倍で消費し、6 並列 + Test + Editor で
+#         1 push あたり約 160 請求分かかる (public 化前の実測)。その場合は
+#         セルフホストランナーを登録してリポジトリ変数 NOX_RUNNER=self-hosted
+#         を設定する (セルフホストの実行時間は無料枠を消費しない)。
 # ============================================================
 
 name: CI
@@ -43,10 +43,18 @@ on:
   # actions の更新は CI 自身を書き換えるので何も飛ばさない (各ジョブの if を参照)。
   workflow_dispatch:   # GitHub UI の「Run workflow」から手動実行
 
-# 同じ ref に新しい push が来たら、走っている古い実行を打ち切る
+# 同じ ref に新しい push が来たら、走っている古い実行を打ち切る。
+# ただし master は打ち切らない。master へ連続 push すると完了した結果が
+# 虫食いになり (実際に run #49〜#51 が cancelled で終わっている)、
+# 「master の最新は緑か」も notify の復旧判定も答えられなくなるため。
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+# GITHUB_TOKEN は既定で読み取りに絞る。書き込みが要るジョブ (notify の
+# actions: read など) はジョブ側で個別に広げる。
+permissions:
+  contents: read
 
 defaults:
   run:
@@ -79,11 +87,7 @@ jobs:
         # compiler x configuration の直積 (6 ジョブ)。このリポジトリは
         # 重要なので、push のたびに 6 構成すべてを建てる。
         #
-        # ただし windows-latest は無料枠を 2 倍で消費し、6 並列 + Test +
-        # Editor で 1 push あたり約 160 請求分かかる (実測)。無料枠は
-        # 月 2,000 分でアカウント全体の共有なので、月 12 push 前後で
-        # 枠を使い切る。これを本気で回すならセルフホストランナーを
-        # 登録すること (下の runs-on を参照。セルフホストは無制限で無料)。
+        # 費用はファイル冒頭の「費用」を参照 (公開リポジトリなので今は無料)。
         #
         # --- 各構成を建てている理由 ---
         # Release: Debug しか建てていなかったせいで NOX_INFO_LINE /
@@ -178,6 +182,11 @@ jobs:
   # 分ける理由は無い。2 つあると片方だけ直して追従漏れが起きる。
   # Build ジョブとは独立に走らせて総時間を詰めている。
   #
+  # ただし両者は runtime.slnx で <Build Project="false" /> が付いていて、
+  # ソリューションビルドでは建たない。Release で runtime.exe と同時に
+  # リンクされると LTCG が衝突するためで、理由はビルドステップのコメント参照。
+  # ここでは msbuild を分けて明示的に建てる。
+  #
   #   - kernel_test : kernel だけに依存する下層のテスト
   #   - core_test   : core / reflection / reflection_generated に依存するテスト
   #                   (リフレクションの getter/setter は生成コードを実際に
@@ -211,6 +220,63 @@ jobs:
             /v:minimal `
             /nologo `
             "/flp:logfile=build-test.log;verbosity=normal"
+
+      # kernel_test / core_test は runtime.slnx では Build=false なので、
+      # 上のソリューションビルドでは建たない。ここで個別に建てる。
+      #
+      # 分けているのは LTCG のため。Release では nox_release.props の
+      # WholeProgramOptimization で全プロジェクトに /GL が付き、コード生成が
+      # リンク時まで遅れる。このとき link.exe は一時ファイル (*.g.asm) を
+      # 「.obj の出身プロジェクト」の中間ディレクトリへ書くので、
+      # reflection_generated.lib を共有する runtime.exe と core_test.exe を
+      # /m で同時にリンクすると同じパスを取り合って落ちる
+      # (C1083 Permission denied -> LNK1257)。msbuild の呼び出しを分ければ
+      # 時間的に重ならないので、構成によらずこの衝突は起きない。
+      #
+      # ライブラリは上のソリューションビルドで出来ているので、ここは
+      # テスト自身のコンパイルとリンクだけで済む。
+      - name: Build test projects (Debug)
+        run: |
+          # vcxproj を直接建てると MSBuild はソリューション由来のプロパティを
+          # 設定しない ($(SolutionPath) は *Undefined* という文字列になる)。
+          # 3 つとも実際に使われているので、ソリューションビルドと同じ値を渡す。
+          #
+          #   SolutionDir  : nox_common.props の OutDir / IntDir の起点。
+          #                  渡さないと出力先がずれて次のステップが exe を見失う
+          #   SolutionName : 同上 (build\<SolutionName>\... に入る)
+          #   SolutionPath : reflection_generated/Directory.Build.targets が
+          #                  ReflectionGenerator へ -solution として渡す。
+          #                  *Undefined* のままだと IOException で落ちる
+          #
+          # 参照先 (core / kernel / reflection / reflection_generated) は直前の
+          # ソリューションビルドで出来ているので建て直さない。プロパティの値が
+          # ソリューションビルドと文字列として一致しないと最新判定が外れて
+          # 全部作り直しになり、このステップだけで 4 分以上かかっていた。
+          # BuildProjectReferences=false でも参照先の出力パスは解決されるので、
+          # リンク入力は変わらない。
+          #
+          # 区切りを / にしてあるのは、SolutionDir の末尾が \ だと引数の
+          # 引用符がエスケープ扱いになって壊れるため。Windows は混在を許す。
+          $solutionDir  = (Resolve-Path 'runtime').Path.Replace('\', '/') + '/'
+          $solutionPath = $solutionDir + 'runtime.slnx'
+
+          $projects = @(
+            'runtime\kernel\test\kernel_test.vcxproj',
+            'runtime\core\test\core_test.vcxproj'
+          )
+          foreach ($proj in $projects) {
+            msbuild $proj `
+              /p:Configuration=Debug `
+              /p:Platform=x64 `
+              "/p:SolutionDir=$solutionDir" `
+              /p:SolutionName=runtime `
+              "/p:SolutionPath=$solutionPath" `
+              /p:BuildProjectReferences=false `
+              /m `
+              /v:minimal `
+              /nologo
+            if ($LASTEXITCODE -ne 0) { throw "テストプロジェクトのビルドに失敗: $proj" }
+          }
 
       # OutDir は nox_common.props が build\$(SolutionName)\$(Platform)\$(Configuration)\
       # と決めているので、runtime.slnx の出力はここに落ちる。
