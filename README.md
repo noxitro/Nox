@@ -80,3 +80,17 @@ winget install Gitleaks.Gitleaks
 ただし CI は push の後に走るので、流出そのものは防げない。
 外に出る前に止まるのは `pre-push` と、GitHub 側の push protection
 (Settings > Code security) の 2 つだけ。
+
+### Visual Studio の項目テンプレート
+
+「新しい項目の追加」に出る `nox_header` / `nox_source` / `nox_header_source` の
+元は `tools/vs-templates/` にある。ライセンスヘッダ付きで .h / .cpp を作れる。
+テンプレートを直したら、次を再実行して VS へ反映する (VS は再起動が要る)。
+
+```powershell
+pwsh tools/vs-templates/install.ps1
+```
+
+各フォルダを zip にして `ドキュメント\Visual Studio 18\Templates\ItemTemplates` へ
+コピーする。OneDrive のバックアップが有効なら `%OneDrive%\Documents` 側も探す。
+見つからないときは `-Destination` で置き場を指定する。
