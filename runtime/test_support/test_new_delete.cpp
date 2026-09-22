@@ -2,7 +2,7 @@
 //	SPDX-License-Identifier: MIT
 
 ///	@file	test_new_delete.cpp
-///	@brief	テスト実行ファイル用の標準 operator new / delete
+///	@brief	test_new_delete
 ///
 ///	@details
 ///		kernel は memory/new_delete.h で グローバル operator new / delete を
@@ -25,11 +25,10 @@
 ///		nox::memory::Allocate / Deallocate を直接呼ぶ経路 (pmr, stl_allocate_adapter)
 ///		は差し替えの影響を受けないので、そちらは通常どおり動作する。
 
-#include	"pch.h"
-
 #include	<cstdlib>
 #include	<new>
 
+_NODISCARD _Ret_notnull_ _Post_writable_byte_size_(size) _VCRT_ALLOCATOR
 void* __CRTDECL operator new(std::size_t size)
 {
 	void* const ptr = std::malloc(size != 0 ? size : 1);
@@ -40,11 +39,13 @@ void* __CRTDECL operator new(std::size_t size)
 	return ptr;
 }
 
+_NODISCARD _Ret_notnull_ _Post_writable_byte_size_(size) _VCRT_ALLOCATOR
 void* __CRTDECL operator new[](std::size_t size)
 {
 	return ::operator new(size);
 }
 
+_NODISCARD _Ret_notnull_ _Post_writable_byte_size_(size) _VCRT_ALLOCATOR
 void* __CRTDECL operator new(std::size_t size, std::align_val_t align)
 {
 	void* const ptr = ::_aligned_malloc(size != 0 ? size : 1, static_cast<std::size_t>(align));
@@ -55,26 +56,31 @@ void* __CRTDECL operator new(std::size_t size, std::align_val_t align)
 	return ptr;
 }
 
+_NODISCARD _Ret_notnull_ _Post_writable_byte_size_(size) _VCRT_ALLOCATOR
 void* __CRTDECL operator new[](std::size_t size, std::align_val_t align)
 {
 	return ::operator new(size, align);
 }
 
+_NODISCARD _Ret_maybenull_ _Success_(return != NULL) _Post_writable_byte_size_(size) _VCRT_ALLOCATOR
 void* __CRTDECL operator new(std::size_t size, const std::nothrow_t&) noexcept
 {
 	return std::malloc(size != 0 ? size : 1);
 }
 
+_NODISCARD _Ret_maybenull_ _Success_(return != NULL) _Post_writable_byte_size_(size) _VCRT_ALLOCATOR
 void* __CRTDECL operator new[](std::size_t size, const std::nothrow_t&) noexcept
 {
 	return std::malloc(size != 0 ? size : 1);
 }
 
+_NODISCARD _Ret_maybenull_ _Success_(return != NULL) _Post_writable_byte_size_(size) _VCRT_ALLOCATOR
 void* __CRTDECL operator new(std::size_t size, std::align_val_t align, const std::nothrow_t&) noexcept
 {
 	return ::_aligned_malloc(size != 0 ? size : 1, static_cast<std::size_t>(align));
 }
 
+_NODISCARD _Ret_maybenull_ _Success_(return != NULL) _Post_writable_byte_size_(size) _VCRT_ALLOCATOR
 void* __CRTDECL operator new[](std::size_t size, std::align_val_t align, const std::nothrow_t&) noexcept
 {
 	return ::_aligned_malloc(size != 0 ? size : 1, static_cast<std::size_t>(align));
