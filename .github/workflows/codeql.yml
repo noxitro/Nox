@@ -18,9 +18,10 @@ on:
     - cron: '21 4 * * 1'
   workflow_dispatch:
 
+# master と schedule は打ち切らない (打ち切ると master の解析結果が抜ける)
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   analyze:

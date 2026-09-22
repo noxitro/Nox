@@ -324,6 +324,17 @@ namespace ReflectionGenerator;
 					continue;
 				}
 
+				//	.vcxitems (共有アイテムプロジェクト) や .csproj は、ビルド成果物も
+				//	「<プロジェクト名>.h」も持たないので列挙から外す。
+				//	拡張子を見ずに通すと、呼び出し側の Replace("vcxproj", "h") が
+				//	効かないまま .vcxitems のパスが生成コードの include に書き出され、
+				//	MSBuild の XML を C++ としてコンパイルしに行って全構成が落ちる
+				//	(test_support.vcxitems を足したときに実際に踏んだ)。
+				if (string.Equals(Path.GetExtension(rel), ".vcxproj", StringComparison.OrdinalIgnoreCase) == false)
+				{
+					continue;
+				}
+
 				string full = Path.GetFullPath(Path.Combine(slnxDir, rel));
 				projectPaths.Add(full);
 			}

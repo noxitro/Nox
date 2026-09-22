@@ -8,8 +8,14 @@ version: 2
 updates:
   # GitHub Actions 自体の更新。actions/checkout@v4 のような
   # 参照が古くなるのを拾う。
+  #
+  # directory: / だけだと .github/workflows/ しか見ない。composite action
+  # (.github/actions/*/action.yml) は別に列挙しないと更新されず、実際に
+  # ワークフロー側だけ v6 / v7 に上がって composite が v4 のまま取り残された。
   - package-ecosystem: github-actions
-    directory: /
+    directories:
+      - /
+      - /.github/actions/setup-nox-build
     schedule:
       interval: weekly
     commit-message:
