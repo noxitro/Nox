@@ -237,13 +237,21 @@ jobs:
       # テスト自身のコンパイルとリンクだけで済む。
       - name: Build test projects (Debug)
         run: |
-          # nox_common.props の OutDir / IntDir は $(SolutionDir) と
-          # $(SolutionName) で決まる。vcxproj を直接建てると MSBuild は
-          # どちらも設定しないので、出力先がソリューションビルドとずれて
-          # 次のステップが exe を見つけられない。明示的に渡して揃える。
-          # (区切りを / にしてあるのは、値の末尾が \ だと引数の引用符が
-          #  エスケープ扱いになって壊れるため。Windows は混在を受け付ける)
-          $solutionDir = (Resolve-Path 'runtime').Path.Replace('\', '/') + '/'
+          # vcxproj を直接建てると MSBuild はソリューション由来のプロパティを
+          # 設定しない ($(SolutionPath) は *Undefined* という文字列になる)。
+          # 3 つとも実際に使われているので、ソリューションビルドと同じ値を渡す。
+          #
+          #   SolutionDir  : nox_common.props の OutDir / IntDir の起点。
+          #                  渡さないと出力先がずれて次のステップが exe を見失う
+          #   SolutionName : 同上 (build\<SolutionName>\... に入る)
+          #   SolutionPath : reflection_generated/Directory.Build.targets が
+          #                  ReflectionGenerator へ -solution として渡す。
+          #                  *Undefined* のままだと IOException で落ちる
+          #
+          # 区切りを / にしてあるのは、SolutionDir の末尾が \ だと引数の
+          # 引用符がエスケープ扱いになって壊れるため。Windows は混在を許す。
+          $solutionDir  = (Resolve-Path 'runtime').Path.Replace('\', '/') + '/'
+          $solutionPath = $solutionDir + 'runtime.slnx'
 
           $projects = @(
             'runtime\kernel\test\kernel_test.vcxproj',
@@ -255,6 +263,7 @@ jobs:
               /p:Platform=x64 `
               "/p:SolutionDir=$solutionDir" `
               /p:SolutionName=runtime `
+              "/p:SolutionPath=$solutionPath" `
               /m `
               /v:minimal `
               /nologo
