@@ -248,6 +248,13 @@ jobs:
           #                  ReflectionGenerator へ -solution として渡す。
           #                  *Undefined* のままだと IOException で落ちる
           #
+          # 参照先 (core / kernel / reflection / reflection_generated) は直前の
+          # ソリューションビルドで出来ているので建て直さない。プロパティの値が
+          # ソリューションビルドと文字列として一致しないと最新判定が外れて
+          # 全部作り直しになり、このステップだけで 4 分以上かかっていた。
+          # BuildProjectReferences=false でも参照先の出力パスは解決されるので、
+          # リンク入力は変わらない。
+          #
           # 区切りを / にしてあるのは、SolutionDir の末尾が \ だと引数の
           # 引用符がエスケープ扱いになって壊れるため。Windows は混在を許す。
           $solutionDir  = (Resolve-Path 'runtime').Path.Replace('\', '/') + '/'
@@ -264,6 +271,7 @@ jobs:
               "/p:SolutionDir=$solutionDir" `
               /p:SolutionName=runtime `
               "/p:SolutionPath=$solutionPath" `
+              /p:BuildProjectReferences=false `
               /m `
               /v:minimal `
               /nologo
