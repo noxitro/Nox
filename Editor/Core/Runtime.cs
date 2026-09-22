@@ -32,7 +32,7 @@ namespace Core;
 
 		#region 公開プロパティ
     public PlatformType Platform { get; set; } = PlatformType.X64;
-		public ConfigurationType ConfigurationType { get; set; } = ConfigurationType.Debug;
+		public ConfigurationType ConfigurationType { get; set; } = RuntimeConfiguration.ResolveDefault();
 		public RuntimeTypeDB TypeDB { get; set; } = new RuntimeTypeDB();
 
 		public System.Diagnostics.Process? Process => MainRuntimeSession.Process;

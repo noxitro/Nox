@@ -6,7 +6,8 @@
 # 構成  : Build & test (MSVC / ClangCL x Debug / Release / Master の 6 並列) と
 #         Editor ジョブを並列実行。GoogleTest と FlaUI は独立したジョブではなく、
 #         マトリクスジョブの中で走る。同じ構成を 2 回建てないため。
-#         GoogleTest は Master 以外の 4 ジョブ、FlaUI は MSVC/Debug の 1 ジョブ。
+#         GoogleTest は Master 以外の 4 ジョブ、FlaUI は MSVC の Debug / Release。
+#         Runtime 連携テストだけは continue-on-error で、落ちても止めない。
 #         Master だけテストを飛ばしているのは、reflection_generated の pch.h /
 #         reflect.cpp が test_support のテスト型を #if !NOX_MASTER で囲っており、
 #         Master ではテスト型のリフレクションが生成されず core_test が
@@ -77,8 +78,7 @@ jobs:
   # テストのビルドは約 30 秒、実行は数秒なので、各ジョブへの上乗せは僅か。
   # 副作用として、これまで MSVC/Debug でしか走っていなかった GoogleTest が
   # ClangCL と Release でも走るようになる (最適化や /GL で初めて出る不具合は
-  # Debug では原理的に拾えない)。FlaUI は Debug のままで、理由はそのステップの
-  # コメントを参照 (Editor 側に構成を指定する口が無い)。
+  # Debug では原理的に拾えない)。FlaUI も MSVC の Debug / Release で走る。
   #
   # Master でテストを走らせないのは、reflection_generated の pch.h /
   # reflect.cpp が test_support のテスト型を #if !NOX_MASTER で囲っており、
@@ -269,21 +269,20 @@ jobs:
       # ClangCL では走らせない。FlaUI が見るのは C# 側の挙動で、C++ の
       # ツールセットには依存しないため、2 回回しても得るものが無い。
       #
-      # Debug 限定なのは Editor 側の制約。Editor/Core/Runtime.cs の
-      # ConfigurationType が既定値 Debug のまま固定で、外から差し替える口が
-      # 無いため、Editor は自身がどの構成で建てられたかに関係なく
-      # RuntimeTypeDB.x64.Debug.bin を要求する。Release だけを建てたジョブには
-      # RuntimeTypeDB.x64.Release.bin しか無く、起動時に
-      # InvalidOperationException で落ちる。Release でも回すなら
-      # ConfigurationType を外から指定できるようにするのが先。
+      # Editor が参照する runtime の構成は NOX_RUNTIME_CONFIGURATION で渡す。
+      # Core.RuntimeConfiguration.ResolveDefault() がこれを読み、
+      # RuntimeTypeDB.x64.<構成>.bin と runtime.exe の置き場を決める。
+      # 既定値は Debug のままなので、人の手元の使い勝手は変わらない
+      # (Editor を Release で建てて runtime は Debug、という組み合わせは普通にある)。
+      # CI は 1 ジョブ 1 構成しか建てないので、明示的に揃える必要がある。
       #
-      # Runtime 連携の 2 件 (Reboot ボタン / Transform の往復) は runtime.exe の
-      # attach 待ちで落ちる既知の問題があるため除外している。直したら外すこと。
+      # Runtime 連携の 2 件 (Reboot ボタン / Transform の往復) は別ステップに
+      # 分けて continue-on-error で回す。理由はそのステップのコメントを参照。
       # GitHub ホストの windows ランナーは対話デスクトップを持つので FlaUI が動く。
       # セルフホストへ回す場合はサービスではなく対話セッションで動かすこと。
       # ---------------------------------------------------------
       - name: Verify RuntimeTypeDB exists
-        if: always() && matrix.compiler == 'MSVC' && matrix.configuration == 'Debug'
+        if: always() && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
         run: |
           $bin = 'runtime/reflection_generated/gen/RuntimeTypeDB.x64.${{ matrix.configuration }}.bin'
           if (-not (Test-Path $bin)) { throw "TypeDB が無い: $bin (runtime.slnx の ${{ matrix.configuration }} ビルドで生成されるはず)" }
@@ -293,22 +292,56 @@ jobs:
       # リポジトリルートからの相対で探す (EditorApp.ResolveBuildConfiguration が
       # テスト自身の出力ディレクトリから構成名を導く) ので、同じ構成で建てる。
       - name: Build Editor/Studio.slnx
-        if: always() && matrix.compiler == 'MSVC' && matrix.configuration == 'Debug'
+        if: always() && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
         run: |
           dotnet build Editor/Studio.slnx -c ${{ matrix.configuration }} --no-incremental -v minimal
           if ($LASTEXITCODE -ne 0) { throw "Editor のビルドに失敗 (exit $LASTEXITCODE)" }
 
       - name: Run FlaUI tests
-        if: always() && matrix.compiler == 'MSVC' && matrix.configuration == 'Debug'
+        if: always() && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
         id: flaui
         env:
           NOX_RUNTIME_TYPEDB_DIR: ${{ github.workspace }}/runtime/reflection_generated/gen
+          NOX_RUNTIME_CONFIGURATION: ${{ matrix.configuration }}
         run: |
           dotnet test Editor/Studio.Wpf.UITests/Studio.Wpf.UITests.csproj -c ${{ matrix.configuration }} --no-build -v minimal `
             --filter "FullyQualifiedName!~RebootButtonLaunchesRuntime&FullyQualifiedName!~TransformInspectorFieldsStaySynced" `
             --blame-hang-timeout 5m `
             --logger "trx;LogFileName=flaui.trx" --results-directory flaui-results
           if ($LASTEXITCODE -ne 0) { throw "FlaUI テストに失敗 (exit $LASTEXITCODE)" }
+
+      # ---------------------------------------------------------
+      # Runtime 連携テスト (Editor <-> runtime.exe の TCP 往復)
+      #
+      #   - RebootButtonLaunchesRuntimeAndHostsWindowInRuntimeView
+      #   - TransformInspectorFieldsStaySyncedAfterRuntimeRoundTrip
+      #
+      # Editor を起動し、Reboot ボタンで runtime.exe を起こして attach を待ち、
+      # AttachStatus の Sent / Deserialized カウンタが増えることを確かめる。
+      # UI 操作 + プロセス起動 + TCP という、CI で最も不安定になる組み合わせ。
+      # 実際 attach 待ちで落ちる既知の問題があり、これまでフィルタで外していた。
+      #
+      # continue-on-error を付けているのは、ここが落ちても PR を止めないため。
+      # 「失敗しても通す」を安易に広げるとテストの意味が無くなるので、対象は
+      # この 2 件だけに限り、結果は必ず Job Summary へ出す (下の要約ステップ)。
+      # 常時赤が当たり前になったら、通す運用をやめて原因を潰すこと。
+      #
+      # 本体の FlaUI とは別の msbuild 呼び出しに分けてあるので、こちらが
+      # 転んでも上の UI テストの結果は汚れない。
+      # ---------------------------------------------------------
+      - name: Run FlaUI tests (runtime 連携)
+        if: always() && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
+        id: integration
+        continue-on-error: true
+        env:
+          NOX_RUNTIME_TYPEDB_DIR: ${{ github.workspace }}/runtime/reflection_generated/gen
+          NOX_RUNTIME_CONFIGURATION: ${{ matrix.configuration }}
+        run: |
+          dotnet test Editor/Studio.Wpf.UITests/Studio.Wpf.UITests.csproj -c ${{ matrix.configuration }} --no-build -v minimal `
+            --filter "FullyQualifiedName~RebootButtonLaunchesRuntime|FullyQualifiedName~TransformInspectorFieldsStaySynced" `
+            --blame-hang-timeout 5m `
+            --logger "trx;LogFileName=integration.trx" --results-directory integration-results
+          if ($LASTEXITCODE -ne 0) { throw "Runtime 連携テストに失敗 (exit $LASTEXITCODE)" }
 
       # ---------------------------------------------------------
       # 要約とアーティファクト
@@ -395,7 +428,7 @@ jobs:
 
       # trx を読んで件数を要約する。0 件の緑は緑ではないので、実行数も見る
       - name: Write FlaUI summary
-        if: always() && matrix.compiler == 'MSVC' && matrix.configuration == 'Debug'
+        if: always() && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
         run: |
           $ok = '${{ steps.flaui.outcome }}' -eq 'success'
           $icon = if ($ok) { ':white_check_mark:' } else { ':x:' }
@@ -415,11 +448,42 @@ jobs:
           }
           $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
 
+      # 連携テストは continue-on-error なのでジョブは緑のまま進む。
+      # 結果がどこにも出ないと「落ちているのに誰も気付かない」になるので、
+      # 失敗したときは要約の先頭に警告を立てて、落ちたテスト名まで出す。
+      - name: Write runtime 連携 summary
+        if: always() && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
+        run: |
+          $outcome = '${{ steps.integration.outcome }}'
+          $icon = if ($outcome -eq 'success') { ':white_check_mark:' } else { ':warning:' }
+          $lines = @('', "## $icon Runtime 連携テスト (${{ matrix.configuration }})", '')
+          if ($outcome -ne 'success') {
+            $lines += '> [!WARNING]'
+            $lines += '> このステップは continue-on-error で通してあるため、失敗してもジョブは緑になる。'
+            $lines += '> 常時赤が当たり前になったら、通す運用をやめて原因を潰すこと。'
+            $lines += ''
+          }
+
+          $trx = Get-ChildItem integration-results -Filter *.trx -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($trx) {
+            [xml]$x = Get-Content $trx.FullName
+            $c = $x.TestRun.ResultSummary.Counters
+            $lines += "| 実行 | 合格 | 失敗 | 合計 |"
+            $lines += "| --- | --- | --- | --- |"
+            $lines += "| $($c.executed) | $($c.passed) | $($c.failed) | $($c.total) |"
+            $bad = $x.TestRun.Results.UnitTestResult | Where-Object { $_.outcome -ne 'Passed' }
+            foreach ($r in $bad) { $lines += "- ``$($r.testName)``: $($r.outcome)" }
+            if ([int]$c.executed -lt 2) { $lines += ''; $lines += ":warning: 2 件走るはずが $($c.executed) 件しか走っていない。フィルタを疑うこと。" }
+          } else {
+            $lines += ':warning: trx が見つからない (テストランナーが起動していない)'
+          }
+          $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
       # Studio.Wpf.exe が起動直後に落ちた場合、FlaUI 側には「プロセスが居ない」
       # としか残らない。理由は Windows のイベントログ (.NET Runtime の未処理例外、
       # Application Error) にあるので、直近分を拾って summary とアーティファクトに残す。
       - name: Collect Editor crash diagnostics
-        if: always() && matrix.compiler == 'MSVC' && matrix.configuration == 'Debug'
+        if: always() && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
         run: |
           $since = (Get-Date).AddMinutes(-30)
           $events = Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $since } -ErrorAction SilentlyContinue |
@@ -457,11 +521,13 @@ jobs:
       # trx は実行ユーザー名と絶対パスを含むので、リポジトリには入れず
       # アーティファクトにだけ残す (.gitignore でも除外している)
       - name: Upload FlaUI results
-        if: always() && matrix.compiler == 'MSVC' && matrix.configuration == 'Debug'
+        if: always() && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
         uses: actions/upload-artifact@v7
         with:
           name: flaui-results-${{ matrix.configuration }}
-          path: flaui-results/
+          path: |
+            flaui-results/
+            integration-results/
           if-no-files-found: warn
 
   # =========================================================
