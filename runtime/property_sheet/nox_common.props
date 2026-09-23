@@ -66,5 +66,25 @@
     </Midl>
     <PreBuildEvent />
   </ItemDefinitionGroup>
+  <!--
+    ClangCL だけの警告エラー化。
+    /W4 は clang-cl では -Wall -Wextra 相当で、すでに 1000 件近い警告が出ている。
+    ビルドが止まらないので誰も読まず、未定義動作に直結するものまで埋もれていた。
+    フラグを足して件数を増やすより、実害のある種類だけを選んでエラーにする。
+      return-type             : 値を返さずに抜ける非 void 関数 (未定義動作)
+      uninitialized           : 構築前のメンバを読む / 参照メンバを初期化できないクラス
+      null-dereference        : nullptr を参照に束ねる
+      reorder-ctor            : 初期化子の並びと宣言順の不一致 (前のメンバに依存すると壊れる)
+      switch                  : enum の switch で列挙子が漏れている
+      unused-result           : [[nodiscard]] の戻り値の読み捨て
+      void-pointer-to-int-cast: ポインタを 32 bit 整数へ切り詰める
+    MSVC は同種の警告を出さない箇所があるので、ClangCL のジョブで止める。
+    警告の種類を足すときは、先に既存の発生箇所を直してからここへ加えること。
+  -->
+  <ItemDefinitionGroup Condition="'$(PlatformToolset)'=='ClangCL'">
+    <ClCompile>
+      <AdditionalOptions>-Werror=return-type -Werror=uninitialized -Werror=null-dereference -Werror=reorder-ctor -Werror=switch -Werror=unused-result -Werror=void-pointer-to-int-cast %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup />
 </Project>

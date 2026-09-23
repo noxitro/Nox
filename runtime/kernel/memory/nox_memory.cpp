@@ -329,21 +329,6 @@ namespace nox::memory
 {
     namespace
     {
-        /// @brief 1MB以上の大きなメモリ確保用
-        /// @param size 
-        /// @param align 
-        /// @return 
-        inline void* AllocateGlobal(const std::size_t size, const std::size_t align)
-        {
-            //  アライメントチェック
-            NOX_ASSERT(align >= 1 || nox::math::IsPow2(align), u"アライメントサイズは2の累乗で指定してください");
-
-            const auto align_mask = align > 0 ? align - 1 : 0;
-
-
-        }
-
-
         inline void* Allocate2(const size_t size, size_t align_mask, const InstanceType instance_type)
         {
             NOX_ASSERT(g_unique_flag.IsOn(UniqueFlag::Finalized) == false,
