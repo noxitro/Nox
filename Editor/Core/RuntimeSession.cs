@@ -38,7 +38,7 @@ namespace Core;
 		public Workspace Workspace { get; }
 		public RuntimeSessionKind Kind { get; }
 		public PlatformType Platform { get; set; } = PlatformType.X64;
-		public ConfigurationType ConfigurationType { get; set; } = ConfigurationType.Debug;
+		public ConfigurationType ConfigurationType { get; set; } = RuntimeConfiguration.ResolveDefault();
 		public string RuntimeExecutablePath => Path.GetFullPath(Path.Combine(
 			Workspace.RuntimeRootPath,
 			"build",

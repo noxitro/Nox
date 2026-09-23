@@ -260,7 +260,7 @@ public sealed class EditorSmokeTests
 	public void RebootButtonLaunchesRuntimeAndHostsWindowInRuntimeView()
 	{
 		string repositoryRoot = EditorApp.ResolveRepositoryRoot();
-		string runtimeExecutablePath = Path.Combine(repositoryRoot, "runtime", "build", "runtime", "x64", "Debug", "runtime.exe");
+		string runtimeExecutablePath = ResolveRuntimeExecutablePath(repositoryRoot);
 		Assert.True(File.Exists(runtimeExecutablePath), $"runtime.exe was not found. Build runtime before running this FlaUI test: {runtimeExecutablePath}");
 
 		try
@@ -296,7 +296,7 @@ public sealed class EditorSmokeTests
 	public void TransformInspectorFieldsStaySyncedAfterRuntimeRoundTrip()
 	{
 		string repositoryRoot = EditorApp.ResolveRepositoryRoot();
-		string runtimeExecutablePath = Path.Combine(repositoryRoot, "runtime", "build", "runtime", "x64", "Debug", "runtime.exe");
+		string runtimeExecutablePath = ResolveRuntimeExecutablePath(repositoryRoot);
 		Assert.True(File.Exists(runtimeExecutablePath), $"runtime.exe was not found. Build runtime before running this FlaUI test: {runtimeExecutablePath}");
 
 		try
@@ -425,6 +425,17 @@ public sealed class EditorSmokeTests
 
 		return result.Result ?? throw new InvalidOperationException(
 			$"Runtime view was not attached. Expected status text '{expectedText}'. EditorExited={editor.HasExited}. {GetRuntimeViewDiagnostics(editor.MainWindow)} {GetRuntimeDiagnostics(runtimeExecutablePath)}");
+	}
+
+	/// <summary>
+	/// Editor が起動する runtime.exe のパス。Editor 側 (Core.RuntimeSession) と
+	/// 同じ規則で解決しないと、テストが存在を確かめた exe と Editor が実際に
+	/// 起動する exe がずれる。構成の決め方は Core.RuntimeConfiguration に一本化してある。
+	/// </summary>
+	private static string ResolveRuntimeExecutablePath(string repositoryRoot)
+	{
+		string configuration = Core.RuntimeConfiguration.ResolveDefault().ToString();
+		return Path.Combine(repositoryRoot, "runtime", "build", "runtime", "x64", configuration, "runtime.exe");
 	}
 
 	private static void WaitForDebugCounterAtLeast(EditorApp editor, string counterName, int expectedMinimum, string runtimeExecutablePath)

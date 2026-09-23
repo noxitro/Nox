@@ -141,7 +141,7 @@ namespace nox::test::updater_graph
 	//	更新メソッドの購読は通常リフレクション生成コードが行うが、
 	//	nox::EntityLogicMethodTable の手書き特殊化 (entity_logic.h が明記している
 	//	エスケープハッチ) を使えば生成器を通さずに同じ経路へ載せられる。
-	//	core_test 専用の型を core/test_support/test_types.h へ足さずに済み、
+	//	core_test 専用の型を core/test/test_types.h へ足さずに済み、
 	//	Master でテスト型のリフレクションが生成されない問題とも無関係でいられる。
 	//	=================================================================================
 

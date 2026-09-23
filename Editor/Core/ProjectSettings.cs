@@ -37,6 +37,40 @@ namespace Core;
 	}
 
 	/// <summary>
+	/// Runtime の構成 (ConfigurationType) の既定値を決める
+	/// </summary>
+	/// <remarks>
+	/// 既定は Debug。Editor を Release で建てても runtime は Debug で動かす、という
+	/// 組み合わせが普通にあるので、Editor 自身のビルド構成からは導かない。
+	///
+	/// ただし CI の UI テストのように 1 構成しか建てていない環境では、Debug の
+	/// runtime.exe も RuntimeTypeDB.x64.Debug.bin も存在せず Editor が起動に失敗する。
+	/// そのため環境変数で上書きできるようにしてある。TypeDB の置き場を指定する
+	/// NOX_RUNTIME_TYPEDB_DIR と同じ考え方。
+	/// </remarks>
+	public static class RuntimeConfiguration
+	{
+		/// <summary>
+		/// 既定の ConfigurationType を上書きする環境変数。
+		/// 値は ConfigurationType の名前 (Debug / Release / Master、大文字小文字は問わない)。
+		/// 未設定・空・解釈できない値のときは Debug に落ちる。
+		/// </summary>
+		public const string EnvironmentVariableName = "NOX_RUNTIME_CONFIGURATION";
+
+		public static ConfigurationType ResolveDefault()
+		{
+			string? value = System.Environment.GetEnvironmentVariable(EnvironmentVariableName);
+			if (string.IsNullOrWhiteSpace(value) == false &&
+				System.Enum.TryParse(value.Trim(), ignoreCase: true, out ConfigurationType parsed) == true)
+			{
+				return parsed;
+			}
+
+			return ConfigurationType.Debug;
+		}
+	}
+
+	/// <summary>
 	/// プロジェクト設定
 	/// </summary>
 	public class ProjectSettings

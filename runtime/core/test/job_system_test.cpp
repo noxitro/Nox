@@ -4,6 +4,9 @@
 /// @file	job_system_test.cpp
 /// @brief	JobSystemのセルフテスト。配分・完了待ち・並列性を起動時に検証する。
 #include "pch.h"
+
+#include "../../kernel/kernel.h"
+#include "../../reflection/reflection.h"
 #include "test.h"
 
 #include "../../kernel/job_system.h"
