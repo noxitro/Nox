@@ -13,6 +13,9 @@
 #         #if !NOX_MASTER で囲っており、Master ではテスト型のリフレクションが
 #         生成されず core_test が成立しないため。
 #         前準備は .github/actions/setup-nox-build に切り出してある。
+#         Tools ジョブは runtime/bin/source 配下の開発ツール (CustomTask /
+#         ReflectionGenerator / MakeAllIncludeHeader / nox_lib) を
+#         Debug / Release で単体ビルドする。
 # 環境  : windows。runtime の vcxproj は PlatformToolset=v145
 #         (Visual Studio 2026) を要求するため windows-2022 では動かない。
 # 費用  : 公開リポジトリなので GitHub ホストランナーは無料 (実行の usage で
@@ -544,6 +547,135 @@ jobs:
           if-no-files-found: warn
 
   # =========================================================
+  # Tools: runtime/bin/source 配下の開発ツールを単体で建てる
+  #
+  # setup-nox-build も CustomTask と ReflectionGenerator を建てるが、
+  # runtime ビルドの前準備として Debug だけを建てているにすぎない。
+  # 次の 3 つはどこでも確かめられていなかった。
+  #   - Release 構成 (どのツールも一度も建てていなかった)
+  #   - ReflectionGenerator.slnx の Sample.vcxproj
+  #     (setup-nox-build は csproj を直接建てるので含まれない)
+  #   - MakeAllIncludeHeader と nox_lib。runtime はコミット済みの
+  #     runtime/bin/MakeAllIncludeHeader.exe を呼ぶだけなので、
+  #     ソースが壊れても runtime のビルドは通ってしまう
+  #
+  # vcpkg も v145 の runtime ライブラリも要らないので setup-nox-build は
+  # 使わず独立させている。ただし Sample.vcxproj と nox_lib.vcxproj は
+  # C++ (v145) なので MSBuild は要る。
+  #
+  # 順序が重要: ReflectionGenerator.csproj は ..\..\CustomTask.dll
+  # (= runtime/bin/CustomTask.dll) を HintPath で参照しているので、
+  # 同じ構成の CustomTask を先に建てて配置する。
+  # =========================================================
+  tools:
+    name: Build tools
+    # 既定は GitHub ホストの windows-latest。リポジトリ変数 NOX_RUNNER を
+    # 設定するとそちらへ回す (例: NOX_RUNNER=self-hosted)。
+    runs-on: ${{ vars.NOX_RUNNER || 'windows-latest' }}
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # setup-nox-build の同名ステップと同じ。vcpkg の復元まで
+      # 巻き込まないよう、MSBuild の解決だけをここへ持ってきている
+      - name: Locate MSBuild (Visual Studio 2026 / v145)
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $msbuild = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -find 'MSBuild\**\Bin\amd64\MSBuild.exe' |
+            Select-Object -First 1
+          if (-not $msbuild) { throw 'MSBuild が見つからない (Visual Studio が入っていないイメージ?)' }
+          Write-Host "MSBuild : $msbuild"
+          Split-Path $msbuild | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      # 1 本転んでも残りは最後まで建てて、壊れているものを一度に全部出す。
+      # ただし CustomTask が転んだ構成では ReflectionGenerator を建てない
+      # (古い CustomTask.dll で建っても意味が無い)。
+      # --no-incremental / -t:Rebuild は Editor ジョブと同じ理由
+      # (参照解決の破損を差分ビルドで見逃さないため)。
+      # MSBuild に -clp:Summary を付けるのは、-v:minimal だと締めくくりの
+      # 警告数・エラー数が出ず、サマリーで拾えないため。
+      - name: Build tools
+        id: build
+        run: |
+          $src = 'runtime/bin/source'
+          $failed = @()
+
+          function Invoke-ToolBuild([string]$Name, [string]$Cfg, [scriptblock]$Build) {
+            Write-Host "::group::$Name ($Cfg)"
+            & $Build 2>&1 | Tee-Object -FilePath "tools-$Cfg-$Name.log" | Out-Host
+            $code = $LASTEXITCODE
+            Write-Host '::endgroup::'
+            if ($code -ne 0) {
+              Write-Host "::error::$Name ($Cfg) のビルドに失敗 (exit $code)"
+              $script:failed += "$Name/$Cfg (exit $code)"
+              return $false
+            }
+            return $true
+          }
+
+          foreach ($cfg in 'Debug', 'Release') {
+            $ok = Invoke-ToolBuild 'CustomTask' $cfg {
+              dotnet build "$src/CustomTask/CustomTask.csproj" -c $cfg --no-incremental -v minimal
+            }
+            if ($ok) {
+              Copy-Item -Force "$src/CustomTask/bin/$cfg/netstandard2.0/CustomTask.dll" 'runtime/bin/'
+              # Sample.vcxproj (C++) + RuntimeTypeDB + ReflectionGenerator
+              Invoke-ToolBuild 'ReflectionGenerator' $cfg {
+                msbuild "$src/ReflectionGenerator/ReflectionGenerator.slnx" -restore -t:Rebuild -m -nologo `
+                  -v:minimal -clp:Summary "-p:Configuration=$cfg" '-p:Platform=x64'
+              } | Out-Null
+            }
+
+            Invoke-ToolBuild 'MakeAllIncludeHeader' $cfg {
+              dotnet build "$src/MakeAllIncludeHeader/MakeAllIncludeHeader.slnx" -c $cfg --no-incremental -v minimal
+            } | Out-Null
+
+            Invoke-ToolBuild 'nox_lib' $cfg {
+              msbuild "$src/nox_lib/nox_lib.slnx" -t:Rebuild -m -nologo `
+                -v:minimal -clp:Summary "-p:Configuration=$cfg" '-p:Platform=x64'
+            } | Out-Null
+          }
+
+          if ($failed.Count -gt 0) { throw ("失敗したビルド: " + ($failed -join ', ')) }
+
+      - name: Write job summary
+        if: always()
+        run: |
+          $ok = '${{ steps.build.outcome }}' -eq 'success'
+          $icon = if ($ok) { ':white_check_mark:' } else { ':x:' }
+          $lines = @("## $icon Tools", '', '| Tool | Configuration | Result |', '|---|---|---|')
+
+          foreach ($cfg in 'Debug', 'Release') {
+            foreach ($name in 'CustomTask', 'ReflectionGenerator', 'MakeAllIncludeHeader', 'nox_lib') {
+              $log = "tools-$cfg-$name.log"
+              if (-not (Test-Path $log)) {
+                $lines += "| $name | $cfg | (未実行) |"
+                continue
+              }
+              # 締めくくり (「N 個の警告」「N エラー」) を拾う
+              $tail = Get-Content $log | Select-String -Pattern '警告|エラー|Warning\(s\)|Error\(s\)' |
+                ForEach-Object { $_.Line.Trim() } | Select-Object -Last 2
+              $lines += "| $name | $cfg | $($tail -join ' / ') |"
+            }
+          }
+          $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+      - name: Upload build log
+        if: always() && steps.build.outcome == 'failure'
+        uses: actions/upload-artifact@v7
+        with:
+          name: tools-build-log
+          path: tools-*.log
+          if-no-files-found: warn
+
+  # =========================================================
   # Notify: 転んだとき / 転んだ状態から戻ったときだけ Discord に流す
   #
   # GitHub 既定のメール通知の置き換え。成功が続いている間は無言なので、
@@ -557,7 +689,7 @@ jobs:
   # =========================================================
   notify:
     name: Notify Discord
-    needs: [build, editor]
+    needs: [build, editor, tools]
     # 判定は step 側で needs.*.result を見るので、ここでは always() で拾うだけ。
     if: always() && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
