@@ -258,17 +258,23 @@ namespace nox::stack_walker
 			/// @brief 有効なコールスタックを取得済みか
 			bool	is_collected_;
 		};
+
+		/// @brief StackWalkerSlim のスタック配列
+		/// @details WalkerSlimBase より先に構築されるよう、先頭の基底クラスとして持たせる
+		template<uint8 _STACK_DEPTH>
+		struct WalkerSlimStorage
+		{
+			std::array<SlimStackFrame, _STACK_DEPTH> frame_table;
+		};
 	}
 
 	template<uint8 _STACK_DEPTH = nox::stack_walker::DEFAULT_STACK_DEPTH> requires(_STACK_DEPTH <= MAX_STACK_DEPTH)
-		class StackWalkerSlim : public detail::WalkerSlimBase
+		class StackWalkerSlim : private detail::WalkerSlimStorage<_STACK_DEPTH>, public detail::WalkerSlimBase
 	{
 	public:
 		inline constexpr StackWalkerSlim()noexcept :
-			detail::WalkerSlimBase(stack_table_.data(), static_cast<uint8>(stack_table_.size())) {}
+			detail::WalkerSlimBase(this->frame_table.data(), _STACK_DEPTH) {}
 		inline constexpr ~StackWalkerSlim() = default;
-	private:
-		std::array<SlimStackFrame, _STACK_DEPTH> stack_table_;
 	};
 
 	//template<uint8 _STACK_DEPTH = nox::stack_walker::DEFAULT_STACK_DEPTH> requires(_STACK_DEPTH <= MAX_STACK_DEPTH)

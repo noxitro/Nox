@@ -432,7 +432,8 @@ void	nox::stack_walker::detail::WalkerSlimBase::Trace()const
 	}
 
 	::HANDLE const processHandle = ::GetCurrentProcess();
-	NOX_ASSERT(FAILED(processHandle), u8"processHandle is failed");
+	//	GetCurrentProcess は疑似ハンドル (-1) を返す。HRESULT ではないので FAILED で判定しない
+	NOX_ASSERT(processHandle != nullptr, u8"processHandle is failed");
 
 	/* シンボル情報サイズを算出 */
 	constexpr size_t SymbolInfoSize = sizeof(::SYMBOL_INFOW) + ((k_max_name_size + 1) * sizeof(nox::wchar16));

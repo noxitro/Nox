@@ -29,6 +29,11 @@ namespace nox::reflection
 	class FunctionTypeInfo : public TypeInfo
 	{
 	public:
+		inline constexpr explicit FunctionTypeInfo(const nox::reflection::Type& raw_type, const nox::reflection::TypeInfo& return_type)noexcept :
+			TypeInfo(raw_type),
+			return_type_(return_type)
+		{
+		}
 
 	private:
 		const nox::reflection::TypeInfo& return_type_;

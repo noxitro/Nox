@@ -23,10 +23,10 @@ namespace nox::reflection
 			const std::uint8_t attribute_length
 		)noexcept :
 			value_int64_(value),
-			name_(name),
-			fullname_(fullname),
+			attribute_length_(attribute_length),
 			attribute_list_(attribute_list),
-			attribute_length_(attribute_length) {}
+			name_(name),
+			fullname_(fullname) {}
 
 		inline constexpr explicit EnumeratorInfo(
 			const std::uint64_t value,
@@ -36,10 +36,10 @@ namespace nox::reflection
 			const std::uint8_t attribute_length
 		)noexcept :
 			value_uint64_(value),
-			name_(name),
-			fullname_(fullname),
+			attribute_length_(attribute_length),
 			attribute_list_(attribute_list),
-			attribute_length_(attribute_length) {}
+			name_(name),
+			fullname_(fullname) {}
 
 		/// @brief 名前を取得
 		/// @return 
@@ -107,15 +107,15 @@ namespace nox::reflection
 			const std::reference_wrapper<const EnumeratorInfo>*const variable_list,
 			std::uint8_t variable_length
 		)noexcept :
-			name_(name),
-			fullname_(fullname),
-			namespace_(_namespace),
+			attribute_length_(attribute_length),
+			variable_length_(variable_length),
 			access_level_(access_level),
 			attribute_list_(attribute_list),
-			attribute_length_(attribute_length),
 			variable_list_(variable_list),
-			variable_length_(variable_length),
-			type_(type)
+			type_(type),
+			name_(name),
+			fullname_(fullname),
+			namespace_(_namespace)
 		{}
 
 		/// @brief 基底型を取得

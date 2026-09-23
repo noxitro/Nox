@@ -54,8 +54,8 @@ namespace nox::dev::editor_remote
 
 nox::dev::editor_remote::SocketStreamWriter::SocketStreamWriter(nox::dev::editor_remote::EditorRemoteServer& server) noexcept :
 	server_(server),
-	buffer_{ 0 },
-	position_(k_header_reserve_size)
+	position_(k_header_reserve_size),
+	buffer_{ 0 }
 {
 
 }

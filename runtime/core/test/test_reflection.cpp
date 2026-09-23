@@ -42,7 +42,6 @@ class Game
 {
 public:
 	virtual void abst() = 0;
-	int& a;
 };
 
 template<class T = int, class F, class... Args>
