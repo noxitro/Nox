@@ -49,8 +49,6 @@
 /runtime/bin/source/ReflectionGenerator/Sample/x64/Release/SampleCpp.tlog
 /runtime/bin/source/ReflectionGenerator/Sample/x64/Release
 /runtime/bin/source/ReflectionGenerator/x64/Release
-/runtime/bin/source/ReflectionGeneratorCpp/.vs/ReflectionGeneratorCpp
-/runtime/bin/source/ReflectionGeneratorCpp/ifc
 /runtime/runtime.vcxproj.preprocess
 /runtime/runtime.vcxproj.preprocess2
 /runtime/unity_711FJ45DMPQLZRQN.i
@@ -59,12 +57,6 @@
 /runtime/reflection_generated/build/intermediate/x64/Debug/reflection_generated
 /runtime/core/build/intermediate/x64/Debug/core
 /runtime/kernel/build/intermediate/x64/Debug/kernel
-/runtime/bin/source/ReflectionGeneratorCpp/build/.vs/LLVM
-/runtime/bin/source/ReflectionGeneratorCpp/build
-/runtime/bin/source/ReflectionGeneratorCpp/Reflecti.a6cde9f7/x64/Debug
-/runtime/bin/source/ReflectionGeneratorCpp/x64/Debug
-/runtime/bin/source/ReflectionGeneratorCpp/Sample/SampleCpp/x64/Debug
-/runtime/bin/source/ReflectionGeneratorCpp/Sample/x64
 /runtime/reflection_generated/build/x64/Debug
 /runtime/bin/source/CustomTask/.vs
 /runtime/bin/source/CustomTask/bin/x64
@@ -79,10 +71,6 @@
 /bin/source/ReflectionGenerator/.vs
 /bin/source/MakeAllIncludeHeader/obj
 /bin/source/MakeAllIncludeHeader/bin
-/bin/source/ReflectionGeneratorCpp/x64/Debug
-/bin/source/ReflectionGeneratorCpp/.vs/ReflectionGeneratorCpp
-/bin/source/ReflectionGeneratorCpp/Reflecti.a6cde9f7/x64/Debug
-/bin/source/ReflectionGeneratorCpp/ifc
 /bin/source/test/x64/Debug
 /bin/source/test/test/x64/Debug
 /bin/source/test/.vs/test
@@ -99,7 +87,6 @@
 
 /runtime/bin/source/ReflectionGenerator/bin
 
-/runtime/bin/source/ReflectionGeneratorCpp/Reflecti.a6cde9f7/x64/Release
 /runtime/bin/source/RuntimeTypeDB/obj
 /runtime/bin/source/RuntimeTypeDB/bin/Debug/net9.0
 /Editor/.vs/Editor
