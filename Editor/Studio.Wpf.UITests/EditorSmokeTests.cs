@@ -256,6 +256,19 @@ public sealed class EditorSmokeTests
 		Assert.False(runtimeObject.IsDirty("Title"));
 	}
 
+	/// <summary>
+	/// Editor と runtime.exe が TCP で繋がり、往復が成立することを確かめる。
+	/// </summary>
+	/// <remarks>
+	/// RuntimeView の IsAttached は、GetMainSceneView の応答で受け取ったウィンドウハンドルを
+	/// RuntimeView に取り込めたときだけ True になる。つまり True であること自体が
+	/// 「Editor が問い合わせを送り、runtime が処理して応答し、Editor がそれを受け取った」
+	/// ことの証拠になる。念のため送信数と受信数でも確かめる。
+	///
+	/// かつてはこの後にエンティティを作って同期を確かめていたが、runtime 側は
+	/// EntityNode から ECS へ置き換わっており、Editor の Hierarchy と ECS の同期は
+	/// まだ無い。その部分は同期を実装したときに、その仕様で書き直すこと。
+	/// </remarks>
 	[Fact]
 	public void RebootButtonLaunchesRuntimeAndHostsWindowInRuntimeView()
 	{
@@ -269,78 +282,10 @@ public sealed class EditorSmokeTests
 
 			FindByAutomationId(editor.MainWindow, "NoxStudio.RuntimeControl.RebootButton").AsButton().Invoke();
 
-			AutomationElement attachStatus = WaitForAttachStatus(editor, "True", runtimeExecutablePath);
-			int sentBeforeAdd = GetDebugCounter(attachStatus.HelpText, "Sent");
-			int deserializedBeforeAdd = GetDebugCounter(attachStatus.HelpText, "Deserialized");
-			CreateRootEntityFromHierarchyContextMenu(editor);
-			Assert.NotNull(WaitForDescendantByName(editor.MainWindow, "EntityNode 3"));
-			WaitForDebugCounterAtLeast(editor, "Sent", sentBeforeAdd + 1, runtimeExecutablePath);
-			WaitForDebugCounterAtLeast(editor, "Deserialized", deserializedBeforeAdd + 1, runtimeExecutablePath);
-			int sentAfterCreate = GetDebugCounter(
-				FindByAutomationId(editor.MainWindow, "NoxStudio.RuntimeView.AttachStatus").HelpText,
-				"Sent");
-			int deserializedAfterCreate = GetDebugCounter(
-				FindByAutomationId(editor.MainWindow, "NoxStudio.RuntimeView.AttachStatus").HelpText,
-				"Deserialized");
-			WaitForDebugCounterAtLeast(editor, "Sent", sentAfterCreate + 1, runtimeExecutablePath);
-			WaitForDebugCounterAtLeast(editor, "Deserialized", deserializedAfterCreate + 1, runtimeExecutablePath);
+			WaitForAttachStatus(editor, "True", runtimeExecutablePath);
+			WaitForDebugCounterAtLeast(editor, "Sent", 1, runtimeExecutablePath);
+			WaitForDebugCounterAtLeast(editor, "Deserialized", 1, runtimeExecutablePath);
 			Assert.False(editor.HasExited, "Studio exited after invoking the Reboot button.");
-		}
-		finally
-		{
-			KillRuntimeProcesses(runtimeExecutablePath);
-		}
-	}
-
-	[Fact]
-	public void TransformInspectorFieldsStaySyncedAfterRuntimeRoundTrip()
-	{
-		string repositoryRoot = EditorApp.ResolveRepositoryRoot();
-		string runtimeExecutablePath = ResolveRuntimeExecutablePath(repositoryRoot);
-		Assert.True(File.Exists(runtimeExecutablePath), $"runtime.exe was not found. Build runtime before running this FlaUI test: {runtimeExecutablePath}");
-
-		try
-		{
-			using EditorApp editor = EditorApp.Launch(repositoryRoot);
-
-			FindByAutomationId(editor.MainWindow, "NoxStudio.RuntimeControl.RebootButton").AsButton().Invoke();
-			AutomationElement attachStatus = WaitForAttachStatus(editor, "True", runtimeExecutablePath);
-			int sentBeforeEdit = GetDebugCounter(attachStatus.HelpText, "Sent");
-			int deserializedBeforeEdit = GetDebugCounter(attachStatus.HelpText, "Deserialized");
-
-			AutomationElement hierarchyTree = FindByAutomationId(editor.MainWindow, "NoxStudio.Hierarchy.Tree");
-			WaitForDescendantByName(hierarchyTree, "Main Camera").Click();
-
-			AutomationElement componentTree = FindByAutomationId(editor.MainWindow, "NoxStudio.Inspector.ComponentTree");
-			Assert.NotNull(WaitForDescendantByName(componentTree, "Transform"));
-			Assert.NotNull(WaitForDescendantByName(componentTree, "LocalPosition"));
-			Assert.NotNull(WaitForDescendantByName(componentTree, "LocalScale"));
-			Assert.NotNull(WaitForDescendantByName(componentTree, "LocalRotation"));
-
-			RetryResult<TextBox[]?> textBoxResult = Retry.WhileNull(
-				() =>
-				{
-					TextBox[] edits = componentTree.FindAllDescendants(cf => cf.ByControlType(ControlType.Edit))
-						.Select(element => element.AsTextBox())
-						.ToArray();
-					return edits.Length >= 3 ? edits : null;
-				},
-				UiTimeout);
-			TextBox[] textBoxes = textBoxResult.Result ?? throw new InvalidOperationException(
-				"Transform vector text boxes were not found. " + DescribeAutomationSubtree(componentTree));
-			Assert.True(textBoxes.Length >= 3, "Expected LocalPosition to expose three editable text boxes.");
-
-			textBoxes[0].Click();
-			textBoxes[0].Text = "123";
-			textBoxes[1].Click();
-
-			RetryResult<bool> valueResult = Retry.WhileFalse(
-				() => textBoxes[0].Text.StartsWith("123", StringComparison.Ordinal),
-				TimeSpan.FromSeconds(3));
-			Assert.True(valueResult.Success, $"LocalPosition X did not remain synchronized after edit. Actual='{textBoxes[0].Text}'.");
-
-			WaitForDebugCounterAtLeast(editor, "Sent", sentBeforeEdit + 1, runtimeExecutablePath);
-			WaitForDebugCounterAtLeast(editor, "Deserialized", deserializedBeforeEdit + 1, runtimeExecutablePath);
 		}
 		finally
 		{
@@ -448,8 +393,8 @@ public sealed class EditorSmokeTests
 			},
 			UiTimeout);
 
-		Assert.NotNull(result.Result);
 		Assert.False(editor.HasExited, $"Editor exited while waiting for RuntimeView debug counter {counterName}>={expectedMinimum}. {GetRuntimeViewDiagnostics(editor.MainWindow)} {GetRuntimeDiagnostics(runtimeExecutablePath)}");
+		Assert.True(result.Result != null, $"RuntimeView debug counter {counterName} did not reach {expectedMinimum}. {GetRuntimeViewDiagnostics(editor.MainWindow)} {GetRuntimeDiagnostics(runtimeExecutablePath)}");
 	}
 
 	private static int GetDebugCounter(string? debugText, string counterName)
@@ -560,12 +505,6 @@ public sealed class EditorSmokeTests
 		}
 
 		return diagnostics.Count == 0 ? "No matching runtime.exe process was found." : string.Join("; ", diagnostics);
-	}
-
-	private static string DescribeAutomationSubtree(AutomationElement root)
-	{
-		return string.Join(" | ", root.FindAllDescendants().Take(80).Select(element =>
-			$"Name='{element.Name}', Id='{element.AutomationId}', Type='{element.ControlType}'"));
 	}
 
 	private static string GetProcessWindowDiagnostics(Process process)
