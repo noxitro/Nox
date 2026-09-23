@@ -61,6 +61,33 @@ Master 構成は `NOX_ASSERT` も `NOX_DEVELOP` も消えるため、Debug / Rel
 - Visual Studio (C++ ワークロード) と必要な .NET SDK を使用。
 - C++ ビルド前にリフレクション生成を完了させる。
 
+## Runtime (C++) コーディング規約
+
+原則として [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html) に従う。
+ただし上の「最優先ルール」と以下の例外が優先する。
+
+### 命名 (Google に従う)
+
+- 型 (class / struct / enum / 型エイリアス / concept): `PascalCase`
+- 関数・メンバ関数: `PascalCase`
+- 変数・引数・struct のデータメンバ: `snake_case`
+- class の非公開データメンバ: `snake_case_` (末尾アンダースコア)
+- 定数 (`constexpr` / `const` の名前空間スコープ・静的メンバ) と列挙子: `kPascalCase`
+- 名前空間: `snake_case`、ファイル名: `snake_case`
+- マクロ: `NOX_` 接頭辞の `UPPER_SNAKE_CASE`
+
+定数・列挙子は `k_snake_case` / 接頭辞なし `PascalCase` からの移行中。触ったファイルでは `kPascalCase` へ寄せてよいが、無関係な箇所の一括リネームはしない。
+
+### 例外 (既存コードに合わせ、Google と異なる)
+
+- インデントはタブ。
+- 波括弧は独立行 (Allman)。
+- インクルードガードは `#pragma once`。
+- 拡張子は `.h` / `.cpp`。
+- 行長の上限は設けない (目安 120 桁)。
+- コメントは日本語の Doxygen 形式 (`/// @brief` など) でよい。
+- C++ 例外は使わない (Google と同じ)。
+
 ## Reflection / 属性マクロ規約
 
 - `NOX_ATTR_DECLARATION` / `NOX_ATTR_DECLARE` マクロは、メンバ変数・メンバ関数だけでなく、グローバル変数・グローバル関数にも付与できる属性マクロである。
