@@ -87,7 +87,7 @@ bool nox::Asset::Initialize(std::u8string_view native_path)
 	{
 		return false;
 	}
-	if (magic != nox::k_asset_magic || version != nox::k_asset_format_version)
+	if (magic != nox::kAssetMagic || version != nox::kAssetFormatVersion)
 	{
 		return false;
 	}

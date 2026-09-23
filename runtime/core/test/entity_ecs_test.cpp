@@ -4,6 +4,9 @@
 /// @file	entity_ecs_test.cpp
 /// @brief	Archetypeストレージ / シグネチャ解析 / EntitySystem / EntityLogic のテスト。
 #include "pch.h"
+
+#include "../../kernel/kernel.h"
+#include "../../reflection/reflection.h"
 #include "test.h"
 
 #include "entity_ecs_test.h"
