@@ -5,14 +5,14 @@
 ///	@brief	nox::reflection::VariableInfo の getter / setter の回帰テスト。
 ///	@details	検証対象は「生成コードが書き出した getter / setter」と
 ///				「VariableInfo 側の引数チェック」の両方。
-///				対象の型は core/test_support/reflection_variable_test_types.h に置いてある
+///				対象の型は core/test/reflection_variable_test_types.h に置いてある
 ///				(リフレクション生成器の解析対象に載せるための既存の作法)。
 
 #include	"pch.h"
 
 #include	"../../kernel/kernel.h"
 #include	"../../reflection/reflection.h"
-#include	"../test_support/reflection_variable_test_types.h"
+#include	"reflection_variable_test_types.h"
 
 namespace
 {

@@ -16,9 +16,20 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
+    <ClInclude Include="test.h" />
+    <ClInclude Include="test_reflection.h" />
+    <ClInclude Include="test_types.h" />
+    <ClInclude Include="delegate_test.h" />
+    <ClInclude Include="entity_ecs_test.h" />
+    <ClInclude Include="reflection_variable_test_types.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="core_self_test.cpp" />
+    <ClCompile Include="delegate_test.cpp" />
+    <ClCompile Include="entity_command_buffer_test.cpp" />
+    <ClCompile Include="entity_ecs_test.cpp" />
+    <ClCompile Include="job_system_test.cpp" />
+    <ClCompile Include="test_reflection.cpp" />
     <ClCompile Include="entity_command_playback_test.cpp" />
     <ClCompile Include="job_system_dispatch_test.cpp" />
     <ClCompile Include="entity_structural_change_test.cpp" />

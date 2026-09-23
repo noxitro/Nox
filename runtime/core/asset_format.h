@@ -18,22 +18,21 @@ namespace nox
 	/// @brief チャンク種別
 	enum class AssetChunkType : nox::uint8
 	{
-		Invalid = 0,
-		Main = 1,
-		Extra = 2,
+		Main,
+		Extra,
 	};
 
 	/// @brief ネイティブアセットのマジック（'N''O''X''A' をリトルエンディアン u32 で表現）
-	inline constexpr nox::uint32 k_asset_magic = 0x41584F4Eu;
+	inline constexpr nox::uint32 kAssetMagic = 0x41584F4Eu;
 
 	/// @brief 現在のフォーマットバージョン
-	inline constexpr nox::uint16 k_asset_format_version = 1;
+	inline constexpr nox::uint16 kAssetFormatVersion = 1;
 
 	/// @brief ファイル先頭ヘッダ
 	struct AssetFileHeader
 	{
-		nox::uint32 magic;			///< k_asset_magic
-		nox::uint16 version;		///< k_asset_format_version
+		nox::uint32 magic;			///< kAssetMagic
+		nox::uint16 version;		///< kAssetFormatVersion
 		nox::uint16 chunk_count;	///< 後続の AssetChunkHeader 個数
 	};
 

@@ -11,10 +11,6 @@
 #include	"log_id.h"
 #include	"log_service.h"
 
-#if !NOX_MASTER
-#include	"test_support/test.h"
-#endif // !NOX_MASTER
-
 nox::int32 nox::EntryPoint(const std::span<const nox::char16* const> args)
 {
 	//	runtime開始を通知
@@ -32,13 +28,6 @@ nox::int32 nox::EntryPoint(const std::span<const nox::char16* const> args)
 	nox::reflection::Initialize();
 
 	nox::os::Initialize(args);
-
-#if !NOX_MASTER
-	//	ECS基盤のセルフテスト。Archetypeストレージと引数リストの束縛が壊れていれば起動時点で落ちる。
-	nox::test::TestEntityEcs();
-	//	ジョブシステムのセルフテスト。配分・完了待ち・0ワーカーのフォールバックを起動時に確認する。
-	nox::test::TestJobSystem();
-#endif // !NOX_MASTER
 
 	{
 		nox::World world;
