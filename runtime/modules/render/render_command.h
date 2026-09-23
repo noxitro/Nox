@@ -37,9 +37,9 @@ namespace nox::render::commands
 
 	protected:
 		inline constexpr CommandBase(CommandType command_type, const nox::uint32 size)noexcept:
+			order(),
 			command_type(command_type),
-			command_size(size),
-			order()
+			command_size(size)
 		{}
 		~CommandBase() {}
 	};

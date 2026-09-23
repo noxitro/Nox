@@ -51,8 +51,6 @@ void	nox::assertion::detail::Assert(std::u16string_view error_category, std::u16
 	nox::stack_walker::StackWalkerSlim stack_walker;
 	stack_walker.Collect(1);
 
-	stack_walker.GetStackList();
-
 	std::array<nox::char16, 4096> assert_message = { 0 };
 	nox::util::Format(assert_message, u"{0}\n{1}\nLine:{2}, Column:{3}", message, file_name.data(), source_location.line(), source_location.column());
 	

@@ -19,9 +19,9 @@ namespace nox::dev::net
 
 nox::dev::net::Server::Server(nox::dev::net::IServerEventHandler& event_handler)noexcept :
 	event_handler_(event_handler),
-	is_startup_(false),
+	initialize_context_{},
 	socket_(nox::dev::net::k_raw_invalid_socket),
-	initialize_context_{}
+	is_startup_(false)
 {
 
 }

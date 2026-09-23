@@ -56,6 +56,20 @@ namespace nox::reflection
 	/// @brief 型エイリアスに関する情報を保持するクラスです。
 	class TypeAliasInfo
 	{
+	public:
+		inline constexpr explicit TypeAliasInfo(
+			const nox::reflection::Type& type,
+			std::u8string_view name,
+			std::u8string_view fullname,
+			std::u8string_view _namespace
+		)noexcept :
+			type_(type),
+			name_(name),
+			fullname_(fullname),
+			namespace_(_namespace)
+		{
+		}
+
 	private:
 		const nox::reflection::Type& type_;
 		const std::u8string_view name_;
@@ -87,23 +101,23 @@ namespace nox::reflection
 			const std::reference_wrapper<const nox::reflection::Type>* internal_type_list,
 			const std::uint8_t internal_class_length
 		)noexcept:
+			base_type_length_(base_type_length),
+			attribute_length_(attribute_length),
+			variable_length_(variable_length),
+			function_length_(function_length),
+			internal_type_length_(internal_class_length),
+			enum_length_(enum_length),
 			type_(type),
-			name_(name),
-			fullname_(fullname),
-			namespace_(_namespace),
 			external_class_type_(external_class_type),
 			base_type_list_(base_type_list),
-			base_type_length_(base_type_length),
 			attribute_list_(attribute_list),
-			attribute_length_(attribute_length),
 			variable_list_(variable_list),
-			variable_length_(variable_length),
 			function_list_(function_list),
-			function_length_(function_length),
 			internal_type_list_(internal_type_list),
-			internal_type_length_(internal_class_length),
 			enum_list_(enum_list),
-			enum_length_(enum_length)
+			name_(name),
+			fullname_(fullname),
+			namespace_(_namespace)
 		{
 
 		}

@@ -24,6 +24,7 @@ namespace nox
 		{
 			switch (type)
 			{
+			case nox::PlatformType::None:	break;
 			case nox::PlatformType::Win64:	return u8"Win64";
 			case nox::PlatformType::Android:	return u8"Android";
 			}

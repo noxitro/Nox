@@ -87,22 +87,22 @@ namespace nox::reflection
 			const SetterSubscriptOperatorMemberFunc setter_array_member_func = nullptr,
 			const GetterAddressSubscriptOperatorMemberFunc getter_array_address_member_func = nullptr
 		)noexcept :
-			name_(name),
-			fullname_(fullname),
-			namespace_(_namespace),
-			access_level_(access_level),
-			bit_width_(bit_width),
-			field_offset_(field_offset),
-			attribute_list_(attribute_list),
 			attribute_list_length_(attribute_list_length),
-			object_id_(object_id),
 			field_attribute_flgas_(field_attribute_flgas),
+			access_level_(access_level),
+			field_offset_(field_offset),
+			bit_width_(bit_width),
+			object_id_(object_id),
+			attribute_list_(attribute_list),
 			type_(type),
 			containing_type_(owner_class_type),
 			setter_member_func_(setter_member_func),
 			getter_address_member_func_(getter_address_member_func),
 			setter_array_member_func_(setter_array_member_func),
-			getter_array_address_member_func_(getter_array_address_member_func)
+			getter_array_address_member_func_(getter_array_address_member_func),
+			name_(name),
+			fullname_(fullname),
+			namespace_(_namespace)
 		{}
 
 		/// @brief グローバルフィールド用のコンストラクタ
@@ -141,22 +141,22 @@ namespace nox::reflection
 			const SetterSubscriptOperatorGlobalFunc setter_array_global_func = nullptr,
 			const GetterAddressSubscriptOperatorGlobalFunc getter_array_address_global_func = nullptr
 		)noexcept :
-			name_(name),
-			fullname_(fullname),
-			namespace_(_namespace),
-			access_level_(access_level),
-			bit_width_(bit_width),
-			field_offset_(field_offset),
-			attribute_list_(attribute_list),
 			attribute_list_length_(attribute_list_length),
-			object_id_(object_id),
 			field_attribute_flgas_(field_attribute_flgas),
+			access_level_(access_level),
+			field_offset_(field_offset),
+			bit_width_(bit_width),
+			object_id_(object_id),
+			attribute_list_(attribute_list),
 			type_(type),
 			containing_type_(owner_class_type),
 			setter_global_func_(setter_global_func),
 			getter_address_global_func_(getter_address_global_func),
 			setter_array_global_func_(setter_array_global_func),
-			getter_array_address_global_func_(getter_array_address_global_func)
+			getter_array_address_global_func_(getter_array_address_global_func),
+			name_(name),
+			fullname_(fullname),
+			namespace_(_namespace)
 		{}
 
 

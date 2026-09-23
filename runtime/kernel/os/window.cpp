@@ -92,10 +92,10 @@ namespace nox::os
 }
 
 nox::os::Window::Window()noexcept:
-	callback_(nullptr),
+	is_visible_(false),
 	window_handle_(nullptr),
 	instance_handle_(nullptr),
-	is_visible_(false)
+	callback_(nullptr)
 {
 
 }

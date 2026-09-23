@@ -28,11 +28,11 @@ namespace nox::reflection
 			const nox::reflection::Type& type,
 			const bool hasDefaultValue = false
 		)noexcept :
-			name_(name),
-			type_(type),
-			attribute_list_(attribute_list),
+			has_default_value_(hasDefaultValue),
 			attribute_list_length_(attribute_list_length),
-			has_default_value_(hasDefaultValue)
+			attribute_list_(attribute_list),
+			type_(type),
+			name_(name)
 		{}
 
 		inline constexpr FunctionArgumentInfo(const FunctionArgumentInfo&)noexcept = delete;
@@ -97,16 +97,16 @@ namespace nox::reflection
 			const AccessLevel access_level,
 			const FunctionAttributeFlag method_attribute_flags
 			)noexcept :
+			attribute_list_length_(attribute_list_length),
+			function_param_list_length_(function_param_list_length),
 			name_(name),
 			fullname_(fullname),
 			namespace_(_namespace),
+			function_id_(function_id),
 			containing_type_(owner_class_type),
 			result_type_(result_type),
 			attribute_list_(attribute_list),
-			attribute_list_length_(attribute_list_length),
-			function_id_(function_id),
 			function_param_list_(function_param_list),
-			function_param_list_length_(function_param_list_length),
 			access_level_(access_level),
 			function_attribute_flags_(method_attribute_flags)
 		{}

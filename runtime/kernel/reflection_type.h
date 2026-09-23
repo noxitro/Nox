@@ -160,19 +160,19 @@ namespace nox::reflection
 	{
 	protected:
 		[[nodiscard]] inline constexpr explicit Type(const nox::reflection::detail::TypeDesc& desc)noexcept:
+			argument_length_(desc.argument_length),
 			kind_(desc.kind),
 			attribute_flags_(desc.attribute_flags),
-			size_(desc.size),
-			alignment_(desc.alignment),
 			array_rank_(desc.array_rank),
 			array_extent_(desc.array_extent),
+			size_(desc.size),
+			alignment_(desc.alignment),
 			name_(desc.name),
 			create_object_(desc.create_object),
 			create_object_placement_(desc.create_object_placement),
 			destroy_at_(desc.destroy_at),
-			is_convertible_functor_(desc.is_convertible_functor),
-			argument_length_(desc.argument_length),
 			get_argument_type_list_(desc.get_argument_type_list),
+			is_convertible_functor_(desc.is_convertible_functor),
 			remove_pointer_type_(desc.remove_pointer_type),
 			result_type_(desc.result_type),
 			remove_element_type_(desc.remove_element_type),
