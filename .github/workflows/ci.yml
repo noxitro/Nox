@@ -7,7 +7,7 @@
 #         Editor ジョブを並列実行。GoogleTest と FlaUI は独立したジョブではなく、
 #         マトリクスジョブの中で走る。同じ構成を 2 回建てないため。
 #         GoogleTest は Master 以外の 4 ジョブ、FlaUI は MSVC の Debug / Release。
-#         Runtime 連携テストだけは continue-on-error で、落ちても止めない。
+#         FlaUI には Editor と runtime.exe の接続テスト (Reboot → attach) も含む。
 #         Master だけテストを飛ばしているのは、reflection_generated の pch.h /
 #         reflect.cpp が runtime/core/test/test_types.h のテスト型を
 #         #if !NOX_MASTER で囲っており、Master ではテスト型のリフレクションが
@@ -276,8 +276,10 @@ jobs:
       # (Editor を Release で建てて runtime は Debug、という組み合わせは普通にある)。
       # CI は 1 ジョブ 1 構成しか建てないので、明示的に揃える必要がある。
       #
-      # Runtime 連携の 2 件 (Reboot ボタン / Transform の往復) は別ステップに
-      # 分けて continue-on-error で回す。理由はそのステップのコメントを参照。
+      # Editor と runtime.exe の接続テスト (RebootButtonLaunchesRuntimeAndHostsWindowInRuntimeView)
+      # もここで走る。Reboot で runtime.exe を起こし、GetMainSceneView の往復で
+      # ウィンドウハンドルを受け取って RuntimeView に取り込めるまでを確かめる。
+      # 他の UI テストと同じくゲートとして扱い、continue-on-error は付けない。
       # GitHub ホストの windows ランナーは対話デスクトップを持つので FlaUI が動く。
       # セルフホストへ回す場合はサービスではなく対話セッションで動かすこと。
       # ---------------------------------------------------------
@@ -305,43 +307,9 @@ jobs:
           NOX_RUNTIME_CONFIGURATION: ${{ matrix.configuration }}
         run: |
           dotnet test Editor/Studio.Wpf.UITests/Studio.Wpf.UITests.csproj -c ${{ matrix.configuration }} --no-build -v minimal `
-            --filter "FullyQualifiedName!~RebootButtonLaunchesRuntime&FullyQualifiedName!~TransformInspectorFieldsStaySynced" `
             --blame-hang-timeout 5m `
             --logger "trx;LogFileName=flaui.trx" --results-directory flaui-results
           if ($LASTEXITCODE -ne 0) { throw "FlaUI テストに失敗 (exit $LASTEXITCODE)" }
-
-      # ---------------------------------------------------------
-      # Runtime 連携テスト (Editor <-> runtime.exe の TCP 往復)
-      #
-      #   - RebootButtonLaunchesRuntimeAndHostsWindowInRuntimeView
-      #   - TransformInspectorFieldsStaySyncedAfterRuntimeRoundTrip
-      #
-      # Editor を起動し、Reboot ボタンで runtime.exe を起こして attach を待ち、
-      # AttachStatus の Sent / Deserialized カウンタが増えることを確かめる。
-      # UI 操作 + プロセス起動 + TCP という、CI で最も不安定になる組み合わせ。
-      # 実際 attach 待ちで落ちる既知の問題があり、これまでフィルタで外していた。
-      #
-      # continue-on-error を付けているのは、ここが落ちても PR を止めないため。
-      # 「失敗しても通す」を安易に広げるとテストの意味が無くなるので、対象は
-      # この 2 件だけに限り、結果は必ず Job Summary へ出す (下の要約ステップ)。
-      # 常時赤が当たり前になったら、通す運用をやめて原因を潰すこと。
-      #
-      # 本体の FlaUI とは別の msbuild 呼び出しに分けてあるので、こちらが
-      # 転んでも上の UI テストの結果は汚れない。
-      # ---------------------------------------------------------
-      - name: Run FlaUI tests (runtime 連携)
-        if: always() && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
-        id: integration
-        continue-on-error: true
-        env:
-          NOX_RUNTIME_TYPEDB_DIR: ${{ github.workspace }}/runtime/reflection_generated/gen
-          NOX_RUNTIME_CONFIGURATION: ${{ matrix.configuration }}
-        run: |
-          dotnet test Editor/Studio.Wpf.UITests/Studio.Wpf.UITests.csproj -c ${{ matrix.configuration }} --no-build -v minimal `
-            --filter "FullyQualifiedName~RebootButtonLaunchesRuntime|FullyQualifiedName~TransformInspectorFieldsStaySynced" `
-            --blame-hang-timeout 5m `
-            --logger "trx;LogFileName=integration.trx" --results-directory integration-results
-          if ($LASTEXITCODE -ne 0) { throw "Runtime 連携テストに失敗 (exit $LASTEXITCODE)" }
 
       # ---------------------------------------------------------
       # 要約とアーティファクト
@@ -448,37 +416,6 @@ jobs:
           }
           $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
 
-      # 連携テストは continue-on-error なのでジョブは緑のまま進む。
-      # 結果がどこにも出ないと「落ちているのに誰も気付かない」になるので、
-      # 失敗したときは要約の先頭に警告を立てて、落ちたテスト名まで出す。
-      - name: Write runtime 連携 summary
-        if: always() && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
-        run: |
-          $outcome = '${{ steps.integration.outcome }}'
-          $icon = if ($outcome -eq 'success') { ':white_check_mark:' } else { ':warning:' }
-          $lines = @('', "## $icon Runtime 連携テスト (${{ matrix.configuration }})", '')
-          if ($outcome -ne 'success') {
-            $lines += '> [!WARNING]'
-            $lines += '> このステップは continue-on-error で通してあるため、失敗してもジョブは緑になる。'
-            $lines += '> 常時赤が当たり前になったら、通す運用をやめて原因を潰すこと。'
-            $lines += ''
-          }
-
-          $trx = Get-ChildItem integration-results -Filter *.trx -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($trx) {
-            [xml]$x = Get-Content $trx.FullName
-            $c = $x.TestRun.ResultSummary.Counters
-            $lines += "| 実行 | 合格 | 失敗 | 合計 |"
-            $lines += "| --- | --- | --- | --- |"
-            $lines += "| $($c.executed) | $($c.passed) | $($c.failed) | $($c.total) |"
-            $bad = $x.TestRun.Results.UnitTestResult | Where-Object { $_.outcome -ne 'Passed' }
-            foreach ($r in $bad) { $lines += "- ``$($r.testName)``: $($r.outcome)" }
-            if ([int]$c.executed -lt 2) { $lines += ''; $lines += ":warning: 2 件走るはずが $($c.executed) 件しか走っていない。フィルタを疑うこと。" }
-          } else {
-            $lines += ':warning: trx が見つからない (テストランナーが起動していない)'
-          }
-          $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-
       # Studio.Wpf.exe が起動直後に落ちた場合、FlaUI 側には「プロセスが居ない」
       # としか残らない。理由は Windows のイベントログ (.NET Runtime の未処理例外、
       # Application Error) にあるので、直近分を拾って summary とアーティファクトに残す。
@@ -525,9 +462,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: flaui-results-${{ matrix.configuration }}
-          path: |
-            flaui-results/
-            integration-results/
+          path: flaui-results/
           if-no-files-found: warn
 
   # =========================================================
