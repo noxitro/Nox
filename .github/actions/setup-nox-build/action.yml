@@ -21,7 +21,7 @@ runs:
     # -------------------------------------------------------
     # MSBuild の解決
     #
-    # runtime 配下の vcxproj は PlatformToolset=v145、つまり
+    # runtime 配下は PlatformToolset=v145 (runtime/Directory.Build.props)、つまり
     # Visual Studio 2026 のツールセットを指定している。
     # windows-latest (windows-2025) は 2026-06 に VS2026 入りの
     # イメージへ移行済みなので vswhere -latest でそれが取れる。

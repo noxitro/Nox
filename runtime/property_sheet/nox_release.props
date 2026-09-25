@@ -3,7 +3,7 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <_PropertySheetDisplayName>rex_release</_PropertySheetDisplayName>
+    <_PropertySheetDisplayName>nox_release</_PropertySheetDisplayName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile />
