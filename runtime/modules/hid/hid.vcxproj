@@ -65,6 +65,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="hid.h" />
     <ClInclude Include="hid_module.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>

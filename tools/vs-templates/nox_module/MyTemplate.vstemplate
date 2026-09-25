@@ -9,6 +9,7 @@
   <TemplateContent>
     <Project TargetFileName="$safeprojectname$.vcxproj" File="NoxModule.vcxproj" ReplaceParameters="true">
       <ProjectItem ReplaceParameters="true" TargetFileName="$safeprojectname$.vcxproj.filters">NoxModule.vcxproj.filters</ProjectItem>
+      <ProjectItem ReplaceParameters="true" TargetFileName="$safeprojectname$.h">root.h</ProjectItem>
       <ProjectItem ReplaceParameters="true" TargetFileName="$safeprojectname$_module.cpp">module.cpp</ProjectItem>
       <ProjectItem ReplaceParameters="true" TargetFileName="$safeprojectname$_module.h">module.h</ProjectItem>
       <ProjectItem ReplaceParameters="true" TargetFileName="pch.cpp">pch.cpp</ProjectItem>

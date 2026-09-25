@@ -19,6 +19,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="hid.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
     <ClInclude Include="hid_module.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>

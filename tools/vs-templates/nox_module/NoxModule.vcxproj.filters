@@ -19,6 +19,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="$safeprojectname$.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
     <ClInclude Include="$safeprojectname$_module.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>

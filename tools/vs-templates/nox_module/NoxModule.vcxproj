@@ -65,6 +65,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="$safeprojectname$.h" />
     <ClInclude Include="$safeprojectname$_module.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
