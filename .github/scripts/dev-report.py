@@ -67,6 +67,10 @@ MAX_DIFF_CHARS = int(os.environ.get("NOX_REPORT_MAX_DIFF_CHARS") or 400_000)
 MAX_FILE_DIFF_CHARS = 60_000
 # 一覧に並べるコミットの上限。超えた分は件数だけ示す (比較リンクで全部見られる)。
 MAX_LISTED_COMMITS = 40
+# AI に渡すコミット一覧・ファイル一覧の上限。キャッシュ切れや長い失敗の後に範囲が
+# 大きくなっても、差分とは別に一覧だけでモデルの上限を超えないようにする。
+MAX_PROMPT_COMMITS = 200
+MAX_PROMPT_FILES = 400
 
 GEMINI_DEFAULT_MODEL = "gemini-3.8-flash"
 CLAUDE_DEFAULT_MODEL = "claude-opus-5"
@@ -597,6 +601,13 @@ def commit_lines(commits):
     return lines
 
 
+def capped(lines, limit, unit):
+    """AI に渡す一覧を limit 行に抑え、省いた件数を最後の行で示す。"""
+    if len(lines) <= limit:
+        return lines
+    return lines[:limit] + [f"- …ほか {len(lines) - limit} {unit}は省略"]
+
+
 def discord_escape(s):
     return re.sub(r"([\\`*_~|>\[\]])", r"\\\1", s)
 
@@ -665,11 +676,12 @@ def daily(args, now):
         + (f", マージ {merges} 件" if merges else "") + ")",
         "",
         "## コミット一覧 (新しい順)",
-        *[f"- {c['short']} {c['subject']} ({c['author']})" for c in commits],
+        *capped([f"- {c['short']} {c['subject']} ({c['author']})" for c in commits], MAX_PROMPT_COMMITS, "コミット"),
         "",
         "## 変更ファイル",
-        *[f"- {f['status']} {f['path']}" + (f" (← {f['old_path']})" if f["old_path"] != f["path"] else "")
-          + (" [binary]" if f["binary"] else f" +{f['added']} -{f['deleted']}") for f in files],
+        *capped([f"- {f['status']} {f['path']}" + (f" (← {f['old_path']})" if f["old_path"] != f["path"] else "")
+                  + (" [binary]" if f["binary"] else f" +{f['added']} -{f['deleted']}") for f in files],
+                 MAX_PROMPT_FILES, "ファイル"),
         "",
         "## 省略したもの",
         *([f"- {o}" for o in omitted] or ["- なし"]),
@@ -726,7 +738,8 @@ def weekly(args, now):
             f"期間: {period} (JST), コミット {len(commits)} 件" + (f", マージ {merges} 件" if merges else ""),
             "",
             "## コミット一覧 (新しい順)",
-            *[f"- {c['date'].astimezone(JST):%m/%d} {c['short']} {c['subject']} ({c['author']})" for c in commits],
+            *capped([f"- {c['date'].astimezone(JST):%m/%d} {c['short']} {c['subject']} ({c['author']})" for c in commits],
+                    MAX_PROMPT_COMMITS, "コミット"),
             "",
             "## 変更の多い場所",
             *area_stats(files, limit=20),

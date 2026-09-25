@@ -81,9 +81,14 @@ def split_text(text, limit=CHUNK_CHARS):
 def text_embeds(title, text, color, url=None, footer=None):
     """本文を分割して embed の列にする。2 つ目以降のタイトルには (続き) を付ける。
     url は先頭の embed にだけ付ける。同じ url の embed が 1 メッセージに並ぶと、Discord は
-    画像ギャラリーとしてまとめてしまい、2 つ目以降を表示しない。"""
+    画像ギャラリーとしてまとめてしまい、2 つ目以降を表示しない。
+    embed 1 つの合計 (タイトル + 本文 + フッター) も 6000 文字以下に収める。"""
     embeds = []
-    for i, chunk in enumerate(split_text(text or "(なし)")):
+    title = clip(title, TITLE_LIMIT - len(" (続き)"))
+    footer = clip(footer, FOOTER_LIMIT) if footer else None
+    # 続きのタイトルとコードブロックの閉じ直し (8 文字) の分も空けておく
+    room = MESSAGE_TOTAL_LIMIT - len(title) - len(" (続き)") - len(footer or "") - 8
+    for i, chunk in enumerate(split_text(text or "(なし)", min(CHUNK_CHARS, room))):
         embed = {
             "title": clip(title if i == 0 else f"{title} (続き)", TITLE_LIMIT),
             "description": chunk,
