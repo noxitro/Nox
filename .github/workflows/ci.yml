@@ -221,7 +221,7 @@ jobs:
 
       # OutDir は nox_common.props が build\$(SolutionName)\$(Platform)\$(Configuration)\
       # と決めているので、runtime.slnx の出力はここに落ちる。
-      # gtest.dll は各テスト vcxproj の PostBuildEvent が隣へ置く。
+      # gtest.dll は各テスト vcxproj が import する nox_test.props の PostBuildEvent が隣へ置く。
       - name: Run GoogleTest suites
         id: gtest
         if: matrix.configuration != 'Master'

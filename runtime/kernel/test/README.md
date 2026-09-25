@@ -22,11 +22,15 @@ Google Test を使用しています。依存関係はリポジトリルート�
 インストール先は `vcpkg_installed/x64-windows/` です。
 このトリプレットでは gtest は **DLL（共有ライブラリ）** としてビルドされるため、
 
-- `kernel_test.vcxproj` は `GTEST_LINKED_AS_SHARED_LIBRARY` を定義します。
+テストプロジェクト (`kernel_test` / `core_test`) が `nox.props` に続けて import する
+`runtime/property_sheet/nox_test.props` が、次の設定をまとめて持っています。
+GoogleTest のテストプロジェクトを新しく作るときも、このシートを import してください。
+
+- `GTEST_LINKED_AS_SHARED_LIBRARY` を定義します。
 - `gtest.lib`（インポートライブラリ）をリンクします。
 - PostBuildEvent で `gtest.dll` を出力ディレクトリにコピーします。
-  コピー元は Debug が `$(NoxVcpkgInstalledDir)debug\bin\`、
-  Release / Master が `$(NoxVcpkgInstalledDir)bin\` です。
+  コピー元は `nox_common.props` の `$(NoxVcpkgBinDir)` で、
+  Debug が `$(NoxVcpkgInstalledDir)debug\bin`、Release / Master が `$(NoxVcpkgInstalledDir)bin` です。
 
 ### `NoxVcpkgInstalledDir` の上書き
 
