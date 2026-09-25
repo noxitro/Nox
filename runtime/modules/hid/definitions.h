@@ -8,7 +8,8 @@
 
 namespace nox::hid
 {
-	/// @brief USB HID Keyboard/Keypad usage code; text characters are handled separately.
+	/// @brief USB HID の Keyboard/Keypad ページの Usage ID
+	/// @details 物理キーを表す。文字入力 (WM_CHAR / IME) は別で扱う
 	enum class KeyCode : nox::uint8
 	{
 		Unknown = 0x00,

@@ -22,6 +22,14 @@ namespace nox::os
 		nox::os::Window& self;
 		WindowSetupDesc& desc;
 	};
+
+	namespace
+	{
+		/// @brief	直前の Raw Input キーボード入力に E1 が付いていたか
+		/// @details	Pause は E1 1D と 45 の 2 件に分かれて届くので、後半の 45 を見分けるのに使う。
+		///			ウィンドウメッセージを処理するスレッドだけが触る。
+		constinit bool is_raw_keyboard_e1_pending_ = false;
+	}
 }
 
 ::LRESULT CALLBACK nox::os::Window::CallbackWindow(const ::HWND hWnd, const ::UINT message, const ::WPARAM wParam, ::LPARAM lParam)
@@ -86,26 +94,36 @@ namespace nox::os
 				&raw_input_buffer_size,
 				static_cast<::UINT>(sizeof(::RAWINPUTHEADER)));
 
-			constexpr ::UINT k_min_keyboard_input_size =
+			constexpr ::UINT kMinKeyboardInputSize =
 				static_cast<::UINT>(sizeof(::RAWINPUTHEADER) + sizeof(::RAWKEYBOARD));
-			if (raw_input_size == static_cast<::UINT>(-1) || raw_input_size < k_min_keyboard_input_size)
+			if (raw_input_size == static_cast<::UINT>(-1) || raw_input_size < kMinKeyboardInputSize)
 			{
-				::OutputDebugStringW(L"GetRawInputData failed; the legacy keyboard message fallback remains active.\n");
+				::OutputDebugStringW(L"GetRawInputData に失敗したため、このキーボード入力を破棄しました\n");
 			}
 			else if (raw_input.header.dwType == RIM_TYPEKEYBOARD)
 			{
 				const ::RAWKEYBOARD& keyboard = raw_input.data.keyboard;
-				const nox::os::RawKeyboardInputEvent event
+				const bool is_extended1 = (keyboard.Flags & RI_KEY_E1) != 0u;
+
+				//	Pause の後半の 45 は NumLock と同じ値なので捨てる。Pause としては前半の E1 1D で送っている。
+				const bool is_pause_tail =
+					(is_raw_keyboard_e1_pending_ == true) && (is_extended1 == false) && (keyboard.MakeCode == 0x45u);
+				is_raw_keyboard_e1_pending_ = is_extended1;
+
+				if (is_pause_tail == false)
 				{
-					.type = ((keyboard.Flags & RI_KEY_BREAK) != 0u)
-						? nox::os::RawKeyboardInputType::KeyUp
-						: nox::os::RawKeyboardInputType::KeyDown,
-					.make_code = keyboard.MakeCode,
-					.virtual_key = keyboard.VKey,
-					.is_extended = (keyboard.Flags & RI_KEY_E0) != 0u,
-					.is_extended1 = (keyboard.Flags & RI_KEY_E1) != 0u
-				};
-				nox::os::detail::DispatchRawKeyboardInput(event);
+					const nox::os::RawKeyboardInputEvent event
+					{
+						.type = ((keyboard.Flags & RI_KEY_BREAK) != 0u)
+							? nox::os::RawKeyboardInputType::KeyUp
+							: nox::os::RawKeyboardInputType::KeyDown,
+						.make_code = keyboard.MakeCode,
+						.virtual_key = keyboard.VKey,
+						.is_extended = (keyboard.Flags & RI_KEY_E0) != 0u,
+						.is_extended1 = is_extended1
+					};
+					nox::os::detail::DispatchRawKeyboardInput(event);
+				}
 			}
 		}
 		return ::DefWindowProcW(hWnd, message, wParam, lParam);
@@ -124,20 +142,40 @@ namespace nox::os
 	case WM_SYSKEYDOWN:
 	case WM_KEYUP:
 	case WM_SYSKEYUP:
-		// These messages also provide a fallback; duplicate Raw Input transitions are filtered by KeyboardManager.
-		if (self != nullptr)
+		//	Raw Input を登録できなかったときだけの代替。登録済みなら同じ変化が WM_INPUT でも届くうえ、
+		//	OS が合成したメッセージ (AltGr の偽 LCtrl など) も混ざるので送らない。
+		if (self != nullptr && nox::os::detail::IsRawKeyboardInputRegistered() == false)
 		{
 			const nox::uint32 key_data = static_cast<nox::uint32>(lParam);
 			const bool is_down = (message == WM_KEYDOWN) || (message == WM_SYSKEYDOWN);
+			nox::uint16 make_code = static_cast<nox::uint16>((key_data >> 16u) & 0xFFu);
+			bool is_extended = (key_data & (1u << 24u)) != 0u;
+			bool is_extended1 = false;
+
+			//	従来のキーメッセージでは Pause と NumLock がどちらも 0x45 で、拡張ビットの有無だけが違う。
+			//	Raw Input の表現 (Pause は E1 1D、NumLock は拡張なしの 45) へ揃える。
+			if (make_code == 0x45u)
+			{
+				if (is_extended == true)
+				{
+					is_extended = false;
+				}
+				else
+				{
+					make_code = 0x1Du;
+					is_extended1 = true;
+				}
+			}
+
 			const nox::os::RawKeyboardInputEvent event
 			{
 				.type = is_down
 					? nox::os::RawKeyboardInputType::KeyDown
 					: nox::os::RawKeyboardInputType::KeyUp,
-				.make_code = static_cast<nox::uint16>((key_data >> 16u) & 0xFFu),
+				.make_code = make_code,
 				.virtual_key = static_cast<nox::uint16>(wParam),
-				.is_extended = (key_data & (1u << 24u)) != 0u,
-				.is_extended1 = false
+				.is_extended = is_extended,
+				.is_extended1 = is_extended1
 			};
 			nox::os::detail::DispatchRawKeyboardInput(event);
 		}

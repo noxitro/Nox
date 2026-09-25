@@ -18,6 +18,9 @@ namespace nox::os
 		FocusLost
 	};
 
+	/// @brief キーボード入力 1 件
+	/// @details make_code は Raw Input と同じ表現 (Set 1 の make code。E0 / E1 接頭辞はフラグで持つ)。
+	///			従来のキーメッセージから作る場合もこの表現へ揃える。
 	struct RawKeyboardInputEvent
 	{
 		RawKeyboardInputType type;
@@ -36,6 +39,10 @@ namespace nox::os
 	namespace detail
 	{
 		void DispatchRawKeyboardInput(const RawKeyboardInputEvent& event)noexcept;
+
+		/// @brief Raw Input へキーボードを登録できたか
+		/// @details 登録できていれば、従来のキーメッセージはコールバックへ送らない
+		[[nodiscard]] bool IsRawKeyboardInputRegistered()noexcept;
 	}
 
 	struct ProcessMemoryInfo

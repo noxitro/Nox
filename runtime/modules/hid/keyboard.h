@@ -23,14 +23,14 @@ namespace nox::hid
 		[[nodiscard]] bool WasReleased(KeyCode key_code)const noexcept;
 
 	private:
-		static constexpr std::size_t k_key_count = 256;
+		static constexpr std::size_t kKeyCount = 256;
 
 		void BeginFrame()noexcept;
 		void ProcessKeyEvent(KeyCode key_code, bool is_down)noexcept;
 		void ReleaseAllKeys()noexcept;
 
-		std::bitset<k_key_count> is_down_{};
-		std::bitset<k_key_count> was_pressed_{};
-		std::bitset<k_key_count> was_released_{};
+		std::bitset<kKeyCount> is_down_{};
+		std::bitset<kKeyCount> was_pressed_{};
+		std::bitset<kKeyCount> was_released_{};
 	};
 }

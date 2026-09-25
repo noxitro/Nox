@@ -35,6 +35,7 @@ namespace nox::os
 
 		constinit nox::os::RawKeyboardInputCallback raw_keyboard_input_callback_ = nullptr;
 		constinit void* raw_keyboard_input_user_data_ = nullptr;
+		constinit bool is_raw_keyboard_input_registered_ = false;
 
 #if !NOX_MASTER
 		constinit nox::util::ParallelExecuteChecker parallel_execute_checker_ = {};
@@ -49,7 +50,8 @@ void	nox::os::Initialize(const std::span<const nox::char16* const> args)
 	native_thread_id_ = nox::os::Thread::GetThisThreadNativeThreadId();
 
 #if NOX_WINDOWS
-	// Legacy key messages stay enabled for WM_CHAR/IME and as a fallback if Raw Input registration fails.
+	//	従来のキーメッセージは WM_CHAR / IME のために止めない (RIDEV_NOLEGACY を付けない)。
+	//	キー状態は、登録できれば WM_INPUT だけから作り、失敗したときだけ従来のキーメッセージで代替する。
 	const ::RAWINPUTDEVICE keyboard_device
 	{
 		.usUsagePage = 0x01,
@@ -58,12 +60,13 @@ void	nox::os::Initialize(const std::span<const nox::char16* const> args)
 		.hwndTarget = nullptr
 	};
 
-	if (::RegisterRawInputDevices(
+	nox::os::is_raw_keyboard_input_registered_ = (::RegisterRawInputDevices(
 		&keyboard_device,
 		1u,
-		static_cast<::UINT>(sizeof(::RAWINPUTDEVICE))) == FALSE)
+		static_cast<::UINT>(sizeof(::RAWINPUTDEVICE))) != FALSE);
+	if (nox::os::is_raw_keyboard_input_registered_ == false)
 	{
-		::OutputDebugStringW(L"RegisterRawInputDevices failed; legacy keyboard messages remain active.\n");
+		::OutputDebugStringW(L"RegisterRawInputDevices に失敗したため、従来のキーメッセージで代替します\n");
 	}
 #endif // NOX_WINDOWS
 }
@@ -83,6 +86,11 @@ void nox::os::detail::DispatchRawKeyboardInput(const nox::os::RawKeyboardInputEv
 	{
 		callback(event, nox::os::raw_keyboard_input_user_data_);
 	}
+}
+
+bool nox::os::detail::IsRawKeyboardInputRegistered()noexcept
+{
+	return nox::os::is_raw_keyboard_input_registered_;
 }
 
 bool	nox::os::Update()
@@ -116,6 +124,7 @@ void	nox::os::Finalize()
 	nox::os::command_line_args_ = {};
 	nox::os::raw_keyboard_input_callback_ = nullptr;
 	nox::os::raw_keyboard_input_user_data_ = nullptr;
+	nox::os::is_raw_keyboard_input_registered_ = false;
 }
 
 std::span<const nox::char16* const> nox::os::GetCommandLineArgList() noexcept
