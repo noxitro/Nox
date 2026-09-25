@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  runtime 配下の C++ プロジェクトが読み込むプロパティシートの入口。
+  vcxproj はこれだけを import する (テストは続けて nox_test.props も)。
+  構成別シートの選択はここで行うので、構成を足すときもここだけ直せばよい。
+  読み込み順がそのまま上書き順になる。共通 → 構成別の順を崩さないこと。
+-->
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets">
+    <Import Project="nox_common.props" />
+    <Import Project="nox_debug.props" Condition="'$(Configuration)'=='Debug'" />
+    <Import Project="nox_release.props" Condition="'$(Configuration)'=='Release'" />
+    <Import Project="nox_master.props" Condition="'$(Configuration)'=='Master'" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <ItemGroup />
+</Project>

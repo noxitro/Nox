@@ -113,6 +113,8 @@ Master 構成は `NOX_ASSERT` も `NOX_DEVELOP` も消えるため、Debug / Rel
 - ソリューション: `runtime/runtime.slnx`
 - `PlatformToolset` / `CharacterSet` は `runtime/Directory.Build.props` で一括管理します。vcxproj には書きません (VS のプロパティページで変えると書き戻されるので、その行は消す)。
   - `property_sheet/*.props` は `Microsoft.Cpp.props` の後に読まれるため、ツールセットを置いても切り替わりません。コンパイラ・リンカの設定はこちらに置きます。
+- vcxproj が import するシートは `property_sheet/nox.props` だけです (GoogleTest のテストは続けて `nox_test.props`)。構成別シート (`nox_debug` / `nox_release` / `nox_master`) の切り替えは `nox.props` が行います。
+  - vcxproj の ItemDefinitionGroup には、そのプロジェクト固有の差分 (例: reflection_generated の `/bigobj`) だけを書きます。全プロジェクト共通の設定を vcxproj に足さないこと。
 
 ### ReflectionGenerator (C#)
 

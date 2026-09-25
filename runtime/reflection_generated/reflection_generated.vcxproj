@@ -41,24 +41,18 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\property_sheet\nox_common.props" />
-    <Import Project="..\property_sheet\nox_debug.props" />
-    <Import Project="..\property_sheet\nox_x64.props" />
+    <Import Project="..\property_sheet\nox.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\property_sheet\nox_common.props" />
-    <Import Project="..\property_sheet\nox_release.props" />
-    <Import Project="..\property_sheet\nox_x64.props" />
+    <Import Project="..\property_sheet\nox.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\property_sheet\nox_common.props" />
-    <Import Project="..\property_sheet\nox_master.props" />
-    <Import Project="..\property_sheet\nox_x64.props" />
+    <Import Project="..\property_sheet\nox.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+  <ItemDefinitionGroup>
     <ClCompile>
       <!--
         生成されたリフレクションコードはUnityビルドでまとめられるため、
@@ -68,54 +62,6 @@
       -->
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-    </Link>
-    <ClCompile />
-    <PreBuildEvent />
-    <CustomBuildStep>
-      <Command>
-      </Command>
-    </CustomBuildStep>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <ClCompile>
-      <!--
-        生成されたリフレクションコードはUnityビルドでまとめられるため、
-        1つの翻訳単位のセクション数がCOFFの上限を超えることがある。
-        束ね方はファイルの列挙順に依存し環境によって変わるため、
-        ローカルでは通るのにCIで C1128 になった。/bigobj で上限を引き上げる。
-      -->
-      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
-    </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-    </Link>
-    <ClCompile />
-    <PreBuildEvent />
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'">
-    <ClCompile>
-      <!--
-        生成されたリフレクションコードはUnityビルドでまとめられるため、
-        1つの翻訳単位のセクション数がCOFFの上限を超えることがある。
-        束ね方はファイルの列挙順に依存し環境によって変わるため、
-        ローカルでは通るのにCIで C1128 になった。/bigobj で上限を引き上げる。
-      -->
-      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
-    </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-    </Link>
-    <ClCompile />
-    <PreBuildEvent />
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="definition.cpp">
@@ -198,9 +144,7 @@
     <ClCompile Include="pch.cpp">
       <SubType>
       </SubType>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Master|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
