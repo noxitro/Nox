@@ -1,0 +1,136 @@
+# ============================================================
+# Dev report
+#
+# 目的  : master に入ったコミットを毎日 AI にレビューさせ、週に一度は活動を
+#         総括して、Discord に投稿する。中身は .github/scripts/dev-report.py。
+# 経緯  : 以前は別リポジトリ noxitro/discord-dev-report で動かしていたが、
+#         使っていた GitHub Models が 2026-07-30 に提供終了し、2026-09-06 以降は
+#         毎回失敗していた。ここへ移して、PAT も private の Actions 枠も不要にした。
+# 日程  : 日次 JST 01:07 / 週次 月曜 JST 01:17 (schedule は既定ブランチでしか動かない)。
+#         GitHub の schedule は混雑時に遅れるので、ちょうど 0 分を避けている。
+# 検証  : このワークフローかスクリプトを変えた push では dry-run で走らせる
+#         (投稿も状態の更新もしない。内容はジョブのサマリーで見られる)。
+#
+# 必要な secret (リポジトリの Settings > Secrets and variables > Actions):
+#   DISCORD_WEBHOOK_URL             投稿先。ci.yml の通知と同じもの
+#   DISCORD_DEV_REPORT_WEBHOOK_URL  (任意) レポートだけ別チャンネルにするとき
+#   GEMINI_API_KEY                  (任意) Gemini API のキー。無料枠で動く
+#   ANTHROPIC_API_KEY               (任意) Claude API のキー。有料。登録したときだけ使う
+# 任意の variable (同じ画面の Variables タブ):
+#   NOX_REVIEW_GEMINI_MODEL / NOX_REVIEW_CLAUDE_MODEL / NOX_REVIEW_CLAUDE_EFFORT /
+#   NOX_REPORT_MAX_DIFF_CHARS  (既定値は dev-report.py の先頭を参照)
+# ============================================================
+
+name: Dev report
+
+on:
+  schedule:
+    - cron: '7 16 * * *'    # 日次: 毎日 UTC 16:07 = JST 01:07
+    - cron: '17 16 * * 0'   # 週次: 日曜 UTC 16:17 = JST 月曜 01:17
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'daily か weekly'
+        type: choice
+        options: [daily, weekly]
+        default: daily
+      dry_run:
+        description: '投稿せずに内容だけ確認する'
+        type: boolean
+        default: true
+  push:
+    branches: ['**']
+    paths:
+      - '.github/workflows/dev-report.yml'
+      - '.github/scripts/dev-report.py'
+      - '.github/scripts/discord_webhook.py'
+
+# 日次と週次は別々に、同じ種類は順番に走らせる (状態を二重に進めないため)。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.schedule || inputs.mode || 'push' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    name: Report
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      HAS_ANTHROPIC: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # 前回の地点から今までの履歴と差分を手元の git で取るため
+
+      - name: Resolve mode
+        id: mode
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+          INPUT_MODE: ${{ inputs.mode }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          case "$EVENT" in
+            schedule)
+              if [ "$SCHEDULE" = '17 16 * * 0' ]; then mode=weekly; else mode=daily; fi
+              dry=false ;;
+            workflow_dispatch)
+              mode="$INPUT_MODE"; dry="$INPUT_DRY_RUN" ;;
+            *)
+              mode=daily; dry=true ;;
+          esac
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "dry_run=$dry" >> "$GITHUB_OUTPUT"
+          echo "mode=$mode dry_run=$dry"
+
+      # 日次の「前回レポートした地点」を取り出す。キーに run_id を含めて毎回
+      # 新しく保存し、restore-keys の前方一致で最新のものを拾う。master で
+      # 保存したキャッシュは他のブランチからも読めるので、dry-run でも同じ範囲になる。
+      - name: Restore state
+        if: steps.mode.outputs.mode == 'daily'
+        uses: actions/cache/restore@v6
+        with:
+          path: .dev-report-state
+          key: dev-report-state-daily-${{ github.run_id }}
+          restore-keys: dev-report-state-daily-
+
+      # Ubuntu のシステム Python には pip で直接入れられない (PEP 668) ので venv を作る。
+      # Claude を使うときだけ SDK を入れる。
+      - name: Set up Python
+        shell: bash
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          if [ "$HAS_ANTHROPIC" = 'true' ]; then
+            "$RUNNER_TEMP/venv/bin/pip" install --quiet --disable-pip-version-check 'anthropic>=1,<2'
+          fi
+
+      - name: Report
+        id: report
+        shell: bash
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_DEV_REPORT_WEBHOOK_URL || secrets.DISCORD_WEBHOOK_URL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NOX_REVIEW_GEMINI_MODEL: ${{ vars.NOX_REVIEW_GEMINI_MODEL }}
+          NOX_REVIEW_CLAUDE_MODEL: ${{ vars.NOX_REVIEW_CLAUDE_MODEL }}
+          NOX_REVIEW_CLAUDE_EFFORT: ${{ vars.NOX_REVIEW_CLAUDE_EFFORT }}
+          NOX_REPORT_MAX_DIFF_CHARS: ${{ vars.NOX_REPORT_MAX_DIFF_CHARS }}
+          MODE: ${{ steps.mode.outputs.mode }}
+          DRY_RUN: ${{ steps.mode.outputs.dry_run }}
+        run: |
+          args=(--mode "$MODE" --state .dev-report-state/daily.json)
+          if [ "$DRY_RUN" = 'true' ]; then args+=(--dry-run); fi
+          "$RUNNER_TEMP/venv/bin/python" .github/scripts/dev-report.py "${args[@]}"
+
+      # 投稿とレビューが成功して地点を進めたときだけ保存する。
+      - name: Save state
+        if: steps.report.outputs.state_updated == 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: .dev-report-state
+          key: dev-report-state-daily-${{ github.run_id }}

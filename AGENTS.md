@@ -49,6 +49,7 @@ Nox は、カスタムのリフレクション生成システムと WPF ベー�
 
 - **6 構成すべてがビルド成功 (exit 0 / エラー 0)**: MSVC(v145) / ClangCL × Debug / Release / Master (CI で確認)
 - **全テストが PASS** (CI で確認)
+- **ファイル形式の検査が通ること** (CI の `File format` で確認。文書だけの変更でも走ります)
 - **意図しない変更がないこと** (`git status` で確認)
 
 ClangCL は必須ゲートです。MSVC が見逃す非適合を実際に拾った実績があるので、落ちたら原因を直してください。`continue-on-error` で回避しないこと。
@@ -62,6 +63,8 @@ Master 構成は `NOX_ASSERT` も `NOX_DEVELOP` も消えるため、Debug / Rel
 - 実際に「29 ファイルの BOM 剥がれ」「ヘッダ 1 本の CRLF 一括変換」を起こしています。
 - `.gitattributes` で git 側の改行変換は無効化してありますが、**書き換えツール自身が壊すのは防げません。**
 - 変更後は `git diff --stat` を見て、行数が実際の編集量と釣り合っているか確認してください。
+- push ごとに CI (`.github/workflows/file-format.yml`) が、変更前後で BOM の有無・改行コードが変わっていないか、改行が混在していないかを検査し、落ちたら Discord に通知します。push 前に手元で確かめるには `python3 .github/scripts/check-file-format.py --base origin/master` を実行します。
+- 意図して形式を変えるときは、そのコミットメッセージに `Format-Change: <パス or glob>` の行を書きます (該当ファイルは警告扱いになります)。
 
 ## 最優先ルール
 

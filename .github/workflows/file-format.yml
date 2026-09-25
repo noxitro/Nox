@@ -1,0 +1,97 @@
+# ============================================================
+# File format
+#
+# 目的  : push で変わったファイルの BOM と改行コード (CRLF / LF) が、変更前から
+#         変わっていないかを検査する。このリポジトリは両方がファイルごとに
+#         混在していて統一ルールでは見られないので、「元の形式を保つ」という
+#         AGENTS.md の規約をそのまま、変更前後の比較で機械化している。
+#         検査の中身は .github/scripts/check-file-format.py を参照。
+# 背景  : 実際に「29 ファイルの BOM 剥がれ」「ヘッダ 1 本の CRLF 一括変換」
+#         「CRLF のファイルへの LF 行の混入」を起こしている。どれも差分が全行に
+#         なり、レビューも履歴も追えなくなる。導入前の master 97 コミットに
+#         当てると 14 コミットで検出した (2026-06〜09)。
+# 許可  : 意図して変換するときは、コミットメッセージに
+#         「Format-Change: <パス or glob>」の行を書く。
+# 環境  : ubuntu-latest。1 回数秒。公開リポジトリなので無料。
+# ============================================================
+
+name: File format
+
+# secret-scan と同じく paths-ignore を置かない。Markdown の BOM や改行も対象にする。
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+    inputs:
+      base:
+        description: '比較元のリビジョン (空なら直前のコミット)'
+        required: false
+        default: ''
+
+# 打ち切らない。push ごとの差分 (before..sha) を見るので、古い実行を打ち切ると
+# その push の範囲が検査されないまま残る。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: BOM / line endings
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # push の直前の地点や master との分岐点まで遡るため
+
+      - name: Check
+        id: check
+        shell: bash
+        env:
+          BEFORE: ${{ github.event.before }}
+          INPUT_BASE: ${{ inputs.base }}
+        run: |
+          set -uo pipefail
+          # 比較元を決める。
+          #   push           : push 前の地点 (before)
+          #   新規ブランチ    : master との分岐点 (before が 0000…)
+          #   force-push 等  : before が取れなければ master との分岐点
+          #   手動実行       : 入力の base、無ければ直前のコミット
+          base=''
+          if [ -n "${INPUT_BASE}" ]; then
+            base="${INPUT_BASE}"
+          elif [ -n "${BEFORE}" ] && [ "${BEFORE}" != "0000000000000000000000000000000000000000" ] && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            base="${BEFORE}"
+          else
+            mb=$(git merge-base origin/master HEAD 2>/dev/null || true)
+            if [ -n "$mb" ] && [ "$mb" != "$(git rev-parse HEAD)" ]; then
+              base="$mb"
+            elif git rev-parse --verify --quiet HEAD^ >/dev/null; then
+              base="HEAD^"
+            fi
+          fi
+          if [ -z "$base" ]; then
+            echo "比較元が無い (ルートコミットだけ)。検査しない"
+            exit 0
+          fi
+          echo "比較元: $base"
+          python3 .github/scripts/check-file-format.py --base "$base" --head HEAD --report "$RUNNER_TEMP/format-report.md"
+
+      # 転んだときだけ Discord に流す。Webhook は ci.yml の notify と同じ secret。
+      # 未設定 (Dependabot の push など) なら警告だけでスキップする。
+      - name: Notify Discord
+        if: failure() && steps.check.outcome == 'failure'
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          [ -s "$RUNNER_TEMP/format-report.md" ] || echo "検査スクリプトが途中で失敗した。ログを確認すること" > "$RUNNER_TEMP/format-report.md"
+          python3 .github/scripts/discord_webhook.py \
+            --title ":x: ファイル形式 — ${GITHUB_REPOSITORY} (${GITHUB_REF_NAME})" \
+            --description-file "$RUNNER_TEMP/format-report.md" \
+            --color red --url "$RUN_URL" \
+            --footer "${GITHUB_WORKFLOW} #${GITHUB_RUN_NUMBER} · ${GITHUB_SHA::7}"
