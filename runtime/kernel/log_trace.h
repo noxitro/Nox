@@ -127,32 +127,24 @@ namespace nox::debug
 	}
 }
 
-#if NOX_DEBUG
-#define	NOX_INFO_LINE_OLD(...) ::nox::debug::LogTrace(::nox::debug::LogLevel::Info, __VA_ARGS__)
-#define NOX_WARNING_LINE_OLD(...) ::nox::debug::LogTrace(::nox::debug::LogLevel::Warning, __VA_ARGS__)
-#define NOX_ERROR_LINE_OLD(...) ::nox::debug::LogTrace(::nox::debug::LogLevel::Error, __VA_ARGS__)
-
+#if !NOX_MASTER
 /// @brief		ログ出力 レベル：Info
 /// @details	フォーマット処理を動的メモリ確保を行わないように確保済みのバッファを使用する
 #define NOX_INFO_LINE(LodId, ...) ::nox::debug::LogTraceArgs<LodId>(::nox::debug::LogLevel::Info, ::std::source_location::current(), __VA_ARGS__)
 #define NOX_WARNING_LINE(LodId, ...) ::nox::debug::LogTraceArgs<LodId>(::nox::debug::LogLevel::Warning, ::std::source_location::current(), __VA_ARGS__)
 #define NOX_ERROR_LINE(LodId, ...) ::nox::debug::LogTraceArgs<LodId>(::nox::debug::LogLevel::Error, ::std::source_location::current(), __VA_ARGS__)
 #else
-#define	NOX_INFO_LINE_OLD(...)
-#define NOX_WARNING_LINE_OLD(...)
-#define NOX_ERROR_LINE_OLD(...)
-
 namespace nox::debug
 {
 	/// @brief		ログ出力の無効化時に引数だけを型検査するためのプローブ
-	/// @details	NOX_*_LINE は非 Debug ビルドではログを出さないが、引数を単純に
+	/// @details	NOX_*_LINE は Master ビルドではログを出さないが、引数を単純に
 	///				捨てると 2 つの問題が出る。
 	///				  1. ログにしか使っていないローカル変数・引数が未参照になり、
 	///				     C4189 / C4100 が湧く。呼び出し側へ [[maybe_unused]] を
 	///				     撒く羽目になり、ログ行を書くたびに増え続ける。
-	///				  2. Release では引数に何を書いても通ってしまうため、
-	///				     Debug 側 LogTraceArgs との不整合 (引数の個数・型・LogId の
-	///				     取り違え) を Release ビルドで検出できない。
+	///				  2. Master では引数に何を書いても通ってしまうため、
+	///				     開発ビルド側 LogTraceArgs との不整合 (引数の個数・型・LogId の
+	///				     取り違え) を Master ビルドで検出できない。
 	///				     実際、無効化側が (LodId, message) の 2 引数固定のまま
 	///				     壊れていたことに長く気付けなかった。
 	///
@@ -166,7 +158,7 @@ namespace nox::debug
 	///
 	///				シグネチャは LogTraceArgs の鏡写しにしてある (テンプレート引数
 	///				LogId + requires 制約 + message + Args&&...)。こうしておくと
-	///				「Debug で通る呼び出しは Release でも通り、逆も成立する」が
+	///				「開発ビルドで通る呼び出しは Master でも通り、逆も成立する」が
 	///				保たれ、引数個数の不一致が構造的に再発しなくなる。
 	///
 	///				sizeof は完全型を要求するので戻り値は void ではなく int。
@@ -183,4 +175,4 @@ namespace nox::debug
 #define NOX_WARNING_LINE(LodId, ...) ((void)sizeof(::nox::debug::LogTraceProbe<LodId>(__VA_ARGS__)))
 #define NOX_ERROR_LINE(LodId, ...) ((void)sizeof(::nox::debug::LogTraceProbe<LodId>(__VA_ARGS__)))
 
-#endif // NOX_DEBUG
+#endif // !NOX_MASTER
