@@ -74,6 +74,75 @@ namespace nox::os
 
 	switch (message)
 	{
+	case WM_INPUT:
+		if (self != nullptr)
+		{
+			::RAWINPUT raw_input{};
+			::UINT raw_input_buffer_size = static_cast<::UINT>(sizeof(raw_input));
+			const ::UINT raw_input_size = ::GetRawInputData(
+				reinterpret_cast<::HRAWINPUT>(lParam),
+				RID_INPUT,
+				&raw_input,
+				&raw_input_buffer_size,
+				static_cast<::UINT>(sizeof(::RAWINPUTHEADER)));
+
+			constexpr ::UINT k_min_keyboard_input_size =
+				static_cast<::UINT>(sizeof(::RAWINPUTHEADER) + sizeof(::RAWKEYBOARD));
+			if (raw_input_size == static_cast<::UINT>(-1) || raw_input_size < k_min_keyboard_input_size)
+			{
+				::OutputDebugStringW(L"GetRawInputData failed; the legacy keyboard message fallback remains active.\n");
+			}
+			else if (raw_input.header.dwType == RIM_TYPEKEYBOARD)
+			{
+				const ::RAWKEYBOARD& keyboard = raw_input.data.keyboard;
+				const nox::os::RawKeyboardInputEvent event
+				{
+					.type = ((keyboard.Flags & RI_KEY_BREAK) != 0u)
+						? nox::os::RawKeyboardInputType::KeyUp
+						: nox::os::RawKeyboardInputType::KeyDown,
+					.make_code = keyboard.MakeCode,
+					.virtual_key = keyboard.VKey,
+					.is_extended = (keyboard.Flags & RI_KEY_E0) != 0u,
+					.is_extended1 = (keyboard.Flags & RI_KEY_E1) != 0u
+				};
+				nox::os::detail::DispatchRawKeyboardInput(event);
+			}
+		}
+		return ::DefWindowProcW(hWnd, message, wParam, lParam);
+
+	case WM_KILLFOCUS:
+	{
+		const nox::os::RawKeyboardInputEvent event
+		{
+			.type = nox::os::RawKeyboardInputType::FocusLost
+		};
+		nox::os::detail::DispatchRawKeyboardInput(event);
+	}
+	break;
+
+	case WM_KEYDOWN:
+	case WM_SYSKEYDOWN:
+	case WM_KEYUP:
+	case WM_SYSKEYUP:
+		// These messages also provide a fallback; duplicate Raw Input transitions are filtered by KeyboardManager.
+		if (self != nullptr)
+		{
+			const nox::uint32 key_data = static_cast<nox::uint32>(lParam);
+			const bool is_down = (message == WM_KEYDOWN) || (message == WM_SYSKEYDOWN);
+			const nox::os::RawKeyboardInputEvent event
+			{
+				.type = is_down
+					? nox::os::RawKeyboardInputType::KeyDown
+					: nox::os::RawKeyboardInputType::KeyUp,
+				.make_code = static_cast<nox::uint16>((key_data >> 16u) & 0xFFu),
+				.virtual_key = static_cast<nox::uint16>(wParam),
+				.is_extended = (key_data & (1u << 24u)) != 0u,
+				.is_extended1 = false
+			};
+			nox::os::detail::DispatchRawKeyboardInput(event);
+		}
+		break;
+
 	case WM_CLOSE:
 		::DestroyWindow(hWnd);
 		return 0;

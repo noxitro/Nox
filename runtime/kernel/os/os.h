@@ -11,6 +11,33 @@
 
 namespace nox::os
 {
+	enum class RawKeyboardInputType : nox::uint8
+	{
+		KeyDown,
+		KeyUp,
+		FocusLost
+	};
+
+	struct RawKeyboardInputEvent
+	{
+		RawKeyboardInputType type;
+		nox::uint16 make_code;
+		nox::uint16 virtual_key;
+		bool is_extended;
+		bool is_extended1;
+	};
+
+	using RawKeyboardInputCallback = void(*)(const RawKeyboardInputEvent&, void*)noexcept;
+
+	/// @brief コールバックはウィンドウメッセージを処理するスレッド上で実行されます
+	/// @details メッセージポンプ開始前に登録し、ポンプ終了後に解除します
+	void SetRawKeyboardInputCallback(RawKeyboardInputCallback callback, void* user_data)noexcept;
+
+	namespace detail
+	{
+		void DispatchRawKeyboardInput(const RawKeyboardInputEvent& event)noexcept;
+	}
+
 	struct ProcessMemoryInfo
 	{
 		uint32 cb;

@@ -33,6 +33,9 @@ namespace nox::os
 		constinit void(*window_dispatch_function_)(const void*) = nullptr;
 		constinit const void* window_dispatch_arg_ = nullptr;
 
+		constinit nox::os::RawKeyboardInputCallback raw_keyboard_input_callback_ = nullptr;
+		constinit void* raw_keyboard_input_user_data_ = nullptr;
+
 #if !NOX_MASTER
 		constinit nox::util::ParallelExecuteChecker parallel_execute_checker_ = {};
 #endif // !NOX_MASTER
@@ -44,6 +47,42 @@ void	nox::os::Initialize(const std::span<const nox::char16* const> args)
 	nox::os::command_line_args_ = args;
 	
 	native_thread_id_ = nox::os::Thread::GetThisThreadNativeThreadId();
+
+#if NOX_WINDOWS
+	// Legacy key messages stay enabled for WM_CHAR/IME and as a fallback if Raw Input registration fails.
+	const ::RAWINPUTDEVICE keyboard_device
+	{
+		.usUsagePage = 0x01,
+		.usUsage = 0x06,
+		.dwFlags = 0,
+		.hwndTarget = nullptr
+	};
+
+	if (::RegisterRawInputDevices(
+		&keyboard_device,
+		1u,
+		static_cast<::UINT>(sizeof(::RAWINPUTDEVICE))) == FALSE)
+	{
+		::OutputDebugStringW(L"RegisterRawInputDevices failed; legacy keyboard messages remain active.\n");
+	}
+#endif // NOX_WINDOWS
+}
+
+void nox::os::SetRawKeyboardInputCallback(
+	const nox::os::RawKeyboardInputCallback callback,
+	void* const user_data)noexcept
+{
+	nox::os::raw_keyboard_input_callback_ = callback;
+	nox::os::raw_keyboard_input_user_data_ = (callback == nullptr) ? nullptr : user_data;
+}
+
+void nox::os::detail::DispatchRawKeyboardInput(const nox::os::RawKeyboardInputEvent& event)noexcept
+{
+	const nox::os::RawKeyboardInputCallback callback = nox::os::raw_keyboard_input_callback_;
+	if (callback != nullptr)
+	{
+		callback(event, nox::os::raw_keyboard_input_user_data_);
+	}
 }
 
 bool	nox::os::Update()
@@ -75,6 +114,8 @@ bool	nox::os::Update()
 void	nox::os::Finalize()
 {
 	nox::os::command_line_args_ = {};
+	nox::os::raw_keyboard_input_callback_ = nullptr;
+	nox::os::raw_keyboard_input_user_data_ = nullptr;
 }
 
 std::span<const nox::char16* const> nox::os::GetCommandLineArgList() noexcept
