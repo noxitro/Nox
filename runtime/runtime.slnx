@@ -29,6 +29,9 @@
       <BuildDependency Project="kernel/kernel.vcxproj" />
       <Build Project="false" />
     </Project>
+    <Project Path="modules/hid/test/hid_test.vcxproj" Id="16f5b20d-fa5a-4efe-8459-a363be7fc322">
+      <Build Project="false" />
+    </Project>
     <Project Path="test_support/test_support.vcxitems" Id="5b55ef87-eaf3-4ab8-abe3-1df15b3b88c1" />
   </Folder>
   <Project Path="app/app.vcxproj" Id="e21d57c8-c4b7-4702-9f36-12c332b64433" />

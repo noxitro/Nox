@@ -163,8 +163,15 @@ jobs:
       #   - core_test   : core / reflection / reflection_generated に依存する
       #                   テスト (リフレクションの getter/setter は生成コードを
       #                   実際に走らせないと検証できないので、生成器も動く)
+      #   - <モジュール名>_test : モジュールごとのテスト
+      #                   (tools/module-test/new-module-test.ps1 で生成する)
       #
-      # 両者は runtime.slnx で <Build Project="false" /> が付いていて、
+      # テストプロジェクトは runtime.slnx にある *_test.vcxproj を全部拾う。
+      # モジュールごとに増えていくので、ここに名前を並べると追記漏れで
+      # 「CI で走っていないテスト」が黙って生まれるため。
+      # "_test" 終わりは ReflectionGenerator (Entry.cs) と共通の規約。
+      #
+      # いずれも runtime.slnx で <Build Project="false" /> が付いていて、
       # 上のソリューションビルドでは建たない。Release では
       # nox_release.props の WholeProgramOptimization で全プロジェクトに /GL が
       # 付き、コード生成がリンク時まで遅れる。このとき link.exe は一時ファイル
@@ -174,6 +181,18 @@ jobs:
       # (C1083 Permission denied -> LNK1257)。msbuild の呼び出しを分ければ
       # 時間的に重ならないので、構成によらずこの衝突は起きない。
       # ---------------------------------------------------------
+      - name: Discover test projects
+        id: tests
+        if: matrix.configuration != 'Master'
+        run: |
+          # runtime.slnx の Path は runtime/ からの相対で、区切りは /
+          $projects = ([xml](Get-Content runtime\runtime.slnx -Raw)).SelectNodes('//Project') |
+            ForEach-Object { $_.Path } |
+            Where-Object { $_ -like '*_test.vcxproj' }
+          if (-not $projects) { throw 'runtime.slnx に *_test.vcxproj が 1 つも無い' }
+          $projects | ForEach-Object { Write-Host "test project: $_" }
+          "projects=$($projects -join ';')" >> $env:GITHUB_OUTPUT
+
       - name: Build test projects
         if: matrix.configuration != 'Master'
         run: |
@@ -200,12 +219,9 @@ jobs:
           $solutionDir  = (Resolve-Path 'runtime').Path.Replace('\', '/') + '/'
           $solutionPath = $solutionDir + 'runtime.slnx'
 
-          $projects = @(
-            'runtime\kernel\test\kernel_test.vcxproj',
-            'runtime\core\test\core_test.vcxproj'
-          )
+          $projects = '${{ steps.tests.outputs.projects }}'.Split(';')
           foreach ($proj in $projects) {
-            msbuild $proj `
+            msbuild "runtime/$proj" `
               /p:Configuration=${{ matrix.configuration }} `
               /p:Platform=x64 `
               /p:PlatformToolset=${{ matrix.compiler == 'MSVC' && 'v145' || 'ClangCL' }} `
@@ -230,7 +246,9 @@ jobs:
           New-Item -ItemType Directory -Force test-results | Out-Null
 
           $failed = @()
-          foreach ($name in 'kernel_test', 'core_test') {
+          $names = '${{ steps.tests.outputs.projects }}'.Split(';') |
+            ForEach-Object { [IO.Path]::GetFileNameWithoutExtension($_) }
+          foreach ($name in $names) {
             $exe = Join-Path $outDir "$name.exe"
             if (-not (Test-Path $exe)) { throw "テスト実行ファイルが無い: $exe" }
             & $exe --gtest_output="xml:test-results/$name.xml" 2>&1 |
@@ -357,7 +375,10 @@ jobs:
 
           # gtest の XML から件数と失敗したテスト名を拾う。
           # レポート用のアクションを足すほどの規模ではないので自前で読む
-          foreach ($name in 'kernel_test', 'core_test') {
+          $names = '${{ steps.tests.outputs.projects }}'.Split(';') |
+            Where-Object { $_ } |
+            ForEach-Object { [IO.Path]::GetFileNameWithoutExtension($_) }
+          foreach ($name in $names) {
             $lines += "### $name", ''
             $xmlPath = "test-results/$name.xml"
             if (Test-Path $xmlPath) {
