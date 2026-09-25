@@ -115,6 +115,7 @@ Master 構成は `NOX_ASSERT` も `NOX_DEVELOP` も消えるため、Debug / Rel
   - `property_sheet/*.props` は `Microsoft.Cpp.props` の後に読まれるため、ツールセットを置いても切り替わりません。コンパイラ・リンカの設定はこちらに置きます。
 - vcxproj が import するシートは `property_sheet/nox.props` だけです (GoogleTest のテストは続けて `nox_test.props`)。構成別シート (`nox_debug` / `nox_release` / `nox_master`) の切り替えは `nox.props` が行います。
   - vcxproj の ItemDefinitionGroup には、そのプロジェクト固有の差分 (例: reflection_generated の `/bigobj`) だけを書きます。全プロジェクト共通の設定を vcxproj に足さないこと。
+  - vcxproj 内の ItemDefinitionGroup とファイル単位のメタデータ (`pch.cpp` の `PrecompiledHeader=Create` など) は、値が全構成で同じでも構成ごとの条件付きで書きます (VS が書く形)。条件なしにまとめると、プロパティページで 1 構成だけ変えたつもりの編集が全構成に入ることを VS 2026 で確認しています。
 
 ### ReflectionGenerator (C#)
 

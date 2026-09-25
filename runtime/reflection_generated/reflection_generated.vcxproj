@@ -52,14 +52,24 @@
     <Import Project="..\property_sheet\nox.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <ItemDefinitionGroup>
+  <!--
+    生成されたリフレクションコードはUnityビルドでまとめられるため、
+    1つの翻訳単位のセクション数がCOFFの上限を超えることがある。
+    束ね方はファイルの列挙順に依存し環境によって変わるため、
+    ローカルでは通るのにCIで C1128 になった。/bigobj で上限を引き上げる。
+  -->
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <!--
-        生成されたリフレクションコードはUnityビルドでまとめられるため、
-        1つの翻訳単位のセクション数がCOFFの上限を超えることがある。
-        束ね方はファイルの列挙順に依存し環境によって変わるため、
-        ローカルでは通るのにCIで C1128 になった。/bigobj で上限を引き上げる。
-      -->
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'">
+    <ClCompile>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
   </ItemDefinitionGroup>
@@ -144,7 +154,9 @@
     <ClCompile Include="pch.cpp">
       <SubType>
       </SubType>
-      <PrecompiledHeader>Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Master|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

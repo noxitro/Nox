@@ -49,7 +49,17 @@
     <Import Project="..\property_sheet\nox.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <PostBuildEvent>
+      <Command>call $(SolutionDir)bin\MakeAllIncludeHeader.exe $(ProjectDir) $(ProjectName)</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <PostBuildEvent>
+      <Command>call $(SolutionDir)bin\MakeAllIncludeHeader.exe $(ProjectDir) $(ProjectName)</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'">
     <PostBuildEvent>
       <Command>call $(SolutionDir)bin\MakeAllIncludeHeader.exe $(ProjectDir) $(ProjectName)</Command>
     </PostBuildEvent>
