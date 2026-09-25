@@ -10,6 +10,9 @@
 #         GitHub の schedule は混雑時に遅れるので、ちょうど 0 分を避けている。
 # 検証  : このワークフローかスクリプトを変えた push では dry-run で走らせる
 #         (投稿も状態の更新もしない。内容はジョブのサマリーで見られる)。
+#         有料の Claude は push の dry-run では呼ばない (無料の Gemini だけ)。
+# 状態  : 日次・週次それぞれ「前回レポートした master の地点」を actions/cache に
+#         保存し、次回はそこから今までを対象にする (dev-report.py の先頭を参照)。
 #
 # 必要な secret (リポジトリの Settings > Secrets and variables > Actions):
 #   DISCORD_WEBHOOK_URL             投稿先。ci.yml の通知と同じもの
@@ -46,8 +49,9 @@ on:
       - '.github/scripts/discord_webhook.py'
 
 # 日次と週次は別々に、同じ種類は順番に走らせる (状態を二重に進めないため)。
+# schedule と手動実行で同じグループになるよう、cron の文字列ではなく種類で分ける。
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.schedule || inputs.mode || 'push' }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'push' && 'push' || ((github.event.schedule == '17 16 * * 0' || inputs.mode == 'weekly') && 'weekly' || 'daily') }}
   cancel-in-progress: false
 
 permissions:
@@ -57,9 +61,12 @@ jobs:
   report:
     name: Report
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # AI の呼び出しは 1 プロバイダ 10 分までに抑えてある (dev-report.py の PROVIDER_BUDGET)。
+    # 2 つ使っても収まるよう余裕を持たせる。
+    timeout-minutes: 30
     env:
-      HAS_ANTHROPIC: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+      # 有料の Claude は、スクリプトを変えた push の dry-run では呼ばない
+      HAS_ANTHROPIC: ${{ github.event_name != 'push' && secrets.ANTHROPIC_API_KEY != '' }}
 
     steps:
       - uses: actions/checkout@v7
@@ -88,34 +95,38 @@ jobs:
           echo "dry_run=$dry" >> "$GITHUB_OUTPUT"
           echo "mode=$mode dry_run=$dry"
 
-      # 日次の「前回レポートした地点」を取り出す。キーに run_id を含めて毎回
-      # 新しく保存し、restore-keys の前方一致で最新のものを拾う。master で
-      # 保存したキャッシュは他のブランチからも読めるので、dry-run でも同じ範囲になる。
+      # 「前回レポートした地点」を取り出す。キーに run_id を含めて毎回新しく保存し、
+      # restore-keys の前方一致で最新のものを拾う。master で保存したキャッシュは
+      # 他のブランチからも読めるので、dry-run でも同じ範囲になる。
       - name: Restore state
-        if: steps.mode.outputs.mode == 'daily'
         uses: actions/cache/restore@v6
         with:
           path: .dev-report-state
-          key: dev-report-state-daily-${{ github.run_id }}
-          restore-keys: dev-report-state-daily-
+          key: dev-report-state-${{ steps.mode.outputs.mode }}-${{ github.run_id }}
+          restore-keys: dev-report-state-${{ steps.mode.outputs.mode }}-
 
       # Ubuntu のシステム Python には pip で直接入れられない (PEP 668) ので venv を作る。
-      # Claude を使うときだけ SDK を入れる。
+      # Claude を使うときだけ SDK を入れる。PyPI の障害などで入らなくても止めない
+      # (Claude のレビューが失敗として投稿に載るだけで、Gemini とコミット一覧は届く)。
       - name: Set up Python
         shell: bash
         run: |
           python3 -m venv "$RUNNER_TEMP/venv"
           if [ "$HAS_ANTHROPIC" = 'true' ]; then
-            "$RUNNER_TEMP/venv/bin/pip" install --quiet --disable-pip-version-check 'anthropic>=1,<2'
+            "$RUNNER_TEMP/venv/bin/pip" install --quiet --disable-pip-version-check 'anthropic>=1,<2' \
+              || echo "::warning::anthropic パッケージを入れられなかった。Claude のレビューは失敗になる"
           fi
 
+      # ステップ単位の上限。ジョブの上限に達するとジョブごと中断され、下の失敗通知も
+      # 走らない。ステップで先に打ち切れば「失敗」になり、通知が届く。
       - name: Report
         id: report
+        timeout-minutes: 25
         shell: bash
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_DEV_REPORT_WEBHOOK_URL || secrets.DISCORD_WEBHOOK_URL }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ github.event_name != 'push' && secrets.ANTHROPIC_API_KEY || '' }}
           NOX_REVIEW_GEMINI_MODEL: ${{ vars.NOX_REVIEW_GEMINI_MODEL }}
           NOX_REVIEW_CLAUDE_MODEL: ${{ vars.NOX_REVIEW_CLAUDE_MODEL }}
           NOX_REVIEW_CLAUDE_EFFORT: ${{ vars.NOX_REVIEW_CLAUDE_EFFORT }}
@@ -123,14 +134,29 @@ jobs:
           MODE: ${{ steps.mode.outputs.mode }}
           DRY_RUN: ${{ steps.mode.outputs.dry_run }}
         run: |
-          args=(--mode "$MODE" --state .dev-report-state/daily.json)
+          args=(--mode "$MODE" --state ".dev-report-state/$MODE.json")
           if [ "$DRY_RUN" = 'true' ]; then args+=(--dry-run); fi
           "$RUNNER_TEMP/venv/bin/python" .github/scripts/dev-report.py "${args[@]}"
 
-      # 投稿とレビューが成功して地点を進めたときだけ保存する。
+      # 投稿できて地点を進めたときだけ保存する。
       - name: Save state
         if: steps.report.outputs.state_updated == 'true'
         uses: actions/cache/save@v6
         with:
           path: .dev-report-state
-          key: dev-report-state-daily-${{ github.run_id }}
+          key: dev-report-state-${{ steps.mode.outputs.mode }}-${{ github.run_id }}
+
+      # 以前の別リポジトリ版は、毎日失敗していたのに誰も気付かなかった。
+      # 定期実行が落ちたら (投稿の失敗・タイムアウト・想定外のエラー) Discord に流す。
+      - name: Notify failure
+        if: failure() && steps.mode.outputs.dry_run != 'true'
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_DEV_REPORT_WEBHOOK_URL || secrets.DISCORD_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          python3 .github/scripts/discord_webhook.py \
+            --title ":x: 開発レポートの作成に失敗した — ${GITHUB_REPOSITORY}" \
+            --description "ログを確認すること。地点は進めていないので、次回に同じ範囲をもう一度扱う。" \
+            --color red --url "$RUN_URL" \
+            --footer "${GITHUB_WORKFLOW} #${GITHUB_RUN_NUMBER}"

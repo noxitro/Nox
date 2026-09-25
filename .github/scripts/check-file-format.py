@@ -15,9 +15,14 @@ base と head の 2 点を比べて、形式が変わったファイルだけを
   - BOM が外れた / 付いた
   - 改行コードが一括変換された (CRLF -> LF, LF -> CRLF)
   - 改行が揃っていたファイルに、別の改行の行が混ざった
+  - 元から混在していたファイルで、少数派の改行の行が増えた / 少数派へ一括変換された
   - 新規ファイルの中で改行が混在している
 警告だけにするもの (warning):
-  - 元から改行が混在していたファイルが、どちらかに揃えられた (直す方向の変換)
+  - 元から混在していたファイルが、多数派の改行に揃えられた (直す方向の変換)
+  - 事故で変わった形式を、その前の形式へ戻した (過去の版を遡って判定する)
+見ないもの:
+  - バイナリ、空のファイル、シンボリックリンク、サブモジュール
+  - BOM と CR を除いた内容の類似度が 90% 未満の移動・複製 (別ファイルとみなし、新規ファイルとしてだけ見る)
 
 意図して変換するときは、範囲内のどれかのコミットメッセージに
     Format-Change: <パス or glob>
@@ -26,11 +31,13 @@ base と head の 2 点を比べて、形式が変わったファイルだけを
 使い方:
     python3 .github/scripts/check-file-format.py --base <rev> --head <rev>
     python3 .github/scripts/check-file-format.py --base origin/master   # 手元で push 前に確認
+                                                                        # (master との分岐点から比べる)
 
 終了コード: error があれば 1、なければ 0。
 """
 
 import argparse
+import difflib
 import fnmatch
 import os
 import re
@@ -122,7 +129,8 @@ def minority(fmt):
 
 
 def parse_raw_diff(base, head):
-    """git diff --raw -z の出力を (status, old_mode, new_mode, old_sha, new_sha, old_path, new_path) に分解する。"""
+    """git diff --raw -z の出力を辞書のリストに分解する。
+    キー: kind (A/C/D/M/R/T…), score (移動・複製の類似度), old_mode, new_mode, old_sha, new_sha, old_path, new_path"""
     out = git("diff", "--raw", "-z", "--no-abbrev", "-M", "--no-ext-diff", base, head)
     tokens = out.split(b"\0")
     entries = []
@@ -140,28 +148,38 @@ def parse_raw_diff(base, head):
         else:
             old_path = new_path = tokens[i + 1].decode("utf-8", "replace")
             i += 2
-        entries.append((kind, old_mode, new_mode, old_sha, new_sha, old_path, new_path))
+        entries.append({
+            "kind": kind, "score": int(status[1:] or 100),
+            "old_mode": old_mode, "new_mode": new_mode, "old_sha": old_sha, "new_sha": new_sha,
+            "old_path": old_path, "new_path": new_path,
+        })
     return entries
 
 
-def pair_renames_by_name(entries):
-    """改行を一括変換したうえで移動したファイルは、内容の類似度が下がって git には
-    削除 + 追加に見える。同じファイル名の削除が 1 つだけあれば、移動とみなして比べる。"""
-    deleted = {}
+def normalized(data):
+    """BOM と CR を除いた内容。形式だけが違う同じファイルを見分けるのに使う。"""
+    if data.startswith(UTF8_BOM):
+        data = data[len(UTF8_BOM):]
+    return data.replace(b"\r\n", b"\n")
+
+
+def pair_converted_moves(entries, reader):
+    """改行を一括変換したうえで移動したファイルは、全行が変わるので git の移動検出に
+    かからず、削除 + 追加に見える。BOM と CR を除いた内容が完全に一致する削除と追加が
+    1 対 1 なら、移動とみなして変更前後の形式を比べる。"""
+    deleted, added = {}, {}
     for e in entries:
-        if e[0] == "D":
-            deleted.setdefault(os.path.basename(e[5]).lower(), []).append(e)
-    paired = set()
-    result = []
-    for e in entries:
-        if e[0] != "A":
-            continue
-        cands = deleted.get(os.path.basename(e[6]).lower(), [])
-        if len(cands) == 1 and id(cands[0]) not in paired:
-            d = cands[0]
-            paired.add(id(d))
-            result.append(("R?", d[1], e[2], d[3], e[4], d[5], e[6]))
-    return result, paired
+        if e["kind"] == "D" and e["old_mode"] not in SKIP_MODES:
+            deleted.setdefault(normalized(reader.read(e["old_sha"]) or b""), []).append(e)
+        elif e["kind"] == "A" and e["new_mode"] not in SKIP_MODES:
+            added.setdefault(normalized(reader.read(e["new_sha"]) or b""), []).append(e)
+    pairs = []
+    for key, adds in added.items():
+        dels = deleted.get(key, [])
+        if key and len(adds) == 1 and len(dels) == 1:
+            d, a = dels[0], adds[0]
+            pairs.append(dict(a, kind="R", old_mode=d["old_mode"], old_sha=d["old_sha"], old_path=d["old_path"]))
+    return pairs
 
 
 def allowed_patterns(base, head):
@@ -175,64 +193,153 @@ def allowed_patterns(base, head):
     return patterns
 
 
+def earlier_formats(reader, base, path, limit=20):
+    """base 以前にこのパスを変えたコミットでの形式を、新しい順に返す (base 時点の版を含む)。"""
+    out = git("log", f"-n{limit}", "--format=%H", base, "--", path, check=False).decode().split()
+    formats = []
+    for sha in out:
+        fmt = classify(reader.read(f"{sha}:{path}"))
+        if fmt is not None:
+            formats.append(fmt)
+    return formats
+
+
+def restored(history, attr, old_value, new_value):
+    """直前の形式変更の前の値へ戻しただけか。history は新しい順の過去の形式。
+    事故で壊れたファイルを元に戻すコミットを、新たな変換として咎めないため。"""
+    for fmt in history:
+        value = getattr(fmt, attr)
+        if value != old_value:
+            return value == new_value
+    return False
+
+
+def majority(fmt):
+    return "CRLF" if fmt.crlf >= fmt.lf else "LF"
+
+
+def compare(old, new, where, path, history):
+    """変更前後の形式を比べ、(errors, warnings) を返す。history は元の形式を調べるための遅延関数。"""
+    errors, warnings = [], []
+
+    if old.bom != new.bom:
+        if old.bom:
+            title, message = "BOM が外れた", f"{where}: UTF-8 BOM 付きだったファイルから BOM が外れた"
+        else:
+            title, message = "BOM が付いた", f"{where}: BOM なしだったファイルに UTF-8 BOM が付いた"
+        if restored(history(), "bom", old.bom, new.bom):
+            warnings.append((path, 1, "BOM を元に戻した", f"{where}: 以前の形式 ({'BOM あり' if new.bom else 'BOM なし'}) に戻した"))
+        else:
+            errors.append((path, 1, title, message))
+
+    if old.eol == new.eol and old.eol != "mixed":
+        pass
+    elif new.eol == "none":
+        pass
+    elif old.eol == "mixed":
+        stray = "LF" if majority(old) == "CRLF" else "CRLF"
+        old_stray = old.lf if stray == "LF" else old.crlf
+        new_stray = new.lf if stray == "LF" else new.crlf
+        if new.eol == majority(old):
+            warnings.append((path, None, "改行の混在が解消された",
+                f"{where}: 改行が混在していたファイルが多数派の {new.eol} に揃えられた (元 CRLF {old.crlf} 行 / LF {old.lf} 行)"))
+        elif new.eol == stray:
+            errors.append((path, 1, "改行コードが変わった",
+                f"{where}: 改行が混在していた (CRLF {old.crlf} 行 / LF {old.lf} 行) ファイルが、少数派の {stray} に一括変換された"))
+        elif new_stray > old_stray:
+            lines = new.lines_ending_with(stray)
+            errors.append((path, lines[0] if lines else None, "改行の混在が増えた",
+                f"{where}: 多数派が {majority(old)} のファイルで {stray} の行が {old_stray} 行から {new_stray} 行に増えた"))
+    elif new.eol == "mixed":
+        # 元の改行と違う方で終わる行が、紛れ込んだ行
+        stray = "LF" if old.eol == "CRLF" else "CRLF" if old.eol == "LF" else minority(new)
+        lines = new.lines_ending_with(stray)
+        errors.append((path, lines[0] if lines else None, "改行が混在した",
+            f"{where}: {old.eol if old.eol != 'none' else '改行なし'} のファイルに {stray} の行が混ざった "
+            f"(CRLF {new.crlf} 行 / LF {new.lf} 行、{stray} の行: {', '.join(map(str, lines))} …)"))
+    elif old.eol != "none":
+        if restored(history(), "eol", old.eol, new.eol):
+            warnings.append((path, 1, "改行コードを元に戻した", f"{where}: 以前の改行コード {new.eol} に戻した"))
+        else:
+            errors.append((path, 1, "改行コードが変わった",
+                f"{where}: 改行コードが {old.eol} から {new.eol} に一括変換された (差分が全行になる)"))
+    return errors, warnings
+
+
+# 移動・複製として形式を比べる類似度の下限。これ未満の移動 (テンプレートから作った別物の
+# pch.h が 61% で対応付くなど) は別ファイルとみなし、新規ファイルとしてだけ見る。
+# git の類似度は CR や BOM の違いも差分に数えるので、改行を変換して移動したファイルは
+# 低く出る。90 未満のときは BOM と CR を除いた内容で測り直す。
+RENAME_SCORE_MIN = 90
+# 測り直しに difflib を使うので、大きすぎるファイルは測らない (別ファイル扱い)
+SIMILARITY_MAX_BYTES = 1024 * 1024
+
+
+def same_file(entry, reader):
+    """移動・複製の前後が、形式を比べるべき同じファイルか。"""
+    if entry["score"] >= RENAME_SCORE_MIN:
+        return True
+    a, b = reader.read(entry["old_sha"]) or b"", reader.read(entry["new_sha"]) or b""
+    if len(a) > SIMILARITY_MAX_BYTES or len(b) > SIMILARITY_MAX_BYTES:
+        return False
+    a_lines, b_lines = normalized(a).split(b"\n"), normalized(b).split(b"\n")
+    return difflib.SequenceMatcher(None, a_lines, b_lines, autojunk=False).ratio() * 100 >= RENAME_SCORE_MIN
+
+
 def check(base, head):
     """(errors, warnings, checked) を返す。各指摘は (path, line or None, title, message)。"""
     entries = parse_raw_diff(base, head)
-    renamed, paired_deletes = pair_renames_by_name(entries)
-    targets = [e for e in entries if e[0] in ("M", "T", "R", "C")]
-    targets += renamed
-    # 移動として扱った追加は、新規ファイルとしては見ない
-    renamed_new = {e[6] for e in renamed}
-    added = [e for e in entries if e[0] == "A" and e[6] not in renamed_new]
-
     reader = BlobReader()
     errors, warnings = [], []
     checked = 0
     try:
-        for kind, old_mode, new_mode, old_sha, new_sha, old_path, new_path in targets:
-            if old_mode in SKIP_MODES or new_mode in SKIP_MODES:
+        moves = pair_converted_moves(entries, reader)
+        moved_new = {e["new_path"] for e in moves}
+        targets = []
+        added = []
+        for e in entries:
+            if e["kind"] in ("M", "T") or (e["kind"] in ("R", "C") and same_file(e, reader)):
+                targets.append(e)
+            elif e["kind"] in ("R", "C", "A") and e["new_path"] not in moved_new:
+                added.append(e)
+        targets += moves
+
+        for e in targets:
+            if e["old_mode"] in SKIP_MODES or e["new_mode"] in SKIP_MODES:
                 continue
-            old = classify(reader.read(old_sha))
-            new_data = reader.read(new_sha)
-            new = classify(new_data)
-            if old is None or new is None or len(new_data) == 0:
+            old_data = reader.read(e["old_sha"])
+            new_data = reader.read(e["new_sha"])
+            old, new = classify(old_data), classify(new_data)
+            # 空のファイルには形式が無いので、空から / 空への変更は比べない
+            if old is None or new is None or not old_data or not new_data:
                 continue
             checked += 1
+            old_path, new_path = e["old_path"], e["new_path"]
             where = new_path if old_path == new_path else f"{new_path} (移動元 {old_path})"
+            cache = []
 
-            if old.bom and not new.bom:
-                errors.append((new_path, 1, "BOM が外れた", f"{where}: UTF-8 BOM 付きだったファイルから BOM が外れた"))
-            elif not old.bom and new.bom:
-                errors.append((new_path, 1, "BOM が付いた", f"{where}: BOM なしだったファイルに UTF-8 BOM が付いた"))
+            def history(old_path=old_path, cache=cache):
+                if not cache:
+                    cache.append(earlier_formats(reader, base, old_path))
+                return cache[0]
 
-            if old.eol == new.eol or new.eol == "none":
-                pass
-            elif old.eol == "mixed":
-                warnings.append((new_path, None, "改行の混在が解消された",
-                    f"{where}: 改行が混在していたファイルが {new.eol} に揃えられた (元 CRLF {old.crlf} 行 / LF {old.lf} 行)。意図した変換なら問題ない"))
-            elif new.eol == "mixed":
-                # 元の改行と違う方で終わる行が、紛れ込んだ行
-                stray = "LF" if old.eol == "CRLF" else "CRLF" if old.eol == "LF" else minority(new)
-                lines = new.lines_ending_with(stray)
-                errors.append((new_path, lines[0] if lines else None, "改行が混在した",
-                    f"{where}: {old.eol if old.eol != 'none' else '改行なし'} のファイルに {stray} の行が混ざった "
-                    f"(CRLF {new.crlf} 行 / LF {new.lf} 行、{stray} の行: {', '.join(map(str, lines))} …)"))
-            elif old.eol != "none":
-                errors.append((new_path, 1, "改行コードが変わった",
-                    f"{where}: 改行コードが {old.eol} から {new.eol} に一括変換された (差分が全行になる)"))
+            errs, warns = compare(old, new, where, new_path, history)
+            errors += errs
+            warnings += warns
 
-        for kind, old_mode, new_mode, old_sha, new_sha, old_path, new_path in added:
-            if new_mode in SKIP_MODES:
+        for e in added:
+            if e["new_mode"] in SKIP_MODES:
                 continue
-            new = classify(reader.read(new_sha))
+            new = classify(reader.read(e["new_sha"]))
             if new is None:
                 continue
             checked += 1
             if new.eol == "mixed":
+                path = e["new_path"]
                 stray = minority(new)
                 lines = new.lines_ending_with(stray)
-                errors.append((new_path, lines[0] if lines else None, "改行が混在している",
-                    f"{new_path}: 新規ファイルの中で改行が混在している (CRLF {new.crlf} 行 / LF {new.lf} 行、{stray} の行: {', '.join(map(str, lines))} …)"))
+                errors.append((path, lines[0] if lines else None, "改行が混在している",
+                    f"{path}: 新規ファイルの中で改行が混在している (CRLF {new.crlf} 行 / LF {new.lf} 行、{stray} の行: {', '.join(map(str, lines))} …)"))
     finally:
         reader.close()
 
@@ -265,6 +372,14 @@ def main():
 
     base = git("rev-parse", "--verify", args.base + "^{commit}").decode().strip()
     head = git("rev-parse", "--verify", args.head + "^{commit}").decode().strip()
+    # base が head の祖先でない (手元で --base origin/master を指定したが master が先へ
+    # 進んでいる、force-push された、など) ときは分岐点から比べる。そうしないと、
+    # こちらが触っていないファイルの master 側の変更を逆向きに検出してしまう。
+    if subprocess.run(["git", "merge-base", "--is-ancestor", base, head]).returncode != 0:
+        mb = git("merge-base", base, head, check=False).decode().strip()
+        if mb:
+            print(f"{base[:10]} は {head[:10]} の祖先ではないので、分岐点 {mb[:10]} から比べる")
+            base = mb
     errors, warnings, checked = check(base, head)
 
     in_actions = os.environ.get("GITHUB_ACTIONS") == "true"

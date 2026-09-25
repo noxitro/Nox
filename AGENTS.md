@@ -63,7 +63,7 @@ Master 構成は `NOX_ASSERT` も `NOX_DEVELOP` も消えるため、Debug / Rel
 - 実際に「29 ファイルの BOM 剥がれ」「ヘッダ 1 本の CRLF 一括変換」を起こしています。
 - `.gitattributes` で git 側の改行変換は無効化してありますが、**書き換えツール自身が壊すのは防げません。**
 - 変更後は `git diff --stat` を見て、行数が実際の編集量と釣り合っているか確認してください。
-- push ごとに CI (`.github/workflows/file-format.yml`) が、変更前後で BOM の有無・改行コードが変わっていないか、改行が混在していないかを検査し、落ちたら Discord に通知します。push 前に手元で確かめるには `python3 .github/scripts/check-file-format.py --base origin/master` を実行します。
+- push ごとに CI (`.github/workflows/file-format.yml`) が、変更前後で BOM の有無・改行コードが変わっていないか、改行が新たに混在していないかを検査し、落ちたら Discord に通知します。push 前に手元で確かめるには `python3 .github/scripts/check-file-format.py --base origin/master` を実行します (master との分岐点から比べます)。
 - 意図して形式を変えるときは、そのコミットメッセージに `Format-Change: <パス or glob>` の行を書きます (該当ファイルは警告扱いになります)。
 
 ## 最優先ルール

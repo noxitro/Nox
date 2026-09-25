@@ -13,12 +13,14 @@
 日次 (daily):
   前回レポートした master の地点から、今の HEAD までを対象にする。前回の地点は
   ワークフローが actions/cache に保存した状態ファイル (--state) から読む。日付で
-  区切らないのは、(1) 前日のコミットを翌日に push すると取りこぼす、(2) 実行が
-  失敗した日の分が抜ける、の 2 つを避けるため。状態が無いとき (初回・キャッシュ
-  切れ・履歴の書き換え後) は JST の前日 1 日分に戻る。
+  区切らないのは、(1) 前日のコミットを翌日に push すると取りこぼす、(2) 投稿に
+  失敗した日の分が抜ける、(3) pull のマージで first-parent がずれると同じコミットを
+  二重に数える、を避けるため。状態が無いとき (初回・キャッシュ切れ・履歴の書き換え後)
+  は JST の前日 1 日分に戻る。
   対象のコミットが無い日は投稿しない (流れてきた時点で見るものがある、にする)。
 週次 (weekly):
-  JST で直近 7 日 (実行日の 0 時まで) を集計し、活動統計と週の総括を投稿する。
+  日次と同じ仕組みで前回の週次レポート以降 (状態が無ければ JST の直近 7 日) を集計し、
+  活動統計と週の総括を投稿する。コミットが無い週も投稿する。
 
 AI レビュー (設定されている API キーの分だけ行い、並べて投稿する):
   GEMINI_API_KEY     Google Gemini API。無料枠で使える (既定モデル gemini-3.8-flash)。
@@ -33,12 +35,14 @@ AI レビュー (設定されている API キーの分だけ行い、並べて�
   python3 .github/scripts/dev-report.py --mode daily --dry-run
   python3 .github/scripts/dev-report.py --mode daily --dry-run --base <rev> --head <rev>
 
-終了コード: 投稿できて AI レビューも失敗しなければ 0。どれかが失敗したら 1
-(日次では状態を進めないので、次回に同じ範囲をもう一度レビューする)。
+終了コード: 投稿できれば 0 (AI レビューの失敗は投稿の中に赤い embed で示す)。
+投稿できなければ 1 で、状態を進めないので次回に同じ範囲を投稿し直す。
+指定したリビジョンを解決できなければ 2。
 """
 
 import argparse
 import datetime as dt
+import http.client
 import json
 import os
 import re
@@ -65,6 +69,11 @@ MAX_LISTED_COMMITS = 40
 
 GEMINI_DEFAULT_MODEL = "gemini-3.8-flash"
 CLAUDE_DEFAULT_MODEL = "claude-opus-5"
+# 1 回の API 呼び出しを待つ上限 (秒) と、再試行を含めた 1 プロバイダの持ち時間 (秒)。
+# 両プロバイダの持ち時間の合計が、ワークフローの timeout-minutes (30 分) に余裕を
+# 持って収まるようにしてある。超えるとジョブごと打ち切られて何も投稿されない。
+REQUEST_TIMEOUT = 300
+PROVIDER_BUDGET = 600
 # 100 万トークンあたりの USD (入力, 出力)。概算の表示にだけ使う。
 CLAUDE_PRICES = {
     "claude-fable-5-1": (10.0, 50.0),
@@ -201,36 +210,39 @@ def file_patches(base, head, files):
 # 範囲の決定
 # ---------------------------------------------------------------------------
 
-def resolve_daily_range(head, state_path, now):
-    """(base, head, 説明) を返す。base が None なら head までの全部。"""
-    state = None
-    if state_path and os.path.exists(state_path):
-        try:
-            with open(state_path, encoding="utf-8") as f:
-                state = json.load(f)
-        except (OSError, ValueError) as e:
-            print(f"::warning::状態ファイルを読めなかった ({e})。前日分にする")
+def load_state(path):
+    if not path or not os.path.exists(path):
+        return None
+    try:
+        with open(path, encoding="utf-8") as f:
+            state = json.load(f)
+        return state if isinstance(state, dict) else None
+    except (OSError, ValueError) as e:
+        print(f"::warning::状態ファイルを読めなかった ({e})。日付の範囲で集計する")
+        return None
+
+
+def resolve_range(head, state, now, days):
+    """対象の範囲を (base, head, 期間の表示, 説明) で返す。base が None なら head までの全部。
+
+    前回レポートした地点 (state) があり、今の head の祖先なら、そこから head まで。
+    日付で区切るより確実で、pull のマージで first-parent がずれても二重に数えない。
+    無ければ JST の直近 days 日 (今日の 0 時まで) を、first-parent を遡って決める。"""
     if state and state.get("head"):
         base = rev(state["head"])
         if base and is_ancestor(base, head):
-            return base, head, f"前回のレポート ({state['head'][:10]}) 以降"
-        print(f"::warning::前回の地点 {state['head'][:10]} が今の履歴に無い (履歴の書き換え?)。前日分にする")
+            since = state.get("reported_at", "")[:10] or "前回"
+            period = f"{since} 〜 {now.astimezone(JST):%Y-%m-%d}"
+            return base, head, period, f"前回のレポート ({state['head'][:10]}) 以降"
+        print(f"::warning::前回の地点 {state['head'][:10]} が今の履歴に無い (履歴の書き換え?)。日付の範囲で集計する")
 
-    today = now.astimezone(JST).replace(hour=0, minute=0, second=0, microsecond=0)
-    start = today - dt.timedelta(days=1)
-    end_head = first_parent_before(head, today)
-    if end_head is None:
-        return None, None, "前日分"
-    return first_parent_before(head, start), end_head, f"{start:%Y-%m-%d} (JST) の 1 日分"
-
-
-def resolve_weekly_range(head, now):
     end = now.astimezone(JST).replace(hour=0, minute=0, second=0, microsecond=0)
-    start = end - dt.timedelta(days=7)
+    start = end - dt.timedelta(days=days)
+    period = f"{start:%Y-%m-%d}" if days == 1 else f"{start:%Y-%m-%d} 〜 {(end - dt.timedelta(days=1)):%Y-%m-%d}"
     end_head = first_parent_before(head, end)
     if end_head is None:
-        return None, None, start, end
-    return first_parent_before(head, start), end_head, start, end
+        return None, None, period, f"{period} (JST)"
+    return first_parent_before(head, start), end_head, period, f"{period} (JST)"
 
 
 # ---------------------------------------------------------------------------
@@ -360,7 +372,7 @@ class Review:
         return " · ".join(parts)
 
 
-def http_json(url, body, headers, timeout=600):
+def http_json(url, body, headers, timeout=REQUEST_TIMEOUT):
     req = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), method="POST",
                                  headers={"Content-Type": "application/json", **headers})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -390,28 +402,32 @@ def review_with_gemini(system, user):
         # 思考に使うトークンも出力の上限に含まれるので、本文 3,000 文字に対して十分に取る
         "generationConfig": {"maxOutputTokens": 32768},
     }
-    headers = {"x-goog-api-key": os.environ["GEMINI_API_KEY"]}
+    headers = {"x-goog-api-key": os.environ["GEMINI_API_KEY"].strip()}
     data = None
-    attempts = 4
-    for attempt in range(attempts):
+    started = time.monotonic()
+    attempt = 0
+    while True:
         try:
             data = http_json(url, body, headers)
             break
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", "replace")
-            if e.code in (429, 500, 503, 504) and attempt + 1 < attempts:
-                delay = gemini_retry_delay(detail, attempt)
-                print(f"Gemini: HTTP {e.code}。{delay:.0f} 秒待って再試行する")
-                time.sleep(delay)
-                continue
-            r.error = f"HTTP {e.code}: {detail[:400]}"
+            retryable = e.code in (429, 500, 503, 504)
+            delay = gemini_retry_delay(detail, attempt)
+            error = f"HTTP {e.code}: {detail[:400]}"
+        except (urllib.error.URLError, http.client.HTTPException, OSError, ValueError) as e:
+            # 接続の失敗、応答途中の切断 (RemoteDisconnected / IncompleteRead)、
+            # タイムアウト、JSON でない応答 (プロキシのエラーページなど)
+            retryable = True
+            delay = min(15 * (2 ** attempt), 120)
+            error = f"{type(e).__name__}: {getattr(e, 'reason', e)}"
+        attempt += 1
+        # 持ち時間の中で、もう 1 回待って投げても間に合うときだけ再試行する
+        if not retryable or time.monotonic() - started + delay + REQUEST_TIMEOUT > PROVIDER_BUDGET:
+            r.error = error
             return r
-        except (urllib.error.URLError, TimeoutError) as e:
-            if attempt + 1 < attempts:
-                time.sleep(15 * (2 ** attempt))
-                continue
-            r.error = f"接続に失敗した: {getattr(e, 'reason', e)}"
-            return r
+        print(f"Gemini: {error[:120]}。{delay:.0f} 秒待って再試行する")
+        time.sleep(delay)
 
     usage = data.get("usageMetadata", {})
     r.input_tokens = usage.get("promptTokenCount")
@@ -461,7 +477,8 @@ def review_with_claude(system, user):
         params["betas"] = ["server-side-fallback-2026-07-01"]
         params["extra_body"] = {"fallbacks": "default"}
 
-    client = anthropic.Anthropic(max_retries=4)
+    # 再試行を含めて PROVIDER_BUDGET に収める (SDK はタイムアウトと 429 / 5xx を自動で再試行する)
+    client = anthropic.Anthropic(timeout=REQUEST_TIMEOUT, max_retries=1)
     try:
         if "betas" in params:
             resp = client.beta.messages.create(**params)
@@ -476,11 +493,13 @@ def review_with_claude(system, user):
 
     r.input_tokens = resp.usage.input_tokens
     r.output_tokens = resp.usage.output_tokens
-    price = CLAUDE_PRICES.get(model)
+    # 実際に応答したモデルの単価で見積もる。fallback が起きたときは、拒否した側の
+    # 試行の費用が別に掛かっている場合があり、それはこの概算に含まれない。
+    price = CLAUDE_PRICES.get(resp.model) or CLAUDE_PRICES.get(model)
     if price:
         r.cost_usd = (r.input_tokens * price[0] + r.output_tokens * price[1]) / 1_000_000
     if resp.model != model:
-        r.notes.append(f"{resp.model} が応答 (fallback)")
+        r.notes.append(f"{resp.model} が応答 (fallback。拒否された試行の費用は概算に含まない)")
     if resp.stop_reason == "refusal":
         r.error = "モデルがレビューを拒否した (stop_reason=refusal)"
         return r
@@ -493,11 +512,21 @@ def review_with_claude(system, user):
 
 
 def run_reviews(system, user):
+    """設定されているプロバイダでレビューする。1 つが想定外の例外で落ちても、
+    他のプロバイダと Discord への投稿は続ける。"""
     reviews = []
-    if os.environ.get("GEMINI_API_KEY"):
-        reviews.append(review_with_gemini(system, user))
-    if os.environ.get("ANTHROPIC_API_KEY"):
-        reviews.append(review_with_claude(system, user))
+    providers = []
+    if os.environ.get("GEMINI_API_KEY", "").strip():
+        providers.append(("Gemini", os.environ.get("NOX_REVIEW_GEMINI_MODEL") or GEMINI_DEFAULT_MODEL, review_with_gemini))
+    if os.environ.get("ANTHROPIC_API_KEY", "").strip():
+        providers.append(("Claude", os.environ.get("NOX_REVIEW_CLAUDE_MODEL") or CLAUDE_DEFAULT_MODEL, review_with_claude))
+    for name, model, fn in providers:
+        try:
+            reviews.append(fn(system, user))
+        except Exception as e:  # noqa: BLE001
+            r = Review(name, model)
+            r.error = f"想定外のエラー: {type(e).__name__}: {str(e)[:300]}"
+            reviews.append(r)
     for r in reviews:
         status = f"失敗: {r.error}" if r.error else f"{len(r.text)} 文字"
         print(f"{r.provider} ({r.model}): {status} / {r.footer()}")
@@ -564,12 +593,25 @@ def date_span(commits):
     return dates[0] if len(dates) == 1 else f"{dates[0]} 〜 {dates[-1]}"
 
 
-def daily(args, now):
+def resolve(args, now, days):
+    """(base, head, 期間の表示, 説明) を返す。指定されたリビジョンが解決できなければ終了コード 2 で抜ける。"""
     head = rev(args.head)
+    if head is None:
+        print(f"::error::--head {args.head} を解決できない")
+        sys.exit(2)
     if args.base:
-        base, desc = rev(args.base), f"指定範囲 {args.base}..{args.head}"
-    else:
-        base, head, desc = resolve_daily_range(head, args.state, now)
+        base = rev(args.base)
+        if base is None:
+            # 黙ってリポジトリの先頭からにすると、履歴全体を AI に送って投稿してしまう
+            print(f"::error::--base {args.base} を解決できない")
+            sys.exit(2)
+        return base, head, f"{args.base}..{args.head}", f"指定範囲 {args.base}..{args.head}"
+    return resolve_range(head, load_state(args.state), now, days)
+
+
+def daily(args, now):
+    """(終了コード, 次回の起点にする head) を返す。"""
+    base, head, period, desc = resolve(args, now, days=1)
     if head is None or base == head:
         print(f"対象: {desc}。新しいコミットが無いので投稿しない")
         return 0, head
@@ -622,9 +664,8 @@ def daily(args, now):
 
 
 def weekly(args, now):
-    head = rev(args.head)
-    base, head, start, end = resolve_weekly_range(head, now)
-    period = f"{start:%Y-%m-%d} 〜 {(end - dt.timedelta(days=1)):%Y-%m-%d}"
+    """(終了コード, 次回の起点にする head) を返す。コミットが無い週も投稿する。"""
+    base, head, period, desc = resolve(args, now, days=7)
     commits = list_commits(base, head) if head and base != head else []
     files = changed_files(base, head) if commits else []
     merges = count_merges(base, head) if commits else 0
@@ -639,7 +680,8 @@ def weekly(args, now):
     body = [f"**コミット {len(commits)} 件**" + (f" · マージ {merges} 件" if merges else "")
             + (f" · {stat_line(files)}" if files else "")]
     if commits:
-        body += ["", "**日別**", *[f"{d:%m/%d} ({'月火水木金土日'[d.weekday()]}): {n} 件" for d, n in sorted(per_day.items())]]
+        # 日付はコミット日。前の週に作って今週 push したコミットは、その日付に数える
+        body += ["", "**コミット日別**", *[f"{d:%m/%d} ({'月火水木金土日'[d.weekday()]}): {n} 件" for d, n in sorted(per_day.items())]]
         body += ["", "**作者**", *[f"{discord_escape(a)}: {n} 件" for a, n in sorted(authors.items(), key=lambda kv: -kv[1])]]
         body += ["", "**変更の多い場所**", *area_stats(files)]
     else:
@@ -665,28 +707,36 @@ def weekly(args, now):
     url = f"{repo_url()}/compare/{base}...{head}" if base and head and base != head else f"{repo_url()}/commits"
     embeds = discord_webhook.text_embeds(f"📊 ウィークリー開発レポート — {period}", "\n".join(body),
                                          discord_webhook.COLORS["blue"], url=url,
-                                         footer=os.environ.get("GITHUB_REPOSITORY", "noxitro/Nox"))
+                                         footer=f"{os.environ.get('GITHUB_REPOSITORY', 'noxitro/Nox')} · {desc}")
     embeds += review_embeds(reviews)
-    print(f"対象: {period} / コミット {len(commits)} 件")
-    return publish(args, embeds, reviews)
+    print(f"対象: {desc} / コミット {len(commits)} 件")
+    return publish(args, embeds, reviews), head
 
 
 def publish(args, embeds, reviews):
-    """投稿して終了コードを返す。dry-run なら表示だけ。"""
-    webhook = os.environ.get("DISCORD_WEBHOOK_URL", "")
+    """投稿して終了コードを返す。dry-run なら表示だけ。
+
+    AI レビューの失敗では 1 を返さない。失敗は赤い embed として投稿に含まれていて、
+    ここで失敗扱いにして地点を進めないと、同じ失敗 (拒否・クレジット切れなど) が毎日
+    繰り返され、範囲が伸び続けて同じコミットを何度も投稿・課金することになる。"""
+    webhook = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
+    for r in reviews:
+        if r.error:
+            print(f"::warning::{r.provider} のレビューに失敗した: {r.error}")
     if args.dry_run:
         discord_webhook.send(webhook, embeds, username="Nox Dev Report", dry_run=True)
         write_summary(embeds)
-    elif not webhook:
+        return 0
+    if not webhook:
         print("::error::DISCORD_WEBHOOK_URL が未設定なので投稿できない")
         return 1
-    else:
+    try:
         count = discord_webhook.send(webhook, embeds, username="Nox Dev Report")
-        print(f"Discord に {count} 件のメッセージを送った")
-    failed = [r for r in reviews if r.error]
-    for r in failed:
-        print(f"::error::{r.provider} のレビューに失敗した: {r.error}")
-    return 1 if failed else 0
+    except RuntimeError as e:
+        print(f"::error::{e}")
+        return 1
+    print(f"Discord に {count} 件のメッセージを送った")
+    return 0
 
 
 def write_summary(embeds):
@@ -706,8 +756,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--mode", choices=["daily", "weekly"], default="daily")
     ap.add_argument("--head", default="HEAD", help="レポートの終点 (既定: HEAD)")
-    ap.add_argument("--base", help="日次の起点を直接指定する (状態ファイルより優先)")
-    ap.add_argument("--state", help="日次: 前回の地点を読む/書く JSON ファイル")
+    ap.add_argument("--base", help="起点を直接指定する (状態ファイルより優先。状態は更新しない)")
+    ap.add_argument("--state", help="前回レポートした地点を読み書きする JSON ファイル (日次と週次で別にする)")
     ap.add_argument("--now", help="現在時刻の上書き (ISO 8601、試験用)")
     ap.add_argument("--dry-run", action="store_true", help="投稿せず、内容を表示するだけ")
     args = ap.parse_args()
@@ -720,15 +770,13 @@ def main():
     if now.tzinfo is None:
         now = now.replace(tzinfo=JST)
 
-    if args.mode == "weekly":
-        return weekly(args, now)
-
-    code, reported_head = daily(args, now)
-    # 投稿とレビューが成功したときだけ地点を進める。失敗したら次回に同じ範囲をやり直す。
+    code, reported_head = (weekly if args.mode == "weekly" else daily)(args, now)
+    # 投稿できたら地点を進める (AI レビューの成否は問わない。publish を参照)。
+    # 投稿に失敗したら進めず、次回に同じ範囲を投稿し直す。
     if code == 0 and args.state and not args.dry_run and not args.base and reported_head:
         os.makedirs(os.path.dirname(os.path.abspath(args.state)), exist_ok=True)
         with open(args.state, "w", encoding="utf-8") as f:
-            json.dump({"head": reported_head, "reported_at": now.isoformat()}, f)
+            json.dump({"head": reported_head, "reported_at": now.astimezone(JST).isoformat()}, f)
         out = os.environ.get("GITHUB_OUTPUT")
         if out:
             with open(out, "a", encoding="utf-8") as f:

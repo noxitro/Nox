@@ -28,11 +28,10 @@ on:
         required: false
         default: ''
 
-# 打ち切らない。push ごとの差分 (before..sha) を見るので、古い実行を打ち切ると
-# その push の範囲が検査されないまま残る。
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+# concurrency は付けない。push ごとの差分 (before..sha) を見るので、1 本でも実行が
+# 消えるとその push の範囲が検査されないまま残る。cancel-in-progress: false にしても
+# 待機中の実行は新しい実行に置き換えられて消えるため、グループ自体を作らない。
+# 各実行は読むだけで互いに干渉しないので、並行して走ってよい。
 
 permissions:
   contents: read
@@ -58,9 +57,11 @@ jobs:
           set -uo pipefail
           # 比較元を決める。
           #   push           : push 前の地点 (before)
-          #   新規ブランチ    : master との分岐点 (before が 0000…)
+          #   新規ブランチ    : master との分岐点 (before が 0000…)。自前のコミットが
+          #                    無い (master の既存コミットを指すだけの) ブランチは検査しない
           #   force-push 等  : before が取れなければ master との分岐点
           #   手動実行       : 入力の base、無ければ直前のコミット
+          # base が head の祖先でなければ、スクリプト側で分岐点に置き換える。
           base=''
           if [ -n "${INPUT_BASE}" ]; then
             base="${INPUT_BASE}"
@@ -70,6 +71,9 @@ jobs:
             mb=$(git merge-base origin/master HEAD 2>/dev/null || true)
             if [ -n "$mb" ] && [ "$mb" != "$(git rev-parse HEAD)" ]; then
               base="$mb"
+            elif [ "${GITHUB_EVENT_NAME}" = "push" ] && [ -n "$mb" ]; then
+              echo "master に既にあるコミットを指すだけの push なので、検査するものが無い"
+              exit 0
             elif git rev-parse --verify --quiet HEAD^ >/dev/null; then
               base="HEAD^"
             fi

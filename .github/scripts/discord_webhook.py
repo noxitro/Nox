@@ -79,7 +79,9 @@ def split_text(text, limit=CHUNK_CHARS):
 
 
 def text_embeds(title, text, color, url=None, footer=None):
-    """本文を分割して embed の列にする。2 つ目以降のタイトルには (続き) を付ける。"""
+    """本文を分割して embed の列にする。2 つ目以降のタイトルには (続き) を付ける。
+    url は先頭の embed にだけ付ける。同じ url の embed が 1 メッセージに並ぶと、Discord は
+    画像ギャラリーとしてまとめてしまい、2 つ目以降を表示しない。"""
     embeds = []
     for i, chunk in enumerate(split_text(text or "(なし)")):
         embed = {
@@ -87,7 +89,7 @@ def text_embeds(title, text, color, url=None, footer=None):
             "description": chunk,
             "color": color,
         }
-        if url:
+        if url and i == 0:
             embed["url"] = url
         embeds.append(embed)
     if footer:
@@ -125,7 +127,9 @@ def pack_messages(embeds):
 
 
 def post(webhook, payload, retries=5):
-    """1 メッセージ分を投稿する。429 は retry_after に従い、5xx は指数バックオフで再送する。"""
+    """1 メッセージ分を投稿する。429 は retry_after に従い、5xx は指数バックオフで再送する。
+    Webhook の URL にはトークンが含まれるので、どの失敗でも例外の文面に URL を載せない。"""
+    webhook = webhook.strip()
     url = webhook + ("&" if "?" in webhook else "?") + "wait=true"
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     for attempt in range(retries):
@@ -155,7 +159,10 @@ def post(webhook, payload, retries=5):
             if attempt + 1 < retries:
                 time.sleep(2 ** attempt)
                 continue
-            raise RuntimeError(f"Discord への接続に失敗した: {e.reason}") from None
+            raise RuntimeError(f"Discord への接続に失敗した: {type(e.reason).__name__}") from None
+        except Exception as e:  # noqa: BLE001  URL を含みうる文面を出さないため、型名だけにする
+            # 応答を読む途中で切れた場合などは、投稿済みかもしれないので再送しない
+            raise RuntimeError(f"Discord への投稿に失敗した: {type(e).__name__}") from None
 
 
 def send(webhook, embeds, username=None, dry_run=False):
@@ -185,7 +192,7 @@ def main():
     ap.add_argument("--dry-run", action="store_true", help="投稿せずに payload を表示する")
     args = ap.parse_args()
 
-    webhook = os.environ.get("DISCORD_WEBHOOK_URL", "")
+    webhook = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
     if not webhook and not args.dry_run:
         print("::warning::DISCORD_WEBHOOK_URL が未設定なので通知をスキップする")
         return 0
