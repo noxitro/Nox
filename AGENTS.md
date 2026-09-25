@@ -24,10 +24,21 @@ Nox は、カスタムのリフレクション生成システムと WPF ベー�
 
 **エージェントはメインのチェックアウトでビルドしません。** ユーザーが Visual Studio で作業しているので、ビルド出力と生成物の取り合いになり、実際にファイルロックで長時間ブロックされたことがあります。
 
-- `git worktree add` で専用のツリーを作り、そこでビルド・検証まで完結させます。
+- `git worktree add` で専用のツリーを作り、編集とコミットはそこで行います。検証は下の「検証は CI で行う」に従います。
+- 以下はローカルでビルドする場合の注意です。
 - `OutDir` は `$(SolutionDir)build\` なのでワークツリーごとに独立します。vcpkg は環境変数 `NOX_VCPKG_INSTALLED_DIR` でメインのものを共有できます。
 - 生成器のバイナリ (`runtime/bin/`) は `.gitignore` 済みなのでコピーが要りますが、**同ディレクトリには追跡ファイルも混ざっています**。まとめて上書きすると巻き添えで壊すので、コピー後に `git status` を確認してください。
 - メインのチェックアウトで行ってよいのは git 操作 (commit / merge / push) だけです。
+
+### 検証は CI で行う
+
+**エージェントは原則としてローカルでビルド・テストを走らせません。** 6 構成のフルビルドはユーザーの PC を長時間占有し、Visual Studio での作業を妨げるためです。
+
+- `work/<タスク名>` を push すると、CI (`.github/workflows/ci.yml`) が 6 構成のビルドと全テストを走らせます。「master へ入れる条件」の判定にはこの結果を使います。
+- `work/*` ブランチの push はこの規約で許可済みです。確認は要りません。
+- CI が落ちたら `gh run view <run-id> --log-failed` でログを読み、直して push し直します。
+- ローカルでビルド・テストするのは、ユーザーが明示的に頼んだときだけです。
+- 文書だけの変更 (`**.md` / `docs/**` など `paths-ignore` の対象) は CI が走らないので、ビルド検証は要りません。
 
 ### マージ
 
@@ -36,8 +47,8 @@ Nox は、カスタムのリフレクション生成システムと WPF ベー�
 
 ### master へ入れる条件
 
-- **6 構成すべてがビルド成功 (exit 0 / エラー 0)**: MSVC(v145) / ClangCL × Debug / Release / Master
-- **全テストが PASS**
+- **6 構成すべてがビルド成功 (exit 0 / エラー 0)**: MSVC(v145) / ClangCL × Debug / Release / Master (CI で確認)
+- **全テストが PASS** (CI で確認)
 - **意図しない変更がないこと** (`git status` で確認)
 
 ClangCL は必須ゲートです。MSVC が見逃す非適合を実際に拾った実績があるので、落ちたら原因を直してください。`continue-on-error` で回避しないこと。
@@ -100,6 +111,8 @@ Master 構成は `NOX_ASSERT` も `NOX_DEVELOP` も消えるため、Debug / Rel
 ### Runtime (C++)
 
 - ソリューション: `runtime/runtime.slnx`
+- `PlatformToolset` / `CharacterSet` は `runtime/Directory.Build.props` で一括管理します。vcxproj には書きません (VS のプロパティページで変えると書き戻されるので、その行は消す)。
+  - `property_sheet/*.props` は `Microsoft.Cpp.props` の後に読まれるため、ツールセットを置いても切り替わりません。コンパイラ・リンカの設定はこちらに置きます。
 
 ### ReflectionGenerator (C#)
 

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  runtime 配下の全 C++ プロジェクト共通の構成プロパティ。
+  MSBuild が Microsoft.Cpp.Default.props の中から自動で読み込む。
+
+  PlatformToolset / CharacterSet をここに置くのは、Microsoft.Cpp.props より前に
+  決まっている必要があるため (ツールセット固有の Toolset.props は Microsoft.Cpp.props が
+  $(PlatformToolset) を見て選ぶ)。property_sheet\nox_common.props は Microsoft.Cpp.props の
+  後に読まれるので、そこで設定しても値だけが変わってツールセットは切り替わらない。
+
+  - vcxproj に同じプロパティを書くと、そちらが後勝ちで上書きする。書かないこと
+    (VS のプロパティページで変更すると vcxproj に書き戻されるので、その行は消す)。
+  - CI の /p:PlatformToolset=ClangCL はグローバルプロパティなので、ここより優先される。
+  - runtime\bin\source 以下の生成器などは vcxproj 側で個別に指定しており、影響を受けない。
+-->
+<Project>
+  <PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.vcxproj'">
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+</Project>

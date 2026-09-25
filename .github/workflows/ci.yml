@@ -13,7 +13,7 @@
 #         #if !NOX_MASTER で囲っており、Master ではテスト型のリフレクションが
 #         生成されず core_test が成立しないため。
 #         前準備は .github/actions/setup-nox-build に切り出してある。
-# 環境  : windows。runtime の vcxproj は PlatformToolset=v145
+# 環境  : windows。runtime は PlatformToolset=v145 (runtime/Directory.Build.props)
 #         (Visual Studio 2026) を要求するため windows-2022 では動かない。
 # 費用  : 公開リポジトリなので GitHub ホストランナーは無料 (実行の usage で
 #         billable が 0 ms になっているのを確認済み)。private に戻すと
