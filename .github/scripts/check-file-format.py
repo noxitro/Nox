@@ -199,31 +199,53 @@ def allowed_patterns(base, head):
 
 
 def earlier_formats(reader, base, path, limit=20):
-    """base 以前にこのパスを変えたコミットでの形式を、新しい順に返す (base 時点の版を含む)。"""
-    out = git("log", f"-n{limit}", "--format=%H", base, "--", path, check=False).decode().split()
-    formats = []
-    for sha in out:
+    """base 以前に master が持っていたこのパスの版を、新しい順に (形式, Format-Change の指定) で返す。
+    先頭は base 時点の版。--first-parent で、マージしたブランチは 1 版 (マージコミット) と数える。"""
+    out = git("log", "--first-parent", f"-n{limit}", "--format=%H%x01%B%x00", base, "--", path, check=False)
+    versions = []
+    for rec in out.decode("utf-8", "replace").split("\0"):
+        rec = rec.strip("\n")
+        if "\x01" not in rec:
+            continue
+        sha, message = rec.split("\x01", 1)
         fmt = classify(reader.read(f"{sha}:{path}"))
-        if fmt is not None:
-            formats.append(fmt)
-    return formats
+        if fmt is not None and fmt.data:  # 消えた版・バイナリ・空の版には形式が無い
+            patterns = [p for m in FORMAT_CHANGE_RE.finditer(message) for p in re.split(r"[\s,]+", m.group(1)) if p]
+            versions.append((fmt, any(fnmatch.fnmatch(path, p) for p in patterns)))
+    return versions
 
 
 def restored(history, attr, old_value, new_value):
-    """事故で変わった形式を、その前の形式へ戻しただけか。history は新しい順の過去の
-    形式で、先頭が base 時点の版。master で事故を直すコミットを咎めないために使う
-    (作業ブランチは master との分岐点から累積で比べるので、事故と修正が相殺される)。
+    """事故で変わった形式を、その前の形式へ戻しただけか。history は earlier_formats の戻り値。
+    master で事故を直すコミットを咎めないために使う (作業ブランチは master との分岐点から
+    累積で比べるので、事故と修正が相殺される)。
 
-    次の 2 つを満たすときだけ「戻した」とみなす。
-      - 今の形式 (old) は直前の版で入ったばかりで、その前の版は new だった
-      - 直近 10 版では new の方が old 以上に続いていた
-    「過去のどこかで new だった」まで認めると、一度でも形式が変わったファイル
-    (Nox では 80 本) で同じ事故を繰り返しても素通りする。2 つ目の条件が無いと、
-    事故 → 修正 → 同じ事故、の 3 回目を「修正を戻した」と見誤る。"""
-    versions = [getattr(f, attr) for f in history if f.data][:10]  # 空の版には形式が無い
-    if len(versions) < 2 or versions[0] != old_value:
+    履歴を同じ形式が続く区間に分け、今の区間 (old) を作った変更が「事故」で、今回その
+    1 つ前の形式に戻すなら修正とみなす。事故かどうかは次で決める。
+      - その変更のコミットに Format-Change がある → 意図した変換なので事故ではない
+      - 1 版しか続かなかった事故を、その前の形式へ戻した変更 → 修正なので事故ではない
+      - それ以外 → 事故
+    今の区間が 2 版以上続いていたら (事故の後にほかの変更を挟んだら) 修正とはみなさない。
+    そのときや、単純な数え方では誤る込み入った履歴では Format-Change で通す。"""
+    runs = []  # [値, 版の数, 区間を作ったコミットに Format-Change があるか]
+    for fmt, allowed in history:
+        value = getattr(fmt, attr)
+        if runs and runs[-1][0] == value:
+            runs[-1][1] += 1
+            runs[-1][2] = allowed  # 区間の最古の版 = その区間を作ったコミット
+        else:
+            runs.append([value, 1, allowed])
+    if len(runs) < 2 or runs[0][0] != old_value or runs[1][0] != new_value or runs[0][1] != 1:
         return False
-    return versions[1] == new_value and versions.count(new_value) >= versions.count(old_value)
+
+    def accident(i):
+        """runs[i] を作った変更 (runs[i+1] からの変更) が事故か。"""
+        if runs[i][2]:
+            return False
+        undid = i + 2 < len(runs) and runs[i + 2][0] == runs[i][0] and runs[i + 1][1] == 1 and accident(i + 1)
+        return not undid
+
+    return accident(0)
 
 
 def majority(fmt):

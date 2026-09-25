@@ -44,6 +44,7 @@ import argparse
 import datetime as dt
 import http.client
 import json
+import math
 import os
 import re
 import subprocess
@@ -412,8 +413,11 @@ def review_with_gemini(system, user):
             data = http_json(url, body, headers, timeout=deadline - time.monotonic())
             break
         except urllib.error.HTTPError as e:
-            detail = e.read().decode("utf-8", "replace")
-            retryable = e.code in (429, 500, 503, 504)
+            try:
+                detail = e.read().decode("utf-8", "replace")
+            except Exception:  # noqa: BLE001  エラー本文を読む途中で切れても、再試行の判断は続ける
+                detail = ""
+            retryable = e.code in (408, 429, 500, 502, 503, 504)
             delay = gemini_retry_delay(detail, attempt)
             error = f"HTTP {e.code}: {detail[:400]}"
         except (urllib.error.URLError, http.client.HTTPException, OSError, ValueError) as e:
@@ -454,6 +458,19 @@ def review_with_gemini(system, user):
     return r
 
 
+def retry_after_seconds(headers):
+    """retry-after-ms / retry-after (秒) を読む。0 以下・非数・日付形式などは None
+    (呼び出し側で指数バックオフにする。0 を真に受けると待たずに連打してしまう)。"""
+    for name, scale in (("retry-after-ms", 0.001), ("retry-after", 1.0)):
+        try:
+            value = float(headers.get(name) or "") * scale
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(value) and value > 0:
+            return min(max(value, 1.0), 120.0)
+    return None
+
+
 def review_with_claude(system, user):
     model = os.environ.get("NOX_REVIEW_CLAUDE_MODEL") or CLAUDE_DEFAULT_MODEL
     r = Review("Claude", model)
@@ -489,13 +506,12 @@ def review_with_claude(system, user):
             resp = api.beta.messages.create(**params) if "betas" in params else api.messages.create(**params)
             break
         except anthropic.APIStatusError as e:
-            # 429 (レート制限)、5xx、529 (過負荷) は待てば通ることがある
-            retryable = e.status_code == 429 or e.status_code >= 500
+            # SDK の再試行と同じ基準: x-should-retry があれば従い、無ければ 408 / 409 / 429 /
+            # 5xx (529 の過負荷を含む) を待てば通るものとみなす
+            should = (e.response.headers.get("x-should-retry") or "").lower()
+            retryable = should == "true" or (should != "false" and (e.status_code in (408, 409, 429) or e.status_code >= 500))
             error = f"HTTP {e.status_code}: {str(e.message)[:400]}"
-            try:
-                delay = float(e.response.headers.get("retry-after", ""))
-            except ValueError:
-                delay = 15 * (2 ** attempt)
+            delay = retry_after_seconds(e.response.headers) or 15 * (2 ** attempt)
         except anthropic.APIConnectionError as e:
             # タイムアウト (APITimeoutError) もここ。持ち時間を使い切っていれば下で諦める
             retryable = True
