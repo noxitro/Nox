@@ -36,6 +36,7 @@ namespace nox::os
 		constinit nox::os::RawKeyboardInputCallback raw_keyboard_input_callback_ = nullptr;
 		constinit void* raw_keyboard_input_user_data_ = nullptr;
 		constinit bool is_raw_keyboard_input_registered_ = false;
+		constinit bool is_raw_keyboard_input_log_enabled_ = false;
 
 #if !NOX_MASTER
 		constinit nox::util::ParallelExecuteChecker parallel_execute_checker_ = {};
@@ -69,6 +70,10 @@ void	nox::os::Initialize(const std::span<const nox::char16* const> args)
 		::OutputDebugStringW(L"RegisterRawInputDevices に失敗したため、従来のキーメッセージで代替します\n");
 	}
 #endif // NOX_WINDOWS
+
+#if NOX_DEVELOP
+	nox::os::is_raw_keyboard_input_log_enabled_ = nox::os::ContainsCommandLineArgKey(u"--log-raw-keyboard");
+#endif // NOX_DEVELOP
 }
 
 void nox::os::SetRawKeyboardInputCallback(
@@ -91,6 +96,77 @@ void nox::os::detail::DispatchRawKeyboardInput(const nox::os::RawKeyboardInputEv
 bool nox::os::detail::IsRawKeyboardInputRegistered()noexcept
 {
 	return nox::os::is_raw_keyboard_input_registered_;
+}
+
+bool nox::os::detail::IsRawKeyboardInputLogEnabled()noexcept
+{
+	return nox::os::is_raw_keyboard_input_log_enabled_;
+}
+
+bool nox::os::detail::TranslateRawKeyboardInput(
+	const nox::uint16 make_code,
+	const nox::uint16 flags,
+	const nox::uint16 virtual_key,
+	nox::os::detail::RawKeyboardTranslateState& state,
+	nox::os::RawKeyboardInputEvent& out)noexcept
+{
+	const bool is_extended1 = (flags & nox::os::detail::kRawKeyE1) != 0u;
+
+	//	Pause としては前半の E1 1D で送っている
+	const bool is_pause_tail = (state.is_e1_pending == true) && (is_extended1 == false) && (make_code == 0x45u);
+	state.is_e1_pending = is_extended1;
+	if (is_pause_tail == true)
+	{
+		return false;
+	}
+
+	out = nox::os::RawKeyboardInputEvent
+	{
+		.type = ((flags & nox::os::detail::kRawKeyBreak) != 0u)
+			? nox::os::RawKeyboardInputType::KeyUp
+			: nox::os::RawKeyboardInputType::KeyDown,
+		.make_code = make_code,
+		.virtual_key = virtual_key,
+		.is_extended = (flags & nox::os::detail::kRawKeyE0) != 0u,
+		.is_extended1 = is_extended1
+	};
+	return true;
+}
+
+nox::os::RawKeyboardInputEvent nox::os::detail::TranslateLegacyKeyMessage(
+	const bool is_down,
+	const nox::uint16 virtual_key,
+	const nox::uint32 key_data)noexcept
+{
+	nox::uint16 make_code = static_cast<nox::uint16>((key_data >> 16u) & 0xFFu);
+	bool is_extended = (key_data & (1u << 24u)) != 0u;
+	bool is_extended1 = false;
+
+	//	従来のキーメッセージでは Pause と NumLock がどちらも 0x45 で、拡張ビットの有無だけが違う。
+	//	Raw Input の表現 (Pause は E1 1D、NumLock は拡張なしの 45) へ揃える。
+	if (make_code == 0x45u)
+	{
+		if (is_extended == true)
+		{
+			is_extended = false;
+		}
+		else
+		{
+			make_code = 0x1Du;
+			is_extended1 = true;
+		}
+	}
+
+	return nox::os::RawKeyboardInputEvent
+	{
+		.type = is_down
+			? nox::os::RawKeyboardInputType::KeyDown
+			: nox::os::RawKeyboardInputType::KeyUp,
+		.make_code = make_code,
+		.virtual_key = virtual_key,
+		.is_extended = is_extended,
+		.is_extended1 = is_extended1
+	};
 }
 
 bool	nox::os::Update()
@@ -125,6 +201,7 @@ void	nox::os::Finalize()
 	nox::os::raw_keyboard_input_callback_ = nullptr;
 	nox::os::raw_keyboard_input_user_data_ = nullptr;
 	nox::os::is_raw_keyboard_input_registered_ = false;
+	nox::os::is_raw_keyboard_input_log_enabled_ = false;
 }
 
 std::span<const nox::char16* const> nox::os::GetCommandLineArgList() noexcept

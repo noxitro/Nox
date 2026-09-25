@@ -43,6 +43,40 @@ namespace nox::os
 		/// @brief Raw Input へキーボードを登録できたか
 		/// @details 登録できていれば、従来のキーメッセージはコールバックへ送らない
 		[[nodiscard]] bool IsRawKeyboardInputRegistered()noexcept;
+
+		/// @brief 受け取った Raw Input キーボード入力をデバッグ出力へ書き出すか
+		/// @details 開発ビルドで起動引数に --log-raw-keyboard を付けたときだけ true
+		[[nodiscard]] bool IsRawKeyboardInputLogEnabled()noexcept;
+
+		/// @brief RAWKEYBOARD::Flags のビット。RI_KEY_BREAK / RI_KEY_E0 / RI_KEY_E1 と同じ値
+		inline constexpr nox::uint16 kRawKeyBreak = 0x01u;
+		inline constexpr nox::uint16 kRawKeyE0 = 0x02u;
+		inline constexpr nox::uint16 kRawKeyE1 = 0x04u;
+
+		/// @brief Raw Input のキーボード入力を変換するときに、次の入力へ持ち越す状態
+		struct RawKeyboardTranslateState
+		{
+			/// @brief 直前の入力に E1 が付いていたか (Pause の後半を見分ける)
+			bool is_e1_pending = false;
+		};
+
+		/// @brief RAWKEYBOARD の値から入力を作る
+		/// @details Pause は E1 1D と 45 の 2 件に分かれて届く。後半の 45 は NumLock と同じ値なので送らない
+		/// @return 送る入力があれば true
+		[[nodiscard]] bool TranslateRawKeyboardInput(
+			nox::uint16 make_code,
+			nox::uint16 flags,
+			nox::uint16 virtual_key,
+			RawKeyboardTranslateState& state,
+			RawKeyboardInputEvent& out)noexcept;
+
+		/// @brief 従来のキーメッセージ (WM_KEYDOWN など) から入力を作る
+		/// @details Pause と NumLock はどちらも 0x45 で届くので、Raw Input の表現へ揃える
+		/// @param key_data lParam の下位 32 ビット
+		[[nodiscard]] RawKeyboardInputEvent TranslateLegacyKeyMessage(
+			bool is_down,
+			nox::uint16 virtual_key,
+			nox::uint32 key_data)noexcept;
 	}
 
 	struct ProcessMemoryInfo

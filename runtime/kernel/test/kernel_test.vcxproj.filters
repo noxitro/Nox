@@ -31,5 +31,8 @@
     <ClCompile Include="math_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="raw_keyboard_input_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
