@@ -280,6 +280,10 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="asset_format.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="asset_manager.cpp">
       <SubType>
       </SubType>

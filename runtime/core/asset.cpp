@@ -4,7 +4,9 @@
 /// @file	asset.cpp
 /// @brief	asset
 #include "pch.h"
+
 #include "asset.h"
+#include "asset_format.h"
 
 namespace nox
 {
@@ -103,6 +105,9 @@ bool nox::Asset::Initialize(std::u8string_view native_path)
 	{
 		return false;
 	}
+
+	// AssetChunkLoaderを作成
+	nox::AssetChunkLoader loader;
 
 	//	Main チャンクのビュー上に（ヒープを使わない）ストリームリーダーを構築して初期化する。
 	//	SpanStreamReader は読み取り専用（buffer_ から copy するのみ）のため、const を外しても安全。

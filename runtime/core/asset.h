@@ -5,13 +5,11 @@
 /// @brief	asset
 #pragma once
 #include	"object.h"
-#include	"asset_format.h"
-
-//NOTE:	ネイティブファイルのフォーマット定義は asset_format.h を参照。
 
 namespace nox
 {
 	class AssetManager;
+	class AssetChunkLoader;
 	class Asset : public nox::Object
 	{
 		NOX_DECLARE_OBJECT(Asset, nox::Object);

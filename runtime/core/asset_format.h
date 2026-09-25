@@ -44,4 +44,16 @@ namespace nox
 		nox::uint32 size;			///< データサイズ（バイト）
 		nox::uint32 version;		///< チャンクバージョン
 	};
+
+	class AssetChunkLoader
+	{
+	public:
+
+	private:
+		nox::AssetChunkHeader* chunk_headers_;
+		nox::uint8 chunk_count_;
+
+		/// @brief 一定サイズまではスタックメモリ、それ以上はヒープメモリに確保するためのポインタ配列
+		const std::byte*const* raw_data_list_;
+	};
 }
