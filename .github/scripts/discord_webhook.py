@@ -133,20 +133,24 @@ def post(webhook, payload, retries=5):
     url = webhook + ("&" if "?" in webhook else "?") + "wait=true"
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     for attempt in range(retries):
-        req = urllib.request.Request(url, data=body, method="POST", headers={
-            "Content-Type": "application/json; charset=utf-8",
-            "User-Agent": USER_AGENT,
-        })
         try:
+            # Request の生成も try の中に置く。URL が不正だと、URL を含む ValueError になる
+            req = urllib.request.Request(url, data=body, method="POST", headers={
+                "Content-Type": "application/json; charset=utf-8",
+                "User-Agent": USER_AGENT,
+            })
             with urllib.request.urlopen(req, timeout=30) as resp:
                 resp.read()
                 return
         except urllib.error.HTTPError as e:
-            detail = e.read().decode("utf-8", "replace")
+            try:
+                detail = e.read().decode("utf-8", "replace")
+            except Exception:  # noqa: BLE001  エラー本文を読む途中で切れても、再試行の判断は続ける
+                detail = ""
             if e.code == 429 and attempt + 1 < retries:
                 try:
-                    wait = float(json.loads(detail).get("retry_after", 2))
-                except (ValueError, AttributeError):
+                    wait = float(json.loads(detail).get("retry_after") or 2)
+                except (ValueError, AttributeError, TypeError):
                     wait = 2.0
                 time.sleep(min(wait, 60) + 0.5)
                 continue
@@ -156,10 +160,16 @@ def post(webhook, payload, retries=5):
             # URL にはトークンが含まれるので、エラーには出さない
             raise RuntimeError(f"Discord への投稿に失敗した: HTTP {e.code} {detail[:500]}") from None
         except urllib.error.URLError as e:
-            if attempt + 1 < retries:
-                time.sleep(2 ** attempt)
-                continue
-            raise RuntimeError(f"Discord への接続に失敗した: {type(e.reason).__name__}") from None
+            # reason は文字列 ("unknown url type: htps" など、設定の誤り) か OSError (接続の失敗)。
+            # どちらも URL 自体は含まない。設定の誤りは再試行しても直らない。
+            if isinstance(e.reason, OSError):
+                reason = f"{type(e.reason).__name__}: {e.reason.strerror or ''}".rstrip(": ")
+                if attempt + 1 < retries:
+                    time.sleep(2 ** attempt)
+                    continue
+            else:
+                reason = str(e.reason)
+            raise RuntimeError(f"Discord への接続に失敗した: {reason}") from None
         except Exception as e:  # noqa: BLE001  URL を含みうる文面を出さないため、型名だけにする
             # 応答を読む途中で切れた場合などは、投稿済みかもしれないので再送しない
             raise RuntimeError(f"Discord への投稿に失敗した: {type(e).__name__}") from None

@@ -48,10 +48,13 @@ on:
       - '.github/scripts/dev-report.py'
       - '.github/scripts/discord_webhook.py'
 
-# 日次と週次は別々に、同じ種類は順番に走らせる (状態を二重に進めないため)。
-# schedule と手動実行で同じグループになるよう、cron の文字列ではなく種類で分ける。
+# 投稿して状態を進める実行だけを、日次と週次それぞれで順番に走らせる (状態を二重に
+# 進めないため)。schedule と手動実行で同じグループになるよう、cron の文字列ではなく
+# 種類で分ける。dry-run (push と、既定の手動実行) は状態に触らないので実行ごとに別の
+# グループにする。同じグループに入れると、待機中の定期実行が後から来た dry-run に
+# 置き換えられて消える (cancel-in-progress: false でも待機中の実行は 1 本しか残らない)。
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'push' && 'push' || ((github.event.schedule == '17 16 * * 0' || inputs.mode == 'weekly') && 'weekly' || 'daily') }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run)) && format('dry-{0}', github.run_id) || ((github.event.schedule == '17 16 * * 0' || inputs.mode == 'weekly') && 'weekly' || 'daily') }}
   cancel-in-progress: false
 
 permissions:

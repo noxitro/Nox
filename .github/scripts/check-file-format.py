@@ -22,7 +22,6 @@ base と head の 2 点を比べて、形式が変わったファイルだけを
   - 事故で変わった形式を、その前の形式へ戻した (過去の版を遡って判定する)
 見ないもの:
   - バイナリ、空のファイル、シンボリックリンク、サブモジュール
-  - BOM と CR を除いた内容の類似度が 90% 未満の移動・複製 (別ファイルとみなし、新規ファイルとしてだけ見る)
 
 意図して変換するときは、範囲内のどれかのコミットメッセージに
     Format-Change: <パス or glob>
@@ -37,7 +36,6 @@ base と head の 2 点を比べて、形式が変わったファイルだけを
 """
 
 import argparse
-import difflib
 import fnmatch
 import os
 import re
@@ -67,13 +65,20 @@ class BlobReader:
     def __init__(self):
         self.proc = subprocess.Popen(["git", "cat-file", "--batch"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
-    def read(self, sha):
-        self.proc.stdin.write(sha.encode() + b"\n")
+    def read(self, name):
+        """name は blob の SHA か "<commit>:<path>"。無ければ None。"""
+        self.proc.stdin.write(name.encode() + b"\n")
         self.proc.stdin.flush()
-        header = self.proc.stdout.readline().split()
-        if len(header) < 3 or header[1] == b"missing":
+        header = self.proc.stdout.readline()
+        # 無いときは "<name> missing"。name がパスを含むと空白が入るので、右から読む
+        if header.endswith((b" missing\n", b" ambiguous\n")):
             return None
-        data = self.proc.stdout.read(int(header[2]))
+        parts = header.rsplit(b" ", 2)
+        if len(parts) != 3 or parts[1] != b"blob":
+            if len(parts) == 3 and parts[2].strip().isdigit():
+                self.proc.stdout.read(int(parts[2]) + 1)  # blob 以外の中身を読み捨てる
+            return None
+        data = self.proc.stdout.read(int(parts[2]))
         self.proc.stdout.read(1)  # 末尾の改行
         return data
 
@@ -205,13 +210,20 @@ def earlier_formats(reader, base, path, limit=20):
 
 
 def restored(history, attr, old_value, new_value):
-    """直前の形式変更の前の値へ戻しただけか。history は新しい順の過去の形式。
-    事故で壊れたファイルを元に戻すコミットを、新たな変換として咎めないため。"""
-    for fmt in history:
-        value = getattr(fmt, attr)
-        if value != old_value:
-            return value == new_value
-    return False
+    """事故で変わった形式を、その前の形式へ戻しただけか。history は新しい順の過去の
+    形式で、先頭が base 時点の版。master で事故を直すコミットを咎めないために使う
+    (作業ブランチは master との分岐点から累積で比べるので、事故と修正が相殺される)。
+
+    次の 2 つを満たすときだけ「戻した」とみなす。
+      - 今の形式 (old) は直前の版で入ったばかりで、その前の版は new だった
+      - 直近 10 版では new の方が old 以上に続いていた
+    「過去のどこかで new だった」まで認めると、一度でも形式が変わったファイル
+    (Nox では 80 本) で同じ事故を繰り返しても素通りする。2 つ目の条件が無いと、
+    事故 → 修正 → 同じ事故、の 3 回目を「修正を戻した」と見誤る。"""
+    versions = [getattr(f, attr) for f in history if f.data][:10]  # 空の版には形式が無い
+    if len(versions) < 2 or versions[0] != old_value:
+        return False
+    return versions[1] == new_value and versions.count(new_value) >= versions.count(old_value)
 
 
 def majority(fmt):
@@ -240,9 +252,9 @@ def compare(old, new, where, path, history):
         stray = "LF" if majority(old) == "CRLF" else "CRLF"
         old_stray = old.lf if stray == "LF" else old.crlf
         new_stray = new.lf if stray == "LF" else new.crlf
-        if new.eol == majority(old):
+        if new.eol == majority(old) or (old.crlf == old.lf and new.eol in ("CRLF", "LF")):
             warnings.append((path, None, "改行の混在が解消された",
-                f"{where}: 改行が混在していたファイルが多数派の {new.eol} に揃えられた (元 CRLF {old.crlf} 行 / LF {old.lf} 行)"))
+                f"{where}: 改行が混在していたファイルが {new.eol} に揃えられた (元 CRLF {old.crlf} 行 / LF {old.lf} 行)"))
         elif new.eol == stray:
             errors.append((path, 1, "改行コードが変わった",
                 f"{where}: 改行が混在していた (CRLF {old.crlf} 行 / LF {old.lf} 行) ファイルが、少数派の {stray} に一括変換された"))
@@ -266,24 +278,6 @@ def compare(old, new, where, path, history):
     return errors, warnings
 
 
-# 移動・複製として形式を比べる類似度の下限。これ未満の移動 (テンプレートから作った別物の
-# pch.h が 61% で対応付くなど) は別ファイルとみなし、新規ファイルとしてだけ見る。
-# git の類似度は CR や BOM の違いも差分に数えるので、改行を変換して移動したファイルは
-# 低く出る。90 未満のときは BOM と CR を除いた内容で測り直す。
-RENAME_SCORE_MIN = 90
-# 測り直しに difflib を使うので、大きすぎるファイルは測らない (別ファイル扱い)
-SIMILARITY_MAX_BYTES = 1024 * 1024
-
-
-def same_file(entry, reader):
-    """移動・複製の前後が、形式を比べるべき同じファイルか。"""
-    if entry["score"] >= RENAME_SCORE_MIN:
-        return True
-    a, b = reader.read(entry["old_sha"]) or b"", reader.read(entry["new_sha"]) or b""
-    if len(a) > SIMILARITY_MAX_BYTES or len(b) > SIMILARITY_MAX_BYTES:
-        return False
-    a_lines, b_lines = normalized(a).split(b"\n"), normalized(b).split(b"\n")
-    return difflib.SequenceMatcher(None, a_lines, b_lines, autojunk=False).ratio() * 100 >= RENAME_SCORE_MIN
 
 
 def check(base, head):
@@ -298,9 +292,13 @@ def check(base, head):
         targets = []
         added = []
         for e in entries:
-            if e["kind"] in ("M", "T") or (e["kind"] in ("R", "C") and same_file(e, reader)):
+            # git が移動・複製と判定したもの (類似度 50% 以上) は同じファイルとして比べる。
+            # 絞ると、移動と同時に include を直したような本物の移動での事故を見逃す。
+            # 逆に、モジュールを消してテンプレートから別のモジュールを作ると別物の
+            # pch.h どうしが対応付くことがある。そのときは Format-Change で通す。
+            if e["kind"] in ("M", "T", "R", "C"):
                 targets.append(e)
-            elif e["kind"] in ("R", "C", "A") and e["new_path"] not in moved_new:
+            elif e["kind"] == "A" and e["new_path"] not in moved_new:
                 added.append(e)
         targets += moves
 
@@ -310,8 +308,11 @@ def check(base, head):
             old_data = reader.read(e["old_sha"])
             new_data = reader.read(e["new_sha"])
             old, new = classify(old_data), classify(new_data)
-            # 空のファイルには形式が無いので、空から / 空への変更は比べない
-            if old is None or new is None or not old_data or not new_data:
+            # 空のファイルには形式が無いので比べない。空だったファイルは新規ファイルとして見る
+            if old_data is not None and not old_data:
+                added.append(e)
+                continue
+            if old is None or new is None or not new_data:
                 continue
             checked += 1
             old_path, new_path = e["old_path"], e["new_path"]

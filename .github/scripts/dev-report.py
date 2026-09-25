@@ -69,11 +69,12 @@ MAX_LISTED_COMMITS = 40
 
 GEMINI_DEFAULT_MODEL = "gemini-3.8-flash"
 CLAUDE_DEFAULT_MODEL = "claude-opus-5"
-# 1 回の API 呼び出しを待つ上限 (秒) と、再試行を含めた 1 プロバイダの持ち時間 (秒)。
-# 両プロバイダの持ち時間の合計が、ワークフローの timeout-minutes (30 分) に余裕を
-# 持って収まるようにしてある。超えるとジョブごと打ち切られて何も投稿されない。
-REQUEST_TIMEOUT = 300
+# 再試行を含めた 1 プロバイダの持ち時間 (秒)。1 回の呼び出しは残り時間いっぱいまで待つ
+# (大きな差分のレビューは数分かかるので、呼び出しごとに短く切ると正常な応答まで失う)。
+# 両プロバイダの合計が Report ステップの timeout-minutes (25 分) に収まるようにしてある。
 PROVIDER_BUDGET = 600
+# 残り時間がこれを下回ったら、再試行しても間に合わないので諦める
+MIN_ATTEMPT_WINDOW = 90
 # 100 万トークンあたりの USD (入力, 出力)。概算の表示にだけ使う。
 CLAUDE_PRICES = {
     "claude-fable-5-1": (10.0, 50.0),
@@ -372,7 +373,7 @@ class Review:
         return " · ".join(parts)
 
 
-def http_json(url, body, headers, timeout=REQUEST_TIMEOUT):
+def http_json(url, body, headers, timeout):
     req = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), method="POST",
                                  headers={"Content-Type": "application/json", **headers})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -404,11 +405,11 @@ def review_with_gemini(system, user):
     }
     headers = {"x-goog-api-key": os.environ["GEMINI_API_KEY"].strip()}
     data = None
-    started = time.monotonic()
+    deadline = time.monotonic() + PROVIDER_BUDGET
     attempt = 0
     while True:
         try:
-            data = http_json(url, body, headers)
+            data = http_json(url, body, headers, timeout=deadline - time.monotonic())
             break
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", "replace")
@@ -422,8 +423,8 @@ def review_with_gemini(system, user):
             delay = min(15 * (2 ** attempt), 120)
             error = f"{type(e).__name__}: {getattr(e, 'reason', e)}"
         attempt += 1
-        # 持ち時間の中で、もう 1 回待って投げても間に合うときだけ再試行する
-        if not retryable or time.monotonic() - started + delay + REQUEST_TIMEOUT > PROVIDER_BUDGET:
+        # 待ってから投げ直しても、持ち時間が十分に残るときだけ再試行する
+        if not retryable or deadline - time.monotonic() - delay < MIN_ATTEMPT_WINDOW:
             r.error = error
             return r
         print(f"Gemini: {error[:120]}。{delay:.0f} 秒待って再試行する")
@@ -477,19 +478,35 @@ def review_with_claude(system, user):
         params["betas"] = ["server-side-fallback-2026-07-01"]
         params["extra_body"] = {"fallbacks": "default"}
 
-    # 再試行を含めて PROVIDER_BUDGET に収める (SDK はタイムアウトと 429 / 5xx を自動で再試行する)
-    client = anthropic.Anthropic(timeout=REQUEST_TIMEOUT, max_retries=1)
-    try:
-        if "betas" in params:
-            resp = client.beta.messages.create(**params)
-        else:
-            resp = client.messages.create(**params)
-    except anthropic.APIStatusError as e:
-        r.error = f"HTTP {e.status_code}: {str(e.message)[:400]}"
-        return r
-    except anthropic.APIConnectionError as e:
-        r.error = f"接続に失敗した: {e}"
-        return r
+    # 再試行は SDK に任せず自前で行い、PROVIDER_BUDGET に収める。SDK の自動再試行は
+    # retry-after に上限を設けず、1 回ごとの待ち時間も持ち時間とは無関係に決まるため。
+    client = anthropic.Anthropic(max_retries=0)
+    deadline = time.monotonic() + PROVIDER_BUDGET
+    attempt = 0
+    while True:
+        api = client.with_options(timeout=deadline - time.monotonic())
+        try:
+            resp = api.beta.messages.create(**params) if "betas" in params else api.messages.create(**params)
+            break
+        except anthropic.APIStatusError as e:
+            # 429 (レート制限)、5xx、529 (過負荷) は待てば通ることがある
+            retryable = e.status_code == 429 or e.status_code >= 500
+            error = f"HTTP {e.status_code}: {str(e.message)[:400]}"
+            try:
+                delay = float(e.response.headers.get("retry-after", ""))
+            except ValueError:
+                delay = 15 * (2 ** attempt)
+        except anthropic.APIConnectionError as e:
+            # タイムアウト (APITimeoutError) もここ。持ち時間を使い切っていれば下で諦める
+            retryable = True
+            error = f"接続に失敗した: {type(e).__name__}"
+            delay = 15 * (2 ** attempt)
+        attempt += 1
+        if not retryable or deadline - time.monotonic() - delay < MIN_ATTEMPT_WINDOW:
+            r.error = error
+            return r
+        print(f"Claude: {error[:120]}。{delay:.0f} 秒待って再試行する")
+        time.sleep(delay)
 
     r.input_tokens = resp.usage.input_tokens
     r.output_tokens = resp.usage.output_tokens
