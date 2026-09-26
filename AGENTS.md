@@ -57,13 +57,16 @@ Master 構成は `NOX_ASSERT` も `NOX_DEVELOP` も消えるため、Debug / Rel
 
 ### ファイル形式
 
-**このリポジトリは BOM の有無も改行コード (CRLF / LF) も混在しています。**
+**文字コードは BOM なしの UTF-8 に統一しています。改行コード (CRLF / LF) はファイルごとに混在しています。**
 
-- ファイルを書き換えるときは、**そのファイルの元の形式を必ず保ってください。** 一括変換すると差分が全行になり、レビューも履歴も追えなくなります。
-- 実際に「29 ファイルの BOM 剥がれ」「ヘッダ 1 本の CRLF 一括変換」を起こしています。
+- **BOM は付けないでください。** C++ は `/utf-8` でコンパイルし、C# / XAML / MSBuild は BOM が無くても UTF-8 として読むので、BOM は要りません。文字コードは `.editorconfig` の `charset` で決めてあり、Visual Studio もこれに従って保存します。
+- 例外として、BOM が要るファイルだけは BOM 付きです。PowerShell スクリプト (Windows PowerShell 5.1 は BOM が無いと Shift-JIS として読む) と、日本語を含む VS テンプレート 2 本です。一覧は `.github/scripts/bom_policy.py` にあり、`.editorconfig` と揃えてあります。
+- Visual Studio がプロジェクトファイルを保存し直したときや、テンプレートからファイルを作ったときに BOM が付くことがあります。`python3 .github/scripts/strip-bom.py <パス>` で外してください。
+- 改行コードは、ファイルを書き換えるときに**そのファイルの元の形式を必ず保ってください。** 一括変換すると差分が全行になり、レビューも履歴も追えなくなります。
+- 実際に「29 ファイルの BOM 剥がれ」「ヘッダ 1 本の CRLF 一括変換」を起こしています (BOM 剥がれは、統一した今は問題になりません)。
 - `.gitattributes` で git 側の改行変換は無効化してありますが、**書き換えツール自身が壊すのは防げません。**
 - 変更後は `git diff --stat` を見て、行数が実際の編集量と釣り合っているか確認してください。
-- push ごとに CI (`.github/workflows/file-format.yml`) が、BOM の有無・改行コードが変わっていないか、改行が新たに混在していないかを検査し、落ちたら Discord に通知します。作業ブランチは master との分岐点から累積で比べるので、壊したファイルを元の形式に戻すコミットを足せば通ります。push 前に手元で確かめるには `python3 .github/scripts/check-file-format.py --base origin/master` を実行します (master との分岐点から比べます)。
+- push ごとに CI (`.github/workflows/file-format.yml`) が、BOM が付いていないか (BOM が要るファイルは外れていないか)・改行コードが変わっていないか・改行が新たに混在していないかを検査し、落ちたら Discord に通知します。作業ブランチは master との分岐点から累積で比べるので、壊したファイルを直すコミットを足せば通ります。push 前に手元で確かめるには `python3 .github/scripts/check-file-format.py --base origin/master` を実行します (master との分岐点から比べます)。
 - 意図して形式を変えるときは、そのコミットメッセージに `Format-Change: <パス or glob>` の行を書きます (該当ファイルは警告扱いになります)。
 
 ## 最優先ルール
