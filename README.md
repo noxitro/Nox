@@ -52,6 +52,8 @@ Runtime は **C++23** (`/std:c++latest`) の x64 ビルドで、以下 2 つの�
    ```powershell
    cd runtime/bin/source/ReflectionGenerator/
    dotnet build ReflectionGenerator.slnx
+   ```
+
 ### 開発フックの導入
 
 clone したら 1 回だけ実行する。コミット時と push 時に、秘密情報・
