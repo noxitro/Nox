@@ -1,4 +1,4 @@
-# gitで管理していないファイル群を生成するスクリプト
+﻿# gitで管理していないファイル群を生成するスクリプト
 # 1. "Nox\runtime\bin\source\CustomTask\CustomTask.sln" をビルドして、"Nox\runtime\bin" に "CustomTask.dll" を配置。
 # 2. "Nox\runtime\bin\source\ReflectionGenerator\ReflectionGenerator.slnx" を発行する。"Nox\runtime\bin" に "ReflectionGenerator.exe" を配置。
 

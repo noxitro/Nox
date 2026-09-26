@@ -1,4 +1,4 @@
-﻿//	Copyright (c) 2023-2026 noxitro
+//	Copyright (c) 2023-2026 noxitro
 //	SPDX-License-Identifier: MIT
 
 ///	@file	read_write_lock_interface.h
