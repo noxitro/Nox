@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""変更されたファイルの BOM と改行コードが、変更前から変わっていないかを検査する。
+"""変更されたファイルの BOM と改行コードを検査する。
 
-このリポジトリは BOM の有無も改行コード (CRLF / LF) もファイルごとに混在していて、
-統一ルールでは検査できない (.gitattributes と AGENTS.md の「ファイル形式」を参照)。
-守るべきなのは「各ファイルの元の形式を保つこと」なので、全体を一律に見るのではなく
-base と head の 2 点を比べて、形式が変わったファイルだけを拾う。
+BOM: BOM なしの UTF-8 に統一してある。BOM が要るのは bom_policy.py の REQUIRED
+     (PowerShell スクリプトなど) だけで、それ以外に BOM が付いたら拾う。
+改行: ファイルごとに CRLF / LF が混在していて、統一ルールでは検査できない
+     (.gitattributes と AGENTS.md の「ファイル形式」を参照)。守るべきなのは
+     「各ファイルの元の改行を保つこと」なので、base と head の 2 点を比べて、
+     改行が変わったファイルだけを拾う。
 
 実際に起きた事故:
   - 書き換えツールが 29 ファイルの BOM を剥がした
@@ -12,14 +14,14 @@ base と head の 2 点を比べて、形式が変わったファイルだけを
   - CRLF のファイルに LF の行が紛れ込む (部分的な書き換え)
 
 検出するもの (error):
-  - BOM が外れた / 付いた
+  - BOM が付いた (BOM が要るファイルでは、BOM が外れた / 新規ファイルに BOM が無い)
   - 改行コードが一括変換された (CRLF -> LF, LF -> CRLF)
   - 改行が揃っていたファイルに、別の改行の行が混ざった
   - 元から混在していたファイルで、少数派の改行の行が増えた / 少数派へ一括変換された
   - 新規ファイルの中で改行が混在している
 警告だけにするもの (warning):
   - 元から混在していたファイルが、多数派の改行に揃えられた (直す方向の変換)
-  - 事故で変わった形式を、その前の形式へ戻した (過去の版を遡って判定する)
+  - 事故で変わった改行コードを、その前の改行コードへ戻した (過去の版を遡って判定する)
 見ないもの:
   - バイナリ、空のファイル、シンボリックリンク、サブモジュール
 
@@ -41,6 +43,8 @@ import os
 import re
 import subprocess
 import sys
+
+import bom_policy
 
 UTF8_BOM = b"\xef\xbb\xbf"
 # git と同じく先頭 8000 バイトに NUL があればバイナリとみなす。
@@ -252,19 +256,29 @@ def majority(fmt):
     return "CRLF" if fmt.crlf >= fmt.lf else "LF"
 
 
+def bom_finding(path, has_bom, where):
+    """BOM の有無が決まり (bom_policy) に反していれば指摘を 1 件返す。"""
+    rule = bom_policy.policy(path)
+    if rule == bom_policy.FORBIDDEN_POLICY and has_bom:
+        return (path, 1, "BOM が付いた",
+            f"{where}: UTF-8 BOM が付いている。BOM なしに統一してあるので "
+            f"`python3 .github/scripts/strip-bom.py {path}` で外す")
+    if rule == bom_policy.REQUIRED_POLICY and not has_bom:
+        return (path, 1, "BOM が無い",
+            f"{where}: BOM が必要なファイル (bom_policy.py の REQUIRED) に UTF-8 BOM が無い。"
+            "無いと Windows PowerShell や VS のテンプレートがシステムのコードページで読んで文字化けする")
+    return None
+
+
 def compare(old, new, where, path, history):
     """変更前後の形式を比べ、(errors, warnings) を返す。history は元の形式を調べるための遅延関数。"""
     errors, warnings = [], []
 
+    # BOM は変更前ではなく決まり (bom_policy) と比べる。決まりの方へ直す変更は咎めない
     if old.bom != new.bom:
-        if old.bom:
-            title, message = "BOM が外れた", f"{where}: UTF-8 BOM 付きだったファイルから BOM が外れた"
-        else:
-            title, message = "BOM が付いた", f"{where}: BOM なしだったファイルに UTF-8 BOM が付いた"
-        if restored(history(), "bom", old.bom, new.bom):
-            warnings.append((path, 1, "BOM を元に戻した", f"{where}: 以前の形式 ({'BOM あり' if new.bom else 'BOM なし'}) に戻した"))
-        else:
-            errors.append((path, 1, title, message))
+        finding = bom_finding(path, new.bom, where)
+        if finding:
+            errors.append(finding)
 
     if old.eol == new.eol and old.eol != "mixed":
         pass
@@ -357,8 +371,11 @@ def check(base, head):
             if new is None:
                 continue
             checked += 1
+            path = e["new_path"]
+            finding = bom_finding(path, new.bom, path) if new.data else None
+            if finding:
+                errors.append(finding)
             if new.eol == "mixed":
-                path = e["new_path"]
                 stray = minority(new)
                 lines = new.lines_ending_with(stray)
                 errors.append((path, lines[0] if lines else None, "改行が混在している",
@@ -417,14 +434,14 @@ def main():
 
     lines = []
     if errors or warnings:
-        lines.append(f"`{base[:10]}..{head[:10]}` で BOM / 改行コードの変化を検出した。")
+        lines.append(f"`{base[:10]}..{head[:10]}` で BOM / 改行コードの問題を検出した。")
         lines.append("")
         for level, mark, items in (("error", "❌", errors), ("warning", "⚠️", warnings)):
             for path, line, title, message in items:
                 lines.append(f"- {mark} **{title}** — {message}")
         if errors:
             lines.append("")
-            lines.append("元の形式に戻すこと (AGENTS.md「ファイル形式」)。意図した変換なら、コミットメッセージに "
+            lines.append("BOM は付けず、改行コードは元の形式に戻すこと (AGENTS.md「ファイル形式」)。意図した変換なら、コミットメッセージに "
                 "`Format-Change: <パス>` を書いて push し直す。")
     report = "\n".join(lines)
 
