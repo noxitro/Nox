@@ -46,7 +46,8 @@ namespace MakeAllIncludeHeader;
 		/// <param name="path"></param>
 		public CodeWriter(string path)
 		{
-			_Stream = new StreamWriter(path, false, Encoding.UTF8);
+			//	BOM なしの UTF-8 で書く (Encoding.UTF8 は BOM を付ける)。AGENTS.md の「ファイル形式」
+			_Stream = new StreamWriter(path, false, new UTF8Encoding(false));
 
 			//  ファイルをクリア
 			_Stream.BaseStream.SetLength(0);

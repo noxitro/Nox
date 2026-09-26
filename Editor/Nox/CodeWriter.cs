@@ -149,7 +149,8 @@ namespace Nox;
 		/// <param name="path"></param>
 		public CodeWriter(string path)
 		{
-			_Stream = new System.IO.StreamWriter(path, false, System.Text.Encoding.UTF8);
+			//	BOM なしの UTF-8 で書く (Encoding.UTF8 は BOM を付ける)。AGENTS.md の「ファイル形式」
+			_Stream = new System.IO.StreamWriter(path, false, new System.Text.UTF8Encoding(false));
 
 			//  ファイルをクリア
 			_Stream.BaseStream.SetLength(0);
