@@ -66,19 +66,19 @@ namespace Core.UI.Views;
 	//		_ownsProcess = false;
 	//		_placeholderOnly = false;
 
-	//		// ƒvƒƒZƒX‚ªŠù‚ÉI—¹‚µ‚Ä‚¢‚ê‚ÎƒNƒŠƒA
+	//		// ãƒ—ãƒ­ã‚»ã‚¹ãŒæ—¢ã«çµ‚äº†ã—ã¦ã„ã‚Œã°ã‚¯ãƒªã‚¢
 	//		if (_process is { HasExited: true })
 	//		{
 	//			_process.Dispose();
 	//			_process = null;
 	//		}
 
-	//		// ƒvƒƒZƒX‚ª–³‚¢ê‡‚Í‹N“®‚·‚éB‚½‚¾‚µƒpƒX–¢İ’è/•s‘¶İ‚È‚çƒvƒŒ[ƒXƒzƒ‹ƒ_[‚ÅŒp‘±B
+	//		// ãƒ—ãƒ­ã‚»ã‚¹ãŒç„¡ã„å ´åˆã¯èµ·å‹•ã™ã‚‹ã€‚ãŸã ã—ãƒ‘ã‚¹æœªè¨­å®š/ä¸å­˜åœ¨ãªã‚‰ãƒ—ãƒ¬ãƒ¼ã‚¹ãƒ›ãƒ«ãƒ€ãƒ¼ã§ç¶™ç¶šã€‚
 	//		if (_process == null)
 	//		{
 	//			if (string.IsNullOrWhiteSpace(ExecutablePath) || !System.IO.File.Exists(ExecutablePath))
 	//			{
-	//				_runtimeHwnd = CreatePlaceholder(hwndParent.Handle, "runtime.exe ‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ");
+	//				_runtimeHwnd = CreatePlaceholder(hwndParent.Handle, "runtime.exe ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“");
 	//				_placeholderOnly = true;
 	//				return new System.Runtime.InteropServices.HandleRef(this, _runtimeHwnd);
 	//			}
@@ -95,7 +95,7 @@ namespace Core.UI.Views;
 	//			}
 	//			catch (System.ComponentModel.Win32Exception ex)
 	//			{
-	//				_runtimeHwnd = CreatePlaceholder(hwndParent.Handle, $"runtime.exe ‹N“®¸”s: {ex.Message}");
+	//				_runtimeHwnd = CreatePlaceholder(hwndParent.Handle, $"runtime.exe èµ·å‹•å¤±æ•—: {ex.Message}");
 	//				_placeholderOnly = true;
 	//				return new System.Runtime.InteropServices.HandleRef(this, _runtimeHwnd);
 	//			}
