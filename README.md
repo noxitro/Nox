@@ -94,3 +94,16 @@ pwsh tools/vs-templates/install.ps1
 各フォルダを zip にして `ドキュメント\Visual Studio 18\Templates\ItemTemplates` へ
 コピーする。OneDrive のバックアップが有効なら `%OneDrive%\Documents` 側も探す。
 見つからないときは `-Destination` で置き場を指定する。
+
+### モジュールのテストプロジェクト
+
+モジュール (`nox_module` テンプレートで作ったもの) の GoogleTest プロジェクトは、
+VS のテンプレートではなくスクリプトで生成する。
+
+```powershell
+pwsh tools/module-test/new-module-test.ps1 hid
+```
+
+`runtime/modules/hid/test/hid_test.vcxproj` 一式を作り、`runtime.slnx` の `/tests/` に
+登録する。参照設定・gtest の設定・CI への登録まで済むので、あとはテストを書くだけでよい。
+詳細は [docs/google-test-integration.md](docs/google-test-integration.md) を参照。

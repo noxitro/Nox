@@ -150,6 +150,8 @@ dotnet build Editor/Studio.slnx
 - C++ テスト:
   - runtime/core/test/ (core の GoogleTest)
   - runtime/kernel/test/ (kernel の GoogleTest)
+  - runtime/modules/<モジュール名>/test/ (モジュールの GoogleTest)。手で作らず `pwsh tools/module-test/new-module-test.ps1 <モジュール名>` で生成する
+  - テストプロジェクト名は `_test` 終わり (ReflectionGenerator と CI がこれで判別する)。CI は runtime.slnx の `*_test.vcxproj` を自動で拾う
   - 重点: reflection, delegate, type system, memory management
 - Editor は自動 UI テストが限定的なため、Windows 上の手動確認を基本とする。
 
