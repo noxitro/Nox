@@ -46,6 +46,8 @@ Checks: >
   misc-unconventional-assign-operator,
   modernize-use-override
 WarningsAsErrors: ''
-# ヘッダは runtime 配下のものだけを見る (vcpkg の依存や SDK のヘッダは対象外)
+# ヘッダは runtime 配下のものだけを見る (SDK のヘッダは対象外)。vcpkg の依存は
+# runtime\property_sheet\..\..\vcpkg_installed のようなパスで参照されてこの正規表現に
+# 当たってしまうので、集計側 (clang-tidy-report.py) で除いている。
 HeaderFilterRegex: '.*[\\/]runtime[\\/].*'
 FormatStyle: none

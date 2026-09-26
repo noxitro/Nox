@@ -40,7 +40,14 @@ RAN_RE = re.compile(r"clang-tidy", re.IGNORECASE)
 
 
 def normalize_path(path, root):
+    # "runtime\property_sheet\..\..\vcpkg_installed\..." のような .. を解決してから比べる
     path = path.strip().replace("\\", "/")
+    path = re.sub(r"/(?:\./)+", "/", path)
+    while True:
+        collapsed = re.sub(r"/[^/.][^/]*/\.\./", "/", path, count=1)
+        if collapsed == path:
+            break
+        path = collapsed
     root = os.path.abspath(root).replace("\\", "/").rstrip("/") + "/"
     # Windows のランナーではドライブ文字の大小が揃わないことがある
     if path.lower().startswith(root.lower()):
@@ -69,6 +76,9 @@ def parse(log_paths, root):
                 if checks.startswith("clang-diagnostic-"):
                     continue
                 path = normalize_path(m.group("file"), root)
+                # 外部ライブラリ (vcpkg) の指摘は直せないので数えない
+                if "vcpkg_installed/" in path or not path.startswith("runtime/"):
+                    continue
                 line = int(m.group("line1") or m.group("line2"))
                 col = int(m.group("col1") or m.group("col2") or 0)
                 msg = m.group("msg").strip()
@@ -95,6 +105,10 @@ def summarize(findings):
 
 
 def main():
+    # Windows のランナーは標準出力が cp1252 なので、日本語で落ちないようにする
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--log", action="append", required=True, help="MSBuild のログ (複数可)")
     ap.add_argument("--root", default=".", help="リポジトリのルート (パスを相対にするため)")

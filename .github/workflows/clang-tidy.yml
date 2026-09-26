@@ -42,6 +42,10 @@ defaults:
   run:
     shell: pwsh
 
+# Windows の Python は既定で cp1252 を使い、日本語の入出力で落ちる
+env:
+  PYTHONUTF8: '1'
+
 jobs:
   analyze:
     name: Analyze (ClangCL / Debug)
