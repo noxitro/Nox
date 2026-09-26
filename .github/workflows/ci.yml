@@ -30,12 +30,10 @@ on:
   # タグ push での二重起動だけは避けたいので branches で限定してある。
   push:
     branches: ['**']
-    # 文書だけの変更で windows ランナーを起こさない
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - '.gitignore'
-      - 'LICENSE'
+    # 文書だけの変更で windows ランナーを起こさない仕組みは paths-ignore ではなく
+    # changes ジョブで持つ。paths-ignore だとワークフロー自体が起動せず、
+    # ブランチ保護の必須チェック (CI result) が永久に報告されないまま
+    # 文書だけの PR がマージできなくなるため。
   # pull_request は外してある。同一リポジトリのブランチへの PR は push 側と
   # 合わせて毎回 2 倍走り、ref が違うので concurrency でも畳めないため。
   # 公開後もフォーク PR は受けていない。受けるなら pull_request を戻し、
@@ -65,6 +63,80 @@ defaults:
 
 jobs:
   # =========================================================
+  # Changes: 文書だけの変更かどうかを判定する
+  #
+  # 文書だけなら build / editor を飛ばす (windows ランナーを起こさない)。
+  # ワークフロー自体は必ず起動するので、必須チェックの CI result は常に報告される。
+  #
+  # 比較の起点:
+  #   - master への push      : 直前の master (github.event.before) との差
+  #   - それ以外のブランチ     : master との差 (three-dot、つまり分岐点からの全変更)
+  # ブランチでは「今回の push の差」ではなく「ブランチ全体の差」を見る。
+  # 前の push でコードを壊して CI が落ち、その後に文書だけ直した push が来たとき、
+  # 今回の差だけ見ると build を飛ばして CI result が緑になり、壊れたコードが
+  # マージできてしまうため。
+  #
+  # 判定できないとき (新規ブランチで起点が無い、API が失敗、300 ファイル超、
+  # push 以外のイベント) は「コード変更あり」に倒す。取りこぼすより余計に建てる方が安い。
+  # =========================================================
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.detect.outputs.code }}
+    steps:
+      - name: Detect code changes
+        id: detect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BEFORE: ${{ github.event.before }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          $code = 'true'
+          $reason = ''
+
+          if ($env:GITHUB_EVENT_NAME -ne 'push') {
+            $reason = "push 以外のイベント ($env:GITHUB_EVENT_NAME)"
+          } else {
+            $base = if ($env:GITHUB_REF -eq "refs/heads/$env:DEFAULT_BRANCH") { $env:BEFORE } else { $env:DEFAULT_BRANCH }
+            if (-not $base -or $base -match '^0+$') {
+              $reason = "比較の起点が無い (base=$base)"
+            } else {
+              $json = gh api "repos/$env:GITHUB_REPOSITORY/compare/$base...$env:GITHUB_SHA"
+              if ($LASTEXITCODE -ne 0) {
+                $reason = "compare API が失敗 (base=$base)"
+              } else {
+                $files = @((($json -join "`n") | ConvertFrom-Json).files | ForEach-Object { $_.filename })
+                if ($files.Count -eq 0) {
+                  $reason = "差分が無い (base=$base)"
+                } elseif ($files.Count -ge 300) {
+                  $reason = "差分が $($files.Count) ファイル (compare API は 300 で打ち切る)"
+                } else {
+                  # 文書とみなすもの。ここ以外が 1 つでもあればコード変更
+                  $nonDoc = $files | Where-Object {
+                    -not ($_ -like '*.md' -or $_ -like 'docs/*' -or $_ -eq '.gitignore' -or $_ -eq 'LICENSE')
+                  } | Select-Object -First 1
+                  if ($nonDoc) {
+                    $reason = "コード変更あり (例: $nonDoc / base=$base, $($files.Count) ファイル)"
+                  } else {
+                    $code = 'false'
+                    $reason = "文書だけの変更 (base=$base, $($files.Count) ファイル)"
+                  }
+                }
+              }
+            }
+          }
+
+          Write-Host "code=$code : $reason"
+          "code=$code" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "## Changes`n`n- code: **$code**`n- $reason" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+          # gh api が失敗しても上で「コード変更あり」に倒してある。Actions の pwsh は
+          # 最後の $LASTEXITCODE をステップの終了コードにするので、明示的に 0 で抜ける
+          exit 0
+
+  # =========================================================
   # Build & test: runtime.slnx を 2 コンパイラ x 3 構成で建て、
   #               そのジョブの中で GoogleTest と FlaUI まで走らせる
   #
@@ -87,6 +159,8 @@ jobs:
   # =========================================================
   build:
     name: Build & test (${{ matrix.compiler }} / ${{ matrix.configuration }})
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     # 既定は GitHub ホストの windows-latest。リポジトリ変数 NOX_RUNNER を
     # 設定するとそちらへ回す (例: NOX_RUNNER=self-hosted)。セルフホストの
     # 実行時間は無料枠を消費しないので、6 構成を毎 push で建てるならこれ。
@@ -489,6 +563,8 @@ jobs:
   # =========================================================
   editor:
     name: Build Editor (C#)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     # 既定は GitHub ホストの windows-latest。リポジトリ変数 NOX_RUNNER を
     # 設定するとそちらへ回す (例: NOX_RUNNER=self-hosted)。セルフホストの
     # 実行時間は無料枠を消費しないので、6 構成を毎 push で建てるならこれ。
@@ -544,6 +620,48 @@ jobs:
           if-no-files-found: warn
 
   # =========================================================
+  # CI result: ブランチ保護の必須チェックはこのジョブ 1 つだけにする
+  #
+  # マトリクスの各ジョブ名 (Build & test (MSVC / Debug) など) を必須にすると、
+  # 次のときに報告されないジョブが出て、PR が永久に「待機中」で止まる。
+  #   - 文書だけの変更で build / editor を飛ばしたとき
+  #   - dependabot/nuget でマトリクスが MSVC/Debug だけに縮んだとき
+  # 飛ばした (skipped) ジョブは合格として扱い、failure / cancelled だけを落とす。
+  #
+  # マトリクスの組み合わせを増減しても、ブランチ保護の設定は触らなくてよい。
+  # =========================================================
+  result:
+    name: CI result
+    needs: [changes, build, editor]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check results
+        env:
+          CODE: ${{ needs.changes.outputs.code }}
+          CHANGES: ${{ needs.changes.result }}
+          BUILD: ${{ needs.build.result }}
+          EDITOR: ${{ needs.editor.result }}
+        run: |
+          Write-Host "code=$env:CODE changes=$env:CHANGES build=$env:BUILD editor=$env:EDITOR"
+
+          $bad = @()
+          foreach ($pair in @(@('changes', $env:CHANGES), @('build', $env:BUILD), @('editor', $env:EDITOR))) {
+            if ($pair[1] -in 'failure', 'cancelled') { $bad += "$($pair[0])=$($pair[1])" }
+          }
+
+          # コード変更ありなのに build / editor が飛んでいたら、それは if の書き間違い。
+          # 黙って緑にすると、何も検証せずにマージできてしまう
+          if ($env:CODE -eq 'true') {
+            if ($env:BUILD -eq 'skipped') { $bad += 'build が skipped (コード変更ありなのに)' }
+            if ($env:EDITOR -eq 'skipped') { $bad += 'editor が skipped (コード変更ありなのに)' }
+          }
+
+          if ($bad.Count -gt 0) { throw ('CI が通っていない: ' + ($bad -join ', ')) }
+          if ($env:CODE -eq 'false') { Write-Host '文書だけの変更なので build / editor は飛ばした' }
+
+  # =========================================================
   # Notify: 転んだとき / 転んだ状態から戻ったときだけ Discord に流す
   #
   # GitHub 既定のメール通知の置き換え。成功が続いている間は無言なので、
@@ -557,7 +675,7 @@ jobs:
   # =========================================================
   notify:
     name: Notify Discord
-    needs: [build, editor]
+    needs: [changes, build, editor]
     # 判定は step 側で needs.*.result を見るので、ここでは always() で拾うだけ。
     if: always() && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
