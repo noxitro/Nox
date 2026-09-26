@@ -1,0 +1,53 @@
+# clang-tidy の設定。CI (.github/workflows/clang-tidy.yml) と Visual Studio の
+# 「コード分析 → Clang-Tidy」の両方がこのファイルを読む。
+#
+# 方針: 実害のあるもの (バグ・未定義動作・性能) だけを選ぶ。命名や書き方の好みを
+# 見る readability-* / modernize-* の大半は入れない。命名は AGENTS.md の規約に
+# 従うが、移行中 (k_snake_case → kPascalCase) で機械的に咎めると数千件になるため。
+#
+# 選んだ理由:
+#   bugprone-*        取り違え・誤用・未定義動作に直結するもの
+#   clang-analyzer-*  パス依存の解析 (null 参照、解放後使用、リークなど)
+#   performance-*     AGENTS.md の最優先ルール「CPU/メモリ性能」。不要なコピーや
+#                     値渡し、ループ内の再確保など
+#   一部の cppcoreguidelines / misc / modernize
+#                     スライシング、仮想デストラクタ漏れ、override 漏れなど
+#                     バグの温床になるものだけ
+#
+# 外しているもの (件数が多いわりに実害が薄い、または規約と合わない):
+#   bugprone-easily-swappable-parameters   同じ型の引数が並ぶだけで出る
+#   bugprone-narrowing-conversions         整数・浮動小数の変換すべてに出る
+#   bugprone-implicit-widening-of-multiplication-result
+#   bugprone-reserved-identifier           既存マクロ・生成コードの _ 始まりに出る
+#   bugprone-exception-escape              Runtime は例外を使わない
+#   performance-enum-size                  enum の基底型の好み
+#
+# 報告だけで CI は落とさない (WarningsAsErrors は空)。既存の指摘を片付けてから、
+# 種類ごとにここへ WarningsAsErrors を足して関門にしていく。
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
+  -bugprone-implicit-widening-of-multiplication-result,
+  -bugprone-reserved-identifier,
+  -bugprone-exception-escape,
+  clang-analyzer-core.*,
+  clang-analyzer-cplusplus.*,
+  clang-analyzer-deadcode.*,
+  clang-analyzer-unix.*,
+  clang-analyzer-security.FloatLoopCounter,
+  performance-*,
+  -performance-enum-size,
+  cppcoreguidelines-slicing,
+  cppcoreguidelines-virtual-class-destructor,
+  misc-redundant-expression,
+  misc-misplaced-const,
+  misc-unconventional-assign-operator,
+  modernize-use-override
+WarningsAsErrors: ''
+# ヘッダは runtime 配下のものだけを見る (SDK のヘッダは対象外)。vcpkg の依存は
+# runtime\property_sheet\..\..\vcpkg_installed のようなパスで参照されてこの正規表現に
+# 当たってしまうので、集計側 (clang-tidy-report.py) で除いている。
+HeaderFilterRegex: '.*[\\/]runtime[\\/].*'
+FormatStyle: none
