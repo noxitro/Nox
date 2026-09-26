@@ -441,9 +441,6 @@
     <ClInclude Include="colors.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="type_traits\sorted_tuple2.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="type_traits\sorted_tuple.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
