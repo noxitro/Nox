@@ -749,7 +749,6 @@
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{ce18e5d8-faa4-48b4-a1d2-dab85fc1acbb}</ProjectGuid>
     <RootNamespace>kernel</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <VcpkgEnabled>true</VcpkgEnabled>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

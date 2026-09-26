@@ -114,17 +114,17 @@ void nox::test::TestReflection()
 			LC(int v) :value(v) {}
 			LC(const LC& other) :value(other.value) 
 			{
-				NOX_INFO_LINE_OLD(U"LC Copy Constructor");
+				NOX_INFO_LINE(nox::log_id::CoreCommon, u"LC Copy Constructor");
 			}
 			LC(LC&& other) :value(other.value) 
 			{
 				other.value = 0;
-				NOX_INFO_LINE_OLD(U"LC Move Constructor");
+				NOX_INFO_LINE(nox::log_id::CoreCommon, u"LC Move Constructor");
 			}
 
 			~LC()
 			{
-				NOX_INFO_LINE_OLD(U"LC Destructor");
+				NOX_INFO_LINE(nox::log_id::CoreCommon, u"LC Destructor");
 			}
 
 			int Func(int a)const noexcept { return a + value; }
