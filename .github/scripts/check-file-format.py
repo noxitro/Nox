@@ -274,11 +274,12 @@ def compare(old, new, where, path, history):
     """変更前後の形式を比べ、(errors, warnings) を返す。history は元の形式を調べるための遅延関数。"""
     errors, warnings = [], []
 
-    # BOM は変更前ではなく決まり (bom_policy) と比べる。決まりの方へ直す変更は咎めない
-    if old.bom != new.bom:
-        finding = bom_finding(path, new.bom, where)
-        if finding:
-            errors.append(finding)
+    # BOM は変更前ではなく決まり (bom_policy) と比べる。決まりの方へ直す変更は咎めない。
+    # BOM の有無が変わらなくても見る。移動・複製で決まりの違うパスへ移ることがあるため
+    # (BOM なしのファイルを .ps1 に改名した、など)
+    finding = bom_finding(path, new.bom, where)
+    if finding:
+        errors.append(finding)
 
     if old.eol == new.eol and old.eol != "mixed":
         pass
