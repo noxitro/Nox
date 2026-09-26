@@ -76,8 +76,9 @@ def parse(log_paths, root):
                 if checks.startswith("clang-diagnostic-"):
                     continue
                 path = normalize_path(m.group("file"), root)
-                # 外部ライブラリ (vcpkg) の指摘は直せないので数えない
-                if "vcpkg_installed/" in path or not path.startswith("runtime/"):
+                # 外部ライブラリ (vcpkg) の指摘は直せないので数えない。ビルドが生成する
+                # unity ファイル (runtime/build/...) も、元のソースの指摘と重なるだけなので除く
+                if "vcpkg_installed/" in path or not path.startswith("runtime/") or path.startswith("runtime/build/"):
                     continue
                 line = int(m.group("line1") or m.group("line2"))
                 col = int(m.group("col1") or m.group("col2") or 0)
