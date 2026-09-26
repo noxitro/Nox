@@ -1,0 +1,21 @@
+#	文字コードだけをここで決める。BOM なしの UTF-8 に統一してある (AGENTS.md の「ファイル形式」)。
+#	Visual Studio はこの charset に従って保存するので、英数字だけのファイルに日本語を
+#	書き足したときに Shift-JIS で保存されたり、BOM が付いたりするのを防げる。
+#
+#	改行コード (end_of_line) やインデントはここに書かないこと。改行はファイルごとに
+#	CRLF / LF が混在していて、書くと保存のたびに全行が変換されてしまう。
+root = true
+
+[*]
+charset = utf-8
+
+#	Windows PowerShell 5.1 は BOM の無いスクリプトを Shift-JIS として読み、日本語の
+#	文字列が化ける (壊れて構文エラーになることもある)。PowerShell だけは BOM 付きにする。
+[*.{ps1,psm1,psd1}]
+charset = utf-8-bom
+
+#	Visual Studio のテンプレート。パラメーター置換 (ReplaceParameters) をする
+#	テンプレートは BOM が無いとシステムのコードページで読まれうるので、日本語を含む
+#	ものは BOM を残す。
+[tools/vs-templates/nox_module/{root.h,NoxModule.vcxproj.filters}]
+charset = utf-8-bom
