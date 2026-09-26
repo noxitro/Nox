@@ -161,8 +161,6 @@ TEST(TestSuiteName, TestName)
   関数属性 / フィールド属性（static 判定）
 - `math_test.cpp`: `nox::Vec2` / `nox::Vec3` の構築・加減算・スカラー倍
 - `file_win64_test.cpp`: UTF-8 パスでのバイナリ読み書き、追記モード
-- `raw_keyboard_input_test.cpp`: RAWKEYBOARD / 従来のキーメッセージからキーボード入力への変換
-  （Pause の 2 件目の除去、Pause / NumLock の区別）。実機の入力列の追加方法はファイル冒頭を参照
 
 ## 参考資料
 

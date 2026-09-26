@@ -33,7 +33,7 @@
 - `work/*` を push すると CI (`.github/workflows/ci.yml`) が 6 構成のビルド、GoogleTest、Editor の UI テスト (FlaUI) を走らせる。`work/*` の push は確認なしでよい。
 - 落ちたら `gh run view <run-id> --log-failed` でログを読み、直して push し直す。
 - 文書だけの変更 (`paths-ignore` の対象) ではビルドの CI は走らない。File format の検査は走る。
-- テストは `runtime/core/test/` と `runtime/kernel/test/` (GoogleTest)。reflection / delegate / 型システム / メモリ管理を重点に書く。
+- テストは `runtime/core/test/`・`runtime/kernel/test/`・`runtime/modules/hid/test/` (GoogleTest)。reflection / delegate / 型システム / メモリ管理を重点に書く。
 - Editor の見た目や操作は UI テストで拾いきれないので、Windows 上で手動確認する。
 
 ローカルでビルドする場合:

@@ -22,13 +22,7 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="basic_test.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="file_win64_test.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="math_test.cpp">
+    <ClCompile Include="raw_keyboard_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

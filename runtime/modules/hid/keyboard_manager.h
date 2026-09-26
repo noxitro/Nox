@@ -5,16 +5,23 @@
 ///	@brief	keyboard_manager
 #pragma once
 #include	"../../core/system.h"
-#include	"../../kernel/os/os.h"
 #include	"keyboard.h"
+#include	"raw_keyboard.h"
 
 #include	<array>
 #include	<atomic>
 #include	<span>
 
+namespace nox::os
+{
+	struct WindowMessage;
+}
+
 namespace nox::hid
 {
 	/// @brief ウィンドウスレッドのキーイベントをSystem Updateへ渡すシステム
+	/// @details Raw Input の登録とウィンドウメッセージの読み取りもここで行う。
+	///			kernel には汎用のウィンドウメッセージフックだけを登録する
 	class KeyboardManager : public nox::SystemBase
 	{
 		NOX_DECLARE_OBJECT(nox::hid::KeyboardManager, nox::SystemBase);
@@ -49,10 +56,13 @@ namespace nox::hid
 		static constexpr nox::uint32 kEventQueueMask = kEventQueueCapacity - 1u;
 		static_assert((kEventQueueCapacity & (kEventQueueCapacity - 1u)) == 0u);
 
-		static void OnRawKeyboardInput(
-			const nox::os::RawKeyboardInputEvent& event,
-			void* user_data)noexcept;
-		static nox::hid::KeyCode MapRawKey(const nox::os::RawKeyboardInputEvent& event)noexcept;
+		static void OnWindowMessage(const nox::os::WindowMessage& message, void* user_data)noexcept;
+
+		//	以下の Produce* / TryFlushResync はウィンドウメッセージを処理するスレッドで呼ぶ
+		void ProduceRawInput(nox::int64 raw_input_handle)noexcept;
+		void ProduceKeyInput(const nox::hid::RawKeyboardInput& input)noexcept;
+		void ProduceFocusLost()noexcept;
+		bool TryFlushResync()noexcept;
 
 		void Update(nox::World& world);
 		std::span<const nox::SystemBase::PhaseRegister> GetPhaseRegisterList()const noexcept override;
@@ -78,8 +88,13 @@ namespace nox::hid
 		alignas(64) std::atomic<nox::uint32> write_index_{ 0u };
 		/// @brief キューへ積んだ時点のキー状態。auto-repeat など状態が変わらない入力を除くのに使う
 		std::array<bool, nox::hid::Keyboard::kKeyCount> producer_key_state_{};
+		nox::hid::RawKeyboardTranslateState producer_translate_state_{};
 		/// @brief 取りこぼしがあり、Resync をまだキューへ積めていない
 		bool producer_resync_pending_ = false;
+		/// @brief Raw Input へ登録できたか。できなければ従来のキーメッセージで代替する
+		bool is_raw_input_registered_ = false;
+		/// @brief 受け取った RAWKEYBOARD をデバッグ出力へ書くか (開発ビルドで --log-raw-keyboard)
+		bool is_raw_input_log_enabled_ = false;
 
 		alignas(64) std::atomic<nox::uint32> read_index_{ 0u };
 	};

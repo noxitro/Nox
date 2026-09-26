@@ -48,6 +48,32 @@ namespace nox::os
 		};
 	};
 
+	/// @brief ウィンドウメッセージ 1 件
+	struct WindowMessage
+	{
+		nox::os::WindowHandle window_handle;
+		nox::uint32 message;
+		nox::uint64 wparam;
+		nox::int64 lparam;
+	};
+
+	/// @brief ウィンドウメッセージを受け取る関数
+	/// @details 既定の処理より先に呼ばれる。見るだけで、処理を横取りはしない
+	using WindowMessageHook = void(*)(const WindowMessage& message, void* user_data)noexcept;
+
+	/// @brief 登録できるフックの上限
+	inline constexpr nox::uint32 kMaxWindowMessageHooks = 8u;
+
+	/// @brief 全ウィンドウのメッセージを受け取るフックを登録する
+	/// @details kernel はメッセージの中身を解釈しない。入力などの処理は上位のモジュールがフックの中で行う。
+	///			フックはウィンドウメッセージを処理するスレッド上で呼ばれる。
+	///			同じスレッドで、メッセージポンプの開始前に登録し、終了後に解除する
+	/// @return 登録できれば true。上限に達しているか、同じ組がすでにあれば false
+	bool AddWindowMessageHook(WindowMessageHook hook, void* user_data)noexcept;
+
+	/// @brief AddWindowMessageHook で登録したフックを解除する
+	void RemoveWindowMessageHook(WindowMessageHook hook, void* user_data)noexcept;
+
 	struct WindowSetupDesc
 	{
 		nox::uint32 width;

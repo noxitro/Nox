@@ -163,8 +163,10 @@ jobs:
       #   - core_test   : core / reflection / reflection_generated に依存する
       #                   テスト (リフレクションの getter/setter は生成コードを
       #                   実際に走らせないと検証できないので、生成器も動く)
+      #   - hid_test    : hid のうち core に依存しない部分 (キー入力の変換と
+      #                   キーコードの対応表)。hid.lib と kernel.lib だけをリンクする
       #
-      # 両者は runtime.slnx で <Build Project="false" /> が付いていて、
+      # いずれも runtime.slnx で <Build Project="false" /> が付いていて、
       # 上のソリューションビルドでは建たない。Release では
       # nox_release.props の WholeProgramOptimization で全プロジェクトに /GL が
       # 付き、コード生成がリンク時まで遅れる。このとき link.exe は一時ファイル
@@ -202,7 +204,8 @@ jobs:
 
           $projects = @(
             'runtime\kernel\test\kernel_test.vcxproj',
-            'runtime\core\test\core_test.vcxproj'
+            'runtime\core\test\core_test.vcxproj',
+            'runtime\modules\hid\test\hid_test.vcxproj'
           )
           foreach ($proj in $projects) {
             msbuild $proj `
@@ -230,7 +233,7 @@ jobs:
           New-Item -ItemType Directory -Force test-results | Out-Null
 
           $failed = @()
-          foreach ($name in 'kernel_test', 'core_test') {
+          foreach ($name in 'kernel_test', 'core_test', 'hid_test') {
             $exe = Join-Path $outDir "$name.exe"
             if (-not (Test-Path $exe)) { throw "テスト実行ファイルが無い: $exe" }
             & $exe --gtest_output="xml:test-results/$name.xml" 2>&1 |
@@ -244,12 +247,12 @@ jobs:
       # gtest は「1 件も走らなくても」 exit 0 を返す。テスト登録の漏れや
       # フィルタの書き間違いでスイートが丸ごと消えても緑になり、
       # 「通った」と誤読される。件数を数えるのが唯一の証明。
-      # 実測は kernel_test 21 + core_test 81 = 102 件。その 9 割を下限に置く。
+      # 実測は kernel_test 21 + core_test 84 (うち無効 3) + hid_test 15 = 120 件。その 9 割を下限に置く。
       - name: 実行件数を確かめる
         if: always() && matrix.configuration != 'Master'
         shell: pwsh
         run: |
-          python .github/scripts/check-test-results.py test-results --min 91 --label GoogleTest
+          python .github/scripts/check-test-results.py test-results --min 108 --label GoogleTest
 
       # ---------------------------------------------------------
       # Editor UI test (FlaUI, MIT)
@@ -357,7 +360,7 @@ jobs:
 
           # gtest の XML から件数と失敗したテスト名を拾う。
           # レポート用のアクションを足すほどの規模ではないので自前で読む
-          foreach ($name in 'kernel_test', 'core_test') {
+          foreach ($name in 'kernel_test', 'core_test', 'hid_test') {
             $lines += "### $name", ''
             $xmlPath = "test-results/$name.xml"
             if (Test-Path $xmlPath) {
