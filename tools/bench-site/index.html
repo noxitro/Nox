@@ -11,12 +11,10 @@
 <script>
 	// 保存済みのテーマを最初の描画より前に当てる (app.js を待つと一瞬ちらつくため)。
 	// localStorage はプライベートウィンドウなどで例外になるので try で包む。
-	try
-	{
+	try {
 		var t = localStorage.getItem("nox-bench-theme");
 		if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
-	}
-	catch (e) {}
+	} catch (e) {}
 </script>
 </head>
 <body>
@@ -27,8 +25,9 @@
 		<a class="brand" href="#" id="brand-link" aria-label="Nox ベンチマーク (概要へ)">
 			<svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
 				<rect width="32" height="32" rx="8" class="brand-bg"/>
-				<path class="brand-moon" d="M19.6 7.2a9.2 9.2 0 1 0 5.2 15.2A7.4 7.4 0 0 1 19.6 7.2z"/>
-				<path class="brand-line" d="M6.5 21.5l4.2-3.6 3.4 2.4 4.6-5.3"/>
+				<path class="brand-moon" d="M18.2 6.4a10 10 0 1 0 8.4 14.4A8 8 0 0 1 18.2 6.4z"/>
+				<path class="brand-line" d="M16.5 19.5l2.6-2.8 2.2 1.6 3.4-4.3"/>
+				<circle class="brand-moon" cx="24.7" cy="14" r="1.6"/>
 			</svg>
 			<span class="brand-text">Nox <span class="brand-sub">ベンチマーク</span></span>
 		</a>
@@ -38,7 +37,7 @@
 
 		<nav class="view-tabs" aria-label="表示の切り替え">
 			<a class="view-tab" id="tab-overview" href="#" aria-current="page">概要</a>
-			<a class="view-tab" id="tab-compare" href="#view=compare">2 コミット比較</a>
+			<a class="view-tab" id="tab-compare" href="#view=compare"><span class="tab-long">2 コミット</span>比較</a>
 		</nav>
 
 		<div class="appbar-spacer"></div>
@@ -153,10 +152,9 @@
 				<div class="search">
 					<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="8.5" cy="8.5" r="5" class="i-stroke"/><path d="M12.3 12.3 16.5 16.5" class="i-stroke"/></svg>
 					<label class="sr-only" for="search">ベンチマークを検索</label>
-					<input type="search" id="search" placeholder="検索 (-語 で除外)" autocomplete="off" spellcheck="false">
+					<input type="search" id="search" placeholder="名前やタイトルで検索 (-語 で除外)" autocomplete="off" spellcheck="false">
 					<kbd class="search-kbd" aria-hidden="true">/</kbd>
 				</div>
-				<div class="chips" id="group-chips" role="group" aria-label="グループで絞り込む"></div>
 				<div class="toolbar-right">
 					<label class="switch">
 						<input type="checkbox" id="changed-only">
@@ -175,6 +173,7 @@
 					</label>
 				</div>
 			</div>
+			<div class="chips" id="group-chips" role="group" aria-label="グループで絞り込む"></div>
 
 			<p class="result-count" id="result-count" aria-live="polite"></p>
 
@@ -187,7 +186,7 @@
 					<tr>
 						<th scope="col">ベンチマーク</th>
 						<th scope="col" class="num">最新 <span class="th-sub">/ op</span></th>
-						<th scope="col">変化 <span class="th-sub">95% CI</span></th>
+						<th scope="col">変化 <span class="th-sub">95% CI · 帯はしきい値</span></th>
 						<th scope="col">判定</th>
 						<th scope="col" class="num">確保 <span class="th-sub">/ op</span></th>
 						<th scope="col">推移</th>

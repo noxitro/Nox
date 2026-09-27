@@ -394,7 +394,7 @@ def simulate_run(model, variant, compiler, config, k, commit, ref, base_k, base_
         vm = math.exp(rng.gauss(0, b["run_cv"] * 0.6))
         sd = b["round_sd"]
         if name == "job/fanout/1024":
-            sd *= 5.0  # ばらつき大の判定を 1 件出す
+            sd *= 7.0  # ばらつき大の判定を 1 件出す
         heads, bases, head_samples, base_samples = [], [], [], []
         for _ in range(ROUNDS):
             common = math.exp(rng.gauss(0, 0.012))
@@ -408,7 +408,7 @@ def simulate_run(model, variant, compiler, config, k, commit, ref, base_k, base_
                 bases.append(median(bs))
                 base_samples.extend(bs)
 
-        def side(rounds, samples):
+        def side(rounds, samples, threads=threads):
             cyc = None
             if threads == 1:
                 cyc = sig4(median(samples) * CPU_GHZ[cpu] * rng.uniform(0.97, 1.03))
@@ -518,7 +518,6 @@ def point_from_run(bm, base_index):
 def build(n_commits, preview, seed):
     model = Model(n_commits, seed)
     commits = make_commits(model)
-    sha_index = {c["sha"]: i for i, c in enumerate(commits)}
     last = n_commits - 1
     variants = {}
     latest_runs = {}
@@ -584,7 +583,7 @@ def build(n_commits, preview, seed):
             "run_id": commits[last]["run_id"] + 3_100_000, "run_number": commits[last]["run_number"] + 2,
         }
         runs = {}
-        for (vid, label, compiler, config, _) in VARIANTS:
+        for (vid, _label, compiler, config, _) in VARIANTS:
             # candidate はコミット一覧に無いので、モデル上は merge-base と同じ位置 (+ ブランチの変化) とみなす
             runs[vid] = simulate_run(model, vid, compiler, config, mb, cand, PREVIEW_BRANCH, mb, commits[mb],
                                      "merge-base", extra_time=PREVIEW_TIME, extra_alloc=PREVIEW_ALLOC)
@@ -594,7 +593,6 @@ def build(n_commits, preview, seed):
             "run_url": "https://github.com/%s/actions/runs/%d" % (REPO, cand["run_id"]),
             "variants": runs,
         }
-    assert all(c["sha"] in sha_index for c in commits)
     return history, latest
 
 

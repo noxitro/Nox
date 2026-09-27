@@ -39,14 +39,14 @@
 	--on-accent: #ffffff;
 
 	--regress: #cf222e;
-	--regress-soft: rgba(207, 34, 46, 0.09);
+	--regress-soft: rgba(207, 34, 46, 0.08);
 	--improve: #0969da;
-	--improve-soft: rgba(9, 105, 218, 0.09);
-	--noisy: #9a6700;
-	--noisy-soft: rgba(191, 135, 0, 0.13);
+	--improve-soft: rgba(9, 105, 218, 0.08);
+	--noisy: #8a5c00;
+	--noisy-soft: rgba(191, 135, 0, 0.12);
 	--same: #687280;
 	--same-soft: rgba(104, 114, 128, 0.1);
-	--ok: #1a7f37;
+	--ok: #15702f;
 	--ok-soft: rgba(26, 127, 55, 0.1);
 
 	--threshold-band: rgba(104, 114, 128, 0.1);
@@ -408,6 +408,15 @@ button {
 	color: var(--text);
 }
 
+.seg button:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+.seg button:disabled:hover {
+	color: var(--text-2);
+}
+
 .seg button[aria-checked="true"],
 .seg button[aria-pressed="true"],
 .seg button[aria-selected="true"] {
@@ -465,13 +474,12 @@ button {
 
 .brand-moon {
 	fill: var(--on-accent);
-	opacity: 0.94;
 }
 
 .brand-line {
 	fill: none;
-	stroke: var(--accent);
-	stroke-width: 2.2;
+	stroke: var(--on-accent);
+	stroke-width: 2;
 	stroke-linecap: round;
 	stroke-linejoin: round;
 }
@@ -553,6 +561,28 @@ button {
 
 .variant-select {
 	display: none;
+}
+
+.seg-flag {
+	margin-left: 6px;
+	color: var(--regress);
+	font-size: 10.5px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+}
+
+.linklike {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--accent);
+	font: inherit;
+	font-weight: 600;
+}
+
+.linklike:hover {
+	text-decoration: underline;
+	text-underline-offset: 2px;
 }
 
 .appbar-tools {
@@ -774,7 +804,7 @@ a.sha-chip:hover {
 }
 
 .hero-sentence {
-	max-width: 70ch;
+	max-width: 760px;
 	margin-top: 14px;
 	color: var(--text-2);
 	font-size: 13.5px;
@@ -783,6 +813,10 @@ a.sha-chip:hover {
 .hero-sentence strong {
 	color: var(--text);
 	font-weight: 650;
+}
+
+.nowrap {
+	white-space: nowrap;
 }
 
 .hero-figure {
@@ -903,6 +937,11 @@ button.kpi:disabled:hover {
 	letter-spacing: 0;
 }
 
+.kpi-value .kpi-mark.ok {
+	color: var(--ok);
+	font-size: 20px;
+}
+
 .kpi-value-text {
 	display: block;
 	max-width: 100%;
@@ -933,7 +972,7 @@ button.kpi:disabled:hover {
 }
 
 .kpi.is-good .kpi-value {
-	color: var(--ok);
+	color: var(--text);
 }
 
 .kpi.is-improve .kpi-value {
@@ -969,14 +1008,14 @@ button.kpi:disabled:hover {
 	flex-wrap: wrap;
 	align-items: center;
 	gap: 10px 12px;
-	margin-bottom: 10px;
+	margin-bottom: 12px;
 }
 
 .search {
 	position: relative;
 	display: flex;
 	align-items: center;
-	width: 260px;
+	width: 340px;
 	height: 34px;
 	border: 1px solid var(--border);
 	border-radius: var(--radius-sm);
@@ -1035,6 +1074,7 @@ button.kpi:disabled:hover {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 6px;
+	margin-bottom: 14px;
 }
 
 .chip {
@@ -1141,7 +1181,8 @@ button.kpi:disabled:hover {
 }
 
 .select select,
-.field select {
+.field select,
+.variant-select {
 	height: 34px;
 	padding: 0 32px 0 12px;
 	border: 1px solid var(--border);
@@ -1159,7 +1200,8 @@ button.kpi:disabled:hover {
 }
 
 .select select:hover,
-.field select:hover {
+.field select:hover,
+.variant-select:hover {
 	border-color: var(--border-strong);
 }
 
@@ -1192,15 +1234,15 @@ button.kpi:disabled:hover {
 }
 
 .bench-table col.c-change {
-	width: 216px;
+	width: 248px;
 }
 
 .bench-table col.c-verdict {
-	width: 124px;
+	width: 118px;
 }
 
 .bench-table col.c-alloc {
-	width: 124px;
+	width: 112px;
 }
 
 .bench-table col.c-trend {
@@ -1290,6 +1332,18 @@ button.kpi:disabled:hover {
 	padding-left: 18px;
 }
 
+.bench-table tr.row.is-regressed td:first-child {
+	box-shadow: inset 3px 0 0 var(--regress);
+}
+
+.bench-table tr.row.is-improved td:first-child {
+	box-shadow: inset 3px 0 0 var(--improve);
+}
+
+.bench-table tr.row.is-budget-bad td:first-child {
+	box-shadow: inset 3px 0 0 var(--regress);
+}
+
 /* グループの見出し行 (表の中で貼り付く) */
 .bench-table tr.group-row th {
 	position: sticky;
@@ -1334,7 +1388,7 @@ button.kpi:disabled:hover {
 	display: block;
 	overflow: hidden;
 	color: var(--text);
-	font-weight: 560;
+	font-weight: 500;
 	font-size: 14px;
 	line-height: 1.4;
 	text-overflow: ellipsis;
@@ -1375,7 +1429,7 @@ button.kpi:disabled:hover {
 	display: block;
 	color: var(--text);
 	font-size: 14px;
-	font-weight: 560;
+	font-weight: 500;
 	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
 }
@@ -1390,7 +1444,7 @@ button.kpi:disabled:hover {
 .change {
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	gap: 14px;
 }
 
 .change svg {
@@ -1399,10 +1453,11 @@ button.kpi:disabled:hover {
 }
 
 .pct {
-	min-width: 62px;
+	flex: none;
+	width: 90px;
 	color: var(--text);
 	font-size: 13.5px;
-	font-weight: 560;
+	font-weight: 500;
 	font-variant-numeric: tabular-nums;
 	text-align: right;
 	white-space: nowrap;
@@ -1421,7 +1476,8 @@ button.kpi:disabled:hover {
 .pct .ci {
 	display: block;
 	color: var(--text-3);
-	font-size: 11px;
+	font-size: 10.5px;
+	letter-spacing: -0.01em;
 	font-weight: 500;
 	font-style: normal;
 }
@@ -1502,7 +1558,7 @@ button.kpi:disabled:hover {
 	align-items: center;
 	gap: 5px;
 	font-size: 14px;
-	font-weight: 560;
+	font-weight: 500;
 	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
 }
@@ -1532,7 +1588,13 @@ button.kpi:disabled:hover {
 }
 
 .budget.ok {
+	color: var(--text-3);
+	font-weight: 500;
+}
+
+.budget.ok .ck {
 	color: var(--ok);
+	font-weight: 700;
 }
 
 .budget.bad {
@@ -1740,6 +1802,12 @@ button.kpi:disabled:hover {
 	display: inline-flex;
 	align-items: baseline;
 	gap: 6px;
+}
+
+.compare-summary .cs-warn {
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px 10px;
 }
 
 .compare-summary a {
@@ -2273,6 +2341,27 @@ button.kpi:disabled:hover {
 	fill: var(--accent);
 	font-size: 11px;
 	font-weight: 700;
+	paint-order: stroke;
+	stroke: var(--surface);
+	stroke-width: 4px;
+	stroke-linejoin: round;
+}
+
+.chart .budget-line {
+	stroke: var(--regress);
+	stroke-width: 1.25;
+	stroke-dasharray: 5 4;
+	opacity: 0.8;
+}
+
+.chart .budget-label {
+	fill: var(--regress);
+	font-size: 10.5px;
+	font-weight: 650;
+	paint-order: stroke;
+	stroke: var(--surface);
+	stroke-width: 4px;
+	stroke-linejoin: round;
 }
 
 .chart .cand-link {
@@ -2370,6 +2459,10 @@ button.kpi:disabled:hover {
 	border-top: 1px dashed var(--text-3);
 }
 
+.key-line.key-budget {
+	border-top: 1.5px dashed var(--regress);
+}
+
 .key-cand {
 	display: inline-block;
 	width: 8px;
@@ -2401,7 +2494,8 @@ button.kpi:disabled:hover {
 	top: 0;
 	left: 0;
 	width: max-content;
-	max-width: 280px;
+	min-width: 220px;
+	max-width: 320px;
 	padding: 10px 12px;
 	border: 1px solid var(--border);
 	border-radius: 10px;
@@ -2467,6 +2561,43 @@ button.kpi:disabled:hover {
 	height: 20px;
 	padding: 0 7px 0 6px;
 	font-size: 11.5px;
+}
+
+.tip-grid {
+	display: grid;
+	grid-template-columns: max-content minmax(0, 1fr);
+	align-items: center;
+	gap: 4px 12px;
+	margin-top: 8px;
+	font-variant-numeric: tabular-nums;
+}
+
+.tip-k {
+	color: var(--text-3);
+	font-size: 11.5px;
+}
+
+.tip-v {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+	white-space: nowrap;
+}
+
+.tip-v strong {
+	color: var(--text);
+	font-weight: 650;
+}
+
+.tip-v .badge {
+	height: 20px;
+	padding: 0 7px 0 6px;
+	font-size: 11.5px;
+}
+
+.tip-v .badge.v-unchanged {
+	padding-left: 0;
 }
 
 .tip-hint {
@@ -2728,17 +2859,38 @@ button.kpi:disabled:hover {
 
 /* ------------------------------------------------------------------ レスポンシブ */
 
-@media (max-width: 1180px) {
+@media (max-width: 1379px) {
 	.repo-link {
 		display: none;
 	}
+}
 
+/* バリアントの分割ボタンが収まらない幅では select にする */
+@media (max-width: 1259px) {
+	.variant-picker {
+		display: none !important;
+	}
+
+	.variant-select {
+		display: inline-block;
+	}
+}
+
+@media (max-width: 1180px) {
 	.bench-table col.c-change {
-		width: 190px;
+		width: 232px;
 	}
 
 	.bench-table col.c-trend {
 		width: 132px;
+	}
+
+	/* 名前の列が狭くなるので、タイトルは省略せず 2 行まで折り返す */
+	.b-title {
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		white-space: normal;
 	}
 }
 
@@ -2759,14 +2911,6 @@ button.kpi:disabled:hover {
 }
 
 @media (max-width: 1023px) {
-	.variant-picker {
-		display: none;
-	}
-
-	.variant-select {
-		display: inline-block;
-	}
-
 	.hero {
 		grid-template-columns: minmax(0, 1fr);
 		gap: 18px;
@@ -2790,7 +2934,23 @@ button.kpi:disabled:hover {
 	}
 }
 
-@media (max-width: 899px) {
+@media (max-width: 959px) {
+	.tab-long {
+		display: none;
+	}
+
+	.menu-label {
+		display: none;
+	}
+
+	.menu-button {
+		width: 34px;
+		padding: 0;
+		justify-content: center;
+	}
+}
+
+@media (max-width: 1099px) {
 	.bench-table col.c-trend {
 		width: 0;
 	}
@@ -2826,6 +2986,13 @@ button.kpi:disabled:hover {
 		padding-bottom: 0;
 	}
 
+	/* ロゴとツールの行と、タブとバリアントの行に分ける */
+	.appbar-inner::after {
+		content: "";
+		order: 4;
+		flex-basis: 100%;
+	}
+
 	.brand {
 		order: 1;
 		height: 40px;
@@ -2840,15 +3007,20 @@ button.kpi:disabled:hover {
 	}
 
 	.view-tabs {
-		order: 4;
+		order: 5;
 		height: 44px;
 		margin-left: -10px;
 	}
 
+	.tab-long {
+		display: none;
+	}
+
 	.variant-select {
-		order: 5;
+		order: 6;
 		margin-left: auto;
 		align-self: center;
+		max-width: 60%;
 	}
 
 	.menu-label {
@@ -2890,6 +3062,17 @@ button.kpi:disabled:hover {
 		font-size: 16px;
 	}
 
+	.kpi-sub {
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		white-space: normal;
+	}
+
+	.stats td {
+		white-space: normal;
+	}
+
 	.search {
 		width: 100%;
 	}
@@ -2903,7 +3086,7 @@ button.kpi:disabled:hover {
 	.chips {
 		flex-wrap: nowrap;
 		width: calc(100% + 2 * var(--gutter));
-		margin: 0 calc(-1 * var(--gutter));
+		margin: 0 calc(-1 * var(--gutter)) 12px;
 		padding: 2px var(--gutter);
 		overflow-x: auto;
 		scrollbar-width: none;
@@ -2979,6 +3162,19 @@ button.kpi:disabled:hover {
 
 	.bench-table tr.row:hover {
 		border-color: var(--border-strong);
+	}
+
+	.bench-table tr.row td:first-child {
+		box-shadow: none !important;
+	}
+
+	.bench-table tr.row.is-regressed,
+	.bench-table tr.row.is-budget-bad {
+		box-shadow: var(--shadow-sm), inset 3px 0 0 var(--regress);
+	}
+
+	.bench-table tr.row.is-improved {
+		box-shadow: var(--shadow-sm), inset 3px 0 0 var(--improve);
 	}
 
 	.bench-table .cell-name {
@@ -3101,11 +3297,37 @@ button.kpi:disabled:hover {
 		align-self: center;
 	}
 
+	.drawer-inner {
+		display: block;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+	}
+
 	.drawer-head {
 		padding: 14px 16px 12px;
 	}
 
+	.drawer-head-top {
+		padding-right: 76px;
+	}
+
+	.drawer-actions {
+		position: fixed;
+		top: 8px;
+		right: 8px;
+		z-index: 4;
+		margin: 0;
+		padding: 2px;
+		border: 1px solid var(--hairline);
+		border-radius: 12px;
+		background: var(--appbar-bg);
+		-webkit-backdrop-filter: blur(8px);
+		backdrop-filter: blur(8px);
+		box-shadow: var(--shadow-sm);
+	}
+
 	.drawer-body {
+		overflow: visible;
 		padding: 4px 16px 32px;
 	}
 
