@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Reflection;
 using System.Runtime.Serialization;
+using System.Text.Json;
 using FlaUI.Core;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Definitions;
@@ -19,6 +20,24 @@ namespace Studio.Wpf.UITests;
 public sealed class EditorSmokeTests
 {
 	private static readonly TimeSpan UiTimeout = TimeSpan.FromSeconds(20);
+
+	/// <summary>
+	/// Editor を起動してから、メインウィンドウが UI Automation から見えるまで待つ上限。
+	/// </summary>
+	/// <remarks>
+	/// Editor は起動時に約 150MB の RuntimeTypeDB を読む。OS のファイルキャッシュが空の CI ランナーでは、
+	/// UI 操作を待つ <see cref="UiTimeout"/> より長くかかりうるので分けてある。
+	/// </remarks>
+	private static readonly TimeSpan LaunchTimeout = TimeSpan.FromSeconds(60);
+
+	/// <summary>
+	/// メインウィンドウを 1 回問い合わせるときの上限。
+	/// </summary>
+	/// <remarks>
+	/// Application.GetMainWindow は待ち時間を渡さないと、ハンドルが出来るまで無限に待つ。
+	/// 1 回は短く切り、全体の上限は <see cref="LaunchTimeout"/> で決める。
+	/// </remarks>
+	private static readonly TimeSpan MainWindowProbeTimeout = TimeSpan.FromSeconds(1);
 
 	[Fact]
 	public void EditorLaunchesWithMainPanelsAndGeneratesAssetMeta()
@@ -44,8 +63,7 @@ public sealed class EditorSmokeTests
 		editor.MainWindow.Click();
 
 		string metaPath = workspace.GetAssetPath("SmokeAsset.txt.meta");
-		Assert.True(File.Exists(metaPath), $"Expected asset meta file to be generated: {metaPath}");
-		string metaJson = File.ReadAllText(metaPath);
+		string metaJson = ReadJsonFileWhenReady(metaPath, "Expected asset meta file to be generated");
 		Assert.Contains("\"Guid\"", metaJson, StringComparison.Ordinal);
 		Assert.DoesNotContain("\"Kind\"", metaJson, StringComparison.Ordinal);
 		Assert.Contains("\"Importer\": \"TextImporter\"", metaJson, StringComparison.Ordinal);
@@ -150,11 +168,7 @@ public sealed class EditorSmokeTests
 
 		InvokeTopMenuItem(editor, "File", "NoxStudio.File.SaveScene");
 		string scenePath = workspace.GetAssetPath("Main Scene.noxscene");
-		RetryResult<string?> sceneFileResult = Retry.WhileNull(
-			() => File.Exists(scenePath) ? scenePath : null,
-			UiTimeout);
-		Assert.NotNull(sceneFileResult.Result);
-		string sceneJson = File.ReadAllText(scenePath);
+		string sceneJson = ReadJsonFileWhenReady(scenePath, "Expected scene file to be saved");
 		Assert.Contains("\"Name\": \"Main Scene\"", sceneJson, StringComparison.Ordinal);
 		Assert.Contains("\"Name\": \"Main Camera\"", sceneJson, StringComparison.Ordinal);
 		Assert.Contains("\"Name\": \"EntityNode 3\"", sceneJson, StringComparison.Ordinal);
@@ -183,10 +197,11 @@ public sealed class EditorSmokeTests
 
 		WaitForDescendantByName(editor.MainWindow, "Project").Click();
 
-		RetryResult<AutomationElement?> menuItemResult = Retry.WhileNull(
+		RetryResult<AutomationElement?> menuItemResult = WaitWhileNull(
 			() => editor.Automation.GetDesktop().FindFirstDescendant(cf => cf.ByName("Project Settings")),
 			UiTimeout);
-		AutomationElement menuItem = menuItemResult.Result ?? throw new InvalidOperationException("Project Settings menu item was not shown.");
+		AutomationElement menuItem = menuItemResult.Result ?? throw new InvalidOperationException(
+			$"Project Settings menu item was not shown.{DescribeLastException(menuItemResult)}");
 		menuItem.Click();
 
 		Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.ProjectSettingsView"));
@@ -293,26 +308,76 @@ public sealed class EditorSmokeTests
 		}
 	}
 
+	/// <summary>
+	/// <paramref name="probe"/> が null 以外を返すまで待つ。UI Automation を使う待ちはすべてここを通す。
+	/// </summary>
+	/// <remarks>
+	/// UI Automation の呼び出しは、Editor の UI スレッドが一時的に応答しないと
+	/// TimeoutException (UIA_E_TIMEOUT) や COMException を投げる。FlaUI の Retry は既定では例外を握らないので、
+	/// 1 回の例外で、待ち時間を使い切る前にテストが落ちる。実際に PR #34 の CI では、起動直後の
+	/// GetMainWindow と FindFirstDescendant が 20 秒の待ちの途中 (13〜17 秒) で落ちた。
+	/// ここでは例外も「まだ条件を満たしていない」として扱い、上限まで待つ。
+	/// 満たせなかったときは <see cref="DescribeLastException{T}"/> で最後の例外を失敗メッセージに添える。
+	/// </remarks>
+	private static RetryResult<T?> WaitWhileNull<T>(Func<T?> probe, TimeSpan timeout)
+		where T : class
+	{
+		return Retry.WhileNull(probe, timeout, ignoreException: true);
+	}
+
+	private static string DescribeLastException<T>(RetryResult<T> result)
+	{
+		Exception? exception = result.LastException;
+		return exception == null
+			? string.Empty
+			: $" LastException={exception.GetType().Name}: {exception.Message}";
+	}
+
+	/// <summary>
+	/// Editor が書き出した JSON ファイルを、完全な JSON として読めるようになるまで待って読む。
+	/// </summary>
+	/// <remarks>
+	/// シーンの保存は File.Create (共有なし) で開いたまま書くので、存在を確かめた直後に読むと
+	/// 「別のプロセスが使用中」の IOException になる。master の CI run #125 はこれで落ちた。
+	/// .meta は File.WriteAllText (読み取り共有あり) で書くので、書きかけを読むこともありうる。
+	/// どちらも、読めて JSON として解釈できるまで待てば、書き終わった内容だけを見られる。
+	/// </remarks>
+	private static string ReadJsonFileWhenReady(string path, string failureMessage)
+	{
+		RetryResult<string?> result = WaitWhileNull(
+			() =>
+			{
+				string text = File.ReadAllText(path);
+				using JsonDocument document = JsonDocument.Parse(text);
+				return text;
+			},
+			UiTimeout);
+		return result.Result ?? throw new InvalidOperationException(
+			$"{failureMessage}: {path}.{DescribeLastException(result)}");
+	}
+
 	private static AutomationElement FindByAutomationId(AutomationElement root, string automationId)
 	{
-		RetryResult<AutomationElement?> result = Retry.WhileNull(
+		RetryResult<AutomationElement?> result = WaitWhileNull(
 			() => root.FindFirstDescendant(cf => cf.ByAutomationId(automationId)),
 			UiTimeout);
-		return result.Result ?? throw new InvalidOperationException($"Element not found. AutomationId={automationId}");
+		return result.Result ?? throw new InvalidOperationException(
+			$"Element not found. AutomationId={automationId}{DescribeLastException(result)}");
 	}
 
 	private static AutomationElement WaitForDescendantByName(AutomationElement root, string name)
 	{
-		RetryResult<AutomationElement?> result = Retry.WhileNull(
+		RetryResult<AutomationElement?> result = WaitWhileNull(
 			() => root.FindFirstDescendant(cf => cf.ByName(name)),
 			UiTimeout);
-		return result.Result ?? throw new InvalidOperationException($"Element not found. Name={name}");
+		return result.Result ?? throw new InvalidOperationException(
+			$"Element not found. Name={name}{DescribeLastException(result)}");
 	}
 
 	private static void CreateRootEntityFromHierarchyContextMenu(EditorApp editor)
 	{
 		AutomationElement hierarchyTree = FindByAutomationId(editor.MainWindow, "NoxStudio.Hierarchy.Tree");
-		RetryResult<AutomationElement?> result = Retry.WhileNull(
+		RetryResult<AutomationElement?> result = WaitWhileNull(
 			() =>
 			{
 				hierarchyTree.RightClick();
@@ -321,7 +386,7 @@ public sealed class EditorSmokeTests
 			},
 			UiTimeout);
 		AutomationElement createEntity = result.Result ?? throw new InvalidOperationException(
-			"Hierarchy context-menu item was not shown.");
+			$"Hierarchy context-menu item was not shown.{DescribeLastException(result)}");
 		createEntity.Click();
 	}
 
@@ -343,23 +408,25 @@ public sealed class EditorSmokeTests
 
 	private static AutomationElement WaitForDesktopElementByName(EditorApp editor, string name)
 	{
-		RetryResult<AutomationElement?> result = Retry.WhileNull(
+		RetryResult<AutomationElement?> result = WaitWhileNull(
 			() => editor.Automation.GetDesktop().FindFirstDescendant(cf => cf.ByName(name)),
 			UiTimeout);
-		return result.Result ?? throw new InvalidOperationException($"Desktop element not found. Name={name}");
+		return result.Result ?? throw new InvalidOperationException(
+			$"Desktop element not found. Name={name}{DescribeLastException(result)}");
 	}
 
 	private static AutomationElement FindDesktopByAutomationId(EditorApp editor, string automationId)
 	{
-		RetryResult<AutomationElement?> result = Retry.WhileNull(
+		RetryResult<AutomationElement?> result = WaitWhileNull(
 			() => editor.Automation.GetDesktop().FindFirstDescendant(cf => cf.ByAutomationId(automationId)),
 			UiTimeout);
-		return result.Result ?? throw new InvalidOperationException($"Desktop element not found. AutomationId={automationId}");
+		return result.Result ?? throw new InvalidOperationException(
+			$"Desktop element not found. AutomationId={automationId}{DescribeLastException(result)}");
 	}
 
 	private static AutomationElement WaitForAttachStatus(EditorApp editor, string expectedText, string runtimeExecutablePath)
 	{
-		RetryResult<AutomationElement?> result = Retry.WhileNull(
+		RetryResult<AutomationElement?> result = WaitWhileNull(
 			() =>
 			{
 				AutomationElement root = editor.MainWindow;
@@ -369,7 +436,7 @@ public sealed class EditorSmokeTests
 			UiTimeout);
 
 		return result.Result ?? throw new InvalidOperationException(
-			$"Runtime view was not attached. Expected status text '{expectedText}'. EditorExited={editor.HasExited}. {GetRuntimeViewDiagnostics(editor.MainWindow)} {GetRuntimeDiagnostics(runtimeExecutablePath)}");
+			$"Runtime view was not attached. Expected status text '{expectedText}'. EditorExited={editor.HasExited}. {GetRuntimeViewDiagnostics(editor.MainWindow)} {GetRuntimeDiagnostics(runtimeExecutablePath)}{DescribeLastException(result)}");
 	}
 
 	/// <summary>
@@ -385,7 +452,7 @@ public sealed class EditorSmokeTests
 
 	private static void WaitForDebugCounterAtLeast(EditorApp editor, string counterName, int expectedMinimum, string runtimeExecutablePath)
 	{
-		RetryResult<AutomationElement?> result = Retry.WhileNull(
+		RetryResult<AutomationElement?> result = WaitWhileNull(
 			() =>
 			{
 				AutomationElement status = FindByAutomationId(editor.MainWindow, "NoxStudio.RuntimeView.AttachStatus");
@@ -394,7 +461,7 @@ public sealed class EditorSmokeTests
 			UiTimeout);
 
 		Assert.False(editor.HasExited, $"Editor exited while waiting for RuntimeView debug counter {counterName}>={expectedMinimum}. {GetRuntimeViewDiagnostics(editor.MainWindow)} {GetRuntimeDiagnostics(runtimeExecutablePath)}");
-		Assert.True(result.Result != null, $"RuntimeView debug counter {counterName} did not reach {expectedMinimum}. {GetRuntimeViewDiagnostics(editor.MainWindow)} {GetRuntimeDiagnostics(runtimeExecutablePath)}");
+		Assert.True(result.Result != null, $"RuntimeView debug counter {counterName} did not reach {expectedMinimum}. {GetRuntimeViewDiagnostics(editor.MainWindow)} {GetRuntimeDiagnostics(runtimeExecutablePath)}{DescribeLastException(result)}");
 	}
 
 	private static int GetDebugCounter(string? debugText, string counterName)
@@ -590,11 +657,53 @@ public sealed class EditorSmokeTests
 
 			Application application = Application.Launch(startInfo);
 			UIA3Automation automation = new();
-			RetryResult<Window?> mainWindowResult = Retry.WhileNull(
-				() => application.GetMainWindow(automation),
-				UiTimeout);
-			Window mainWindow = mainWindowResult.Result ?? throw new InvalidOperationException("Nox Studio main window was not created.");
+			RetryResult<Window?> mainWindowResult = WaitWhileNull(
+				() => application.GetMainWindow(automation, MainWindowProbeTimeout),
+				LaunchTimeout);
+			Window? mainWindow = mainWindowResult.Result;
+			if (mainWindow == null)
+			{
+				// 起動に失敗した Editor を残すと、後のテストがデスクトップ全体を名前で探したときに
+				// そのウィンドウを拾って巻き添えで落ちる。ここで片付けてから失敗させる。
+				// Application.Kill は終了済みなら何もせず、中で起きた例外も握りつぶす (FlaUI 5.0.0)。
+				// HasExited は投げうる (HasEditorExited を参照) ので、どちらも try に入れ、automation は finally で必ず破棄する。
+				bool editorExited;
+				try
+				{
+					editorExited = HasEditorExited(application);
+					application.Kill();
+				}
+				finally
+				{
+					automation.Dispose();
+				}
+
+				throw new InvalidOperationException(
+					$"Nox Studio main window was not created within {LaunchTimeout.TotalSeconds} seconds. EditorExited={editorExited}.{DescribeLastException(mainWindowResult)}");
+			}
+
 			return new EditorApp(application, automation, mainWindow);
+		}
+
+		/// <summary>
+		/// Editor が終了したかを返す。
+		/// </summary>
+		/// <remarks>
+		/// FlaUI 5.0.0 の GetMainWindow (WaitWhileMainHandleIsMissing) は、持っている Process を破棄してから
+		/// 同じ ID で探し直す。Editor が終了していると探し直しに失敗し、破棄済みの Process が残るので、
+		/// HasExited が InvalidOperationException を投げる。これは Editor が見つからない、つまり終了したときにだけ
+		/// 起こるので、終了済みとして扱う。起動失敗でいちばん多い形なので、ここで投げると失敗の説明が失われる。
+		/// </remarks>
+		private static bool HasEditorExited(Application application)
+		{
+			try
+			{
+				return application.HasExited;
+			}
+			catch (InvalidOperationException)
+			{
+				return true;
+			}
 		}
 
 		public void Dispose()
