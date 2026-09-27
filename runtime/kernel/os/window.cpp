@@ -14,14 +14,56 @@
 #include	"../basic_definition.h"
 #include	"assertion.h"
 #include	"os.h"
+#include	"mutex.h"
+#include	"../log_trace.h"
+#include	"../log_id.h"
+#include	"../preprocessor/util.h"
+#include	"../parallel_execute_checker.h"
 
 namespace nox::os
 {
-	struct NativeCreateArgs
+	namespace
 	{
-		nox::os::Window& self;
-		WindowSetupDesc& desc;
-	};
+		struct NativeCreateArgs
+		{
+			nox::os::Window& self;
+			WindowSetupDesc& desc;
+		};
+
+		struct MessageHookEntry
+		{
+			void(*hook)(const WindowMessage& message, void* user_data);
+			void* user_data;
+		};
+
+		constexpr nox::uint8 kMaxWindowMessageHooks = 8u;
+		constinit std::array<MessageHookEntry, kMaxWindowMessageHooks> window_message_hooks_{};
+		constinit nox::uint8 window_message_hook_count_ = 0u;
+
+		nox::os::Mutex window_message_hooks_mutex_{};
+
+#if !NOX_MASTER
+		nox::util::RWParallelExecuteChecker window_message_hooks_checker_{};
+#endif // !NOX_MASTER
+
+		/// @brief 汎用購読者にウィンドウメッセージを通知する
+		/// @param message 
+		void DispatchWindowMessageHooks(const WindowMessage& message)
+		{
+#if !NOX_MASTER
+			NOX_LOCAL_SCOPE(nox::util::ReadParallelExecuteCheckScope(nox::os::window_message_hooks_checker_, nox::util::detail::ParallelExecuteCheckOption::StackTrace));
+#endif // !NOX_MASTER
+
+			for (nox::uint8 hook_index = 0u; hook_index < nox::os::window_message_hook_count_; ++hook_index)
+			{
+				const nox::os::MessageHookEntry& entry = nox::os::window_message_hooks_[hook_index];
+				if (entry.hook != nullptr)
+				{
+					entry.hook(message, entry.user_data);
+				}
+			}
+		}
+	}
 }
 
 ::LRESULT CALLBACK nox::os::Window::CallbackWindow(const ::HWND hWnd, const ::UINT message, const ::WPARAM wParam, ::LPARAM lParam)
@@ -34,6 +76,17 @@ namespace nox::os
 	}
 
 	nox::os::Window* const self = reinterpret_cast<nox::os::Window*>(::GetWindowLongPtrW(hWnd, GWLP_USERDATA));
+
+	//	フックへは全メッセージを渡す。既定の処理はこのあと通常どおり行う
+	const nox::os::WindowMessage window_message
+	{
+		hWnd,
+		static_cast<nox::uint32>(message),
+		static_cast<nox::uint64>(wParam),
+		static_cast<nox::int64>(lParam)
+	};
+	nox::os::DispatchWindowMessageHooks(window_message);
+
 	if (self != nullptr && self->callback_ != nullptr)
 	{
 		nox::os::WindowCallbackArgs args{};
@@ -240,4 +293,50 @@ void nox::os::Window::RequestClose()noexcept
 		::PostMessageW(handle, WM_CLOSE, 0, 0);
 	}
 #endif // NOX_WINDOWS
+}
+
+bool nox::os::Window::RegisterMessageHook(void(&func)(const nox::os::WindowMessage& message, void* user_data), void* user_data)
+{
+	//	スレッドセーフ対応
+	//	kMaxWindowMessageHooks を超えないようにする
+	NOX_LOCAL_SCOPE(nox::os::ScopedLock(nox::os::window_message_hooks_mutex_));
+#if !NOX_MASTER
+	NOX_LOCAL_SCOPE(nox::util::WriteParallelExecuteCheckScope(nox::os::window_message_hooks_checker_, nox::util::detail::ParallelExecuteCheckOption::StackTrace));
+#endif // !NOX_MASTER
+
+	if (nox::os::window_message_hook_count_ >= nox::os::kMaxWindowMessageHooks)
+	{
+		NOX_ERROR_LINE(nox::log_id::OS, u8"ウィンドウメッセージのフックが上限に達しました");
+		return false;
+	}
+	
+	nox::os::window_message_hooks_[nox::os::window_message_hook_count_] = nox::os::MessageHookEntry{ func, user_data };
+	++nox::os::window_message_hook_count_;
+	return true;
+}
+
+bool nox::os::Window::UnregisterMessageHook(void(&func)(const nox::os::WindowMessage& message, void* user_data), void* user_data)
+{
+	NOX_LOCAL_SCOPE(nox::os::ScopedLock(nox::os::window_message_hooks_mutex_));
+#if !NOX_MASTER
+	NOX_LOCAL_SCOPE(nox::util::WriteParallelExecuteCheckScope(nox::os::window_message_hooks_checker_, nox::util::detail::ParallelExecuteCheckOption::StackTrace));
+#endif // !NOX_MASTER
+
+	//	見つけた位置から後続を詰める
+	for (nox::uint32 hook_index = 0u; hook_index < nox::os::window_message_hook_count_; ++hook_index)
+	{
+		const nox::os::MessageHookEntry& entry = nox::os::window_message_hooks_[hook_index];
+		if (entry.hook == func && entry.user_data == user_data)
+		{
+			for (nox::uint32 move_index = hook_index; move_index + 1u < nox::os::window_message_hook_count_; ++move_index)
+			{
+				nox::os::window_message_hooks_[move_index] = nox::os::window_message_hooks_[move_index + 1u];
+			}
+			--nox::os::window_message_hook_count_;
+			return true;
+		}
+	}
+
+	NOX_ERROR_LINE(nox::log_id::OS, u8"ウィンドウメッセージのフックが見つかりませんでした");
+	return false;
 }

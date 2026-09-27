@@ -3,6 +3,7 @@
 
 #include	"pch.h"
 #include	"nox_memory.h"
+#include	"allocation_counter.h"
 
 #include	"../algorithm.h"
 
@@ -99,6 +100,11 @@ namespace nox::memory
         constinit nox::memory::Arena* head_arena_ptr_ = nullptr;
 
         constinit nox::memory::HeapInfo2* current_zct_heap_info_ = nullptr;
+
+		/// @brief		確保・解放の累積カウンタ (allocation_counter.h)
+		/// @details	heap_list_lock_ の内側でだけ読み書きする。ロックは元々取っているので、
+		///				atomic にしなくても全スレッド分が正確に数えられ、追加の同期も要らない。
+		constinit nox::memory::AllocationCounters allocation_counters_{};
 
         inline constexpr std::size_t MaskToAlignment(std::size_t align_mask)noexcept
         {
@@ -510,6 +516,9 @@ void* nox::memory::Allocate(const size_t size, size_t align_mask, const Instance
     {
 		nox::os::ScopedLock lock(nox::memory::heap_list_lock_);
 
+		++allocation_counters_.allocate_count;
+		allocation_counters_.allocate_bytes += size;
+
         if (nox::memory::head_heap_info_ptr_ == nullptr)
         {
             head_heap_info_ptr_ = &heap_info;
@@ -549,6 +558,8 @@ void	nox::memory::Deallocate(nox::not_null<void*> ptr)
     {
         nox::os::ScopedLock lock(nox::memory::heap_list_lock_);
 
+		++allocation_counters_.deallocate_count;
+
         if (&heap_info == head_heap_info_ptr_)
         {
 			head_heap_info_ptr_ = heap_info.next;
@@ -577,6 +588,12 @@ void	nox::memory::Deallocate(nox::not_null<void*> ptr, [[maybe_unused]] size_t a
 
     //HeapInfo* heap_info_ptr = &GetHeapInfo(ptr);
 	//::_aligned_free(heap_info_ptr);
+}
+
+nox::memory::AllocationCounters nox::memory::GetAllocationCounters()noexcept
+{
+	nox::os::ScopedLock lock(nox::memory::heap_list_lock_);
+	return allocation_counters_;
 }
 
 nox::uint32 nox::memory::GetMemorySize(const nox::memory::SegmentType segment)noexcept

@@ -1,18 +1,20 @@
 //	Copyright (c) 2023-2026 noxitro
 //	SPDX-License-Identifier: MIT
 
-///	@file	parallel_execute_checker.h
-///	@brief	並列チェッカー
+///	@file		parallel_execute_checker.h
+///	@brief		並列チェッカー
+///	@details	開発時の並列アクセス検出用。製品ビルドでは無効化される
 #pragma once
 #include	<atomic>
 #include	<source_location>
 #include	<string_view>
 #include	"basic_definition.h"
+#if !NOX_MASTER
 #include	"basic_type.h"
 
 namespace nox::util
 {
-#if !NOX_MASTER
+
 	class ParallelExecuteChecker;
 	class RWParallelExecuteChecker;
 
@@ -133,6 +135,5 @@ namespace nox::util
 		/// @brief 診断用のラベル。所有しない。
 		std::string_view name_;
 	};
-
-#endif // !NOX_MASTER
 }
+#endif // !NOX_MASTER

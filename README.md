@@ -5,6 +5,7 @@
 [![CodeQL](https://github.com/noxitro/Nox/actions/workflows/codeql.yml/badge.svg?branch=master)](https://github.com/noxitro/Nox/actions/workflows/codeql.yml)
 [![File format](https://github.com/noxitro/Nox/actions/workflows/file-format.yml/badge.svg?branch=master)](https://github.com/noxitro/Nox/actions/workflows/file-format.yml)
 [![Workflow lint](https://github.com/noxitro/Nox/actions/workflows/workflow-lint.yml/badge.svg?branch=master)](https://github.com/noxitro/Nox/actions/workflows/workflow-lint.yml)
+[![Benchmarks](https://img.shields.io/badge/benchmarks-dashboard-8250df)](https://noxitro.github.io/Nox/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **Nox** は、Windows プラットフォームに特化した **ArchetypeベースのECS** を採用するハイパフォーマンスゲームエンジンです。
@@ -48,6 +49,9 @@ Runtime は **C++23** (`/std:c++latest`) の x64 ビルドで、以下 2 つの�
 - **clang-cl も必須ゲートです。** MSVC が素通りさせる非適合コード（実質機能していない `if constexpr` ガード、未使用変数、未出力関数など）を実際に検出した実績があるため、`continue-on-error` には戻さない方針です。ClangCL ジョブが落ちた場合は無効化で回避せず、原因を修正してください。
 - ユニットテスト（`runtime.slnx` の `tests` フォルダ、GoogleTest）は MSVC / clang-cl の Debug / Release の 4 ジョブで実行します。Master はテスト型のリフレクションが生成されないため対象外です。
 - `runtime.exe` の起動と終了は 6 ジョブすべてで確かめます。`--exit-after-frames=N` を付けて起動すると、N フレーム目にウィンドウを閉じたときと同じ経路で終了します。
+- ベンチマーク（`runtime/bench`）は Release / Master の 4 構成で毎 push 計測し、[結果ページ](https://noxitro.github.io/Nox/)（GitHub Pages）に履歴を積みます。
+  共有ランナーの揺れを避けるため、master で建てた exe と同じ VM で交互に走らせて比較します。
+  1 op あたりのヒープ確保回数が予算を超えたときだけ CI が落ちます（詳細は [`runtime/bench/README.md`](runtime/bench/README.md)）。
 
 ### ビルド手順
 
