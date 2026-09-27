@@ -34,6 +34,7 @@
 - 落ちたら `gh run view <run-id> --log-failed` でログを読み、直して push し直す。
 - 文書だけの変更 (`paths-ignore` の対象) ではビルドの CI は走らない。File format の検査は走る。
 - テストは `runtime/core/test/` と `runtime/kernel/test/` (GoogleTest)。reflection / delegate / 型システム / メモリ管理を重点に書く。
+- ベンチマークは `runtime/bench/` (`bench_test.exe`)。CI が Release / Master で master の exe と同じ VM で交互に計測し、結果ページ (GitHub Pages) に積む。時間の変化では CI を落とさないが、1 op あたりの確保回数が予算 (`alloc_budget`) を超えると落ちる。詳細は `runtime/bench/README.md`。
 - Editor の見た目や操作は UI テストで拾いきれないので、Windows 上で手動確認する。
 
 ローカルでビルドする場合:

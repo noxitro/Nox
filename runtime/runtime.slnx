@@ -5,6 +5,15 @@
     <BuildType Name="Release" />
     <Platform Name="x64" />
   </Configurations>
+  <Folder Name="/bench/">
+    <Project Path="bench/bench_test.vcxproj" Id="2f8256d1-7097-4138-aa72-9b4e6024d770">
+      <BuildDependency Project="core/core.vcxproj" />
+      <BuildDependency Project="kernel/kernel.vcxproj" />
+      <BuildDependency Project="reflection/reflection.vcxproj" />
+      <BuildDependency Project="reflection_generated/reflection_generated.vcxproj" />
+      <Build Project="false" />
+    </Project>
+  </Folder>
   <Folder Name="/modules/">
     <Project Path="modules/hid/hid.vcxproj" Id="ab5dd6a3-936b-4ac5-84d0-29e114fab8ae">
       <BuildDependency Project="core/core.vcxproj" />

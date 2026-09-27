@@ -162,6 +162,9 @@
     <ClInclude Include="memory\nox_memory.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="memory\allocation_counter.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
     <ClInclude Include="memory\memory_definition.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>

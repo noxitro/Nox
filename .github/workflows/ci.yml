@@ -36,6 +36,8 @@ on:
       - 'docs/**'
       - '.gitignore'
       - 'LICENSE'
+      # ベンチマークの結果ページだけの変更は bench-publish.yml が計測なしで作り直す
+      - 'tools/bench-site/**'
   # pull_request は外してある。同一リポジトリのブランチへの PR は push 側と
   # 合わせて毎回 2 倍走り、ref が違うので concurrency でも畳めないため。
   # 公開後もフォーク PR は受けていない。受けるなら pull_request を戻し、
@@ -95,6 +97,11 @@ jobs:
     # ビルド + テスト + Editor + FlaUI まで 1 ジョブで通すので、
     # 分かれていたころ (30) より余裕を持たせる。実測は MSVC/Debug で約 10 分。
     timeout-minutes: 40
+    # ベンチマークの比較元 (master で建てた bench_test.exe) をアーティファクトから
+    # 取るので actions: read を足す。書き込みは増やさない。
+    permissions:
+      contents: read
+      actions: read
 
     strategy:
       fail-fast: false   # 片方が転んでももう片方は最後まで走らせる
@@ -250,6 +257,80 @@ jobs:
         shell: pwsh
         run: |
           python .github/scripts/check-test-results.py test-results --min 91 --label GoogleTest
+
+      # ---------------------------------------------------------
+      # Benchmark (runtime/bench/bench_test.exe)
+      #
+      # 6 構成すべてで建てる。Master も建てるのは、出荷構成でコンパイルが通ることの
+      # 確認を兼ねるため (テストは Master で建たないので、ここが唯一の確認になる)。
+      # テストと同じく runtime.slnx の外で、msbuild の呼び出しも分けて建てる。
+      # Release / Master の /GL で reflection_generated.lib を共有する exe を
+      # 同時にリンクすると衝突するため (上の「Build test projects」の説明を参照)。
+      #
+      # 計測は Release / Master だけ。Debug は --smoke で各ベンチを 1 回ずつ通し、
+      # アサートに掛からないことだけを見る。
+      # 比較元は master で建てた bench_test.exe (アーティファクト bench-exe-<構成>)。
+      # 同じ VM で交互に走らせるので、ランナーの CPU が毎回違っても差が取れる。
+      # 仕組みと判定の詳細は .github/scripts/bench-run.py の先頭を参照。
+      #
+      # 時間の変化では CI を落とさない (共有ランナーの揺れで誤判定するため)。
+      # 確保回数は揺れないので、予算を超えたとき (終了コード 3) だけ落とす。
+      # ---------------------------------------------------------
+      - name: Build bench_test
+        id: bench-build
+        if: always() && steps.build.outcome == 'success'
+        run: |
+          $solutionDir  = (Resolve-Path 'runtime').Path.Replace('\', '/') + '/'
+          $solutionPath = $solutionDir + 'runtime.slnx'
+          msbuild runtime\bench\bench_test.vcxproj `
+            /p:Configuration=${{ matrix.configuration }} `
+            /p:Platform=x64 `
+            /p:PlatformToolset=${{ matrix.compiler == 'MSVC' && 'v145' || 'ClangCL' }} `
+            "/p:SolutionDir=$solutionDir" `
+            /p:SolutionName=runtime `
+            "/p:SolutionPath=$solutionPath" `
+            /p:BuildProjectReferences=false `
+            /m `
+            /v:minimal `
+            /nologo
+          if ($LASTEXITCODE -ne 0) { throw "bench_test のビルドに失敗 (exit $LASTEXITCODE)" }
+
+      - name: Run benchmarks
+        id: bench
+        if: always() && steps.bench-build.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # Windows の Python は既定で cp1252 を使い、日本語の入出力で落ちる
+          PYTHONUTF8: '1'
+        run: |
+          $benchArgs = @(
+            '--exe', 'runtime\build\runtime\x64\${{ matrix.configuration }}\bench_test.exe',
+            '--compiler', '${{ matrix.compiler }}',
+            '--config', '${{ matrix.configuration }}',
+            '--out-dir', 'bench-out',
+            '--summary', $env:GITHUB_STEP_SUMMARY
+          )
+          if ('${{ matrix.configuration }}' -eq 'Debug') { $benchArgs += '--smoke' } else { $benchArgs += @('--base', 'auto') }
+          python .github/scripts/bench-run.py @benchArgs
+          if ($LASTEXITCODE -ne 0) { throw "ベンチマークが失敗 (exit $LASTEXITCODE)" }
+
+      - name: Upload benchmark result
+        if: always() && steps.bench-build.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: bench-result-${{ matrix.compiler }}-${{ matrix.configuration }}
+          path: bench-out/result.json
+          if-no-files-found: warn
+
+      # 後続の push が比較元として取りに来る。master のものだけ長く残す
+      - name: Upload bench_test.exe
+        if: always() && steps.bench-build.outcome == 'success' && matrix.configuration != 'Debug'
+        uses: actions/upload-artifact@v7
+        with:
+          name: bench-exe-${{ matrix.compiler }}-${{ matrix.configuration }}
+          path: runtime/build/runtime/x64/${{ matrix.configuration }}/bench_test.exe
+          retention-days: ${{ github.ref == 'refs/heads/master' && 90 || 7 }}
+          if-no-files-found: warn
 
       # ---------------------------------------------------------
       # Editor UI test (FlaUI, MIT)
@@ -544,6 +625,29 @@ jobs:
           if-no-files-found: warn
 
   # =========================================================
+  # Benchmark publish: 各構成の計測結果を履歴へ積み、結果ページを作り直す
+  #
+  # 中身は bench-publish.yml (ページだけの変更でも単独で走らせたいので分けてある)。
+  # ビルドやテストが一部転んでも、計測できた構成の結果は載せたいので always() で呼ぶ。
+  # master では GitHub Pages へ公開し、それ以外のブランチでは master の履歴に
+  # 今回の結果を重ねたプレビューをアーティファクト bench-site に置く。
+  # pages / id-token は公開ジョブ (master のみ) が使う。
+  # =========================================================
+  bench-publish:
+    name: Benchmark publish
+    needs: [build]
+    if: always() && !cancelled()
+    uses: ./.github/workflows/bench-publish.yml
+    permissions:
+      contents: read
+      actions: read
+      pages: write
+      id-token: write
+    secrets: inherit
+    with:
+      measured: true
+
+  # =========================================================
   # Notify: 転んだとき / 転んだ状態から戻ったときだけ Discord に流す
   #
   # GitHub 既定のメール通知の置き換え。成功が続いている間は無言なので、
@@ -557,7 +661,9 @@ jobs:
   # =========================================================
   notify:
     name: Notify Discord
-    needs: [build, editor]
+    # bench-publish も含める。含めないと、結果ページの生成・公開が落ちても通知されず、
+    # 次の成功で「復旧」だけが流れる。
+    needs: [build, editor, bench-publish]
     # 判定は step 側で needs.*.result を見るので、ここでは always() で拾うだけ。
     if: always() && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
