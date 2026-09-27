@@ -13,7 +13,8 @@ nox-bench-history/1 と §4.2 の nox-bench-latest/1) のそれらしいデー�
   - 本物の悪化 2 件と改善 2 件 (うち 1 件ずつは最新のコミット)。対の比較 (paired) の
     判定つき。ばらつき大の判定もときどき混ざる
   - ヒープ確保回数 (ほとんど 0、予算つきのものあり、最新のコミットで 1 件増える)
-  - --preview: 最新の結果を「未マージのブランチの計測」(candidate) にする。予算違反も 1 件入る
+  - --preview: 最新の結果を「未マージのブランチの計測」(candidate) にする。予算違反と、
+    ラウンドごとに確保回数が揃わなかった (stable = false) ものも 1 件ずつ入る
 
 乱数の種を固定しているので、同じ引数なら毎回同じ内容になる (差分で見た目の変化を追える)。
 生成物 (data/) は .gitignore 済みで、コミットしない。
@@ -53,7 +54,8 @@ GENERATED = "2026-09-27T01:30:00Z"
 
 CPU_EPYC = "AMD EPYC 7763 64-Core Processor"
 CPU_XEON = "Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz"
-# QueryThreadCycleTime の周波数の代わり (サイクル/op を作るためだけに使う)
+# QueryThreadCycleTime の周波数の代わり (head.cycles を作るためだけに使う。この値は不変 TSC の
+# 基準ティックで ns に定数を掛けただけなので、ページには出していない)
 CPU_GHZ = {CPU_EPYC: 2.45, CPU_XEON: 2.80}
 IMAGE_OLD = "win25/20260810.1"
 IMAGE_NEW = "win25/20260907.2"
@@ -81,8 +83,8 @@ CATALOG = [
     ("ecs/query_iterate_frag16/10k", "ecs", "entity", "1", 0, "1 万体を列挙 (Archetype 16 個に分散)", 0.95, 0, 0),
     ("ecs/query_parallel/100k", "ecs", "entity", "W", 0, "Chunk 単位の並列列挙 (10 万体, 既定ワーカー数)", 0.31, 0, 0),
     ("ecs/get_component_random/10k", "ecs", "lookup", "1", 0, "TryGetComponent のランダムアクセス (1 万体)", 7.8, 0, 0),
-    ("ecs/tag_toggle/1k", "ecs", "entity", "1", None, "タグ Add→Remove による Archetype 移動 (1024 体)", 142.0, 0, 0),
-    ("ecs/spawn_despawn/1k", "ecs", "entity", "1", None, "即時 API で生成 + 2 コンポーネント追加 + 破棄 (1024 体)", 265.0, 0.0156, 256),
+    ("ecs/tag_toggle/1k", "ecs", "entity", "1", None, "タグ Add→Remove による Archetype 移動 (1024 体)", 142.0, 1 / 256, 16),
+    ("ecs/spawn_despawn/1k", "ecs", "entity", "1", None, "即時 API で生成 + 2 コンポーネント追加 + 破棄 (1024 体)", 265.0, 1 / 512, 64),
     ("ecs/deferred_spawn/1k", "ecs", "entity", "1", None, "EntityCommands で生成を記録 → Flush → 破棄 (1024 体)", 318.0, 0.0234, 410),
     ("ecs/layer_indices/64", "ecs", "call", "1", 0, "UpdaterGraph のレイヤー分割 (64 ノード)", 1850.0, 0, 0),
     ("ecs/graph_rebuild/8", "ecs", "call", "1", None, "UpdaterGraph::Rebuild (System 8 個)", 5400.0, 14, 3264),
@@ -179,6 +181,8 @@ PREVIEW_TIME = {
 }
 # 予算 0 のベンチマークで確保が起きる (CI が失敗する例)
 PREVIEW_ALLOC = {"container/nox_vector_reuse/256": (1, 1024)}
+# ラウンドごとに確保回数が揃わなかった例 (alloc.stable = false)
+PREVIEW_UNSTABLE = {"ecs/deferred_spawn/1k"}
 
 
 def sig4(x):
@@ -219,15 +223,20 @@ def cv(xs):
 
 
 def verdict_of(ratio, lo, hi, threads):
-    """DESIGN §5 の判定。"""
+    """bench_common.paired_analysis と同じ判定。
+
+    悪化 / 改善: 区間が 1 をまたがず、比の中央値がしきい値以上動いた。
+    変化なし: 区間の全体が 1 ± しきい値 の帯に収まる (差が無いと言える)。
+    ばらつき大: どちらでもない (区間が帯からはみ出していて、変化が無いとは言い切れない)。
+    """
     thr = THRESHOLD if threads == 1 else 2 * THRESHOLD
     if lo > 1 and ratio - 1 >= thr:
         return "regressed"
     if hi < 1 and 1 - ratio >= thr:
         return "improved"
-    if hi - lo > 4 * thr:
-        return "noisy"
-    return "unchanged"
+    if lo > 1 - thr and hi < 1 + thr:
+        return "unchanged"
+    return "noisy"
 
 
 VERDICT_CODE = {"regressed": 1, "improved": -1, "unchanged": 0, "noisy": 2}
@@ -380,7 +389,7 @@ def make_commits(model):
 
 
 def simulate_run(model, variant, compiler, config, k, commit, ref, base_k, base_commit, base_kind,
-                 extra_time=None, extra_alloc=None, run_attempt=1):
+                 extra_time=None, extra_alloc=None, unstable=(), run_attempt=1):
     """1 回の CI 実行ぶんの nox-bench-run/1 を、ラウンド単位のデータから作る。"""
     rng = random.Random(zlib.crc32(("run:%s:%s" % (variant, commit["sha"])).encode()))
     env = model.env(variant, compiler, min(k, model.n - 1))
@@ -439,7 +448,7 @@ def simulate_run(model, variant, compiler, config, k, commit, ref, base_k, base_
             "name": name, "group": b["group"], "title": b["title"], "per": b["per"], "threads": threads,
             "alloc_budget": budget, "head": head, "base": base, "paired": pr,
             "alloc": {
-                "allocs": float(allocs), "bytes": float(nbytes), "frees": float(allocs), "stable": True,
+                "allocs": float(allocs), "bytes": float(nbytes), "frees": float(allocs), "stable": name not in unstable,
                 "budget": budget, "budget_ok": budget_ok,
                 "base_allocs": None if ba is None else float(ba), "base_bytes": None if bb is None else float(bb),
                 "verdict": av,
@@ -586,7 +595,8 @@ def build(n_commits, preview, seed):
         for (vid, _label, compiler, config, _) in VARIANTS:
             # candidate はコミット一覧に無いので、モデル上は merge-base と同じ位置 (+ ブランチの変化) とみなす
             runs[vid] = simulate_run(model, vid, compiler, config, mb, cand, PREVIEW_BRANCH, mb, commits[mb],
-                                     "merge-base", extra_time=PREVIEW_TIME, extra_alloc=PREVIEW_ALLOC)
+                                     "merge-base", extra_time=PREVIEW_TIME, extra_alloc=PREVIEW_ALLOC,
+                                     unstable=PREVIEW_UNSTABLE)
         latest = {
             "schema": LATEST_SCHEMA, "candidate": True, "branch": PREVIEW_BRANCH,
             "commit": cand,

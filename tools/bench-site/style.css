@@ -855,6 +855,18 @@ a.sha-chip:hover {
 	color: var(--improve);
 }
 
+/* 有意とは言えない全体の変化は目立たせない (色を付けず、細く小さく) */
+.hero-number.is-muted {
+	color: var(--text-2);
+	font-size: 42px;
+	font-weight: 450;
+}
+
+.hero-number.is-muted .unit {
+	color: var(--text-3);
+	font-weight: 450;
+}
+
 .hero-caption {
 	display: inline-flex;
 	align-items: center;
@@ -893,6 +905,12 @@ button.kpi:hover {
 
 button.kpi:disabled {
 	cursor: default;
+}
+
+/* KPI で絞り込み中 (表の上のチップと対になる) */
+button.kpi[aria-pressed="true"] {
+	border-color: var(--accent);
+	box-shadow: inset 0 0 0 1px var(--accent);
 }
 
 button.kpi:disabled:hover {
@@ -973,6 +991,30 @@ button.kpi:disabled:hover {
 
 .kpi.is-good .kpi-value {
 	color: var(--text);
+}
+
+/* 予算内でも確保回数が増えた (決定的な悪化) */
+.kpi.is-warn {
+	border-color: color-mix(in srgb, var(--noisy) 45%, var(--border));
+	background: color-mix(in srgb, var(--noisy) 5%, var(--surface));
+}
+
+.kpi.is-warn .kpi-value {
+	color: var(--noisy);
+}
+
+.kpi-value .kpi-mark.warn {
+	font-size: 14px;
+}
+
+/* 比較が無いときに悪化と改善を 1 枚にまとめたカード */
+.kpis.is-3 {
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.kpi-nocmp .kpi-value-text {
+	color: var(--text-3);
+	font-weight: 600;
 }
 
 .kpi.is-improve .kpi-value {
@@ -1206,10 +1248,59 @@ button.kpi:disabled:hover {
 }
 
 .result-count {
-	min-height: 20px;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px 6px;
+	min-height: 24px;
 	margin-bottom: 8px;
 	color: var(--text-3);
 	font-size: 12.5px;
+}
+
+.result-count strong {
+	color: var(--text-2);
+}
+
+/* KPI カードで絞り込んだときのチップ (押すと解除) */
+.filter-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	height: 24px;
+	margin-right: 6px;
+	padding: 0 6px 0 10px;
+	border: 1px solid var(--accent);
+	border-radius: 999px;
+	background: var(--accent-soft);
+	color: var(--accent);
+	font-size: 12px;
+	font-weight: 650;
+	white-space: nowrap;
+}
+
+.filter-chip:hover {
+	background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.filter-chip .c-regressed,
+.filter-chip .c-improved {
+	font-size: 9px;
+}
+
+.filter-chip .x {
+	display: inline-grid;
+	place-items: center;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	font-size: 13px;
+	line-height: 1;
+}
+
+.filter-chip:hover .x {
+	background: var(--accent);
+	color: var(--on-accent);
 }
 
 /* ------------------------------------------------------------------ 表 */
@@ -1413,6 +1504,19 @@ button.kpi:disabled:hover {
 	text-overflow: ellipsis;
 }
 
+/* 構成の間の大きな差 ("ClangCL / Master より 3.3 倍遅い") */
+.vgap {
+	flex: none;
+	padding: 0 7px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	color: var(--text-2);
+	font-family: var(--font);
+	font-size: 11px;
+	font-weight: 550;
+	line-height: 17px;
+}
+
 .tag {
 	flex: none;
 	padding: 0 6px;
@@ -1465,6 +1569,12 @@ button.kpi:disabled:hover {
 
 .pct.is-sig {
 	font-weight: 700;
+}
+
+/* 比較も参考値も無い行 (初回など) */
+.pct.muted {
+	color: var(--text-3);
+	font-weight: 400;
 }
 
 .pct.is-fallback {
@@ -1571,6 +1681,29 @@ button.kpi:disabled:hover {
 .alloc-up {
 	color: var(--regress);
 	font-size: 10px;
+}
+
+/* 増減したときの base の値 ("9 →") */
+.alloc-from {
+	color: var(--text-3);
+	font-size: 12px;
+	font-weight: 500;
+}
+
+.alloc-sub {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.alloc-unstable {
+	padding: 0 6px;
+	border-radius: 999px;
+	background: var(--noisy-soft);
+	color: var(--noisy);
+	font-size: 10.5px;
+	font-weight: 650;
+	line-height: 17px;
 }
 
 .alloc-down {
@@ -1798,6 +1931,11 @@ button.kpi:disabled:hover {
 	font-variant-numeric: tabular-nums;
 }
 
+.compare-summary strong.is-ref {
+	color: var(--text-2);
+	font-weight: 500;
+}
+
 .compare-summary .cs-item {
 	display: inline-flex;
 	align-items: baseline;
@@ -1844,6 +1982,16 @@ button.kpi:disabled:hover {
 	display: flex;
 	flex-direction: column;
 	align-items: flex-start;
+}
+
+.cmp-cpu {
+	color: var(--text-3);
+	font-size: 11.5px;
+	white-space: nowrap;
+}
+
+.compare-table tr.is-mismatch .val {
+	color: var(--text-2);
 }
 
 /* ------------------------------------------------------------------ 読み方・フッター */
@@ -1919,6 +2067,19 @@ button.kpi:disabled:hover {
 
 .guide-body li + li {
 	margin-top: 6px;
+}
+
+.guide-body .verdict-rules {
+	margin-top: 6px;
+}
+
+.guide-body .verdict-rules li + li {
+	margin-top: 2px;
+}
+
+.verdict-rules .c-regressed,
+.verdict-rules .c-improved {
+	font-size: 10px;
 }
 
 .guide-body strong {
@@ -2760,6 +2921,170 @@ button.kpi:disabled:hover {
 	font-size: 12.5px;
 }
 
+.rule-note {
+	margin: 6px 0 0;
+}
+
+.insufficient-note {
+	margin: 0;
+	line-height: 1.8;
+}
+
+.insufficient-note .badge {
+	margin-right: 4px;
+	vertical-align: middle;
+}
+
+/* 構成ごとの比較 (同じベンチマークを MSVC / ClangCL × Master / Release で並べる) */
+.vc-list {
+	display: grid;
+	gap: 2px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.vc-row {
+	display: grid;
+	grid-template-columns: minmax(128px, 11em) minmax(48px, 1fr) 5.4em 3.6em 6.2em;
+	grid-template-areas: "head track val rel alloc";
+	align-items: center;
+	gap: 4px 12px;
+	min-height: 40px;
+	padding: 5px 10px;
+	border-radius: 8px;
+}
+
+.vc-row.is-current {
+	background: var(--accent-soft);
+}
+
+.vc-head {
+	grid-area: head;
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.vc-name {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--text);
+	font-size: 13px;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+button.vc-switch {
+	align-self: flex-start;
+	padding: 0;
+	border: 0;
+	background: none;
+	text-align: left;
+}
+
+button.vc-switch:hover {
+	color: var(--accent);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+.vc-cur {
+	padding: 0 6px;
+	border-radius: 999px;
+	background: var(--surface);
+	color: var(--accent);
+	font-size: 10.5px;
+	font-weight: 700;
+	line-height: 17px;
+}
+
+.vc-note {
+	color: var(--text-3);
+	font-size: 11px;
+	line-height: 1.4;
+	overflow-wrap: anywhere;
+}
+
+.vc-track {
+	grid-area: track;
+	position: relative;
+	height: 10px;
+	overflow: hidden;
+	border-radius: 3px;
+	background: var(--surface-3);
+}
+
+.vc-row.is-current .vc-track {
+	background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+
+.vc-fill {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	border-radius: 3px;
+	background: var(--median-line);
+}
+
+.vc-row.is-current .vc-fill {
+	background: var(--accent);
+}
+
+.vc-val {
+	grid-area: val;
+	color: var(--text);
+	font-size: 13.5px;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	text-align: right;
+	white-space: nowrap;
+}
+
+.vc-rel {
+	grid-area: rel;
+	color: var(--text);
+	font-size: 12.5px;
+	font-weight: 650;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.vc-rel.is-near {
+	color: var(--text-3);
+	font-weight: 500;
+}
+
+.vc-rel.is-fastest {
+	justify-self: start;
+	padding: 0 6px;
+	border: 1px solid var(--border-strong);
+	border-radius: 999px;
+	color: var(--text-2);
+	font-size: 11px;
+	line-height: 17px;
+}
+
+.vc-alloc {
+	grid-area: alloc;
+	color: var(--text);
+	font-size: 12.5px;
+	font-variant-numeric: tabular-nums;
+	text-align: right;
+	white-space: nowrap;
+}
+
+.vc-alloc.is-zero {
+	color: var(--text-3);
+}
+
+.vc-k {
+	color: var(--text-3);
+	font-size: 11.5px;
+}
+
 .about {
 	color: var(--text-2);
 	font-size: 13.5px;
@@ -2921,12 +3246,21 @@ button.kpi:disabled:hover {
 		text-align: left;
 	}
 
-	.kpis {
+	.kpis,
+	.kpis.is-3 {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.kpis.is-3 > .kpi-env {
+		grid-column: 1 / -1;
 	}
 
 	.bench-table col.c-alloc {
 		width: 104px;
+	}
+
+	.compare-table col.c-verdict {
+		width: 150px;
 	}
 
 	.bench-table col.c-verdict {
@@ -3234,6 +3568,11 @@ button.kpi:disabled:hover {
 		white-space: normal;
 	}
 
+	.b-name {
+		flex-wrap: wrap;
+		row-gap: 4px;
+	}
+
 	.empty-row {
 		display: block;
 	}
@@ -3250,7 +3589,8 @@ button.kpi:disabled:hover {
 		grid-template-areas:
 			"name name"
 			"a b"
-			"change verdict";
+			"change verdict"
+			"alloc alloc";
 		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 	}
 
@@ -3329,6 +3669,15 @@ button.kpi:disabled:hover {
 	.drawer-body {
 		overflow: visible;
 		padding: 4px 16px 32px;
+	}
+
+	.vc-row {
+		grid-template-columns: minmax(0, 1fr) auto auto;
+		grid-template-areas:
+			"head val rel"
+			"track track alloc";
+		gap: 4px 10px;
+		padding: 8px 10px;
 	}
 
 	.guide-body {

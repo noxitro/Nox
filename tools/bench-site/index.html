@@ -119,7 +119,7 @@
 			</div>
 		</section>
 
-		<section class="kpis" aria-label="要約">
+		<section class="kpis" id="kpis" aria-label="要約">
 			<button type="button" class="kpi kpi-regressed" id="kpi-regressed" data-kpi="regressed">
 				<span class="kpi-label"><span class="glyph" aria-hidden="true">▲</span>悪化</span>
 				<span class="kpi-value" id="kpi-regressed-value">—</span>
@@ -130,8 +130,13 @@
 				<span class="kpi-value" id="kpi-improved-value">—</span>
 				<span class="kpi-sub" id="kpi-improved-sub"></span>
 			</button>
+			<div class="kpi kpi-nocmp" id="kpi-nocmp" hidden>
+				<span class="kpi-label">悪化 / 改善</span>
+				<span class="kpi-value kpi-value-text">比較なし</span>
+				<span class="kpi-sub" id="kpi-nocmp-sub"></span>
+			</div>
 			<button type="button" class="kpi kpi-budget" id="kpi-budget" data-kpi="budget">
-				<span class="kpi-label">ヒープ確保予算</span>
+				<span class="kpi-label">ヒープ確保</span>
 				<span class="kpi-value" id="kpi-budget-value">—</span>
 				<span class="kpi-sub" id="kpi-budget-sub"></span>
 			</button>
@@ -222,7 +227,7 @@
 		<table class="bench-table compare-table" id="compare-table">
 			<caption class="sr-only">A と B の中央値の比較。変化の大きい順</caption>
 			<colgroup>
-				<col class="c-name"><col class="c-value"><col class="c-value"><col class="c-change"><col class="c-verdict">
+				<col class="c-name"><col class="c-value"><col class="c-value"><col class="c-change"><col class="c-alloc"><col class="c-verdict">
 			</colgroup>
 			<thead>
 				<tr>
@@ -230,6 +235,7 @@
 					<th scope="col" class="num">A</th>
 					<th scope="col" class="num">B</th>
 					<th scope="col">変化 (B / A)</th>
+					<th scope="col" class="num">確保 <span class="th-sub">/ op</span></th>
 					<th scope="col">目安</th>
 				</tr>
 			</thead>
@@ -243,7 +249,13 @@
 			<div class="guide-col">
 				<h3>どう測っているか</h3>
 				<p>push のたびに CI (GitHub-hosted の Windows ランナー) が <code>bench_test.exe</code> を実行します。比較対象 (base) は master の直前のコミット (ブランチでは分岐元) でビルド済みの実行ファイルで、<strong>同じ VM の上で head と base を交互に</strong> 既定 10 ラウンドずつ動かします。VM の当たり外れは両方に同じようにかかるので、比 (head / base) で見れば打ち消されます。</p>
-				<p>判定はラウンドごとの比の中央値と、ブートストラップ (2000 回) による 95 % 信頼区間で決めます。区間が 1 をまたがず、変化が <strong><span id="guide-thr">5</span> % 以上</strong> (複数スレッドのものは 2 倍) のときだけ ▲ 悪化 / ▼ 改善 とし、区間が広すぎるものは ？ ばらつき大 とします。</p>
+				<p>判定はラウンドごとの比の中央値と、ブートストラップ (2000 回) による 95 % 信頼区間で決めます。しきい値は <strong>±<span class="js-thr">5</span> %</strong> (複数スレッドのものは 2 倍) です。</p>
+				<ul class="verdict-rules">
+					<li><strong><span class="c-regressed" aria-hidden="true">▲</span> 悪化 / <span class="c-improved" aria-hidden="true">▼</span> 改善</strong>: 区間が 0 をまたがず、変化がしきい値以上</li>
+					<li><strong><span aria-hidden="true">≈</span> 変化なし</strong>: 区間の全体が ±<span class="js-thr">5</span> % の帯に収まる</li>
+					<li><strong><span class="c-noisy" aria-hidden="true">？</span> ばらつき大</strong>: どちらでもない (区間が帯からはみ出していて、変化が無いとは言い切れない)</li>
+					<li><strong>回数不足</strong>: 対になったラウンドが 3 組未満で、判定していない</li>
+				</ul>
 			</div>
 			<div class="guide-col">
 				<h3>数字の見方</h3>
@@ -251,11 +263,13 @@
 					<li><strong>最新</strong> は 1 op あたりの時間の中央値です。1 op が何を指すかは各行の単位 (例: <code>/ entity</code>) を見てください。</li>
 					<li>ランナーの CPU は実行のたびに変わることがあります (例: AMD EPYC と Intel Xeon)。<strong>CPU が違う点どうしの絶対値は比べられません</strong>。推移のグラフでは点の色で CPU を分け、CPU やイメージが変わった所に縦の破線を引いています。</li>
 					<li>比較対象が無い回 (base の実行ファイルが期限切れなど) は、同じ CPU の直前の点との差を <em class="muted">~ 付きの斜体</em> で参考表示します。</li>
+					<li>詳細の「構成ごとの比較」では、同じベンチマークを MSVC / ClangCL × Master / Release で並べます。構成ごとに別の VM なので、数 % の差は誤差の範囲です。</li>
 				</ul>
 			</div>
 			<div class="guide-col">
 				<h3>ヒープ確保</h3>
 				<p>ヒープ確保回数は決定的なので、時間と違い 1 回の計測で確定します。予算 (1 op あたりの上限回数) があるベンチマークで上回ると <strong>CI が失敗</strong> します。時間の悪化は CI を止めず、ここと Job Summary で知らせるだけです。</p>
+				<p>1 op あたり 1 回未満の確保は <code>1/512</code> (512 op に 1 回) のように分数で表します。</p>
 				<p class="guide-links" id="guide-links"></p>
 			</div>
 		</div>
