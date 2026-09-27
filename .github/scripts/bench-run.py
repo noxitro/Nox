@@ -4,10 +4,12 @@
 .github/workflows/ci.yml の build ジョブ (Windows ランナー) から呼ばれる。やること:
   1. base (比較対象の exe) を用意する。--base auto なら、master の CI が上げた
      アーティファクト bench-exe-<構成> を gh で探して落とす。
-       master       : 直前に計測した master のコミット (previous-master)
+       master       : この実行より前の master の実行のうち、直前のもの (previous-master)。
+                      古い実行を再実行しても、それより新しい master とは比べない
        ほかのブランチ: 分岐元 (merge-base)。無ければ最新の master (latest-master)
      見つからない・落とせないときは警告だけ出して base なしで続ける。base が無い
-     ことはジョブを落とす理由にならない (初回やアーティファクトの期限切れで普通に起きる)
+     ことはジョブを落とす理由にならない (初回やアーティファクトの期限切れで普通に起きる)。
+     分岐元や実行番号が取れないだけで base は使えるときは、notice を出して続ける
   2. head と base を同じ VM で交互に R ラウンド回す (偶数ラウンドは head → base、
      奇数ラウンドは base → head)。GitHub のランナーは VM ごとに CPU が違い、同じ VM
      でも時間とともに速さが揺れる。別々の実行の数字を並べても 5 % 程度の差は揺れに
@@ -42,6 +44,7 @@ import argparse
 import glob
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -61,6 +64,10 @@ LOG_TAIL_LINES = 60
 
 def warning(message):
     bc.annotate("warning", message)
+
+
+def notice(message):
+    bc.annotate("notice", message)
 
 
 def error(message):
@@ -96,40 +103,62 @@ def env_int(name):
 # gh (base の exe の取得)
 # ---------------------------------------------------------------------------
 
-def gh(args, what):
-    """gh を 1 回呼び、標準出力を返す。失敗したら ::warning:: を出して None を返す。
+def gh_failed(what, detail, soft):
+    """gh の失敗を注釈にする。
+
+    soft=False: base を使えなくなる失敗 (一覧・取得)。::warning:: で「base を用意できない」
+    soft=True : base は使えるまま続く失敗 (分岐元の特定・実行番号の取得)。::notice:: で、
+                what に「どうなるか」まで書いた文面を渡す ("{detail}" を理由で埋める)
+    """
+    if soft:
+        notice(what.format(detail=detail))
+    else:
+        warning(f"base を用意できない ({what}): {detail}")
+
+
+def gh(args, what, soft=False):
+    """gh を 1 回呼び、標準出力を返す。失敗したら注釈 (gh_failed) を出して None を返す。
 
     base の用意は「できれば」の処理なので、どこで失敗しても例外にしない。呼び出し側は
-    None を見て base なしに切り替える。gh の呼び出しは必ずここを通す。
+    None を見て base なしに切り替える (soft の呼び出しは代わりの手で続ける)。gh の呼び出しは
+    必ずここを通す。
     """
     cmd = ["gh"] + [str(a) for a in args]
     try:
         proc = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, timeout=GH_TIMEOUT)
     except FileNotFoundError:
-        warning(f"base を用意できない ({what}): gh が見つからない")
+        gh_failed(what, "gh が見つからない", soft)
         return None
     except subprocess.TimeoutExpired:
-        warning(f"base を用意できない ({what}): gh が {GH_TIMEOUT} 秒で終わらない")
+        gh_failed(what, f"gh が {GH_TIMEOUT} 秒で終わらない", soft)
         return None
     except OSError as e:
-        warning(f"base を用意できない ({what}): gh を起動できない ({e})")
+        gh_failed(what, f"gh を起動できない ({e})", soft)
         return None
     if proc.returncode != 0:
         err = decode(proc.stderr).strip().splitlines()
         detail = err[-1] if err else "(メッセージなし)"
-        warning(f"base を用意できない ({what}): gh の終了コード {proc.returncode}: {detail}")
+        gh_failed(what, f"gh の終了コード {proc.returncode}: {detail}", soft)
         return None
     return decode(proc.stdout)
 
 
-def gh_json(args, what):
-    text = gh(args, what)
+def gh_json(args, what, soft=False):
+    text = gh(args, what, soft)
     if text is None:
         return None
     try:
         return json.loads(text)
     except ValueError as e:
-        warning(f"base を用意できない ({what}): gh の出力が JSON でない ({e})")
+        gh_failed(what, f"gh の出力が JSON でない ({e})", soft)
+        return None
+
+
+def to_int(x):
+    """実行 id などを int に。数字でなければ None。"""
+    try:
+        return int(str(x))
+    except (TypeError, ValueError):
         return None
 
 
@@ -152,7 +181,7 @@ def resolve_base(names, out_dir):
     repo = os.environ.get("GITHUB_REPOSITORY")
     sha = os.environ.get("GITHUB_SHA")
     ref = os.environ.get("GITHUB_REF_NAME")
-    run_id = os.environ.get("GITHUB_RUN_ID")
+    run_id = to_int(os.environ.get("GITHUB_RUN_ID"))
     if not (repo and sha and ref):
         print("GitHub Actions の外なので base を探さない (--base-exe で指定できる)")
         return None, None
@@ -171,16 +200,18 @@ def resolve_base(names, out_dir):
         wr = a.get("workflow_run") or {}
         if (a.get("name") or "").lower() not in wanted or a.get("expired"):
             continue
-        if wr.get("head_branch") != "master" or not wr.get("id") or not wr.get("head_sha"):
+        if wr.get("head_branch") != "master" or to_int(wr.get("id")) is None or not wr.get("head_sha"):
             continue
-        if run_id and str(wr.get("id")) == str(run_id):
+        if run_id is not None and to_int(wr["id"]) == run_id:
             continue
         # フォークからの実行はブランチ名が master でも別のコード。比較の基準にしない
         if wr.get("head_repository_id") and wr.get("repository_id") \
                 and wr["head_repository_id"] != wr["repository_id"]:
             continue
         candidates.append(a)
-    candidates.sort(key=lambda a: a.get("created_at") or "", reverse=True)
+    # 新しい実行から順に並べる。実行 id は実行を作った順に増え、再実行しても変わらない。
+    # アーティファクトの created_at は再実行で新しくなるので、同じ実行の中の並びにだけ使う
+    candidates.sort(key=lambda a: (to_int(a["workflow_run"]["id"]), a.get("created_at") or ""), reverse=True)
     if not candidates:
         warning(f"base にする {name} が無い (master の CI がまだ上げていないか、期限切れ)。比較せずに計測する")
         return None, None
@@ -188,18 +219,32 @@ def resolve_base(names, out_dir):
     pick = None
     if ref == "master":
         kind = "previous-master"
-        pick = next((a for a in candidates if a["workflow_run"]["head_sha"] != sha), None)
+        # 今回より前に作られた master の実行だけを候補にする。古い master の実行を再実行した
+        # とき、それより新しい master を「直前」に選ぶと比較が逆向きになる (新しいコミットでの
+        # 高速化が今回の悪化に見え、履歴の点と Discord の通知が誤る)
+        pick = next((a for a in candidates
+                     if a["workflow_run"]["head_sha"] != sha
+                     and (run_id is None or to_int(a["workflow_run"]["id"]) < run_id)), None)
         if pick is None:
-            warning(f"base にする {name} が無い (このコミット以外の master の結果が無い)。比較せずに計測する")
+            warning(f"base にする {name} が無い (この実行より前の、別のコミットの master の結果が無い)。"
+                    "比較せずに計測する")
             return None, None
     else:
-        text = gh(["api", f"repos/{repo}/compare/master...{sha}", "--jq", ".merge_base_commit.sha"], "分岐元の特定")
-        merge_base = text.strip() if text else ""
+        # ブランチは分岐元と比べる。特定できなくても最新の master と比べられるので notice にとどめる
+        text = gh(["api", f"repos/{repo}/compare/master...{sha}", "--jq", ".merge_base_commit.sha"],
+                  "分岐元を特定できない ({detail})。最新の master と比べる", soft=True)
+        merge_base = text.strip().lower() if text else ""
+        if text is not None and not re.fullmatch(r"[0-9a-f]{40}", merge_base):
+            notice(f"分岐元を特定できない (応答が SHA でない: {merge_base[:60]!r})。最新の master と比べる")
+            merge_base = ""
         if merge_base:
             pick = next((a for a in candidates if a["workflow_run"]["head_sha"] == merge_base), None)
         kind = "merge-base"
         if pick is None:
             # 分岐元の exe が期限切れなど。最新の master と比べる (差にはブランチ外の変更も混ざる)
+            if merge_base:
+                print(f"分岐元 {bc.short_sha(merge_base)} の {name} が無い (期限切れか、計測を始める前の"
+                      "コミット)。最新の master と比べる")
             pick = candidates[0]
             kind = "latest-master"
 
@@ -217,11 +262,15 @@ def resolve_base(names, out_dir):
         # 手元 (Linux) の試験用。アーティファクトは実行属性を保たない
         os.chmod(exe, os.stat(exe).st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
+    # 実行番号は表示 (#123) にしか使わないので、取れなくても base はそのまま使う
     run_number = None
-    run = gh_json(["api", f"repos/{repo}/actions/runs/{wr['id']}"], "base の実行番号")
-    if isinstance(run, dict) and isinstance(run.get("run_number"), int):
+    run = gh_json(["api", f"repos/{repo}/actions/runs/{wr['id']}"],
+                  "base の実行番号を取れない ({detail})。比較は続ける", soft=True)
+    if isinstance(run, dict) and isinstance(run.get("run_number"), int) and not isinstance(run["run_number"], bool):
         run_number = run["run_number"]
-    info = {"sha": wr["head_sha"], "run_id": int(wr["id"]), "run_number": run_number, "kind": kind}
+    elif isinstance(run, dict):
+        notice("base の実行番号を取れない (応答に run_number が無い)。比較は続ける")
+    info = {"sha": wr["head_sha"], "run_id": to_int(wr["id"]), "run_number": run_number, "kind": kind}
     print(f"base: {bc.base_kind_label(kind)} {bc.short_sha(wr['head_sha'])} (run {wr['id']})")
     return exe, info
 

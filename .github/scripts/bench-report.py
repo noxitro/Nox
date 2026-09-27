@@ -14,9 +14,14 @@
   4. --site-src のページ一式と data/history.js・history.json・latest.js を --out-site に書く
   5. ジョブのサマリー・ステップの出力 (悪化の件数など)・Discord 用の本文を書く
 
-公開中の履歴を取れないとき (404 以外の HTTP エラー・タイムアウト・壊れた内容) は、サイトを
-書かずに終了コード 1 で止める。欠けた履歴で上書き公開すると過去の点が消えるため。
-404 は「まだ一度も公開していない」とみなし、空の履歴から始める。
+公開中の履歴を取れないとき (404 以外の HTTP エラー・タイムアウト・壊れた内容) は、publish
+ではサイトを書かずに終了コード 1 で止める。欠けた履歴で上書き公開すると過去の点が消えるため。
+preview はどこにも書き戻さないので止めない。::warning:: を出し、取れた分の履歴だけでプレビュー
+を作る (サマリーにも、公開中の履歴が入っていないと書く)。404 は「まだ一度も公開していない」と
+みなし、空の履歴から始める。
+
+publish で今回のコミットが履歴の最新のコミットより古い (古い master の実行を再実行した) ときは、
+latest を古いコミットへ戻さず、前に公開した latest をそのまま使う。
 
 使い方:
     python3 .github/scripts/bench-report.py --results-dir bench-results \\
@@ -30,7 +35,8 @@
 ステップの出力 (--output): regressed, improved, budget_violations, alloc_regressed,
 has_results (今回の計測結果があるか), discord (Discord 用の本文を書いたか)
 
-終了コード: 0 = 成功、1 = 履歴を取れない・読めない・サイトを書けない、2 = 引数の誤り。
+終了コード: 0 = 成功、1 = 履歴を取れない・読めない (publish のみ)・サイトを書けない、
+2 = 引数の誤り。
 """
 
 import argparse
@@ -355,22 +361,30 @@ def parse_data(text, prefix, source):
         raise ReportError(f"{source}: 読めない ({e})")
 
 
-def fetch_pages(pages_url):
-    """(履歴, latest) を公開中のページから取る。"""
+def pages_data_url(pages_url, name):
     base = pages_url if pages_url.endswith("/") else pages_url + "/"
-    history = None
-    text = fetch_text(base + "data/history.js")
+    return base + "data/" + name
+
+
+def fetch_pages_history(pages_url):
+    """公開中のページの履歴。まだ公開していない (404) なら None。"""
+    url = pages_data_url(pages_url, "history.js")
+    text = fetch_text(url)
     if text is None:
-        notice(f"公開中の履歴が無い (404)。空の履歴から始める: {base}data/history.js")
-    else:
-        history = parse_data(text, bc.HISTORY_JS_PREFIX, "公開中の history.js")
-    latest = None
-    text = fetch_text(base + "data/latest.js")
-    if text is not None:
-        latest = parse_data(text, bc.LATEST_JS_PREFIX, "公開中の latest.js")
-        if latest is not None and (not isinstance(latest, dict) or latest.get("schema") != bc.LATEST_SCHEMA):
-            raise ReportError(f"公開中の latest.js のスキーマが {bc.LATEST_SCHEMA} でない")
-    return history, latest
+        notice(f"公開中の履歴が無い (404)。空の履歴から始める: {url}")
+        return None
+    return parse_data(text, bc.HISTORY_JS_PREFIX, "公開中の history.js")
+
+
+def fetch_pages_latest(pages_url):
+    """公開中のページの latest。無ければ None。"""
+    text = fetch_text(pages_data_url(pages_url, "latest.js"))
+    if text is None:
+        return None
+    latest = parse_data(text, bc.LATEST_JS_PREFIX, "公開中の latest.js")
+    if latest is not None and (not isinstance(latest, dict) or latest.get("schema") != bc.LATEST_SCHEMA):
+        raise ReportError(f"公開中の latest.js のスキーマが {bc.LATEST_SCHEMA} でない")
+    return latest
 
 
 def read_history_file(path):
@@ -536,12 +550,46 @@ def write_site(site_src, out_site, history, latest):
     print(f"サイト: {out_site} (ページ {copied} ファイル + data/、history.js {size / 1024:.1f} KiB)")
 
 
-def build_latest(current, mode, server, repo, previous):
+def behind_history(commit, history):
+    """commit が履歴の最新のコミットより前か。
+
+    履歴のコミットは実行番号の順に並ぶ (build_history)。再実行では実行番号が変わらないので、
+    古い master の実行を再実行すると、そのコミットはその後の master より前に来る。
+    履歴に無いコミット (上限で外れた・点が無い) は実行番号で比べる。
+    """
+    commits = history.get("commits") or []
+    sha = commit.get("sha")
+    if not commits or commits[-1].get("sha") == sha:
+        return False
+    if any(c.get("sha") == sha for c in commits):
+        return True
+    number, newest = commit.get("run_number"), commits[-1].get("run_number")
+    return isinstance(number, int) and isinstance(newest, int) and number < newest
+
+
+def older_run(a, b):
+    """コミット情報 a の実行番号が b より小さいか (どちらかが無ければ False)。"""
+    na, nb = (a or {}).get("run_number"), (b or {}).get("run_number")
+    return isinstance(na, int) and isinstance(nb, int) and na < nb
+
+
+def build_latest(current, mode, server, repo, previous, history):
     if not current:
         # 計測の無い実行 (サイトだけ作り直す) では、前に公開した latest をそのまま使う
         return previous
     head = max(current, key=lambda r: run_rank(r["commit"]))
     c = head["commit"]
+    if mode == "publish" and behind_history(c, history):
+        # 古い master の実行の再実行など。latest を古いコミットへ戻さない (履歴の点は更新する)
+        newest = history["commits"][-1]
+        where = (f"今回のコミット {bc.short_sha(c.get('sha'))} (#{c.get('run_number')}) は履歴の最新 "
+                 f"{bc.short_sha(newest.get('sha'))} (#{newest.get('run_number')}) より古い")
+        prev_commit = (previous or {}).get("commit") if isinstance(previous, dict) else None
+        if isinstance(previous, dict) and not previous.get("candidate") and not older_run(prev_commit, c):
+            notice(f"{where}ので、前に公開した latest ({bc.short_sha((prev_commit or {}).get('sha'))}) を"
+                   "そのまま使う")
+            return previous
+        print(f"{where}が、前に公開した latest が無い (かさらに古い) ので今回の結果を latest にする")
     run_url = f"{server}/{repo}/actions/runs/{c['run_id']}" if repo and c.get("run_id") else None
     return {
         "schema": bc.LATEST_SCHEMA,
@@ -585,7 +633,7 @@ def variant_line(r):
     return text + "\n"
 
 
-def summary_markdown(current, others, history, mode, pages_url, stats):
+def summary_markdown(current, others, history, mode, pages_url, stats, missing=()):
     out = []
     if current:
         c = max(current, key=lambda r: run_rank(r["commit"]))["commit"]
@@ -596,6 +644,14 @@ def summary_markdown(current, others, history, mode, pages_url, stats):
     if mode == "preview" and current:
         out.append(f"> プレビュー: ブランチ `{current[0]['commit'].get('ref') or '?'}` の結果。"
                    "master の履歴には入れず、並べて表示するだけ。\n\n")
+    if missing:
+        # preview で履歴の一部を取れなかった (publish ではここまで来ない)
+        reasons = "、".join(f"{what}: {bc.md_cell(err)}" for what, err, _ in missing)
+        if any(published for _, _, published in missing):
+            out.append("> ⚠️ 公開中の履歴を取れなかったので、このプレビューには公開済みの履歴が入っていない"
+                       f" (ほかから取れた分だけで作った)。{reasons}\n\n")
+        else:
+            out.append(f"> ⚠️ 次を取れなかったので使わずにプレビューを作った。{reasons}\n\n")
     if not current:
         out.append("この実行には計測結果が無い。履歴からサイトだけ作り直した。\n\n")
     for r in current:
@@ -712,20 +768,43 @@ def main():
 
     store = Store()
     previous_latest = None
+    # preview で取れなかった出どころ ([(何, 理由, 公開中の履歴か)])。publish では 1 つでも
+    # 取れなければ止める
+    missing = []
+
+    def lenient(what, e, published_history=False):
+        """preview では履歴の取得失敗で止めない (どこにも書き戻さないので欠けても害が無い)。"""
+        if args.mode == "publish":
+            raise e
+        warning(f"{what}を取れないので、使わずにプレビューを作る (プレビューは公開しないので止めない): {e}")
+        missing.append((what.strip(), str(e), published_history))
+
     try:
         if args.pages_url:
-            history, previous_latest = fetch_pages(args.pages_url)
-            if history is not None:
-                points = points_from_history(history, "公開中の history.js")
-                for p in points:
-                    store.put(p)
-                repo = repo or history.get("repo")
-                print(f"公開中の履歴: {len(points)} 点")
+            history = None
+            try:
+                history = fetch_pages_history(args.pages_url)
+                if history is not None:
+                    points = points_from_history(history, "公開中の history.js")
+                    for p in points:
+                        store.put(p)
+                    repo = repo or history.get("repo")
+                    print(f"公開中の履歴: {len(points)} 点")
+            except ReportError as e:
+                lenient("公開中の履歴 (history.js) ", e, published_history=True)
+            try:
+                previous_latest = fetch_pages_latest(args.pages_url)
+            except ReportError as e:
+                lenient("公開中の latest.js ", e)
         for path in args.history_file:
-            history, sibling_latest = read_history_file(path)
-            if history is None:
+            try:
+                history, sibling_latest = read_history_file(path)
+                if history is None:
+                    continue
+                points = points_from_history(history, f"--history-file {path}")
+            except ReportError as e:
+                lenient(f"--history-file {path} ", e)
                 continue
-            points = points_from_history(history, f"--history-file {path}")
             added = sum(1 for p in points if store.put(p))
             repo = repo or history.get("repo")
             if previous_latest is None:
@@ -750,7 +829,7 @@ def main():
 
     generated = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     history, dropped = build_history(store, repo, args.max_commits, generated)
-    latest = build_latest(current, args.mode, server, repo, previous_latest)
+    latest = build_latest(current, args.mode, server, repo, previous_latest, history)
 
     try:
         write_site(args.site_src, args.out_site, history, latest)
@@ -768,7 +847,7 @@ def main():
     }
 
     stats = {"added_current": added_current, "added_backfill": added_backfill, "dropped": dropped}
-    markdown = summary_markdown(current, others, history, args.mode, args.pages_url, stats)
+    markdown = summary_markdown(current, others, history, args.mode, args.pages_url, stats, missing)
     print(markdown)
     if args.summary:
         with open(args.summary, "a", encoding="utf-8") as f:

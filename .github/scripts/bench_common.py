@@ -14,6 +14,8 @@ bench-run.py (Windows ランナーで計測する) と bench-report.py (ubuntu �
     再実行で判定が入れ替わって混乱するのを防ぐ
   - 判定のしきい値は既定 5 %。複数スレッドで動くもの (JobSystem など) はスケジュール
     の揺れが大きいので 2 倍にする
+  - 「変化なし」は同等性の主張なので、区間がしきい値の内側 (1 − しきい値 〜 1 + しきい値)
+    に収まったときだけ出す。有意でもなく、しきい値の内側とも言えないものは「ばらつき大」
 """
 
 import json
@@ -83,6 +85,7 @@ VERDICT_LABELS = {
     "improved": "改善",
     "unchanged": "変化なし",
     "noisy": "ばらつき大",
+    # 対が 3 組未満で判定しない。結果ページ (tools/bench-site/app.js) も同じ文言を使う
     "insufficient": "回数不足",
 }
 NO_BASE_GLYPH = "—"
@@ -216,6 +219,12 @@ def paired_analysis(name, head_rounds, base_rounds, threshold=DEFAULT_THRESHOLD,
 
     head_rounds[i] と base_rounds[i] は同じラウンド (同じ VM で続けて測った) の中央値。
     どちらかが None や 0 以下の組は捨てる。3 組未満なら判定しない ("insufficient")。
+
+    判定 (thr はしきい値。複数スレッドは 2 倍):
+      regressed : 区間の下端 > 1 かつ 推定値 ≥ 1 + thr (有意に遅く、しきい値以上)
+      improved  : 区間の上端 < 1 かつ 推定値 ≤ 1 − thr (有意に速く、しきい値以上)
+      unchanged : 区間全体が (1 − thr, 1 + thr) の内側 (しきい値ほどの変化は無いと言える)
+      noisy     : それ以外 (区間がしきい値の外まで伸びていて、変化の有無を言えない)
     """
     lr = []
     for h, b in zip(head_rounds, base_rounds):
@@ -245,11 +254,13 @@ def paired_analysis(name, head_rounds, base_rounds, threshold=DEFAULT_THRESHOLD,
         verdict = "regressed"
     elif ci_high < 1 and 1 - ratio >= thr:
         verdict = "improved"
-    elif ci_high - ci_low > 4 * thr:
-        # 区間が広すぎて、しきい値の変化があっても見分けられない
-        verdict = "noisy"
-    else:
+    elif ci_low > 1 - thr and ci_high < 1 + thr:
+        # 同等性の判定: 区間全体がしきい値の内側にあるときだけ「変化なし」と言う
         verdict = "unchanged"
+    else:
+        # 区間がしきい値の外まで伸びている (揺れが大きい、またはしきい値前後の変化で
+        # 有意とまでは言えない)。「変化なし」とは言えないので分けて見せる
+        verdict = "noisy"
     return {"ratio": ratio, "ci_low": ci_low, "ci_high": ci_high, "change": ratio - 1,
             "verdict": verdict, "pairs": n}
 
@@ -357,32 +368,54 @@ def fmt_change(paired):
     return text
 
 
+def _count_plain(v):
+    """0 以上の v: 整数ならそのまま、端数は有効数字 3 桁 (末尾の 0 は落とす)、100 万以上は M。"""
+    if v >= 1e6:
+        return f"{_sig3(float(f'{v:.3g}') / 1e6)}M"
+    if abs(v - round(v)) < 1e-9:
+        return str(int(round(v)))
+    s = _sig3(float(f"{v:.3g}"))
+    if "." in s:
+        s = s.rstrip("0").rstrip(".")
+    return s
+
+
+# 1 未満の回数を "1/N" と書くときの許容。1/v が最寄りの整数 N から N の 2 % より離れていれば
+# (0.3 = 1/3.33 など) 分数にせず有効数字 3 桁で書く
+RECIPROCAL_TOLERANCE = 0.02
+
+
 def fmt_count(x):
-    """1 op あたりの確保回数など。整数ならそのまま、端数は有効数字 3 桁。"""
+    """1 op あたりの確保回数など。結果ページと同じ書き方にする。
+
+    0 は "0"。0 と 1 の間は逆数の分数 ("1/512" = 512 op に 1 回)。1/v を最寄りの整数に丸め、
+    ずれが 2 % を超える (または 1/1 になる) ときだけ有効数字 3 桁の小数に戻す。
+    1 以上は整数ならそのまま、端数は有効数字 3 桁。
+    """
     if not is_num(x):
         return "—"
     if x == 0:
         return "0"
     sign = "−" if x < 0 else ""
     v = abs(x)
-    if v >= 1e6:
-        return f"{sign}{_sig3(float(f'{v:.3g}') / 1e6)}M"
-    if abs(v - round(v)) < 1e-9:
-        return f"{sign}{int(round(v))}"
-    s = _sig3(float(f"{v:.3g}"))
-    if "." in s:
-        s = s.rstrip("0").rstrip(".")
-    return sign + s
+    if v < 1:
+        inv = 1 / v
+        if math.isfinite(inv):
+            n = round(inv)
+            if n >= 2 and abs(inv - n) <= RECIPROCAL_TOLERANCE * n:
+                return f"{sign}1/{n}"
+    return sign + _count_plain(v)
 
 
 def fmt_bytes(x):
+    """バイト数。1 未満も分数にはしない (0.125 B は "0.125 B")。"""
     if not is_num(x):
         return "—"
     v = abs(x)
     for unit, scale in (("MiB", 1024.0 ** 2), ("KiB", 1024.0)):
         if v >= scale:
             return f"{_sig3(float(f'{v / scale:.3g}'))} {unit}"
-    return f"{fmt_count(v)} B"
+    return f"{_count_plain(v)} B"
 
 
 _CPU_NOISE = re.compile(
@@ -572,12 +605,12 @@ def notable_sort_key(bench):
 
 
 def count_text(summary):
-    """"▲ 悪化 1 / ▼ 改善 0 / ≈ 変化なし 25 / ？ばらつき大 2" (回数不足は 0 なら省く)。"""
+    """"▲ 悪化 1 / ▼ 改善 0 / ≈ 変化なし 25 / ？ ばらつき大 2" (回数不足は 0 なら省く)。"""
     s = summary or {}
     parts = [f"{VERDICT_GLYPHS[v]} {VERDICT_LABELS[v]} {s.get(v, 0)}"
              for v in ("regressed", "improved", "unchanged", "noisy")]
     if s.get("insufficient"):
-        parts.append(f"{VERDICT_GLYPHS['insufficient']} 回数不足 {s['insufficient']}")
+        parts.append(f"{VERDICT_GLYPHS['insufficient']} {VERDICT_LABELS['insufficient']} {s['insufficient']}")
     return " / ".join(parts)
 
 
