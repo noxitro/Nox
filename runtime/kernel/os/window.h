@@ -80,6 +80,11 @@ namespace nox::os
 		void Show();
 		void Dispose();
 
+		///	@brief		ウィンドウを閉じるよう要求する。ユーザーが閉じるボタンを押したのと同じ。
+		///	@details	WM_CLOSE を投げるだけで、実際に閉じるのはウィンドウを作ったスレッドのメッセージ処理。
+		///				PostMessage はスレッドをまたいでよいので、どのスレッドから呼んでもよい。
+		void RequestClose()noexcept;
+
 		inline void* GetNativeHandle()const { return window_handle_; }
 
 		void SetPos(const nox::Int2& pos);

@@ -46,5 +46,8 @@ namespace nox
 		nox::SceneView* main_scene_view_;
 
 		nox::Vector<std::reference_wrapper<nox::SceneView>> scene_view_list_;
+
+		/// @brief --exit-after-frames による終了要求を出し終えたか。要求は 1 回だけ出す。
+		bool close_requested_;
 	};
 }

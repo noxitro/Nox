@@ -221,3 +221,15 @@ void nox::os::Window::Dispose()
 		window_handle_ = nullptr;
 	}
 }
+
+void nox::os::Window::RequestClose()noexcept
+{
+#if NOX_WINDOWS
+	if (window_handle_ != nullptr)
+	{
+		//	WM_CLOSE → DestroyWindow → WM_DESTROY → PostQuitMessage の順に、閉じるボタンと同じ経路をたどる
+		//	(CallbackWindow を参照)。DestroyWindow は作ったスレッドでしか効かないので、直接は呼ばない。
+		::PostMessageW(window_handle_, WM_CLOSE, 0, 0);
+	}
+#endif // NOX_WINDOWS
+}
