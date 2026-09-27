@@ -665,13 +665,18 @@ public sealed class EditorSmokeTests
 			{
 				// 起動に失敗した Editor を残すと、後のテストがデスクトップ全体を名前で探したときに
 				// そのウィンドウを拾って巻き添えで落ちる。ここで片付けてから失敗させる。
+				// Application.Kill は終了済みなら何もせず、中で起きた例外も握りつぶす (FlaUI 5.0.0) ので、
+				// 自然終了と競合しても投げない。それでも automation は必ず破棄されるよう finally に置く。
 				bool editorExited = application.HasExited;
-				if (editorExited == false)
+				try
 				{
 					application.Kill();
 				}
+				finally
+				{
+					automation.Dispose();
+				}
 
-				automation.Dispose();
 				throw new InvalidOperationException(
 					$"Nox Studio main window was not created within {LaunchTimeout.TotalSeconds} seconds. EditorExited={editorExited}.{DescribeLastException(mainWindowResult)}");
 			}

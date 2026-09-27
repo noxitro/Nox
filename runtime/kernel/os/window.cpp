@@ -6,6 +6,7 @@
 #include	"pch.h"
 #include	"window.h"
 
+#include	<atomic>
 #include	<filesystem>
 #if NOX_WINDOWS
 #include	"windows.h"
@@ -79,10 +80,16 @@ namespace nox::os
 		return 0;
 
 	case WM_DESTROY:
-		if (self != nullptr && self->window_handle_ == hWnd)
+		if (self != nullptr)
 		{
-			self->window_handle_ = nullptr;
-			self->is_visible_ = false;
+			//	RequestClose はゲームスレッドからハンドルを読むので、ここでの書き換えは atomic に行う
+			//	(非 atomic な読み書きが重なるとデータ競合になる)。
+			std::atomic_ref<nox::os::WindowHandle> handle(self->window_handle_);
+			if (handle.load(std::memory_order_relaxed) == hWnd)
+			{
+				handle.store(nullptr, std::memory_order_release);
+				self->is_visible_ = false;
+			}
 		}
 		::PostQuitMessage(0);
 		return 0;
@@ -225,11 +232,16 @@ void nox::os::Window::Dispose()
 void nox::os::Window::RequestClose()noexcept
 {
 #if NOX_WINDOWS
-	if (window_handle_ != nullptr)
+	//	ゲームスレッドから呼ばれる。ハンドルは UI スレッドの WM_DESTROY が nullptr に書き換えるので、
+	//	atomic に読む (CallbackWindow と対になっている)。読んだ直後にユーザーが閉じて破棄されていた
+	//	場合、PostMessageW は無効なハンドルとして失敗するだけで、何も起きない。
+	const nox::os::WindowHandle handle =
+		std::atomic_ref<nox::os::WindowHandle>(window_handle_).load(std::memory_order_acquire);
+	if (handle != nullptr)
 	{
 		//	WM_CLOSE → DestroyWindow → WM_DESTROY → PostQuitMessage の順に、閉じるボタンと同じ経路をたどる
 		//	(CallbackWindow を参照)。DestroyWindow は作ったスレッドでしか効かないので、直接は呼ばない。
-		::PostMessageW(window_handle_, WM_CLOSE, 0, 0);
+		::PostMessageW(handle, WM_CLOSE, 0, 0);
 	}
 #endif // NOX_WINDOWS
 }
