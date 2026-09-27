@@ -3,3 +3,6 @@
 
 # license: 全ソースのヘッダを SPDX 形式に統一
 3b20ab32e2648f11ae9aa8fbcabd561e33f0bca1
+
+# all: テキストファイルの UTF-8 BOM を外し、BOM なしに統一する
+904c4730aed94a28e6009be78c87024a6ddad4b4

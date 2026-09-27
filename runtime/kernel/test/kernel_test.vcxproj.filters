@@ -22,6 +22,9 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="allocation_counter_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="basic_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

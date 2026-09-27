@@ -1,0 +1,230 @@
+# ============================================================
+# Benchmark publish (ベンチマーク結果ページの生成と公開)
+#
+# 目的  : ci.yml の各構成で計測したベンチマーク結果を master の履歴へ積み、
+#         GitHub Pages の結果ページ (tools/bench-site) を作り直して公開する。
+# 仕組み: ci.yml の最後から workflow_call で呼ばれる。履歴の正本は公開中のページの
+#         data/history.js。これに前回の master の bench-history アーティファクト
+#         (Pages が読めないときの控え) と、直近の master の結果アーティファクト
+#         (公開の取りこぼしを直す) を取り込み直してから、今回の結果を足す。
+#         取り込みはコミットごとに冪等なので、何度走っても二重にはならない。
+#         長命なデータ用ブランチは作らない (AGENTS.md: 長命なブランチは master だけ)。
+#         master 以外では履歴に足さず、「このブランチの結果」を重ねたプレビューを
+#         アーティファクト bench-site に置くだけにする (展開して index.html を開けば見られる)。
+#         ページだけを直した push (tools/bench-site/**) では ci.yml が走らないので、
+#         このワークフローが単独で起動し、計測せずにページだけ作り直す。
+# 公開  : 初回だけ、リポジトリ管理者が Settings > Pages > Build and deployment > Source を
+#         "GitHub Actions" にする。未設定のあいだは公開を飛ばして notice を出すだけで、
+#         CI は落とさない (結果は bench-site / bench-history アーティファクトに残る)。
+# 通知  : master で悪化または確保回数の予算超過があれば Discord へ投稿する
+#         (DISCORD_DEV_REPORT_WEBHOOK_URL、無ければ DISCORD_WEBHOOK_URL)。
+# 費用  : ubuntu ランナーだけ。
+# ============================================================
+
+name: Benchmark publish
+
+on:
+  workflow_call:
+    inputs:
+      measured:
+        description: 'この実行で計測した結果 (bench-result-*) があるか'
+        type: boolean
+        default: false
+  push:
+    branches: ['**']
+    paths:
+      - 'tools/bench-site/**'
+      - '.github/workflows/bench-publish.yml'
+  workflow_dispatch:
+
+# GITHUB_TOKEN は既定で読み取りに絞る。書き込みが要るジョブはジョブ側で個別に広げる。
+permissions:
+  contents: read
+
+jobs:
+  # =========================================================
+  # Report: 履歴を組み立ててサイトを生成する (全ブランチ)
+  # =========================================================
+  report:
+    name: Build benchmark site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read   # 過去の master の結果・履歴アーティファクトを取り込み直すため
+      pages: read     # Pages が有効かどうかと、公開 URL を調べるため
+    outputs:
+      publish: ${{ steps.mode.outputs.publish == 'true' && steps.restore.outputs.ok == 'true' }}
+      pages_enabled: ${{ steps.pages.outputs.enabled }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            .github/scripts
+            tools/bench-site
+
+      # 履歴へ足してよいのは master の結果だけ
+      - name: Decide mode
+        id: mode
+        shell: bash
+        run: |
+          if [ "$GITHUB_REF" = "refs/heads/master" ]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            echo "mode=publish" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "mode=preview" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 404 (未設定) のときは公開を飛ばすだけで落とさない。
+      # Source がブランチ (legacy) のときも公開しない。deploy-pages は GitHub Actions からの
+      # 公開用で、ブランチ公開のサイトを上書きしたり、毎回失敗したりするため。
+      - name: Check GitHub Pages
+        id: pages
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if info=$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq '[.build_type, .html_url] | @tsv' 2>/dev/null) && [ -n "$info" ]; then
+            build_type=$(cut -f1 <<<"$info")
+            url=$(cut -f2 <<<"$info")
+          else
+            build_type=""
+            url=""
+          fi
+          if [ "$build_type" = "workflow" ] && [ -n "$url" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "url=${url%/}/" >> "$GITHUB_OUTPUT"
+            echo "公開先: ${url%/}/"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            if [ -n "$build_type" ]; then
+              echo "::notice::GitHub Pages の Source が GitHub Actions ではない ($build_type) ので公開しない (Settings > Pages > Source)"
+            else
+              echo "::notice::GitHub Pages が未設定なので公開しない (Settings > Pages > Source: GitHub Actions)"
+            fi
+          fi
+
+      - name: Download results of this run
+        if: inputs.measured
+        uses: actions/download-artifact@v8
+        with:
+          pattern: bench-result-*
+          path: bench-results
+
+      # Pages の履歴が読めない (未設定・一時障害) ときの控え。読めるときも和集合を取るだけ。
+      # 一覧や取得に失敗したときは ok=false にし、master でも控えと公開を上書きしない
+      # (欠けた履歴を「最新の控え」として上げると、Pages 未設定のあいだは点が戻らないため)。
+      - name: Restore previous history
+        id: restore
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ok=true
+          if json=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=bench-history&per_page=30"); then
+            run_id=$(jq -r '[.artifacts[] | select(.expired == false and .workflow_run.head_branch == "master")][0].workflow_run.id // empty' <<<"$json")
+            if [ -n "$run_id" ]; then
+              if ! gh run download "$run_id" -n bench-history -D prev-history; then
+                ok=false
+                echo "::warning::前回の bench-history を取得できなかった (run $run_id)。今回は控えと公開を更新しない"
+              fi
+            else
+              echo "前回の bench-history は無い"
+            fi
+          else
+            ok=false
+            echo "::warning::bench-history の一覧を取得できなかった。今回は控えと公開を更新しない"
+          fi
+          echo "ok=$ok" >> "$GITHUB_OUTPUT"
+
+      - name: Build site
+        id: report
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODE: ${{ steps.mode.outputs.mode }}
+          PAGES_URL: ${{ steps.pages.outputs.url }}
+        run: |
+          report_args=(
+            --results-dir bench-results
+            --site-src tools/bench-site
+            --out-site _site
+            --mode "$MODE"
+            --backfill 30
+            --summary "$GITHUB_STEP_SUMMARY"
+            --output "$GITHUB_OUTPUT"
+            --discord-md bench-discord.md
+          )
+          if [ -n "$PAGES_URL" ]; then report_args+=(--pages-url "$PAGES_URL"); fi
+          if [ -f prev-history/history.js ]; then report_args+=(--history-file prev-history/history.js); fi
+          python3 .github/scripts/bench-report.py "${report_args[@]}"
+
+      # どのブランチでも見られるように置く (展開して index.html を開けば動く)
+      - name: Upload site
+        uses: actions/upload-artifact@v7
+        with:
+          name: bench-site
+          path: _site/
+          if-no-files-found: warn
+
+      - name: Upload history
+        if: steps.mode.outputs.publish == 'true' && steps.restore.outputs.ok == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: bench-history
+          path: _site/data/
+          retention-days: 90
+          if-no-files-found: warn
+
+      - name: Upload Pages artifact
+        if: steps.mode.outputs.publish == 'true' && steps.pages.outputs.enabled == 'true' && steps.restore.outputs.ok == 'true'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site/
+
+      # 通知の失敗 (webhook の障害など) で公開まで止めない
+      - name: Post to Discord
+        if: steps.report.outputs.discord == 'true'
+        continue-on-error: true
+        shell: bash
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_DEV_REPORT_WEBHOOK_URL || secrets.DISCORD_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SHA: ${{ github.sha }}
+        run: |
+          python3 .github/scripts/discord_webhook.py \
+            --title "📉 ベンチマークの悪化 — ${SHA:0:7}" \
+            --description-file bench-discord.md \
+            --color yellow --url "$RUN_URL" \
+            --footer "$GITHUB_WORKFLOW #$GITHUB_RUN_NUMBER"
+
+  # =========================================================
+  # Deploy: GitHub Pages へ公開する (master で、Pages が有効なときだけ)
+  #
+  # 公開は同時に 1 本しか走らせられないので pages グループで直列にする。
+  # 後から来た実行が待機中の古い実行を置き換えても、履歴は結果アーティファクトから
+  # 取り込み直されるので、失われるのは「その回の公開」だけで点は次回に戻る。
+  # =========================================================
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: [report]
+    if: needs.report.outputs.publish == 'true' && needs.report.outputs.pages_enabled == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5

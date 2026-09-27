@@ -1,4 +1,4 @@
-﻿//	Copyright (c) 2023-2026 noxitro
+//	Copyright (c) 2023-2026 noxitro
 //	SPDX-License-Identifier: MIT
 
 ///	@file	window.h
@@ -62,6 +62,15 @@ namespace nox::os
 		bool resizable = true;
 	};
 
+	/// @brief ウィンドウメッセージ
+	struct WindowMessage
+	{
+		nox::os::WindowHandle window_handle;
+		nox::uint32 message;
+		nox::uint64 wparam;
+		nox::int64 lparam;
+	};
+
 	/// @brief ウィンドウ
 	class Window
 	{
@@ -89,6 +98,25 @@ namespace nox::os
 		inline const nox::Int2& GetSize()const noexcept { return size_; }
 
 		std::array<nox::char16, nox::os::Window::k_max_title_length> GetWindowTitle()const noexcept;
+
+		bool RegisterMessageHook(void(&func)(const nox::os::WindowMessage& message, void* user_data), void* user_data);
+		bool UnregisterMessageHook(void(&func)(const nox::os::WindowMessage& message, void* user_data), void* user_data);
+
+		template<auto Func, class T>
+			requires (
+			std::is_invocable_r_v<void, decltype(Func),	const WindowMessage&, T&>
+			&& !std::is_volatile_v<T>
+			)
+		inline bool RegisterMessageHook(T& user_data)
+		{
+			return RegisterMessageHook(
+				+[](const nox::os::WindowMessage& message, void* user_data_ptr)
+				{
+					std::invoke(Func, message, *static_cast<T*>(user_data_ptr));
+				},
+				const_cast<void*>(
+					static_cast<const void*>(std::addressof(user_data))));
+		}
 	private:
 		static void	CreateNative(const void* self);
 		std::u16string_view GetWindowTitle(std::span<nox::char16> dest)const noexcept;

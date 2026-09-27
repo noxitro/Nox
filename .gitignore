@@ -157,6 +157,8 @@
 /runtime/bin/ReflectionGenerator.runtimeconfig.json
 # モジュール配下のテストプロジェクトを単体ビルドしたときの出力
 /runtime/*/test/build/
+# ベンチマーク (runtime/bench) を単体ビルドしたときの出力
+/runtime/bench/build/
 
 /runtime/bin/source/CustomTask/bin/
 
@@ -228,3 +230,9 @@ TestResults/
 
 # Python の実行キャッシュ (.github/scripts)
 __pycache__/
+
+# ベンチマークの実行結果と結果ページの生成物 (CI の作業ディレクトリ・ローカルのデモデータ)
+/bench-out/
+/bench-results/
+/_site/
+/tools/bench-site/data/

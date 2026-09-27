@@ -1,0 +1,154 @@
+# ============================================================
+# clang-tidy (C++ の静的解析)
+#
+# 目的  : runtime (C++) を clang-tidy で解析し、バグ・未定義動作・性能の問題を
+#         拾う。検査の種類は runtime/.clang-tidy に書いてある。
+# 仕組み: ClangCL / Debug で runtime.slnx を建てながら、MSBuild のコード分析
+#         (EnableClangTidyCodeAnalysis) で各翻訳単位に clang-tidy をかける。
+#         Visual Studio の「コード分析」と同じ経路なので、手元でも同じ結果になる。
+#         Debug を選んでいるのは NOX_ASSERT / NOX_DEVELOP の中まで見るため。
+# 段階  : 今は報告だけで CI は落とさない。既存の指摘を片付けてから、
+#         .clang-tidy の WarningsAsErrors に種類ごとに足して関門にしていく。
+# 日程  : 毎日 JST 02:37 (master)。6 構成のビルドとは別枠で 1 回だけ走らせる。
+#         このワークフローか設定を変えた push でも走る (設定の確認用。投稿しない)。
+# 通知  : 前回の結果と比べ、新しく出た指摘を Discord に投稿する
+#         (DISCORD_DEV_REPORT_WEBHOOK_URL、無ければ DISCORD_WEBHOOK_URL)。
+#         解析自体が失敗したときは DISCORD_WEBHOOK_URL に流す。
+# 費用  : 公開リポジトリなので windows ランナーも無料。
+# ============================================================
+
+name: clang-tidy
+
+on:
+  schedule:
+    - cron: '37 17 * * *'   # 毎日 UTC 17:37 = JST 02:37 (dev-report の後、混雑する 0 分を避ける)
+  workflow_dispatch:
+  push:
+    branches: ['**']
+    paths:
+      - 'runtime/.clang-tidy'
+      - '.github/workflows/clang-tidy.yml'
+      - '.github/scripts/clang-tidy-report.py'
+
+# 設定を試す push が続いたら古いものは打ち切る。定期実行と手動実行は打ち切らない。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'push' && 'push' || 'main' }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: pwsh
+
+# Windows の Python は既定で cp1252 を使い、日本語の入出力で落ちる
+env:
+  PYTHONUTF8: '1'
+
+jobs:
+  analyze:
+    name: Analyze (ClangCL / Debug)
+    runs-on: ${{ vars.NOX_RUNNER || 'windows-latest' }}
+    # 通常のビルドに解析が上乗せされるので、6 構成の 1 ジョブ (約 10 分) より長くかかる
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup build prerequisites
+        uses: ./.github/actions/setup-nox-build
+
+      # 前回の結果。新しく出た指摘を見分けるのに使う。master で保存したものは
+      # 他のブランチからも読めるので、設定を試す push でも比較できる。
+      - name: Restore previous result
+        uses: actions/cache/restore@v6
+        with:
+          path: .clang-tidy-state
+          key: clang-tidy-state-${{ github.run_id }}
+          restore-keys: clang-tidy-state-
+
+      # RunCodeAnalysis + EnableClangTidyCodeAnalysis で、コンパイルと一緒に clang-tidy を走らせる。
+      # MSVC のコード分析 (/analyze) は別途検討するので、ここでは切っておく。
+      # clang-tidy の指摘は MSBuild の警告として build ログに出る。
+      - name: Build with clang-tidy
+        run: |
+          msbuild runtime\runtime.slnx `
+            /p:Configuration=Debug `
+            /p:Platform=x64 `
+            /p:PlatformToolset=ClangCL `
+            /p:RunCodeAnalysis=true `
+            /p:EnableClangTidyCodeAnalysis=true `
+            /p:EnableMicrosoftCodeAnalysis=false `
+            /m `
+            /v:minimal `
+            /nologo `
+            "/flp:logfile=clang-tidy-build.log;verbosity=normal"
+          if ($LASTEXITCODE -ne 0) { throw "ビルドに失敗 (exit $LASTEXITCODE)" }
+
+      - name: Report
+        id: report
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python .github/scripts/clang-tidy-report.py `
+            --log clang-tidy-build.log `
+            --root "$env:GITHUB_WORKSPACE" `
+            --previous .clang-tidy-state/latest.json `
+            --out clang-tidy.json `
+            --discord clang-tidy-discord.md `
+            --run-url "$env:RUN_URL"
+          if ($LASTEXITCODE -ne 0) { throw "集計に失敗 (exit $LASTEXITCODE)" }
+
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: clang-tidy
+          path: |
+            clang-tidy.json
+            clang-tidy-build.log
+          if-no-files-found: warn
+
+      # 比較の基準は master の定期実行・手動実行の結果だけにする
+      # (設定を試す push の結果を基準にすると、次回の「新規」がずれる)。
+      - name: Save result for next comparison
+        if: github.ref == 'refs/heads/master' && github.event_name != 'push'
+        run: |
+          New-Item -ItemType Directory -Force .clang-tidy-state | Out-Null
+          Copy-Item clang-tidy.json .clang-tidy-state/latest.json -Force
+
+      - name: Save state
+        if: github.ref == 'refs/heads/master' && github.event_name != 'push'
+        uses: actions/cache/save@v6
+        with:
+          path: .clang-tidy-state
+          key: clang-tidy-state-${{ github.run_id }}
+
+      # 毎日の結果をレポートのチャンネルに流す。新しい指摘があれば黄色、無ければ灰色。
+      - name: Post to Discord
+        if: github.event_name != 'push'
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_DEV_REPORT_WEBHOOK_URL || secrets.DISCORD_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TOTAL: ${{ steps.report.outputs.total }}
+          NEW: ${{ steps.report.outputs.new }}
+        run: |
+          $color = if ([int]$env:NEW -gt 0) { 'yellow' } else { 'gray' }
+          python .github/scripts/discord_webhook.py `
+            --title "🔍 clang-tidy — $env:TOTAL 件 ($env:GITHUB_REF_NAME)" `
+            --description-file clang-tidy-discord.md `
+            --color $color --url "$env:RUN_URL" `
+            --footer "$env:GITHUB_WORKFLOW #$env:GITHUB_RUN_NUMBER"
+
+      - name: Notify failure
+        if: failure() && github.event_name != 'push'
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python .github/scripts/discord_webhook.py `
+            --title ":x: clang-tidy の解析に失敗した — $env:GITHUB_REPOSITORY" `
+            --description "ビルドか集計が失敗した。ログを確認すること。" `
+            --color red --url "$env:RUN_URL" `
+            --footer "$env:GITHUB_WORKFLOW #$env:GITHUB_RUN_NUMBER"

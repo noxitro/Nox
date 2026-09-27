@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -227,6 +227,7 @@
     <ClInclude Include="math\vector4d.h" />
     <ClInclude Include="math\vector_util.h" />
     <ClInclude Include="memory\nox_memory.h" />
+    <ClInclude Include="memory\allocation_counter.h" />
     <ClInclude Include="memory\memory_definition.h" />
     <ClInclude Include="memory\memory_profile.h">
       <SubType>
@@ -749,7 +750,6 @@
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{ce18e5d8-faa4-48b4-a1d2-dab85fc1acbb}</ProjectGuid>
     <RootNamespace>kernel</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <VcpkgEnabled>true</VcpkgEnabled>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
