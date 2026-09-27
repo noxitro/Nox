@@ -54,7 +54,7 @@ jobs:
       actions: read   # 過去の master の結果・履歴アーティファクトを取り込み直すため
       pages: read     # Pages が有効かどうかと、公開 URL を調べるため
     outputs:
-      publish: ${{ steps.mode.outputs.publish }}
+      publish: ${{ steps.mode.outputs.publish == 'true' && steps.restore.outputs.ok == 'true' }}
       pages_enabled: ${{ steps.pages.outputs.enabled }}
 
     steps:
@@ -78,20 +78,33 @@ jobs:
             echo "mode=preview" >> "$GITHUB_OUTPUT"
           fi
 
-      # 404 (未設定) のときは公開を飛ばすだけで落とさない
+      # 404 (未設定) のときは公開を飛ばすだけで落とさない。
+      # Source がブランチ (legacy) のときも公開しない。deploy-pages は GitHub Actions からの
+      # 公開用で、ブランチ公開のサイトを上書きしたり、毎回失敗したりするため。
       - name: Check GitHub Pages
         id: pages
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if url=$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq .html_url 2>/dev/null) && [ -n "$url" ]; then
+          if info=$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq '[.build_type, .html_url] | @tsv' 2>/dev/null) && [ -n "$info" ]; then
+            build_type=$(cut -f1 <<<"$info")
+            url=$(cut -f2 <<<"$info")
+          else
+            build_type=""
+            url=""
+          fi
+          if [ "$build_type" = "workflow" ] && [ -n "$url" ]; then
             echo "enabled=true" >> "$GITHUB_OUTPUT"
             echo "url=${url%/}/" >> "$GITHUB_OUTPUT"
             echo "公開先: ${url%/}/"
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::GitHub Pages が未設定なので公開しない (Settings > Pages > Source: GitHub Actions)"
+            if [ -n "$build_type" ]; then
+              echo "::notice::GitHub Pages の Source が GitHub Actions ではない ($build_type) ので公開しない (Settings > Pages > Source)"
+            else
+              echo "::notice::GitHub Pages が未設定なので公開しない (Settings > Pages > Source: GitHub Actions)"
+            fi
           fi
 
       - name: Download results of this run
@@ -101,20 +114,31 @@ jobs:
           pattern: bench-result-*
           path: bench-results
 
-      # Pages の履歴が読めない (未設定・一時障害) ときの控え。読めるときも和集合を取るだけ
+      # Pages の履歴が読めない (未設定・一時障害) ときの控え。読めるときも和集合を取るだけ。
+      # 一覧や取得に失敗したときは ok=false にし、master でも控えと公開を上書きしない
+      # (欠けた履歴を「最新の控え」として上げると、Pages 未設定のあいだは点が戻らないため)。
       - name: Restore previous history
+        id: restore
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          run_id=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=bench-history&per_page=30" \
-            --jq '[.artifacts[] | select(.expired == false and .workflow_run.head_branch == "master")][0].workflow_run.id // empty' 2>/dev/null || true)
-          if [ -n "$run_id" ]; then
-            gh run download "$run_id" -n bench-history -D prev-history \
-              || echo "::warning::前回の bench-history を取得できなかった (run $run_id)"
+          ok=true
+          if json=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=bench-history&per_page=30"); then
+            run_id=$(jq -r '[.artifacts[] | select(.expired == false and .workflow_run.head_branch == "master")][0].workflow_run.id // empty' <<<"$json")
+            if [ -n "$run_id" ]; then
+              if ! gh run download "$run_id" -n bench-history -D prev-history; then
+                ok=false
+                echo "::warning::前回の bench-history を取得できなかった (run $run_id)。今回は控えと公開を更新しない"
+              fi
+            else
+              echo "前回の bench-history は無い"
+            fi
           else
-            echo "前回の bench-history は無い"
+            ok=false
+            echo "::warning::bench-history の一覧を取得できなかった。今回は控えと公開を更新しない"
           fi
+          echo "ok=$ok" >> "$GITHUB_OUTPUT"
 
       - name: Build site
         id: report
@@ -147,7 +171,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload history
-        if: steps.mode.outputs.publish == 'true'
+        if: steps.mode.outputs.publish == 'true' && steps.restore.outputs.ok == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: bench-history
@@ -156,13 +180,15 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload Pages artifact
-        if: steps.mode.outputs.publish == 'true' && steps.pages.outputs.enabled == 'true'
+        if: steps.mode.outputs.publish == 'true' && steps.pages.outputs.enabled == 'true' && steps.restore.outputs.ok == 'true'
         uses: actions/upload-pages-artifact@v5
         with:
           path: _site/
 
+      # 通知の失敗 (webhook の障害など) で公開まで止めない
       - name: Post to Discord
-        if: steps.mode.outputs.publish == 'true' && (steps.report.outputs.regressed != '0' || steps.report.outputs.budget_violations != '0') && hashFiles('bench-discord.md') != ''
+        if: steps.report.outputs.discord == 'true'
+        continue-on-error: true
         shell: bash
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_DEV_REPORT_WEBHOOK_URL || secrets.DISCORD_WEBHOOK_URL }}

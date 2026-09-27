@@ -661,7 +661,9 @@ jobs:
   # =========================================================
   notify:
     name: Notify Discord
-    needs: [build, editor]
+    # bench-publish も含める。含めないと、結果ページの生成・公開が落ちても通知されず、
+    # 次の成功で「復旧」だけが流れる。
+    needs: [build, editor, bench-publish]
     # 判定は step 側で needs.*.result を見るので、ここでは always() で拾うだけ。
     if: always() && github.event_name != 'pull_request'
     runs-on: ubuntu-latest

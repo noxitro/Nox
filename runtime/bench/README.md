@@ -11,7 +11,7 @@ GitHub Pages の結果ページ (`tools/bench-site`) に積んでいく。
 | `ecs` | クエリ列挙、Chunk 並列列挙、ランダムアクセス、Archetype 移動、遅延生成 | フレームごとに効く本体 |
 | `job` | Dispatch + Wait の往復、1024 ジョブの分配 | ワーカーの起こし方で桁が変わる |
 | `memory` | `nox::memory::Allocate` / グローバル new / CRT malloc | 確保 1 回の値段 |
-| `container` | `nox::Vector` / `StackAllocVector` / `FixedVector` | 確保 0 回の書き方がいくら得か |
+| `container` | `nox::Vector` / `StackAllocVector` / `FixedVector` | 確保 0 回の書き方がいくら得か。参照越しの vector へ積むと MSVC で遅くなる落とし穴も並べてある |
 | `string` / `delegate` / `math` / `lock` | 書式化、CRC32、UTF 変換、delegate 呼び出し、Vec3、SRWLOCK | 基盤部品 |
 
 一覧は `bench_test.exe --list` で出る。ベンチの名前 (`ecs/query_iterate/10k` など) は履歴と
@@ -27,7 +27,9 @@ GitHub Pages の結果ページ (`tools/bench-site`) に積んでいく。
 3. サンプル 11 回 (1 op あたりの ns と、計測スレッドの CPU サイクル)
 4. 確保計数 (固定の 32 op を 2 回。`nox::memory::GetAllocationCounters` の差分)
 
-プロセスは HIGH 優先度にし、計測スレッドを CPU 1 に固定する。
+プロセスは HIGH 優先度にし、計測スレッドを CPU 1 に固定する (`--no-pin` で外せる)。
+ラムダの本体はインライン化させない関数越しに呼ぶ。Run の中へ展開されるかどうかで
+同じ処理のコード生成が変わるのを防ぐため。
 
 ## CI での比較と判定
 
@@ -37,6 +39,8 @@ GitHub のホストランナーは実行ごとに CPU の型番が変わるこ�
 ブートストラップの 95% 信頼区間で判定する (`.github/scripts/bench-run.py`)。
 
 - 時間: 5% 以上の変化で、信頼区間が 0% をまたがないときに「悪化 / 改善」。
+  信頼区間がまるごと ±5% に収まったときだけ「変化なし」とし、それ以外は「ばらつき大」
+  (測り直さないと言えない) にする。複数スレッドで働くベンチはしきい値を 2 倍にする。
   CI は落とさない (報告だけ)。
 - 確保回数: 揺れないので厳密に比べる。`alloc_budget` を設けたベンチで予算を超えると
   `bench_test.exe` が終了コード 3 を返し、CI が落ちる。フレーム中に確保しないはずの経路

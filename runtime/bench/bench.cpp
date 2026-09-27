@@ -324,7 +324,7 @@ int nox::bench::RunBenchmarks(
 	{
 		context.qpc_hz = static_cast<nox::uint64>(frequency.QuadPart);
 	}
-	StabilizeThread(context, true);
+	StabilizeThread(context, options.pin);
 
 	std::fprintf(stderr, "[bench] cpu=%s logical_cpus=%u config=%s compiler=%s pinned_cpu=%d smoke=%d\n",
 		context.cpu.data(), context.logical_cpus, GetConfigurationName(), context.compiler.data(),

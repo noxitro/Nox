@@ -4,7 +4,7 @@
 ///	@file	bench_kernel.cpp
 ///	@brief	kernel の基盤部品 (コンテナ・文字列・delegate・数学・ロック) のベンチマーク
 ///	@details	フレーム中の一時リストをどのコンテナで持つかで、確保回数も時間も桁で変わる。
-///				同じ「256 個積む」操作を 5 通りで並べ、確保 0 回の書き方がいくら得かを数字で見せる。
+///				同じ「256 個積む」操作を 6 通りで並べ、確保 0 回の書き方がいくら得かを数字で見せる。
 
 #include	"pch.h"
 #include	"bench.h"
@@ -22,6 +22,7 @@
 #include	<functional>
 #include	<span>
 #include	<string_view>
+#include	<utility>
 
 namespace
 {
@@ -67,7 +68,37 @@ namespace
 	}
 
 	/// @brief clear して使い回す nox::Vector に積む (定常状態で確保 0 回)
+	/// @details 使い回すバッファはラムダの外に持ち、計測中だけローカルの vector へムーブして使う。
+	///          StlAllocateAdapter は状態を持たない (is_always_equal) ので、ムーブはバッファの付け替えだけで
+	///          確保は起きない。swap は Debug で allocator の operator== を要求するので使わない。
+	///          外の vector を参照越しに直接触ると、下の「参照越し」のベンチと同じコード生成の差が混ざり、
+	///          確保方式の差が見えなくなる。
 	void BenchNoxVectorReuse(nox::bench::State& state)
+	{
+		nox::Vector<nox::uint32> storage;
+		storage.reserve(kPushCount);
+		state.Run([&storage](const nox::uint64 op_count)
+			{
+				nox::Vector<nox::uint32> values(std::move(storage));
+				for (nox::uint64 op = 0u; op < op_count; ++op)
+				{
+					values.clear();
+					for (nox::uint32 index = 0u; index < kPushCount; ++index)
+					{
+						values.push_back(index);
+					}
+					nox::bench::DoNotOptimize(values.data());
+				}
+				storage = std::move(values);
+			});
+	}
+
+	/// @brief 参照越しの nox::Vector (メンバ変数のように外にあるもの) へ積む (確保 0 回)
+	/// @details 上の reuse と仕事は同じで、vector を参照越しに触るところだけが違う。
+	///          MSVC は型によるエイリアス解析をしないので、要素の書き込みが vector 自身の
+	///          末尾ポインタを書き換えうるとみなし、push_back のたびに読み直す。
+	///          メンバの vector へループで積むエンジンのコードが実際に払っているコストを見るためのもの。
+	void BenchNoxVectorPushViaRef(nox::bench::State& state)
 	{
 		nox::Vector<nox::uint32> values;
 		values.reserve(kPushCount);
@@ -299,10 +330,11 @@ namespace
 
 std::span<const nox::bench::Definition> nox::bench::GetKernelBenchmarks()noexcept
 {
-	static constexpr std::array<nox::bench::Definition, 13> kDefinitions{ {
+	static constexpr std::array<nox::bench::Definition, 14> kDefinitions{ {
 		{ .name = "container/nox_vector_grow/256", .title = "nox::Vector に 256 個 push_back (reserve なし)", .per = "op", .alloc_budget = nox::bench::kNoBudget, .function = &BenchNoxVectorGrow },
 		{ .name = "container/nox_vector_reserve/256", .title = "nox::Vector に reserve してから 256 個 push_back", .per = "op", .alloc_budget = 1, .function = &BenchNoxVectorReserve },
 		{ .name = "container/nox_vector_reuse/256", .title = "clear して使い回す nox::Vector に 256 個 push_back", .per = "op", .alloc_budget = 0, .function = &BenchNoxVectorReuse },
+		{ .name = "container/nox_vector_push_via_ref/256", .title = "参照越しの nox::Vector に 256 個 push_back (メンバ変数に積む形)", .per = "op", .alloc_budget = 0, .function = &BenchNoxVectorPushViaRef },
 		{ .name = "container/stack_alloc_vector/256", .title = "StackAllocVector に 256 個 push_back", .per = "op", .alloc_budget = 0, .function = &BenchStackAllocVector },
 		{ .name = "container/fixed_vector/256", .title = "FixedVector に 256 個 PushBack", .per = "op", .alloc_budget = 0, .function = &BenchFixedVector },
 		{ .name = "string/format_span/u8", .title = "nox::util::Format を固定バッファへ (uint32 × 2)", .per = "call", .alloc_budget = 0, .function = &BenchFormatSpan },

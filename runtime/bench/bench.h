@@ -71,6 +71,9 @@ namespace nox::bench
 
 		/// @brief 動作確認だけ行う (各 op を 1 回ずつ。Debug 構成向け)
 		bool smoke = false;
+
+		/// @brief 計測スレッドを CPU 1 に固定する (--no-pin で外す。固定の有無で結果を比べるため)
+		bool pin = true;
 	};
 
 	namespace detail
@@ -78,8 +81,21 @@ namespace nox::bench
 		/// @brief 最適化で値が消されないようにするための受け口 (別 TU で定義し、インライン化させない)
 		__declspec(noinline) void UseCharPointer(const volatile char* pointer)noexcept;
 
-		/// @brief 呼び出しスレッドが消費した CPU サイクル数 (QueryThreadCycleTime)
+		/// @brief 呼び出しスレッドの QueryThreadCycleTime の値
+		/// @details 不変 TSC の基準ティックで数えた「スレッドが実際に走っていた量」。コアのクロック数ではない
+		///          (ブーストしても増えない)。壁時計と違い、スレッドが止められていた間は進まない。
 		[[nodiscard]] nox::uint64 ReadThreadCycles()noexcept;
+
+		/// @brief ベンチの本体を 1 回呼ぶ
+		/// @details わざとインライン化させない。本体 (ラムダ) が State::Run の中へ展開されるかどうかは
+		///          Run の大きさやベンチごとのコンパイラの判断で変わり、同じ処理でもコード生成が変わって
+		///          しまう (参照で捕捉した値がレジスタに載らなくなるなど)。呼び出しはサンプル 1 回につき
+		///          1 回なので、この関数呼び出しの費用は計測に影響しない。
+		template<class Body>
+		__declspec(noinline) void InvokeBody(Body& body, const nox::uint64 op_count)
+		{
+			body(op_count);
+		}
 	}
 
 	/// @brief 値を「使った」ことにして、計算そのものを最適化で消させない
@@ -206,7 +222,7 @@ void nox::bench::State::Run(Body&& body)
 	has_run_ = true;
 
 	//	1. 準備運転
-	body(nox::uint64{ 1u });
+	nox::bench::detail::InvokeBody(body, nox::uint64{ 1u });
 
 	//	2. 校正
 	nox::uint64 ops = 1u;
@@ -215,7 +231,7 @@ void nox::bench::State::Run(Body&& body)
 		for (;;)
 		{
 			const Clock::time_point begin = Clock::now();
-			body(ops);
+			nox::bench::detail::InvokeBody(body, ops);
 			const Clock::time_point end = Clock::now();
 			const double elapsed_ns = ElapsedNs(begin, end);
 			if (elapsed_ns >= options_.min_sample_ns || ops >= kMaxOpsPerSample)
@@ -243,7 +259,7 @@ void nox::bench::State::Run(Body&& body)
 	{
 		const nox::uint64 cycles_begin = nox::bench::detail::ReadThreadCycles();
 		const Clock::time_point begin = Clock::now();
-		body(ops);
+		nox::bench::detail::InvokeBody(body, ops);
 		const Clock::time_point end = Clock::now();
 		const nox::uint64 cycles_end = nox::bench::detail::ReadThreadCycles();
 
@@ -254,9 +270,9 @@ void nox::bench::State::Run(Body&& body)
 	//	4. 確保計数 (全スレッド合計。ワーカーの確保も含む)
 	const nox::uint64 alloc_ops = options_.smoke ? 1u : options_.alloc_ops;
 	const nox::memory::AllocationCounters counters0 = nox::memory::GetAllocationCounters();
-	body(alloc_ops);
+	nox::bench::detail::InvokeBody(body, alloc_ops);
 	const nox::memory::AllocationCounters counters1 = nox::memory::GetAllocationCounters();
-	body(alloc_ops);
+	nox::bench::detail::InvokeBody(body, alloc_ops);
 	const nox::memory::AllocationCounters counters2 = nox::memory::GetAllocationCounters();
 
 	const double alloc_divisor = static_cast<double>(alloc_ops) * static_cast<double>(items_per_op_);

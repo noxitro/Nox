@@ -5,7 +5,7 @@
 ///	@brief	bench_test.exe の入口
 ///	@details	使い方:
 ///				  bench_test.exe --out <path> [--filter <部分文字列>] [--smoke] [--samples N]
-///				                 [--min-sample-ms X] [--list]
+///				                 [--min-sample-ms X] [--no-pin] [--list]
 ///				終了コード: 0 成功 / 1 出力失敗 / 2 引数の誤り / 3 確保回数の予算超過
 ///
 ///				gtest を使わないので test_support (operator new の CRT 差し替え) を取り込まない。
@@ -31,7 +31,7 @@ namespace
 	{
 		std::fputs(
 			"usage: bench_test.exe --out <path> [--filter <substring>] [--smoke] [--samples N]\n"
-			"                      [--min-sample-ms X] [--list]\n",
+			"                      [--min-sample-ms X] [--no-pin] [--list]\n",
 			stderr);
 	}
 
@@ -102,6 +102,10 @@ int main(int argc, char** argv)
 		else if (argument == "--smoke")
 		{
 			options.smoke = true;
+		}
+		else if (argument == "--no-pin")
+		{
+			options.pin = false;
 		}
 		else if (argument == "--list")
 		{
