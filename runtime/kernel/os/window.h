@@ -4,6 +4,7 @@
 ///	@file	window.h
 ///	@brief	window
 #pragma once
+#include	<atomic>
 #include	<functional>
 #include	"../math/math.h"
 
@@ -85,7 +86,8 @@ namespace nox::os
 		///				PostMessage はスレッドをまたいでよいので、どのスレッドから呼んでもよい。
 		void RequestClose()noexcept;
 
-		inline void* GetNativeHandle()const { return window_handle_; }
+		///	@details	ゲームスレッド (Editor から届く GetMainSceneView の処理など) から呼ばれ、UI スレッドの WM_DESTROY と重なりうる。
+		inline void* GetNativeHandle()const noexcept { return window_handle_.load(std::memory_order_acquire); }
 
 		void SetPos(const nox::Int2& pos);
 		inline const nox::Int2& GetPos()const noexcept { return pos_; }
@@ -103,7 +105,13 @@ namespace nox::os
 		nox::Int2 size_;
 		bool is_visible_;
 
-		nox::os::WindowHandle window_handle_;
+		///	@brief		ウィンドウハンドル。破棄されると nullptr になる。
+		///	@details	書くのはウィンドウを作ったスレッド (UI スレッド) の CreateNative と WM_DESTROY、それに終了処理の Dispose。
+		///				Dispose はゲームスレッドから呼ばれるが、World::Run の kill_ で UI スレッドの処理より後に順序付けられている。
+		///				読むのはゲームスレッド (Show / RequestClose / GetNativeHandle など) も含む。
+		///				ユーザーが閉じた瞬間にゲームスレッドが読むと非 atomic ではデータ競合になるので、atomic にしてある。
+		///				読み書きは作成・破棄・終了要求のときだけで、フレームごとには触らない。
+		std::atomic<nox::os::WindowHandle> window_handle_;
 		nox::os::InstanceHandle instance_handle_;
 		std::function<void(const WindowCallbackArgs&)> callback_;
 

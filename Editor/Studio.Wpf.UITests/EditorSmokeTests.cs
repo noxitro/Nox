@@ -665,11 +665,12 @@ public sealed class EditorSmokeTests
 			{
 				// 起動に失敗した Editor を残すと、後のテストがデスクトップ全体を名前で探したときに
 				// そのウィンドウを拾って巻き添えで落ちる。ここで片付けてから失敗させる。
-				// Application.Kill は終了済みなら何もせず、中で起きた例外も握りつぶす (FlaUI 5.0.0) ので、
-				// 自然終了と競合しても投げない。それでも automation は必ず破棄されるよう finally に置く。
-				bool editorExited = application.HasExited;
+				// Application.Kill は終了済みなら何もせず、中で起きた例外も握りつぶす (FlaUI 5.0.0)。
+				// HasExited は投げうる (HasEditorExited を参照) ので、どちらも try に入れ、automation は finally で必ず破棄する。
+				bool editorExited;
 				try
 				{
+					editorExited = HasEditorExited(application);
 					application.Kill();
 				}
 				finally
@@ -682,6 +683,27 @@ public sealed class EditorSmokeTests
 			}
 
 			return new EditorApp(application, automation, mainWindow);
+		}
+
+		/// <summary>
+		/// Editor が終了したかを返す。
+		/// </summary>
+		/// <remarks>
+		/// FlaUI 5.0.0 の GetMainWindow (WaitWhileMainHandleIsMissing) は、持っている Process を破棄してから
+		/// 同じ ID で探し直す。Editor が終了していると探し直しに失敗し、破棄済みの Process が残るので、
+		/// HasExited が InvalidOperationException を投げる。これは Editor が見つからない、つまり終了したときにだけ
+		/// 起こるので、終了済みとして扱う。起動失敗でいちばん多い形なので、ここで投げると失敗の説明が失われる。
+		/// </remarks>
+		private static bool HasEditorExited(Application application)
+		{
+			try
+			{
+				return application.HasExited;
+			}
+			catch (InvalidOperationException)
+			{
+				return true;
+			}
 		}
 
 		public void Dispose()
