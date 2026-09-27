@@ -34,6 +34,7 @@
 - 落ちたら `gh run view <run-id> --log-failed` でログを読み、直して push し直す。
 - 文書だけの変更 (`paths-ignore` の対象) ではビルドの CI は走らない。File format の検査は走る。
 - テストは `runtime/core/test/` と `runtime/kernel/test/` (GoogleTest)。reflection / delegate / 型システム / メモリ管理を重点に書く。
+- ベンチマークは `runtime/bench/` (`bench_test.exe`)。CI が Release / Master で master の exe と同じ VM で交互に計測し、結果ページ (GitHub Pages) に積む。時間の変化では CI を落とさないが、1 op あたりの確保回数が予算 (`alloc_budget`) を超えると落ちる。詳細は `runtime/bench/README.md`。
 - Editor の見た目や操作は UI テストで拾いきれないので、Windows 上で手動確認する。
 
 ローカルでビルドする場合:
@@ -55,10 +56,13 @@ ClangCL は必須ゲート。MSVC が見逃す非適合を実際に拾ってい�
 
 ### ファイル形式
 
-このリポジトリは BOM の有無も改行コード (CRLF / LF) も混在している。**書き換えるときはそのファイルの元の形式を必ず保つ。**
+文字コードは BOM なしの UTF-8 に統一している。改行コード (CRLF / LF) はファイルごとに混在している。**書き換えるときは改行コードを元の形式のまま保つ。**
 
+- BOM は付けない。C++ は `/utf-8` でコンパイルし、C# / XAML / MSBuild は BOM が無くても UTF-8 として読む。文字コードは `.editorconfig` の `charset` で決めてあり、Visual Studio もこれに従って保存する。
+- 例外として PowerShell スクリプト (Windows PowerShell 5.1 は BOM が無いと Shift-JIS として読む) と、日本語を含む VS テンプレート 2 本は BOM 付き。一覧は `.github/scripts/bom_policy.py` (`.editorconfig` と揃えてある)。
+- VS がプロジェクトファイルを保存し直したときなどに BOM が付いたら、`python3 .github/scripts/strip-bom.py <パス>` で外す。
 - 変更後は `git diff --stat` の行数が実際の編集量と釣り合うか確かめる。
-- 手元では `python3 .github/scripts/check-file-format.py --base origin/master` で確かめられる (CI の File format と同じ検査)。壊したら、元の形式に戻すコミットを足せば通る。
+- 手元では `python3 .github/scripts/check-file-format.py --base origin/master` で確かめられる (CI の File format と同じ検査)。壊したら、直すコミットを足せば通る。
 - 意図して形式を変えるときは、コミットメッセージに `Format-Change: <パス or glob>` の行を書く。
 
 ## 環境とビルド

@@ -195,6 +195,10 @@ def send(webhook, embeds, username=None, dry_run=False):
 
 
 def main():
+    # Windows のランナーは標準出力が cp1252 なので、日本語で落ちないようにする
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description="Discord の Webhook へ embed を投稿する")
     ap.add_argument("--title", required=True)
     group = ap.add_mutually_exclusive_group(required=True)
