@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Nox ランタイムのマイクロベンチマークを CI で計測した結果と推移">
+<title>Nox ベンチマーク</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<script>
+	// 保存済みのテーマを最初の描画より前に当てる (app.js を待つと一瞬ちらつくため)。
+	// localStorage はプライベートウィンドウなどで例外になるので try で包む。
+	try
+	{
+		var t = localStorage.getItem("nox-bench-theme");
+		if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+	}
+	catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">本文へ移動</a>
+
+<header class="appbar" id="appbar">
+	<div class="appbar-inner">
+		<a class="brand" href="#" id="brand-link" aria-label="Nox ベンチマーク (概要へ)">
+			<svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+				<rect width="32" height="32" rx="8" class="brand-bg"/>
+				<path class="brand-moon" d="M19.6 7.2a9.2 9.2 0 1 0 5.2 15.2A7.4 7.4 0 0 1 19.6 7.2z"/>
+				<path class="brand-line" d="M6.5 21.5l4.2-3.6 3.4 2.4 4.6-5.3"/>
+			</svg>
+			<span class="brand-text">Nox <span class="brand-sub">ベンチマーク</span></span>
+		</a>
+		<a class="repo-link" id="repo-link" href="https://github.com/noxitro/Nox" target="_blank" rel="noopener">
+			<span id="repo-name">noxitro/Nox</span><span class="ext" aria-hidden="true">↗</span>
+		</a>
+
+		<nav class="view-tabs" aria-label="表示の切り替え">
+			<a class="view-tab" id="tab-overview" href="#" aria-current="page">概要</a>
+			<a class="view-tab" id="tab-compare" href="#view=compare">2 コミット比較</a>
+		</nav>
+
+		<div class="appbar-spacer"></div>
+
+		<div class="variant-picker" id="variant-picker" role="radiogroup" aria-label="コンパイラと構成"></div>
+
+		<div class="appbar-tools">
+			<div class="theme-switch" role="radiogroup" aria-label="テーマ">
+				<button type="button" role="radio" data-theme-choice="auto" aria-checked="true" title="テーマ: 自動 (OS の設定に合わせる)">
+					<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="6.25" class="i-stroke"/><path d="M10 3.75a6.25 6.25 0 0 1 0 12.5z" class="i-fill"/></svg>
+					<span class="sr-only">自動</span>
+				</button>
+				<button type="button" role="radio" data-theme-choice="light" aria-checked="false" title="テーマ: ライト">
+					<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="3.5" class="i-stroke"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4" class="i-stroke"/></svg>
+					<span class="sr-only">ライト</span>
+				</button>
+				<button type="button" role="radio" data-theme-choice="dark" aria-checked="false" title="テーマ: ダーク">
+					<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M15.8 12.6A6.5 6.5 0 0 1 7.4 4.2a6.5 6.5 0 1 0 8.4 8.4z" class="i-stroke"/></svg>
+					<span class="sr-only">ダーク</span>
+				</button>
+			</div>
+			<div class="menu" id="data-menu">
+				<button type="button" class="btn btn-ghost menu-button" id="data-menu-button" aria-haspopup="menu" aria-expanded="false" aria-controls="data-menu-list">
+					<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 3.5v9M6.5 9.5 10 13l3.5-3.5M4 16h12" class="i-stroke"/></svg>
+					<span class="menu-label">データ</span>
+				</button>
+				<div class="menu-list" id="data-menu-list" role="menu" hidden>
+					<a role="menuitem" href="data/history.json" download id="dl-history">
+						<span class="menu-item-title">履歴 (history.json)</span>
+						<span class="menu-item-sub">全バリアントの計測値。列指向の JSON</span>
+					</a>
+					<button type="button" role="menuitem" id="dl-csv">
+						<span class="menu-item-title">いまの表を CSV で保存</span>
+						<span class="menu-item-sub" id="dl-csv-sub">表示中の行だけ</span>
+					</button>
+					<a role="menuitem" href="data/latest.js" id="dl-latest" target="_blank" rel="noopener">
+						<span class="menu-item-title">最新の計測 (latest.js)</span>
+						<span class="menu-item-sub">ラウンドごとの値を含む生データ</span>
+					</a>
+				</div>
+			</div>
+		</div>
+	</div>
+</header>
+
+<div class="preview-banner" id="preview-banner" role="status" hidden></div>
+
+<main id="main" class="page" tabindex="-1">
+	<!-- データが無いとき -->
+	<section class="empty-state" id="empty-state" hidden aria-labelledby="empty-title">
+		<svg class="empty-illust" viewBox="0 0 160 110" aria-hidden="true" focusable="false">
+			<rect x="8" y="10" width="144" height="92" rx="10" class="e-card"/>
+			<path d="M24 80h112" class="e-axis"/>
+			<path d="M28 70l20-10 18 6 22-22 18 8 22-16" class="e-line"/>
+			<circle cx="128" cy="36" r="4.5" class="e-dot"/>
+			<path d="M24 28h40M24 38h26" class="e-text"/>
+		</svg>
+		<h1 id="empty-title">まだ計測データがありません</h1>
+		<p id="empty-body">master に push すると CI がベンチマークを計測し、ここに結果と推移が表示されます。</p>
+		<div class="empty-hint">
+			<p>見た目を手元で確かめるには、デモデータを作ってからこのページを開き直してください。</p>
+			<pre><code>python3 tools/bench-site/make-demo-data.py</code></pre>
+		</div>
+	</section>
+
+	<!-- 概要 -->
+	<div id="view-overview" hidden>
+		<section class="hero" aria-labelledby="hero-subject">
+			<div class="hero-main">
+				<p class="eyebrow" id="hero-eyebrow">最新の計測</p>
+				<h1 class="hero-subject" id="hero-subject"></h1>
+				<p class="hero-meta" id="hero-meta"></p>
+				<p class="hero-sentence" id="hero-sentence"></p>
+			</div>
+			<div class="hero-figure" id="hero-figure">
+				<p class="hero-figure-label">全体の変化 <span class="muted">(幾何平均)</span></p>
+				<p class="hero-number" id="hero-number">—</p>
+				<p class="hero-caption" id="hero-caption"></p>
+			</div>
+		</section>
+
+		<section class="kpis" aria-label="要約">
+			<button type="button" class="kpi kpi-regressed" id="kpi-regressed" data-kpi="regressed">
+				<span class="kpi-label"><span class="glyph" aria-hidden="true">▲</span>悪化</span>
+				<span class="kpi-value" id="kpi-regressed-value">—</span>
+				<span class="kpi-sub" id="kpi-regressed-sub"></span>
+			</button>
+			<button type="button" class="kpi kpi-improved" id="kpi-improved" data-kpi="improved">
+				<span class="kpi-label"><span class="glyph" aria-hidden="true">▼</span>改善</span>
+				<span class="kpi-value" id="kpi-improved-value">—</span>
+				<span class="kpi-sub" id="kpi-improved-sub"></span>
+			</button>
+			<button type="button" class="kpi kpi-budget" id="kpi-budget" data-kpi="budget">
+				<span class="kpi-label">ヒープ確保予算</span>
+				<span class="kpi-value" id="kpi-budget-value">—</span>
+				<span class="kpi-sub" id="kpi-budget-sub"></span>
+			</button>
+			<div class="kpi kpi-env" id="kpi-env">
+				<span class="kpi-label">計測環境</span>
+				<span class="kpi-value kpi-value-text" id="kpi-env-value">—</span>
+				<span class="kpi-sub" id="kpi-env-sub"></span>
+			</div>
+		</section>
+
+		<section class="bench-section" aria-labelledby="bench-heading">
+			<div class="section-head">
+				<h2 id="bench-heading">ベンチマーク</h2>
+				<p class="section-note" id="bench-note">時間は 1 op あたり。小さいほど速い</p>
+			</div>
+
+			<div class="toolbar" role="search">
+				<div class="search">
+					<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="8.5" cy="8.5" r="5" class="i-stroke"/><path d="M12.3 12.3 16.5 16.5" class="i-stroke"/></svg>
+					<label class="sr-only" for="search">ベンチマークを検索</label>
+					<input type="search" id="search" placeholder="検索 (-語 で除外)" autocomplete="off" spellcheck="false">
+					<kbd class="search-kbd" aria-hidden="true">/</kbd>
+				</div>
+				<div class="chips" id="group-chips" role="group" aria-label="グループで絞り込む"></div>
+				<div class="toolbar-right">
+					<label class="switch">
+						<input type="checkbox" id="changed-only">
+						<span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+						<span>変化ありのみ</span>
+					</label>
+					<label class="select">
+						<span class="sr-only">並べ替え</span>
+						<select id="sort">
+							<option value="group">グループ順</option>
+							<option value="regressed">悪化が大きい順</option>
+							<option value="improved">改善が大きい順</option>
+							<option value="name">名前順</option>
+							<option value="fast">速い順</option>
+						</select>
+					</label>
+				</div>
+			</div>
+
+			<p class="result-count" id="result-count" aria-live="polite"></p>
+
+			<table class="bench-table" id="bench-table">
+				<caption class="sr-only">ベンチマークごとの最新値、変化、判定、ヒープ確保、推移。行を選ぶと詳細を開きます</caption>
+				<colgroup>
+					<col class="c-name"><col class="c-value"><col class="c-change"><col class="c-verdict"><col class="c-alloc"><col class="c-trend">
+				</colgroup>
+				<thead>
+					<tr>
+						<th scope="col">ベンチマーク</th>
+						<th scope="col" class="num">最新 <span class="th-sub">/ op</span></th>
+						<th scope="col">変化 <span class="th-sub">95% CI</span></th>
+						<th scope="col">判定</th>
+						<th scope="col" class="num">確保 <span class="th-sub">/ op</span></th>
+						<th scope="col">推移</th>
+					</tr>
+				</thead>
+				<tbody id="bench-body"></tbody>
+			</table>
+		</section>
+	</div>
+
+	<!-- 2 コミット比較 -->
+	<div id="view-compare" hidden>
+		<section class="compare-head" aria-labelledby="compare-title">
+			<div class="section-head">
+				<h1 id="compare-title">2 コミット比較</h1>
+				<p class="section-note">同じバリアントで、別々の CI 実行の中央値どうしを比べます。対の計測ではないので目安です</p>
+			</div>
+			<div class="compare-pickers">
+				<label class="field">
+					<span class="field-label"><span class="ab-tag">A</span>基準</span>
+					<select id="compare-a"></select>
+				</label>
+				<button type="button" class="btn btn-ghost swap-btn" id="compare-swap" title="A と B を入れ替える" aria-label="A と B を入れ替える">
+					<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M6 4 3 7l3 3M3 7h11M14 10l3 3-3 3M17 13H6" class="i-stroke"/></svg>
+				</button>
+				<label class="field">
+					<span class="field-label"><span class="ab-tag ab-b">B</span>比べる側</span>
+					<select id="compare-b"></select>
+				</label>
+			</div>
+			<div class="compare-summary" id="compare-summary"></div>
+		</section>
+		<table class="bench-table compare-table" id="compare-table">
+			<caption class="sr-only">A と B の中央値の比較。変化の大きい順</caption>
+			<colgroup>
+				<col class="c-name"><col class="c-value"><col class="c-value"><col class="c-change"><col class="c-verdict">
+			</colgroup>
+			<thead>
+				<tr>
+					<th scope="col">ベンチマーク</th>
+					<th scope="col" class="num">A</th>
+					<th scope="col" class="num">B</th>
+					<th scope="col">変化 (B / A)</th>
+					<th scope="col">目安</th>
+				</tr>
+			</thead>
+			<tbody id="compare-body"></tbody>
+		</table>
+	</div>
+
+	<details class="guide" id="guide">
+		<summary><span>読み方</span><span class="guide-sub">計測のしかたと、数字の見方</span></summary>
+		<div class="guide-body">
+			<div class="guide-col">
+				<h3>どう測っているか</h3>
+				<p>push のたびに CI (GitHub-hosted の Windows ランナー) が <code>bench_test.exe</code> を実行します。比較対象 (base) は master の直前のコミット (ブランチでは分岐元) でビルド済みの実行ファイルで、<strong>同じ VM の上で head と base を交互に</strong> 既定 10 ラウンドずつ動かします。VM の当たり外れは両方に同じようにかかるので、比 (head / base) で見れば打ち消されます。</p>
+				<p>判定はラウンドごとの比の中央値と、ブートストラップ (2000 回) による 95 % 信頼区間で決めます。区間が 1 をまたがず、変化が <strong><span id="guide-thr">5</span> % 以上</strong> (複数スレッドのものは 2 倍) のときだけ ▲ 悪化 / ▼ 改善 とし、区間が広すぎるものは ？ ばらつき大 とします。</p>
+			</div>
+			<div class="guide-col">
+				<h3>数字の見方</h3>
+				<ul>
+					<li><strong>最新</strong> は 1 op あたりの時間の中央値です。1 op が何を指すかは各行の単位 (例: <code>/ entity</code>) を見てください。</li>
+					<li>ランナーの CPU は実行のたびに変わることがあります (例: AMD EPYC と Intel Xeon)。<strong>CPU が違う点どうしの絶対値は比べられません</strong>。推移のグラフでは点の色で CPU を分け、CPU やイメージが変わった所に縦の破線を引いています。</li>
+					<li>比較対象が無い回 (base の実行ファイルが期限切れなど) は、同じ CPU の直前の点との差を <em class="muted">~ 付きの斜体</em> で参考表示します。</li>
+				</ul>
+			</div>
+			<div class="guide-col">
+				<h3>ヒープ確保</h3>
+				<p>ヒープ確保回数は決定的なので、時間と違い 1 回の計測で確定します。予算 (1 op あたりの上限回数) があるベンチマークで上回ると <strong>CI が失敗</strong> します。時間の悪化は CI を止めず、ここと Job Summary で知らせるだけです。</p>
+				<p class="guide-links" id="guide-links"></p>
+			</div>
+		</div>
+	</details>
+</main>
+
+<footer class="footer" id="footer">
+	<div class="footer-inner" id="footer-inner"></div>
+</footer>
+
+<dialog class="drawer" id="drawer" aria-labelledby="drawer-title">
+	<div class="drawer-inner" id="drawer-inner"></div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="data/history.js"></script>
+<script src="data/latest.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
