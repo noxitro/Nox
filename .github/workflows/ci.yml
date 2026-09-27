@@ -173,8 +173,11 @@ jobs:
       # 終わることを見る。Init / Start / Update の各フェーズを一通り通れば足りるので、
       # フレーム数は少なくしてある。
       #
-      # runtime.exe は Windows サブシステムで標準出力を持たないので、落ちたときは
-      # Windows のイベントログ (Application Error / WER) に残った記録を拾って出す。
+      # runtime.exe は Windows サブシステムで標準出力を持たないので、異常終了したときは
+      # 同じ引数でデバッガ (WDK に付いてくる cdb) の下で起動し直し、例外で止まった地点の
+      # スタックを出す。PDB は exe の隣に出ているので、関数名と行番号まで読める。
+      # デバッガが無いイメージや、終わらなかった (ハング) ときは、Windows のイベントログ
+      # (Application Error / WER) に残った記録を拾って出す。
       # 作業ディレクトリは Editor (Core.RuntimeSession) と同じく exe の置き場所。
       #
       # テストのビルドより前に置いているのは、テストを建てない Master でも走らせるため。
@@ -192,11 +195,13 @@ jobs:
           $process = [System.Diagnostics.Process]::Start($psi)
 
           $problem = $null
+          $crashed = $false
           if (-not $process.WaitForExit($limitSeconds * 1000)) {
             $process.Kill($true)
             $problem = "$limitSeconds 秒以内に終了しなかった (ハング、または終了要求が届いていない)"
           }
           elseif ($process.ExitCode -ne 0) {
+            $crashed = $true
             $problem = 'exit 0x{0:X8} で終了した (クラッシュ、またはアサート)' -f $process.ExitCode
           }
           $elapsed = ((Get-Date) - $started).TotalSeconds
@@ -207,12 +212,30 @@ jobs:
             Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
 
           if ($problem) {
-            $events = Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $started } -ErrorAction SilentlyContinue |
-              Where-Object { ($_.ProviderName -in @('Application Error', 'Windows Error Reporting')) -and ($_.Message -match 'runtime\.exe') } |
-              Select-Object -First 5
-            foreach ($e in $events) {
-              Write-Host "=== [$($e.TimeCreated)] $($e.ProviderName) (Id $($e.Id))"
-              Write-Host $e.Message
+            $cdb = Join-Path ${env:ProgramFiles(x86)} 'Windows Kits\10\Debuggers\x64\cdb.exe'
+            if ($crashed -and (Test-Path $cdb)) {
+              # g で走らせ、例外で止まったら内容・レジスタ・スタックを出して終わる
+              $exeDir = Split-Path $exe
+              $arguments = '-lines -y "{0}" -c "g; .lastevent; r; kn 60; q" "{1}" --exit-after-frames={2}' -f $exeDir, $exe, $frames
+              $dbgInfo = [System.Diagnostics.ProcessStartInfo]::new($cdb, $arguments)
+              $dbgInfo.UseShellExecute = $false
+              $dbgInfo.RedirectStandardOutput = $true
+              $dbgInfo.WorkingDirectory = $exeDir
+              $debugger = [System.Diagnostics.Process]::Start($dbgInfo)
+              $output = $debugger.StandardOutput.ReadToEndAsync()
+              if (-not $debugger.WaitForExit($limitSeconds * 1000)) { $debugger.Kill($true) }
+              Write-Host '=== cdb: 例外で止まった地点 ==='
+              Write-Host $output.Result
+            }
+            else {
+              if ($crashed) { Write-Host "cdb が無いのでスタックは取れない: $cdb" }
+              $events = Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $started } -ErrorAction SilentlyContinue |
+                Where-Object { ($_.ProviderName -in @('Application Error', 'Windows Error Reporting')) -and ($_.Message -match 'runtime\.exe') } |
+                Select-Object -First 5
+              foreach ($e in $events) {
+                Write-Host "=== [$($e.TimeCreated)] $($e.ProviderName) (Id $($e.Id))"
+                Write-Host $e.Message
+              }
             }
             throw "runtime.exe: $problem"
           }
