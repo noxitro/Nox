@@ -120,13 +120,13 @@ Service の寿命と UpdaterGraph の実行順は別々の問いに答える別�
 | 今 | 行き先 |
 |---|---|
 | `SystemBase` / `PhaseRegister` / `system_phase_table_` / `BuildExecuteNodeList` | **削除** |
-| `AssetManager : SystemBase` | Service + 完了取り込みのメソッド (FrameIngress) |
-| `SceneManager : SystemBase` | Service + シーンの ECS データ |
+| `AssetManager : SystemBase` | Service (手順 3b で移行済み)。ノードは持たない。ロードは専用のロードスレッドで完結し、完了はロードスレッドが `Asset` の状態 (`IsReady`) へ直接書く。完了をフレームへ取り込むメソッド (FrameIngress) は、ゲームスレッド側で完了を受け取る処理が要る時点で足す。開発ビルドでは `EditorRemoteServer` に `Depends` でつながる |
+| `SceneManager : SystemBase` | Service (手順 3b で移行済み)。メインウィンドウを持つだけでノードは持たない。`--exit-after-frames` の終了要求は World へ移した。シーンの ECS データはまだ無い |
 | `GarbageCollector : SystemBase` | Service (Object 基盤用。ECS の寿命とは分離) |
 | `SocketScheduler : SystemBase` | Service (手順 3a で移行済み)。受信は専用スレッドで回し、ノードは持たない |
 | `EditorRemoteServer : SystemBase` | Service + クエリを実行する FrameIngress の排他ノード (手順 3a で移行済み)。`SocketScheduler` とは `Depends` (寿命) だけでつながる |
 | `Renderer` / `DebugDraw : SystemBase` | Service + 抽出・提出のメソッド (Presentation)。Init の順序は `Depends` で自動 |
-| `EngineModule::CreateEngineSystems` | Service の登録だけを行う `RegisterServices` |
+| `EngineModule::CreateEngineSystems` | Service の登録だけを行う `RegisterServices` (手順 3b の時点で、Core の `CreateEngineSystems` に残るのは `GarbageCollector` だけ) |
 
 `EditorRemoteServer` と `SocketScheduler` の間にあった明示依存 3 件のうち、Init と Terminate の順序の 2 件は `Depends` (初期化順とその逆順の終了) に置き換わった。残る 1 件 (Update の順序) は、依存先が専用スレッドの受信ループでフェーズではなく、もともと黙って無効になっていたもの。受信データは受信スレッドから `EditorRemoteServer` の受信バッファ (mutex で保護) 越しに受け渡され、FrameIngress の排他ノードが取り出す。フレーム内の順序としての依存は残らない。
 
@@ -137,8 +137,8 @@ Service の寿命と UpdaterGraph の実行順は別々の問いに答える別�
 | 1 | UpdaterGraph の全順序を「明示辺 + 型名順」にする。`RunAfter` / `RunBefore`。見つからない依存・循環は起動失敗。旧 `BuildExecuteNodeList` の読み飛ばしも起動失敗に | 完了 (CI 全構成 緑) |
 | 2a | Service の寿命 (`OnInitialize` / `OnShutdown`、`Depends`、失敗時の逆順ロールバック)。`EngineModule::RegisterServices`。ノードのメインスレッド限定実行 | 完了 |
 | 2b | Service の属性付きメソッドとグローバル関数をノードとして登録 (リフレクション生成器の変更あり) | 完了 (CI 全構成 緑) |
-| 3a | フェーズに FrameIngress を足す。`SocketScheduler` → `EditorRemoteServer` を Service へ移す。ノードの排他アクセス (`nox::World&`) | 実装中 |
-| 3b | `AssetManager` / `SceneManager` を Service へ移す | 未着手 |
+| 3a | フェーズに FrameIngress を足す。`SocketScheduler` → `EditorRemoteServer` を Service へ移す。ノードの排他アクセス (`nox::World&`) | 完了 (CI 全構成 緑) |
+| 3b | `AssetManager` / `SceneManager` を Service へ移す。`--exit-after-frames` を World へ移す | 実装中 |
 | 4 | `Renderer` / `DebugDraw` / `GarbageCollector` を移す。フェーズに Presentation を足す | 未着手 |
 | 5 | `SystemBase` と旧フェーズ表を削除 | 未着手 |
 | 6 | `Query<...>` / `ComponentLookup<const T>` を引数の種類として足す | Transform 階層が要る時点で |
@@ -190,7 +190,7 @@ Service の寿命と UpdaterGraph の実行順は別々の問いに答える別�
 - **受信スレッドは World に触れない**: Service は World への参照を持たないので、`Server::Update` と `IServerEventHandler::OnServerReceive` から World 引数を外した。以前は受信スレッド上でもクエリを実行していたが (ゲームスレッドとの競合があった)、受信スレッドは受信バッファに積むだけにし、クエリの実行は FrameIngress の排他ノードだけが行う。Editor からのクエリは最大 1 フレーム遅れて処理される。
 - **登録の解除は同期**: `SocketScheduler::UnregisterEntity` は受信スレッドが外し終えるまで待ってから戻る。反映は受信ループの周回の頭でだけ行うので、戻った後に受信スレッドがその Server に触れることはない。`EditorRemoteServer` は `Depends` の逆順で `SocketScheduler` より先に終了するので、受信スレッドが動いている間に Server を閉じても競合しない。
 - **EditorRemoteServer**: Service になり、`using Depends = nox::TypeList<nox::dev::net::SocketScheduler>;` で初期化・終了の順序を宣言する。`OnInitialize` で待ち受けを始めて受信スレッドに登録し、`OnShutdown` で登録を外して閉じる。待ち受けの失敗では起動を止めない (Editor と繋がらないだけ)。クエリの実行は `NOX_ATTR(nox::attr::ServiceMethod(nox::SystemPhaseType::FrameIngress))` を付けた `UpdateReceive(nox::World&)`。
-- **エンジン内部からの参照**: クエリの実装 (`Query::Execute`) と、まだ `SystemBase` の `AssetManager` は引数で受け取れないので、`World::TryGetService` で `EditorRemoteServer` を引く (起動時・テスト・エンジン内部専用の経路)。見つからなければ `NOX_ASSERT` し、失敗のレスポンスを返す。
+- **エンジン内部からの参照**: クエリの実装 (`Query::Execute`) と、まだ `SystemBase` の `AssetManager` は引数で受け取れないので、`World::TryGetService` で `EditorRemoteServer` を引く (起動時・テスト・エンジン内部専用の経路)。見つからなければ `NOX_ASSERT` し、失敗のレスポンスを返す。(手順 3b で `AssetManager` は Service になり、`Depends` + `ServiceContext::Get` に置き換わった。クエリの実装は `SceneManager` も同じ形で引く)
 - **即時系の構造変更**: クエリの実装は即時系 (`CreateEntity` など) を呼んでいない。ゲームスレッドの旧 Update フェーズで実行していた経路は、フェーズ実行中の制約が今と同じだった (受信スレッド上の経路はフェーズと無関係に走っていたが、上のとおり外した)。
 
 ### 排他アクセス (`nox::World&`)
@@ -201,3 +201,16 @@ Service の寿命と UpdaterGraph の実行順は別々の問いに答える別�
 - **宣言の扱い**: World は Service のアクセス宣言に算入しない。Service のメソッドの自己書き込みはそのまま付く。起動ログのノード行には `exclusive` が付き、衝突理由は `exclusive` と出る。`BY-NAME` の候補には、排他だけによる衝突を出さない (出すとフェーズの全ノードとの組が並び、他の候補が埋もれる)。
 - **即時系**: 排他ノードもフェーズ実行中に走るので、中から即時系の構造変更は呼べない (`DeniedDuringPhase`)。構造変更は `EntityCommands&` を使う。
 - **用途の限定**: 引数でアクセスを宣言する規則 (§3) に対する開発ツール用の逃げ道で、Editor との橋渡しのように World を丸ごと触ることが本質の処理だけに使う。ゲームロジックでは使わない。何を読み書きしているかが依存解析から見えなくなり、そのノードの前後でフェーズの並列性を断ち切るため。
+
+### 3b: SceneManager / AssetManager / --exit-after-frames
+
+- **SceneManager**: Service になり、ノードを持たない。`OnInitialize` でメインウィンドウを作って (studio mode でなければ) 表示し、`OnShutdown` で破棄する。ウィンドウを作れなければ `OnInitialize` が false を返して起動を止める (ウィンドウが無いと、ユーザーの操作でも `--exit-after-frames` でも閉じる経路で終了できない)。`Depends` は無い。
+- **SceneManager が Update を持たない理由**: 旧 Update フェーズがしていたのは `--exit-after-frames` の終了要求だけで、これは SceneManager の状態ではなく、World のフレーム数とコマンドラインで決まる。Service のメソッドにすると、フレーム数を読むために World への排他アクセス (§12 の逃げ道) か、フレーム数を持つ別の Service が要る。どちらも「フレームを数えている World が 1 か所で判定する」より宣言が増えるだけなので、判定は World に置き、SceneManager は閉じる操作 (`RequestCloseMainWindow`) だけを公開する。
+- **`--exit-after-frames` の位置**: `World::Update` が Update フェーズの後・フレーム数を数える前に判定し (`nox::ShouldRequestExitAfterFrames`)、`TryGetService` で引いた SceneManager の `RequestCloseMainWindow` を 1 回だけ呼ぶ。旧 `SceneManager::Update` (Update フェーズ) と同じ位置なので、N 回目の呼び出しでフレーム数が N - 1 になる数え方は変わらない。VSync の待ちで飛ばすフレームでは判定しない (旧 Update フェーズも走らなかった)。要求を出し終えたかのフラグは World の状態。閉じる経路 (WM_CLOSE → WM_DESTROY → WM_QUIT) は変えていない。
+- **studio mode の判定**: `--studio` の判定を純粋関数 `nox::ResolveStudioMode(引数列)` に切り出し、World (`IsStudioMode`) と SceneManager の両方がコマンドラインの引数列から呼ぶ。Service は World への参照を持たないので、World が読んだ値を Service へ渡す経路は作らない。同じ入力に同じ関数を当てるので、両者の判定は食い違わない。
+- **ウィンドウを作るスレッド**: `OnInitialize` は `World::Init` の中、UI スレッドのメッセージループに入る前に呼ばれる。ウィンドウ生成の受け渡し (`nox::os::detail::DispatchCreateNativeWindow`) は UI スレッドの `nox::os::Update` が要求を拾うまで待つ作りだったので、UI スレッド自身から呼ばれたときはその場で実行するようにした。作るスレッドは以前と同じ UI スレッドで、メッセージを処理するループも変わらない。
+- **AssetManager**: Service になり、ノードを持たない。`OnInitialize` でアセット型の表を作ってロードスレッドを起こし、`OnShutdown` でロードスレッドを止めて join し、生成したアセットを破棄する。ロードスレッドは World に触れず (未使用だった World 引数を外した)、停止は自身の停止フラグで行う。
+- **AssetManager の依存**: 開発ビルドでは `CreateAsset` がコンバート要求を Editor へ送るので、`using Depends = nox::TypeList<EditorRemoteServer>;` を宣言し、`ServiceContext::Get` で受け取る (引けなければ起動失敗)。`EditorRemoteServer` は開発ビルドにしか無いので、宣言と `Get` を `#if NOX_DEVELOP` で囲む。Master では依存が無い。
+- **完了の取り込み**: ロードスレッドが `Asset::Initialize` を呼び、完了は `Asset` の状態 (`IsReady`) へロードスレッドが直接書く。フレームへ取り込むノードはまだ無い。§7 の「完了取り込みのメソッド (FrameIngress)」は、ゲームスレッド側で完了を受け取る処理が要る時点で足す。
+- **終了の時点**: SceneManager と AssetManager の終了は、ゲームスレッドの Terminate フェーズから `World::Exit` (ゲームスレッドが止まった後、UI スレッド) の Service の終了に移った。まだ `SystemBase` の `GarbageCollector` / `Renderer` / `DebugDraw` の Terminate フェーズより後になる。
+- **`CreateEngineSystems`**: Core に残るのは `GarbageCollector` だけ。`Renderer` / `DebugDraw` は描画モジュールが登録する (手順 4)。
