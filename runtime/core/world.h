@@ -44,7 +44,7 @@ namespace nox
 
 	/// @brief 遅延構造変更の記録先を「今このスレッドが実行しているノード」へ束ねるスコープ。
 	/// @details 遅延系のコマンドバッファは「構造変更を出しうるノード」1本ずつあり、
-	///          Playbackはその登録順に回る。
+	///          PlaybackはUpdaterGraphの全順序(nox::UpdaterNode::order_index)に回る。
 	///          記録側(nox::EntityCommands)は引数リストにWorldしか持たないので、
 	///          「どのノードのバッファへ積むか」はスレッドローカルな束縛で伝える。
 	///          こうしておくと、EntityLogic / EntitySystem の書き手には何の記述も増えない。
@@ -335,9 +335,10 @@ namespace nox
 		///          コマンドバッファは「遅延構造変更を出しうるノード」1つにつき1本あり、再生は
 		///          「ノード外バッファ → バッファ0 → バッファ1 → …」の固定順で回す。
 		///          バッファ番号は nox::UpdaterNode::command_buffer_index で、
-		///          UpdaterGraphの登録順に昇順で詰めて振られる。
-		///          これは構築時に決まりフレーム間で動かない(かつ衝突辺が必ず
-		///          小さい番号から大きい番号へ張られるためトポロジカル順でもある)。
+		///          UpdaterGraphの全順序(nox::UpdaterNode::order_index)の昇順に詰めて振られる。
+		///          全順序は明示辺(RunAfter / RunBefore)のトポロジカル順で、決まらない箇所は型名順。
+		///          これは構築時に決まりフレーム間でもビルド間でも動かない(登録順には依存しない)。
+		///          明示辺も衝突辺も必ず全順序の前から後へ張られるので、トポロジカル順でもある。
 		///          よって「どのワーカーがどのノードを先に走らせたか」はPlaybackの順序に影響しない。
 		///          ノード外バッファを先頭に置いているのは、そこへ積まれるのが
 		///          UpdaterGraphのディスパッチより前に走る旧SystemPhaseなど、時間的に先行する経路だから。
@@ -444,7 +445,7 @@ namespace nox
 		void CreateEntitySystems();
 		void CreateEntityLogicStorages();
 		/// @brief UpdaterGraphのレイヤー順にノードを実行する。
-		/// @details 現段階は「レイヤー順・レイヤー内は登録順」の直列実行。
+		/// @details レイヤー順に回す。直列実行ではレイヤー内は全順序(nox::UpdaterNode::order_index)の順。
 		///          同一レイヤーのノードは互いに衝突しないため、stage 2bではこのループが配分点になる。
 		void ExecuteUpdaterGraphPhase(nox::SystemPhaseType phase_type);
 		/// @brief ノード1つを実行する。stage 2bではこの関数をそのままワーカーへ渡す。

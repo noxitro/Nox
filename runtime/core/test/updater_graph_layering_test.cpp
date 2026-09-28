@@ -23,7 +23,7 @@
 ///
 ///				最後に 3 で組んだ実グラフに対して不変条件
 ///				  ・同一レイヤーの任意のノード対は衝突しない
-///				  ・衝突するノード対は必ずレイヤーが真に増加する (登録順が保たれる)
+///				  ・衝突するノード対は必ずレイヤーが真に増加する (全順序が保たれる)
 ///				を全数検査する。ここが「たまたま通っている」を排除する本体で、
 ///				衝突判定を壊すと必ず落ちる。
 ///
@@ -396,8 +396,10 @@ TEST(UpdaterGraphLayering, IndependentNodesShareOneLayer)
 	EXPECT_EQ(layers[2], 0u);
 }
 
-///	@brief	同じ ComponentData へ write する3つは3レイヤーに分かれ、登録順を保つ。
-TEST(UpdaterGraphLayering, WritersOnSameComponentSerializeInRegistrationOrder)
+///	@brief	同じ ComponentData へ write する3つは3レイヤーに分かれ、渡した並びを保つ。
+///	@details	BuildUpdaterLayerIndices が受け取る並びは、nox::UpdaterGraph が決めた全順序
+///				(明示辺のトポロジカル順、決まらない箇所は型名順)。登録順ではない。
+TEST(UpdaterGraphLayering, WritersOnSameComponentSerializeInGivenOrder)
 {
 	const nox::ComponentMask mask_a = nox::MakeComponentMask<LayerA>();
 	const std::array<nox::UpdaterNodeAccess, 3> accesses{
@@ -491,7 +493,7 @@ namespace
 	public:
 		GraphFixture()
 		{
-			//	登録順 = systems の並び → storages の並び → メソッド表の並び。
+			//	登録順は結果に影響しない (全順序は型名順。UpdaterGraphOrder.RegistrationOrderDoesNotChangeTheGraph を参照)。
 			systems_.push_back(&write_a_);
 			systems_.push_back(&write_b_);
 			systems_.push_back(&read_a_);
@@ -576,6 +578,10 @@ TEST(UpdaterGraphRebuild, LayerPartitionCoversEveryNodeExactlyOnce)
 }
 
 ///	@brief	独立な EntitySystem 同士 (WriteA / WriteB) は同一レイヤーへ載る。
+///	@details	旧規則 (登録順) では両方ともレイヤー0だった。新規則では全順序が型名順なので、
+///				型名で先に来る OtherLogic::MethodC (LayerA read / LayerB write) が
+///				WriteA (LayerA write) とも WriteB (LayerB write) とも衝突し、2つとも1つ後ろへ回る。
+///				独立な2つが同じレイヤーに載ること自体は変わらない。
 TEST(UpdaterGraphRebuild, IndependentSystemsShareALayer)
 {
 	const GraphFixture fixture;
@@ -587,12 +593,16 @@ TEST(UpdaterGraphRebuild, IndependentSystemsShareALayer)
 	ASSERT_NE(write_a, std::numeric_limits<nox::uint32>::max());
 	ASSERT_NE(write_b, std::numeric_limits<nox::uint32>::max());
 
-	EXPECT_EQ(write_a, 0u);
-	EXPECT_EQ(write_b, 0u);
+	EXPECT_EQ(write_a, write_b);
+	EXPECT_EQ(write_a, 1u);
+	EXPECT_EQ(FindLayerIndexByName(nodes, "MethodC"), 0u);
 }
 
-///	@brief	LayerA を read するだけの2つは同一レイヤーへ載り、writer より後ろへ回る。
-TEST(UpdaterGraphRebuild, ReadersShareALayerBehindTheWriter)
+///	@brief	LayerA を read するだけの2つは同一レイヤーへ載り、writer とは直列化される。
+///	@details	旧規則 (登録順) では writer (WriteASystem) が先だった。新規則では明示辺が無いので
+///				型名順 ("ReadA2System" < "ReadASystem" < "WriteASystem") で決まり、writer が後ろへ回る。
+///				writer を先にしたければ reader 側に RunAfter を書く (UpdaterGraphOrder.* を参照)。
+TEST(UpdaterGraphRebuild, ReadersShareALayerAndTheWriterFollowsByTypeName)
 {
 	const GraphFixture fixture;
 	const std::span<const nox::UpdaterNode> nodes =
@@ -606,14 +616,17 @@ TEST(UpdaterGraphRebuild, ReadersShareALayerBehindTheWriter)
 
 	//	read 同士は衝突しないので同一レイヤー。
 	EXPECT_EQ(read_a, read_a2);
-	//	write A とは衝突するので後ろ。
-	EXPECT_GT(read_a, write_a);
+	EXPECT_EQ(read_a, 0u);
+	//	write A とは衝突するので別レイヤー。型名順で writer が後ろ。
+	EXPECT_GT(write_a, read_a);
 }
 
 ///	@brief	同一 Service に write が絡めば別レイヤーへ分かれる。
 ///	@details	この3 System は ComponentData が互いにも他のノードとも一切重ならない
 ///				(LayerE / LayerF / LayerG は専用) ので、レイヤーの分かれ方は
 ///				Service の規則だけで決まる。
+///				旧規則 (登録順) では ServiceWrite が先だった。新規則では型名順
+///				("ServiceReadSystem" < "ServiceWriteSystem") で読む側が先になる。
 TEST(UpdaterGraphRebuild, ServiceWriteSeparatesLayers)
 {
 	const GraphFixture fixture;
@@ -627,10 +640,10 @@ TEST(UpdaterGraphRebuild, ServiceWriteSeparatesLayers)
 	ASSERT_NE(service_read, std::numeric_limits<nox::uint32>::max());
 	ASSERT_NE(other_service_read, std::numeric_limits<nox::uint32>::max());
 
-	//	LayerServiceX を書く側は他の誰とも衝突しないので先頭レイヤー。
-	EXPECT_EQ(service_write, 0u);
-	//	同じ Service を読む側は、write と衝突するので1つ後ろへ回る。
-	EXPECT_EQ(service_read, 1u);
+	//	LayerServiceX を読む側は型名順で先なので先頭レイヤー。
+	EXPECT_EQ(service_read, 0u);
+	//	同じ Service を書く側は、read と衝突するので1つ後ろへ回る。
+	EXPECT_EQ(service_write, 1u);
 	//	別 Service (LayerServiceY) しか触らない方は巻き込まれず先頭レイヤーのまま。
 	EXPECT_EQ(other_service_read, 0u);
 }
@@ -650,7 +663,8 @@ TEST(UpdaterGraphRebuild, MethodsOfTheSameEntityLogicAreSerialized)
 	ASSERT_NE(method_a, std::numeric_limits<nox::uint32>::max());
 	ASSERT_NE(method_b, std::numeric_limits<nox::uint32>::max());
 
-	//	登録順は MethodA -> MethodB。よって MethodB が後ろ。
+	//	同じ型のメソッド同士はメソッド名順 (MethodA -> MethodB)。よって MethodB が後ろ。
+	//	旧規則ではメソッド表の並び (登録順) だったが、この型ではどちらでも同じ並びになる。
 	EXPECT_GT(method_b, method_a);
 
 	//	宣言そのものは本当に重なっていないことを、同時に押さえておく
@@ -727,7 +741,7 @@ TEST(UpdaterGraphInvariant, NoTwoNodesInTheSameLayerConflict)
 	}
 }
 
-///	@brief	衝突するノード対は、登録順の小さい方が必ず前のレイヤーに来る。
+///	@brief	衝突するノード対は、全順序 (order_index) の小さい方が必ず前のレイヤーに来る。
 ///	@details	レイヤー順が宣言の依存関係と整合していること。
 ///				等号を許さない (真に増加する) ので、衝突対が同居することもない。
 TEST(UpdaterGraphInvariant, ConflictingPairsAreStrictlyOrderedByLayer)

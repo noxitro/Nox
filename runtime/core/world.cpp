@@ -461,6 +461,8 @@ void nox::World::Init()
 
 	//	EntitySystem / EntityLogicの集合が確定してからUpdaterGraphを組む。
 	//	以降この集合が変わったら Rebuild を呼び直すこと。
+	//	渡す並び(= 生成器の走査順)は結果に影響しない。順序は明示辺(RunAfter / RunBefore)と型名だけで決まる。
+	//	明示辺の名前が解決できない・循環する場合は、Rebuild が理由をログに出して起動を止める。
 	updater_graph_.Rebuild(
 		std::span<nox::EntitySystemBase* const>(entity_systems_.data(), entity_systems_.size()),
 		std::span<nox::EntityLogicStorage* const>(entity_logic_storages_.data(), entity_logic_storages_.size()));
@@ -1587,7 +1589,7 @@ void nox::World::AbortOnEntityCommandOverflow(const nox::World::EntityCommandBuf
 	volatile const nox::uint32 overflow_payload_length = buffer.GetPayloadLength();
 	volatile const nox::uint32 overflow_payload_capacity = k_entity_command_payload_bytes;
 	//	どのノードのバッファで溢れたのかもダンプから読めるようにする。
-	//	ノード番号は nox::UpdaterNode::order_index で、起動ログのUpdaterGraphの n<番号> と一致する。
+	//	番号は nox::UpdaterNode::command_buffer_index で、起動ログのUpdaterGraphの cb=<番号> と一致する。
 	volatile const nox::uint32 overflow_node_index =
 		(&buffer == &out_of_node_command_buffer_)
 		? std::numeric_limits<nox::uint32>::max()
@@ -1668,8 +1670,8 @@ void nox::World::FlushEntityCommands()noexcept
 	}
 
 	//	記録先はノードごとに分かれている。再生は「ノード外 → ノード番号順」の固定順で回す。
-	//	ノード番号はUpdaterGraphの登録順(=トポロジカル順)で構築時に決まるため、
-	//	どのワーカーがどのノードを先に走らせたかはここに一切影響しない。
+	//	ノード番号はUpdaterGraphの全順序(明示辺と衝突辺のトポロジカル順、決まらない箇所は型名順)で
+	//	構築時に決まるため、どのワーカーがどのノードを先に走らせたかはここに一切影響しない。
 	PlaybackEntityCommandBuffer(out_of_node_command_buffer_);
 	for (nox::uint32 node_index = 0u; node_index < node_command_buffer_count_; ++node_index)
 	{
