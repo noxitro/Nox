@@ -93,6 +93,24 @@ namespace nox
 		std::span<const nox::char16* const> command_line_args,
 		nox::uint32 default_worker_count)noexcept;
 
+	/// @brief --exit-after-frames で指定できる最大のフレーム数。これを超える指定はここで頭打ちにする。
+	inline constexpr nox::uint32 kMaxExitAfterFrames = 100'000'000u;
+
+	/// @brief コマンドライン引数列から、自動で終了するまでのフレーム数を決める。
+	/// @details --exit-after-frames=N を渡すと、N フレーム目にメインウィンドウを閉じ、
+	///          ユーザーがウィンドウを閉じたときと同じ経路で終了する (閉じるのは nox::SceneManager)。
+	///          CI のスモーク実行で、起動から Terminate フェーズ・後始末までを人手なしで通すための入口。
+	///
+	///          0 は「自動で終了しない」で、普段の起動はこれ。指定が無いとき、値が空のとき、
+	///          数字以外を含むときも 0 を返す。打ち間違いで即座に終了するより、終了しない方が
+	///          CI の制限時間で気付ける。
+	///
+	///          N を nox::kMaxExitAfterFrames で頭打ちにするのは方針ではなく桁あふれ対策。
+	///          nox::ResolveUpdaterWorkerCount と同じく、コマンドラインの取得(nox::os)に触れない純粋関数。
+	/// @param command_line_args nox::os::GetCommandLineArgList() が返す並び。
+	[[nodiscard]] nox::uint32 ResolveExitAfterFrames(
+		std::span<const nox::char16* const> command_line_args)noexcept;
+
 	class World final: public nox::Object
 	{
 		NOX_DECLARE_OBJECT(World, nox::Object);
@@ -208,6 +226,8 @@ namespace nox
 
 		inline bool IsKill()const noexcept { return kill_.load(std::memory_order_acquire); }
 		inline bool IsStudioMode()const noexcept { return studio_mode_; }
+		/// @brief この数のフレームを回したら自動で終了する。0 なら終了しない。nox::ResolveExitAfterFrames を参照。
+		inline nox::uint32 GetExitAfterFrames()const noexcept { return exit_after_frames_; }
 
 		nox::SystemBase* FindSystem(const nox::reflection::Type& type)const noexcept;
 
@@ -583,6 +603,10 @@ namespace nox
 		/// @brief UpdaterGraphを回すワーカー数。0ならスレッドを1本も作らず直列実行になる。
 		/// @details コマンドラインで決まる。決め方は nox::ResolveUpdaterWorkerCount を参照。
 		const nox::uint32 updater_worker_count_;
+
+		/// @brief この数のフレームを回したら自動で終了する。0 なら終了しない (既定)。
+		/// @details コマンドラインで決まる。決め方は nox::ResolveExitAfterFrames を参照。
+		const nox::uint32 exit_after_frames_;
 
 #if !NOX_MASTER
 		//	依存解析の誤りを即座に検出するためのチェッカー。ComponentTypeIndexごと / Service登録順ごとに1つ持つ。

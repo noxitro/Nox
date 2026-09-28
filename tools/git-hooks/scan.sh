@@ -23,7 +23,7 @@ MAX_BYTES=$((5 * 1024 * 1024))
 note() { FOUND=1; printf '  [%s] %s\n    %s\n' "$1" "$2" "$3" >&2; }
 
 # 秘密情報。誤検出の少ない、発行元が特定できる形式だけを並べている。
-SECRET_RE='BEGIN (RSA|OPENSSH|DSA|EC|PGP) PRIVATE KEY|gh[pousr]_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{30}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|xox[abprs]-[0-9A-Za-z-]{10}|sk-ant-[A-Za-z0-9_-]{20}|(mongodb\+srv|mongodb|postgresql|postgres|mysql|redis|amqp)://[^:/[:space:]]+:[^@[:space:]]+@'
+SECRET_RE='BEGIN (RSA|OPENSSH|DSA|EC|PGP) PRIVATE KEY|gh[pousr]_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{30}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|xox[abprs]-[0-9A-Za-z-]{10}|sk-ant-[A-Za-z0-9_-]{20}|discord(app)?\.com/api/(v[0-9]+/)?webhooks/[0-9]{17,20}/[A-Za-z0-9_-]{60}|(mongodb\+srv|mongodb|postgresql|postgres|mysql|redis|amqp)://[^:/[:space:]]+:[^@[:space:]]+@'
 # 個人情報。履歴から除去済みなので、再流入をここで止める。
 PERSONAL_RE='[A-Za-z]:[\/]{1,2}Users[\/]{1,2}[A-Za-z0-9._-]+|[A-Za-z0-9._%+-]+@(gmail|outlook|yahoo|icloud|hotmail)\.[A-Za-z.]{2,}'
 

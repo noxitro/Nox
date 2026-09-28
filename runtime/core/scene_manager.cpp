@@ -10,7 +10,8 @@
 #include	"scene_view.h"
 
 nox::SceneManager::SceneManager()noexcept:
-	main_scene_view_(nullptr)
+	main_scene_view_(nullptr),
+	close_requested_(false)
 {
 
 }
@@ -42,9 +43,21 @@ void	nox::SceneManager::Initialize(nox::World& world)
 	}
 }
 
-void	nox::SceneManager::Update([[maybe_unused]] nox::World& world)
+void	nox::SceneManager::Update(nox::World& world)
 {
-
+	//	--exit-after-frames=N (CI のスモーク実行用)。N フレーム目にメインウィンドウを閉じる。
+	//	ユーザーがウィンドウを閉じたときと同じ経路 (WM_CLOSE → WM_DESTROY → WM_QUIT) で終わるので、
+	//	Terminate フェーズから reflection / memory の終了処理まで、普段の終了と同じ順に通る。
+	//	フレーム数は World::Update がこのフェーズの後に数えるので、N 回目の呼び出しでは N - 1 になっている。
+	const nox::uint32 exit_after_frames = world.GetExitAfterFrames();
+	if ((exit_after_frames != 0u) && (close_requested_ == false) && ((world.GetFrameCount() + 1u) >= exit_after_frames))
+	{
+		if (main_scene_view_ != nullptr)
+		{
+			main_scene_view_->GetWindow().RequestClose();
+		}
+		close_requested_ = true;
+	}
 }
 
 void	nox::SceneManager::Finalize([[maybe_unused]] nox::World& world)

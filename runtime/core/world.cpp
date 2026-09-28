@@ -260,6 +260,39 @@ nox::uint32 nox::ResolveUpdaterWorkerCount(
 	return parsed;
 }
 
+nox::uint32 nox::ResolveExitAfterFrames(const std::span<const nox::char16* const> command_line_args)noexcept
+{
+	static constexpr std::u16string_view kExitAfterFramesKey = u"--exit-after-frames";
+
+	//	キーの照合と値の切り出しは nox::os 側に寄せてある (ResolveUpdaterWorkerCount と同じ)。
+	const std::optional<std::u16string_view> value =
+		nox::os::TryGetCommandLineArgValue(command_line_args, kExitAfterFramesKey);
+	if ((value.has_value() == false) || (value->empty() == true))
+	{
+		//	指定が無い、または "--exit-after-frames" / "--exit-after-frames=" だけ。自動では終了しない。
+		return 0u;
+	}
+
+	//	10進の非負整数だけを受ける。ヒープも例外も使わないので自前で読む。
+	nox::uint32 parsed = 0u;
+	for (const nox::char16 character : *value)
+	{
+		if ((character < u'0') || (character > u'9'))
+		{
+			//	数字でない文字が混ざっていたら指定そのものを無視する。
+			//	打ち間違いで即座に終了するより、終了しない方が CI の制限時間で気付ける。
+			return 0u;
+		}
+		parsed = (parsed * 10u) + static_cast<nox::uint32>(character - u'0');
+		if (parsed > nox::kMaxExitAfterFrames)
+		{
+			//	方針ではなく桁あふれ対策。ここで打ち切らないとuint32を回り込む。
+			return nox::kMaxExitAfterFrames;
+		}
+	}
+	return parsed;
+}
+
 nox::World::World() :
 	free_entity_head_(make_free_entity_head(k_invalid_entity_index, 0u)),
 	next_entity_index_(0u),
@@ -285,6 +318,7 @@ nox::World::World() :
 	updater_worker_count_(nox::ResolveUpdaterWorkerCount(
 		nox::os::GetCommandLineArgList(),
 		nox::JobSystem::GetDefaultWorkerCount())),
+	exit_after_frames_(nox::ResolveExitAfterFrames(nox::os::GetCommandLineArgList())),
 	services_(),
 	modules_(),
 	systems_(),

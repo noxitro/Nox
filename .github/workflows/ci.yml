@@ -8,6 +8,7 @@
 #         マトリクスジョブの中で走る。同じ構成を 2 回建てないため。
 #         GoogleTest は Master 以外の 4 ジョブ、FlaUI は MSVC の Debug / Release。
 #         FlaUI には Editor と runtime.exe の接続テスト (Reboot → attach) も含む。
+#         runtime.exe の起動・終了 (スモーク) は 6 ジョブすべてで走る。
 #         Master だけテストを飛ばしているのは、reflection_generated の pch.h /
 #         reflect.cpp が runtime/core/test/test_types.h のテスト型を
 #         #if !NOX_MASTER で囲っており、Master ではテスト型のリフレクションが
@@ -162,6 +163,90 @@ jobs:
             /v:minimal `
             /nologo `
             "/flp:logfile=build.log;verbosity=normal"
+
+      # ---------------------------------------------------------
+      # runtime.exe の起動・終了 (スモーク)
+      #
+      # AGENTS.md の「master へ入れる条件」にある「runtime.exe がクラッシュせず
+      # 起動・終了する」を確かめる。FlaUI の Reboot テストも runtime.exe を起こすが、
+      # 最後は強制終了するので、正常終了の経路 (Terminate フェーズ、World の後始末、
+      # reflection / memory の終了処理) は通らない。しかも FlaUI は MSVC の
+      # Debug / Release でしか走らないので、Master と ClangCL の runtime.exe は
+      # これまで一度も起動されていなかった。
+      #
+      # --exit-after-frames=N を渡すと、N フレーム目にメインウィンドウを閉じ、
+      # 閉じるボタンを押したときと同じ経路 (WM_CLOSE → WM_DESTROY → WM_QUIT) で
+      # 終了する (nox::ResolveExitAfterFrames)。制限時間内に終了コード 0 で
+      # 終わることを見る。Init / Start / Update の各フェーズを一通り通れば足りるので、
+      # フレーム数は少なくしてある。
+      #
+      # runtime.exe は Windows サブシステムで標準出力を持たないので、異常終了したときは
+      # 同じ引数でデバッガ (WDK に付いてくる cdb) の下で起動し直し、例外で止まった地点の
+      # スタックを出す。PDB は exe の隣に出ているので、関数名と行番号まで読める。
+      # デバッガが無いイメージや、終わらなかった (ハング) ときは、Windows のイベントログ
+      # (Application Error / WER) に残った記録を拾って出す。
+      # 作業ディレクトリは Editor (Core.RuntimeSession) と同じく exe の置き場所。
+      #
+      # テストのビルドより前に置いているのは、テストを建てない Master でも走らせるため。
+      # ---------------------------------------------------------
+      - name: Run runtime.exe (start / exit)
+        run: |
+          $exe = (Resolve-Path 'runtime\build\runtime\x64\${{ matrix.configuration }}\runtime.exe').Path
+          $frames = 30
+          $limitSeconds = 120
+          $started = Get-Date
+
+          $psi = [System.Diagnostics.ProcessStartInfo]::new($exe, "--exit-after-frames=$frames")
+          $psi.UseShellExecute = $false
+          $psi.WorkingDirectory = Split-Path $exe
+          $process = [System.Diagnostics.Process]::Start($psi)
+
+          $problem = $null
+          $crashed = $false
+          if (-not $process.WaitForExit($limitSeconds * 1000)) {
+            $process.Kill($true)
+            $problem = "$limitSeconds 秒以内に終了しなかった (ハング、または終了要求が届いていない)"
+          }
+          elseif ($process.ExitCode -ne 0) {
+            $crashed = $true
+            $problem = 'exit 0x{0:X8} で終了した (クラッシュ、またはアサート)' -f $process.ExitCode
+          }
+          $elapsed = ((Get-Date) - $started).TotalSeconds
+
+          $icon = if ($problem) { ':x:' } else { ':white_check_mark:' }
+          $detail = if ($problem) { $problem } else { '{0} フレーム回して正常終了 ({1:N1} 秒)' -f $frames, $elapsed }
+          @('', "## $icon runtime.exe の起動・終了 (${{ matrix.compiler }} / ${{ matrix.configuration }})", '', $detail) |
+            Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+          if ($problem) {
+            $cdb = Join-Path ${env:ProgramFiles(x86)} 'Windows Kits\10\Debuggers\x64\cdb.exe'
+            if ($crashed -and (Test-Path $cdb)) {
+              # g で走らせ、例外で止まったら内容・レジスタ・スタックを出して終わる
+              $exeDir = Split-Path $exe
+              $arguments = '-lines -y "{0}" -c "g; .lastevent; r; kn 60; q" "{1}" --exit-after-frames={2}' -f $exeDir, $exe, $frames
+              $dbgInfo = [System.Diagnostics.ProcessStartInfo]::new($cdb, $arguments)
+              $dbgInfo.UseShellExecute = $false
+              $dbgInfo.RedirectStandardOutput = $true
+              $dbgInfo.WorkingDirectory = $exeDir
+              $debugger = [System.Diagnostics.Process]::Start($dbgInfo)
+              $output = $debugger.StandardOutput.ReadToEndAsync()
+              if (-not $debugger.WaitForExit($limitSeconds * 1000)) { $debugger.Kill($true) }
+              Write-Host '=== cdb: 例外で止まった地点 ==='
+              Write-Host $output.Result
+            }
+            else {
+              if ($crashed) { Write-Host "cdb が無いのでスタックは取れない: $cdb" }
+              $events = Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $started } -ErrorAction SilentlyContinue |
+                Where-Object { ($_.ProviderName -in @('Application Error', 'Windows Error Reporting')) -and ($_.Message -match 'runtime\.exe') } |
+                Select-Object -First 5
+              foreach ($e in $events) {
+                Write-Host "=== [$($e.TimeCreated)] $($e.ProviderName) (Id $($e.Id))"
+                Write-Host $e.Message
+              }
+            }
+            throw "runtime.exe: $problem"
+          }
+          Write-Host $detail
 
       # ---------------------------------------------------------
       # GoogleTest
