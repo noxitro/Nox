@@ -162,7 +162,7 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::AddEntityNodeQuery::Execute(nox::World& world, std::span<nox::uint8> storage)const
 {
-	//nox::dev::editor_remote::EditorRemoteServer& server = world.GetSystem<nox::dev::editor_remote::EditorRemoteServer>();
+	//nox::dev::editor_remote::EditorRemoteServer& server = *TryGetEditorRemoteServer(world);
 	//nox::SceneNode& main_scene = TryGetSceneManager(world)->GetMainScene();
 	//const nox::int64 remote_instance_id = GetRemoteInstanceId();
 	//NOX_ASSERT(remote_instance_id > 0, u"Editor owned EntityNode id must be positive. id:{0}", remote_instance_id);
@@ -205,7 +205,7 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::AddComponentQuery::Execute(nox::World& world, std::span<nox::uint8> storage)const
 {
-	/*nox::dev::editor_remote::EditorRemoteServer& server = world.GetSystem<nox::dev::editor_remote::EditorRemoteServer>();
+	/*nox::dev::editor_remote::EditorRemoteServer& server = *TryGetEditorRemoteServer(world);
 	const nox::int64 remote_instance_id = GetRemoteInstanceId();
 	NOX_ASSERT(remote_instance_id > 0, u"Editor owned Component id must be positive. id:{0}", remote_instance_id);
 	auto response = nox::PlacementObject<nox::dev::editor_remote::AddComponentResponse>::Construct(storage);
@@ -259,7 +259,7 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::DestroyEntityNodeQuery::Execute(nox::World& world, std::span<nox::uint8>)const
 {
-	/*nox::dev::editor_remote::EditorRemoteServer& server = world.GetSystem<nox::dev::editor_remote::EditorRemoteServer>();
+	/*nox::dev::editor_remote::EditorRemoteServer& server = *TryGetEditorRemoteServer(world);
 	nox::Object* const object = server.FindRemoteInstance(GetRemoteInstanceId());
 	if (object == nullptr)
 	{
