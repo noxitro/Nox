@@ -13,6 +13,7 @@
 #include	"../entity_system.h"
 #include	"../entity_logic.h"
 #include	"../entity_logic_attribute.h"
+#include	"../service_attribute.h"
 
 namespace nox::test::ecs
 {
@@ -130,4 +131,56 @@ namespace nox::test::ecs
 			last_alive = commands.IsAlive(entity);
 		}
 	};
+
+	/// @brief 属性付きprivateメソッドがUpdaterGraphのノードになるService(生成器の経路の実証)。
+	/// @details ヘッダに定義するだけで nox::GetServiceMethodTypes() の表に載る。friendも登録呼び出しも要らない。
+	///          Worldに登録しない限りノードにはならない(runtime.exeでは登録されないので走らない)。
+	///          メソッドは「引数なし(メインスレッド限定)」「EntityCommands」「Serviceをconstポインタで」の3形。
+	class TestNodeService final : public nox::Service
+	{
+		NOX_DECLARE_OBJECT(TestNodeService, nox::Service);
+	public:
+		nox::int32 poll_count = 0;
+		nox::int32 spawn_count = 0;
+		nox::int32 observe_count = 0;
+		/// @brief Observe が最後に読んだ TestCounterService::call_count。未登録なら -1。
+		nox::int32 observed_counter = 0;
+		/// @brief TestNodeCountTask が書き込んだ回数。
+		nox::int32 task_count = 0;
+		nox::EntityId last_spawned{ 0u };
+
+	private:
+		NOX_ATTR(nox::attr::ServiceMethod(nox::SystemPhaseType::Update, nox::attr::ThreadAffinity::MainThread))
+		void Poll()
+		{
+			++poll_count;
+		}
+
+		NOX_ATTR(nox::attr::ServiceMethod(nox::SystemPhaseType::Update))
+		void Spawn(nox::EntityCommands& commands)
+		{
+			//	生成は遅延。TestHealthが読めるようになるのはフェーズ末の反映後。
+			last_spawned = commands.Create();
+			commands.Add<nox::test::ecs::TestHealth>(last_spawned, nox::test::ecs::TestHealth{ .value = 5 });
+			++spawn_count;
+		}
+
+		NOX_ATTR(nox::attr::ServiceMethod(nox::SystemPhaseType::Update))
+		void Observe(const nox::test::ecs::TestCounterService* counter)
+		{
+			observed_counter = (counter != nullptr) ? counter->call_count : -1;
+			++observe_count;
+		}
+	};
+
+	/// @brief 属性付きのグローバル関数(Task)。ヘッダに定義するだけで nox::GetUpdaterTaskDescriptors() の表に載る。
+	/// @details runtime.exe でも毎フレーム走るが、TestNodeService は登録されないので nullptr が渡るだけ。
+	NOX_ATTR(nox::attr::UpdaterTask(nox::SystemPhaseType::Update))
+	inline void TestNodeCountTask(nox::test::ecs::TestNodeService* service)
+	{
+		if (service != nullptr)
+		{
+			++service->task_count;
+		}
+	}
 }
