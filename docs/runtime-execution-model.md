@@ -80,7 +80,7 @@ UpdaterGraph は、フェーズごとに構築時に 1 回だけグラフを組�
 
 ### メインスレッド限定
 
-OS のメッセージを読む・GPU へ提出するなど、ワーカーへ流せない処理は `static constexpr bool kMainThreadOnly = true;` で宣言する。同一レイヤー内で該当ノードだけを呼び出しスレッドで回し、それ以外をワーカーへ配る。`k_parallel_for_each` (Chunk 並列) とは両立しないので `static_assert` で弾く。
+OS のメッセージを読む・GPU へ提出するなど、ワーカーへ流せない処理は `static constexpr bool kMainThreadOnly = true;` で宣言する (EntitySystem / EntityLogic の型。Service のメソッドと Task は属性の `nox::attr::ThreadAffinity::MainThread` でメソッド単位に宣言する)。同一レイヤー内で該当ノードだけを呼び出しスレッドで回し、それ以外をワーカーへ配る。`k_parallel_for_each` (Chunk 並列) とは両立しないので `static_assert` で弾く。
 
 ## 5. フェーズ
 
@@ -133,8 +133,8 @@ Service の寿命と UpdaterGraph の実行順は別々の問いに答える別�
 | 手順 | 内容 | 状態 |
 |---|---|---|
 | 1 | UpdaterGraph の全順序を「明示辺 + 型名順」にする。`RunAfter` / `RunBefore`。見つからない依存・循環は起動失敗。旧 `BuildExecuteNodeList` の読み飛ばしも起動失敗に | 完了 (CI 全構成 緑) |
-| 2a | Service の寿命 (`OnInitialize` / `OnShutdown`、`Depends`、失敗時の逆順ロールバック)。`EngineModule::RegisterServices`。ノードのメインスレッド限定実行 | 実装中 |
-| 2b | Service の属性付きメソッドとグローバル関数をノードとして登録 (リフレクション生成器の変更あり) | 未着手 |
+| 2a | Service の寿命 (`OnInitialize` / `OnShutdown`、`Depends`、失敗時の逆順ロールバック)。`EngineModule::RegisterServices`。ノードのメインスレッド限定実行 | 完了 |
+| 2b | Service の属性付きメソッドとグローバル関数をノードとして登録 (リフレクション生成器の変更あり) | 実装中 |
 | 3 | `AssetManager` → `SocketScheduler` → `SceneManager` → `EditorRemoteServer` の順で Service へ移す。フェーズに FrameIngress を足す | 未着手 |
 | 4 | `Renderer` / `DebugDraw` / `GarbageCollector` を移す。フェーズに Presentation を足す | 未着手 |
 | 5 | `SystemBase` と旧フェーズ表を削除 | 未着手 |
@@ -156,3 +156,24 @@ Service の寿命と UpdaterGraph の実行順は別々の問いに答える別�
 - `SocketScheduler` のソケット受信ループは `Initialize` が起こす専用スレッド上で `World::IsKill()` まで回り続ける処理であり、フェーズではない。`PhaseRegister` に載せてはならず、他からこのフェーズへの依存も宣言できない。
 - テストは abort せず結果を返す `UpdaterGraph::TryRebuild` を使う。起動経路は `Rebuild`。
 - 既存の EntitySystem / EntityLogic の直列化順は登録順から型名順に変わる。データの流れと逆向きになった組は起動ログの `BY-NAME` に出るので、必要なら `RunAfter` を宣言する。
+
+## 11. 手順 2 で決まったこと (実装済みの仕様)
+
+### 2a: Service の寿命とメインスレッド限定
+
+- `OnInitialize(nox::ServiceContext&)` / `OnShutdown()` は private な仮想関数 (NVI) で、呼ぶのは World だけ。派生型は friend を書かない。
+- 初期化は `Depends` のトポロジカル順、決まらない箇所は完全修飾型名順 (登録順は使わない)。終了は初期化の逆順。`OnInitialize` が false を返したら、それまでに初期化した分だけを逆順に終了して起動失敗。
+- `Depends` は public な `using Depends = nox::TypeList<...>;`。private に書くと見えず、宣言が無いのと同じになる。未登録の型・循環・同じ型の二重登録は、どの `OnInitialize` よりも前に起動失敗。
+- `ServiceContext::Get<T>()` は `Depends` に並べた型しか引けない。宣言外の型は nullptr を返し、`OnInitialize` が true を返しても起動失敗 (`UndeclaredServiceAccess`)。`ServiceContext` は World への参照を持たない。
+- `kMainThreadOnly` は EntitySystem / EntityLogic の型に public に書く。そのノード (EntityLogic は型の全メソッド) をワーカーへ配らず、フェーズを回しているスレッドで実行する。依存解析 (レイヤー) には影響しない。`k_parallel_for_each` とは両立しない (`static_assert`)。
+
+### 2b: Service のメソッドと Task
+
+- **Service のメソッド**: `NOX_ATTR(nox::attr::ServiceMethod(phase[, nox::attr::ThreadAffinity]))` を `nox::Service` 派生型のメソッドに付ける (private のままでよい)。実行スレッドはメソッド単位で、既定は `Any`。Service の型に `kMainThreadOnly` を書くと `static_assert` で弾く (黙って無視しない)。
+- **Task**: `NOX_ATTR(nox::attr::UpdaterTask(phase[, nox::attr::ThreadAffinity]))` を名前空間スコープの関数に付ける。無名名前空間・関数テンプレート・メンバ関数への付与は生成器がエラーにする。全順序のキーは完全修飾関数名。
+- **シグネチャの規則 (両者共通)**: 戻り値は void。引数に取れるのは Service (参照 / ポインタ、const なら読み取り) と `nox::EntityCommands&` だけで、ComponentData・`nox::EntityId` は `static_assert` で弾く。entity を列挙せず、フェーズごとにちょうど 1 回呼ばれる (entity が 0 個でも呼ばれる)。参照で受ける Service が未登録なら呼び出しを打ち切り、ポインタなら nullptr を渡す (EntitySystem / EntityLogic と同じ)。
+- **自己書き込みの暗黙付与**: Service のメソッドは、自分自身の Service への書き込みを宣言の末尾に足す。引数に書かなくても、その Service を読み書きする他のノードとは直列化され、並列実行チェッカーも宣言外の同時アクセスを拾える。同じ Service のメソッド同士はインスタンス状態を共有するので group で必ず衝突させ、メソッド名順に直列化する (起動ログの衝突理由は `service-state`。`BY-NAME` の候補には出さない)。
+- **明示辺**: Service の型にも `RunAfter` / `RunBefore` を書ける。その型の同じフェーズの全メソッドに掛かる。並べた Service が属性付きメソッドを持たないか World に登録されていなければ `UnresolvedOrderTarget` で起動失敗。
+- **Task に `RunAfter` / `RunBefore` が無い理由**: Task は型ではないので宣言を書く場所が無く、他のノードの `nox::TypeList` に並べることもできない。関数を型として扱う仕組みを足すより、順序が要る処理は状態の置き場所である Service のメソッドに書く方が、宣言が 1 か所で済む。Task は状態を持たないので group も無く、衝突は引数の宣言だけで決まる。
+- **記述子の置き場所**: メソッド表 (`nox::ServiceMethodTable<T>`) と型ごとの記述子 (`nox::ServiceMethodTypeDescriptor`) は、寿命の記述子 (`nox::ServiceTypeDescriptor`) と別に持つ。メソッド表の特殊化は生成コードの翻訳単位にしか見えないため、登録側 (`MakeServiceTypeDescriptor`) から読むと翻訳単位ごとに別の中身の実体ができる。World は生成コードの表 `nox::GetServiceMethodTypes()` を型情報で登録済みの Service と照合し、登録されている型だけをノードにする。Task は `nox::GetUpdaterTaskDescriptors()` の表をそのまま渡す。
+- **EntitySystem**: `OnUpdate` は ComponentData を 1 つ以上取る (`static_assert`)。空の Query は全 Archetype に一致し、entity の数だけ呼ばれてしまうため。1 フェーズに 1 回の処理は Service のメソッドか Task にする。
