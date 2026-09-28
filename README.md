@@ -76,7 +76,9 @@ sh tools/git-hooks/install.sh
 
 検査は 2 段になっている。`scan.sh` がこのリポジトリ固有のもの
 (ビルド成果物の混入、ローカル絶対パス、個人メール) を見て、
-`gitleaks` が汎用の秘密情報を見る。gitleaks は任意だが、入れると
+`gitleaks` が汎用の秘密情報を見る。外部資料の名前 (ファイルの中身と
+コミットメッセージ) は `check-external-names.py` が見る。これは Python 3 を使い、
+無ければ手元では飛ばして CI の Secret scan だけで検査する。gitleaks は任意だが、入れると
 検出できるトークン形式が大幅に増えるので推奨する。
 
 ```sh

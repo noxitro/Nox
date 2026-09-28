@@ -101,6 +101,16 @@ if grep -a -q -E "$SECRET_RE|$PERSONAL_RE" "$TMP/blobs.bin" \
   done < "$TMP/objs.txt"
 fi
 
+# --- 4. 外部資料の名前 -------------------------------------------------------
+# 名前はハッシュで持っているので grep では見られない。Python に任せる。
+# 手元に Python が無ければ飛ばす (CI の Secret scan が必ず見る)。
+PY=$(sh "$(dirname "$0")/find-python.sh")
+if [ -n "$PY" ]; then
+  "$PY" "$(dirname "$0")/check-external-names.py" --blobs < "$TMP/objs.txt" || FOUND=1
+else
+  echo "scan.sh: Python が見つからないので外部資料名の検査を飛ばした" >&2
+fi
+
 if [ "$FOUND" -ne 0 ]; then
   cat >&2 <<'MSG'
 
