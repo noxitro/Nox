@@ -4,7 +4,7 @@
 /// @file	asset_manager.h
 /// @brief	asset_manager
 #pragma once
-#include	"system.h"
+#include	"service.h"
 
 #if NOX_DEVELOP
 namespace nox::dev::editor_remote
@@ -25,10 +25,27 @@ namespace nox
 
 	class Asset;
 
-	class AssetManager : public nox::SystemBase
+	/// @brief		アセットの生成とロードを受け持つService。
+	/// @details	OnInitialize で nox::Asset 派生型を拡張子で引く表を作ってロードスレッドを起こし、
+	///				OnShutdown でロードスレッドを止めて join し、生成したアセットを破棄する。
+	///
+	///				毎フレームの処理(ノード)は持たない。CreateAsset はアセットをロードキューへ積んで返すだけで、
+	///				ロード(ネイティブファイルの存在確認と nox::Asset::Initialize)はロードスレッドで完結する。
+	///				完了はロードスレッドが nox::Asset の状態(IsReady)へ直接書き込む。フレームへ取り込むノードはまだ無い。
+	///				ロードスレッドは World に触れない(Service は World への参照を持たない)。停止は自身の停止フラグで行う。
+	///
+	///				開発ビルドでは、CreateAsset がコンバート要求を Editor へ送るので EditorRemoteServer に依存する
+	///				(Depends。初期化はこちらが後、終了はこちらが先)。Master ではその依存は無い。
+	class AssetManager : public nox::Service
 	{
-		NOX_DECLARE_OBJECT(AssetManager, nox::SystemBase);
+		NOX_DECLARE_OBJECT(AssetManager, nox::Service);
 	public:
+#if NOX_DEVELOP
+		/// @brief CreateAsset がコンバート要求を Editor へ送るので、EditorRemoteServer を先に初期化し、後に終了させる。
+		/// @details EditorRemoteServer は開発ビルドにしか無いので、宣言も同じ条件で囲む。
+		using Depends = nox::TypeList<nox::dev::editor_remote::EditorRemoteServer>;
+#endif // NOX_DEVELOP
+
 		AssetManager();
 		~AssetManager()override;
 
@@ -48,11 +65,13 @@ namespace nox
 		}
 
 	private:
-		void Init(nox::World& world);
-		void Terminate(nox::World& world);
+		/// @brief アセット型の表を作り、ロードスレッドを起こす。
+		/// @details 開発ビルドでは Depends に並べた EditorRemoteServer を受け取る(引けなければ起動失敗)。
+		bool OnInitialize(nox::ServiceContext& context)noexcept override;
+		/// @brief ロードスレッドを止めて join し、生成したアセットを破棄する。
+		/// @details 開発ビルドでは、依存先の EditorRemoteServer はまだ生きている。
+		void OnShutdown()noexcept override;
 		nox::Asset& CreateAssetImpl(std::u8string_view uri);
-
-		std::span<const nox::SystemBase::PhaseRegister> GetPhaseRegisterList()const noexcept override;
 
 		/// @brief ロードスレッドでのアセット処理結果
 		enum class LoadStatus : nox::uint8
@@ -65,22 +84,13 @@ namespace nox
 			Corrupted,
 		};
 
-		void LoadThread(nox::World& world);
+		/// @brief ロードスレッドの本体。停止フラグ(is_kill_)が立つまで回る。
+		void LoadThread();
 
 		/// @brief 単一アセットのロード処理（存在チェック・初期化チェック・初期化）
 		/// @param asset 対象アセット
 		/// @return 処理結果
 		LoadStatus ProcessLoad(nox::Asset& asset);
-	public:
-		static constexpr SystemPhaseInit kPhaseInit{
-			&AssetManager::Init,
-			u8"AssetManager::Init"
-		};
-
-		static constexpr SystemPhaseTerminate kPhaseTerminate{
-			&AssetManager::Terminate,
-			u8"AssetManager::Terminate"
-		};
 
 	private:
 #if NOX_DEVELOP
@@ -96,6 +106,7 @@ namespace nox
 		std::counting_semaphore<> load_queue_signal_;
 
 		nox::os::Thread load_thread_;
+		/// @brief ロードスレッドの停止要求。OnShutdown が立てる。
 		std::atomic_bool is_kill_;
 	};
 }

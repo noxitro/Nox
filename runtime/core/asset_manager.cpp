@@ -159,18 +159,19 @@ nox::Asset& nox::AssetManager::CreateAssetImpl(std::u8string_view uri)
 	return *new_asset;
 }
 
-void nox::AssetManager::Init(nox::World& world)
+bool nox::AssetManager::OnInitialize([[maybe_unused]] nox::ServiceContext& context)noexcept
 {
 #if NOX_DEVELOP
-	//	EditorRemoteServer は Service。AssetManager はまだ SystemBase なので引数で受け取れず、
-	//	エンジン内部の経路として TryGetService で引く(Service の初期化は Init フェーズより前に済んでいる)。
+	//	Depends に並べてあるので初期化済みの実体が返る(宣言の誤りなら起動失敗になる)。
+	//	CreateAsset がコンバート要求を送るのに使うので、引けなければ起動を止める。
 	nox::dev::editor_remote::EditorRemoteServer* const editor_remote_server =
-		world.TryGetService<nox::dev::editor_remote::EditorRemoteServer>();
+		context.Get<nox::dev::editor_remote::EditorRemoteServer>();
 	NOX_ASSERT(editor_remote_server != nullptr, u8"EditorRemoteServerが登録されていません");
-	if (editor_remote_server != nullptr)
+	if (editor_remote_server == nullptr)
 	{
-		editor_remote_server_system_ = *editor_remote_server;
+		return false;
 	}
+	editor_remote_server_system_ = *editor_remote_server;
 #endif // NOX_DEVELOP
 
 
@@ -193,13 +194,15 @@ void nox::AssetManager::Init(nox::World& world)
 		});
 	is_resource_class_cache_built_ = true;
 
-	load_thread_.Dispatch([this, &world]()
+	//	ロードスレッドは World に触れない。停止は OnShutdown が立てる is_kill_ で行う。
+	load_thread_.Dispatch([this]()
 		{
-			this->LoadThread(world);
+			this->LoadThread();
 		});
+	return true;
 }
 
-void nox::AssetManager::Terminate([[maybe_unused]] nox::World& world)
+void nox::AssetManager::OnShutdown()noexcept
 {
 	//	ロードスレッドを停止させる（停止フラグを立ててから起こし、終了を待つ）
 	is_kill_.store(true);
@@ -216,16 +219,7 @@ void nox::AssetManager::Terminate([[maybe_unused]] nox::World& world)
 	is_resource_class_cache_built_ = false;
 }
 
-std::span<const nox::SystemBase::PhaseRegister> nox::AssetManager::GetPhaseRegisterList()const noexcept
-{
-	static constexpr auto table = std::array{
-		PhaseRegister(kPhaseInit),
-		PhaseRegister(kPhaseTerminate)
-	};
-	return table;
-}
-
-void nox::AssetManager::LoadThread([[maybe_unused]] nox::World& world)
+void nox::AssetManager::LoadThread()
 {
 	while (is_kill_.load() == false)
 	{
