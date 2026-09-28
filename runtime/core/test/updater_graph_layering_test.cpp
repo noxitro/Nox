@@ -21,11 +21,16 @@
 ///				   EntitySystem / EntityLogic の「引数リスト」からアクセス宣言が導出され、
 ///				   1 と 2 が実型に対しても成立すること。
 ///
-///				最後に 3 で組んだ実グラフに対して不変条件
+///				続いて 3 で組んだ実グラフに対して不変条件
 ///				  ・同一レイヤーの任意のノード対は衝突しない
 ///				  ・衝突するノード対は必ずレイヤーが真に増加する (全順序が保たれる)
 ///				を全数検査する。ここが「たまたま通っている」を排除する本体で、
 ///				衝突判定を壊すと必ず落ちる。
+///
+///				最後に全順序 (nox::UpdaterGraph::Rebuild / TryRebuild) を検証する。
+///				明示辺 (RunAfter / RunBefore) は衝突が無くても直列化し、
+///				順序が決まらない箇所は型名順で決まる (登録順を入れ替えても同じグラフになる)。
+///				名前が解決できない・循環する宣言は構築失敗になる。
 ///
 ///	@note		World は使わない。nox::World::Init() は private で、core_test から
 ///				本番のフェーズ実行を駆動できないため。
@@ -167,6 +172,134 @@ namespace nox::test::updater_graph
 			b.value = a.value;
 		}
 	};
+
+	//	=================================================================================
+	//	明示的な順序宣言 (RunAfter / RunBefore) の検証用
+	//	どの型も専用の ComponentData しか触らないので、互いに衝突辺は1本も立たない。
+	//	レイヤーが分かれるなら、それは明示辺だけによる。
+	//	=================================================================================
+
+	struct OrderH : nox::IComponentData { nox::float32 value; };
+	struct OrderI : nox::IComponentData { nox::float32 value; };
+	struct OrderJ : nox::IComponentData { nox::float32 value; };
+	struct OrderK : nox::IComponentData { nox::float32 value; };
+	struct OrderL : nox::IComponentData { nox::float32 value; };
+
+	/// @brief 型名順では最後。OrderMidSystem の RunBefore で後ろへ、OrderAlphaSystem の RunAfter で前へ縛られる。
+	/// @details nox::EntityCommands& を受けるので、コマンドバッファ番号が全順序で振られることの検証にも使う。
+	class OrderZetaSystem final : public nox::EntitySystem<nox::test::updater_graph::OrderZetaSystem>
+	{
+	public:
+		void OnUpdate(nox::test::updater_graph::OrderH& h, nox::EntityCommands&) { h.value += 1.0f; }
+	};
+
+	/// @brief 型名順では先頭だが、RunAfter で OrderZetaSystem の後ろへ回る。
+	class OrderAlphaSystem final : public nox::EntitySystem<nox::test::updater_graph::OrderAlphaSystem>
+	{
+	public:
+		using RunAfter = nox::TypeList<nox::test::updater_graph::OrderZetaSystem>;
+
+		void OnUpdate(nox::test::updater_graph::OrderI& i, nox::EntityCommands&) { i.value += 1.0f; }
+	};
+
+	/// @brief RunBefore で OrderZetaSystem より前に置く。
+	class OrderMidSystem final : public nox::EntitySystem<nox::test::updater_graph::OrderMidSystem>
+	{
+	public:
+		using RunBefore = nox::TypeList<nox::test::updater_graph::OrderZetaSystem>;
+
+		void OnUpdate(nox::test::updater_graph::OrderJ& j) { j.value += 1.0f; }
+	};
+
+	/// @brief EntityLogic 型に書いた RunAfter は、その型の更新メソッド全てに掛かる。
+	class OrderLogic final : public nox::EntityLogic<nox::test::updater_graph::OrderLogic>
+	{
+	public:
+		using RunAfter = nox::TypeList<nox::test::updater_graph::OrderAlphaSystem>;
+
+		void Step(nox::test::updater_graph::OrderK& k) { k.value += 1.0f; }
+	};
+
+	/// @brief EntityLogic 型も RunAfter の相手に並べられる。
+	class OrderTailSystem final : public nox::EntitySystem<nox::test::updater_graph::OrderTailSystem>
+	{
+	public:
+		using RunAfter = nox::TypeList<nox::test::updater_graph::OrderLogic>;
+
+		void OnUpdate(nox::test::updater_graph::OrderL& l) { l.value += 1.0f; }
+	};
+
+	//	---------------------------------------------------------------------------------
+	//	構築失敗の検証用。いずれも TryRebuild で失敗が返ることを見る (Rebuild は abort する)。
+	//	---------------------------------------------------------------------------------
+
+	class CycleYSystem;
+
+	/// @brief CycleYSystem と互いに RunAfter し合う (閉路)。
+	class CycleXSystem final : public nox::EntitySystem<nox::test::updater_graph::CycleXSystem>
+	{
+	public:
+		using RunAfter = nox::TypeList<nox::test::updater_graph::CycleYSystem>;
+
+		void OnUpdate(nox::test::updater_graph::OrderH& h) { h.value += 1.0f; }
+	};
+
+	class CycleYSystem final : public nox::EntitySystem<nox::test::updater_graph::CycleYSystem>
+	{
+	public:
+		using RunAfter = nox::TypeList<nox::test::updater_graph::CycleXSystem>;
+
+		void OnUpdate(nox::test::updater_graph::OrderI& i) { i.value += 1.0f; }
+	};
+
+	/// @brief 閉路の下流にあるだけで、閉路には乗っていない型。
+	/// @details 型名順では閉路の2つより前 ("CycleAfterX" < "CycleX") なので、
+	///          報告が閉路の上のノードを指すこと(下流を指さないこと)の検証になる。
+	class CycleAfterXSystem final : public nox::EntitySystem<nox::test::updater_graph::CycleAfterXSystem>
+	{
+	public:
+		using RunAfter = nox::TypeList<nox::test::updater_graph::CycleXSystem>;
+
+		void OnUpdate(nox::test::updater_graph::OrderJ& j) { j.value += 1.0f; }
+	};
+
+	/// @brief 自分自身を RunAfter に並べる (長さ1の閉路)。
+	class SelfOrderSystem final : public nox::EntitySystem<nox::test::updater_graph::SelfOrderSystem>
+	{
+	public:
+		using RunAfter = nox::TypeList<nox::test::updater_graph::SelfOrderSystem>;
+
+		void OnUpdate(nox::test::updater_graph::OrderK& k) { k.value += 1.0f; }
+	};
+
+	/// @brief 前方宣言だけで、どこにも登録されない型。RunAfter に並べるのは名前だけなので定義は要らない。
+	class NeverDefinedSystem;
+
+	/// @brief 登録されていない型を RunAfter に並べる。
+	class DanglingOrderSystem final : public nox::EntitySystem<nox::test::updater_graph::DanglingOrderSystem>
+	{
+	public:
+		using RunAfter = nox::TypeList<nox::test::updater_graph::NeverDefinedSystem>;
+
+		void OnUpdate(nox::test::updater_graph::OrderL& l) { l.value += 1.0f; }
+	};
+
+	/// @brief Init フェーズにしかノードを持たない型。
+	class InitOnlySystem final
+		: public nox::EntitySystem<nox::test::updater_graph::InitOnlySystem, nox::SystemPhaseType::Init>
+	{
+	public:
+		void OnUpdate(nox::test::updater_graph::OrderH& h) { h.value += 1.0f; }
+	};
+
+	/// @brief Update フェーズから、Init にしかいない型を RunAfter に並べる (辺が1本も張れない)。
+	class CrossPhaseSystem final : public nox::EntitySystem<nox::test::updater_graph::CrossPhaseSystem>
+	{
+	public:
+		using RunAfter = nox::TypeList<nox::test::updater_graph::InitOnlySystem>;
+
+		void OnUpdate(nox::test::updater_graph::OrderI& i) { i.value += 1.0f; }
+	};
 }
 
 namespace nox
@@ -193,6 +326,20 @@ namespace nox
 		static constexpr std::array<nox::EntityLogicMethodDescriptor, 1> k_methods{
 			nox::MakeEntityLogicMethodDescriptor<
 				&nox::test::updater_graph::OtherLogic::MethodC, nox::SystemPhaseType::Update>("MethodC"),
+		};
+
+		[[nodiscard]] static constexpr std::span<const nox::EntityLogicMethodDescriptor> GetMethods()noexcept
+		{
+			return std::span<const nox::EntityLogicMethodDescriptor>(k_methods.data(), k_methods.size());
+		}
+	};
+
+	template<>
+	struct EntityLogicMethodTable<nox::test::updater_graph::OrderLogic> final
+	{
+		static constexpr std::array<nox::EntityLogicMethodDescriptor, 1> k_methods{
+			nox::MakeEntityLogicMethodDescriptor<
+				&nox::test::updater_graph::OrderLogic::Step, nox::SystemPhaseType::Update>("Step"),
 		};
 
 		[[nodiscard]] static constexpr std::span<const nox::EntityLogicMethodDescriptor> GetMethods()noexcept
@@ -471,6 +618,57 @@ TEST(UpdaterGraphLayering, EmptyInputProducesNoLayer)
 	EXPECT_EQ(nox::BuildUpdaterLayerIndices(std::span<const nox::UpdaterNodeAccess>(), layers), 0u);
 }
 
+///	@brief	明示辺は衝突が無くても後ろのレイヤーへ送る。
+///	@details	3つとも触る ComponentData が重ならないので、明示辺が無ければ全て layer 0。
+TEST(UpdaterGraphLayering, OrderEdgesSerializeIndependentNodes)
+{
+	const nox::ComponentMask mask_a = nox::MakeComponentMask<LayerA>();
+	const nox::ComponentMask mask_b = nox::MakeComponentMask<LayerB>();
+	const nox::ComponentMask mask_c = nox::MakeComponentMask<LayerC>();
+
+	const std::array<nox::UpdaterNodeAccess, 3> accesses{
+		MakeAccess(mask_a, mask_a),
+		MakeAccess(mask_b, mask_b),
+		MakeAccess(mask_c, mask_c),
+	};
+
+	//	n0 -> n2 だけ。n1 は巻き込まれない。
+	{
+		const std::array<nox::UpdaterOrderEdge, 1> edges{ nox::UpdaterOrderEdge{ .from = 0u, .to = 2u } };
+		std::array<nox::uint32, 3> layers{};
+		const nox::uint32 layer_count = nox::BuildUpdaterLayerIndicesWithOrderEdges(accesses, edges, layers);
+
+		EXPECT_EQ(layer_count, 2u);
+		EXPECT_EQ(layers[0], 0u);
+		EXPECT_EQ(layers[1], 0u);
+		EXPECT_EQ(layers[2], 1u);
+	}
+
+	//	n0 -> n1 -> n2 の鎖 (to の昇順に並べて渡す)。
+	{
+		const std::array<nox::UpdaterOrderEdge, 2> edges{
+			nox::UpdaterOrderEdge{ .from = 0u, .to = 1u },
+			nox::UpdaterOrderEdge{ .from = 1u, .to = 2u },
+		};
+		std::array<nox::uint32, 3> layers{};
+		const nox::uint32 layer_count = nox::BuildUpdaterLayerIndicesWithOrderEdges(accesses, edges, layers);
+
+		EXPECT_EQ(layer_count, 3u);
+		EXPECT_EQ(layers[0], 0u);
+		EXPECT_EQ(layers[1], 1u);
+		EXPECT_EQ(layers[2], 2u);
+	}
+
+	//	辺が空なら短縮形 (BuildUpdaterLayerIndices) と同じ。
+	{
+		std::array<nox::uint32, 3> layers{};
+		EXPECT_EQ(nox::BuildUpdaterLayerIndicesWithOrderEdges(accesses, std::span<const nox::UpdaterOrderEdge>(), layers), 1u);
+		EXPECT_EQ(layers[0], 0u);
+		EXPECT_EQ(layers[1], 0u);
+		EXPECT_EQ(layers[2], 0u);
+	}
+}
+
 //	=====================================================================================
 //	3. 本番の構築経路 (nox::UpdaterGraph::Rebuild)
 //	=====================================================================================
@@ -491,7 +689,8 @@ namespace
 	class GraphFixture final
 	{
 	public:
-		GraphFixture()
+		/// @param reverse_registration 登録順を逆にして組む。結果は変わらないはず。
+		explicit GraphFixture(const bool reverse_registration = false)
 		{
 			//	登録順は結果に影響しない (全順序は型名順。UpdaterGraphOrder.RegistrationOrderDoesNotChangeTheGraph を参照)。
 			systems_.push_back(&write_a_);
@@ -504,6 +703,12 @@ namespace
 
 			storages_.push_back(&two_method_storage_);
 			storages_.push_back(&other_logic_storage_);
+
+			if (reverse_registration)
+			{
+				std::ranges::reverse(systems_);
+				std::ranges::reverse(storages_);
+			}
 
 			graph_.Rebuild(
 				std::span<nox::EntitySystemBase* const>(systems_.data(), systems_.size()),
@@ -782,4 +987,321 @@ TEST(UpdaterGraphInvariant, EveryLayerIsNonEmpty)
 	{
 		EXPECT_FALSE(graph.GetLayerNodes(nox::SystemPhaseType::Update, layer_index).empty());
 	}
+}
+
+//	=====================================================================================
+//	5. 全順序 (明示辺 + 型名順)
+//	=====================================================================================
+
+namespace
+{
+	constexpr nox::EntityLogicTypeDescriptor k_order_logic_descriptor =
+		nox::MakeEntityLogicTypeDescriptor<OrderLogic>();
+
+	/// @brief 明示辺だけで直列化される5ノードのグラフ。
+	/// @details 期待する全順序は OrderMid -> OrderZeta -> OrderAlpha -> OrderLogic::Step -> OrderTail。
+	///          型名順 (Alpha < Logic < Mid < Tail < Zeta) とはほぼ逆で、明示辺が型名順に勝つことを見る。
+	class OrderFixture final
+	{
+	public:
+		/// @param reverse_registration 登録順を逆にして組む。結果は変わらないはず。
+		explicit OrderFixture(const bool reverse_registration = false)
+		{
+			//	登録順はわざと型名順とも期待する全順序ともずらしてある。
+			systems_.push_back(&zeta_);
+			systems_.push_back(&tail_);
+			systems_.push_back(&alpha_);
+			systems_.push_back(&mid_);
+			storages_.push_back(&logic_storage_);
+
+			if (reverse_registration)
+			{
+				std::ranges::reverse(systems_);
+				std::ranges::reverse(storages_);
+			}
+
+			graph_.Rebuild(
+				std::span<nox::EntitySystemBase* const>(systems_.data(), systems_.size()),
+				std::span<nox::EntityLogicStorage* const>(storages_.data(), storages_.size()));
+		}
+
+		[[nodiscard]] const nox::UpdaterGraph& GetGraph()const noexcept { return graph_; }
+
+	private:
+		OrderZetaSystem zeta_;
+		OrderAlphaSystem alpha_;
+		OrderMidSystem mid_;
+		OrderTailSystem tail_;
+		nox::EntityLogicStorage logic_storage_{ k_order_logic_descriptor };
+
+		std::vector<nox::EntitySystemBase*> systems_;
+		std::vector<nox::EntityLogicStorage*> storages_;
+		nox::UpdaterGraph graph_;
+	};
+
+	/// @brief ノードの型名。EntitySystem は System の型、EntityLogic は Logic の型。
+	[[nodiscard]] std::string_view GetNodeTypeName(const nox::UpdaterNode& node)noexcept
+	{
+		return (node.kind == nox::UpdaterNodeKind::EntitySystem)
+			? node.system->GetDescriptor().name
+			: node.storage->GetDescriptor().name;
+	}
+
+	/// @brief ノードのメソッド名。EntitySystem は空。
+	[[nodiscard]] std::string_view GetNodeMethodName(const nox::UpdaterNode& node)noexcept
+	{
+		return (node.kind == nox::UpdaterNodeKind::EntitySystem) ? std::string_view() : node.method->name;
+	}
+
+	/// @brief order_index の順に並べたノード。GetNodes は (レイヤー, 全順序) 順なので並べ直す。
+	[[nodiscard]] std::vector<const nox::UpdaterNode*> SortByOrderIndex(const std::span<const nox::UpdaterNode> nodes)
+	{
+		std::vector<const nox::UpdaterNode*> sorted(nodes.size(), nullptr);
+		for (const nox::UpdaterNode& node : nodes)
+		{
+			if (node.order_index < sorted.size())
+			{
+				sorted[node.order_index] = &node;
+			}
+		}
+		return sorted;
+	}
+
+	/// @brief 2つのグラフのフェーズ内ノード列が、インスタンスの違いを除いて一致するか。
+	/// @details インスタンスのアドレスと group_index (storages の並びでの番号) は登録順で変わるので比べない。
+	///          型名・メソッド名・レイヤー・全順序・コマンドバッファ番号・宣言を比べる。
+	void ExpectSameGraph(
+		const nox::UpdaterGraph& expected,
+		const nox::UpdaterGraph& actual,
+		const nox::SystemPhaseType phase_type)
+	{
+		const std::span<const nox::UpdaterNode> expected_nodes = expected.GetNodes(phase_type);
+		const std::span<const nox::UpdaterNode> actual_nodes = actual.GetNodes(phase_type);
+		ASSERT_EQ(expected_nodes.size(), actual_nodes.size());
+		EXPECT_EQ(expected.GetLayerCount(phase_type), actual.GetLayerCount(phase_type));
+		EXPECT_EQ(expected.GetCommandBufferCount(phase_type), actual.GetCommandBufferCount(phase_type));
+
+		for (size_t index = 0u; index < expected_nodes.size(); ++index)
+		{
+			const nox::UpdaterNode& left = expected_nodes[index];
+			const nox::UpdaterNode& right = actual_nodes[index];
+			EXPECT_EQ(GetNodeTypeName(left), GetNodeTypeName(right)) << "index " << index;
+			EXPECT_EQ(GetNodeMethodName(left), GetNodeMethodName(right)) << "index " << index;
+			EXPECT_EQ(left.kind, right.kind) << "index " << index;
+			EXPECT_EQ(left.layer_index, right.layer_index) << "index " << index;
+			EXPECT_EQ(left.order_index, right.order_index) << "index " << index;
+			EXPECT_EQ(left.command_buffer_index, right.command_buffer_index) << "index " << index;
+			EXPECT_TRUE(left.access.read_write_mask == right.access.read_write_mask) << "index " << index;
+			EXPECT_TRUE(left.access.write_mask == right.access.write_mask) << "index " << index;
+		}
+	}
+
+	/// @brief System だけで TryRebuild を回し、失敗したらグラフが空になっていることまで確かめる。
+	[[nodiscard]] nox::UpdaterGraphBuildResult TryBuildSystems(std::vector<nox::EntitySystemBase*> systems)
+	{
+		nox::UpdaterGraph graph;
+		const nox::UpdaterGraphBuildResult result = graph.TryRebuild(
+			std::span<nox::EntitySystemBase* const>(systems.data(), systems.size()),
+			std::span<nox::EntityLogicStorage* const>());
+
+		if (result.IsSuccess() == false)
+		{
+			//	半端なグラフで走らないよう、失敗したら全フェーズが空になる。
+			for (nox::uint8 phase_index = 0u; phase_index < nox::util::ToUnderlying(nox::SystemPhaseType::_Max); ++phase_index)
+			{
+				const nox::SystemPhaseType phase_type = static_cast<nox::SystemPhaseType>(phase_index);
+				EXPECT_TRUE(graph.GetNodes(phase_type).empty());
+				EXPECT_EQ(graph.GetLayerCount(phase_type), 0u);
+				EXPECT_EQ(graph.GetCommandBufferCount(phase_type), 0u);
+			}
+		}
+		return result;
+	}
+}
+
+///	@brief	明示辺 (RunAfter / RunBefore) があると、衝突が無くても後ろのレイヤーに置かれる。
+///	@details	5ノードはどの組も衝突しない (先に全数で確かめる)。それでも 5 レイヤーに分かれ、
+///				型名順ではなく明示辺の向きに並ぶ。EntityLogic の型に書いた RunAfter と、
+///				EntityLogic の型を相手に並べた RunAfter の両方が効くことも含む。
+TEST(UpdaterGraphOrder, ExplicitEdgesSerializeWithoutConflicts)
+{
+	const OrderFixture fixture;
+	const nox::UpdaterGraph& graph = fixture.GetGraph();
+	const std::span<const nox::UpdaterNode> nodes = graph.GetNodes(nox::SystemPhaseType::Update);
+	ASSERT_EQ(nodes.size(), 5u);
+
+	//	前提: 衝突辺は1本も無い。レイヤーが分かれるなら明示辺だけによる。
+	for (size_t i = 0u; i < nodes.size(); ++i)
+	{
+		for (size_t j = i + 1u; j < nodes.size(); ++j)
+		{
+			ASSERT_FALSE(nox::ConflictsUpdaterNodeAccess(nodes[i].access, nodes[j].access));
+		}
+	}
+
+	EXPECT_EQ(graph.GetLayerCount(nox::SystemPhaseType::Update), 5u);
+
+	const std::vector<const nox::UpdaterNode*> in_order = SortByOrderIndex(nodes);
+	ASSERT_EQ(in_order.size(), 5u);
+	const std::array<std::string_view, 5> expected_types{
+		nox::util::GetTypeName<OrderMidSystem>(),
+		nox::util::GetTypeName<OrderZetaSystem>(),
+		nox::util::GetTypeName<OrderAlphaSystem>(),
+		nox::util::GetTypeName<OrderLogic>(),
+		nox::util::GetTypeName<OrderTailSystem>(),
+	};
+	for (nox::uint32 order_index = 0u; order_index < in_order.size(); ++order_index)
+	{
+		ASSERT_NE(in_order[order_index], nullptr);
+		EXPECT_EQ(GetNodeTypeName(*in_order[order_index]), expected_types[order_index]) << "order " << order_index;
+		//	鎖なので、全順序の位置がそのままレイヤー番号になる。
+		EXPECT_EQ(in_order[order_index]->layer_index, order_index) << "order " << order_index;
+	}
+	EXPECT_EQ(GetNodeMethodName(*in_order[3]), "Step");
+}
+
+///	@brief	コマンドバッファ番号は、型名順ではなく全順序の昇順で振られる。
+///	@details	nox::EntityCommands& を受けるのは OrderZeta と OrderAlpha。型名順なら Alpha が先だが、
+///				明示辺で Zeta が先に実行されるので、再生 (バッファ番号順) も Zeta が先でなければならない。
+TEST(UpdaterGraphOrder, CommandBufferIndicesFollowTheTotalOrder)
+{
+	const OrderFixture fixture;
+	const nox::UpdaterGraph& graph = fixture.GetGraph();
+	const std::span<const nox::UpdaterNode> nodes = graph.GetNodes(nox::SystemPhaseType::Update);
+
+	EXPECT_EQ(graph.GetCommandBufferCount(nox::SystemPhaseType::Update), 2u);
+
+	nox::uint32 zeta_buffer = nox::k_invalid_updater_command_buffer_index;
+	nox::uint32 alpha_buffer = nox::k_invalid_updater_command_buffer_index;
+	for (const nox::UpdaterNode& node : nodes)
+	{
+		if (GetNodeTypeName(node) == nox::util::GetTypeName<OrderZetaSystem>())
+		{
+			zeta_buffer = node.command_buffer_index;
+		}
+		else if (GetNodeTypeName(node) == nox::util::GetTypeName<OrderAlphaSystem>())
+		{
+			alpha_buffer = node.command_buffer_index;
+		}
+		else
+		{
+			//	nox::EntityCommands& を受けないノードにはバッファを割り当てない。
+			EXPECT_EQ(node.command_buffer_index, nox::k_invalid_updater_command_buffer_index);
+		}
+	}
+
+	EXPECT_EQ(zeta_buffer, 0u);
+	EXPECT_EQ(alpha_buffer, 1u);
+}
+
+///	@brief	登録順を入れ替えても、レイヤーと直列化順 (全順序) が変わらない。
+///	@details	旧規則では登録順 (= 生成器の走査順) がそのまま直列化順だった。
+///				新規則では全順序が明示辺と型名だけで決まるので、渡す並びを逆にしても同じグラフになる。
+///				衝突で直列化されるグラフ (GraphFixture) と、明示辺で直列化されるグラフ (OrderFixture) の両方で見る。
+TEST(UpdaterGraphOrder, RegistrationOrderDoesNotChangeTheGraph)
+{
+	{
+		const GraphFixture forward(false);
+		const GraphFixture reversed(true);
+		ExpectSameGraph(forward.GetGraph(), reversed.GetGraph(), nox::SystemPhaseType::Update);
+	}
+	{
+		const OrderFixture forward(false);
+		const OrderFixture reversed(true);
+		ExpectSameGraph(forward.GetGraph(), reversed.GetGraph(), nox::SystemPhaseType::Update);
+	}
+}
+
+///	@brief	明示辺が無い衝突は、型名順で直列化される。
+///	@details	GraphFixture の全順序を先頭から並べると、(型名, メソッド名) の昇順になっているはず。
+///				明示辺を1本も持たないグラフなので、全順序は型名順そのもの。
+TEST(UpdaterGraphOrder, WithoutExplicitEdgesTheTotalOrderIsTypeNameOrder)
+{
+	const GraphFixture fixture;
+	const std::vector<const nox::UpdaterNode*> in_order =
+		SortByOrderIndex(fixture.GetGraph().GetNodes(nox::SystemPhaseType::Update));
+	ASSERT_EQ(in_order.size(), 10u);
+
+	for (size_t index = 1u; index < in_order.size(); ++index)
+	{
+		ASSERT_NE(in_order[index - 1u], nullptr);
+		ASSERT_NE(in_order[index], nullptr);
+		const std::string_view previous_type = GetNodeTypeName(*in_order[index - 1u]);
+		const std::string_view current_type = GetNodeTypeName(*in_order[index]);
+		const bool ascending =
+			(previous_type < current_type) ||
+			((previous_type == current_type) && (GetNodeMethodName(*in_order[index - 1u]) < GetNodeMethodName(*in_order[index])));
+		EXPECT_TRUE(ascending) << previous_type << " / " << current_type;
+	}
+}
+
+///	@brief	明示辺が循環していれば構築失敗 (Rebuild なら abort する経路)。
+///	@details	CycleX と CycleY は互いに RunAfter し合う。CycleAfterX は閉路の下流にいるだけで、
+///				型名順では閉路の2つより前に来る。報告は閉路の上の辺を指し、下流を指さないこと。
+TEST(UpdaterGraphOrder, CycleOfExplicitEdgesFailsToBuild)
+{
+	CycleXSystem cycle_x;
+	CycleYSystem cycle_y;
+	CycleAfterXSystem after_x;
+
+	const nox::UpdaterGraphBuildResult result = TryBuildSystems({ &after_x, &cycle_x, &cycle_y });
+	EXPECT_EQ(result.error, nox::UpdaterGraphBuildError::OrderCycle);
+	EXPECT_EQ(result.phase, nox::SystemPhaseType::Update);
+
+	const std::string_view name_x = nox::util::GetTypeName<CycleXSystem>();
+	const std::string_view name_y = nox::util::GetTypeName<CycleYSystem>();
+	EXPECT_TRUE((result.declaring_type_name == name_x) || (result.declaring_type_name == name_y))
+		<< result.declaring_type_name;
+	EXPECT_TRUE((result.target_type_name == name_x) || (result.target_type_name == name_y))
+		<< result.target_type_name;
+	EXPECT_NE(result.declaring_type_name, result.target_type_name);
+}
+
+///	@brief	自分自身を RunAfter に並べるのも循環 (長さ1)。
+TEST(UpdaterGraphOrder, SelfReferenceFailsToBuild)
+{
+	SelfOrderSystem self_order;
+
+	const nox::UpdaterGraphBuildResult result = TryBuildSystems({ &self_order });
+	EXPECT_EQ(result.error, nox::UpdaterGraphBuildError::OrderCycle);
+	EXPECT_EQ(result.declaring_type_name, nox::util::GetTypeName<SelfOrderSystem>());
+	EXPECT_EQ(result.target_type_name, nox::util::GetTypeName<SelfOrderSystem>());
+}
+
+///	@brief	登録されていない型への明示辺は構築失敗 (黙って無視しない)。
+TEST(UpdaterGraphOrder, UnresolvedNameFailsToBuild)
+{
+	DanglingOrderSystem dangling;
+	//	明示辺を持たない型を混ぜておく(こちらが巻き添えで失敗扱いにならないこと)。
+	WriteASystem unrelated;
+
+	const nox::UpdaterGraphBuildResult result = TryBuildSystems({ &unrelated, &dangling });
+	EXPECT_EQ(result.error, nox::UpdaterGraphBuildError::UnresolvedOrderTarget);
+	EXPECT_EQ(result.declaring_type_name, nox::util::GetTypeName<DanglingOrderSystem>());
+	EXPECT_EQ(result.target_type_name, nox::util::GetTypeName<NeverDefinedSystem>());
+}
+
+///	@brief	RunBefore の相手が登録されていなくても同じく構築失敗。
+///	@details	OrderMidSystem は RunBefore<OrderZetaSystem> を宣言している。Zeta を渡さなければ解決できない。
+TEST(UpdaterGraphOrder, UnresolvedRunBeforeFailsToBuild)
+{
+	OrderMidSystem mid;
+
+	const nox::UpdaterGraphBuildResult result = TryBuildSystems({ &mid });
+	EXPECT_EQ(result.error, nox::UpdaterGraphBuildError::UnresolvedOrderTarget);
+	EXPECT_EQ(result.declaring_type_name, nox::util::GetTypeName<OrderMidSystem>());
+	EXPECT_EQ(result.target_type_name, nox::util::GetTypeName<OrderZetaSystem>());
+}
+
+///	@brief	登録されていても、同じフェーズにノードを持たない型への明示辺は構築失敗。
+///	@details	辺が1本も張れないので、放っておくと宣言が黙って無効になる。
+TEST(UpdaterGraphOrder, TargetInAnotherPhaseFailsToBuild)
+{
+	InitOnlySystem init_only;
+	CrossPhaseSystem cross_phase;
+
+	const nox::UpdaterGraphBuildResult result = TryBuildSystems({ &init_only, &cross_phase });
+	EXPECT_EQ(result.error, nox::UpdaterGraphBuildError::OrderTargetInOtherPhase);
+	EXPECT_EQ(result.declaring_type_name, nox::util::GetTypeName<CrossPhaseSystem>());
+	EXPECT_EQ(result.target_type_name, nox::util::GetTypeName<InitOnlySystem>());
 }

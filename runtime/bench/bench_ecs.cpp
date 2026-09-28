@@ -76,7 +76,9 @@ namespace nox::bench::ecs
 		}
 	};
 
-	//	UpdaterGraph::Rebuild 用の 8 個。書き込み 4 個 → 2 段の合流 → 最終段で 4 レイヤーになる
+	//	UpdaterGraph::Rebuild 用の 8 個。書き込み 4 個 → 2 段の合流 → 最終段で 4 レイヤーになる。
+	//	データの流れ (書き込み → 合流 → 最終段) は RunAfter で宣言する。宣言しないと全順序が型名順
+	//	(BLFinal < BLMerge.. < BLWrite..) になり、流れと逆向きに直列化されて 2 レイヤーに潰れる。
 	class BLWrite0System final : public nox::EntitySystem<nox::bench::ecs::BLWrite0System>
 	{
 	public:
@@ -100,21 +102,25 @@ namespace nox::bench::ecs
 	class BLMerge01System final : public nox::EntitySystem<nox::bench::ecs::BLMerge01System>
 	{
 	public:
+		using RunAfter = nox::TypeList<nox::bench::ecs::BLWrite0System, nox::bench::ecs::BLWrite1System>;
 		void OnUpdate(nox::bench::ecs::BL4& out, const nox::bench::ecs::BL0& a, const nox::bench::ecs::BL1& b) { out.value = a.value + b.value; }
 	};
 	class BLMerge23System final : public nox::EntitySystem<nox::bench::ecs::BLMerge23System>
 	{
 	public:
+		using RunAfter = nox::TypeList<nox::bench::ecs::BLWrite2System, nox::bench::ecs::BLWrite3System>;
 		void OnUpdate(nox::bench::ecs::BL5& out, const nox::bench::ecs::BL2& a, const nox::bench::ecs::BL3& b) { out.value = a.value + b.value; }
 	};
 	class BLMerge45System final : public nox::EntitySystem<nox::bench::ecs::BLMerge45System>
 	{
 	public:
+		using RunAfter = nox::TypeList<nox::bench::ecs::BLMerge01System, nox::bench::ecs::BLMerge23System>;
 		void OnUpdate(nox::bench::ecs::BL6& out, const nox::bench::ecs::BL4& a, const nox::bench::ecs::BL5& b) { out.value = a.value + b.value; }
 	};
 	class BLFinalSystem final : public nox::EntitySystem<nox::bench::ecs::BLFinalSystem>
 	{
 	public:
+		using RunAfter = nox::TypeList<nox::bench::ecs::BLMerge45System>;
 		void OnUpdate(nox::bench::ecs::BL7& out, const nox::bench::ecs::BL6& a) { out.value = a.value * 0.5f; }
 	};
 }
