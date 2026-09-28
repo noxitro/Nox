@@ -55,7 +55,7 @@ nox::dev::editor_remote::EditorRemoteServer::EditorRemoteServer():
 
 nox::dev::editor_remote::EditorRemoteServer::~EditorRemoteServer()
 {
-	Shutdown();
+	CloseServer();
 	delete impl_;
 	impl_ = nullptr;
 }
@@ -87,25 +87,35 @@ void	nox::dev::editor_remote::EditorRemoteServer::SendBuffer(std::span<const nox
 	}
 }
 
-void	nox::dev::editor_remote::EditorRemoteServer::Start(nox::World& world)
+bool	nox::dev::editor_remote::EditorRemoteServer::OnInitialize(nox::ServiceContext& context)noexcept
 {
+	//	Depends に並べてあるので初期化済みの実体が返る(宣言の誤りなら起動失敗になる)。
+	nox::dev::net::SocketScheduler* const socket_scheduler = context.Get<nox::dev::net::SocketScheduler>();
+	NOX_ASSERT(socket_scheduler != nullptr, u"SocketSchedulerが登録されていません");
+
     const bool started = server_.Startup(nox::dev::net::Server::InitializeContext{
 		.max_connection = 1,
 		.port = 86,
 		});
 
-	if (started && socket_scheduler_ == nullptr)
+	if (started && socket_scheduler != nullptr)
 	{
-		socket_scheduler_ = world.TryGetService<nox::dev::net::SocketScheduler>();
-		NOX_ASSERT(socket_scheduler_ != nullptr, u"SocketSchedulerが登録されていません");
-		if (socket_scheduler_ != nullptr)
-		{
-			socket_scheduler_->RegisterEntity(server_);
-		}
+		socket_scheduler->RegisterEntity(server_);
+		socket_scheduler_ = socket_scheduler;
 	}
+
+	//	待ち受けの失敗では起動を止めない(Editor と繋がらないだけ)。
+	return true;
 }
 
-void nox::dev::editor_remote::EditorRemoteServer::Shutdown()
+void nox::dev::editor_remote::EditorRemoteServer::OnShutdown()noexcept
+{
+	//	SocketScheduler より先に呼ばれる(Depends の逆順)。登録を外し終えてから Server を閉じるので、
+	//	受信スレッドと競合しない。
+	CloseServer();
+}
+
+void nox::dev::editor_remote::EditorRemoteServer::CloseServer()
 {
 	if (socket_scheduler_ != nullptr)
 	{
@@ -116,21 +126,13 @@ void nox::dev::editor_remote::EditorRemoteServer::Shutdown()
 	server_.Shutdown();
 }
 
-void nox::dev::editor_remote::EditorRemoteServer::Terminate([[maybe_unused]] nox::World& world)
-{
-	Shutdown();
-}
-
-void	nox::dev::editor_remote::EditorRemoteServer::Update(nox::World& world)
-{
-	if (main_client_.socket != nox::dev::net::k_raw_invalid_socket)
-	{
-		UpdateReceive(world);
-	}
-}
-
 void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive(nox::World& world)
 {
+	if (main_client_.socket == nox::dev::net::k_raw_invalid_socket)
+	{
+		return;
+	}
+
 	if (reader_.GetReceivedSize() <= 0)
 	{
 		return;
@@ -363,18 +365,5 @@ void nox::dev::editor_remote::EditorRemoteServer::CollectRemoteInstances(std::fu
 	{
 		evaluate(pair.first, pair.second.get());
 	}
-}
-
-std::span<const nox::SystemBase::PhaseRegister> nox::dev::editor_remote::EditorRemoteServer::GetPhaseRegisterList()const noexcept
-{
-	//	SocketScheduler は Service になったので、初期化は Init フェーズより前、終了は Terminate フェーズより後に済む。
-	//	そのため Init / Terminate の順序はここで宣言しなくても守られる。
-	static constexpr auto table = std::to_array({
-		PhaseRegister(k_phase_init),
-		PhaseRegister(k_phase_update),
-		PhaseRegister(k_phase_terminate)
-	});
-
-	return table;
 }
 #endif // NOX_DEVELOP

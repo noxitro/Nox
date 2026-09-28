@@ -7,7 +7,8 @@
 #if NOX_DEVELOP
 #include	"net/server.h"
 #include	"net/client.h"
-#include	"../system.h"
+#include	"../service.h"
+#include	"../service_attribute.h"
 
 #include	"socket_stream_writer.h"
 #include	"socket_stream_reader.h"
@@ -39,9 +40,22 @@ namespace nox::dev::editor_remote
 		TwoWay
 	};
 
-	class EditorRemoteServer final:	public nox::SystemBase
+	/// @brief		Editor との通信を受け持つService(開発ビルドのみ)。
+	/// @details	OnInitialize で待ち受けの Server を起こして nox::dev::net::SocketScheduler の受信スレッドに登録し、
+	///				OnShutdown で登録を外して閉じる。SocketScheduler は Depends に並べてあるので、
+	///				初期化はこちらが後、終了はこちらが先になる(登録を外してから受信スレッドが止まる)。
+	///
+	///				受信スレッドは受け取ったデータを reader_ に積むだけで、World には触れない。
+	///				積まれたクエリの実行は FrameIngress の UpdateReceive(nox::World& を取る排他ノード)が
+	///				ゲームスレッド上で1フレームに1回行う。クエリは World を広く触る(SceneManager・entity など)ため、
+	///				引数でアクセスを宣言する形では書けない。排他アクセスはこういう開発ツールの橋渡しのための逃げ道で、
+	///				ゲームロジックでは使わない(nox::EntityParameterKind::World)。
+	///
+	///				他のノードから使うときは引数で受け取る。エンジン内部の Query の実装など、引数で受け取れない箇所は
+	///				nox::World::TryGetService で引く。
+	class EditorRemoteServer final:	public nox::Service
 	{
-		NOX_DECLARE_OBJECT(nox::dev::editor_remote::EditorRemoteServer, nox::SystemBase);
+		NOX_DECLARE_OBJECT(nox::dev::editor_remote::EditorRemoteServer, nox::Service);
 	private:
 		class ServerEventHandler final : public nox::dev::net::IServerEventHandler
 		{
@@ -70,6 +84,9 @@ namespace nox::dev::editor_remote
 
 		struct Impl;
 	public:
+		/// @brief Server を受信スレッドに登録するので、SocketScheduler を先に初期化し、後に終了させる。
+		using Depends = nox::TypeList<nox::dev::net::SocketScheduler>;
+
 		EditorRemoteServer();
 		~EditorRemoteServer()override;
 
@@ -89,34 +106,28 @@ namespace nox::dev::editor_remote
 		nox::int64 FindRemoteInstanceId(const nox::Object& object)const noexcept;
 		nox::Object* FindRemoteInstance(nox::int64 instance_id)const noexcept;
 		void	CollectRemoteInstances(std::function<void(nox::int64, const nox::Object&)> evaluate)const;
-		std::span<const nox::SystemBase::PhaseRegister> GetPhaseRegisterList()const noexcept override;
 	private:
-		/// @brief main threadから呼び出される更新処理
-		void	Start(nox::World& world);
-		void	Shutdown();
-		void	Update(nox::World& world);
-		void	Terminate(nox::World& world);
+		/// @brief 待ち受けを始め、SocketScheduler の受信スレッドに登録する。
+		/// @details 待ち受けに失敗しても(ポートが使用中など)起動は止めない。Editor と繋がらないだけで、ゲームは動かせる。
+		bool	OnInitialize(nox::ServiceContext& context)noexcept override;
+		/// @brief 受信スレッドから登録を外し(外し終えるまで待つ)、待ち受けを閉じる。SocketScheduler はまだ生きている。
+		void	OnShutdown()noexcept override;
+		/// @brief 受信スレッドから登録を外し、待ち受けを閉じる。二重に呼んでも害はない(デストラクタからも呼ぶ)。
+		/// @details 基底(nox::Service)の private な Shutdown と名前が重ならないよう別名にしてある。
+		void	CloseServer();
 
 		void	OnServerConnected(const nox::dev::net::ConnectionContext& context);
 		void	OnServerDisconnected([[maybe_unused]] const nox::dev::net::ConnectionContext& context);
 		/// @brief 受信スレッドから呼ばれる。受け取ったデータを reader_ に積むだけで、World には触れない。
 		void	OnServerReceive();
-		void UpdateReceive(nox::World& world);
-	public:
-		static constexpr SystemPhaseInit k_phase_init{
-			&EditorRemoteServer::Start,
-			NOX_U8_NAMEOF_FUNCTION(&EditorRemoteServer::Start)
-		};
 
-		static constexpr SystemPhaseUpdate k_phase_update{
-			&EditorRemoteServer::Update,
-			NOX_U8_NAMEOF_FUNCTION(&EditorRemoteServer::Update)
-		};
-
-		static constexpr SystemPhaseTerminate k_phase_terminate{
-			&EditorRemoteServer::Terminate,
-			NOX_U8_NAMEOF_FUNCTION(&EditorRemoteServer::Terminate)
-		};
+		/// @brief 受信済みのクエリ / レスポンスを取り出して実行する。FrameIngress に1フレーム1回。
+		/// @details nox::World& を取る排他ノード。同じフェーズの他のノードと並ばず単独で、
+		///          フェーズを回しているスレッドで実行される。クエリは World を丸ごと触るため
+		///          (Query::Execute が nox::World& を受け取る)。フェーズ実行中なので、クエリの中から
+		///          即時系の構造変更(CreateEntity 等)は呼べない。
+		NOX_ATTR(nox::attr::ServiceMethod(nox::SystemPhaseType::FrameIngress))
+		void	UpdateReceive(nox::World& world);
 
 	private:
 		ServerEventHandler event_handler_;

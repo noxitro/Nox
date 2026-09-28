@@ -16,7 +16,7 @@ namespace nox
 		CoreModule();
 		~CoreModule()override;
 
-		/// @brief Core が持つServiceを登録する(開発ビルドではエディタ通信の SocketScheduler など)。
+		/// @brief Core が持つServiceを登録する(開発ビルドではエディタ通信の SocketScheduler / EditorRemoteServer)。
 		void RegisterServices(nox::World& world)const override;
 
 		void CreateEngineSystems(nox::PmrVector<nox::SystemBase*>& out)const override;

@@ -47,6 +47,17 @@ namespace
 		}
 		text.append(reinterpret_cast<const char8_t*>(line), static_cast<std::size_t>(length));
 	}
+
+	/// @brief クエリを実行している EditorRemoteServer を引く。
+	/// @details クエリは EditorRemoteServer の FrameIngress のメソッド(排他ノード)の中から実行されるので、
+	///          開発ビルドでは必ず登録されている。Query::Execute は引数で受け取れないので、エンジン内部の経路として
+	///          nox::World::TryGetService を使う。
+	[[nodiscard]] nox::dev::editor_remote::EditorRemoteServer* TryGetEditorRemoteServer(nox::World& world)noexcept
+	{
+		nox::dev::editor_remote::EditorRemoteServer* const server = world.TryGetService<nox::dev::editor_remote::EditorRemoteServer>();
+		NOX_ASSERT(server != nullptr, u8"EditorRemoteServerが登録されていません");
+		return server;
+	}
 }
 
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::AssetConvertQuery::Execute(nox::World& world, std::span<nox::uint8> storage)const
@@ -67,11 +78,18 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::SyncQuery::Execute(nox::World& world, std::span<nox::uint8> storage)const
 {
-	nox::dev::editor_remote::EditorRemoteServer& server = world.GetSystem<nox::dev::editor_remote::EditorRemoteServer>();
 	const nox::int64 remote_instance_id = GetRemoteInstanceId();
 	NOX_ASSERT(remote_instance_id > 0, u"Editor owned remote instance id must be positive. id:{0}", remote_instance_id);
 	auto response = nox::PlacementObject<nox::dev::editor_remote::SyncResponse>::Construct(storage);
 	response->SetRemoteInstanceId(remote_instance_id);
+
+	nox::dev::editor_remote::EditorRemoteServer* const server_ptr = TryGetEditorRemoteServer(world);
+	if (server_ptr == nullptr)
+	{
+		response->SetApplied(false);
+		return response;
+	}
+	nox::dev::editor_remote::EditorRemoteServer& server = *server_ptr;
 
 	if (nox::Object* const registered_object = server.FindRemoteInstance(remote_instance_id))
 	{
@@ -247,11 +265,17 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::AutoSyncQuery::Execute(nox::World& world, std::span<nox::uint8> storage)const
 {
-	nox::dev::editor_remote::EditorRemoteServer& server = world.GetSystem<nox::dev::editor_remote::EditorRemoteServer>();
 	auto response = nox::PlacementObject<nox::dev::editor_remote::AutoSyncResponse>::Construct(storage);
 	response->SetRemoteInstanceId(GetRemoteInstanceId());
 
-	nox::Object* const object = server.FindRemoteInstance(GetRemoteInstanceId());
+	nox::dev::editor_remote::EditorRemoteServer* const server = TryGetEditorRemoteServer(world);
+	if (server == nullptr)
+	{
+		response->SetExists(false);
+		return response;
+	}
+
+	nox::Object* const object = server->FindRemoteInstance(GetRemoteInstanceId());
 	nox::Object* const managed_object = object != nullptr ? static_cast<nox::Object*>(object) : nullptr;
 	if (managed_object == nullptr)
 	{
@@ -268,11 +292,17 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::InvokeRuntimeActionQuery::Execute(nox::World& world, std::span<nox::uint8> storage)const
 {
-	nox::dev::editor_remote::EditorRemoteServer& server = world.GetSystem<nox::dev::editor_remote::EditorRemoteServer>();
 	auto response = nox::PlacementObject<nox::dev::editor_remote::InvokeRuntimeActionResponse>::Construct(storage);
 	response->SetRemoteInstanceId(GetRemoteInstanceId());
 
-	nox::Object* const object = server.FindRemoteInstance(GetRemoteInstanceId());
+	nox::dev::editor_remote::EditorRemoteServer* const server = TryGetEditorRemoteServer(world);
+	if (server == nullptr)
+	{
+		response->SetInvoked(false);
+		return response;
+	}
+
+	nox::Object* const object = server->FindRemoteInstance(GetRemoteInstanceId());
 	if (object == nullptr)
 	{
 		response->SetInvoked(false);
@@ -333,12 +363,17 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::GetRemoteInstanceSnapshotQuery::Execute(nox::World& world, std::span<nox::uint8> storage)const
 {
 	auto response = nox::PlacementObject<nox::dev::editor_remote::RemoteInstanceSnapshotResponse>::Construct(storage);
-	nox::dev::editor_remote::EditorRemoteServer& server = world.GetSystem<nox::dev::editor_remote::EditorRemoteServer>();
+	nox::dev::editor_remote::EditorRemoteServer* const server = TryGetEditorRemoteServer(world);
+	if (server == nullptr)
+	{
+		//	空の一覧を返す。
+		return response;
+	}
 
 	std::u8string text;
 	text.reserve(3072);
 	std::array<char, 512> line{};
-	server.CollectRemoteInstances([&](nox::int64 instance_id, const nox::Object& object)
+	server->CollectRemoteInstances([&](nox::int64 instance_id, const nox::Object& object)
 		{
 			const nox::reflection::ClassInfo* const class_info = nox::reflection::FindClassInfo(object.GetType());
 			const std::u8string_view full_name = class_info != nullptr ? class_info->GetFullName() : std::u8string_view(u8"Unknown");

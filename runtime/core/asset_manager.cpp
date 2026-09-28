@@ -162,7 +162,15 @@ nox::Asset& nox::AssetManager::CreateAssetImpl(std::u8string_view uri)
 void nox::AssetManager::Init(nox::World& world)
 {
 #if NOX_DEVELOP
-	editor_remote_server_system_ = world.GetSystem<nox::dev::editor_remote::EditorRemoteServer>();
+	//	EditorRemoteServer は Service。AssetManager はまだ SystemBase なので引数で受け取れず、
+	//	エンジン内部の経路として TryGetService で引く(Service の初期化は Init フェーズより前に済んでいる)。
+	nox::dev::editor_remote::EditorRemoteServer* const editor_remote_server =
+		world.TryGetService<nox::dev::editor_remote::EditorRemoteServer>();
+	NOX_ASSERT(editor_remote_server != nullptr, u8"EditorRemoteServerが登録されていません");
+	if (editor_remote_server != nullptr)
+	{
+		editor_remote_server_system_ = *editor_remote_server;
+	}
 #endif // NOX_DEVELOP
 
 
