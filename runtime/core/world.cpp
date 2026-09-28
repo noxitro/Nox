@@ -847,18 +847,9 @@ void nox::World::CreateEntitySystems()
 	}
 }
 
-void nox::World::ExecuteLayerNodesSerial(const std::span<const nox::UpdaterNode> nodes)
+void nox::World::ExecuteNodeOfLayer(void* const context, const nox::UpdaterNode& node)
 {
-	for (const nox::UpdaterNode& node : nodes)
-	{
-		ExecuteNode(node);
-	}
-}
-
-void nox::World::ExecuteNodeJob(void* const context)
-{
-	auto* const job_context = static_cast<nox::World::NodeJobContext*>(context);
-	job_context->world->ExecuteNode(*job_context->node);
+	static_cast<nox::World*>(context)->ExecuteNode(node);
 }
 
 void nox::World::ExecuteEntitySystemChunkJob(void* const context)
@@ -924,45 +915,16 @@ void nox::World::ExecuteUpdaterGraphPhase(const nox::SystemPhaseType phase_type)
 {
 	//	レイヤーは「小さいほど先」。同一レイヤー内のノードは依存解析上互いに衝突しないので、
 	//	そのままワーカーへ配ってよい。レイヤー間は直列のまま(次のレイヤーは前のレイヤーの完了が前提)。
+	//	配り方(直列へ落とす条件・main_thread_only の扱い・上限超えの扱い)は nox::ExecuteUpdaterLayer に集約してある。
 	//	確保は一切走らない。ノード列もレイヤー境界もInitで構築済みで、ジョブ配列はスタック上の固定長。
 	const nox::uint32 layer_count = updater_graph_.GetLayerCount(phase_type);
-	const bool parallel_enabled = (job_system_.GetWorkerCount() != 0u);
-
 	for (nox::uint32 layer_index = 0u; layer_index < layer_count; ++layer_index)
 	{
-		const std::span<const nox::UpdaterNode> nodes = updater_graph_.GetLayerNodes(phase_type, layer_index);
-
-		//	1つしか無いレイヤーを配っても往復コストが乗るだけなので、その場で回す。
-		if (parallel_enabled == false || nodes.size() <= 1u)
-		{
-			ExecuteLayerNodesSerial(nodes);
-			continue;
-		}
-
-		NOX_ASSERT(nodes.size() <= k_max_nodes_per_layer,
-			u8"1レイヤーのノード数が上限を超えました 上限={0} 実際={1}",
-			k_max_nodes_per_layer, static_cast<nox::uint32>(nodes.size()));
-
-		const nox::uint32 job_count = std::min(static_cast<nox::uint32>(nodes.size()), k_max_nodes_per_layer);
-
-		std::array<nox::World::NodeJobContext, k_max_nodes_per_layer> job_contexts{};
-		std::array<nox::Job, k_max_nodes_per_layer> jobs{};
-		for (nox::uint32 index = 0u; index < job_count; ++index)
-		{
-			job_contexts[index] = nox::World::NodeJobContext{ .world = this, .node = &nodes[index] };
-			jobs[index] = nox::Job{ .func = &nox::World::ExecuteNodeJob, .context = &job_contexts[index] };
-		}
-
-		nox::JobCounter counter{ 0u };
-		job_system_.Dispatch(std::span<const nox::Job>(jobs.data(), job_count), counter);
-		//	待つ側(ゲームスレッド)も自分でジョブを引いて働く。
-		job_system_.Wait(counter);
-
-		//	上限を超えた分は取りこぼさずここで直列実行する(アサート済みの異常系)。
-		if (job_count < nodes.size())
-		{
-			ExecuteLayerNodesSerial(nodes.subspan(job_count));
-		}
+		nox::ExecuteUpdaterLayer(
+			job_system_,
+			updater_graph_.GetLayerNodes(phase_type, layer_index),
+			&nox::World::ExecuteNodeOfLayer,
+			this);
 	}
 }
 

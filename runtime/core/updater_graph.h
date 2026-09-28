@@ -25,10 +25,12 @@
 ///          理由をログに残して abort する(Masterでも同じ)。テストは失敗を返す TryRebuild を使う。
 ///
 ///          ソートも名前解決も構築時に一度だけ行い、実行時はノード配列を順に舐めるだけ。
-///          stage 2b では「同一レイヤーのノード群」をそのままワーカーへ配ればよい。
+///          同一レイヤーのノード群は nox::ExecuteUpdaterLayer がワーカーへ配る
+///          (kMainThreadOnly を宣言した型のノードだけは配らず、フェーズを回しているスレッドで実行する)。
 #pragma once
 #include	"entity_system.h"
 #include	"entity_logic.h"
+#include	"../kernel/job_system.h"
 
 namespace nox
 {
@@ -149,6 +151,10 @@ namespace nox
 		nox::uint32 order_index = 0u;
 		/// @brief 小さいほど先に実行。同一レイヤーは同時実行可能。
 		nox::uint32 layer_index = 0u;
+		/// @brief ワーカーへ配らず、フェーズを回しているスレッド上で実行するか。
+		/// @details 型の kMainThreadOnly 宣言から来る(EntityLogicは型の全更新メソッドに掛かる)。
+		///          依存解析(レイヤー)には影響しない。 nox::IsMainThreadOnlyUpdaterType を参照。
+		bool main_thread_only = false;
 		/// @brief 遅延構造変更の記録先バッファ番号。出さないノードは k_invalid_updater_command_buffer_index。
 		/// @details nox::EntityCommands& を宣言したノードにだけ、全順序(order_index)の昇順に詰めて振る。
 		///          大半のノードは構造変更を出さないため、order_indexをそのまま使うと
@@ -159,6 +165,35 @@ namespace nox
 		///          全順序は明示辺と衝突辺のトポロジカル順なので、実行と矛盾しない再生順でもある。
 		nox::uint32 command_buffer_index = nox::k_invalid_updater_command_buffer_index;
 	};
+
+	/// @brief 1レイヤーでワーカーへ配れるノード数の上限。ジョブ配列をスタックに置くために固定する。
+	/// @details 超えた分は配らずに、配った側のスレッドで直列に実行する(アサート済みの異常系)。
+	inline constexpr nox::uint32 kMaxUpdaterNodesPerLayer = 256u;
+
+	/// @brief ノード1つを実行する関数。contextは nox::ExecuteUpdaterLayer の呼び出し側が渡したもの。
+	using UpdaterNodeExecuteFunction = void(*)(void* context, const nox::UpdaterNode& node);
+
+	/// @brief 1レイヤー分のノードを実行する。全ノードが終わってから戻る。
+	/// @details 同一レイヤーのノードは互いに衝突しないので、順序を問わず同時に走らせてよい。
+	///            - ワーカーが無い、またはノードが1つ以下 … 呼び出しスレッド上で全順序どおりに直列実行
+	///            - それ以外 … main_thread_only でないノードをワーカーへ配り、配ってから
+	///                          main_thread_only のノードを呼び出しスレッド上で直接実行し、最後に Wait する
+	///                          (Wait の間は呼び出しスレッドも残りのジョブを引いて働く)
+	///          main_thread_only のノードは、どの経路でも必ず呼び出しスレッド上で走る。
+	///
+	///          配ってから回すのは、先に回すとその間ワーカーが遊ぶため。配った後なら
+	///          呼び出しスレッドが main_thread_only のノードを回している間も、ワーカーは配られたノードを進められる。
+	///
+	///          確保は一切走らない。ジョブ配列はスタック上の固定長(nox::kMaxUpdaterNodesPerLayer)。
+	///          nox::World::ExecuteUpdaterGraphPhase がレイヤーごとに呼ぶ。World非依存なので、
+	///          テストから自前の nox::JobSystem で同じ経路を検証できる。
+	///          エンジン内部の配分点なので汎用リフレクションには載せない(関数ポインタを引数に取る)。
+	NOX_ATTR_DECLARE(::nox::reflection::attr::IgnoreReflection())
+	void ExecuteUpdaterLayer(
+		nox::JobSystem& job_system,
+		std::span<const nox::UpdaterNode> nodes,
+		nox::UpdaterNodeExecuteFunction execute,
+		void* context);
 
 	/// @brief フェーズごとの実行ノードとレイヤー境界。
 	/// @details 構築時にだけ確保し、実行時は確保も解放も行わない。

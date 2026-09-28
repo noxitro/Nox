@@ -198,6 +198,22 @@ namespace nox
 			return nox::UpdaterGraphBuildResult{};
 		}
 
+		/// @brief ワーカーへ配るノード1つ分のジョブコンテキスト。ディスパッチ毎にスタック上へ作る。
+		/// @details ジョブは関数ポインタ + void* しか渡せないので、実行関数と呼び出し側の文脈とノードをここで束ねる。
+		struct UpdaterLayerJobContext final
+		{
+			nox::UpdaterNodeExecuteFunction execute = nullptr;
+			void* context = nullptr;
+			const nox::UpdaterNode* node = nullptr;
+		};
+
+		/// @brief UpdaterLayerJobContext を実行するジョブ本体。
+		void execute_updater_layer_job(void* const job_context)
+		{
+			const auto* const layer_job = static_cast<const UpdaterLayerJobContext*>(job_context);
+			layer_job->execute(layer_job->context, *layer_job->node);
+		}
+
 		/// @brief 未配置の先行ノードを1つ返す。循環の報告にだけ使う。
 		/// @details 未配置のノードは入次数が残っている = 未配置の先行ノードを必ず持つ。
 		[[nodiscard]] nox::uint32 find_unplaced_predecessor(
@@ -551,6 +567,82 @@ nox::uint32 nox::BuildUpdaterLayerIndicesWithOrderEdges(
 	return layer_count;
 }
 
+void nox::ExecuteUpdaterLayer(
+	nox::JobSystem& job_system,
+	const std::span<const nox::UpdaterNode> nodes,
+	const nox::UpdaterNodeExecuteFunction execute,
+	void* const context)
+{
+	//	ワーカーが無い、または1つしか無いレイヤーはその場で回す。配っても往復コストが乗るだけで、
+	//	呼び出しスレッド上なので main_thread_only もそのまま満たす。
+	if ((job_system.GetWorkerCount() == 0u) || (nodes.size() <= 1u))
+	{
+		for (const nox::UpdaterNode& node : nodes)
+		{
+			execute(context, node);
+		}
+		return;
+	}
+
+	//	main_thread_only でないノードだけをジョブにする。確保は一切走らない(スタック上の固定長)。
+	std::array<UpdaterLayerJobContext, nox::kMaxUpdaterNodesPerLayer> job_contexts{};
+	std::array<nox::Job, nox::kMaxUpdaterNodesPerLayer> jobs{};
+	nox::uint32 job_count = 0u;
+	//	上限に達した位置。ここから先の(main_thread_only でない)ノードは配らずに直列で回す。
+	size_t overflow_index = nodes.size();
+	for (size_t index = 0u; index < nodes.size(); ++index)
+	{
+		const nox::UpdaterNode& node = nodes[index];
+		if (node.main_thread_only)
+		{
+			continue;
+		}
+		if (job_count == nox::kMaxUpdaterNodesPerLayer)
+		{
+			overflow_index = index;
+			break;
+		}
+
+		job_contexts[job_count] = UpdaterLayerJobContext{ .execute = execute, .context = context, .node = &node };
+		jobs[job_count] = nox::Job{ .func = &execute_updater_layer_job, .context = &job_contexts[job_count] };
+		++job_count;
+	}
+	NOX_ASSERT(overflow_index == nodes.size(),
+		u8"1レイヤーのノード数が上限を超えました 上限={0} 実際={1}",
+		nox::kMaxUpdaterNodesPerLayer, static_cast<nox::uint32>(nodes.size()));
+
+	//	先に配る。main_thread_only のノードを呼び出しスレッドで回している間も、ワーカーは配られたノードを進められる
+	//	(先に回すと、その間ワーカーが遊ぶ)。同一レイヤーは互いに衝突しないので、どちらが先に走っても結果は同じ。
+	nox::JobCounter counter{ 0u };
+	if (job_count != 0u)
+	{
+		job_system.Dispatch(std::span<const nox::Job>(jobs.data(), job_count), counter);
+	}
+
+	for (const nox::UpdaterNode& node : nodes)
+	{
+		if (node.main_thread_only)
+		{
+			execute(context, node);
+		}
+	}
+
+	if (job_count != 0u)
+	{
+		//	待つ側(呼び出しスレッド)も自分でジョブを引いて働く。
+		job_system.Wait(counter);
+	}
+
+	//	上限を超えた分は取りこぼさずここで直列実行する(アサート済みの異常系)。
+	for (size_t index = overflow_index; index < nodes.size(); ++index)
+	{
+		if (nodes[index].main_thread_only == false)
+		{
+			execute(context, nodes[index]);
+		}
+	}
+}
+
 nox::UpdaterGraph::UpdaterGraph() :
 	phase_nodes_{},
 	phase_layer_offsets_{},
@@ -650,6 +742,7 @@ nox::UpdaterGraphBuildResult nox::UpdaterGraph::RebuildPhase(
 		build_node.node.access.group_index = nox::k_invalid_updater_group_index;
 		build_node.node.kind = nox::UpdaterNodeKind::EntitySystem;
 		build_node.node.system = system;
+		build_node.node.main_thread_only = descriptor.main_thread_only;
 		build_node.type_name = descriptor.name;
 		build_node.method_name = std::string_view();
 		build_node.registration_index = static_cast<nox::uint32>(build_nodes.size());
@@ -676,6 +769,8 @@ nox::UpdaterGraphBuildResult nox::UpdaterGraph::RebuildPhase(
 			build_node.node.kind = nox::UpdaterNodeKind::EntityLogicMethod;
 			build_node.node.storage = storage;
 			build_node.node.method = &method;
+			//	EntityLogicの kMainThreadOnly は型単位の宣言で、全更新メソッドに掛かる。
+			build_node.node.main_thread_only = storage->GetDescriptor().main_thread_only;
 			build_node.type_name = storage->GetDescriptor().name;
 			build_node.method_name = method.name;
 			build_node.registration_index = static_cast<nox::uint32>(build_nodes.size());
@@ -987,6 +1082,11 @@ void nox::UpdaterGraph::Trace()const
 			{
 				builder.Append(u8" cb=");
 				builder.Append(node.command_buffer_index);
+			}
+			if (node.main_thread_only)
+			{
+				//	ワーカーへ配られず、フェーズを回しているスレッドで実行される。
+				builder.Append(u8" main-thread-only");
 			}
 
 			NOX_INFO_LINE(nox::log_id::CoreCommon, u8"  Layer {0}: n{1} {2}",

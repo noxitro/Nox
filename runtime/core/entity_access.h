@@ -136,6 +136,30 @@ namespace nox
 		}
 	}
 
+	/// @brief EntitySystem / EntityLogic の型が `static constexpr bool kMainThreadOnly = true;` を宣言しているか。
+	/// @details 宣言が無い型は既定でfalse(nox::IsParallelForEachEntitySystem と同じ検出)。
+	///          trueなら、その型のノード(EntityLogicは型の全更新メソッド)はワーカーへ配られず、
+	///          フェーズを回しているスレッド上で直接実行される(nox::ExecuteUpdaterLayer を参照)。
+	///          nox::World::Run ではゲームスレッドで、OSのメインスレッド(ウィンドウのメッセージを回す側)ではない。
+	///
+	///          同じレイヤーの他ノードとの並列性は失わない。他ノードをワーカーへ配ってから、
+	///          配った側のスレッドがこのノードを回す。
+	///          k_parallel_for_each とは両立しない(Chunkをワーカーへ配るのと矛盾する)。
+	///
+	///          privateに書いた定数は見えず、宣言が無いのと同じになる。必ずpublicに書くこと。
+	template<class T>
+	[[nodiscard]] constexpr bool IsMainThreadOnlyUpdaterType()noexcept
+	{
+		if constexpr (requires { { T::kMainThreadOnly } -> std::convertible_to<bool>; })
+		{
+			return static_cast<bool>(T::kMainThreadOnly);
+		}
+		else
+		{
+			return false;
+		}
+	}
+
 	/// @brief ComponentDataとして引数に取れる型。
 	template<class T>
 	concept ComponentDataParameter = nox::IsComponentDataType<std::remove_cv_t<T>>();

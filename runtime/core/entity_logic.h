@@ -75,6 +75,9 @@ namespace nox
 		std::span<const std::string_view> run_after;
 		/// @brief この型の更新メソッドより後に実行する型の完全修飾名(TLogic::RunBefore)。
 		std::span<const std::string_view> run_before;
+		/// @brief 型の全更新メソッドを、ワーカーへ配らずフェーズを回しているスレッド上で実行するか(TLogic::kMainThreadOnly)。
+		/// @details nox::IsMainThreadOnlyUpdaterType を参照。
+		bool main_thread_only;
 	};
 
 	template<class TLogic>
@@ -160,6 +163,9 @@ namespace nox
 	///          他のSystem / EntityLogicとの実行順を明示したいときは、派生型にpublicな
 	///          `using RunAfter = nox::TypeList<...>;` / `using RunBefore = nox::TypeList<...>;` を書く
 	///          (全更新メソッドに掛かる)。同じ型の更新メソッド同士はメソッド名順に直列化される。
+	///
+	///          publicな `static constexpr bool kMainThreadOnly = true;` を書くと、全更新メソッドが
+	///          ワーカーへ配られず、フェーズを回しているスレッド上で実行される(nox::IsMainThreadOnlyUpdaterType)。
 	/// @tparam TDerived CRTPの派生型。
 	/// @tparam ExtraRequiredComponents どのメソッドも引数に取らないが、存在を必須にしたいComponentData
 	///         (タグ用)。通常は指定しない。
@@ -253,7 +259,7 @@ namespace nox
 	}
 
 	/// @brief EntityLogic型の記述子を作る。
-	/// @details nox::EntityLogicMethodTable<TLogic> と、あれば TLogic::RunAfter / RunBefore だけを読む。
+	/// @details nox::EntityLogicMethodTable<TLogic> と、あれば TLogic::RunAfter / RunBefore / kMainThreadOnly だけを読む。
 	///          CRTP基底には何も持たせない。
 	template<class TLogic>
 	[[nodiscard]] constexpr nox::EntityLogicTypeDescriptor MakeEntityLogicTypeDescriptor()noexcept
@@ -294,6 +300,7 @@ namespace nox
 			.name = nox::util::GetTypeName<TLogic>(),
 			.run_after = nox::detail::GetRunAfterTypeNames<TLogic>(),
 			.run_before = nox::detail::GetRunBeforeTypeNames<TLogic>(),
+			.main_thread_only = nox::IsMainThreadOnlyUpdaterType<TLogic>(),
 		};
 	}
 }

@@ -44,6 +44,8 @@ namespace nox
 		nox::SystemPhaseType phase;
 		/// @brief OnUpdateをChunk単位で並列実行してよいか。 nox::IsParallelForEachEntitySystem を参照。
 		bool parallel_for_each;
+		/// @brief ワーカーへ配らず、フェーズを回しているスレッド上で実行するか。 nox::IsMainThreadOnlyUpdaterType を参照。
+		bool main_thread_only;
 		/// @brief このSystemが遅延構造変更を出しうるか(= nox::EntityCommands& を宣言しているか)。
 		/// @details 引数リストから導出される。宣言していないSystemは1コマンドも積めないので、
 		///          Worldはこのノードのぶんのコマンドバッファを確保しない。
@@ -161,7 +163,8 @@ namespace nox
 	}
 
 	/// @brief EntitySystem型の記述子を作る。
-	/// @details TSystem::k_phase と TSystem::SignatureOf<> と、あれば TSystem::RunAfter / RunBefore だけを読む。
+	/// @details TSystem::k_phase と TSystem::SignatureOf<> と、あれば TSystem::RunAfter / RunBefore /
+	///          k_parallel_for_each / kMainThreadOnly だけを読む。
 	///          CRTP基底には何も持たせない。
 	template<class TSystem>
 	[[nodiscard]] constexpr nox::EntitySystemTypeDescriptor MakeEntitySystemTypeDescriptor()noexcept
@@ -176,6 +179,13 @@ namespace nox
 			"k_parallel_for_each を宣言したSystemは nox::EntityCommands& を受け取れません"
 			"(Chunkジョブ間でコマンドの順序が決まらないため)。"
 			"構造変更を出すなら k_parallel_for_each を外してください");
+		//	Chunk並列はOnUpdateをワーカーへ配る宣言、kMainThreadOnlyは配らない宣言なので矛盾する。
+		static_assert(
+			nox::IsParallelForEachEntitySystem<TSystem>() == false ||
+			nox::IsMainThreadOnlyUpdaterType<TSystem>() == false,
+			"kMainThreadOnly と k_parallel_for_each は両立しません"
+			"(Chunkをワーカーへ配ることと、呼び出しスレッドだけで実行することが矛盾するため)。"
+			"どちらか一方を外してください");
 
 		return nox::EntitySystemTypeDescriptor{
 			.create = []() -> nox::EntitySystemBase* { return new TSystem(); },
@@ -188,6 +198,7 @@ namespace nox
 			.name = nox::util::GetTypeName<TSystem>(),
 			.phase = TSystem::k_phase,
 			.parallel_for_each = nox::IsParallelForEachEntitySystem<TSystem>(),
+			.main_thread_only = nox::IsMainThreadOnlyUpdaterType<TSystem>(),
 			.emits_structural_change = (Signature::k_commands_parameter_count != 0u),
 			.run_after = nox::detail::GetRunAfterTypeNames<TSystem>(),
 			.run_before = nox::detail::GetRunBeforeTypeNames<TSystem>(),

@@ -153,8 +153,6 @@ namespace nox
 		static constexpr nox::uint32 k_structural_change_iteration_mask = ~k_structural_change_phase_bit;
 		static constexpr nox::uint32 k_max_service_count = 64u;
 		static constexpr nox::uint32 k_initial_archetype_capacity = 64u;
-		/// @brief 1レイヤーに載せられるノード数の上限。ジョブ配列をスタックに置くために固定する。
-		static constexpr nox::uint32 k_max_nodes_per_layer = 256u;
 		/// @brief 1回のディスパッチで配れるChunkジョブ数の上限。
 		/// @details ジョブ配列をスタック上の固定長で持つための上限。Queryのマッチ数がこれを超える場合は
 		///          この単位のバッチへ分けて配る(確保は一切しない)。
@@ -196,14 +194,6 @@ namespace nox
 		struct EntityRecordPage
 		{
 			std::array<nox::World::EntityRecord, k_entity_record_page_size> records;
-		};
-
-		/// @brief ノード1つ分のジョブコンテキスト。ディスパッチ毎にスタック上へ作る。
-		/// @details 関数ポインタ + void* しか渡せないので、Worldとノードをここで束ねる。
-		struct NodeJobContext
-		{
-			nox::World* world;
-			const nox::UpdaterNode* node;
 		};
 
 		/// @brief Chunk1つ分のジョブコンテキスト。ディスパッチ毎にスタック上へ作る。
@@ -493,14 +483,13 @@ namespace nox
 		void CreateEntityLogicStorages();
 		/// @brief UpdaterGraphのレイヤー順にノードを実行する。
 		/// @details レイヤー順に回す。直列実行ではレイヤー内は全順序(nox::UpdaterNode::order_index)の順。
-		///          同一レイヤーのノードは互いに衝突しないため、stage 2bではこのループが配分点になる。
+		///          同一レイヤーのノードは互いに衝突しないため、レイヤーごとに nox::ExecuteUpdaterLayer が
+		///          ワーカーへ配る。main_thread_only のノードは配らず、このスレッド(Runではゲームスレッド)で回す。
 		void ExecuteUpdaterGraphPhase(nox::SystemPhaseType phase_type);
-		/// @brief ノード1つを実行する。stage 2bではこの関数をそのままワーカーへ渡す。
+		/// @brief ノード1つを実行する。ワーカー上でも呼ばれる。
 		void ExecuteNode(const nox::UpdaterNode& node);
-		/// @brief ExecuteNodeをジョブとして呼ぶためのthunk。contextはNodeJobContext*。
-		static void ExecuteNodeJob(void* context);
-		/// @brief レイヤーのノードを直列に実行する。
-		void ExecuteLayerNodesSerial(std::span<const nox::UpdaterNode> nodes);
+		/// @brief ExecuteNodeを nox::ExecuteUpdaterLayer から呼ぶためのthunk。contextはWorld*。
+		static void ExecuteNodeOfLayer(void* context, const nox::UpdaterNode& node);
 		/// @brief EntitySystemの列挙をChunk単位でワーカーへ配る(stage 2c)。
 		/// @details ノードの排他はExecuteNodeが既に取っている前提。Chunk同士は互いに素なメモリなので、
 		///          この内側では追加の排他は要らない。
