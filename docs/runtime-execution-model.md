@@ -50,6 +50,7 @@ Runtime (C++) の「毎フレーム何がどの順で走るか」と「共有状
 - 4 つは実行の仕組みが違うのではなく、**同じノードの置き場所が違うだけ**。UpdaterGraph から見れば全て「読み書きを宣言したノード」で、並べ方・並列化・コマンドバッファの割り当ては同じ。
 - EntitySystem は「本体が Query ループ 1 つだけのノード」の糖衣。行単位の書き方はそのまま残す。ComponentData を 1 つも取らない EntitySystem は `static_assert` で弾く (空の Query は全 Archetype に一致し、エンティティの数だけ呼ばれてしまう)。
 - 他のエンティティを見る処理 (Transform 階層、衝突ペア) は、`Query<...>` と読み取り専用の `ComponentLookup<const T>` を引数に取るノードで書く。
+- 例外として、Service のメソッドと Task は `nox::World&` を引数に取れる (排他アクセス)。Editor との橋渡しのような開発ツール用の逃げ道で、ゲームロジックでは使わない (§12)。
 - ノード同士の直接参照は禁止。共有は ComponentData か Service を介する。
 - 使い分けの目安: Service 自身の状態を保つ処理は Service のメソッドに、Service を使ってエンティティを動かす処理は EntitySystem / EntityLogic に書く。「まず EntityLogic で書き、数が増えたら同じ引数で EntitySystem へ移す」が小さな書き換えで済むよう、両者の引数規則は同じにしてある。
 
@@ -96,6 +97,7 @@ OS のメッセージを読む・GPU へ提出するなど、ワーカーへ流�
 - 各フェーズの末尾で EntityCommands を反映する。Playback 順は「ノード外バッファ → 全順序の昇順」で固定なので、どのワーカーがどのノードを先に走らせたかに依存しない。
 - `Init` / `Terminate` はフェーズではなく、Service の寿命 (§6) と、開始・終了時に 1 回走るノードに分ける。
 - 固定 tick は最初は入れない。必要になったら FrameIngress と Update の間に Fixed 系のフェーズを挿す。
+- 実装済みは FrameIngress (手順 3a)。Presentation / FrameEnd はまだ無い。
 
 ## 6. 寿命 (ServiceGraph)
 
@@ -121,12 +123,12 @@ Service の寿命と UpdaterGraph の実行順は別々の問いに答える別�
 | `AssetManager : SystemBase` | Service + 完了取り込みのメソッド (FrameIngress) |
 | `SceneManager : SystemBase` | Service + シーンの ECS データ |
 | `GarbageCollector : SystemBase` | Service (Object 基盤用。ECS の寿命とは分離) |
-| `SocketScheduler : SystemBase` | Service + 受信メソッド (FrameIngress) |
-| `EditorRemoteServer : SystemBase` | Service + ingress / egress のメソッド。`SocketScheduler` の後は `RunAfter` で明示 |
+| `SocketScheduler : SystemBase` | Service (手順 3a で移行済み)。受信は専用スレッドで回し、ノードは持たない |
+| `EditorRemoteServer : SystemBase` | Service + クエリを実行する FrameIngress の排他ノード (手順 3a で移行済み)。`SocketScheduler` とは `Depends` (寿命) だけでつながる |
 | `Renderer` / `DebugDraw : SystemBase` | Service + 抽出・提出のメソッド (Presentation)。Init の順序は `Depends` で自動 |
 | `EngineModule::CreateEngineSystems` | Service の登録だけを行う `RegisterServices` |
 
-今ある明示依存 3 件のうち 2 件 (Init の順序) は `Depends` で自動化され、フレーム内の順序として残るのは `EditorRemoteServer → SocketScheduler` の 1 件だけ。
+`EditorRemoteServer` と `SocketScheduler` の間にあった明示依存 3 件のうち、Init と Terminate の順序の 2 件は `Depends` (初期化順とその逆順の終了) に置き換わった。残る 1 件 (Update の順序) は、依存先が専用スレッドの受信ループでフェーズではなく、もともと黙って無効になっていたもの。受信データは受信スレッドから `EditorRemoteServer` の受信バッファ (mutex で保護) 越しに受け渡され、FrameIngress の排他ノードが取り出す。フレーム内の順序としての依存は残らない。
 
 ## 8. 移行の順序
 
@@ -134,8 +136,9 @@ Service の寿命と UpdaterGraph の実行順は別々の問いに答える別�
 |---|---|---|
 | 1 | UpdaterGraph の全順序を「明示辺 + 型名順」にする。`RunAfter` / `RunBefore`。見つからない依存・循環は起動失敗。旧 `BuildExecuteNodeList` の読み飛ばしも起動失敗に | 完了 (CI 全構成 緑) |
 | 2a | Service の寿命 (`OnInitialize` / `OnShutdown`、`Depends`、失敗時の逆順ロールバック)。`EngineModule::RegisterServices`。ノードのメインスレッド限定実行 | 完了 |
-| 2b | Service の属性付きメソッドとグローバル関数をノードとして登録 (リフレクション生成器の変更あり) | 実装中 |
-| 3 | `AssetManager` → `SocketScheduler` → `SceneManager` → `EditorRemoteServer` の順で Service へ移す。フェーズに FrameIngress を足す | 未着手 |
+| 2b | Service の属性付きメソッドとグローバル関数をノードとして登録 (リフレクション生成器の変更あり) | 完了 (CI 全構成 緑) |
+| 3a | フェーズに FrameIngress を足す。`SocketScheduler` → `EditorRemoteServer` を Service へ移す。ノードの排他アクセス (`nox::World&`) | 実装中 |
+| 3b | `AssetManager` / `SceneManager` を Service へ移す | 未着手 |
 | 4 | `Renderer` / `DebugDraw` / `GarbageCollector` を移す。フェーズに Presentation を足す | 未着手 |
 | 5 | `SystemBase` と旧フェーズ表を削除 | 未着手 |
 | 6 | `Query<...>` / `ComponentLookup<const T>` を引数の種類として足す | Transform 階層が要る時点で |
@@ -153,7 +156,7 @@ Service の寿命と UpdaterGraph の実行順は別々の問いに答える別�
 - `RunAfter` / `RunBefore` は public に書く。private に書いたエイリアスは `requires` から見えず、宣言がないのと同じになる。
 - EntityLogic の `RunAfter` は型単位で、その型の同じフェーズの全メソッドに掛かる。同じ型のメソッド同士はメソッド名順。
 - `command_buffer_index` は全順序の昇順で振る。
-- `SocketScheduler` のソケット受信ループは `Initialize` が起こす専用スレッド上で `World::IsKill()` まで回り続ける処理であり、フェーズではない。`PhaseRegister` に載せてはならず、他からこのフェーズへの依存も宣言できない。
+- `SocketScheduler` のソケット受信ループは `Initialize` が起こす専用スレッド上で `World::IsKill()` まで回り続ける処理であり、フェーズではない。`PhaseRegister` に載せてはならず、他からこのフェーズへの依存も宣言できない。(手順 3a で `SocketScheduler` は Service になり、受信ループの停止は自身の停止フラグになった。§12)
 - テストは abort せず結果を返す `UpdaterGraph::TryRebuild` を使う。起動経路は `Rebuild`。
 - 既存の EntitySystem / EntityLogic の直列化順は登録順から型名順に変わる。データの流れと逆向きになった組は起動ログの `BY-NAME` に出るので、必要なら `RunAfter` を宣言する。
 
@@ -177,3 +180,24 @@ Service の寿命と UpdaterGraph の実行順は別々の問いに答える別�
 - **Task に `RunAfter` / `RunBefore` が無い理由**: Task は型ではないので宣言を書く場所が無く、他のノードの `nox::TypeList` に並べることもできない。関数を型として扱う仕組みを足すより、順序が要る処理は状態の置き場所である Service のメソッドに書く方が、宣言が 1 か所で済む。Task は状態を持たないので group も無く、衝突は引数の宣言だけで決まる。
 - **記述子の置き場所**: メソッド表 (`nox::ServiceMethodTable<T>`) と型ごとの記述子 (`nox::ServiceMethodTypeDescriptor`) は、寿命の記述子 (`nox::ServiceTypeDescriptor`) と別に持つ。メソッド表の特殊化は生成コードの翻訳単位にしか見えないため、登録側 (`MakeServiceTypeDescriptor`) から読むと翻訳単位ごとに別の中身の実体ができる。World は生成コードの表 `nox::GetServiceMethodTypes()` を型情報で登録済みの Service と照合し、登録されている型だけをノードにする。Task は `nox::GetUpdaterTaskDescriptors()` の表をそのまま渡す。
 - **EntitySystem**: `OnUpdate` は ComponentData を 1 つ以上取る (`static_assert`)。空の Query は全 Archetype に一致し、entity の数だけ呼ばれてしまうため。1 フェーズに 1 回の処理は Service のメソッドか Task にする。
+
+## 12. 手順 3 で決まったこと (実装済みの仕様)
+
+### 3a: FrameIngress / SocketScheduler / EditorRemoteServer / 排他アクセス
+
+- **FrameIngress の位置**: `SystemPhaseType` の `Start` と `Update` の間。`World::Update` が毎フレーム `ExecutePhase(FrameIngress)` → `ExecutePhase(Update)` の順に呼ぶ。`ExecutePhase` は旧表 → UpdaterGraph → `FlushEntityCommands` の順なので、FrameIngress で積んだ構造変更は Update から見える。VSync の待ちでフレームを飛ばすときは両方とも走らない。
+- **SocketScheduler**: Service になり、`OnInitialize` で WinSock を初期化して受信スレッドを起こし、`OnShutdown` で止めて join する。受信ループの停止は `World::IsKill()` ではなく自身の停止フラグ (`OnShutdown` が立てる) で行う。`OnShutdown` は `World::Exit` から呼ばれるので、ゲームスレッドが止まった後に受信スレッドが止まる。WinSock の初期化に失敗しても起動は止めない (受信スレッドを起こさないだけ)。ノードは持たない。
+- **受信スレッドは World に触れない**: Service は World への参照を持たないので、`Server::Update` と `IServerEventHandler::OnServerReceive` から World 引数を外した。以前は受信スレッド上でもクエリを実行していたが (ゲームスレッドとの競合があった)、受信スレッドは受信バッファに積むだけにし、クエリの実行は FrameIngress の排他ノードだけが行う。Editor からのクエリは最大 1 フレーム遅れて処理される。
+- **登録の解除は同期**: `SocketScheduler::UnregisterEntity` は受信スレッドが外し終えるまで待ってから戻る。反映は受信ループの周回の頭でだけ行うので、戻った後に受信スレッドがその Server に触れることはない。`EditorRemoteServer` は `Depends` の逆順で `SocketScheduler` より先に終了するので、受信スレッドが動いている間に Server を閉じても競合しない。
+- **EditorRemoteServer**: Service になり、`using Depends = nox::TypeList<nox::dev::net::SocketScheduler>;` で初期化・終了の順序を宣言する。`OnInitialize` で待ち受けを始めて受信スレッドに登録し、`OnShutdown` で登録を外して閉じる。待ち受けの失敗では起動を止めない (Editor と繋がらないだけ)。クエリの実行は `NOX_ATTR(nox::attr::ServiceMethod(nox::SystemPhaseType::FrameIngress))` を付けた `UpdateReceive(nox::World&)`。
+- **エンジン内部からの参照**: クエリの実装 (`Query::Execute`) と、まだ `SystemBase` の `AssetManager` は引数で受け取れないので、`World::TryGetService` で `EditorRemoteServer` を引く (起動時・テスト・エンジン内部専用の経路)。見つからなければ `NOX_ASSERT` し、失敗のレスポンスを返す。
+- **即時系の構造変更**: クエリの実装は即時系 (`CreateEntity` など) を呼んでいない。ゲームスレッドの旧 Update フェーズで実行していた経路は、フェーズ実行中の制約が今と同じだった (受信スレッド上の経路はフェーズと無関係に走っていたが、上のとおり外した)。
+
+### 排他アクセス (`nox::World&`)
+
+- **規則**: Service のメソッドと Task は引数に `nox::World&` を 1 つ取れる (`EntityParameterKind::World`)。`const nox::World&` は取れない (読むだけでも World 全体に触れる点は同じで、区別しても並列化に使えない)。EntitySystem / EntityLogic の行単位メソッドに書くと `static_assert` で弾く。
+- **衝突**: 取ったノードは `UpdaterNodeAccess::exclusive` を持ち、同じフェーズの全ノードと衝突する。全順序での位置は他のノードと同じ規則 (明示辺 → 型名順) で決まり、その位置で単独のレイヤーになる (前の全ノードの後、後の全ノードの前)。
+- **実行スレッド**: 暗黙にメインスレッド限定 (フェーズを回しているスレッド)。属性の `ThreadAffinity` が `Any` でも立つ。
+- **宣言の扱い**: World は Service のアクセス宣言に算入しない。Service のメソッドの自己書き込みはそのまま付く。起動ログのノード行には `exclusive` が付き、衝突理由は `exclusive` と出る。`BY-NAME` の候補には、排他だけによる衝突を出さない (出すとフェーズの全ノードとの組が並び、他の候補が埋もれる)。
+- **即時系**: 排他ノードもフェーズ実行中に走るので、中から即時系の構造変更は呼べない (`DeniedDuringPhase`)。構造変更は `EntityCommands&` を使う。
+- **用途の限定**: 引数でアクセスを宣言する規則 (§3) に対する開発ツール用の逃げ道で、Editor との橋渡しのように World を丸ごと触ることが本質の処理だけに使う。ゲームロジックでは使わない。何を読み書きしているかが依存解析から見えなくなり、そのノードの前後でフェーズの並列性を断ち切るため。
