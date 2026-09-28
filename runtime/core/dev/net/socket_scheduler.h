@@ -49,6 +49,11 @@ namespace nox::dev::net
 			NOX_U8_NAMEOF_FUNCTION(&SocketScheduler::Initialize)
 		};
 
+		/// @brief ソケット受信ループ。**PhaseRegisterに載せてはならない**。
+		/// @details UpdateTaskはInitializeが起こす専用スレッド(thread_)上で World::IsKill() まで回り続ける。
+		///          フェーズとして登録するとメインスレッドがこのループから戻らなくなる。
+		///          同じ理由で、他のSystemからこのフェーズへの依存も宣言できない
+		///          (旧SystemPhaseの依存解決は、未登録のフェーズへの依存を起動失敗にする)。
 		static constexpr SystemPhaseUpdate k_phase_socket_update{
 			&SocketScheduler::UpdateTask,
 			NOX_U8_NAMEOF_FUNCTION(&SocketScheduler::UpdateTask)

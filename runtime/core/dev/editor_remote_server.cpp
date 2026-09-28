@@ -375,9 +375,12 @@ std::span<const nox::SystemBase::PhaseRegister> nox::dev::editor_remote::EditorR
 {
 	static constexpr auto table = std::to_array({
 		PhaseRegister(k_phase_init, nox::dev::net::SocketScheduler::k_phase_init),
-		PhaseRegister(k_phase_update, 
-			{nox::dev::net::SocketScheduler::k_phase_socket_update}
-			),
+		//	ソケット受信(SocketScheduler::UpdateTask)への依存は宣言しない。
+		//	UpdateTaskはSocketSchedulerのInitializeが起こす専用スレッド上で、
+		//	World::IsKill()までループし続ける処理であり、フェーズではない。
+		//	受信データは reader_ (mutex_reader_ で保護) 越しに受け渡されるので、フェーズ間の順序では表せない。
+		//	(以前はここで依存を宣言していたが、依存先がどのPhaseRegisterにも載っておらず黙って無視されていた)
+		PhaseRegister(k_phase_update),
 		PhaseRegister(k_phase_terminate,
 			{},
 			{nox::dev::net::SocketScheduler::k_phase_terminate}

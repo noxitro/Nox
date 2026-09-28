@@ -73,6 +73,42 @@ namespace nox
 			return static_cast<nox::uint32>(head >> 32u);
 		}
 
+		/// @brief 旧SystemPhaseの依存宣言が成立しないときに、理由を残して起動を止める。
+		/// @details 見つからない依存や循環を黙って読み飛ばすと、宣言した順序が守られないまま走り続け、
+		///          原因がフレームの挙動として遠くに現れる。原因はデータではなくコード
+		///          (PhaseRegisterの書き間違い・登録漏れ)なので、Masterでも続行しない。
+		///          NOX_ASSERTは診断補助であり、成否の判定には使わない(Masterでは消える)。
+		///          ログもMasterでは消えるため、nox::World::AbortOnEntityCommandOverflow と同じく
+		///          名前の所在をvolatileなローカルに残し、クラッシュダンプから読めるようにする。
+		/// @param reason 失敗の種類。
+		/// @param phase_name 依存を宣言した側のフェーズ名。
+		/// @param related_phase_name 依存先(循環なら閉路を閉じた相手)のフェーズ名。
+		[[noreturn]] void abort_on_system_phase_dependency_error(
+			const std::u8string_view reason,
+			const std::u8string_view phase_name,
+			const std::u8string_view related_phase_name)noexcept
+		{
+			NOX_ERROR_LINE(nox::log_id::CoreCommon, u8"SystemPhaseの依存が成立しません: {0} ({1} -> {2})",
+				reason,
+				phase_name,
+				related_phase_name);
+			NOX_ASSERT(false, u8"SystemPhaseの依存が成立しません: {0} ({1} -> {2})",
+				reason,
+				phase_name,
+				related_phase_name);
+
+			const char8_t* volatile failed_phase_name = phase_name.data();
+			volatile const size_t failed_phase_name_length = phase_name.length();
+			const char8_t* volatile failed_related_phase_name = related_phase_name.data();
+			volatile const size_t failed_related_phase_name_length = related_phase_name.length();
+			(void)failed_phase_name;
+			(void)failed_phase_name_length;
+			(void)failed_related_phase_name;
+			(void)failed_related_phase_name_length;
+
+			std::abort();
+		}
+
 #if !NOX_MASTER
 		[[nodiscard]]
 		constexpr std::u8string_view to_graph_phase_name(const nox::SystemPhaseType phase_type) noexcept
@@ -554,6 +590,14 @@ void nox::World::BuildExecuteNodeList(std::span<nox::SystemBase*> system_list)
 		auto& dest = system_phase_table_[phase_index];
 		dest.reserve(nodes.size());
 
+		//	依存先が同じフェーズ種別のノードとして登録されていなければ起動を止める。
+		//	読み飛ばすと、宣言した順序が守られていないことに誰も気付けない。
+		//	見つからない原因は「依存先のSystemが生成されていない」「依存先のフェーズが
+		//	そのSystemのPhaseRegisterに載っていない」「フェーズ種別が違う」のいずれか。
+		static constexpr std::u8string_view k_unresolved_reason =
+			u8"依存先のフェーズが同じフェーズ種別のノードとして登録されていません"
+			u8"(Systemの未生成 / PhaseRegisterへの登録漏れ / フェーズ種別の不一致)";
+
 		nox::Vector<nox::Vector<nox::uint32>> dependency_indices(nodes.size());
 		for (nox::uint32 i = 0; i < nodes.size(); ++i)
 		{
@@ -562,7 +606,10 @@ void nox::World::BuildExecuteNodeList(std::span<nox::SystemBase*> system_list)
 				const auto it = phase_to_index.find(&dep_ref.get());
 				if (it == phase_to_index.end())
 				{
-					continue;
+					abort_on_system_phase_dependency_error(
+						k_unresolved_reason,
+						nodes[i].phase.get().name,
+						dep_ref.get().name);
 				}
 				dependency_indices[i].push_back(it->second);
 			}
@@ -572,7 +619,10 @@ void nox::World::BuildExecuteNodeList(std::span<nox::SystemBase*> system_list)
 				const auto it = phase_to_index.find(&depended_ref.get());
 				if (it == phase_to_index.end())
 				{
-					continue;
+					abort_on_system_phase_dependency_error(
+						k_unresolved_reason,
+						nodes[i].phase.get().name,
+						depended_ref.get().name);
 				}
 				dependency_indices[it->second].push_back(i);
 			}
@@ -588,16 +638,20 @@ void nox::World::BuildExecuteNodeList(std::span<nox::SystemBase*> system_list)
 			{
 				return;
 			}
-			if (states[node_index] == 1)
-			{
-				NOX_ASSERT(false, u8"Phase依存に循環があります: {0}", nodes[node_index].phase.get().name);
-				return;
-			}
 
 			states[node_index] = 1;
 			nox::uint32 max_dependency_layer = 0;
 			for (const nox::uint32 dependency_index : dependency_indices[node_index])
 			{
+				//	訪問中(=再帰の途中)のノードへ戻ってきたら循環。
+				//	アサートだけ出して続行すると、閉路上のレイヤー番号が未確定のまま使われる。
+				if (states[dependency_index] == 1)
+				{
+					abort_on_system_phase_dependency_error(
+						u8"Phase依存に循環があります",
+						nodes[node_index].phase.get().name,
+						nodes[dependency_index].phase.get().name);
+				}
 				self(dependency_index, self);
 				max_dependency_layer = std::max(max_dependency_layer, layer_indices[dependency_index] + 1);
 			}
