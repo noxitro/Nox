@@ -74,46 +74,10 @@ namespace nox
 			return static_cast<nox::uint32>(head >> 32u);
 		}
 
-		/// @brief 旧SystemPhaseの依存宣言が成立しないときに、理由を残して起動を止める。
-		/// @details 見つからない依存や循環を黙って読み飛ばすと、宣言した順序が守られないまま走り続け、
-		///          原因がフレームの挙動として遠くに現れる。原因はデータではなくコード
-		///          (PhaseRegisterの書き間違い・登録漏れ)なので、Masterでも続行しない。
-		///          NOX_ASSERTは診断補助であり、成否の判定には使わない(Masterでは消える)。
-		///          ログもMasterでは消えるため、nox::World::AbortOnEntityCommandOverflow と同じく
-		///          名前の所在をvolatileなローカルに残し、クラッシュダンプから読めるようにする。
-		/// @param reason 失敗の種類。
-		/// @param phase_name 依存を宣言した側のフェーズ名。
-		/// @param related_phase_name 依存先(循環なら閉路を閉じた相手)のフェーズ名。
-		[[noreturn]] void abort_on_system_phase_dependency_error(
-			const std::u8string_view reason,
-			const std::u8string_view phase_name,
-			const std::u8string_view related_phase_name)noexcept
-		{
-			NOX_ERROR_LINE(nox::log_id::CoreCommon, u8"SystemPhaseの依存が成立しません: {0} ({1} -> {2})",
-				reason,
-				phase_name,
-				related_phase_name);
-			NOX_ASSERT(false, u8"SystemPhaseの依存が成立しません: {0} ({1} -> {2})",
-				reason,
-				phase_name,
-				related_phase_name);
-
-			const char8_t* volatile failed_phase_name = phase_name.data();
-			volatile const size_t failed_phase_name_length = phase_name.length();
-			const char8_t* volatile failed_related_phase_name = related_phase_name.data();
-			volatile const size_t failed_related_phase_name_length = related_phase_name.length();
-			(void)failed_phase_name;
-			(void)failed_phase_name_length;
-			(void)failed_related_phase_name;
-			(void)failed_related_phase_name_length;
-
-			std::abort();
-		}
-
 		/// @brief Serviceの初期化の失敗で起動を止める。
 		/// @details 理由のログは nox::World::TryInitializeServices が出し終えている。ここでは残すだけ。
 		///          NOX_ASSERTは診断補助であり、成否の判定には使わない(Masterでは消える)。
-		///          ログもMasterでは消えるため、abort_on_system_phase_dependency_error と同じく
+		///          ログもMasterでは消えるため、nox::World::AbortOnEntityCommandOverflow と同じく
 		///          理由と名前の所在をvolatileなローカルに残し、クラッシュダンプから読めるようにする。
 		[[noreturn]] void abort_on_service_initialize_failure(const nox::ServiceInitializeResult& result)noexcept
 		{
@@ -147,6 +111,20 @@ namespace nox
 			case nox::SystemPhaseType::Terminate: return u8"Terminate";
 			default: return u8"Unknown";
 			}
+		}
+
+		/// @brief 依存グラフ表示用のノード種別名。メソッド名を持たないノード(EntitySystem / Task)の副題に使う。
+		[[nodiscard]]
+		constexpr std::u8string_view to_graph_node_kind_name(const nox::UpdaterNodeKind kind) noexcept
+		{
+			switch (kind)
+			{
+			case nox::UpdaterNodeKind::EntitySystem: return u8"EntitySystem";
+			case nox::UpdaterNodeKind::EntityLogicMethod: return u8"EntityLogic";
+			case nox::UpdaterNodeKind::ServiceMethod: return u8"Service";
+			case nox::UpdaterNodeKind::Task: return u8"Task";
+			}
+			return u8"Unknown";
 		}
 
 		/// @brief 同じServiceを2回宣言している場合、2回目以降はチェッカーに入らないための判定。
@@ -404,10 +382,7 @@ nox::World::World() :
 	service_initialize_order_{},
 	initialized_service_count_(0u),
 	services_initialized_(false),
-	modules_(),
-	systems_(),
-	system_map_(),
-	system_phase_table_{}
+	modules_()
 {
 	for (auto&& entity_record_page : entity_record_pages_)
 	{
@@ -452,11 +427,6 @@ nox::World::~World()
 	for (nox::uint32 service_index = 0u; service_index < services_.GetLength(); ++service_index)
 	{
 		delete services_.GetStorage()[service_index].service;
-	}
-
-	for (nox::SystemBase* const system : systems_)
-	{
-		delete system;
 	}
 
 	for (nox::EngineModule* const module : modules_)
@@ -507,27 +477,6 @@ void nox::World::SetVSync(bool flag)noexcept
 	enabled_vsync_ = flag;
 }
 
-nox::SystemBase* nox::World::FindSystem(const nox::reflection::Type& type)const noexcept
-{
-	const auto it = system_map_.find(&type);
-	if (it == system_map_.end())
-	{
-		return nullptr;
-	}
-	return it->second;
-}
-
-nox::SystemBase& nox::World::GetSystem(const nox::reflection::Type& type)const
-{
-	nox::SystemBase* const system = FindSystem(type);
-	if (system != nullptr)
-	{
-		return *system;
-	}
-	NOX_ASSERT(false, u8"システムが見つかりませんでした: {0}", type.GetTypeName());
-	std::abort();
-}
-
 void nox::World::Init()
 {
 	nox::reflection::ForeachDerivedClassInfoList(
@@ -543,49 +492,14 @@ void nox::World::Init()
 		});
 
 	//	Serviceは全モジュールの登録が揃ってから、Depends の順にまとめて初期化する(登録順は使わない)。
-	//	Systemの生成より前に済ませる。依存の誤りや OnInitialize の失敗は、ここで理由を残して起動を止める。
+	//	ノード(EntitySystem / EntityLogic / Serviceのメソッド)を作るより前に済ませる。
+	//	依存の誤りや OnInitialize の失敗は、ここで理由を残して起動を止める。
 	for (const nox::EngineModule* const module : modules_)
 	{
 		module->RegisterServices(*this);
 	}
 	InitializeServices();
 
-	nox::FixedVector<nox::SystemBase*, 128> system_list;
-	{
-		nox::StackAllocVector<nox::SystemBase*, 512> system_dest_buffer_vector;
-		auto& dest_buffer = system_dest_buffer_vector.GetContainer();
-		dest_buffer.reserve(32);
-
-		for (const nox::EngineModule* const module : modules_)
-		{
-			module->CreateEngineSystems(dest_buffer);
-
-			for (nox::SystemBase* const system : dest_buffer)
-			{
-				if (system == nullptr)
-				{
-					NOX_ASSERT(false, u8"EngineSystemの生成結果にnullが含まれています");
-					continue;
-				}
-
-				const nox::reflection::Type& type = system->GetType();
-				if (system_map_.contains(&type))
-				{
-					NOX_ASSERT(false, u8"登録済み: {0}", type.GetTypeName());
-					delete system;
-					continue;
-				}
-
-				RegisterSystem(*system);
-				systems_.emplace_back(system);
-				system_list.PushBack(system);
-			}
-
-			dest_buffer.clear();
-		}
-	}
-
-	BuildExecuteNodeList(system_list);
 	CreateEntitySystems();
 	CreateEntityLogicStorages();
 
@@ -657,7 +571,6 @@ void nox::World::Init()
 #if !NOX_MASTER
 	//	Rebuildまで来ればノードが宣言したComponentData型は全て登録済みなので、ここで名前を配れる。
 	SetupExecuteCheckerNames();
-	TraceExecuteNodeList();
 	updater_graph_.Trace();
 #endif // !NOX_MASTER
 
@@ -723,170 +636,19 @@ void nox::World::RequestExitAfterFramesIfReached()noexcept
 void nox::World::Exit()
 {
 	kill_.store(true, std::memory_order_release);
-	system_map_.clear();
 
 	//	フェーズは全て止まっている。初期化と逆順に終了させる。
 	ShutdownServices();
-
-	for (auto& layer : system_phase_table_)
-	{
-		layer.clear();
-		layer.shrink_to_fit();
-	}
-}
-
-void nox::World::BuildExecuteNodeList(std::span<nox::SystemBase*> system_list)
-{
-	struct Node
-	{
-		std::reference_wrapper<nox::SystemBase> instance;
-		std::reference_wrapper<const nox::SystemBase::SystemPhase> phase;
-		std::span<const std::reference_wrapper<const nox::SystemBase::SystemPhase>> dependencies;
-		std::span<const std::reference_wrapper<const nox::SystemBase::SystemPhase>> depended;
-	};
-
-	for (nox::uint8 phase_index = 0; phase_index < nox::util::ToUnderlying(nox::SystemPhaseType::_Max); ++phase_index)
-	{
-		const auto current_phase_type = static_cast<nox::SystemPhaseType>(phase_index);
-
-		nox::Vector<Node> nodes;
-		for (nox::SystemBase* const system : system_list)
-		{
-			for (const nox::SystemBase::PhaseRegister& reg : system->GetPhaseRegisterList())
-			{
-				if (reg.GetPhase().type != current_phase_type)
-				{
-					continue;
-				}
-
-				nodes.push_back(Node{
-					*system,
-					reg.GetPhase(),
-					reg.GetDependencies(),
-					reg.GetDepended()
-					});
-			}
-		}
-
-		if (nodes.empty())
-		{
-			continue;
-		}
-
-		nox::UnorderedMap<const nox::SystemBase::SystemPhase*, nox::uint32> phase_to_index;
-		phase_to_index.reserve(nodes.size());
-		for (nox::uint32 i = 0; i < nodes.size(); ++i)
-		{
-			phase_to_index.emplace(&nodes[i].phase.get(), i);
-		}
-
-		auto& dest = system_phase_table_[phase_index];
-		dest.reserve(nodes.size());
-
-		//	依存先が同じフェーズ種別のノードとして登録されていなければ起動を止める。
-		//	読み飛ばすと、宣言した順序が守られていないことに誰も気付けない。
-		//	見つからない原因は「依存先のSystemが生成されていない」「依存先のフェーズが
-		//	そのSystemのPhaseRegisterに載っていない」「フェーズ種別が違う」のいずれか。
-		static constexpr std::u8string_view k_unresolved_reason =
-			u8"依存先のフェーズが同じフェーズ種別のノードとして登録されていません"
-			u8"(Systemの未生成 / PhaseRegisterへの登録漏れ / フェーズ種別の不一致)";
-
-		nox::Vector<nox::Vector<nox::uint32>> dependency_indices(nodes.size());
-		for (nox::uint32 i = 0; i < nodes.size(); ++i)
-		{
-			for (const std::reference_wrapper<const nox::SystemBase::SystemPhase>& dep_ref : nodes[i].dependencies)
-			{
-				const auto it = phase_to_index.find(&dep_ref.get());
-				if (it == phase_to_index.end())
-				{
-					abort_on_system_phase_dependency_error(
-						k_unresolved_reason,
-						nodes[i].phase.get().name,
-						dep_ref.get().name);
-				}
-				dependency_indices[i].push_back(it->second);
-			}
-
-			for (const std::reference_wrapper<const nox::SystemBase::SystemPhase>& depended_ref : nodes[i].depended)
-			{
-				const auto it = phase_to_index.find(&depended_ref.get());
-				if (it == phase_to_index.end())
-				{
-					abort_on_system_phase_dependency_error(
-						k_unresolved_reason,
-						nodes[i].phase.get().name,
-						depended_ref.get().name);
-				}
-				dependency_indices[it->second].push_back(i);
-			}
-		}
-
-		nox::Vector<nox::uint8> states(nodes.size(), 0);
-		nox::Vector<nox::uint32> layer_indices(nodes.size(), 0);
-		nox::uint32 max_layer_index = 0;
-
-		auto visit = [&](nox::uint32 node_index, auto& self) -> void
-		{
-			if (states[node_index] == 2)
-			{
-				return;
-			}
-
-			states[node_index] = 1;
-			nox::uint32 max_dependency_layer = 0;
-			for (const nox::uint32 dependency_index : dependency_indices[node_index])
-			{
-				//	訪問中(=再帰の途中)のノードへ戻ってきたら循環。
-				//	アサートだけ出して続行すると、閉路上のレイヤー番号が未確定のまま使われる。
-				if (states[dependency_index] == 1)
-				{
-					abort_on_system_phase_dependency_error(
-						u8"Phase依存に循環があります",
-						nodes[node_index].phase.get().name,
-						nodes[dependency_index].phase.get().name);
-				}
-				self(dependency_index, self);
-				max_dependency_layer = std::max(max_dependency_layer, layer_indices[dependency_index] + 1);
-			}
-
-			states[node_index] = 2;
-			layer_indices[node_index] = max_dependency_layer;
-			max_layer_index = std::max(max_layer_index, max_dependency_layer);
-		};
-
-		for (nox::uint32 i = 0; i < nodes.size(); ++i)
-		{
-			visit(i, visit);
-		}
-
-		for (nox::uint32 layer_index = 0; layer_index <= max_layer_index; ++layer_index)
-		{
-			for (nox::uint32 i = 0; i < nodes.size(); ++i)
-			{
-				if (layer_indices[i] != layer_index)
-				{
-					continue;
-				}
-
-				dest.push_back(SystemExecuteNode{ nodes[i].instance, nodes[i].phase, layer_index });
-			}
-		}
-	}
 }
 
 void nox::World::ExecutePhase(const nox::SystemPhaseType phase_type)
 {
-	const nox::Vector<SystemExecuteNode>& layers = system_phase_table_[nox::util::ToUnderlying(phase_type)];
 	//	フェーズ実行中は即時系の構造変更を禁じる。列挙深度(下位ビット)には触れない。
 	structural_change_state_.fetch_or(k_structural_change_phase_bit, std::memory_order_seq_cst);
-	for (const SystemExecuteNode& layer : layers)
-	{
-		std::invoke(layer.phase.get().func, &layer.instance.get(), *this);
-	}
 
 	ExecuteUpdaterGraphPhase(phase_type);
 
-	//	将来の並列ディスパッチでは、このplaybackポイントまでに全Systemジョブをjoinする必要がある。
+	//	ExecuteUpdaterGraphPhase はレイヤーごとに全ノードの完了を待ってから戻る。
 	//	ここに来た時点で列挙は全て閉じているので、構造を動かしてよい。
 	FlushEntityCommands();
 	structural_change_state_.fetch_and(~k_structural_change_phase_bit, std::memory_order_seq_cst);
@@ -1110,113 +872,74 @@ void nox::World::RefreshEntityLogics(const nox::EntityId entity, const nox::Arch
 	}
 }
 
-void nox::World::RegisterSystem(nox::SystemBase& system)
-{
-	const nox::reflection::Type& type = system.GetType();
-	if (system_map_.contains(&type))
-	{
-		NOX_ASSERT(false, u8"登録済み: {0}", type.GetTypeName());
-		return;
-	}
-
-	system_map_.emplace(&type, &system);
-}
-
 #if !NOX_MASTER
 nox::U8FixedString<3072> nox::World::BuildRuntimeDependencyGraphText()const
 {
-	struct PhaseNode
-	{
-		const nox::SystemBase::SystemPhase* phase = nullptr;
-		const nox::SystemBase* instance = nullptr;
-		nox::uint32 id = 0;
-		nox::uint32 layer = 0;
-	};
-
+	//	UpdaterGraph のノードとレイヤー、明示辺をそのまま書き出す(書式は宣言の注記を参照)。
+	//	ノード番号はフェーズの順に通し番号で振る。明示辺は全順序の位置(order_index)で持っているので、
+	//	同じフェーズのノード列から位置を引いて番号に直す。開発ツール向けで呼ばれるのも稀なので線形走査で足りる。
 	RuntimeGraphTextBuilder builder;
-	nox::Vector<PhaseNode> phase_nodes;
-	phase_nodes.reserve(128);
-
-	for (nox::uint32 phase_type_index = 0; phase_type_index < nox::util::ToUnderlying(nox::SystemPhaseType::_Max); ++phase_type_index)
+	nox::uint32 node_id_base = 0u;
+	nox::uint32 layer_base = 0u;
+	for (nox::uint8 phase_index = 0u; phase_index < nox::util::ToUnderlying(nox::SystemPhaseType::_Max); ++phase_index)
 	{
-		const nox::SystemPhaseType phase_type = static_cast<nox::SystemPhaseType>(phase_type_index);
-		const nox::Vector<SystemExecuteNode>& execute_nodes = system_phase_table_[phase_type_index];
-		for (const SystemExecuteNode& execute_node : execute_nodes)
+		const nox::SystemPhaseType phase_type = static_cast<nox::SystemPhaseType>(phase_index);
+		const std::span<const nox::UpdaterNode> nodes = updater_graph_.GetNodes(phase_type);
+		for (size_t position = 0u; position < nodes.size(); ++position)
 		{
-			const nox::uint32 id = static_cast<nox::uint32>(phase_nodes.size());
-			const nox::uint32 graph_layer = (phase_type_index * 8u) + execute_node.layer_index;
-			phase_nodes.push_back(PhaseNode{
-				&execute_node.phase.get(),
-				&execute_node.instance.get(),
-				id,
-				graph_layer,
-				});
+			const nox::UpdaterNode& node = nodes[position];
+			const std::string_view method_name = nox::GetUpdaterNodeMethodName(node);
 
 			builder.Append(u8"NODE|n");
-			builder.Append(id);
+			builder.Append(node_id_base + static_cast<nox::uint32>(position));
 			builder.Append(u8"|");
-			builder.Append(execute_node.instance.get().GetType().GetTypeName());
+			builder.Append(nox::GetUpdaterNodeTypeName(node));
 			builder.Append(u8"|");
-			builder.Append(execute_node.phase.get().name);
+			if (method_name.empty())
+			{
+				builder.Append(to_graph_node_kind_name(node.kind));
+			}
+			else
+			{
+				builder.Append(method_name);
+			}
 			builder.Append(u8"|");
 			builder.Append(to_graph_phase_name(phase_type));
 			builder.Append(u8"|");
-			builder.Append(graph_layer);
+			builder.Append(layer_base + node.layer_index);
 			builder.Append(u8"\n");
 		}
-	}
 
-	const auto find_node_id = [&phase_nodes](const nox::SystemBase::SystemPhase& phase) -> std::optional<nox::uint32>
-	{
-		for (const PhaseNode& node : phase_nodes)
+		const auto find_node_id = [&nodes, node_id_base](const nox::uint32 order_index) -> std::optional<nox::uint32>
 		{
-			if (node.phase == &phase)
+			for (size_t position = 0u; position < nodes.size(); ++position)
 			{
-				return node.id;
+				if (nodes[position].order_index == order_index)
+				{
+					return node_id_base + static_cast<nox::uint32>(position);
+				}
 			}
-		}
-		return std::nullopt;
-	};
+			return std::nullopt;
+		};
 
-	for (const PhaseNode& node : phase_nodes)
-	{
-		const nox::SystemBase::PhaseRegister* current_register = nullptr;
-		for (const nox::SystemBase::PhaseRegister& phase_register : node.instance->GetPhaseRegisterList())
+		for (const nox::UpdaterOrderEdge& edge : updater_graph_.GetOrderEdges(phase_type))
 		{
-			if (&phase_register.GetPhase() == node.phase)
+			const std::optional<nox::uint32> from_id = find_node_id(edge.from);
+			const std::optional<nox::uint32> to_id = find_node_id(edge.to);
+			if ((from_id.has_value() == false) || (to_id.has_value() == false))
 			{
-				current_register = &phase_register;
-				break;
+				continue;
 			}
-		}
-		if (current_register == nullptr)
-		{
-			continue;
-		}
 
-		for (const std::reference_wrapper<const nox::SystemBase::SystemPhase>& dependency : current_register->GetDependencies())
-		{
-			if (const std::optional<nox::uint32> dependency_id = find_node_id(dependency.get()))
-			{
-				builder.Append(u8"EDGE|n");
-				builder.Append(*dependency_id);
-				builder.Append(u8"|n");
-				builder.Append(node.id);
-				builder.Append(u8"|depends\n");
-			}
+			builder.Append(u8"EDGE|n");
+			builder.Append(*from_id);
+			builder.Append(u8"|n");
+			builder.Append(*to_id);
+			builder.Append(u8"|order\n");
 		}
 
-		for (const std::reference_wrapper<const nox::SystemBase::SystemPhase>& depended : current_register->GetDepended())
-		{
-			if (const std::optional<nox::uint32> depended_id = find_node_id(depended.get()))
-			{
-				builder.Append(u8"EDGE|n");
-				builder.Append(node.id);
-				builder.Append(u8"|n");
-				builder.Append(*depended_id);
-				builder.Append(u8"|depends\n");
-			}
-		}
+		node_id_base += static_cast<nox::uint32>(nodes.size());
+		layer_base += updater_graph_.GetLayerCount(phase_type);
 	}
 
 	nox::U8FixedString<3072> graph_text;
@@ -1348,24 +1071,6 @@ void nox::World::LeaveNodeAccessScope(const nox::UpdaterNodeAccess& access)noexc
 	}
 }
 
-void nox::World::TraceExecuteNodeList()const
-{
-	for (nox::uint8 phase_index = 0; phase_index < nox::util::ToUnderlying(nox::SystemPhaseType::_Max); ++phase_index)
-	{
-		const auto current_phase_type = static_cast<nox::SystemPhaseType>(phase_index);
-		const auto& layers = system_phase_table_[phase_index];
-		if (layers.empty())
-		{
-			continue;
-		}
-
-		NOX_INFO_LINE(nox::log_id::CoreCommon, u"Phase: {0}", current_phase_type);
-		for (const SystemExecuteNode& node : layers)
-		{
-			NOX_INFO_LINE(nox::log_id::CoreCommon, u"  Layer {0}: {1}", node.layer_index, node.phase.get().name);
-		}
-	}
-}
 #endif // !NOX_MASTER
 
 nox::World::EntityRecord* nox::World::TryGetEntityRecord(nox::uint32 index) noexcept
@@ -1674,7 +1379,7 @@ nox::World::EntityCommandBufferType& nox::World::GetCurrentEntityCommandBuffer()
 	const nox::NodeCommandBinding binding = nox::t_node_command_binding;
 	if (binding.world != this)
 	{
-		//	ノードに束縛されていない経路(旧SystemPhase / リフレクション経由 / ツール・テストの自前列挙)。
+		//	ノードに束縛されていない経路(リフレクション経由 / ツール・テストの自前列挙)。
 		//	いずれも並列ディスパッチの外なので、この1本の中でも順序は決定的になる。
 		return out_of_node_command_buffer_;
 	}

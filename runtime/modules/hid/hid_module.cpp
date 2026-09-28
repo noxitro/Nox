@@ -8,6 +8,6 @@
 
 nox::hid::Module::Module() = default;
 
-void nox::hid::Module::CreateEngineSystems(nox::PmrVector<nox::SystemBase*>&)const
+void nox::hid::Module::RegisterServices([[maybe_unused]] nox::World& world)const
 {
 }

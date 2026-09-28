@@ -8,6 +8,6 @@
 
 nox::$safeprojectname$::Module::Module() = default;
 
-void nox::$safeprojectname$::Module::CreateEngineSystems(nox::PmrVector<nox::SystemBase*>&)const
+void nox::$safeprojectname$::Module::RegisterServices([[maybe_unused]] nox::World& world)const
 {
 }

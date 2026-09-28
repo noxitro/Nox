@@ -254,19 +254,11 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="system.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
     <ClInclude Include="system_phase_type.h">
       <SubType>
       </SubType>
     </ClInclude>
     <ClInclude Include="garbage_collector.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="system_phase.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -484,19 +476,11 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="system.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
     <ClCompile Include="system_phase_type.cpp">
       <SubType>
       </SubType>
     </ClCompile>
     <ClCompile Include="garbage_collector.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="system_phase.cpp">
       <SubType>
       </SubType>
     </ClCompile>

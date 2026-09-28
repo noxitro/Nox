@@ -4,7 +4,6 @@
 /// @file	world.h
 /// @brief	world
 #pragma once
-#include	"system.h"
 #include	"entity.h"
 #include	"entity_command_buffer.h"
 #include	"archetype.h"
@@ -18,7 +17,6 @@ namespace nox
 {
 	struct IComponentData;
 	class Component;
-	class SystemBase;
 	class EngineModule;
 	class World;
 
@@ -186,14 +184,6 @@ namespace nox
 		///          この単位のバッチへ分けて配る(確保は一切しない)。
 		static constexpr nox::uint32 k_max_chunk_jobs_per_dispatch = 256u;
 
-		/// @brief 実行ノード
-		struct SystemExecuteNode
-		{
-			std::reference_wrapper<nox::SystemBase> instance;
-			std::reference_wrapper<const nox::SystemBase::SystemPhase> phase;
-			nox::uint32 layer_index;	///< 小さいほど先に実行。同一レイヤーは並列実行可能
-		};
-
 		struct EntityRecord
 		{
 			nox::Atomic<nox::uint32> generation;
@@ -251,23 +241,13 @@ namespace nox
 		/// @details 判定と終了要求は World::Update が行う (nox::ShouldRequestExitAfterFrames)。
 		inline nox::uint32 GetExitAfterFrames()const noexcept { return exit_after_frames_; }
 
-		nox::SystemBase* FindSystem(const nox::reflection::Type& type)const noexcept;
-
-		template<std::derived_from<nox::SystemBase> T>
-		inline T* FindSystem()const noexcept
-		{
-			return static_cast<T*>(FindSystem(nox::reflection::Typeof<T>()));
-		}
-
-		nox::SystemBase& GetSystem(const nox::reflection::Type& type)const;
-
-		template<std::derived_from<nox::SystemBase> T>
-		inline T& GetSystem()const
-		{
-			return static_cast<T&>(GetSystem(nox::reflection::Typeof<T>()));
-		}
-
 #if !NOX_MASTER
+		/// @brief UpdaterGraph のノード・レイヤー・明示辺を Editor の依存グラフ表示向けの文字列にする。
+		/// @details 1 行 1 要素。フェーズの順(nox::SystemPhaseType の値の順)に並べる。収まらない分は切り捨てる。
+		///            NODE|n<番号>|<型名(Task は関数名)>|<メソッド名(無ければノードの種別)>|<フェーズ名>|<表示用レイヤー>
+		///            EDGE|n<先に走るノード>|n<後に走るノード>|order
+		///          表示用レイヤーはフェーズをまたいで通し番号にする(前のフェーズのレイヤー数だけずらす)。
+		///          EDGE は明示辺(RunAfter / RunBefore)だけ。衝突による直列化はレイヤーの差で読める。
 		NOX_ATTR_DECLARE(::nox::reflection::attr::IgnoreReflection())
 		nox::U8FixedString<3072> BuildRuntimeDependencyGraphText()const;
 #endif // !NOX_MASTER
@@ -382,8 +362,8 @@ namespace nox
 		///          これは構築時に決まりフレーム間でもビルド間でも動かない(登録順には依存しない)。
 		///          明示辺も衝突辺も必ず全順序の前から後へ張られるので、トポロジカル順でもある。
 		///          よって「どのワーカーがどのノードを先に走らせたか」はPlaybackの順序に影響しない。
-		///          ノード外バッファを先頭に置いているのは、そこへ積まれるのが
-		///          UpdaterGraphのディスパッチより前に走る旧SystemPhaseなど、時間的に先行する経路だから。
+		///          ノード外バッファを先頭に置いているのは、そこへ積まれるのがツール・テストの自前の列挙など、
+		///          UpdaterGraphのディスパッチの外(フェーズの前)で走る経路だから。
 		void FlushEntityCommands()noexcept;
 #pragma endregion
 
@@ -480,9 +460,9 @@ namespace nox
 		void InitializeServices()noexcept;
 		/// @brief 初期化済みのServiceを初期化と逆順に Shutdown する。二重呼び出しは無害。
 		void ShutdownServices()noexcept;
-		void BuildExecuteNodeList(std::span<nox::SystemBase*> system_list);
+		/// @brief フェーズ1つを実行する。UpdaterGraph のノードをレイヤー順に回し、末尾で EntityCommands を反映する。
+		/// @details 実行中は即時系の構造変更を禁じる(フェーズbit)。
 		void ExecutePhase(const nox::SystemPhaseType phase_type);
-		void RegisterSystem(nox::SystemBase& system);
 		/// @brief --exit-after-frames のフレーム数に達したら、メインウィンドウを閉じるよう 1 回だけ要求する。
 		/// @details Update から、Presentation フェーズの後・フレーム数を数える前に呼ぶ (nox::ShouldRequestExitAfterFrames)。
 		void RequestExitAfterFramesIfReached()noexcept;
@@ -543,8 +523,6 @@ namespace nox
 		void PatchMovedEntityLocation(nox::EntityId moved_entity, nox::ArchetypeLocation location)noexcept;
 
 #if !NOX_MASTER
-		void TraceExecuteNodeList()const;
-
 		/// @brief ノードが宣言したComponentData / Serviceの並列実行チェックに入る。
 		void EnterNodeAccessScope(const nox::UpdaterNodeAccess& access)noexcept;
 		/// @brief EnterNodeAccessScopeで入ったチェックから抜ける。
@@ -621,8 +599,8 @@ namespace nox
 		///          「速度優先」を崩さずに保証だけ強くできるので、弱める理由が無い。
 		std::atomic<nox::uint32> structural_change_state_;
 		/// @brief どのノードにも束縛されていない状態で積まれたコマンドの受け皿。
-		/// @details 旧SystemPhase(system_phase_table_)の実行中や、ツール・テストが
-		///          自前で列挙している間に積まれたぶんがここへ入る。いずれもUpdaterGraphの
+		/// @details ツール・テストが自前で列挙している間や、リフレクション経由など、ノードの実行に
+		///          束縛されていない経路で積まれたぶんがここへ入る。いずれもUpdaterGraphの
 		///          並列ディスパッチの外なので、この1本の中の順序も決定的になる。
 		///          Worldに埋め込む固定長。Initを呼ばないWorld(テスト等)でも必ず存在する。
 		nox::World::EntityCommandBufferType out_of_node_command_buffer_;
@@ -693,9 +671,7 @@ namespace nox
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
 		bool services_initialized_;
 
+		/// @brief Init で生成した全モジュール。Service を登録させるためだけに持ち、World の破棄で解放する。
 		nox::Vector<nox::EngineModule*> modules_;
-		nox::Vector<nox::SystemBase*> systems_;
-		nox::UnorderedMap<const nox::reflection::Type*, nox::SystemBase*> system_map_;
-		std::array<nox::Vector<SystemExecuteNode>, nox::util::ToUnderlying(nox::SystemPhaseType::_Max)> system_phase_table_;
 	};
 }

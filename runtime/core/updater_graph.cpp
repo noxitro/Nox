@@ -616,7 +616,7 @@ nox::uint32 nox::BuildUpdaterLayerIndicesWithOrderEdges(
 	}
 
 	//	衝突辺も明示辺も必ず「全順序の前 → 後」に張られるので、並びがトポロジカル順そのものになる。
-	//	よってBuildExecuteNodeListの最長経路レイヤリングは、前方への一度の走査に畳める。
+	//	よって最長経路レイヤリング(入ってくる辺の元の最大レイヤー + 1)は、前方への一度の走査に畳める。
 	//	明示辺はtoの昇順に並んでいるので、カーソル1本で「このノードに入る辺」だけを拾える。
 	nox::uint32 layer_count = 0u;
 	size_t edge_cursor = 0u;
@@ -1168,6 +1168,14 @@ std::span<const nox::UpdaterNode> nox::UpdaterGraph::GetNodes(const nox::SystemP
 	const nox::Vector<nox::UpdaterNode>& nodes = phase_nodes_[nox::util::ToUnderlying(phase_type)];
 	return std::span<const nox::UpdaterNode>(nodes.data(), nodes.size());
 }
+
+#if !NOX_MASTER
+std::span<const nox::UpdaterOrderEdge> nox::UpdaterGraph::GetOrderEdges(const nox::SystemPhaseType phase_type)const noexcept
+{
+	const nox::Vector<nox::UpdaterOrderEdge>& edges = phase_order_edges_[nox::util::ToUnderlying(phase_type)];
+	return std::span<const nox::UpdaterOrderEdge>(edges.data(), edges.size());
+}
+#endif // !NOX_MASTER
 
 nox::uint32 nox::UpdaterGraph::GetLayerCount(const nox::SystemPhaseType phase_type)const noexcept
 {

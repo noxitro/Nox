@@ -10,11 +10,11 @@
 namespace nox
 {
 	class EngineModule;
-	class SystemBase;
 	class World;
 
 	/// @brief		モジュールエントリ基底クラス
-	///	@details	nox::Worldで収集され、各フェーズで呼び出される関数を登録するための基底クラス
+	///	@details	nox::World が起動時(World::Init)に派生型を全て生成し、各モジュールの Service を登録させる。
+	///				毎フレームの処理は Service の属性付きメソッドなどのノードとして書く(UpdaterGraph が順序を決める)。
 	class EngineModule : public nox::Object
 	{
 		NOX_DECLARE_OBJECT(nox::EngineModule, nox::Object);
@@ -23,10 +23,8 @@ namespace nox
 		virtual ~EngineModule() = default;
 
 		/// @brief モジュールが持つServiceを登録する。 nox::World::RegisterService を呼ぶ。
-		/// @details World::Init が CreateEngineSystems より前に全モジュールで呼ぶ。
+		/// @details World::Init が全モジュールで呼ぶ。
 		///          全モジュールの登録が済んでから、Depends の順に初期化される(登録順は使わない)。
 		virtual void RegisterServices([[maybe_unused]] nox::World& world)const {}
-
-		virtual void CreateEngineSystems([[maybe_unused]] nox::PmrVector<nox::SystemBase*>& out)const {}
 	};
 }

@@ -22,7 +22,7 @@
 ///
 ///          明示辺も衝突辺も必ず全順序の前から後へ張られるため、DAGに循環が生まれ得ない
 ///          (明示辺だけの循環は構築時に検出して起動を止める)。
-///          このためレイヤー計算はBuildExecuteNodeListと同じ最長経路レイヤリングでありながら、
+///          このためレイヤー計算は最長経路レイヤリング(各ノードを、辺で入ってくるノードの最大レイヤー + 1 に置く)でありながら、
 ///          全順序がそのままトポロジカル順になり、前方への一度の走査で閉じる(訪問状態も再帰も要らない)。
 ///
 ///          明示辺の名前が解決できない・明示辺が循環する、は宣言の誤りなので nox::UpdaterGraph::Rebuild が
@@ -288,6 +288,10 @@ namespace nox
 			nox::uint32 layer_index)const noexcept;
 
 #if !NOX_MASTER
+		/// @brief フェーズ内の明示辺(RunAfter / RunBefore から張った辺)。番号は nox::UpdaterNode::order_index。
+		/// @details 開発ツール(Editor の依存グラフ表示。nox::World::BuildRuntimeDependencyGraphText)向け。Master では持たない。
+		[[nodiscard]] std::span<const nox::UpdaterOrderEdge> GetOrderEdges(nox::SystemPhaseType phase_type)const noexcept;
+
 		/// @brief グラフをログへ書き出す。ノードのレイヤー・宣言・明示辺・衝突辺が読める。
 		/// @details 明示辺が無く、型名順だけで直列化の向きが決まった衝突(write/write・write/read)も
 		///          一覧で出す。因果のある組ならRunAfter / RunBeforeで向きを宣言すべき候補になる。

@@ -15,6 +15,6 @@ namespace nox::$safeprojectname$
 		~Module()noexcept = default;
 
 	private:
-		void CreateEngineSystems(nox::PmrVector<nox::SystemBase*>& out)const override;
+		void RegisterServices(nox::World& world)const override;
 	};
 }
