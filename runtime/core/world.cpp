@@ -708,7 +708,8 @@ void nox::World::RequestExitAfterFramesIfReached()noexcept
 	}
 	exit_after_frames_requested_ = true;
 
-	nox::SceneManager* const scene_manager = FindSystem<nox::SceneManager>();
+	//	エンジン内部の経路として型で引く(要求を出すときの 1 回だけ)。
+	nox::SceneManager* const scene_manager = TryGetService<nox::SceneManager>();
 	NOX_ASSERT(scene_manager != nullptr, u8"SceneManagerが登録されていないので --exit-after-frames で終了できません");
 	if (scene_manager != nullptr)
 	{

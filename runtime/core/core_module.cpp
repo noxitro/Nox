@@ -28,6 +28,7 @@ void nox::CoreModule::RegisterServices([[maybe_unused]] nox::World& world)const
 {
 	//	所有権は World に移る。初期化順は登録順ではなく Depends で決まる
 	//	(EditorRemoteServer は SocketScheduler に依存するので、SocketScheduler が先に初期化され、後に終了する)。
+	world.RegisterService(*new nox::SceneManager());
 #if NOX_DEVELOP
 	world.RegisterService(*new nox::dev::net::SocketScheduler());
 	world.RegisterService(*new nox::dev::editor_remote::EditorRemoteServer());
@@ -36,7 +37,6 @@ void nox::CoreModule::RegisterServices([[maybe_unused]] nox::World& world)const
 
 void nox::CoreModule::CreateEngineSystems(nox::PmrVector<nox::SystemBase*>& out)const
 {
-	out.emplace_back(new nox::SceneManager());
 	out.emplace_back(new nox::AssetManager());
 	out.emplace_back(new nox::GarbageCollector());
 }

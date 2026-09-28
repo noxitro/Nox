@@ -8,6 +8,7 @@
 
 #include	"world.h"
 #include	"scene_view.h"
+#include	"log_id.h"
 
 nox::SceneManager::SceneManager()noexcept:
 	main_scene_view_(nullptr)
@@ -17,29 +18,42 @@ nox::SceneManager::SceneManager()noexcept:
 
 nox::SceneManager::~SceneManager()
 {
-
+	//	OnShutdown を通らなかった場合(起動途中の失敗など)も解放する。通っていれば何もしない。
+	nox::util::SafeDelete(main_scene_view_);
 }
 
-void	nox::SceneManager::Initialize(nox::World& world)
+bool	nox::SceneManager::OnInitialize([[maybe_unused]] nox::ServiceContext& context)noexcept
 {
-
 	//	windowを生成
+	nox::os::WindowSetupDesc desc;
+	desc.width = 1280;
+	desc.height = 720;
+	desc.window_style = nox::os::WindowStyle::Normal;
+	desc.title_ptr = u"runtime";
+
+	main_scene_view_ = new nox::SceneView();
+	main_scene_view_->MakeWindow(desc);
+
+	if (main_scene_view_->GetWindow().GetNativeHandle() == nullptr)
 	{
-		nox::os::WindowSetupDesc desc;
-		desc.width = 1280;
-		desc.height = 720;
-		desc.window_style = nox::os::WindowStyle::Normal;
-		desc.title_ptr = u"runtime";
-
-		main_scene_view_ = new nox::SceneView();
-		main_scene_view_->MakeWindow(desc);
-
-		//	studio modeならウィンドウを表示しない
-		if (!world.IsStudioMode())
-		{
-			main_scene_view_->GetWindow().Show();
-		}
+		//	ウィンドウが無いと、ユーザーの操作でも --exit-after-frames でも閉じる経路で終了できない。
+		NOX_ERROR_LINE(nox::log_id::CoreCommon, u8"メインウィンドウの生成に失敗しました");
+		nox::util::SafeDelete(main_scene_view_);
+		return false;
 	}
+
+	//	studio modeならウィンドウを表示しない。
+	//	World を介さず、World と同じ規則でコマンドラインから決める(Service は World への参照を持たない)。
+	if (nox::ResolveStudioMode(nox::os::GetCommandLineArgList()) == false)
+	{
+		main_scene_view_->GetWindow().Show();
+	}
+	return true;
+}
+
+void	nox::SceneManager::OnShutdown()noexcept
+{
+	nox::util::SafeDelete(main_scene_view_);
 }
 
 void	nox::SceneManager::RequestCloseMainWindow()noexcept
@@ -48,18 +62,4 @@ void	nox::SceneManager::RequestCloseMainWindow()noexcept
 	{
 		main_scene_view_->GetWindow().RequestClose();
 	}
-}
-
-void	nox::SceneManager::Finalize([[maybe_unused]] nox::World& world)
-{
-	nox::util::SafeDelete(main_scene_view_);
-}
-
-std::span<const nox::SystemBase::PhaseRegister> nox::SceneManager::GetPhaseRegisterList()const noexcept
-{
-	static constexpr auto table = {
-		PhaseRegister(k_phase_init),
-		PhaseRegister(k_phase_terminal)
-	};
-	return table;
 }

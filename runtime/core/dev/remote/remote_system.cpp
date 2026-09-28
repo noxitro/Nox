@@ -58,6 +58,16 @@ namespace
 		NOX_ASSERT(server != nullptr, u8"EditorRemoteServerが登録されていません");
 		return server;
 	}
+
+	/// @brief メインのシーンビューを持つ SceneManager を引く。
+	/// @details SceneManager は Core が登録する Service なので、開発ビルドでは必ず登録されている。
+	///          Query::Execute は引数で受け取れないので、エンジン内部の経路として nox::World::TryGetService を使う。
+	[[nodiscard]] nox::SceneManager* TryGetSceneManager(nox::World& world)noexcept
+	{
+		nox::SceneManager* const scene_manager = world.TryGetService<nox::SceneManager>();
+		NOX_ASSERT(scene_manager != nullptr, u8"SceneManagerが登録されていません");
+		return scene_manager;
+	}
 }
 
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::AssetConvertQuery::Execute(nox::World& world, std::span<nox::uint8> storage)const
@@ -68,8 +78,15 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::GetMainSceneView::Execute(nox::World& world, std::span<nox::uint8> storage)const
 {
 	auto scene_view_info = nox::PlacementObject<nox::dev::editor_remote::SceneViewInfo>::Construct(storage);
-	nox::SceneManager& scene_manager = world.GetSystem<nox::SceneManager>();
-	auto& scene_view = scene_manager.GetMainSceneView();
+	nox::SceneManager* const scene_manager = TryGetSceneManager(world);
+	if (scene_manager == nullptr)
+	{
+		//	ウィンドウハンドルは 0 (無し) を返す。
+		scene_view_info->SetMainWindowHandle(0);
+		return scene_view_info;
+	}
+
+	auto& scene_view = scene_manager->GetMainSceneView();
 	auto window_handle = scene_view.GetWindow().GetNativeHandle();
 
 	scene_view_info->SetMainWindowHandle(reinterpret_cast<nox::intptr>(window_handle));
@@ -146,7 +163,7 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::AddEntityNodeQuery::Execute(nox::World& world, std::span<nox::uint8> storage)const
 {
 	//nox::dev::editor_remote::EditorRemoteServer& server = world.GetSystem<nox::dev::editor_remote::EditorRemoteServer>();
-	//nox::SceneNode& main_scene = world.GetSystem<nox::SceneManager>().GetMainScene();
+	//nox::SceneNode& main_scene = TryGetSceneManager(world)->GetMainScene();
 	//const nox::int64 remote_instance_id = GetRemoteInstanceId();
 	//NOX_ASSERT(remote_instance_id > 0, u"Editor owned EntityNode id must be positive. id:{0}", remote_instance_id);
 	//auto response = nox::PlacementObject<nox::dev::editor_remote::AddEntityNodeResponse>::Construct(storage);
@@ -257,7 +274,7 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 	}
 
 	UnregisterEntityComponents(server, *entity_node);
-	world.GetSystem<nox::SceneManager>().GetMainScene().RemoveEntity(*entity_node);
+	TryGetSceneManager(world)->GetMainScene().RemoveEntity(*entity_node);
 	server.UnregisterRemoteInstance(GetRemoteInstanceId());
 	return nullptr;*/
 	return {};
