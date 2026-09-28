@@ -38,6 +38,7 @@
     <ClCompile Include="updater_graph_benchmark.cpp" />
     <ClCompile Include="updater_worker_count_test.cpp" />
     <ClCompile Include="exit_after_frames_test.cpp" />
+    <ClCompile Include="service_graph_test.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

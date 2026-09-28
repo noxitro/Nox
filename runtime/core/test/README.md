@@ -39,6 +39,7 @@ kernel の単体テストがエンジン全部とコード生成器を引きず�
 | `updater_graph_layering_test.cpp` | `UpdaterGraph` の衝突判定とレイヤリングの検証。時間に依存しない |
 | `updater_graph_benchmark.cpp` | 並列化が実際に効くかの実測。全ケース `DISABLED_` で CI では走らない |
 | `updater_worker_count_test.cpp` | `--serial-updater` / `--updater-workers=N` の解析規則の検証 |
+| `service_graph_test.cpp` | Service の寿命(`Depends` の順の初期化・逆順の終了・依存の誤りと `OnInitialize` の失敗)の検証。`World::TryInitializeServices` を直接叩く |
 
 ### UpdaterGraph のテストについて
 
