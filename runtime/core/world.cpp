@@ -143,6 +143,7 @@ namespace nox
 			case nox::SystemPhaseType::Start: return u8"Start";
 			case nox::SystemPhaseType::FrameIngress: return u8"FrameIngress";
 			case nox::SystemPhaseType::Update: return u8"Update";
+			case nox::SystemPhaseType::Presentation: return u8"Presentation";
 			case nox::SystemPhaseType::Terminate: return u8"Terminate";
 			default: return u8"Unknown";
 			}
@@ -683,10 +684,12 @@ void nox::World::Update()
 	}
 
 	//	外部からの取り込み(ソケット受信など)を先に済ませる。ExecutePhase の末尾で EntityCommands が
-	//	反映されるので、FrameIngress で積んだ構造変更は Update から見える。
+	//	反映されるので、FrameIngress で積んだ構造変更は Update から見え、Update で積んだものは Presentation から見える。
 	ExecutePhase(nox::SystemPhaseType::FrameIngress);
 	ExecutePhase(nox::SystemPhaseType::Update);
-	//	旧 SceneManager::Update (Update フェーズ) と同じく、このフレームを数える前に判定する。
+	//	描画の抽出・提出。Update で確定したこのフレームの状態を読む。
+	ExecutePhase(nox::SystemPhaseType::Presentation);
+	//	閉じる要求はフレームの末尾(Presentation の後)で出す。このフレームを数える前に判定するので、
 	//	N 回目の呼び出しでは frame_counter_ が N - 1 になっている (nox::ShouldRequestExitAfterFrames)。
 	RequestExitAfterFramesIfReached();
 	++frame_counter_;

@@ -113,7 +113,7 @@ namespace nox
 		std::span<const nox::char16* const> command_line_args)noexcept;
 
 	/// @brief --exit-after-frames の終了要求を、このフレームで出すか。
-	/// @details World::Update が Update フェーズの後、フレーム数を数える前に呼ぶ。そのため frame_count は
+	/// @details World::Update が Presentation フェーズの後(フレームの末尾)、フレーム数を数える前に呼ぶ。そのため frame_count は
 	///          「このフレームより前に数え終えたフレームの数」で、N 回目の呼び出しでは N - 1 になっている。
 	///          N 回目で true になり、それより前は false。以降も true を返し続けるので、1 回だけ出すのは呼ぶ側の役目。
 	///          exit_after_frames が 0 なら常に false (自動で終了しない)。
@@ -484,7 +484,7 @@ namespace nox
 		void ExecutePhase(const nox::SystemPhaseType phase_type);
 		void RegisterSystem(nox::SystemBase& system);
 		/// @brief --exit-after-frames のフレーム数に達したら、メインウィンドウを閉じるよう 1 回だけ要求する。
-		/// @details Update から、Update フェーズの後・フレーム数を数える前に呼ぶ (nox::ShouldRequestExitAfterFrames)。
+		/// @details Update から、Presentation フェーズの後・フレーム数を数える前に呼ぶ (nox::ShouldRequestExitAfterFrames)。
 		void RequestExitAfterFramesIfReached()noexcept;
 
 		/// @brief 制約を検査せずに構造を変える本体。Playbackと即時系の共通の実装。

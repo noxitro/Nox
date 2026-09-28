@@ -278,6 +278,7 @@ namespace nox
 			case nox::SystemPhaseType::Start: return u8"Start";
 			case nox::SystemPhaseType::FrameIngress: return u8"FrameIngress";
 			case nox::SystemPhaseType::Update: return u8"Update";
+			case nox::SystemPhaseType::Presentation: return u8"Presentation";
 			case nox::SystemPhaseType::Terminate: return u8"Terminate";
 			default: return u8"Unknown";
 			}

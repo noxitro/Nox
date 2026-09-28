@@ -926,3 +926,173 @@ TEST(ServiceNode, ExclusiveNodesRunOncePerPhaseOnTheCallerThreadWithTheWorld)
 	EXPECT_EQ(g_idle_task_calls.load(std::memory_order_relaxed), kFrameCount * 2);
 	EXPECT_EQ(g_other_idle_task_calls.load(std::memory_order_relaxed), kFrameCount * 2);
 }
+
+//	=====================================================================================
+//	6. Presentation フェーズ
+//	=====================================================================================
+
+namespace nox::test::service_node
+{
+	/// @brief Update で数を進め、Presentation でそれを読むService(Renderer の形)。
+	class SnPresentService final : public nox::Service
+	{
+	public:
+		void Tick()
+		{
+			++tick_count;
+		}
+
+		void Present()
+		{
+			presented_tick = tick_count;
+			++present_count;
+		}
+
+		nox::int32 tick_count = 0;
+		nox::int32 presented_tick = -1;
+		nox::int32 present_count = 0;
+	};
+
+	/// @brief Presentation で SnPresentService の後に走るService(DebugDraw の形)。
+	/// @details 型名順では SnPresentService より前("SnO" < "SnP")だが、RunAfter で後ろへ回る。
+	///          SnPresentService には触れないので、明示辺が無ければ同じレイヤーに並ぶ。
+	class SnOverlayService final : public nox::Service
+	{
+	public:
+		using RunAfter = nox::TypeList<nox::test::service_node::SnPresentService>;
+
+		void Present()
+		{
+			++present_count;
+		}
+
+		nox::int32 present_count = 0;
+	};
+}
+
+namespace nox
+{
+	template<>
+	struct ServiceMethodTable<nox::test::service_node::SnPresentService> final
+	{
+		static constexpr std::array<nox::ServiceMethodDescriptor, 2> k_methods{
+			nox::MakeServiceMethodDescriptor<
+				&nox::test::service_node::SnPresentService::Tick, nox::SystemPhaseType::Update>("Tick"),
+			nox::MakeServiceMethodDescriptor<
+				&nox::test::service_node::SnPresentService::Present, nox::SystemPhaseType::Presentation>("Present"),
+		};
+
+		[[nodiscard]] static constexpr std::span<const nox::ServiceMethodDescriptor> GetMethods()noexcept
+		{
+			return std::span<const nox::ServiceMethodDescriptor>(k_methods.data(), k_methods.size());
+		}
+	};
+
+	template<>
+	struct ServiceMethodTable<nox::test::service_node::SnOverlayService> final
+	{
+		static constexpr std::array<nox::ServiceMethodDescriptor, 1> k_methods{
+			nox::MakeServiceMethodDescriptor<
+				&nox::test::service_node::SnOverlayService::Present, nox::SystemPhaseType::Presentation>("Present"),
+		};
+
+		[[nodiscard]] static constexpr std::span<const nox::ServiceMethodDescriptor> GetMethods()noexcept
+		{
+			return std::span<const nox::ServiceMethodDescriptor>(k_methods.data(), k_methods.size());
+		}
+	};
+}
+
+namespace
+{
+	using namespace nox::test::service_node;
+
+	constexpr nox::ServiceMethodTypeDescriptor k_present_descriptor = nox::MakeServiceMethodTypeDescriptor<SnPresentService>();
+	constexpr nox::ServiceMethodTypeDescriptor k_overlay_descriptor = nox::MakeServiceMethodTypeDescriptor<SnOverlayService>();
+
+	//	Presentation は Update と Terminate の間(フェーズの表を配列で持つ箇所が _Max で数えるので、値の並びも固定しておく)。
+	static_assert(nox::util::ToUnderlying(nox::SystemPhaseType::Update) < nox::util::ToUnderlying(nox::SystemPhaseType::Presentation));
+	static_assert(nox::util::ToUnderlying(nox::SystemPhaseType::Presentation) < nox::util::ToUnderlying(nox::SystemPhaseType::Terminate));
+}
+
+///	@brief	Presentation を指定したメソッドは Presentation のノードにだけなり、同じ型の Update のメソッドとは別のフェーズに載る。
+///			Presentation の中でも RunAfter が効く(DebugDraw が Renderer の後に走る形)。
+TEST(ServiceNode, PresentationMethodsAreNodesOfThePresentationPhase)
+{
+	SnPresentService present;
+	SnOverlayService overlay;
+	//	並び(登録順)は結果に影響しない。
+	const std::array<nox::UpdaterServiceBinding, 2> bindings{
+		nox::UpdaterServiceBinding{ .service = &overlay, .descriptor = &k_overlay_descriptor },
+		nox::UpdaterServiceBinding{ .service = &present, .descriptor = &k_present_descriptor },
+	};
+
+	nox::UpdaterGraph graph;
+	const nox::UpdaterGraphBuildResult result = graph.TryRebuild(
+		std::span<nox::EntitySystemBase* const>(),
+		std::span<nox::EntityLogicStorage* const>(),
+		std::span<const nox::UpdaterServiceBinding>(bindings.data(), bindings.size()));
+	ASSERT_TRUE(result.IsSuccess());
+
+	const std::span<const nox::UpdaterNode> update_nodes = graph.GetNodes(nox::SystemPhaseType::Update);
+	ASSERT_EQ(update_nodes.size(), 1u);
+	EXPECT_NE(FindNode(update_nodes, nox::util::GetTypeName<SnPresentService>(), "Tick"), nullptr);
+
+	const std::span<const nox::UpdaterNode> nodes = graph.GetNodes(nox::SystemPhaseType::Presentation);
+	ASSERT_EQ(nodes.size(), 2u);
+	const nox::UpdaterNode* const present_node = FindNode(nodes, nox::util::GetTypeName<SnPresentService>(), "Present");
+	const nox::UpdaterNode* const overlay_node = FindNode(nodes, nox::util::GetTypeName<SnOverlayService>(), "Present");
+	ASSERT_NE(present_node, nullptr);
+	ASSERT_NE(overlay_node, nullptr);
+
+	//	型名順なら overlay が先だが、RunAfter で present の後ろへ回り、別のレイヤーになる。
+	EXPECT_LT(present_node->order_index, overlay_node->order_index);
+	EXPECT_EQ(present_node->layer_index, 0u);
+	EXPECT_EQ(overlay_node->layer_index, 1u);
+	EXPECT_FALSE(nox::ConflictsUpdaterNodeAccess(present_node->access, overlay_node->access));
+}
+
+///	@brief	World::Update と同じ順(FrameIngress → Update → Presentation)にフェーズを回すと、
+///			Presentation のノードはそのフレームの Update の結果を読む。
+///	@details	フェーズをまたぐ順序は UpdaterGraph ではなく World::Update の呼び順で決まる(World::Update は private)。
+///				ここでは同じ順にフェーズを並べて回し、Presentation を足しても Update の結果が同じフレームで見えることを固定する。
+TEST(ServiceNode, PresentationRunsAfterUpdateInTheSameFrame)
+{
+	static constexpr nox::int32 kFrameCount = 4;
+
+	nox::World world;
+	world.RegisterService(*new SnPresentService());
+	world.RegisterService(*new SnOverlayService());
+	ASSERT_TRUE(world.TryInitializeServices().IsSuccess());
+	SnPresentService* const present = world.TryGetService<SnPresentService>();
+	SnOverlayService* const overlay = world.TryGetService<SnOverlayService>();
+	ASSERT_NE(present, nullptr);
+	ASSERT_NE(overlay, nullptr);
+
+	const std::array<nox::UpdaterServiceBinding, 2> bindings{
+		nox::UpdaterServiceBinding{ .service = present, .descriptor = &k_present_descriptor },
+		nox::UpdaterServiceBinding{ .service = overlay, .descriptor = &k_overlay_descriptor },
+	};
+
+	nox::UpdaterGraph graph;
+	const nox::UpdaterGraphBuildResult result = graph.TryRebuild(
+		std::span<nox::EntitySystemBase* const>(),
+		std::span<nox::EntityLogicStorage* const>(),
+		std::span<const nox::UpdaterServiceBinding>(bindings.data(), bindings.size()));
+	ASSERT_TRUE(result.IsSuccess());
+
+	nox::JobSystem job_system;
+	job_system.Initialize(2u);
+	for (nox::int32 frame = 1; frame <= kFrameCount; ++frame)
+	{
+		RunPhase(world, graph, job_system, nox::SystemPhaseType::FrameIngress);
+		RunPhase(world, graph, job_system, nox::SystemPhaseType::Update);
+		RunPhase(world, graph, job_system, nox::SystemPhaseType::Presentation);
+		EXPECT_EQ(present->presented_tick, frame) << "Presentation が同じフレームの Update の結果を読んでいません";
+	}
+	job_system.Finalize();
+
+	EXPECT_EQ(present->tick_count, kFrameCount);
+	EXPECT_EQ(present->present_count, kFrameCount);
+	EXPECT_EQ(overlay->present_count, kFrameCount);
+}

@@ -20,6 +20,10 @@ namespace nox
 		FrameIngress,
 		/// @brief 毎フレーム呼び出される処理
 		Update,
+		/// @brief 毎フレーム、Update の後に呼び出される描画の抽出・提出
+		/// @details Update で確定したこのフレームの状態を読み、描画へ渡す処理を置く。
+		///          末尾で EntityCommands が反映されるので、ここで積んだ構造変更は次のフレームの FrameIngress から見える。
+		Presentation,
 		/// @brief 終了処理
 		Terminate,
 		_Max

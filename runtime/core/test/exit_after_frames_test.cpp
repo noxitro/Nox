@@ -8,8 +8,9 @@
 ///				プロセスの実引数にも依存せずに全分岐を踏める。
 ///
 ///				終了要求を出すかの判定 nox::ShouldRequestExitAfterFrames も同じく純粋関数で、
-///				World::Update が Update フェーズの後・フレーム数を数える前に呼ぶ
-///				(旧 SceneManager::Update と同じ位置。N 回目の呼び出しでフレーム数は N - 1)。
+///				World::Update が Presentation フェーズの後(フレームの末尾)・フレーム数を数える前に呼ぶ
+///				(N 回目の呼び出しでフレーム数は N - 1)。判定の位置がフェーズのどこであっても、
+///				フレーム数を数える前である限り、何回目の呼び出しで要求が出るかは変わらない。
 ///
 ///				実際にそのフレーム数で終了できるかは、CI の「Run runtime.exe」ステップが
 ///				runtime.exe を 6 構成すべてで起動して確かめる。
@@ -80,7 +81,7 @@ TEST(ExitAfterFrames, TooLargeValueIsClampedToMax)
 namespace
 {
 	/// @brief World::Update の呼び出しを真似て、終了要求が初めて出るのが何回目の呼び出しかを返す。
-	/// @details World::Update は「Update フェーズ → 判定 → フレーム数を数える」の順なので、
+	/// @details World::Update は「FrameIngress → Update → Presentation の各フェーズ → 判定 → フレーム数を数える」の順なので、
 	///          i 回目 (1 始まり) の呼び出しで判定に渡るフレーム数は i - 1。要求は 1 回だけ出す。
 	///          max_calls 回までに出なければ 0。
 	[[nodiscard]] nox::uint32 FindRequestCall(const nox::uint32 exit_after_frames, const nox::uint32 max_calls)noexcept
