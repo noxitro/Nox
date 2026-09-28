@@ -111,6 +111,18 @@ namespace nox
 	[[nodiscard]] nox::uint32 ResolveExitAfterFrames(
 		std::span<const nox::char16* const> command_line_args)noexcept;
 
+	/// @brief コマンドライン引数列から、studio mode (Editor から起動された実行) かどうかを決める。
+	/// @details --studio があれば true。値は見ない (キーの照合規則は nox::os::ContainsCommandLineArgKey と同じで、
+	///          "--studio=..." も true、"--studiox" のような別の引数は拾わない)。
+	///          studio mode ではメインウィンドウを表示しない (nox::SceneManager)。
+	///
+	///          World と nox::SceneManager の両方がこれを呼ぶ。Service は World への参照を持たないので、
+	///          World が読んだ値を Service へ渡す経路は作らず、同じ引数列から同じ規則で決める。
+	///          nox::ResolveUpdaterWorkerCount と同じく、コマンドラインの取得(nox::os)に触れない純粋関数。
+	/// @param command_line_args nox::os::GetCommandLineArgList() が返す並び。
+	[[nodiscard]] bool ResolveStudioMode(
+		std::span<const nox::char16* const> command_line_args)noexcept;
+
 	class World final: public nox::Object
 	{
 		NOX_DECLARE_OBJECT(World, nox::Object);
@@ -217,6 +229,7 @@ namespace nox
 		void SetVSync(bool flag)noexcept;
 
 		inline bool IsKill()const noexcept { return kill_.load(std::memory_order_acquire); }
+		/// @brief studio mode (Editor から起動された実行) か。決め方は nox::ResolveStudioMode を参照。
 		inline bool IsStudioMode()const noexcept { return studio_mode_; }
 		/// @brief この数のフレームを回したら自動で終了する。0 なら終了しない。nox::ResolveExitAfterFrames を参照。
 		inline nox::uint32 GetExitAfterFrames()const noexcept { return exit_after_frames_; }
@@ -557,6 +570,7 @@ namespace nox
 		nox::float_t next_elapsed_milli_seconds_;
 		nox::uint16 target_frame_rate_;
 		bool enabled_vsync_;
+		/// @brief コマンドラインで決まる。決め方は nox::ResolveStudioMode を参照。
 		const bool studio_mode_;
 
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())

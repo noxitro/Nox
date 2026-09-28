@@ -38,6 +38,7 @@
     <ClCompile Include="updater_graph_benchmark.cpp" />
     <ClCompile Include="updater_worker_count_test.cpp" />
     <ClCompile Include="exit_after_frames_test.cpp" />
+    <ClCompile Include="studio_mode_test.cpp" />
     <ClCompile Include="service_graph_test.cpp" />
     <ClCompile Include="updater_main_thread_test.cpp" />
     <ClCompile Include="updater_service_node_test.cpp" />

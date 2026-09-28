@@ -362,6 +362,15 @@ nox::uint32 nox::ResolveExitAfterFrames(const std::span<const nox::char16* const
 	return parsed;
 }
 
+bool nox::ResolveStudioMode(const std::span<const nox::char16* const> command_line_args)noexcept
+{
+	static constexpr std::u16string_view kStudioKey = u"--studio";
+
+	//	キーの照合は nox::os 側に寄せてある (ResolveUpdaterWorkerCount と同じ)。
+	//	"--studiox" のような別の引数を拾わないことは ContainsCommandLineArgKey が保証する。
+	return nox::os::ContainsCommandLineArgKey(command_line_args, kStudioKey);
+}
+
 nox::World::World() :
 	free_entity_head_(make_free_entity_head(k_invalid_entity_index, 0u)),
 	next_entity_index_(0u),
@@ -373,7 +382,7 @@ nox::World::World() :
 	next_elapsed_milli_seconds_(0.0f),
 	target_frame_rate_(60),
 	enabled_vsync_(true),
-	studio_mode_(nox::os::ContainsCommandLineArgKey(u"--studio")),
+	studio_mode_(nox::ResolveStudioMode(nox::os::GetCommandLineArgList())),
 	kill_(false),
 	structural_change_state_(0u),
 	out_of_node_command_buffer_(),
