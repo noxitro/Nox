@@ -168,9 +168,6 @@
     <ClInclude Include="scene_asset.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="dev\debug_draw.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="builtin_entities.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -390,9 +387,6 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="scene_asset.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="dev\debug_draw.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="builtin_entities.cpp">

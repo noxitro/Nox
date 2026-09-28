@@ -75,10 +75,6 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="dev\debug_draw.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
     <ClInclude Include="dev\editor_remote_query.h">
       <SubType>
       </SubType>
@@ -337,10 +333,6 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="core_utility.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="dev\debug_draw.cpp">
       <SubType>
       </SubType>
     </ClCompile>
