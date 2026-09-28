@@ -109,6 +109,29 @@ namespace nox
 			std::abort();
 		}
 
+		/// @brief Serviceの初期化の失敗で起動を止める。
+		/// @details 理由のログは nox::World::TryInitializeServices が出し終えている。ここでは残すだけ。
+		///          NOX_ASSERTは診断補助であり、成否の判定には使わない(Masterでは消える)。
+		///          ログもMasterでは消えるため、abort_on_system_phase_dependency_error と同じく
+		///          理由と名前の所在をvolatileなローカルに残し、クラッシュダンプから読めるようにする。
+		[[noreturn]] void abort_on_service_initialize_failure(const nox::ServiceInitializeResult& result)noexcept
+		{
+			NOX_ASSERT(false, u8"Serviceの初期化に失敗しました(理由は直前のエラーログ)");
+
+			volatile const nox::uint32 failed_error = nox::util::ToUnderlying(result.error);
+			const char* volatile failed_service_type_name = result.service_type_name.data();
+			volatile const size_t failed_service_type_name_length = result.service_type_name.length();
+			const char* volatile failed_related_type_name = result.related_type_name.data();
+			volatile const size_t failed_related_type_name_length = result.related_type_name.length();
+			(void)failed_error;
+			(void)failed_service_type_name;
+			(void)failed_service_type_name_length;
+			(void)failed_related_type_name;
+			(void)failed_related_type_name_length;
+
+			std::abort();
+		}
+
 #if !NOX_MASTER
 		[[nodiscard]]
 		constexpr std::u8string_view to_graph_phase_name(const nox::SystemPhaseType phase_type) noexcept
@@ -192,6 +215,51 @@ namespace nox
 			}
 		};
 #endif // !NOX_MASTER
+
+		/// @brief Serviceの初期化の失敗理由をログへ出す。abortするかどうかは呼び出し側が決める。
+		/// @details 引数1つ(u8string_view)で出す。新しい引数の組で NOX_ERROR_LINE を実体化すると、
+		///          kernel/string_format.h 側の既存警告(-Wmissing-braces)がその実体化ぶんだけ増えるため。
+		void log_service_initialize_failure(const nox::ServiceInitializeResult& result)noexcept
+		{
+#if !NOX_MASTER
+			RuntimeGraphTextBuilder builder;
+			builder.Append(u8"Serviceの初期化に失敗しました: ");
+			switch (result.error)
+			{
+			case nox::ServiceInitializeError::None:
+				return;
+			case nox::ServiceInitializeError::DuplicateService:
+				builder.Append(u8"同じ型のServiceが2つ登録されています: ");
+				builder.Append(result.service_type_name);
+				break;
+			case nox::ServiceInitializeError::UnresolvedDependency:
+				builder.Append(u8"Depends に並べた型が Service として登録されていません: ");
+				builder.Append(result.service_type_name);
+				builder.Append(u8" -> ");
+				builder.Append(result.related_type_name);
+				break;
+			case nox::ServiceInitializeError::DependencyCycle:
+				builder.Append(u8"Depends が循環しています(先に初期化される側 -> 後に初期化される側): ");
+				builder.Append(result.related_type_name);
+				builder.Append(u8" -> ");
+				builder.Append(result.service_type_name);
+				break;
+			case nox::ServiceInitializeError::InitializeFailed:
+				builder.Append(u8"OnInitialize が false を返しました: ");
+				builder.Append(result.service_type_name);
+				break;
+			case nox::ServiceInitializeError::UndeclaredServiceAccess:
+				builder.Append(u8"OnInitialize の中で Depends に並べていない型を引きました: ");
+				builder.Append(result.service_type_name);
+				builder.Append(u8" -> ");
+				builder.Append(result.related_type_name);
+				break;
+			}
+			NOX_ERROR_LINE(nox::log_id::CoreCommon, u8"{0}", std::u8string_view(builder.buffer.data(), builder.length));
+#else
+			(void)result;
+#endif // !NOX_MASTER
+		}
 	}
 }
 
@@ -320,6 +388,9 @@ nox::World::World() :
 		nox::JobSystem::GetDefaultWorkerCount())),
 	exit_after_frames_(nox::ResolveExitAfterFrames(nox::os::GetCommandLineArgList())),
 	services_(),
+	service_initialize_order_{},
+	initialized_service_count_(0u),
+	services_initialized_(false),
 	modules_(),
 	systems_(),
 	system_map_(),
@@ -340,6 +411,10 @@ nox::World::~World()
 {
 	//	ノードを触るものを片付ける前に、必ずワーカーを止めて回収する。
 	job_system_.Finalize();
+
+	//	Exitを通らなかった場合(テストや起動途中の破棄)も、初期化済みのServiceは逆順に終了させてから解放する。
+	//	Exitで終了済みなら何もしない。
+	ShutdownServices();
 
 	//	ワーカーが止まった後なら、記録先が消えても誰も触らない。
 	delete[] node_command_buffers_;
@@ -453,6 +528,14 @@ void nox::World::Init()
 				modules_.emplace_back(module);
 			}
 		});
+
+	//	Serviceは全モジュールの登録が揃ってから、Depends の順にまとめて初期化する(登録順は使わない)。
+	//	Systemの生成より前に済ませる。依存の誤りや OnInitialize の失敗は、ここで理由を残して起動を止める。
+	for (const nox::EngineModule* const module : modules_)
+	{
+		module->RegisterServices(*this);
+	}
+	InitializeServices();
 
 	nox::FixedVector<nox::SystemBase*, 128> system_list;
 	{
@@ -570,6 +653,9 @@ void nox::World::Exit()
 {
 	kill_.store(true, std::memory_order_release);
 	system_map_.clear();
+
+	//	フェーズは全て止まっている。初期化と逆順に終了させる。
+	ShutdownServices();
 
 	for (auto& layer : system_phase_table_)
 	{
@@ -2023,10 +2109,236 @@ void nox::World::BuildQuery(nox::EntityQuery& query, const nox::ComponentMask& r
 
 #pragma region Service
 
-void nox::World::RegisterService(const nox::reflection::Type& type, nox::Service& service)
+void nox::World::RegisterService(const nox::ServiceTypeDescriptor& descriptor, nox::Service& service)
 {
+	const nox::reflection::Type& type = *descriptor.type;
 	NOX_ASSERT(TryGetService(type) == nullptr, u8"Serviceが二重に登録されました: {0}", type.GetTypeName());
-	services_.PushBack(nox::World::ServiceEntry{ .type = &type, .service = &service });
+	NOX_ASSERT(services_initialized_ == false, u8"Serviceの初期化後に登録しようとしました: {0}", type.GetTypeName());
+	services_.PushBack(nox::World::ServiceEntry{ .type = &type, .service = &service, .depends = descriptor.depends });
+}
+
+nox::ServiceInitializeResult nox::World::TryInitializeServices()noexcept
+{
+	//	依存の集合をuint64のビット集合で持つ。確保も再帰も要らない。
+	static_assert(k_max_service_count <= 64u, "Serviceの依存をuint64のビット集合で持つため、登録上限は64まで");
+
+	NOX_ASSERT(services_initialized_ == false, u8"Serviceが二重に初期化されようとしました");
+	if (services_initialized_ == true)
+	{
+		return nox::ServiceInitializeResult{};
+	}
+
+	const nox::uint32 service_count = services_.GetLength();
+	const std::array<nox::World::ServiceEntry, k_max_service_count>& entries = services_.GetStorage();
+
+	//	1. 完全修飾型名順に並べる。決まらない箇所のタイブレークであり、名前での解決にも使う。
+	//	   登録順(services_の並び)は結果に影響させない。
+	std::array<nox::uint32, k_max_service_count> sorted_indices{};
+	for (nox::uint32 index = 0u; index < service_count; ++index)
+	{
+		sorted_indices[index] = index;
+	}
+	std::sort(
+		sorted_indices.data(),
+		sorted_indices.data() + service_count,
+		[&entries](const nox::uint32 a, const nox::uint32 b)noexcept
+		{
+			return entries[a].type->GetTypeName() < entries[b].type->GetTypeName();
+		});
+
+	//	整列後の位置で名前とServiceを引ける表。nox::ServiceContext もこの表を引く。
+	std::array<nox::detail::ServiceLookupEntry, k_max_service_count> lookup{};
+	for (nox::uint32 position = 0u; position < service_count; ++position)
+	{
+		const nox::World::ServiceEntry& entry = entries[sorted_indices[position]];
+		lookup[position] = nox::detail::ServiceLookupEntry{ .type_name = entry.type->GetTypeName(), .service = entry.service };
+	}
+	const std::span<const nox::detail::ServiceLookupEntry> lookup_view(lookup.data(), service_count);
+
+	//	2. 同名(= 同じ型)が2つあると名前で解決できない。整列済みなので隣だけ見ればよい。
+	for (nox::uint32 position = 1u; position < service_count; ++position)
+	{
+		if (lookup[position].type_name == lookup[position - 1u].type_name)
+		{
+			const nox::ServiceInitializeResult result{
+				.error = nox::ServiceInitializeError::DuplicateService,
+				.service_type_name = lookup[position].type_name,
+				.related_type_name = lookup[position].type_name,
+			};
+			log_service_initialize_failure(result);
+			return result;
+		}
+	}
+
+	//	3. Depends を整列後の位置のビット集合へ解決する。見つからない名前は宣言の誤り。
+	std::array<nox::uint64, k_max_service_count> predecessor_masks{};
+	for (nox::uint32 position = 0u; position < service_count; ++position)
+	{
+		for (const std::string_view depend_name : entries[sorted_indices[position]].depends)
+		{
+			const auto found = std::ranges::lower_bound(
+				lookup_view, depend_name, std::less<>{}, &nox::detail::ServiceLookupEntry::type_name);
+			if ((found == lookup_view.end()) || (found->type_name != depend_name))
+			{
+				const nox::ServiceInitializeResult result{
+					.error = nox::ServiceInitializeError::UnresolvedDependency,
+					.service_type_name = lookup[position].type_name,
+					.related_type_name = depend_name,
+				};
+				log_service_initialize_failure(result);
+				return result;
+			}
+			predecessor_masks[position] |= (1ull << static_cast<nox::uint32>(found - lookup_view.begin()));
+		}
+	}
+
+	//	4. Depends だけでトポロジカル順を作る(Kahn法)。候補が複数あれば整列順の最小(= 型名順)を採る。
+	//	   全て置き切れなければ循環している(自分自身を並べた場合も、自分のビットが残り続けるのでここで掛かる)。
+	std::array<nox::uint32, k_max_service_count> order_positions{};
+	nox::uint64 placed_mask = 0u;
+	//	未配置の先行を1つ返す。未配置のServiceは必ず未配置の先行を持つ(循環の報告にだけ使う)。
+	const auto find_unplaced_predecessor = [&predecessor_masks, &placed_mask, service_count](const nox::uint32 position)noexcept
+		{
+			const nox::uint64 unplaced_predecessors = predecessor_masks[position] & ~placed_mask;
+			for (nox::uint32 candidate = 0u; candidate < service_count; ++candidate)
+			{
+				if (((unplaced_predecessors >> candidate) & 1ull) != 0u)
+				{
+					return candidate;
+				}
+			}
+			return position;
+		};
+
+	for (nox::uint32 order = 0u; order < service_count; ++order)
+	{
+		nox::uint32 picked = service_count;
+		for (nox::uint32 position = 0u; position < service_count; ++position)
+		{
+			const nox::uint64 bit = 1ull << position;
+			if (((placed_mask & bit) == 0u) && ((predecessor_masks[position] & ~placed_mask) == 0u))
+			{
+				picked = position;
+				break;
+			}
+		}
+
+		if (picked == service_count)
+		{
+			//	先行をService数ぶん遡れば必ず閉路の上に乗る(閉路の下流にあるだけのServiceを報告しないため)。
+			nox::uint32 on_cycle = 0u;
+			while (((placed_mask >> on_cycle) & 1ull) != 0u)
+			{
+				++on_cycle;
+			}
+			for (nox::uint32 step = 0u; step < service_count; ++step)
+			{
+				on_cycle = find_unplaced_predecessor(on_cycle);
+			}
+
+#if !NOX_MASTER
+			//	閉路を一周ぶん書き出す。先行の辿り方は決定的なので、必ず on_cycle へ戻ってくる。
+			{
+				RuntimeGraphTextBuilder builder;
+				builder.Append(u8"Serviceの Depends の閉路(後に初期化される側 <- 先に初期化される側)");
+				NOX_ERROR_LINE(nox::log_id::CoreCommon, u8"{0}", std::u8string_view(builder.buffer.data(), builder.length));
+			}
+			nox::uint32 current = on_cycle;
+			for (nox::uint32 step = 0u; step < service_count; ++step)
+			{
+				const nox::uint32 previous = find_unplaced_predecessor(current);
+				RuntimeGraphTextBuilder builder;
+				builder.Append(u8"  ");
+				builder.Append(lookup[current].type_name);
+				builder.Append(u8" <- ");
+				builder.Append(lookup[previous].type_name);
+				NOX_ERROR_LINE(nox::log_id::CoreCommon, u8"{0}", std::u8string_view(builder.buffer.data(), builder.length));
+				current = previous;
+				if (current == on_cycle)
+				{
+					break;
+				}
+			}
+#endif // !NOX_MASTER
+
+			const nox::ServiceInitializeResult result{
+				.error = nox::ServiceInitializeError::DependencyCycle,
+				.service_type_name = lookup[on_cycle].type_name,
+				.related_type_name = lookup[find_unplaced_predecessor(on_cycle)].type_name,
+			};
+			log_service_initialize_failure(result);
+			return result;
+		}
+
+		placed_mask |= (1ull << picked);
+		order_positions[order] = picked;
+	}
+
+	//	5. 順に初期化する。ここまで来れば宣言(Depends)は全て成立している。
+	//	   OnInitialize が true を返したものだけを「初期化済み」として記録し、失敗時はそれだけを逆順に終了させる。
+	for (nox::uint32 order = 0u; order < service_count; ++order)
+	{
+		const nox::uint32 service_index = sorted_indices[order_positions[order]];
+		const nox::World::ServiceEntry& entry = entries[service_index];
+
+		nox::ServiceContext context(entry.depends, lookup_view);
+		const bool succeeded = entry.service->Initialize(context);
+		if (succeeded == true)
+		{
+			service_initialize_order_[initialized_service_count_] = service_index;
+			++initialized_service_count_;
+		}
+
+		//	宣言外の型を引いていたら、OnInitialize が true を返していても失敗にする。
+		//	宣言 = 依存解析の唯一の入力であり、宣言外の依存は初期化順が保証されないため。
+		const std::string_view undeclared_type_name = context.GetUndeclaredTypeName();
+		if ((succeeded == false) || (undeclared_type_name.empty() == false))
+		{
+			const nox::ServiceInitializeResult result = (undeclared_type_name.empty() == false)
+				? nox::ServiceInitializeResult{
+					.error = nox::ServiceInitializeError::UndeclaredServiceAccess,
+					.service_type_name = entry.type->GetTypeName(),
+					.related_type_name = undeclared_type_name,
+				}
+				: nox::ServiceInitializeResult{
+					.error = nox::ServiceInitializeError::InitializeFailed,
+					.service_type_name = entry.type->GetTypeName(),
+					.related_type_name = std::string_view(),
+				};
+			//	初期化済みのものだけを逆順に終了させてから理由を残す。
+			ShutdownServices();
+			log_service_initialize_failure(result);
+			return result;
+		}
+
+#if !NOX_MASTER
+		NOX_INFO_LINE(nox::log_id::CoreCommon, u8"Service初期化: {0}", entry.type->GetTypeName());
+#endif // !NOX_MASTER
+	}
+
+	services_initialized_ = true;
+	return nox::ServiceInitializeResult{};
+}
+
+void nox::World::InitializeServices()noexcept
+{
+	const nox::ServiceInitializeResult result = TryInitializeServices();
+	if (result.IsSuccess() == false)
+	{
+		//	初期化済みのServiceは TryInitializeServices が逆順に終了させ、理由もログに出してある。
+		abort_on_service_initialize_failure(result);
+	}
+}
+
+void nox::World::ShutdownServices()noexcept
+{
+	//	数を先に減らしてから呼ぶ。OnShutdown の中から何が起きても、同じServiceを2回終了させない。
+	while (initialized_service_count_ != 0u)
+	{
+		--initialized_service_count_;
+		services_.GetStorage()[service_initialize_order_[initialized_service_count_]].service->Shutdown();
+	}
+	services_initialized_ = false;
 }
 
 nox::Service* nox::World::TryGetService(const nox::reflection::Type& type)const noexcept

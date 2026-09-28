@@ -189,6 +189,8 @@ namespace nox
 		{
 			const nox::reflection::Type* type;
 			nox::Service* service;
+			/// @brief このServiceより先に初期化するServiceの完全修飾型名(T::Depends)。
+			std::span<const std::string_view> depends;
 		};
 
 		struct EntityRecordPage
@@ -404,18 +406,39 @@ namespace nox
 
 #pragma region Service
 		/// @brief Serviceを登録する。所有権はWorldに移り、World破棄時に解放される。
-		void RegisterService(const nox::reflection::Type& type, nox::Service& service);
+		/// @details 初期化(nox::World::TryInitializeServices)より前に呼ぶこと。
+		///          通常は nox::EngineModule::RegisterServices の中から呼ぶ。
+		void RegisterService(const nox::ServiceTypeDescriptor& descriptor, nox::Service& service);
 
 		template<std::derived_from<nox::Service> T>
-		void RegisterService(T& service) { RegisterService(nox::reflection::Typeof<T>(), service); }
+		void RegisterService(T& service) { RegisterService(nox::MakeServiceTypeDescriptor<T>(), service); }
 
+		/// @brief 登録済みのServiceを型で引く。
+		/// @details 【起動時・テスト・エンジン内部専用】
+		///          これは引数宣言(System / EntityLogic の引数リスト、Serviceの Depends)を素通りする唯一の経路で、
+		///          ここから引いた依存は UpdaterGraph の依存解析にもServiceの初期化順にも載らない。
+		///          ノード(System / EntityLogic)の中からは呼ばず、引数で受け取ること。
+		///          Serviceの初期化中は nox::ServiceContext::Get を使うこと。
 		[[nodiscard]] nox::Service* TryGetService(const nox::reflection::Type& type)const noexcept;
 
+		/// @brief 登録済みのServiceを型で引く。制約は非テンプレート版と同じ(起動時・テスト・エンジン内部専用)。
 		template<std::derived_from<nox::Service> T>
 		[[nodiscard]] T* TryGetService()const noexcept
 		{
 			return static_cast<T*>(TryGetService(nox::reflection::Typeof<T>()));
 		}
+
+		/// @brief 登録済みの全Serviceを Depends の順に初期化する。失敗を abort せずに返す。
+		/// @details 順序は Depends のトポロジカル順で、決まらない箇所は完全修飾型名順(登録順は使わない)。
+		///          未登録の型への Depends・循環・同じ型の二重登録は、どの OnInitialize よりも前に検出して失敗を返す。
+		///          OnInitialize が false を返した、または宣言外の型を nox::ServiceContext::Get で引いた場合は、
+		///          それまでに初期化した(OnInitialize が true を返した)Serviceだけを逆順に Shutdown してから失敗を返す。
+		///          失敗の理由はログにも出す。
+		///
+		///          起動経路(World::Init)は失敗で abort する版を使う。これは失敗経路を検証するテストのための窓口
+		///          (nox::UpdaterGraph::TryRebuild と同じ考え)。成功後の終了は World::Exit / ~World が逆順に行う。
+		///          確保は一切走らない(全て k_max_service_count の固定長)。
+		[[nodiscard]] nox::ServiceInitializeResult TryInitializeServices()noexcept;
 #pragma endregion
 
 		/// @brief 指定したComponentDataを全て持つArchetypeにマッチするQueryを構築する。
@@ -431,6 +454,10 @@ namespace nox
 		void Init();
 		void Update();
 		void Exit();
+		/// @brief TryInitializeServices の起動経路版。失敗したら理由を残して abort する(Masterでも同じ)。
+		void InitializeServices()noexcept;
+		/// @brief 初期化済みのServiceを初期化と逆順に Shutdown する。二重呼び出しは無害。
+		void ShutdownServices()noexcept;
 		void BuildExecuteNodeList(std::span<nox::SystemBase*> system_list);
 		void ExecutePhase(const nox::SystemPhaseType phase_type);
 		void RegisterSystem(nox::SystemBase& system);
@@ -621,6 +648,19 @@ namespace nox
 
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
 		nox::FixedVector<nox::World::ServiceEntry, k_max_service_count> services_;
+
+		/// @brief 初期化した順の services_ の要素番号。先頭 initialized_service_count_ 個が有効。
+		/// @details Shutdown はこの逆順に回す。
+		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
+		std::array<nox::uint32, k_max_service_count> service_initialize_order_;
+
+		/// @brief 初期化済み(OnInitialize が true を返した)のServiceの数。
+		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
+		nox::uint32 initialized_service_count_;
+
+		/// @brief TryInitializeServices が成功したか。以降の RegisterService は誤り。
+		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
+		bool services_initialized_;
 
 		nox::Vector<nox::EngineModule*> modules_;
 		nox::Vector<nox::SystemBase*> systems_;

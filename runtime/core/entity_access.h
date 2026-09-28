@@ -63,6 +63,10 @@ namespace nox
 	///
 	///          privateに書いたエイリアスは記述子から見えず、宣言が無いのと同じになる。
 	///          必ずpublicに書くこと。
+	///
+	///          Serviceの依存宣言 `using Depends = nox::TypeList<...>;` にも同じ型を使う(service.h を参照)。
+	///          service.h はこのヘッダをインクルードできない(こちらが service.h に依存する)ため、
+	///          向こうには前方宣言だけを置いてある。
 	template<class... Types>
 	struct TypeList final
 	{
