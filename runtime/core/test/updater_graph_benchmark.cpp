@@ -3,7 +3,7 @@
 
 ///	@file	updater_graph_benchmark.cpp
 ///	@brief	UpdaterGraph の2種類の並列化が実際に効くかの実測。assert は一切しない。
-///	@details	SOL-AVES 式の並列化は独立した2つの機構で成り立っている。
+///	@details	UpdaterGraph の並列化は独立した2つの機構で成り立っている。
 ///
 ///				  (a) ノードレベル並列 … 同一レイヤーの複数ノードをワーカーへ配る
 ///				                        (nox::World::ExecuteUpdaterGraphPhase)

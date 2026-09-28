@@ -5,6 +5,8 @@ set -u
 DIR=$(dirname "$0")
 ZERO=0000000000000000000000000000000000000000
 status=0
+PY=$(sh "$DIR/find-python.sh")
+[ -n "$PY" ] || echo "pre-push: Python が見つからないので外部資料名の検査を飛ばす" >&2
 
 while read -r _local_ref local_sha _remote_ref remote_sha; do
   [ "$local_sha" = "$ZERO" ] && continue          # ブランチ削除
@@ -16,6 +18,16 @@ while read -r _local_ref local_sha _remote_ref remote_sha; do
     files=$(git diff --name-only "$range" 2>/dev/null || git ls-tree -r --name-only "$local_sha")
   else
     files=$(git diff --name-only "$remote_sha..$local_sha")
+  fi
+
+  # コミットメッセージに外部資料の名前が無いか。--no-verify で commit-msg を
+  # 飛ばしていても、公開される前にここで止める。
+  if [ -n "$PY" ]; then
+    if [ "$remote_sha" = "$ZERO" ]; then
+      "$PY" "$DIR/check-external-names.py" --commits "$local_sha" --not --remotes || status=1
+    else
+      "$PY" "$DIR/check-external-names.py" --commits "$remote_sha..$local_sha" || status=1
+    fi
   fi
 
   [ -n "$files" ] || continue
