@@ -8,10 +8,11 @@
 照合は 2 種類ある。どちらも NFKC 正規化して小文字にしてから行う。
 
   語として照合 (名前が英数字とカタカナだけのとき。リストの行はハッシュのみ):
-    英数字の並びとカタカナの並びを語として取り出す。間が区切り 2 文字以内
-    (空白 - _ . / ・) で続く語は最大 3 語までつなげて 1 つの候補にもする。
-    "Foo-Bar" "foo_bar" "FooBar" "foo bar" はどれも "foobar" になる。
+    英数字の並びとカタカナの並びを語として取り出す。間が語の文字以外 3 文字以内
+    (空白・記号) で続く語は最大 3 語までつなげて 1 つの候補にもする。
+    "Foo-Bar" "foo_bar" "FooBar" "foo bar" "Foo's Bar" はどれも同じ候補になる。
     語の境界を見るので、長い単語の一部に偶然含まれても誤検出しない。
+    この規則で拾えない名前 (4 文字未満・4 語以上など) は --hash が登録を拒む。
 
   部分文字列として照合 (漢字・ひらがなを含むとき。リストの行は "ハッシュ 文字数"):
     日本語には語の区切りが無いので、漢字・ひらがなを含む行だけを対象に、
@@ -55,11 +56,15 @@ MAX_JOIN = 3
 HINT_TERMS = ("講演",)
 
 # 検査の仕組み自身。HINT_TERMS を平文で持つので対象から外す。
-SELF_PATHS = ("tools/git-hooks/check-external-names.py", "tools/git-hooks/external-names.sha256")
+# 禁止リスト (external-names.sha256) は平文の名前を持たないはずなので、外さずに検査する。
+SELF_PATHS = ("tools/git-hooks/check-external-names.py",)
 
 TOKEN_RE = re.compile(r"[0-9a-z]+|[ァ-ヺー]+")
 TOKEN_ONLY_RE = re.compile(r"(?:[0-9a-z]|[ァ-ヺー])+")
-GAP_RE = re.compile(r"[\s\-_./・]{0,2}")
+# 語と語の間に挟まってよいもの。語の文字 (英数字・カタカナ) 以外なら何でも 3 文字まで。
+# 登録時の compact() は語の文字以外を全部落とすので、ここを絞ると登録できても検出できない名前が出る。
+GAP_RE = re.compile(r"[^0-9a-zァ-ヺー\n]{0,3}")
+MIN_TOKEN_LEN = 4
 # 部分文字列照合を行う行の目印 (ひらがな・漢字)。
 CJK_RE = re.compile(r"[ぁ-ゖ\u3400-\u9fff\uf900-\ufaff]")
 
@@ -98,23 +103,39 @@ def compact(norm: str) -> str:
 
 
 def list_entry(name: str) -> str:
-    """--hash の出力 1 行。"""
+    """--hash の出力 1 行。
+
+    出力した行で名前そのものが検出できることを確かめてから返す。語の数が MAX_JOIN を
+    超える、語の間の区切りが長すぎる、短すぎるなど、検出側の規則で拾えない名前を
+    黙って登録させないため。
+    """
     word = compact(normalize(name))
     if not word:
         raise ValueError(f"文字を含まない名前は登録できない: {name!r}")
     if TOKEN_ONLY_RE.fullmatch(word):
-        return digest(word)
-    return f"{digest(word)} {len(word)}"
+        entry = digest(word)
+        names = NameList()
+        names.tokens.add(entry)
+    else:
+        entry = f"{digest(word)} {len(word)}"
+        names = NameList()
+        names.substrings.add(digest(word))
+        names.lengths.add(len(word))
+    if find_in_line(name, names, hints=False) is None:
+        raise ValueError(
+            f"この名前は登録しても検出できない: {name!r} "
+            f"(英数字・カタカナの名前は {MIN_TOKEN_LEN} 文字以上、{MAX_JOIN} 語以内、語の間の区切りは 3 文字以内)")
+    return entry
 
 
 def mask(word: str) -> str:
     return word[:1] + "*" * (len(word) - 1)
 
 
-def find_in_line(line: str, names: NameList) -> str | None:
+def find_in_line(line: str, names: NameList, hints: bool = True) -> str | None:
     """行の中で最初に見つかった禁止語 (伏せ字) を返す。"""
     norm = normalize(line)
-    for term in HINT_TERMS:
+    for term in HINT_TERMS if hints else ():
         if term in norm:
             return term
     if names.substrings and CJK_RE.search(norm):
@@ -136,7 +157,7 @@ def find_in_line(line: str, names: NameList) -> str | None:
                     break
                 word += nxt.group()
                 end = nxt.end()
-            if len(word) >= 4 and digest(word) in hashes:
+            if len(word) >= MIN_TOKEN_LEN and digest(word) in hashes:
                 return mask(word)
     return None
 
@@ -167,30 +188,50 @@ def iter_blobs(pairs: list[tuple[str, str]]) -> Iterator[tuple[str, bytes]]:
         try:
             for _, obj in pairs:
                 proc.stdin.write(obj.encode("utf-8") + b"\n")
+        except BrokenPipeError:
+            pass  # git が先に終わった。読み側で途切れとして扱う
         finally:
-            proc.stdin.close()
+            try:
+                proc.stdin.close()
+            except BrokenPipeError:
+                pass
 
     writer = threading.Thread(target=feed, daemon=True)
     writer.start()
     out = proc.stdout
+    truncated = False
     for path, _ in pairs:
         header = out.readline().split()
         if not header:
+            truncated = True
             break
         if len(header) < 3 or header[1] == b"missing":
             continue
         size = int(header[2])
         if header[1] != b"blob" or size > MAX_BYTES:
+            # 本文は持たずに読み飛ばす。途中で出力が尽きたら (git の異常終了) 抜ける。
             while size > 0:
-                size -= len(out.read(min(size, 1 << 20)))
+                chunk = out.read(min(size, 1 << 20))
+                if not chunk:
+                    truncated = True
+                    break
+                size -= len(chunk)
+            if truncated:
+                break
             out.read(1)
             continue
         body = out.read(size)
+        if len(body) != size:
+            truncated = True
+            break
         out.read(1)
         yield path, body
-    writer.join()
     out.close()
-    proc.wait()
+    writer.join()
+    code = proc.wait()
+    # 途中で切れたのに成功扱いにすると、検査しなかったファイルを素通りさせてしまう。
+    if truncated or code != 0:
+        raise RuntimeError(f"git cat-file --batch が途中で終了した (終了コード {code})")
 
 
 def cmd_blobs(names: NameList) -> int:
@@ -248,12 +289,16 @@ def main() -> int:
     names = NameList()
     for path in args.list or [LIST_PATH]:
         names.load(path)
-    if args.blobs:
-        found = cmd_blobs(names)
-    elif args.message:
-        found = cmd_message(args.message, names)
-    else:
-        found = cmd_commits(args.commits, names)
+    try:
+        if args.blobs:
+            found = cmd_blobs(names)
+        elif args.message:
+            found = cmd_message(args.message, names)
+        else:
+            found = cmd_commits(args.commits, names)
+    except (RuntimeError, subprocess.CalledProcessError) as e:
+        print(f"check-external-names: 検査を完了できなかった: {e}", file=sys.stderr)
+        return 2
 
     if found:
         print(
