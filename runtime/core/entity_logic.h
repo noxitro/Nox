@@ -69,6 +69,12 @@ namespace nox
 		nox::uint32 instance_size;
 		nox::uint32 instance_alignment;
 		std::string_view name;
+		/// @brief この型の更新メソッドより先に実行する型の完全修飾名(TLogic::RunAfter)。
+		/// @details 型の全更新メソッドに掛かる。名前の解決と循環検査は nox::UpdaterGraph の
+		///          構築時に行い、失敗すれば起動を止める。 nox::TypeList を参照。
+		std::span<const std::string_view> run_after;
+		/// @brief この型の更新メソッドより後に実行する型の完全修飾名(TLogic::RunBefore)。
+		std::span<const std::string_view> run_before;
 	};
 
 	template<class TLogic>
@@ -150,6 +156,10 @@ namespace nox
 	///
 	///          Worldへの参照は保持しない。フェーズ実行中にWorldへ出せる操作は
 	///          更新メソッドの引数に nox::EntityCommands& を並べて受け取る。
+	///
+	///          他のSystem / EntityLogicとの実行順を明示したいときは、派生型にpublicな
+	///          `using RunAfter = nox::TypeList<...>;` / `using RunBefore = nox::TypeList<...>;` を書く
+	///          (全更新メソッドに掛かる)。同じ型の更新メソッド同士はメソッド名順に直列化される。
 	/// @tparam TDerived CRTPの派生型。
 	/// @tparam ExtraRequiredComponents どのメソッドも引数に取らないが、存在を必須にしたいComponentData
 	///         (タグ用)。通常は指定しない。
@@ -243,7 +253,8 @@ namespace nox
 	}
 
 	/// @brief EntityLogic型の記述子を作る。
-	/// @details nox::EntityLogicMethodTable<TLogic> だけを読む。CRTP基底には何も持たせない。
+	/// @details nox::EntityLogicMethodTable<TLogic> と、あれば TLogic::RunAfter / RunBefore だけを読む。
+	///          CRTP基底には何も持たせない。
 	template<class TLogic>
 	[[nodiscard]] constexpr nox::EntityLogicTypeDescriptor MakeEntityLogicTypeDescriptor()noexcept
 	{
@@ -281,6 +292,8 @@ namespace nox
 			.instance_size = static_cast<nox::uint32>(sizeof(TLogic)),
 			.instance_alignment = static_cast<nox::uint32>(alignof(TLogic)),
 			.name = nox::util::GetTypeName<TLogic>(),
+			.run_after = nox::detail::GetRunAfterTypeNames<TLogic>(),
+			.run_before = nox::detail::GetRunBeforeTypeNames<TLogic>(),
 		};
 	}
 }

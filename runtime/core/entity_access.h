@@ -45,6 +45,93 @@ namespace nox
 		bool write;
 	};
 
+	/// @brief 型だけを並べる空のリスト。実行順の明示宣言(RunAfter / RunBefore)に使う。
+	/// @details EntitySystem / EntityLogic の型の中に、publicなエイリアスとして書く(省略時は宣言なし)。
+	///          @code
+	///          class MoveSystem final : public nox::EntitySystem<MoveSystem>
+	///          {
+	///          public:
+	///              using RunAfter = nox::TypeList<InputSystem, PlayerLogic>;
+	///              using RunBefore = nox::TypeList<RenderSyncSystem>;
+	///              void OnUpdate(...);
+	///          };
+	///          @endcode
+	///          引数リストの読み書きの衝突からは導けない因果(例: 受信の後に処理する)を書くためのもの。
+	///          衝突の有無に関係なく辺が張られる。並べる型は EntitySystem / EntityLogic の型で、
+	///          前方宣言だけでよい(名前しか使わない)。EntityLogic を並べると、その型の
+	///          同じフェーズの更新メソッド全てが対象になる。
+	///
+	///          privateに書いたエイリアスは記述子から見えず、宣言が無いのと同じになる。
+	///          必ずpublicに書くこと。
+	template<class... Types>
+	struct TypeList final
+	{
+	};
+
+	namespace detail
+	{
+		/// @brief RunAfter / RunBefore に並べた型の完全修飾名の表。
+		/// @details 名前は nox::util::GetTypeName (定数初期化された静的記憶域) を指すだけなので、
+		///          表も定数初期化される。ヒープも動的初期化も使わない。
+		///          名前の解決(= 登録済みの型か)は nox::UpdaterGraph の構築時に行い、
+		///          見つからなければ起動を止める。ここでは型の完全性を要求しない。
+		template<class TList>
+		struct UpdaterOrderNameTable
+		{
+			static_assert(std::is_void_v<TList> && (std::is_void_v<TList> == false),
+				"RunAfter / RunBefore には nox::TypeList<型...> を指定してください");
+		};
+
+		template<class... Types>
+		struct UpdaterOrderNameTable<nox::TypeList<Types...>>
+		{
+			static_assert(((std::is_class_v<Types> && std::is_same_v<Types, std::remove_cv_t<Types>>) && ... && true),
+				"RunAfter / RunBefore にはcv修飾の無いクラス型(EntitySystem / EntityLogic)を並べてください");
+
+			static constexpr std::array<std::string_view, sizeof...(Types)> k_names{ nox::util::GetTypeName<Types>()... };
+
+			[[nodiscard]] static constexpr std::span<const std::string_view> Get()noexcept
+			{
+				if constexpr (sizeof...(Types) == 0u)
+				{
+					return std::span<const std::string_view>();
+				}
+				else
+				{
+					return std::span<const std::string_view>(k_names.data(), k_names.size());
+				}
+			}
+		};
+
+		/// @brief T::RunAfter に並べた型の名前。宣言が無ければ空。
+		template<class T>
+		[[nodiscard]] constexpr std::span<const std::string_view> GetRunAfterTypeNames()noexcept
+		{
+			if constexpr (requires { typename T::RunAfter; })
+			{
+				return nox::detail::UpdaterOrderNameTable<typename T::RunAfter>::Get();
+			}
+			else
+			{
+				return std::span<const std::string_view>();
+			}
+		}
+
+		/// @brief T::RunBefore に並べた型の名前。宣言が無ければ空。
+		template<class T>
+		[[nodiscard]] constexpr std::span<const std::string_view> GetRunBeforeTypeNames()noexcept
+		{
+			if constexpr (requires { typename T::RunBefore; })
+			{
+				return nox::detail::UpdaterOrderNameTable<typename T::RunBefore>::Get();
+			}
+			else
+			{
+				return std::span<const std::string_view>();
+			}
+		}
+	}
+
 	/// @brief ComponentDataとして引数に取れる型。
 	template<class T>
 	concept ComponentDataParameter = nox::IsComponentDataType<std::remove_cv_t<T>>();

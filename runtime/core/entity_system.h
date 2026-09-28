@@ -48,6 +48,12 @@ namespace nox
 		/// @details 引数リストから導出される。宣言していないSystemは1コマンドも積めないので、
 		///          Worldはこのノードのぶんのコマンドバッファを確保しない。
 		bool emits_structural_change;
+		/// @brief このSystemより先に実行する型の完全修飾名(TSystem::RunAfter)。
+		/// @details 引数リストの衝突からは導けない因果を書く明示辺。名前の解決と循環検査は
+		///          nox::UpdaterGraph の構築時に行い、失敗すれば起動を止める。 nox::TypeList を参照。
+		std::span<const std::string_view> run_after;
+		/// @brief このSystemより後に実行する型の完全修飾名(TSystem::RunBefore)。
+		std::span<const std::string_view> run_before;
 	};
 
 	/// @brief EntitySystemの非テンプレート基底。Worldはこの型でのみ保持する。
@@ -155,7 +161,8 @@ namespace nox
 	}
 
 	/// @brief EntitySystem型の記述子を作る。
-	/// @details TSystem::k_phase と TSystem::SignatureOf<> だけを読む。CRTP基底には何も持たせない。
+	/// @details TSystem::k_phase と TSystem::SignatureOf<> と、あれば TSystem::RunAfter / RunBefore だけを読む。
+	///          CRTP基底には何も持たせない。
 	template<class TSystem>
 	[[nodiscard]] constexpr nox::EntitySystemTypeDescriptor MakeEntitySystemTypeDescriptor()noexcept
 	{
@@ -182,6 +189,8 @@ namespace nox
 			.phase = TSystem::k_phase,
 			.parallel_for_each = nox::IsParallelForEachEntitySystem<TSystem>(),
 			.emits_structural_change = (Signature::k_commands_parameter_count != 0u),
+			.run_after = nox::detail::GetRunAfterTypeNames<TSystem>(),
+			.run_before = nox::detail::GetRunBeforeTypeNames<TSystem>(),
 		};
 	}
 
@@ -194,6 +203,9 @@ namespace nox
 		nox::MakeEntitySystemTypeDescriptor<TSystem>();
 
 	/// @brief entityを一括処理するSystemの基底。
+	/// @details 同一フェーズ内の実行順は、引数リストの読み書きの衝突と、
+	///          publicに書いた `using RunAfter = nox::TypeList<...>;` / `using RunBefore = nox::TypeList<...>;`
+	///          (省略可)から nox::UpdaterGraph が決める。規則は updater_graph.h を参照。
 	/// @tparam TDerived CRTPの派生型。 void OnUpdate(引数リスト) を実装する。
 	/// @tparam _Phase 実行フェーズ。
 	template<class TDerived, nox::SystemPhaseType _Phase = nox::SystemPhaseType::Update>
