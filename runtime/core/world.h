@@ -398,6 +398,8 @@ namespace nox
 		/// @brief Serviceを登録する。所有権はWorldに移り、World破棄時に解放される。
 		/// @details 初期化(nox::World::TryInitializeServices)より前に呼ぶこと。
 		///          通常は nox::EngineModule::RegisterServices の中から呼ぶ。
+		///          型が属性付きメソッド(nox::attr::ServiceMethod)を持てば、Init がそのメソッドを
+		///          UpdaterGraph のノードにする(nox::GetServiceMethodTypes() の表と型情報で照合する)。
 		void RegisterService(const nox::ServiceTypeDescriptor& descriptor, nox::Service& service);
 
 		template<std::derived_from<nox::Service> T>
@@ -487,6 +489,7 @@ namespace nox
 		///          ワーカーへ配る。main_thread_only のノードは配らず、このスレッド(Runではゲームスレッド)で回す。
 		void ExecuteUpdaterGraphPhase(nox::SystemPhaseType phase_type);
 		/// @brief ノード1つを実行する。ワーカー上でも呼ばれる。
+		/// @details EntitySystem / EntityLogic はentityを列挙し、Serviceのメソッド / Task は1回だけ呼ぶ。
 		void ExecuteNode(const nox::UpdaterNode& node);
 		/// @brief ExecuteNodeを nox::ExecuteUpdaterLayer から呼ぶためのthunk。contextはWorld*。
 		static void ExecuteNodeOfLayer(void* context, const nox::UpdaterNode& node);

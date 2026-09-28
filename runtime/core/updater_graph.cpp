@@ -49,20 +49,39 @@ namespace nox
 			return conflicts_service_access(a.service_accesses, b.service_accesses);
 		}
 
-		/// @brief ノードの型が宣言した RunAfter。EntityLogicは型単位の宣言を全メソッドで共有する。
+		/// @brief ノードの型が宣言した RunAfter。EntityLogic / Serviceは型単位の宣言を全メソッドで共有する。
+		/// @details Taskは型ではないので宣言を持たない(空)。
 		[[nodiscard]] std::span<const std::string_view> get_updater_node_run_after(const nox::UpdaterNode& node)noexcept
 		{
-			return (node.kind == nox::UpdaterNodeKind::EntitySystem)
-				? node.system->GetDescriptor().run_after
-				: node.storage->GetDescriptor().run_after;
+			switch (node.kind)
+			{
+			case nox::UpdaterNodeKind::EntitySystem:
+				return node.system->GetDescriptor().run_after;
+			case nox::UpdaterNodeKind::EntityLogicMethod:
+				return node.storage->GetDescriptor().run_after;
+			case nox::UpdaterNodeKind::ServiceMethod:
+				return node.service_type->run_after;
+			case nox::UpdaterNodeKind::Task:
+				break;
+			}
+			return std::span<const std::string_view>();
 		}
 
 		/// @brief ノードの型が宣言した RunBefore。
 		[[nodiscard]] std::span<const std::string_view> get_updater_node_run_before(const nox::UpdaterNode& node)noexcept
 		{
-			return (node.kind == nox::UpdaterNodeKind::EntitySystem)
-				? node.system->GetDescriptor().run_before
-				: node.storage->GetDescriptor().run_before;
+			switch (node.kind)
+			{
+			case nox::UpdaterNodeKind::EntitySystem:
+				return node.system->GetDescriptor().run_before;
+			case nox::UpdaterNodeKind::EntityLogicMethod:
+				return node.storage->GetDescriptor().run_before;
+			case nox::UpdaterNodeKind::ServiceMethod:
+				return node.service_type->run_before;
+			case nox::UpdaterNodeKind::Task:
+				break;
+			}
+			return std::span<const std::string_view>();
 		}
 
 		/// @brief フェーズの集合を表すビット。
@@ -134,14 +153,16 @@ namespace nox
 
 		/// @brief RunAfter / RunBefore に並べた名前が、登録済みの型を指し、同じフェーズを共有しているか。
 		/// @details フェーズごとの構築では「このフェーズに相手のノードが無い」と「そもそも誤記」を区別できない
-		///          (EntityLogicは複数フェーズにメソッドを持てるので、無いフェーズがあるのは正常)。
+		///          (EntityLogic / Serviceは複数フェーズにメソッドを持てるので、無いフェーズがあるのは正常)。
 		///          そこで先に型の集合全体で検査し、辺が1本も張れない宣言をここで弾く。
+		///          Taskは型ではないので、宣言する側にも並べられる側にもならない。
 		[[nodiscard]] nox::UpdaterGraphBuildResult validate_updater_order_targets(
 			const std::span<nox::EntitySystemBase* const> systems,
-			const std::span<nox::EntityLogicStorage* const> storages)
+			const std::span<nox::EntityLogicStorage* const> storages,
+			const std::span<const nox::UpdaterServiceBinding> services)
 		{
 			nox::Vector<UpdaterOrderDeclarer> declarers;
-			declarers.reserve(systems.size() + storages.size());
+			declarers.reserve(systems.size() + storages.size() + services.size());
 			for (const nox::EntitySystemBase* const system : systems)
 			{
 				const nox::EntitySystemTypeDescriptor& descriptor = system->GetDescriptor();
@@ -157,6 +178,21 @@ namespace nox
 				const nox::EntityLogicTypeDescriptor& descriptor = storage->GetDescriptor();
 				nox::uint32 phase_bits = 0u;
 				for (const nox::EntityLogicMethodDescriptor& method : descriptor.get_methods())
+				{
+					phase_bits |= to_updater_phase_bit(method.phase);
+				}
+				declarers.push_back(UpdaterOrderDeclarer{
+					.name = descriptor.name,
+					.run_after = descriptor.run_after,
+					.run_before = descriptor.run_before,
+					.phase_bits = phase_bits,
+					});
+			}
+			for (const nox::UpdaterServiceBinding& binding : services)
+			{
+				const nox::ServiceMethodTypeDescriptor& descriptor = *binding.descriptor;
+				nox::uint32 phase_bits = 0u;
+				for (const nox::ServiceMethodDescriptor& method : descriptor.get_methods())
 				{
 					phase_bits |= to_updater_phase_bit(method.phase);
 				}
@@ -246,20 +282,17 @@ namespace nox
 			}
 		}
 
-		/// @brief ノードの型名(完全修飾名)。表示用。
-		[[nodiscard]] std::string_view get_updater_node_type_name(const nox::UpdaterNode& node)noexcept
+		/// @brief ノードの種別の表示名。
+		[[nodiscard]] constexpr std::u8string_view to_updater_node_kind_name(const nox::UpdaterNodeKind kind)noexcept
 		{
-			return (node.kind == nox::UpdaterNodeKind::EntitySystem)
-				? node.system->GetDescriptor().name
-				: node.storage->GetDescriptor().name;
-		}
-
-		/// @brief ノードのメソッド名。表示用。EntitySystemは空。
-		[[nodiscard]] std::string_view get_updater_node_method_name(const nox::UpdaterNode& node)noexcept
-		{
-			return (node.kind == nox::UpdaterNodeKind::EntitySystem)
-				? std::string_view()
-				: node.method->name;
+			switch (kind)
+			{
+			case nox::UpdaterNodeKind::EntitySystem: return u8"system";
+			case nox::UpdaterNodeKind::EntityLogicMethod: return u8"logic";
+			case nox::UpdaterNodeKind::ServiceMethod: return u8"service";
+			case nox::UpdaterNodeKind::Task: return u8"task";
+			}
+			return u8"unknown";
 		}
 
 		/// @brief ログ1行分を組み立てる固定長バッファ。BuildRuntimeDependencyGraphTextと同じ流儀。
@@ -359,21 +392,24 @@ namespace nox
 			}
 		}
 
-		/// @brief ノードの表示名。EntitySystemは型名、EntityLogicは「型名::メソッド名」。
+		/// @brief ノードの表示名。EntitySystemは型名、EntityLogic / Serviceは「型名::メソッド名」、Taskは関数名。
 		void append_node_name(UpdaterGraphTextBuilder& builder, const nox::UpdaterNode& node)noexcept
 		{
-			append_type_and_method_name(builder, get_updater_node_type_name(node), get_updater_node_method_name(node));
+			append_type_and_method_name(builder, nox::GetUpdaterNodeTypeName(node), nox::GetUpdaterNodeMethodName(node));
 		}
 
 		/// @brief 衝突理由を1つだけ書き出す(先に見つかったもの)。
 		void append_conflict_reason(
 			UpdaterGraphTextBuilder& builder,
-			const nox::UpdaterNodeAccess& a,
-			const nox::UpdaterNodeAccess& b)noexcept
+			const nox::UpdaterNode& a_node,
+			const nox::UpdaterNode& b_node)noexcept
 		{
+			const nox::UpdaterNodeAccess& a = a_node.access;
+			const nox::UpdaterNodeAccess& b = b_node.access;
 			if ((a.group_index != nox::k_invalid_updater_group_index) && (a.group_index == b.group_index))
 			{
-				builder.Append(u8"logic-state");
+				//	同じインスタンスのメソッド同士。EntityLogicはエンティティごとのインスタンス、Serviceは1つのインスタンス。
+				builder.Append((a_node.kind == nox::UpdaterNodeKind::ServiceMethod) ? u8"service-state" : u8"logic-state");
 				return;
 			}
 
@@ -439,7 +475,7 @@ namespace nox
 			case nox::UpdaterGraphBuildError::None:
 				return;
 			case nox::UpdaterGraphBuildError::UnresolvedOrderTarget:
-				builder.Append(u8"RunAfter / RunBefore に並べた型が EntitySystem / EntityLogic として登録されていません: ");
+				builder.Append(u8"RunAfter / RunBefore に並べた型が EntitySystem / EntityLogic / Service(属性付きメソッドを持ち登録済みのもの)として登録されていません: ");
 				break;
 			case nox::UpdaterGraphBuildError::OrderTargetInOtherPhase:
 				builder.Append(u8"RunAfter / RunBefore に並べた型が、宣言した型と同じフェーズにノードを持ちません(辺が張れません): ");
@@ -502,13 +538,44 @@ bool nox::ConflictsUpdaterNodeAccess(
 	const nox::UpdaterNodeAccess& a,
 	const nox::UpdaterNodeAccess& b)noexcept
 {
-	//	同一EntityLogic型のメソッド同士はメンバ変数を共有するため、宣言が重ならなくても直列化する。
+	//	同一EntityLogic型・同一Serviceのメソッド同士はメンバ変数を共有するため、宣言が重ならなくても直列化する。
 	if ((a.group_index != nox::k_invalid_updater_group_index) && (a.group_index == b.group_index))
 	{
 		return true;
 	}
 
 	return conflicts_declared_access(a, b);
+}
+
+std::string_view nox::GetUpdaterNodeTypeName(const nox::UpdaterNode& node)noexcept
+{
+	switch (node.kind)
+	{
+	case nox::UpdaterNodeKind::EntitySystem:
+		return node.system->GetDescriptor().name;
+	case nox::UpdaterNodeKind::EntityLogicMethod:
+		return node.storage->GetDescriptor().name;
+	case nox::UpdaterNodeKind::ServiceMethod:
+		return node.service_type->name;
+	case nox::UpdaterNodeKind::Task:
+		return node.task->name;
+	}
+	return std::string_view();
+}
+
+std::string_view nox::GetUpdaterNodeMethodName(const nox::UpdaterNode& node)noexcept
+{
+	switch (node.kind)
+	{
+	case nox::UpdaterNodeKind::EntityLogicMethod:
+		return node.method->name;
+	case nox::UpdaterNodeKind::ServiceMethod:
+		return node.service_method->name;
+	case nox::UpdaterNodeKind::EntitySystem:
+	case nox::UpdaterNodeKind::Task:
+		break;
+	}
+	return std::string_view();
 }
 
 nox::uint32 nox::BuildUpdaterLayerIndices(
@@ -657,9 +724,11 @@ nox::UpdaterGraph::~UpdaterGraph() = default;
 
 void nox::UpdaterGraph::Rebuild(
 	const std::span<nox::EntitySystemBase* const> systems,
-	const std::span<nox::EntityLogicStorage* const> storages)
+	const std::span<nox::EntityLogicStorage* const> storages,
+	const std::span<const nox::UpdaterServiceBinding> services,
+	const std::span<const nox::UpdaterTaskDescriptor* const> tasks)
 {
-	const nox::UpdaterGraphBuildResult result = TryRebuild(systems, storages);
+	const nox::UpdaterGraphBuildResult result = TryRebuild(systems, storages, services, tasks);
 	if (result.IsSuccess() == false)
 	{
 		abort_on_updater_graph_build_failure(result);
@@ -668,12 +737,14 @@ void nox::UpdaterGraph::Rebuild(
 
 nox::UpdaterGraphBuildResult nox::UpdaterGraph::TryRebuild(
 	const std::span<nox::EntitySystemBase* const> systems,
-	const std::span<nox::EntityLogicStorage* const> storages)
+	const std::span<nox::EntityLogicStorage* const> storages,
+	const std::span<const nox::UpdaterServiceBinding> services,
+	const std::span<const nox::UpdaterTaskDescriptor* const> tasks)
 {
 	Clear();
 
 	//	名前の解決はフェーズをまたいで先に行う(理由は validate_updater_order_targets を参照)。
-	const nox::UpdaterGraphBuildResult validation = validate_updater_order_targets(systems, storages);
+	const nox::UpdaterGraphBuildResult validation = validate_updater_order_targets(systems, storages, services);
 	if (validation.IsSuccess() == false)
 	{
 		log_updater_graph_build_failure(validation);
@@ -683,7 +754,7 @@ nox::UpdaterGraphBuildResult nox::UpdaterGraph::TryRebuild(
 	for (nox::uint8 phase_index = 0u; phase_index < nox::util::ToUnderlying(nox::SystemPhaseType::_Max); ++phase_index)
 	{
 		const nox::UpdaterGraphBuildResult result =
-			RebuildPhase(static_cast<nox::SystemPhaseType>(phase_index), systems, storages);
+			RebuildPhase(static_cast<nox::SystemPhaseType>(phase_index), systems, storages, services, tasks);
 		if (result.IsSuccess() == false)
 		{
 			//	途中まで組んだフェーズを残すと、半端なグラフで走り得る。失敗したら全て空にする。
@@ -712,7 +783,9 @@ void nox::UpdaterGraph::Clear()noexcept
 nox::UpdaterGraphBuildResult nox::UpdaterGraph::RebuildPhase(
 	const nox::SystemPhaseType phase_type,
 	const std::span<nox::EntitySystemBase* const> systems,
-	const std::span<nox::EntityLogicStorage* const> storages)
+	const std::span<nox::EntityLogicStorage* const> storages,
+	const std::span<const nox::UpdaterServiceBinding> services,
+	const std::span<const nox::UpdaterTaskDescriptor* const> tasks)
 {
 	const nox::uint32 phase_index = nox::util::ToUnderlying(phase_type);
 	nox::Vector<nox::UpdaterNode>& dest_nodes = phase_nodes_[phase_index];
@@ -779,6 +852,57 @@ nox::UpdaterGraphBuildResult nox::UpdaterGraph::RebuildPhase(
 		}
 	}
 
+	for (nox::uint32 service_index = 0u; service_index < services.size(); ++service_index)
+	{
+		const nox::UpdaterServiceBinding& binding = services[service_index];
+		for (const nox::ServiceMethodDescriptor& method : binding.descriptor->get_methods())
+		{
+			if (method.phase != phase_type)
+			{
+				continue;
+			}
+
+			UpdaterBuildNode build_node{};
+			//	ComponentDataには触れない(引数に取れない)。宣言はServiceだけで、末尾に自分自身への書き込みを含む。
+			build_node.node.access.service_accesses = method.get_service_accesses();
+			//	同じServiceのメソッド同士を必ず衝突させるためのグループ。EntityLogicの番号と重ならないよう後ろに続ける。
+			build_node.node.access.group_index = static_cast<nox::uint32>(storages.size()) + service_index;
+			build_node.node.kind = nox::UpdaterNodeKind::ServiceMethod;
+			build_node.node.service = binding.service;
+			build_node.node.service_type = binding.descriptor;
+			build_node.node.service_method = &method;
+			//	Serviceの実行スレッドはメソッド単位の宣言(nox::attr::ThreadAffinity)。
+			build_node.node.main_thread_only = method.main_thread_only;
+			build_node.type_name = binding.descriptor->name;
+			build_node.method_name = method.name;
+			build_node.registration_index = static_cast<nox::uint32>(build_nodes.size());
+			build_node.emits_structural_change = method.emits_structural_change;
+			build_nodes.push_back(build_node);
+		}
+	}
+
+	for (const nox::UpdaterTaskDescriptor* const task : tasks)
+	{
+		if (task->phase != phase_type)
+		{
+			continue;
+		}
+
+		UpdaterBuildNode build_node{};
+		build_node.node.access.service_accesses = task->get_service_accesses();
+		//	Taskはインスタンスを持たないので、状態を共有する相手がいない。
+		build_node.node.access.group_index = nox::k_invalid_updater_group_index;
+		build_node.node.kind = nox::UpdaterNodeKind::Task;
+		build_node.node.task = task;
+		build_node.node.main_thread_only = task->main_thread_only;
+		//	全順序のキーは完全修飾関数名。型名と同じ列で比べる。
+		build_node.type_name = task->name;
+		build_node.method_name = std::string_view();
+		build_node.registration_index = static_cast<nox::uint32>(build_nodes.size());
+		build_node.emits_structural_change = task->emits_structural_change;
+		build_nodes.push_back(build_node);
+	}
+
 	if (build_nodes.empty())
 	{
 		return nox::UpdaterGraphBuildResult{};
@@ -802,14 +926,24 @@ nox::UpdaterGraphBuildResult nox::UpdaterGraph::RebuildPhase(
 			++group_last;
 		}
 
+		//	Taskは型ではないので、明示辺を宣言する側にも張られる側にもならない
+		//	(関数名が型名と同じ綴りになる稀な場合でも、型の宣言をTaskへ波及させない)。
 		const nox::UpdaterNode& declarer = sorted_nodes[group_first].node;
 		for (const std::string_view target_name : get_updater_node_run_after(declarer))
 		{
 			const UpdaterNodeRange target = find_updater_type_range(sorted_nodes, target_name);
 			for (nox::uint32 target_index = target.first; target_index < target.last; ++target_index)
 			{
+				if (sorted_nodes[target_index].node.kind == nox::UpdaterNodeKind::Task)
+				{
+					continue;
+				}
 				for (nox::uint32 node_index = group_first; node_index < group_last; ++node_index)
 				{
+					if (sorted_nodes[node_index].node.kind == nox::UpdaterNodeKind::Task)
+					{
+						continue;
+					}
 					edges.push_back(nox::UpdaterOrderEdge{ .from = target_index, .to = node_index });
 				}
 			}
@@ -819,8 +953,16 @@ nox::UpdaterGraphBuildResult nox::UpdaterGraph::RebuildPhase(
 			const UpdaterNodeRange target = find_updater_type_range(sorted_nodes, target_name);
 			for (nox::uint32 target_index = target.first; target_index < target.last; ++target_index)
 			{
+				if (sorted_nodes[target_index].node.kind == nox::UpdaterNodeKind::Task)
+				{
+					continue;
+				}
 				for (nox::uint32 node_index = group_first; node_index < group_last; ++node_index)
 				{
+					if (sorted_nodes[node_index].node.kind == nox::UpdaterNodeKind::Task)
+					{
+						continue;
+					}
 					edges.push_back(nox::UpdaterOrderEdge{ .from = node_index, .to = target_index });
 				}
 			}
@@ -1072,6 +1214,8 @@ void nox::UpdaterGraph::Trace()const
 		{
 			builder.Clear();
 			append_node_name(builder, node);
+			builder.Append(u8" kind=");
+			builder.Append(to_updater_node_kind_name(node.kind));
 			builder.Append(u8" rw=");
 			append_component_mask(builder, node.access.read_write_mask);
 			builder.Append(u8" w=");
@@ -1121,7 +1265,7 @@ void nox::UpdaterGraph::Trace()const
 				}
 
 				builder.Clear();
-				append_conflict_reason(builder, from.access, to.access);
+				append_conflict_reason(builder, from, to);
 				NOX_INFO_LINE(nox::log_id::CoreCommon, u8"  EDGE n{0} -> n{1} ({2})",
 					from.order_index,
 					to.order_index,
@@ -1184,10 +1328,18 @@ void nox::UpdaterGraph::Trace()const
 				{
 					continue;
 				}
+				//	同じServiceのメソッド同士は、暗黙の自己書き込みで必ず宣言が衝突する。
+				//	順序はメソッド名順という規則なので(EntityLogicの logic-state と同じく)候補に出さない。
+				if ((from.kind == nox::UpdaterNodeKind::ServiceMethod) &&
+					(to.kind == nox::UpdaterNodeKind::ServiceMethod) &&
+					(from.access.group_index == to.access.group_index))
+				{
+					continue;
+				}
 
 				++by_name_pair_count;
 				builder.Clear();
-				append_conflict_reason(builder, from.access, to.access);
+				append_conflict_reason(builder, from, to);
 				builder.Append(u8": ");
 				append_node_name(builder, from);
 				builder.Append(u8" -> ");

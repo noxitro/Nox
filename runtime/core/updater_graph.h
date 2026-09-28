@@ -5,12 +5,13 @@
 /// @brief	同一フェーズ内の実行順(レイヤー)を、引数リストと明示的な順序宣言だけで決めるグラフ。
 /// @details 規則:
 ///          1. 衝突: AがBの読み書きする対象へ書き込む(またはその逆)なら衝突。同一EntityLogic型の
-///             更新メソッド同士もインスタンス状態を共有するので衝突。衝突しないノードは同時実行してよい。
+///             更新メソッド同士、同一Serviceのメソッド同士もインスタンス状態を共有するので衝突。
+///             衝突しないノードは同時実行してよい。
 ///          2. 明示辺: 型に書いた `using RunAfter = nox::TypeList<...>;` / `using RunBefore = ...;`
 ///             (nox::TypeList を参照)。読み書きの衝突からは導けない因果を書くためのもので、
 ///             衝突の有無に関係なく辺として張る。
 ///          3. 全順序: 明示辺のトポロジカル順。明示辺で順序が決まらない箇所は
-///             完全修飾型名(EntityLogicはさらにメソッド名)の昇順で決める。
+///             完全修飾型名(EntityLogic / Serviceはさらにメソッド名。Taskは完全修飾関数名)の昇順で決める。
 ///             登録順(= リフレクション生成器の走査順)は一切使わない。
 ///             型名は nox::util::GetTypeName でMSVC / clang-clの綴りを揃えてあるので、
 ///             ビルドやツールセットをまたいでも同じ順序になる。
@@ -24,12 +25,18 @@
 ///          明示辺の名前が解決できない・明示辺が循環する、は宣言の誤りなので nox::UpdaterGraph::Rebuild が
 ///          理由をログに残して abort する(Masterでも同じ)。テストは失敗を返す TryRebuild を使う。
 ///
+///          ノードの置き場所は4つ(EntitySystem / EntityLogicのメソッド / Serviceのメソッド / Task)だが、
+///          グラフから見れば全て「引数で読み書きを宣言したノード」で、並べ方・並列化・コマンドバッファの
+///          割り当ては同じ。違うのは実行の仕方(entityを列挙するか、1回だけ呼ぶか)だけ。
+///
 ///          ソートも名前解決も構築時に一度だけ行い、実行時はノード配列を順に舐めるだけ。
 ///          同一レイヤーのノード群は nox::ExecuteUpdaterLayer がワーカーへ配る
 ///          (kMainThreadOnly を宣言した型のノードだけは配らず、フェーズを回しているスレッドで実行する)。
 #pragma once
 #include	"entity_system.h"
 #include	"entity_logic.h"
+#include	"service_method.h"
+#include	"updater_task.h"
 #include	"../kernel/job_system.h"
 
 namespace nox
@@ -41,6 +48,18 @@ namespace nox
 		EntitySystem,
 		/// @brief EntityLogicの (ストレージ, 更新メソッド) 1組。
 		EntityLogicMethod,
+		/// @brief Serviceの (インスタンス, 属性付きメソッド) 1組。1フェーズに1回呼ばれる。
+		ServiceMethod,
+		/// @brief 属性付きのグローバル関数1つ。1フェーズに1回呼ばれる。インスタンスを持たない。
+		Task,
+	};
+
+	/// @brief 登録済みServiceのインスタンスと、その型のメソッド表の組。nox::UpdaterGraph の構築に渡す。
+	/// @details Worldは nox::GetServiceMethodTypes() の表のうち、自分に登録されている型だけをこの形にして渡す。
+	struct UpdaterServiceBinding final
+	{
+		nox::Service* service = nullptr;
+		const nox::ServiceMethodTypeDescriptor* descriptor = nullptr;
 	};
 
 	/// @brief インスタンス状態を共有しないことを表すグループ番号。
@@ -60,8 +79,8 @@ namespace nox
 		/// @brief 読み書きするService。
 		std::span<const nox::ServiceAccess> service_accesses;
 		/// @brief 同じインスタンス状態を共有するノードのグループ。
-		/// @details 同一EntityLogic型の更新メソッド同士は、宣言が重ならなくてもメンバ変数を共有するため
-		///          必ず衝突させる。k_invalid_updater_group_index なら共有相手がいない。
+		/// @details 同一EntityLogic型の更新メソッド同士・同一Serviceのメソッド同士は、宣言が重ならなくても
+		///          メンバ変数を共有するため必ず衝突させる。k_invalid_updater_group_index なら共有相手がいない。
 		nox::uint32 group_index = nox::k_invalid_updater_group_index;
 	};
 
@@ -105,7 +124,8 @@ namespace nox
 	{
 		/// @brief 成功。
 		None,
-		/// @brief RunAfter / RunBefore に並べた型が、EntitySystem / EntityLogic として登録されていない。
+		/// @brief RunAfter / RunBefore に並べた型が、EntitySystem / EntityLogic / Service(属性付きメソッドを持ち、
+		///        Worldに登録されているもの)として登録されていない。
 		UnresolvedOrderTarget,
 		/// @brief 並べた型は登録されているが、宣言した型と同じフェーズにノードを1つも持たない
 		///        (辺が1本も張れず、宣言が黙って無効になる)。
@@ -146,13 +166,22 @@ namespace nox
 		nox::EntityLogicStorage* storage = nullptr;
 		/// @brief kind == EntityLogicMethod のときの更新メソッド。
 		const nox::EntityLogicMethodDescriptor* method = nullptr;
+		/// @brief kind == ServiceMethod のときのインスタンス。
+		nox::Service* service = nullptr;
+		/// @brief kind == ServiceMethod のときのServiceの型(型名と RunAfter / RunBefore)。
+		const nox::ServiceMethodTypeDescriptor* service_type = nullptr;
+		/// @brief kind == ServiceMethod のときのメソッド。
+		const nox::ServiceMethodDescriptor* service_method = nullptr;
+		/// @brief kind == Task のときの関数。
+		const nox::UpdaterTaskDescriptor* task = nullptr;
 		/// @brief フェーズ内の全順序での位置(明示辺のトポロジカル順、決まらない箇所は型名順)。
 		/// @details 衝突したノードはこの順で直列化される。起動ログの n<番号> はこの値。
 		nox::uint32 order_index = 0u;
 		/// @brief 小さいほど先に実行。同一レイヤーは同時実行可能。
 		nox::uint32 layer_index = 0u;
 		/// @brief ワーカーへ配らず、フェーズを回しているスレッド上で実行するか。
-		/// @details 型の kMainThreadOnly 宣言から来る(EntityLogicは型の全更新メソッドに掛かる)。
+		/// @details EntitySystem / EntityLogic は型の kMainThreadOnly 宣言から来る(EntityLogicは型の全更新メソッドに掛かる)。
+		///          Serviceのメソッド / Task は属性の nox::attr::ThreadAffinity::MainThread から来る(メソッド単位)。
 		///          依存解析(レイヤー)には影響しない。 nox::IsMainThreadOnlyUpdaterType を参照。
 		bool main_thread_only = false;
 		/// @brief 遅延構造変更の記録先バッファ番号。出さないノードは k_invalid_updater_command_buffer_index。
@@ -165,6 +194,12 @@ namespace nox
 		///          全順序は明示辺と衝突辺のトポロジカル順なので、実行と矛盾しない再生順でもある。
 		nox::uint32 command_buffer_index = nox::k_invalid_updater_command_buffer_index;
 	};
+
+	/// @brief ノードの全順序のキー1つ目。EntitySystem / EntityLogic / Service は完全修飾型名、Task は完全修飾関数名。
+	[[nodiscard]] std::string_view GetUpdaterNodeTypeName(const nox::UpdaterNode& node)noexcept;
+
+	/// @brief ノードの全順序のキー2つ目。EntityLogic / Service はメソッド名、EntitySystem / Task は空。
+	[[nodiscard]] std::string_view GetUpdaterNodeMethodName(const nox::UpdaterNode& node)noexcept;
 
 	/// @brief 1レイヤーでワーカーへ配れるノード数の上限。ジョブ配列をスタックに置くために固定する。
 	/// @details 超えた分は配らずに、配った側のスレッドで直列に実行する(アサート済みの異常系)。
@@ -206,20 +241,26 @@ namespace nox
 		UpdaterGraph(const UpdaterGraph&) = delete;
 		UpdaterGraph& operator=(const UpdaterGraph&) = delete;
 
-		/// @brief EntitySystem / EntityLogicの集合からグラフを組み直す。失敗したら起動を止める。
-		/// @details 引数の並び(登録順)は結果に影響しない。順序は明示辺と型名だけで決まる。
+		/// @brief ノード(EntitySystem / EntityLogic / Serviceのメソッド / Task)の集合からグラフを組み直す。失敗したら起動を止める。
+		/// @details 引数の並び(登録順)は結果に影響しない。順序は明示辺と型名(Taskは関数名)だけで決まる。
 		///          明示辺の名前が解決できない・循環する場合は、理由をログに出して abort する
 		///          (Masterでも同じ。宣言の誤りを抱えたまま走らせない)。
+		/// @param services 登録済みServiceとその型のメソッド表の組。同じServiceを2回渡さないこと。
+		/// @param tasks Taskの記述子(nox::GetUpdaterTaskDescriptors())。
 		void Rebuild(
 			std::span<nox::EntitySystemBase* const> systems,
-			std::span<nox::EntityLogicStorage* const> storages);
+			std::span<nox::EntityLogicStorage* const> storages,
+			std::span<const nox::UpdaterServiceBinding> services = std::span<const nox::UpdaterServiceBinding>(),
+			std::span<const nox::UpdaterTaskDescriptor* const> tasks = std::span<const nox::UpdaterTaskDescriptor* const>());
 
 		/// @brief Rebuild の本体。失敗を abort せずに返す。
 		/// @details 失敗した場合、グラフは空(全フェーズでノード0)になる。
 		///          起動経路は Rebuild を使うこと。これは失敗経路を検証するテストのための窓口。
 		[[nodiscard]] nox::UpdaterGraphBuildResult TryRebuild(
 			std::span<nox::EntitySystemBase* const> systems,
-			std::span<nox::EntityLogicStorage* const> storages);
+			std::span<nox::EntityLogicStorage* const> storages,
+			std::span<const nox::UpdaterServiceBinding> services = std::span<const nox::UpdaterServiceBinding>(),
+			std::span<const nox::UpdaterTaskDescriptor* const> tasks = std::span<const nox::UpdaterTaskDescriptor* const>());
 
 		/// @brief フェーズ内の全ノード。(レイヤー, 全順序)で整列済み。
 		[[nodiscard]] std::span<const nox::UpdaterNode> GetNodes(nox::SystemPhaseType phase_type)const noexcept;
@@ -248,7 +289,9 @@ namespace nox
 		[[nodiscard]] nox::UpdaterGraphBuildResult RebuildPhase(
 			nox::SystemPhaseType phase_type,
 			std::span<nox::EntitySystemBase* const> systems,
-			std::span<nox::EntityLogicStorage* const> storages);
+			std::span<nox::EntityLogicStorage* const> storages,
+			std::span<const nox::UpdaterServiceBinding> services,
+			std::span<const nox::UpdaterTaskDescriptor* const> tasks);
 
 	private:
 		/// @brief フェーズごとのノード列。(レイヤー, 全順序)で整列済み。

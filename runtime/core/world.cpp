@@ -576,13 +576,41 @@ void nox::World::Init()
 	CreateEntitySystems();
 	CreateEntityLogicStorages();
 
-	//	EntitySystem / EntityLogicの集合が確定してからUpdaterGraphを組む。
+	//	属性付きメソッドを持つService型のうち、このWorldに登録されているものだけをノードにする。
+	//	登録されていない型(テスト用の型など)は呼ぶ実体が無いので載せない。
+	//	組はグラフの構築にだけ使う(ノードはServiceと記述子を直接指すので、この配列より長く生きなくてよい)。
+	nox::FixedVector<nox::UpdaterServiceBinding, k_max_service_count> service_bindings;
+	for (const nox::ServiceMethodTypeDescriptor* const descriptor : nox::GetServiceMethodTypes())
+	{
+		nox::Service* const service = TryGetService(*descriptor->type);
+		if (service == nullptr)
+		{
+			continue;
+		}
+		service_bindings.PushBack(nox::UpdaterServiceBinding{ .service = service, .descriptor = descriptor });
+
+#if !NOX_MASTER
+		NOX_INFO_LINE(nox::log_id::CoreCommon, u8"Serviceメソッド購読: {0}", descriptor->name);
+#endif // !NOX_MASTER
+	}
+
+	const std::span<const nox::UpdaterTaskDescriptor* const> tasks = nox::GetUpdaterTaskDescriptors();
+#if !NOX_MASTER
+	for (const nox::UpdaterTaskDescriptor* const task : tasks)
+	{
+		NOX_INFO_LINE(nox::log_id::CoreCommon, u8"Task購読: {0}", task->name);
+	}
+#endif // !NOX_MASTER
+
+	//	ノード(EntitySystem / EntityLogic / Serviceのメソッド / Task)の集合が確定してからUpdaterGraphを組む。
 	//	以降この集合が変わったら Rebuild を呼び直すこと。
-	//	渡す並び(= 生成器の走査順)は結果に影響しない。順序は明示辺(RunAfter / RunBefore)と型名だけで決まる。
+	//	渡す並び(= 生成器の走査順)は結果に影響しない。順序は明示辺(RunAfter / RunBefore)と型名(Taskは関数名)だけで決まる。
 	//	明示辺の名前が解決できない・循環する場合は、Rebuild が理由をログに出して起動を止める。
 	updater_graph_.Rebuild(
 		std::span<nox::EntitySystemBase* const>(entity_systems_.data(), entity_systems_.size()),
-		std::span<nox::EntityLogicStorage* const>(entity_logic_storages_.data(), entity_logic_storages_.size()));
+		std::span<nox::EntityLogicStorage* const>(entity_logic_storages_.data(), entity_logic_storages_.size()),
+		std::span<const nox::UpdaterServiceBinding>(service_bindings.GetStorage().data(), service_bindings.GetLength()),
+		tasks);
 
 	//	遅延構造変更の記録先をノード単位に分ける。
 	//
@@ -979,6 +1007,18 @@ void nox::World::ExecuteNode(const nox::UpdaterNode& node)
 			}
 			node.method->invoke(entry.instance, *this, *entity_record->archetype, entity_record->location, entry.entity);
 		}
+		break;
+
+	case nox::UpdaterNodeKind::ServiceMethod:
+		//	entityを列挙しないので、entityの数にかかわらず1回だけ呼ぶ。
+		//	自分自身への書き込みは宣言(node.access.service_accesses)の末尾に入っているので、
+		//	上の並列実行チェッカーは、このServiceへ宣言外に同時アクセスしたノードも拾える。
+		node.service_method->invoke(*node.service, *this);
+		break;
+
+	case nox::UpdaterNodeKind::Task:
+		//	Taskは状態を持たない。1回だけ呼ぶ。
+		node.task->invoke(*this);
 		break;
 
 	default:
