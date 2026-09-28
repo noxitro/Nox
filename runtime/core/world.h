@@ -98,7 +98,8 @@ namespace nox
 
 	/// @brief コマンドライン引数列から、自動で終了するまでのフレーム数を決める。
 	/// @details --exit-after-frames=N を渡すと、N フレーム目にメインウィンドウを閉じ、
-	///          ユーザーがウィンドウを閉じたときと同じ経路で終了する (閉じるのは nox::SceneManager)。
+	///          ユーザーがウィンドウを閉じたときと同じ経路で終了する (World::Update が判定し
+	///          (nox::ShouldRequestExitAfterFrames)、nox::SceneManager::RequestCloseMainWindow で閉じる)。
 	///          CI のスモーク実行で、起動から Terminate フェーズ・後始末までを人手なしで通すための入口。
 	///
 	///          0 は「自動で終了しない」で、普段の起動はこれ。指定が無いとき、値が空のとき、
@@ -110,6 +111,21 @@ namespace nox
 	/// @param command_line_args nox::os::GetCommandLineArgList() が返す並び。
 	[[nodiscard]] nox::uint32 ResolveExitAfterFrames(
 		std::span<const nox::char16* const> command_line_args)noexcept;
+
+	/// @brief --exit-after-frames の終了要求を、このフレームで出すか。
+	/// @details World::Update が Update フェーズの後、フレーム数を数える前に呼ぶ。そのため frame_count は
+	///          「このフレームより前に数え終えたフレームの数」で、N 回目の呼び出しでは N - 1 になっている。
+	///          N 回目で true になり、それより前は false。以降も true を返し続けるので、1 回だけ出すのは呼ぶ側の役目。
+	///          exit_after_frames が 0 なら常に false (自動で終了しない)。
+	///          N - 1 と比べるので、frame_count + 1 の桁あふれは起きない。
+	/// @param exit_after_frames nox::ResolveExitAfterFrames の結果。
+	/// @param frame_count nox::World::GetFrameCount() (このフレームを数える前の値)。
+	[[nodiscard]] inline constexpr bool ShouldRequestExitAfterFrames(
+		const nox::uint32 exit_after_frames,
+		const nox::uint32 frame_count)noexcept
+	{
+		return (exit_after_frames != 0u) && (frame_count >= (exit_after_frames - 1u));
+	}
 
 	/// @brief コマンドライン引数列から、studio mode (Editor から起動された実行) かどうかを決める。
 	/// @details --studio があれば true。値は見ない (キーの照合規則は nox::os::ContainsCommandLineArgKey と同じで、
@@ -232,6 +248,7 @@ namespace nox
 		/// @brief studio mode (Editor から起動された実行) か。決め方は nox::ResolveStudioMode を参照。
 		inline bool IsStudioMode()const noexcept { return studio_mode_; }
 		/// @brief この数のフレームを回したら自動で終了する。0 なら終了しない。nox::ResolveExitAfterFrames を参照。
+		/// @details 判定と終了要求は World::Update が行う (nox::ShouldRequestExitAfterFrames)。
 		inline nox::uint32 GetExitAfterFrames()const noexcept { return exit_after_frames_; }
 
 		nox::SystemBase* FindSystem(const nox::reflection::Type& type)const noexcept;
@@ -466,6 +483,9 @@ namespace nox
 		void BuildExecuteNodeList(std::span<nox::SystemBase*> system_list);
 		void ExecutePhase(const nox::SystemPhaseType phase_type);
 		void RegisterSystem(nox::SystemBase& system);
+		/// @brief --exit-after-frames のフレーム数に達したら、メインウィンドウを閉じるよう 1 回だけ要求する。
+		/// @details Update から、Update フェーズの後・フレーム数を数える前に呼ぶ (nox::ShouldRequestExitAfterFrames)。
+		void RequestExitAfterFramesIfReached()noexcept;
 
 		/// @brief 制約を検査せずに構造を変える本体。Playbackと即時系の共通の実装。
 		[[nodiscard]] nox::EntityId CreateEntityImmediate();
@@ -640,6 +660,11 @@ namespace nox
 		/// @brief この数のフレームを回したら自動で終了する。0 なら終了しない (既定)。
 		/// @details コマンドラインで決まる。決め方は nox::ResolveExitAfterFrames を参照。
 		const nox::uint32 exit_after_frames_;
+
+		/// @brief --exit-after-frames による終了要求を出し終えたか。要求は 1 回だけ出す。
+		/// @details 読み書きするのはゲームスレッドの Update だけ。
+		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
+		bool exit_after_frames_requested_;
 
 #if !NOX_MASTER
 		//	依存解析の誤りを即座に検出するためのチェッカー。ComponentTypeIndexごと / Service登録順ごとに1つ持つ。

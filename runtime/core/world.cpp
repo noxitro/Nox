@@ -9,6 +9,7 @@
 #include "engine_module.h"
 #include "entity_type_registry.h"
 #include "log_id.h"
+#include "scene_manager.h"
 
 namespace nox
 {
@@ -397,6 +398,7 @@ nox::World::World() :
 		nox::os::GetCommandLineArgList(),
 		nox::JobSystem::GetDefaultWorkerCount())),
 	exit_after_frames_(nox::ResolveExitAfterFrames(nox::os::GetCommandLineArgList())),
+	exit_after_frames_requested_(false),
 	services_(),
 	service_initialize_order_{},
 	initialized_service_count_(0u),
@@ -684,10 +686,34 @@ void nox::World::Update()
 	//	反映されるので、FrameIngress で積んだ構造変更は Update から見える。
 	ExecutePhase(nox::SystemPhaseType::FrameIngress);
 	ExecutePhase(nox::SystemPhaseType::Update);
+	//	旧 SceneManager::Update (Update フェーズ) と同じく、このフレームを数える前に判定する。
+	//	N 回目の呼び出しでは frame_counter_ が N - 1 になっている (nox::ShouldRequestExitAfterFrames)。
+	RequestExitAfterFramesIfReached();
 	++frame_counter_;
 
 	next_elapsed_milli_seconds_ += (1000.0f / static_cast<nox::float_t>(target_frame_rate_));
 	stop_watch_.Restart();
+}
+
+void nox::World::RequestExitAfterFramesIfReached()noexcept
+{
+	//	--exit-after-frames=N (CI のスモーク実行用)。N フレーム目にメインウィンドウを閉じる。
+	//	ユーザーがウィンドウを閉じたときと同じ経路 (WM_CLOSE → WM_DESTROY → WM_QUIT) で終わるので、
+	//	Terminate フェーズから Service の終了、reflection / memory の終了処理まで、普段の終了と同じ順に通る。
+	//	毎フレーム呼ばれるが、要求を出すまでは整数の比較だけで済む。
+	if ((exit_after_frames_requested_ == true) ||
+		(nox::ShouldRequestExitAfterFrames(exit_after_frames_, frame_counter_) == false))
+	{
+		return;
+	}
+	exit_after_frames_requested_ = true;
+
+	nox::SceneManager* const scene_manager = FindSystem<nox::SceneManager>();
+	NOX_ASSERT(scene_manager != nullptr, u8"SceneManagerが登録されていないので --exit-after-frames で終了できません");
+	if (scene_manager != nullptr)
+	{
+		scene_manager->RequestCloseMainWindow();
+	}
 }
 
 void nox::World::Exit()

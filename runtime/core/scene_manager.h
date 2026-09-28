@@ -20,9 +20,14 @@ namespace nox
 		inline nox::SceneView& GetMainSceneView() noexcept { return *main_scene_view_; }
 		inline const nox::SceneView& GetMainSceneView()const noexcept { return *main_scene_view_; }
 
+		/// @brief メインウィンドウを閉じるよう要求する。ユーザーが閉じるボタンを押したのと同じ経路で終了する。
+		/// @details WM_CLOSE を投げるだけ (nox::os::Window::RequestClose) なので、どのスレッドから呼んでもよい。
+		///          ウィンドウがまだ無い、または既に閉じていれば何もしない。
+		///          --exit-after-frames の終了要求 (World::Update) が使う。
+		void	RequestCloseMainWindow()noexcept;
+
 	private:
 		void	Initialize(nox::World& world);
-		void	Update(nox::World& world);
 		void	Finalize(nox::World& world);
 
 		std::span<const nox::SystemBase::PhaseRegister> GetPhaseRegisterList()const noexcept override;
@@ -30,11 +35,6 @@ namespace nox
 		static constexpr SystemPhaseInit k_phase_init{
 			&SceneManager::Initialize,
 			u8"SceneManager::Initialize"
-		};
-
-		static constexpr SystemPhaseUpdate k_phase_update{
-			&SceneManager::Update,
-			u8"SceneManager::Update"
 		};
 
 		static constexpr SystemPhaseTerminate k_phase_terminal{
@@ -46,8 +46,5 @@ namespace nox
 		nox::SceneView* main_scene_view_;
 
 		nox::Vector<std::reference_wrapper<nox::SceneView>> scene_view_list_;
-
-		/// @brief --exit-after-frames による終了要求を出し終えたか。要求は 1 回だけ出す。
-		bool close_requested_;
 	};
 }
