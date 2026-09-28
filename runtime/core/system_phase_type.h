@@ -13,6 +13,11 @@ namespace nox
 		Init = 0,
 		/// @brief 更新の前に一度だけ呼び出される処理
 		Start,
+		/// @brief 毎フレーム、Update の前に呼び出される外部からの取り込み
+		/// @details 入力のポーリング、ソケット受信、アセット完了の取り込みなど、
+		///          フレームの外で起きたことをこのフレームの状態へ反映する処理を置く。
+		///          末尾で EntityCommands が反映されるので、ここで積んだ構造変更は Update から見える。
+		FrameIngress,
 		/// @brief 毎フレーム呼び出される処理
 		Update,
 		/// @brief 終了処理

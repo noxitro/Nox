@@ -140,6 +140,7 @@ namespace nox
 			{
 			case nox::SystemPhaseType::Init: return u8"Init";
 			case nox::SystemPhaseType::Start: return u8"Start";
+			case nox::SystemPhaseType::FrameIngress: return u8"FrameIngress";
 			case nox::SystemPhaseType::Update: return u8"Update";
 			case nox::SystemPhaseType::Terminate: return u8"Terminate";
 			default: return u8"Unknown";
@@ -670,6 +671,9 @@ void nox::World::Update()
 		}
 	}
 
+	//	外部からの取り込み(ソケット受信など)を先に済ませる。ExecutePhase の末尾で EntityCommands が
+	//	反映されるので、FrameIngress で積んだ構造変更は Update から見える。
+	ExecutePhase(nox::SystemPhaseType::FrameIngress);
 	ExecutePhase(nox::SystemPhaseType::Update);
 	++frame_counter_;
 
