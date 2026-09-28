@@ -7,6 +7,16 @@
 [extend]
 useDefault = true
 
+# Discord の Webhook URL。ci.yml / file-format.yml / clang-tidy.yml / dev-report.yml の通知先
+# (secret の DISCORD_WEBHOOK_URL / DISCORD_DEV_REPORT_WEBHOOK_URL) として実際に使っている。
+# URL を知っていれば誰でもそのチャンネルへ投稿できるのに、既定ルールには Discord の
+# トークン類しか無く、Webhook URL は素通りしていた。tools/git-hooks/scan.sh にも同じ形を足してある。
+[[rules]]
+id = "discord-webhook-url"
+description = "Discord Webhook URL"
+regex = '''https://(?:(?:canary|ptb)\.)?discord(?:app)?\.com/api/(?:v\d+/)?webhooks/\d{17,20}/[A-Za-z0-9_-]{60,}'''
+keywords = ["discord"]
+
 [allowlist]
 description = "Nox 固有の除外"
 

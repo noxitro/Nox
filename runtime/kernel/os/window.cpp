@@ -132,9 +132,10 @@ namespace nox::os
 		return 0;
 
 	case WM_DESTROY:
-		if (self != nullptr && self->window_handle_ == hWnd)
+		//	ハンドルはゲームスレッドからも読まれるので atomic に書き換える (window_handle_ を参照)。
+		if (self != nullptr && self->window_handle_.load(std::memory_order_relaxed) == hWnd)
 		{
-			self->window_handle_ = nullptr;
+			self->window_handle_.store(nullptr, std::memory_order_release);
 			self->is_visible_ = false;
 		}
 		::PostQuitMessage(0);
@@ -174,21 +175,21 @@ std::array<nox::char16, nox::os::Window::k_max_title_length> nox::os::Window::Ge
 void	nox::os::Window::SetPos(const nox::Int2& pos)
 {
 #if NOX_WINDOWS
-	::SetWindowPos(window_handle_, nullptr, pos.x, pos.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+	::SetWindowPos(window_handle_.load(std::memory_order_acquire), nullptr, pos.x, pos.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
 #endif // NOX_WINSOWS
 }
 
 void nox::os::Window::SetSize(const nox::Int2& size)
 {
 #if NOX_WINDOWS
-	::SetWindowPos(window_handle_, nullptr, 0, 0, size.x, size.y, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+	::SetWindowPos(window_handle_.load(std::memory_order_acquire), nullptr, 0, 0, size.x, size.y, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
 #endif
 }
 
 std::u16string_view nox::os::Window::GetWindowTitle(std::span<nox::char16> dest)const noexcept
 {
 #if NOX_WINDOWS
-	::GetWindowTextW(window_handle_, nox::util::CharCast<nox::wchar16>(dest.data()), dest.size());
+	::GetWindowTextW(window_handle_.load(std::memory_order_acquire), nox::util::CharCast<nox::wchar16>(dest.data()), dest.size());
 #else
 	static_assert(false, "Not implemented");
 #endif // NOX_WINDOWS
@@ -235,7 +236,7 @@ void	nox::os::Window::CreateNative(const void* args_ptr)
 
 	::HINSTANCE h_inst = ::GetModuleHandleW(nullptr);
 
-	self.window_handle_ = ::CreateWindowExW(
+	const ::HWND created_handle = ::CreateWindowExW(
 		style_ex,
 		L"nox",                       // クラス名（上で登録したもの）
 		reinterpret_cast<const nox::wchar16*>(desc.title_ptr), // タイトル（UTF-16 ならそのまま）
@@ -249,8 +250,9 @@ void	nox::os::Window::CreateNative(const void* args_ptr)
 		h_inst,		// インスタンスハンドル
 		&self		// ユーザーデータ
 	);
+	self.window_handle_.store(created_handle, std::memory_order_release);
 
-	if (self.window_handle_ == nullptr)
+	if (created_handle == nullptr)
 	{
 		NOX_ASSERT(false, u8"ウィンドウの生成に失敗しました");
 		return;
@@ -261,18 +263,36 @@ void	nox::os::Window::CreateNative(const void* args_ptr)
 
 void nox::os::Window::Show()
 {
-	NOX_ASSERT(window_handle_ != nullptr, u8"ウィンドウハンドルが不正です");
-	::ShowWindow(window_handle_, SW_SHOW);
-	::UpdateWindow(window_handle_);
+	//	ゲームスレッドから呼ばれ、表示した直後にユーザーが閉じうるので、ハンドルは 1 回だけ読む。
+	const nox::os::WindowHandle handle = window_handle_.load(std::memory_order_acquire);
+	NOX_ASSERT(handle != nullptr, u8"ウィンドウハンドルが不正です");
+	::ShowWindow(handle, SW_SHOW);
+	::UpdateWindow(handle);
 }
 
 void nox::os::Window::Dispose()
 {
-	if (window_handle_ != nullptr)
+	const nox::os::WindowHandle handle = window_handle_.load(std::memory_order_acquire);
+	if (handle != nullptr)
 	{
-		::DestroyWindow(window_handle_);
-		window_handle_ = nullptr;
+		::DestroyWindow(handle);
+		window_handle_.store(nullptr, std::memory_order_release);
 	}
+}
+
+void nox::os::Window::RequestClose()noexcept
+{
+#if NOX_WINDOWS
+	//	ゲームスレッドから呼ばれる。読んだ直後にユーザーが閉じて破棄されていた場合、
+	//	PostMessageW は無効なハンドルとして失敗するだけで、何も起きない。
+	const nox::os::WindowHandle handle = window_handle_.load(std::memory_order_acquire);
+	if (handle != nullptr)
+	{
+		//	WM_CLOSE → DestroyWindow → WM_DESTROY → PostQuitMessage の順に、閉じるボタンと同じ経路をたどる
+		//	(CallbackWindow を参照)。DestroyWindow は作ったスレッドでしか効かないので、直接は呼ばない。
+		::PostMessageW(handle, WM_CLOSE, 0, 0);
+	}
+#endif // NOX_WINDOWS
 }
 
 bool nox::os::Window::RegisterMessageHook(void(&func)(const nox::os::WindowMessage& message, void* user_data), void* user_data)
@@ -280,7 +300,9 @@ bool nox::os::Window::RegisterMessageHook(void(&func)(const nox::os::WindowMessa
 	//	スレッドセーフ対応
 	//	kMaxWindowMessageHooks を超えないようにする
 	NOX_LOCAL_SCOPE(nox::os::ScopedLock(nox::os::window_message_hooks_mutex_));
+#if !NOX_MASTER
 	NOX_LOCAL_SCOPE(nox::util::WriteParallelExecuteCheckScope(nox::os::window_message_hooks_checker_, nox::util::detail::ParallelExecuteCheckOption::StackTrace));
+#endif // !NOX_MASTER
 
 	if (nox::os::window_message_hook_count_ >= nox::os::kMaxWindowMessageHooks)
 	{
@@ -296,7 +318,9 @@ bool nox::os::Window::RegisterMessageHook(void(&func)(const nox::os::WindowMessa
 bool nox::os::Window::UnregisterMessageHook(void(&func)(const nox::os::WindowMessage& message, void* user_data), void* user_data)
 {
 	NOX_LOCAL_SCOPE(nox::os::ScopedLock(nox::os::window_message_hooks_mutex_));
+#if !NOX_MASTER
 	NOX_LOCAL_SCOPE(nox::util::WriteParallelExecuteCheckScope(nox::os::window_message_hooks_checker_, nox::util::detail::ParallelExecuteCheckOption::StackTrace));
+#endif // !NOX_MASTER
 
 	//	見つけた位置から後続を詰める
 	for (nox::uint32 hook_index = 0u; hook_index < nox::os::window_message_hook_count_; ++hook_index)

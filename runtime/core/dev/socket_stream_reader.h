@@ -5,6 +5,11 @@
 ///	@brief	socket_stream_reader
 #pragma once
 
+//	Editor との通信 (editor_remote) 用。実装 (.cpp) と同じく開発ビルドだけに置く。
+//	宣言だけ Master に残っていると、リフレクション生成器がメンバ関数を登録しようとして、
+//	Master では実装が無いためリンクに失敗する。
+#if NOX_DEVELOP
+
 namespace nox
 {
 	class Object;
@@ -95,3 +100,5 @@ namespace nox::dev::editor_remote
 		nox::uint32 read_pos_;
 	};
 }
+
+#endif // NOX_DEVELOP

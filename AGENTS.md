@@ -30,7 +30,8 @@
 
 **エージェントはローカルでビルド・テストしない。** ユーザーが明示的に頼んだときだけ行う。
 
-- `work/*` を push すると CI (`.github/workflows/ci.yml`) が 6 構成のビルド、GoogleTest、Editor の UI テスト (FlaUI) を走らせる。`work/*` の push は確認なしでよい。
+- `work/*` を push すると CI (`.github/workflows/ci.yml`) が 6 構成のビルドと `runtime.exe` の起動・終了、GoogleTest、Editor の UI テスト (FlaUI) を走らせる。`work/*` の push は確認なしでよい。
+- `.github` 以下を変えた push では、Workflow lint (actionlint / ruff) も CI 自身の書き間違いを検査する。
 - 落ちたら `gh run view <run-id> --log-failed` でログを読み、直して push し直す。
 - 文書だけの変更 (`paths-ignore` の対象) ではビルドの CI は走らない。File format の検査は走る。
 - テストは `runtime/core/test/` と `runtime/kernel/test/` (GoogleTest)。reflection / delegate / 型システム / メモリ管理を重点に書く。
@@ -47,7 +48,7 @@
 - CIビルド成功 (エラー 0)
 - 全テストが PASS
 - File format の検査が通る
-- `runtime.exe` がクラッシュせず起動・終了する
+- `runtime.exe` がクラッシュせず起動・終了する (CI が 6 構成すべてで `runtime.exe --exit-after-frames=30` を起動して確かめる)
 - `git status` に意図しない変更がない
 
 ClangCL は必須ゲート。MSVC が見逃す非適合を実際に拾っているので、落ちたら原因を直す。`continue-on-error` で回避しない。

@@ -20,6 +20,11 @@ updates:
       interval: weekly
     commit-message:
       prefix: "ci"
+    # 同じ action の更新を、ワークフローと composite action の両方にまたがって 1 本の PR にする。
+    # ディレクトリごとに別の PR になると片方だけマージされて版がずれうる (上の取り残しと同じ事故)。
+    groups:
+      actions-across-directories:
+        group-by: dependency-name
 
   # .NET (Editor 側)。NuGet の参照を追う。
   - package-ecosystem: nuget
@@ -29,3 +34,15 @@ updates:
     commit-message:
       prefix: "editor"
     open-pull-requests-limit: 5
+    # minor / patch の更新は 1 本の PR にまとめる。まとめないと同じパッケージの更新が
+    # プロジェクトごとの PR に割れ、手で版を揃える必要があった (MessagePack 3.1.8 → 3.1.9 が
+    # #17 と #18 に割れ、#17 に揃え直しのコミットが要った)。
+    # major (AvalonDock 4 → 5 など) は挙動が変わりうるので、グループに入れず個別の PR に残す。
+    # グループの PR のブランチも dependabot/nuget/ で始まるので、ci.yml の縮小はそのまま効く。
+    groups:
+      nuget-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
