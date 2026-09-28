@@ -7,7 +7,9 @@
 ///          シングルトンのような特別な終了処理・再初期化を持たない。
 ///          System / EntityLogic は引数に Service* を書くだけで受け取れる。
 ///
-///          Serviceは更新(Update)を持たないが、寿命(初期化 / 終了)は持つ。
+///          Serviceは共通の更新(Update)を持たないが、寿命(初期化 / 終了)は持つ。
+///          毎フレームの処理は、属性 nox::attr::ServiceMethod を付けたメソッドとして書くと
+///          UpdaterGraph のノードになる(引数でアクセスを宣言する。規則は service_method.h)。
 ///          派生型はprivateな仮想関数 OnInitialize / OnShutdown を上書きする(NVI)。
 ///          呼ぶのはWorldだけで、派生型の書き手はfriendを書かなくてよい。
 ///

@@ -210,6 +210,15 @@
     <ClInclude Include="entity_logic_attribute.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="service_attribute.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="service_method.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="updater_task.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
     <ClInclude Include="entity_type_registry.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -294,6 +303,9 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="entity_logic_attribute.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="service_attribute.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="update_order_attribute.cpp">

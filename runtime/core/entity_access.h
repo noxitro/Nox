@@ -57,9 +57,10 @@ namespace nox
 	///          };
 	///          @endcode
 	///          引数リストの読み書きの衝突からは導けない因果(例: 受信の後に処理する)を書くためのもの。
-	///          衝突の有無に関係なく辺が張られる。並べる型は EntitySystem / EntityLogic の型で、
-	///          前方宣言だけでよい(名前しか使わない)。EntityLogic を並べると、その型の
-	///          同じフェーズの更新メソッド全てが対象になる。
+	///          衝突の有無に関係なく辺が張られる。並べる型は EntitySystem / EntityLogic / Service の型で、
+	///          前方宣言だけでよい(名前しか使わない)。EntityLogic / Service を並べると、その型の
+	///          同じフェーズの更新メソッド全てが対象になる。Service の型にも書ける(その型の同じフェーズの全メソッドに掛かる)。
+	///          Task(属性付きのグローバル関数)は型ではないので、並べることも書くこともできない。
 	///
 	///          privateに書いたエイリアスは記述子から見えず、宣言が無いのと同じになる。
 	///          必ずpublicに書くこと。
@@ -90,7 +91,7 @@ namespace nox
 		struct UpdaterOrderNameTable<nox::TypeList<Types...>>
 		{
 			static_assert(((std::is_class_v<Types> && std::is_same_v<Types, std::remove_cv_t<Types>>) && ... && true),
-				"RunAfter / RunBefore にはcv修飾の無いクラス型(EntitySystem / EntityLogic)を並べてください");
+				"RunAfter / RunBefore にはcv修飾の無いクラス型(EntitySystem / EntityLogic / Service)を並べてください");
 
 			static constexpr std::array<std::string_view, sizeof...(Types)> k_names{ nox::util::GetTypeName<Types>()... };
 
@@ -413,19 +414,24 @@ namespace nox
 			return mask;
 		}
 
+		/// @brief 引数リストが宣言したServiceのアクセス権限を、定数式で配列にする。
+		/// @details GetServiceAccesses の表の中身。Serviceのメソッドは自分自身への書き込みをこの後ろに足した表を作る
+		///          (nox::detail::ServiceMethodAccessTable)ので、配列のまま取り出せるようにしてある。
+		[[nodiscard]] static constexpr std::array<nox::ServiceAccess, k_service_parameter_count> MakeServiceAccessArray()noexcept
+		{
+			std::array<nox::ServiceAccess, k_service_parameter_count> accesses{};
+			nox::uint32 index = 0u;
+			(AppendServiceAccess<Parameters>(accesses, index), ...);
+			return accesses;
+		}
+
 		/// @brief 引数リストが宣言したServiceのアクセス権限一覧。
 		/// @details ComponentDataと違いdense indexを持たないので、マスクではなく型情報の配列で返す。
 		///          配列は定数初期化された関数内staticなので、呼び出しても確保は走らない。
 		///          EntityCommandsは何も算入しない。
 		[[nodiscard]] static std::span<const nox::ServiceAccess> GetServiceAccesses()noexcept
 		{
-			static constexpr std::array<nox::ServiceAccess, k_service_parameter_count> k_accesses = []()constexpr noexcept
-				{
-					std::array<nox::ServiceAccess, k_service_parameter_count> accesses{};
-					nox::uint32 index = 0u;
-					(AppendServiceAccess<Parameters>(accesses, index), ...);
-					return accesses;
-				}();
+			static constexpr std::array<nox::ServiceAccess, k_service_parameter_count> k_accesses = MakeServiceAccessArray();
 
 			return std::span<const nox::ServiceAccess>(k_accesses.data(), k_accesses.size());
 		}
@@ -540,6 +546,23 @@ namespace nox
 			}
 
 			return false;
+		}
+
+		/// @brief 1フェーズに1回だけ呼ばれるノード(Serviceのメソッド / Task)の引数リストとして妥当か。
+		/// @details entityを列挙しないので、行ごとに束縛するもの(ComponentData・nox::EntityId)は取れない。
+		///          取れるのは Service(参照 / ポインタ、constなら読み取り)と nox::EntityCommands& だけ。
+		///          Query を引数の種類に足したら、ここで受け入れる。
+		template<class Signature>
+		[[nodiscard]] consteval bool ValidateOncePerFrameSignature()noexcept
+		{
+			static_assert(Signature::k_all_parameters_valid,
+				"引数は Serviceのポインタ・参照 / nox::EntityCommands& のいずれかのみ指定できます");
+			static_assert(Signature::k_component_parameter_count == 0u && Signature::k_entity_parameter_count == 0u,
+				"Serviceのメソッド / Task は entity を列挙しないので、ComponentData と nox::EntityId は引数に取れません。"
+				"entityを動かす処理は EntitySystem / EntityLogic に書いてください");
+			return Signature::k_all_parameters_valid &&
+				(Signature::k_component_parameter_count == 0u) &&
+				(Signature::k_entity_parameter_count == 0u);
 		}
 	}
 }

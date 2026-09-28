@@ -390,6 +390,66 @@ namespace nox
 				}
 				InvokeRow(owner, method, bases, entity, location.row, k_indices);
 			}
+
+			/// @brief methodを1回だけ呼ぶ(Serviceのメソッド用)。
+			/// @details entityを列挙しないので列挙スコープは張らない(列ポインタも行番号も握らない)。
+			///          Serviceの解決とEntityCommandsの束縛はForEachEntityと同じで、
+			///          参照で受けるServiceが未登録なら呼び出しを打ち切り、ポインタで受けるならnullptrを渡す。
+			///          引数リストにComponentData / EntityIdが無いことは記述子側の static_assert で保証済み。
+			template<class Owner, class MethodPointerType>
+			static void InvokeOnce(nox::World& world, Owner& owner, MethodPointerType method)
+			{
+				if constexpr (k_parameter_count == 0u)
+				{
+					//	解決するものが無い。
+					(void)world;
+					(owner.*method)();
+				}
+				else
+				{
+					constexpr auto k_indices = std::make_index_sequence<k_parameter_count>{};
+					BaseArray bases{};
+					nox::EntityCommands commands(world);
+					if (ResolveServices(world, bases, k_indices) == false)
+					{
+						return;
+					}
+					BindCommands(commands, bases, k_indices);
+					InvokeRow(owner, method, bases, nox::EntityId{}, 0u, k_indices);
+				}
+			}
+
+			template<class FunctionPointerType, size_t... Indices>
+			static void InvokeFunctionRow(
+				FunctionPointerType function,
+				const BaseArray& bases,
+				std::index_sequence<Indices...>)
+			{
+				function(nox::detail::BindEntityArgument<ParameterAt<Indices>>(bases[Indices], nox::EntityId{}, 0u)...);
+			}
+
+			/// @brief 名前空間スコープの関数を1回だけ呼ぶ(Task用)。規則は InvokeOnce と同じ。
+			template<class FunctionPointerType>
+			static void InvokeFunctionOnce(nox::World& world, FunctionPointerType function)
+			{
+				if constexpr (k_parameter_count == 0u)
+				{
+					(void)world;
+					function();
+				}
+				else
+				{
+					constexpr auto k_indices = std::make_index_sequence<k_parameter_count>{};
+					BaseArray bases{};
+					nox::EntityCommands commands(world);
+					if (ResolveServices(world, bases, k_indices) == false)
+					{
+						return;
+					}
+					BindCommands(commands, bases, k_indices);
+					InvokeFunctionRow(function, bases, k_indices);
+				}
+			}
 		};
 
 		/// @brief EntitySignatureからEntityInvokerを取り出す。

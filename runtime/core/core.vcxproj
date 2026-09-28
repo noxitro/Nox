@@ -194,6 +194,18 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="service_attribute.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="service_method.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="updater_task.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="entity_type_registry.h">
       <SubType>
       </SubType>
@@ -497,6 +509,10 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="entity_logic_attribute.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="service_attribute.cpp">
       <SubType>
       </SubType>
     </ClCompile>
