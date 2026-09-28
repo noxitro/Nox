@@ -9,6 +9,7 @@
 #include	"garbage_collector.h"
 #include	"asset_manager.h"
 #include	"scene_manager.h"
+#include	"world.h"
 
 #if NOX_DEVELOP
 #include	"dev/net/socket_scheduler.h"
@@ -23,13 +24,20 @@ nox::CoreModule::~CoreModule()
 {
 }
 
+void nox::CoreModule::RegisterServices([[maybe_unused]] nox::World& world)const
+{
+	//	所有権は World に移る。初期化順は登録順ではなく Depends で決まる。
+#if NOX_DEVELOP
+	world.RegisterService(*new nox::dev::net::SocketScheduler());
+#endif // NOX_DEVELOP
+}
+
 void nox::CoreModule::CreateEngineSystems(nox::PmrVector<nox::SystemBase*>& out)const
 {
 	out.emplace_back(new nox::SceneManager());
 	out.emplace_back(new nox::AssetManager());
 	out.emplace_back(new nox::GarbageCollector());
 #if NOX_DEVELOP
-	out.emplace_back(new nox::dev::net::SocketScheduler());
 	out.emplace_back(new nox::dev::editor_remote::EditorRemoteServer());
 #endif // NOX_DEVELOP
 }

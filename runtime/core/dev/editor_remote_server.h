@@ -60,9 +60,9 @@ namespace nox::dev::editor_remote
 				owner_.OnServerDisconnected(context);
 			}
 
-			void OnServerReceive(nox::World& world) override
+			void OnServerReceive() override
 			{
-				owner_.OnServerReceive(world);
+				owner_.OnServerReceive();
 			}
 		private:
 			EditorRemoteServer& owner_;
@@ -99,7 +99,8 @@ namespace nox::dev::editor_remote
 
 		void	OnServerConnected(const nox::dev::net::ConnectionContext& context);
 		void	OnServerDisconnected([[maybe_unused]] const nox::dev::net::ConnectionContext& context);
-		void	OnServerReceive(nox::World& world);
+		/// @brief 受信スレッドから呼ばれる。受け取ったデータを reader_ に積むだけで、World には触れない。
+		void	OnServerReceive();
 		void UpdateReceive(nox::World& world);
 	public:
 		static constexpr SystemPhaseInit k_phase_init{

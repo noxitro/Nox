@@ -290,7 +290,7 @@ void	nox::dev::net::Server::Connection(::fd_set& fds)
 	}
 }
 
-void nox::dev::net::Server::Update(nox::World& world)
+void nox::dev::net::Server::Update()
 {
 	if (IsStartup() == false)
 	{
@@ -352,7 +352,7 @@ void nox::dev::net::Server::Update(nox::World& world)
 			continue;
 		}
 
-		event_handler_.OnServerReceive(world);
+		event_handler_.OnServerReceive();
 	}
 }
 

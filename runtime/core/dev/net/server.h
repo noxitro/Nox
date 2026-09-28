@@ -6,19 +6,19 @@
 #pragma once
 #include	"net_entity.h"
 
-namespace nox
-{
-	class World;
-}
-
 namespace nox::dev::net
 {
+	/// @brief Server のイベントの通知先。
+	/// @details いずれも nox::dev::net::SocketScheduler の受信スレッドから呼ばれる。
+	///          受信スレッドは World に触れないので、受け取ったデータをフレームへ取り込むのは
+	///          通知先の持ち主(EditorRemoteServer の FrameIngress のメソッドなど)の役目。
 	class IServerEventHandler
 	{
 	public:
 		virtual void OnServerConnected(const nox::dev::net::ConnectionContext& context) = 0;
 		virtual void OnServerDisconnected(const nox::dev::net::ConnectionContext& context) = 0;
-		virtual void OnServerReceive(nox::World& world) = 0;
+		/// @brief 接続中のクライアントのソケットに読めるデータがある。
+		virtual void OnServerReceive() = 0;
 	protected:
 		virtual ~IServerEventHandler() = default;
 	};
@@ -68,8 +68,8 @@ namespace nox::dev::net
 		/// @param fd 
 		void	Connection(::fd_set& fds);
 
-		/// @brief SocketSchedulerから呼び出される更新処理
-		void Update(nox::World& world);
+		/// @brief SocketSchedulerの受信スレッドから呼び出される更新処理
+		void Update();
 
 		/// @brief clientを切断
 		/// @param socket 切断するclientのソケット

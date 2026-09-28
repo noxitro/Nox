@@ -96,7 +96,7 @@ void	nox::dev::editor_remote::EditorRemoteServer::Start(nox::World& world)
 
 	if (started && socket_scheduler_ == nullptr)
 	{
-		socket_scheduler_ = world.FindSystem<nox::dev::net::SocketScheduler>();
+		socket_scheduler_ = world.TryGetService<nox::dev::net::SocketScheduler>();
 		NOX_ASSERT(socket_scheduler_ != nullptr, u"SocketSchedulerが登録されていません");
 		if (socket_scheduler_ != nullptr)
 		{
@@ -217,24 +217,18 @@ void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive(nox::World& worl
 	}
 }
 
-void nox::dev::editor_remote::EditorRemoteServer::OnServerReceive(nox::World& world)
+void nox::dev::editor_remote::EditorRemoteServer::OnServerReceive()
 {
 	//	受信バッファ 未初期化でOK
 	std::array<nox::uint8, 2048> receive_buffer;
 
-	if (world.IsKill())
-	{
-		return;
-	}
-
+	//	受信スレッド上なので World には触れない。受け取ったデータを積むだけにし、
+	//	クエリの実行(World を触る)はゲームスレッドのフェーズ内で行う。
 	const nox::int32 receive_size = nox::dev::net::Receive(main_client_.socket, static_cast<char*>(static_cast<void*>(receive_buffer.data())), static_cast<nox::int32>(receive_buffer.size()));
 	if (receive_size > 0)
 	{
-		{
-			NOX_LOCAL_SCOPE(nox::os::ScopedLock(mutex_reader_));
-			reader_.AddReceiveBuffer(std::span(receive_buffer.data(), static_cast<std::size_t>(receive_size)));
-		}
-		UpdateReceive(world);
+		NOX_LOCAL_SCOPE(nox::os::ScopedLock(mutex_reader_));
+		reader_.AddReceiveBuffer(std::span(receive_buffer.data(), static_cast<std::size_t>(receive_size)));
 	}
 	else if (receive_size < 0)
 	{
@@ -373,18 +367,12 @@ void nox::dev::editor_remote::EditorRemoteServer::CollectRemoteInstances(std::fu
 
 std::span<const nox::SystemBase::PhaseRegister> nox::dev::editor_remote::EditorRemoteServer::GetPhaseRegisterList()const noexcept
 {
+	//	SocketScheduler は Service になったので、初期化は Init フェーズより前、終了は Terminate フェーズより後に済む。
+	//	そのため Init / Terminate の順序はここで宣言しなくても守られる。
 	static constexpr auto table = std::to_array({
-		PhaseRegister(k_phase_init, nox::dev::net::SocketScheduler::k_phase_init),
-		//	ソケット受信(SocketScheduler::UpdateTask)への依存は宣言しない。
-		//	UpdateTaskはSocketSchedulerのInitializeが起こす専用スレッド上で、
-		//	World::IsKill()までループし続ける処理であり、フェーズではない。
-		//	受信データは reader_ (mutex_reader_ で保護) 越しに受け渡されるので、フェーズ間の順序では表せない。
-		//	(以前はここで依存を宣言していたが、依存先がどのPhaseRegisterにも載っておらず黙って無視されていた)
+		PhaseRegister(k_phase_init),
 		PhaseRegister(k_phase_update),
-		PhaseRegister(k_phase_terminate,
-			{},
-			{nox::dev::net::SocketScheduler::k_phase_terminate}
-			)
+		PhaseRegister(k_phase_terminate)
 	});
 
 	return table;
