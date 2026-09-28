@@ -97,6 +97,9 @@ namespace nox::os
 
 	namespace detail
 	{
+		///	@brief		ネイティブウィンドウの生成を UI スレッド (nox::os::Initialize を呼んだスレッド) で実行する。
+		///	@details	他のスレッドからは、UI スレッドの nox::os::Update が拾って実行するまで待つ。
+		///				UI スレッド自身から呼ばれたら、待たずにその場で実行する (自分を待つと進まないため)。
 		void DispatchCreateNativeWindow(void(*func)(const void*), const void* arg);
 	}
 }

@@ -223,6 +223,17 @@ void	nox::os::detail::DispatchCreateNativeWindow(void(*func)(const void*), const
 	NOX_LOCAL_SCOPE(nox::util::ParallelExecuteCheckScope(nox::os::parallel_execute_checker_));
 #endif
 
+	//	UI スレッド (nox::os::Initialize を呼んだスレッド) 自身からの呼び出しは、その場で実行する。
+	//	ディスパッチ要求を拾うのは UI スレッドの nox::os::Update なので、UI スレッドが自分を待つと二度と進まない
+	//	(メッセージループに入る前の Service の初期化でウィンドウを作る場合など)。
+	//	作るスレッドは待ち合わせる場合と同じ UI スレッドなので、ウィンドウのメッセージは同じループが処理する。
+	if ((nox::os::native_thread_id_ != 0u) &&
+		(nox::os::Thread::GetThisThreadNativeThreadId() == nox::os::native_thread_id_))
+	{
+		func(arg);
+		return;
+	}
+
 	while (nox::os::window_dispatch_function_ != nullptr)
 	{
 		nox::os::Thread::Sleep(1);
