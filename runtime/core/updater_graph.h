@@ -16,6 +16,9 @@
 ///             型名は nox::util::GetTypeName でMSVC / clang-clの綴りを揃えてあるので、
 ///             ビルドやツールセットをまたいでも同じ順序になる。
 ///          4. 衝突するノードは全順序の前→後へ直列化する。
+///          5. 排他アクセス(nox::World& を引数に取った Serviceのメソッド / Task)は同じフェーズの全ノードと衝突する。
+///             全順序での位置は他のノードと同じ規則(明示辺 → 型名順)で決まり、その位置で単独のレイヤーになる。
+///             開発ツール用の逃げ道で、ゲームロジックでは使わない(nox::EntityParameterKind::World)。
 ///
 ///          明示辺も衝突辺も必ず全順序の前から後へ張られるため、DAGに循環が生まれ得ない
 ///          (明示辺だけの循環は構築時に検出して起動を止める)。
@@ -82,6 +85,13 @@ namespace nox
 		/// @details 同一EntityLogic型の更新メソッド同士・同一Serviceのメソッド同士は、宣言が重ならなくても
 		///          メンバ変数を共有するため必ず衝突させる。k_invalid_updater_group_index なら共有相手がいない。
 		nox::uint32 group_index = nox::k_invalid_updater_group_index;
+		/// @brief 排他アクセスか(nox::World& を引数に取った Serviceのメソッド / Task)。
+		/// @details true なら同じフェーズの全ノードと衝突する(= 単独のレイヤーになる)。World を丸ごと触るので、
+		///          引数の宣言から読み書きの範囲を導けないため。実行はフェーズを回しているスレッドに固定される
+		///          (nox::UpdaterNode::main_thread_only も立つ)。
+		///          開発ツール用の逃げ道で、Editor との橋渡しのように World を丸ごと触ることが本質の処理だけに使う。
+		///          ゲームロジックでは使わないこと(nox::EntityParameterKind::World)。
+		bool exclusive = false;
 	};
 
 	/// @brief 明示的な順序宣言(RunAfter / RunBefore)から張った辺1本。番号は全順序での位置。
@@ -95,6 +105,7 @@ namespace nox
 
 	/// @brief 2つのノードが同一フェーズ内で同時実行できないか。
 	/// @details (a) 同一ComponentDataにRWが絡む (b) 同一Serviceにwriteが絡む (c) インスタンス状態を共有する
+	///          (d) 片方が排他アクセス(nox::UpdaterNodeAccess::exclusive)
 	///          のいずれかで衝突する。read同士は衝突しない。
 	[[nodiscard]] bool ConflictsUpdaterNodeAccess(
 		const nox::UpdaterNodeAccess& a,
@@ -182,6 +193,7 @@ namespace nox
 		/// @brief ワーカーへ配らず、フェーズを回しているスレッド上で実行するか。
 		/// @details EntitySystem / EntityLogic は型の kMainThreadOnly 宣言から来る(EntityLogicは型の全更新メソッドに掛かる)。
 		///          Serviceのメソッド / Task は属性の nox::attr::ThreadAffinity::MainThread から来る(メソッド単位)。
+		///          排他アクセス(access.exclusive)のノードは暗黙に true。
 		///          依存解析(レイヤー)には影響しない。 nox::IsMainThreadOnlyUpdaterType を参照。
 		bool main_thread_only = false;
 		/// @brief 遅延構造変更の記録先バッファ番号。出さないノードは k_invalid_updater_command_buffer_index。

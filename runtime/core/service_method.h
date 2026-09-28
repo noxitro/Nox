@@ -18,6 +18,10 @@
 ///          - 型に public な `using RunAfter = nox::TypeList<...>;` / `using RunBefore = ...;` を書ける。
 ///            その型の同じフェーズの全メソッドに掛かる。
 ///          - 実行スレッドはメソッド単位で属性に書く(nox::attr::ThreadAffinity)。型の kMainThreadOnly は使わない。
+///          - 【開発ツール用の逃げ道】引数に nox::World& を1つ取れる(排他アクセス。nox::EntityParameterKind::World)。
+///            取ったメソッドは同じフェーズの全ノードと衝突して単独のレイヤーになり、属性の指定に関わらず
+///            フェーズを回しているスレッドで実行される。Editor との橋渡しのように World を丸ごと触ることが
+///            本質の処理だけに使い、ゲームロジックでは使わないこと(依存解析から見えなくなり、並列性を断ち切る)。
 ///
 ///          [生成器との境界]
 ///          生成器は nox::Service の派生型で属性の付いたメソッドを数え上げ、nox::ServiceMethodTable の
@@ -44,10 +48,13 @@ namespace nox
 		std::span<const nox::ServiceAccess>(*get_service_accesses)()noexcept;
 		std::string_view name;
 		nox::SystemPhaseType phase;
-		/// @brief ワーカーへ配らず、フェーズを回しているスレッド上で実行するか(nox::attr::ThreadAffinity::MainThread)。
+		/// @brief ワーカーへ配らず、フェーズを回しているスレッド上で実行するか。
+		/// @details nox::attr::ThreadAffinity::MainThread か、排他アクセス(exclusive)なら true。
 		bool main_thread_only;
 		/// @brief 遅延構造変更を出しうるか(= nox::EntityCommands& を宣言しているか)。
 		bool emits_structural_change;
+		/// @brief 排他アクセスか(= nox::World& を宣言しているか)。nox::UpdaterNodeAccess::exclusive になる。
+		bool exclusive;
 	};
 
 	/// @brief 属性付きメソッドを持つService型ごとに1つだけ作られる静的記述子。
@@ -82,11 +89,11 @@ namespace nox
 	{
 		/// @brief Serviceのメソッドとして妥当な形か。
 		/// @details 形(戻り値void・volatile / 参照修飾なし)と引数の分類は EntityLogic と同じ検査を通し、
-		///          そのうえで 1フェーズに1回のノードの引数規則を課す。
+		///          そのうえで 1フェーズに1回のノードの引数規則を課す。EntityLogic と違い nox::World& (排他アクセス)を認める。
 		template<class MethodPointerType>
 		[[nodiscard]] consteval bool ValidateServiceMethod()noexcept
 		{
-			constexpr bool k_valid_form = nox::detail::ValidateEntityMethod<MethodPointerType>();
+			constexpr bool k_valid_form = nox::detail::ValidateEntityMethod<MethodPointerType, true>();
 			if constexpr (k_valid_form)
 			{
 				using Traits = nox::EntityMethodTraits<MethodPointerType>;
@@ -152,8 +159,10 @@ namespace nox
 			.get_service_accesses = []()noexcept { return nox::detail::ServiceMethodAccessTable<OwnerType, Signature>::Get(); },
 			.name = name,
 			.phase = _Phase,
-			.main_thread_only = (_Affinity == nox::attr::ThreadAffinity::MainThread),
+			//	排他アクセスのノードは暗黙にメインスレッド限定(World を丸ごと触るので、フェーズを回すスレッドに固定する)。
+			.main_thread_only = (_Affinity == nox::attr::ThreadAffinity::MainThread) || (Signature::k_world_parameter_count != 0u),
 			.emits_structural_change = (Signature::k_commands_parameter_count != 0u),
+			.exclusive = (Signature::k_world_parameter_count != 0u),
 		};
 	}
 
@@ -231,8 +240,10 @@ namespace nox::detail
 			.get_service_accesses = []()noexcept { return nox::detail::ServiceMethodAccessTable<OwnerType, Signature>::Get(); },
 			.name = name,
 			.phase = _Phase,
-			.main_thread_only = (_Affinity == nox::attr::ThreadAffinity::MainThread),
+			//	手書き経路(nox::MakeServiceMethodDescriptor)と同じ。排他アクセスは暗黙にメインスレッド限定。
+			.main_thread_only = (_Affinity == nox::attr::ThreadAffinity::MainThread) || (Signature::k_world_parameter_count != 0u),
 			.emits_structural_change = (Signature::k_commands_parameter_count != 0u),
+			.exclusive = (Signature::k_world_parameter_count != 0u),
 		};
 	}
 }

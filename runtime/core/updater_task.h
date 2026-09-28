@@ -11,6 +11,8 @@
 ///          - 1フェーズに1回だけ呼ばれる。entityを列挙しない。
 ///          - 戻り値は void。引数に取れるのは Service(参照 / ポインタ、constなら読み取り)と nox::EntityCommands& だけ
 ///            (nox::attr::ServiceMethod と同じ規則。nox::detail::ValidateOncePerFrameSignature)。
+///          - 【開発ツール用の逃げ道】nox::World& を1つ取れる(排他アクセス)。規則と用途の限定は
+///            nox::EntityParameterKind::World と同じ。同じフェーズの全ノードと衝突し、フェーズを回しているスレッドで実行される。
 ///          - インスタンスを持たないので、他のノードと状態を共有しない。衝突は引数の宣言だけで決まる。
 ///          - 全順序のキーは完全修飾関数名。
 ///          - RunAfter / RunBefore を持たない。型ではないので書く場所が無く、他のノードの RunAfter / RunBefore に
@@ -36,10 +38,13 @@ namespace nox
 		/// @brief 完全修飾関数名。UpdaterGraphの全順序のキー。
 		std::string_view name;
 		nox::SystemPhaseType phase;
-		/// @brief ワーカーへ配らず、フェーズを回しているスレッド上で実行するか(nox::attr::ThreadAffinity::MainThread)。
+		/// @brief ワーカーへ配らず、フェーズを回しているスレッド上で実行するか。
+		/// @details nox::attr::ThreadAffinity::MainThread か、排他アクセス(exclusive)なら true。
 		bool main_thread_only;
 		/// @brief 遅延構造変更を出しうるか(= nox::EntityCommands& を宣言しているか)。
 		bool emits_structural_change;
+		/// @brief 排他アクセスか(= nox::World& を宣言しているか)。nox::UpdaterNodeAccess::exclusive になる。
+		bool exclusive;
 	};
 
 	namespace detail
@@ -103,8 +108,10 @@ namespace nox
 			.get_service_accesses = []()noexcept { return Signature::GetServiceAccesses(); },
 			.name = name,
 			.phase = _Phase,
-			.main_thread_only = (_Affinity == nox::attr::ThreadAffinity::MainThread),
+			//	排他アクセスのノードは暗黙にメインスレッド限定(Serviceのメソッドと同じ)。
+			.main_thread_only = (_Affinity == nox::attr::ThreadAffinity::MainThread) || (Signature::k_world_parameter_count != 0u),
 			.emits_structural_change = (Signature::k_commands_parameter_count != 0u),
+			.exclusive = (Signature::k_world_parameter_count != 0u),
 		};
 	}
 }

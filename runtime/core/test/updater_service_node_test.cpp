@@ -13,6 +13,8 @@
 ///				  ・実行   … entityが0個でも、フェーズごとにちょうど1回呼ばれる。MainThread のメソッドは呼び出しスレッドで走る。
 ///				             EntityCommands& で積んだ生成はフェーズ末の反映で見えるようになる
 ///				  ・生成器 … ヘッダに定義した Service(private メソッド)と Task が生成コードの表に載り、呼べる
+///				  ・排他   … nox::World& を取るメソッド / Task は全ノードと衝突して単独のレイヤーになり、
+///				             属性が Any でもメインスレッド限定で、フェーズごとに1回 World を受け取って呼ばれる
 ///
 ///	@note		World::Init は private なので、フェーズは World と同じ部品(nox::UpdaterGraph /
 ///				nox::ExecuteUpdaterLayer / nox::WorldNodeCommandScope / FlushEntityCommands)を並べて回す
@@ -626,4 +628,301 @@ TEST(ServiceNode, GeneratedDescriptorsRunPrivateMethodsAndTaskOncePerPhase)
 	EXPECT_EQ(node_service->task_count, 1);
 	ASSERT_TRUE(world.HasComponent<TestHealth>(node_service->last_spawned));
 	EXPECT_EQ(world.TryGetComponent<TestHealth>(node_service->last_spawned)->value, 5);
+}
+
+//	=====================================================================================
+//	5. 排他アクセス(nox::World& を引数に取るノード)
+//	=====================================================================================
+
+namespace nox::test::service_node
+{
+	/// @brief SnExclusiveTask が呼ばれた回数と、毎回呼び出しスレッドで走ったか。
+	inline std::atomic<nox::int32> g_exclusive_task_calls{ 0 };
+	inline std::atomic<bool> g_exclusive_task_on_caller_every_time{ true };
+	/// @brief SnOtherIdleTask が呼ばれた回数。ワーカー上で呼ばれうるので atomic にする。
+	inline std::atomic<nox::int32> g_other_idle_task_calls{ 0 };
+
+	/// @brief nox::World& を取るメソッドを持つService。属性の実行スレッドは Any のまま(排他で暗黙にメインスレッド限定になる)。
+	class SnExclusiveService final : public nox::Service
+	{
+	public:
+		void Ingress(nox::World& world)
+		{
+			++ingress_count;
+			last_world = &world;
+			ingress_on_caller_every_time = ingress_on_caller_every_time && (std::this_thread::get_id() == g_caller_thread_id);
+		}
+
+		nox::int32 ingress_count = 0;
+		nox::World* last_world = nullptr;
+		bool ingress_on_caller_every_time = true;
+	};
+
+	/// @brief nox::World& を取る Task。
+	void SnExclusiveTask([[maybe_unused]] nox::World& world)
+	{
+		g_exclusive_task_calls.fetch_add(1, std::memory_order_relaxed);
+		if (std::this_thread::get_id() != g_caller_thread_id)
+		{
+			g_exclusive_task_on_caller_every_time.store(false, std::memory_order_relaxed);
+		}
+	}
+
+	/// @brief 何も宣言しない Task(SnIdleTask と別の関数)。
+	void SnOtherIdleTask()
+	{
+		g_other_idle_task_calls.fetch_add(1, std::memory_order_relaxed);
+	}
+}
+
+namespace nox
+{
+	template<>
+	struct ServiceMethodTable<nox::test::service_node::SnExclusiveService> final
+	{
+		static constexpr std::array<nox::ServiceMethodDescriptor, 1> k_methods{
+			nox::MakeServiceMethodDescriptor<
+				&nox::test::service_node::SnExclusiveService::Ingress, nox::SystemPhaseType::FrameIngress>("Ingress"),
+		};
+
+		[[nodiscard]] static constexpr std::span<const nox::ServiceMethodDescriptor> GetMethods()noexcept
+		{
+			return std::span<const nox::ServiceMethodDescriptor>(k_methods.data(), k_methods.size());
+		}
+	};
+}
+
+namespace
+{
+	using namespace nox::test::service_node;
+
+	constexpr nox::ServiceMethodTypeDescriptor k_exclusive_descriptor = nox::MakeServiceMethodTypeDescriptor<SnExclusiveService>();
+
+	constexpr nox::UpdaterTaskDescriptor k_exclusive_task =
+		nox::MakeUpdaterTaskDescriptor<&nox::test::service_node::SnExclusiveTask, nox::SystemPhaseType::FrameIngress>(
+			"nox::test::service_node::SnExclusiveTask");
+
+	//	全順序のキーは記述子に渡した名前なので、同じ関数でも名前で前後を決められる。
+	//	名前順: SnAIdle < SnBIdle < SnExclusiveService < SnExclusiveTask < SnYIdle < SnZIdle
+	constexpr nox::UpdaterTaskDescriptor k_ingress_idle_a =
+		nox::MakeUpdaterTaskDescriptor<&nox::test::service_node::SnIdleTask, nox::SystemPhaseType::FrameIngress>(
+			"nox::test::service_node::SnAIdle");
+	constexpr nox::UpdaterTaskDescriptor k_ingress_idle_b =
+		nox::MakeUpdaterTaskDescriptor<&nox::test::service_node::SnOtherIdleTask, nox::SystemPhaseType::FrameIngress>(
+			"nox::test::service_node::SnBIdle");
+	constexpr nox::UpdaterTaskDescriptor k_ingress_idle_y =
+		nox::MakeUpdaterTaskDescriptor<&nox::test::service_node::SnIdleTask, nox::SystemPhaseType::FrameIngress>(
+			"nox::test::service_node::SnYIdle");
+	constexpr nox::UpdaterTaskDescriptor k_ingress_idle_z =
+		nox::MakeUpdaterTaskDescriptor<&nox::test::service_node::SnOtherIdleTask, nox::SystemPhaseType::FrameIngress>(
+			"nox::test::service_node::SnZIdle");
+
+	//	引数の規則。nox::World& は1フェーズに1回のノードでだけ、1つまで取れる。
+	//	EntitySystem / EntityLogic の更新メソッドに書くと nox::detail::ValidateEntityMethod の static_assert で
+	//	コンパイルエラーになる(ここではテストできないので、行単位の形として無効であることだけを見る)。
+	static_assert(nox::EntitySignature<nox::World&>::k_world_parameter_count == 1u);
+	static_assert(nox::EntitySignature<nox::World&>::k_is_valid_parameter_list);
+	static_assert(nox::EntitySignature<nox::World&>::k_is_valid == false);
+	static_assert(nox::EntitySignature<SnHealth&, nox::World&>::k_is_valid == false);
+	static_assert(nox::EntitySignature<nox::World&, nox::World&>::k_is_valid_parameter_list == false);
+	static_assert(nox::EntitySignature<const nox::World&>::k_all_parameters_valid == false);
+	static_assert(nox::EntitySignature<nox::World*>::k_all_parameters_valid == false);
+	static_assert(nox::detail::ValidateOncePerFrameSignature<
+		nox::EntitySignature<nox::World&, SnAlphaService&, nox::EntityCommands&>>());
+	//	World はServiceのアクセス宣言に算入しない(衝突は exclusive で表す)。
+	static_assert(nox::EntitySignature<nox::World&, const SnAlphaService&>::k_service_parameter_count == 1u);
+
+	/// @brief 指定フェーズを1回回す。World::ExecutePhase と同じ順(レイヤー順 → 反映)。
+	void RunPhase(nox::World& world, const nox::UpdaterGraph& graph, nox::JobSystem& job_system, const nox::SystemPhaseType phase)
+	{
+		world.EnterEntityIteration();
+		const nox::uint32 layer_count = graph.GetLayerCount(phase);
+		for (nox::uint32 layer_index = 0u; layer_index < layer_count; ++layer_index)
+		{
+			nox::ExecuteUpdaterLayer(
+				job_system,
+				graph.GetLayerNodes(phase, layer_index),
+				&ExecuteNodeForTest,
+				&world);
+		}
+		world.LeaveEntityIteration();
+		world.FlushEntityCommands();
+	}
+}
+
+///	@brief	nox::World& を取るメソッド / Task は記述子で排他になり、属性が Any でもメインスレッド限定になる。
+TEST(ServiceNode, WorldParameterMakesTheNodeExclusiveAndMainThreadOnly)
+{
+	const std::span<const nox::ServiceMethodDescriptor> methods = k_exclusive_descriptor.get_methods();
+	ASSERT_EQ(methods.size(), 1u);
+	EXPECT_EQ(methods[0].phase, nox::SystemPhaseType::FrameIngress);
+	EXPECT_TRUE(methods[0].exclusive);
+	EXPECT_TRUE(methods[0].main_thread_only);
+	EXPECT_FALSE(methods[0].emits_structural_change);
+	//	World はServiceのアクセス宣言に載らない。残るのは自己書き込みだけ。
+	ASSERT_EQ(methods[0].get_service_accesses().size(), 1u);
+	EXPECT_EQ(methods[0].get_service_accesses()[0].type, &nox::reflection::Typeof<SnExclusiveService>());
+
+	EXPECT_TRUE(k_exclusive_task.exclusive);
+	EXPECT_TRUE(k_exclusive_task.main_thread_only);
+	EXPECT_TRUE(k_exclusive_task.get_service_accesses().empty());
+
+	//	World を取らないノードは排他にならない。
+	EXPECT_FALSE(k_ingress_idle_a.exclusive);
+	EXPECT_FALSE(k_ingress_idle_a.main_thread_only);
+	for (const nox::ServiceMethodDescriptor& method : k_alpha_descriptor.get_methods())
+	{
+		EXPECT_FALSE(method.exclusive) << method.name;
+	}
+}
+
+///	@brief	排他は宣言の中身に関係なく全ノードと衝突する。前後のノードは排他ノードを挟んで別のレイヤーになる。
+TEST(ServiceNode, ExclusiveAccessConflictsWithEveryNode)
+{
+	const nox::UpdaterNodeAccess empty{};
+	const nox::UpdaterNodeAccess exclusive{ .exclusive = true };
+	EXPECT_FALSE(nox::ConflictsUpdaterNodeAccess(empty, empty));
+	EXPECT_TRUE(nox::ConflictsUpdaterNodeAccess(empty, exclusive));
+	EXPECT_TRUE(nox::ConflictsUpdaterNodeAccess(exclusive, empty));
+	EXPECT_TRUE(nox::ConflictsUpdaterNodeAccess(exclusive, exclusive));
+
+	//	全順序: 空, 空, 排他, 空, 空 → レイヤー 0, 0, 1, 2, 2
+	const std::array<nox::UpdaterNodeAccess, 5> accesses{ empty, empty, exclusive, empty, empty };
+	std::array<nox::uint32, 5> layers{};
+	EXPECT_EQ(nox::BuildUpdaterLayerIndices(
+		std::span<const nox::UpdaterNodeAccess>(accesses),
+		std::span<nox::uint32>(layers)), 3u);
+	EXPECT_EQ(layers, (std::array<nox::uint32, 5>{ 0u, 0u, 1u, 2u, 2u }));
+}
+
+///	@brief	排他ノードは同じレイヤーに他のノードを置かない。排他でないノード同士は今までどおり同じレイヤーに並ぶ。
+TEST(ServiceNode, ExclusiveNodeTakesALayerOfItsOwn)
+{
+	SnExclusiveService service;
+	const std::array<nox::UpdaterServiceBinding, 1> bindings{
+		nox::UpdaterServiceBinding{ .service = &service, .descriptor = &k_exclusive_descriptor },
+	};
+	//	並び(登録順)は結果に影響しない。
+	const std::array<const nox::UpdaterTaskDescriptor*, 5> tasks{
+		&k_ingress_idle_z, &k_exclusive_task, &k_ingress_idle_a, &k_ingress_idle_y, &k_ingress_idle_b,
+	};
+
+	nox::UpdaterGraph graph;
+	const nox::UpdaterGraphBuildResult result = graph.TryRebuild(
+		std::span<nox::EntitySystemBase* const>(),
+		std::span<nox::EntityLogicStorage* const>(),
+		std::span<const nox::UpdaterServiceBinding>(bindings.data(), bindings.size()),
+		std::span<const nox::UpdaterTaskDescriptor* const>(tasks.data(), tasks.size()));
+	ASSERT_TRUE(result.IsSuccess());
+
+	//	FrameIngress にだけ載り、Update には何も無い。
+	EXPECT_TRUE(graph.GetNodes(nox::SystemPhaseType::Update).empty());
+	const std::span<const nox::UpdaterNode> nodes = graph.GetNodes(nox::SystemPhaseType::FrameIngress);
+	ASSERT_EQ(nodes.size(), 6u);
+	EXPECT_EQ(graph.GetLayerCount(nox::SystemPhaseType::FrameIngress), 4u);
+
+	const nox::UpdaterNode* const idle_a = FindNode(nodes, k_ingress_idle_a.name);
+	const nox::UpdaterNode* const idle_b = FindNode(nodes, k_ingress_idle_b.name);
+	const nox::UpdaterNode* const ingress = FindNode(nodes, nox::util::GetTypeName<SnExclusiveService>(), "Ingress");
+	const nox::UpdaterNode* const exclusive_task = FindNode(nodes, k_exclusive_task.name);
+	const nox::UpdaterNode* const idle_y = FindNode(nodes, k_ingress_idle_y.name);
+	const nox::UpdaterNode* const idle_z = FindNode(nodes, k_ingress_idle_z.name);
+	ASSERT_NE(idle_a, nullptr);
+	ASSERT_NE(idle_b, nullptr);
+	ASSERT_NE(ingress, nullptr);
+	ASSERT_NE(exclusive_task, nullptr);
+	ASSERT_NE(idle_y, nullptr);
+	ASSERT_NE(idle_z, nullptr);
+
+	//	排他ノードは access.exclusive と main_thread_only が立つ。
+	EXPECT_TRUE(ingress->access.exclusive);
+	EXPECT_TRUE(ingress->main_thread_only);
+	EXPECT_TRUE(exclusive_task->access.exclusive);
+	EXPECT_TRUE(exclusive_task->main_thread_only);
+	EXPECT_FALSE(idle_a->access.exclusive);
+	EXPECT_FALSE(idle_a->main_thread_only);
+
+	//	全順序は型名 / 関数名の順。排他ノードの位置も同じ規則で決まる。
+	EXPECT_LT(idle_b->order_index, ingress->order_index);
+	EXPECT_LT(ingress->order_index, exclusive_task->order_index);
+	EXPECT_LT(exclusive_task->order_index, idle_y->order_index);
+
+	//	前の 2 つは同じレイヤー、排他ノードはそれぞれ単独、後ろの 2 つも同じレイヤー。
+	EXPECT_EQ(idle_a->layer_index, 0u);
+	EXPECT_EQ(idle_b->layer_index, 0u);
+	EXPECT_EQ(ingress->layer_index, 1u);
+	EXPECT_EQ(exclusive_task->layer_index, 2u);
+	EXPECT_EQ(idle_y->layer_index, 3u);
+	EXPECT_EQ(idle_z->layer_index, 3u);
+	EXPECT_EQ(graph.GetLayerNodes(nox::SystemPhaseType::FrameIngress, 1u).size(), 1u);
+	EXPECT_EQ(graph.GetLayerNodes(nox::SystemPhaseType::FrameIngress, 2u).size(), 1u);
+
+	for (const nox::UpdaterNode& node : nodes)
+	{
+		if (node.access.exclusive == false)
+		{
+			continue;
+		}
+		for (const nox::UpdaterNode& other : nodes)
+		{
+			if (&other != &node)
+			{
+				EXPECT_NE(other.layer_index, node.layer_index) << nox::GetUpdaterNodeTypeName(other);
+				EXPECT_TRUE(nox::ConflictsUpdaterNodeAccess(node.access, other.access));
+			}
+		}
+	}
+	EXPECT_FALSE(nox::ConflictsUpdaterNodeAccess(idle_a->access, idle_b->access));
+}
+
+///	@brief	World& を取るメソッドと Task は、ワーカーがあってもフェーズごとにちょうど1回、呼び出しスレッドで、
+///			フェーズを回している World を受け取って呼ばれる。
+TEST(ServiceNode, ExclusiveNodesRunOncePerPhaseOnTheCallerThreadWithTheWorld)
+{
+	static constexpr nox::int32 kFrameCount = 8;
+
+	nox::World world;
+	world.RegisterService(*new SnExclusiveService());
+	ASSERT_TRUE(world.TryInitializeServices().IsSuccess());
+	SnExclusiveService* const service = world.TryGetService<SnExclusiveService>();
+	ASSERT_NE(service, nullptr);
+
+	const std::array<nox::UpdaterServiceBinding, 1> bindings{
+		nox::UpdaterServiceBinding{ .service = service, .descriptor = &k_exclusive_descriptor },
+	};
+	const std::array<const nox::UpdaterTaskDescriptor*, 5> tasks{
+		&k_ingress_idle_a, &k_ingress_idle_b, &k_exclusive_task, &k_ingress_idle_y, &k_ingress_idle_z,
+	};
+
+	nox::UpdaterGraph graph;
+	const nox::UpdaterGraphBuildResult result = graph.TryRebuild(
+		std::span<nox::EntitySystemBase* const>(),
+		std::span<nox::EntityLogicStorage* const>(),
+		std::span<const nox::UpdaterServiceBinding>(bindings.data(), bindings.size()),
+		std::span<const nox::UpdaterTaskDescriptor* const>(tasks.data(), tasks.size()));
+	ASSERT_TRUE(result.IsSuccess());
+	world.ReserveNodeEntityCommandBuffers(graph.GetCommandBufferCount(nox::SystemPhaseType::FrameIngress));
+
+	g_caller_thread_id = std::this_thread::get_id();
+	g_idle_task_calls.store(0, std::memory_order_relaxed);
+	g_other_idle_task_calls.store(0, std::memory_order_relaxed);
+	g_exclusive_task_calls.store(0, std::memory_order_relaxed);
+	g_exclusive_task_on_caller_every_time.store(true, std::memory_order_relaxed);
+
+	nox::JobSystem job_system;
+	job_system.Initialize(2u);
+	for (nox::int32 frame = 0; frame < kFrameCount; ++frame)
+	{
+		RunPhase(world, graph, job_system, nox::SystemPhaseType::FrameIngress);
+	}
+	job_system.Finalize();
+
+	EXPECT_EQ(service->ingress_count, kFrameCount);
+	EXPECT_EQ(service->last_world, &world);
+	EXPECT_TRUE(service->ingress_on_caller_every_time);
+	EXPECT_EQ(g_exclusive_task_calls.load(std::memory_order_relaxed), kFrameCount);
+	EXPECT_TRUE(g_exclusive_task_on_caller_every_time.load(std::memory_order_relaxed));
+	//	排他でない Task は2つの記述子から呼ばれる(A と Y が SnIdleTask、B と Z が SnOtherIdleTask)。
+	EXPECT_EQ(g_idle_task_calls.load(std::memory_order_relaxed), kFrameCount * 2);
+	EXPECT_EQ(g_other_idle_task_calls.load(std::memory_order_relaxed), kFrameCount * 2);
 }

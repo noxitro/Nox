@@ -407,6 +407,12 @@ namespace nox
 		{
 			const nox::UpdaterNodeAccess& a = a_node.access;
 			const nox::UpdaterNodeAccess& b = b_node.access;
+			if (a.exclusive || b.exclusive)
+			{
+				//	排他アクセス(nox::World&)。宣言の中身に関係なく全ノードと衝突する。
+				builder.Append(u8"exclusive");
+				return;
+			}
 			if ((a.group_index != nox::k_invalid_updater_group_index) && (a.group_index == b.group_index))
 			{
 				//	同じインスタンスのメソッド同士。EntityLogicはエンティティごとのインスタンス、Serviceは1つのインスタンス。
@@ -539,6 +545,14 @@ bool nox::ConflictsUpdaterNodeAccess(
 	const nox::UpdaterNodeAccess& a,
 	const nox::UpdaterNodeAccess& b)noexcept
 {
+	//	排他アクセス(nox::World&)は何を読み書きするか宣言から導けないので、同じフェーズの全ノードと衝突させる。
+	//	衝突辺は全順序の前 → 後へ張られるので、排他ノードは自分より前の全ノードの後ろ、後の全ノードの前の
+	//	単独のレイヤーになる。
+	if (a.exclusive || b.exclusive)
+	{
+		return true;
+	}
+
 	//	同一EntityLogic型・同一Serviceのメソッド同士はメンバ変数を共有するため、宣言が重ならなくても直列化する。
 	if ((a.group_index != nox::k_invalid_updater_group_index) && (a.group_index == b.group_index))
 	{
@@ -872,8 +886,10 @@ nox::UpdaterGraphBuildResult nox::UpdaterGraph::RebuildPhase(
 			build_node.node.service = binding.service;
 			build_node.node.service_type = binding.descriptor;
 			build_node.node.service_method = &method;
-			//	Serviceの実行スレッドはメソッド単位の宣言(nox::attr::ThreadAffinity)。
-			build_node.node.main_thread_only = method.main_thread_only;
+			//	nox::World& を取ったメソッドは排他アクセス。同じフェーズの全ノードと衝突する。
+			build_node.node.access.exclusive = method.exclusive;
+			//	Serviceの実行スレッドはメソッド単位の宣言(nox::attr::ThreadAffinity)。排他アクセスは暗黙にメインスレッド限定。
+			build_node.node.main_thread_only = method.main_thread_only || method.exclusive;
 			build_node.type_name = binding.descriptor->name;
 			build_node.method_name = method.name;
 			build_node.registration_index = static_cast<nox::uint32>(build_nodes.size());
@@ -895,7 +911,9 @@ nox::UpdaterGraphBuildResult nox::UpdaterGraph::RebuildPhase(
 		build_node.node.access.group_index = nox::k_invalid_updater_group_index;
 		build_node.node.kind = nox::UpdaterNodeKind::Task;
 		build_node.node.task = task;
-		build_node.node.main_thread_only = task->main_thread_only;
+		//	nox::World& を取った Task は排他アクセス(Serviceのメソッドと同じ扱い)。
+		build_node.node.access.exclusive = task->exclusive;
+		build_node.node.main_thread_only = task->main_thread_only || task->exclusive;
 		//	全順序のキーは完全修飾関数名。型名と同じ列で比べる。
 		build_node.type_name = task->name;
 		build_node.method_name = std::string_view();
@@ -1233,6 +1251,11 @@ void nox::UpdaterGraph::Trace()const
 				//	ワーカーへ配られず、フェーズを回しているスレッドで実行される。
 				builder.Append(u8" main-thread-only");
 			}
+			if (node.access.exclusive)
+			{
+				//	nox::World& を取った排他アクセス。同じフェーズの全ノードと衝突し、単独のレイヤーになる。
+				builder.Append(u8" exclusive");
+			}
 
 			NOX_INFO_LINE(nox::log_id::CoreCommon, u8"  Layer {0}: n{1} {2}",
 				node.layer_index,
@@ -1278,6 +1301,8 @@ void nox::UpdaterGraph::Trace()const
 		//	明示辺を辿って to へ届くなら向きは宣言で決まっている。届かなければ型名で決まっただけで、
 		//	型名を変えると実行順が入れ替わる。因果のある組ならRunAfter / RunBeforeで宣言すべき候補。
 		//	同一EntityLogic型のメソッド同士(logic-state)はメソッド名順が規則なので、宣言の衝突が無ければ出さない。
+		//	排他アクセス(exclusive)だけによる衝突も出さない(宣言の衝突だけを見る)。排他ノードは全ノードと衝突するので、
+		//	出すとフェーズの全ノードとの組が並んで他の候補が埋もれる。排他ノードの位置は上の Layer 行で読める。
 		nox::Vector<nox::uint32> out_edge_offsets(static_cast<size_t>(node_count) + 1u, 0u);
 		nox::Vector<nox::uint32> out_edge_targets(order_edges.size(), 0u);
 		for (const nox::UpdaterOrderEdge& edge : order_edges)

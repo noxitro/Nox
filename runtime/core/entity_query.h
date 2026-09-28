@@ -164,6 +164,11 @@ namespace nox
 				//	呼び出し1回につき1つ、スタック上に作った実体を全行で共有する。
 				return *static_cast<nox::EntityCommands*>(base);
 			}
+			else if constexpr (Traits::k_kind == nox::EntityParameterKind::World)
+			{
+				//	排他アクセス。ResolveEntityServiceBase が呼び出し元の World を載せてある(nullにならない)。
+				return *static_cast<nox::World*>(base);
+			}
 			else if constexpr (std::is_reference_v<Parameter>)
 			{
 				//	Service&。解決に失敗した場合はここへ来る前に呼び出しが打ち切られている。
@@ -176,13 +181,19 @@ namespace nox
 			}
 		}
 
-		/// @brief Service引数を解決する。Chunkに依存しないのでForEachごとに1回だけ呼ぶ。
+		/// @brief Service引数(と排他アクセスの nox::World&)を解決する。Chunkに依存しないのでForEachごとに1回だけ呼ぶ。
 		/// @return 実行を続行してよいか。参照で受けるServiceが未登録の場合のみfalse。
 		template<class Parameter>
 		[[nodiscard]] inline bool ResolveEntityServiceBase(nox::World& world, void*& out_base)noexcept
 		{
 			using Traits = nox::EntityParameterTraits<Parameter>;
-			if constexpr (nox::detail::IsServiceParameterKind(Traits::k_kind))
+			if constexpr (Traits::k_kind == nox::EntityParameterKind::World)
+			{
+				//	排他アクセス(Serviceのメソッド / Task のみ)。呼び出し元の World をそのまま渡す。
+				out_base = &world;
+				return true;
+			}
+			else if constexpr (nox::detail::IsServiceParameterKind(Traits::k_kind))
 			{
 				out_base = nox::detail::TryGetServiceOfWorld(world, nox::reflection::Typeof<typename Traits::RawType>());
 				if constexpr (std::is_reference_v<Parameter>)

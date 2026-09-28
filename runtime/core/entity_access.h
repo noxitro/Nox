@@ -32,6 +32,17 @@ namespace nox
 		ServiceWrite,
 		/// @brief nox::EntityCommands& (フェーズ実行中に許されるWorld操作)
 		Commands,
+		/// @brief nox::World& (排他アクセス。Serviceのメソッド / Task でのみ取れる)
+		/// @details 【開発ツール用の逃げ道】引数でアクセスを宣言する規則の例外で、World を丸ごと触る。
+		///          宣言したノードは同じフェーズの全ノードと衝突し(単独のレイヤーになる)、
+		///          フェーズを回しているスレッドで実行される(nox::UpdaterNodeAccess::exclusive)。
+		///          Editor との橋渡しのように「World を丸ごと触る」ことが本質の処理だけに使う。
+		///          ゲームロジックでは使わないこと。何を読み書きしているかが依存解析から見えなくなり、
+		///          フェーズの並列性をそのノードの前後で断ち切る。
+		///
+		///          EntitySystem / EntityLogic の行単位メソッドには書けない(nox::detail::ValidateEntityMethod が static_assert で弾く)。
+		///          フェーズ実行中なので、中から即時系の構造変更(CreateEntity 等)は呼べない。nox::EntityCommands& を使うこと。
+		World,
 	};
 
 	/// @brief 引数リストが宣言したService1つ分のアクセス権限。
@@ -239,6 +250,16 @@ namespace nox
 		using RawType = nox::EntityCommands;
 	};
 
+	//	nox::World& は排他アクセスの宣言(nox::EntityParameterKind::World)。
+	//	const nox::World& は用意しない。読むだけでも World 全体に触れる点は同じで、区別しても並列化に使えないため
+	//	(= Invalid のまま残り、コンパイルエラーになる)。
+	template<>
+	struct EntityParameterTraits<nox::World&>
+	{
+		static constexpr nox::EntityParameterKind k_kind = nox::EntityParameterKind::World;
+		using RawType = nox::World;
+	};
+
 	namespace detail
 	{
 		[[nodiscard]] inline constexpr bool IsComponentParameterKind(const nox::EntityParameterKind kind)noexcept
@@ -361,6 +382,12 @@ namespace nox
 		static constexpr nox::uint32 k_commands_parameter_count =
 			((Traits<Parameters>::k_kind == nox::EntityParameterKind::Commands ? 1u : 0u) + ... + 0u);
 
+		/// @brief nox::World& を受けている引数の数。
+		/// @details 0 でなければ排他アクセスのノード(nox::EntityParameterKind::World)。
+		///          1フェーズに1回のノード(Serviceのメソッド / Task)でだけ 1 まで許す。
+		static constexpr nox::uint32 k_world_parameter_count =
+			((Traits<Parameters>::k_kind == nox::EntityParameterKind::World ? 1u : 0u) + ... + 0u);
+
 		/// @brief EntityIdは省略可能だが、書く場合は必ず先頭1つ。
 		static constexpr bool k_entity_parameter_is_leading =
 			(k_entity_parameter_count == 0u) ||
@@ -391,11 +418,19 @@ namespace nox
 		/// @brief 同じComponentDataを2回宣言していないか。
 		static constexpr bool k_has_unique_components = HasUniqueComponents();
 
-		static constexpr bool k_is_valid =
+		/// @brief 引数の並びとして妥当か(nox::World& は1つまで許す)。
+		/// @details 1フェーズに1回のノード(Serviceのメソッド / Task)の形の検査に使う。
+		static constexpr bool k_is_valid_parameter_list =
 			k_all_parameters_valid &&
 			k_entity_parameter_count <= 1u &&
 			k_entity_parameter_is_leading &&
-			k_has_unique_components;
+			k_has_unique_components &&
+			k_world_parameter_count <= 1u;
+
+		/// @brief 行単位のメソッド(EntitySystem / EntityLogic)の引数として妥当か。nox::World& は取れない。
+		static constexpr bool k_is_valid =
+			k_is_valid_parameter_list &&
+			k_world_parameter_count == 0u;
 
 		/// @brief 読み書きするComponentDataのマスク。Queryの必須条件を兼ねる。
 		/// @details ComponentTypeIndexは実行時に払い出されるため、構築時に一度だけ呼ぶ。
@@ -513,7 +548,9 @@ namespace nox
 	namespace detail
 	{
 		/// @brief コンパイルエラーを不備ごとに切り分けて出す。
-		template<class MethodPointerType>
+		/// @tparam AllowWorldParameter nox::World& (排他アクセス)を引数に認めるか。
+		///         行単位のメソッド(EntitySystem / EntityLogic)は false、1フェーズに1回のノード(Serviceのメソッド)は true。
+		template<class MethodPointerType, bool AllowWorldParameter = false>
 		consteval bool ValidateEntityMethod()noexcept
 		{
 			static_assert(std::is_member_function_pointer_v<MethodPointerType>,
@@ -541,7 +578,19 @@ namespace nox
 						"nox::EntityIdは第一引数にのみ指定できます");
 					static_assert(Signature::k_has_unique_components,
 						"同じComponentDataを複数の引数で宣言することはできません");
-					return Signature::k_is_valid;
+					static_assert(AllowWorldParameter || (Signature::k_world_parameter_count == 0u),
+						"nox::World& (排他アクセス) は Serviceのメソッド / Task でのみ引数に取れます。"
+						"EntitySystem / EntityLogic の更新メソッドには書けません");
+					static_assert(Signature::k_world_parameter_count <= 1u,
+						"nox::World& は1つまでしか指定できません");
+					if constexpr (AllowWorldParameter)
+					{
+						return Signature::k_is_valid_parameter_list;
+					}
+					else
+					{
+						return Signature::k_is_valid;
+					}
 				}
 			}
 
@@ -550,19 +599,23 @@ namespace nox
 
 		/// @brief 1フェーズに1回だけ呼ばれるノード(Serviceのメソッド / Task)の引数リストとして妥当か。
 		/// @details entityを列挙しないので、行ごとに束縛するもの(ComponentData・nox::EntityId)は取れない。
-		///          取れるのは Service(参照 / ポインタ、constなら読み取り)と nox::EntityCommands& だけ。
+		///          取れるのは Service(参照 / ポインタ、constなら読み取り)と nox::EntityCommands& と、
+		///          排他アクセスの nox::World& (1つまで。nox::EntityParameterKind::World)だけ。
 		///          Query を引数の種類に足したら、ここで受け入れる。
 		template<class Signature>
 		[[nodiscard]] consteval bool ValidateOncePerFrameSignature()noexcept
 		{
 			static_assert(Signature::k_all_parameters_valid,
-				"引数は Serviceのポインタ・参照 / nox::EntityCommands& のいずれかのみ指定できます");
+				"引数は Serviceのポインタ・参照 / nox::EntityCommands& / nox::World& のいずれかのみ指定できます");
 			static_assert(Signature::k_component_parameter_count == 0u && Signature::k_entity_parameter_count == 0u,
 				"Serviceのメソッド / Task は entity を列挙しないので、ComponentData と nox::EntityId は引数に取れません。"
 				"entityを動かす処理は EntitySystem / EntityLogic に書いてください");
+			static_assert(Signature::k_world_parameter_count <= 1u,
+				"nox::World& は1つまでしか指定できません");
 			return Signature::k_all_parameters_valid &&
 				(Signature::k_component_parameter_count == 0u) &&
-				(Signature::k_entity_parameter_count == 0u);
+				(Signature::k_entity_parameter_count == 0u) &&
+				(Signature::k_world_parameter_count <= 1u);
 		}
 	}
 }
