@@ -1070,7 +1070,6 @@ void nox::World::LeaveNodeAccessScope(const nox::UpdaterNodeAccess& access)noexc
 		}
 	}
 }
-
 #endif // !NOX_MASTER
 
 nox::World::EntityRecord* nox::World::TryGetEntityRecord(nox::uint32 index) noexcept

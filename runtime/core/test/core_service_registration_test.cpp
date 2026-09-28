@@ -16,7 +16,7 @@
 ///				  ・GarbageCollector は依存を持たず、初期化は登録先を作るだけなので単独で初期化まで走らせる。
 ///				    FrameGC が生成コードの表に Presentation の排他ノードとして載ることもここで見る
 ///				    (garbage_collector.h が core.h 経由で生成器に見えていないと、表に載らず黙って走らなくなる)
-///				3 つが揃った構成で実際に起動・終了できることは、CI の「Run runtime.exe」ステップが確かめる。
+///				Core の Service が全て揃った構成で実際に起動・終了できることは、CI の「Run runtime.exe」ステップが確かめる。
 ///
 ///				描画モジュール(render)の Renderer / DebugDraw は宣言だけを見る。core_test は render.lib をリンクせず
 ///				(Renderer のコンストラクタは描画デバイスを作る)、render のヘッダは生成器の走査対象でもないので
@@ -36,6 +36,7 @@
 #include	"../scene_manager.h"
 #include	"../garbage_collector.h"
 #include	"../service_method.h"
+#include	"../entity_type_registry.h"
 
 #include	"../../modules/render/renderer.h"
 #include	"../../modules/render/debug_draw.h"
