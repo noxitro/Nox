@@ -9,33 +9,19 @@
 #if NOX_DEVELOP
 #include	"renderer.h"
 
-void nox::render::debug::DebugDraw::Init(nox::World& world)
+bool nox::render::debug::DebugDraw::OnInitialize(nox::ServiceContext& context)noexcept
 {
+	renderer_ = context.Get<nox::render::Renderer>();
+	return renderer_ != nullptr;
 }
 
-void nox::render::debug::DebugDraw::UpdateDraw(nox::World& world)
+void nox::render::debug::DebugDraw::OnShutdown()noexcept
 {
+	renderer_ = nullptr;
 }
 
-void nox::render::debug::DebugDraw::Terminate(nox::World& world)
+void nox::render::debug::DebugDraw::UpdateDraw()
 {
-}
-
-std::span<const nox::SystemBase::PhaseRegister> nox::render::debug::DebugDraw::GetPhaseRegisterList()const noexcept
-{
-	static constexpr auto table = std::array{
-		PhaseRegister{
-			DebugDraw::kPhaseInit,
-		{	nox::render::Renderer::kPhaseInit } },
-
-		PhaseRegister{ DebugDraw::kPhaseUpdate,
-		{},
-		{nox::render::Renderer::kPhaseUpdate } },
-
-		PhaseRegister{ DebugDraw::kPhaseTerminate,
-		{nox::render::Renderer::kPhaseTerminate } }
-	};
-	return table;
 }
 
 void nox::render::debug::DebugDraw::DrawLine(const nox::Float3& start, const nox::Float3& end, nox::Color color, nox::render::debug::DebugDrawOption option)

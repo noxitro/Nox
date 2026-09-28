@@ -42,25 +42,15 @@ inline constexpr auto& nox::render::Renderer::GetDevice()const noexcept
 
 }
 
-void nox::render::Renderer::Init(nox::World& world)
+bool nox::render::Renderer::OnInitialize([[maybe_unused]] nox::ServiceContext& context)noexcept
+{
+	return true;
+}
+
+void nox::render::Renderer::OnShutdown()noexcept
 {
 }
 
-void nox::render::Renderer::Update(nox::World& world)
+void nox::render::Renderer::Update()
 {
-}
-
-void nox::render::Renderer::Terminate(nox::World& world)
-{
-
-}
-
-std::span<const nox::SystemBase::PhaseRegister> nox::render::Renderer::GetPhaseRegisterList()const noexcept
-{
-	static constexpr auto tbl = std::array{
-		PhaseRegister(kPhaseInit),
-		PhaseRegister(kPhaseUpdate),
-		PhaseRegister(kPhaseTerminate)
-	};
-	return tbl;
 }

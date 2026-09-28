@@ -17,6 +17,12 @@
 ///				    FrameGC が生成コードの表に Presentation の排他ノードとして載ることもここで見る
 ///				    (garbage_collector.h が core.h 経由で生成器に見えていないと、表に載らず黙って走らなくなる)
 ///				3 つが揃った構成で実際に起動・終了できることは、CI の「Run runtime.exe」ステップが確かめる。
+///
+///				描画モジュール(render)の Renderer / DebugDraw は宣言だけを見る。core_test は render.lib をリンクせず
+///				(Renderer のコンストラクタは描画デバイスを作る)、render のヘッダは生成器の走査対象でもないので
+///				(runtime.exe にもリンクされていない)、インスタンスもメソッド表も作れない。
+///				Depends / RunAfter の宣言はヘッダだけで読めるので、DebugDraw が Renderer の後に初期化され
+///				Presentation でも後に走る宣言になっていることを固定する。
 
 #include	"pch.h"
 
@@ -30,6 +36,9 @@
 #include	"../scene_manager.h"
 #include	"../garbage_collector.h"
 #include	"../service_method.h"
+
+#include	"../../modules/render/renderer.h"
+#include	"../../modules/render/debug_draw.h"
 
 ///	@brief	SceneManager は他の Service に依存しない。
 TEST(CoreServiceRegistration, SceneManagerHasNoDepends)
@@ -140,3 +149,29 @@ TEST(CoreServiceRegistration, GarbageCollectorInitializesAlone)
 	ASSERT_TRUE(result.IsSuccess());
 	EXPECT_EQ(world.TryGetService<nox::GarbageCollector>(), &garbage_collector);
 }
+
+///	@brief	Renderer は他の Service に依存せず、実行順の宣言も持たない。
+TEST(CoreServiceRegistration, RendererHasNoDependsAndNoOrder)
+{
+	const nox::ServiceTypeDescriptor descriptor = nox::MakeServiceTypeDescriptor<nox::render::Renderer>();
+	EXPECT_EQ(descriptor.type, &nox::reflection::Typeof<nox::render::Renderer>());
+	EXPECT_TRUE(descriptor.depends.empty());
+	EXPECT_TRUE(nox::detail::GetRunAfterTypeNames<nox::render::Renderer>().empty());
+	EXPECT_TRUE(nox::detail::GetRunBeforeTypeNames<nox::render::Renderer>().empty());
+}
+
+#if NOX_DEVELOP
+///	@brief	DebugDraw は Renderer に依存し(初期化は後、終了は先)、Presentation でも Renderer の後に走る。
+///	@details	旧 PhaseRegister の Init / Terminate の順序宣言が Depends に、Update の順序宣言が RunAfter に置き換わったもの。
+TEST(CoreServiceRegistration, DebugDrawDependsOnAndRunsAfterRenderer)
+{
+	const nox::ServiceTypeDescriptor descriptor = nox::MakeServiceTypeDescriptor<nox::render::debug::DebugDraw>();
+	ASSERT_EQ(descriptor.depends.size(), 1u);
+	EXPECT_EQ(descriptor.depends[0], nox::util::GetTypeName<nox::render::Renderer>());
+
+	const std::span<const std::string_view> run_after = nox::detail::GetRunAfterTypeNames<nox::render::debug::DebugDraw>();
+	ASSERT_EQ(run_after.size(), 1u);
+	EXPECT_EQ(run_after[0], nox::util::GetTypeName<nox::render::Renderer>());
+	EXPECT_TRUE(nox::detail::GetRunBeforeTypeNames<nox::render::debug::DebugDraw>().empty());
+}
+#endif // NOX_DEVELOP

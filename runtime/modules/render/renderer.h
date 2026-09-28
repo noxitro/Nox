@@ -4,29 +4,32 @@
 ///	@file	renderer.h
 ///	@brief	renderer
 #pragma once
+#include	"../../core/service.h"
+#include	"../../core/service_attribute.h"
 
 namespace nox::render
 {
 	class RenderDevice;
 
-	class Renderer : public nox::SystemBase
+	/// @brief		描画デバイスを持つService。
+	/// @details	デバイスはコンストラクタで作り、デストラクタで破棄する。OnInitialize / OnShutdown は今は何もしない。
+	///				毎フレームの処理は Presentation の Update(描画の抽出・提出の置き場所。今は空)。
+	///				他のServiceとの依存は持たない。描画に依存するService(nox::render::debug::DebugDraw など)が
+	///				Depends / RunAfter でこの型に並ぶ。
+	class Renderer final : public nox::Service
 	{
-		NOX_DECLARE_OBJECT(nox::render::Renderer, nox::Object);
+		NOX_DECLARE_OBJECT(nox::render::Renderer, nox::Service);
 	public:
 		Renderer();
 		~Renderer()override;
 
-		void Init(nox::World& world);
-		void Update(nox::World& world);
-		void Terminate(nox::World& world);
-
-	public:
-		static constexpr nox::SystemBase::SystemPhaseInit kPhaseInit{ &Renderer::Init, u8"Renderer::Init" };
-		static constexpr nox::SystemBase::SystemPhaseUpdate kPhaseUpdate{ &Renderer::Update, u8"Renderer::Update" };
-		static constexpr nox::SystemBase::SystemPhaseTerminate kPhaseTerminate{ &Renderer::Terminate, u8"Renderer::Terminate" };
-
 	private:
-		std::span<const nox::SystemBase::PhaseRegister> GetPhaseRegisterList()const noexcept override;
+		bool OnInitialize(nox::ServiceContext& context)noexcept override;
+		void OnShutdown()noexcept override;
+
+		/// @brief 描画の抽出・提出。Presentation に1フレーム1回。今は空。
+		NOX_ATTR(nox::attr::ServiceMethod(nox::SystemPhaseType::Presentation))
+		void Update();
 
 		inline constexpr auto& GetDevice()const noexcept;
 

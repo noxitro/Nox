@@ -17,10 +17,12 @@ nox::render::RenderModule::RenderModule()
 	
 }
 
-void nox::render::RenderModule::CreateEngineSystems(nox::PmrVector<nox::SystemBase*>& out)const
+void nox::render::RenderModule::RegisterServices(nox::World& world)const
 {
-	out.emplace_back(new nox::render::Renderer());
+	//	所有権は World に移る。初期化順は登録順ではなく Depends で決まる
+	//	(DebugDraw は Renderer に依存するので、Renderer が先に初期化され、後に終了する)。
+	world.RegisterService(*new nox::render::Renderer());
 #if NOX_DEVELOP
-	out.emplace_back(new nox::render::debug::DebugDraw());
+	world.RegisterService(*new nox::render::debug::DebugDraw());
 #endif // NOX_DEVELOP
 }

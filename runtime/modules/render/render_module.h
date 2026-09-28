@@ -15,6 +15,7 @@ namespace nox::render
 		~RenderModule()noexcept = default;
 
 	private:
-		void CreateEngineSystems(nox::PmrVector<nox::SystemBase*>& out)const override;
+		/// @brief 描画のServiceを登録する(Renderer。開発ビルドでは DebugDraw も)。
+		void RegisterServices(nox::World& world)const override;
 	};
 }
