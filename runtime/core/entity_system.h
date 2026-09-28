@@ -171,6 +171,12 @@ namespace nox
 	{
 		using Signature = typename TSystem::template SignatureOf<>;
 		static_assert(nox::detail::ValidateEntityMethod<decltype(&TSystem::OnUpdate)>());
+		//	空のQueryは全Archetypeに一致し、OnUpdateがentityの数だけ呼ばれてしまう。
+		static_assert(Signature::k_component_parameter_count >= 1u,
+			"EntitySystemの OnUpdate には ComponentData を1つ以上指定してください"
+			"(ComponentDataが無いとQueryが全Archetypeに一致し、entityの数だけ呼ばれます)。"
+			"1フレームに1回だけ呼びたい処理は、Serviceのメソッド(nox::attr::ServiceMethod)か"
+			"Task(nox::attr::UpdaterTask を付けたグローバル関数)にしてください");
 		//	Chunk並列の宣言と、遅延構造変更を出す宣言(nox::EntityCommands&)は両立しない。
 		//	理由は nox::IsParallelForEachEntitySystem のコメントを参照。
 		static_assert(
