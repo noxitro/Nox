@@ -21,7 +21,9 @@ namespace nox
 
 void	nox::GarbageCollector::Register(nox::Object& managed_object)
 {
-	NOX_LOCAL_SCOPE(nox::os::Mutex{ impl_->mutex_ });
+	//	任意のスレッドから呼ばれるので、managed_objects_ への追加はロックする。
+	//	(以前は nox::os::Mutex をコピーして作っていたので、実際にはロックしていなかった)
+	NOX_LOCAL_SCOPE(nox::os::ScopedLock(impl_->mutex_));
 	impl_->managed_objects_.emplace_back(managed_object);
 }
 
@@ -46,6 +48,8 @@ void	nox::GarbageCollector::OnShutdown()noexcept
 
 void	nox::GarbageCollector::FrameGC([[maybe_unused]] nox::World& world)
 {
+	//	destroy_objects_ に触れるのは FrameGC だけなのでロックは要らない。
+	//	参照が戻っていた Object は Release の中から Register が呼ばれうるので、ロックを持ったまま Release しない。
 	if (impl_->destroy_objects_.size() > 0)
 	{
 		for (nox::Object& managed_object : impl_->destroy_objects_)
@@ -55,6 +59,9 @@ void	nox::GarbageCollector::FrameGC([[maybe_unused]] nox::World& world)
 		impl_->destroy_objects_.clear();
 	}
 	
+	//	managed_objects_ は Register が任意のスレッド(ロードスレッドなど、フェーズの外も含む)から積むので、
+	//	走査して移す間はロックする。排他ノードで防げるのは同じフェーズのノードとの競合だけ。
+	NOX_LOCAL_SCOPE(nox::os::ScopedLock(impl_->mutex_));
 	const auto result = std::ranges::remove_if(impl_->managed_objects_, +[](const nox::Object& managed_object)noexcept 
 		{
 			return nox::detail::ObjectImpl::GetRefCount(managed_object) < 0;
