@@ -2274,7 +2274,9 @@ nox::ServiceInitializeResult nox::World::TryInitializeServices()noexcept
 		}
 
 #if !NOX_MASTER
-		NOX_INFO_LINE(nox::log_id::CoreCommon, u8"Service初期化: {0}", entry.type->GetTypeName());
+		//	引数は左辺値で渡す(EntitySystem購読 のログ行と同じ実体化に揃え、string_format.h 側の既存警告を増やさない)。
+		const std::string_view initialized_type_name = entry.type->GetTypeName();
+		NOX_INFO_LINE(nox::log_id::CoreCommon, u8"Service初期化: {0}", initialized_type_name);
 #endif // !NOX_MASTER
 	}
 
