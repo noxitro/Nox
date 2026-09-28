@@ -25,18 +25,26 @@ void	nox::GarbageCollector::Register(nox::Object& managed_object)
 	impl_->managed_objects_.emplace_back(managed_object);
 }
 
-void	nox::GarbageCollector::Initialize([[maybe_unused]] nox::World&)
+bool	nox::GarbageCollector::OnInitialize([[maybe_unused]] nox::ServiceContext& context)noexcept
 {
+	//	登録先はクラスに1つ。同じ World の中の二重登録は DuplicateService で弾かれるので、
+	//	ここへ来るのは別の World が GarbageCollector を初期化したままのときだけ。登録先を取り合わないよう起動を止める。
+	if (impl_ != nullptr)
+	{
+		NOX_ASSERT(false, u8"GarbageCollectorが2つ初期化されました(登録先はクラスに1つしか持てません)");
+		return false;
+	}
 	impl_ = new Impl();
+	return true;
 }
 
-void	nox::GarbageCollector::Finalize([[maybe_unused]] nox::World&)
+void	nox::GarbageCollector::OnShutdown()noexcept
 {
 	delete impl_;
 	impl_ = nullptr;
 }
 
-void	nox::GarbageCollector::FrameGC([[maybe_unused]] nox::World&)
+void	nox::GarbageCollector::FrameGC([[maybe_unused]] nox::World& world)
 {
 	if (impl_->destroy_objects_.size() > 0)
 	{
@@ -54,14 +62,4 @@ void	nox::GarbageCollector::FrameGC([[maybe_unused]] nox::World&)
 	
 	impl_->destroy_objects_.insert(impl_->destroy_objects_.end(), result.begin(), result.end());
 	impl_->managed_objects_.erase(result.begin(), result.end());
-}
-
-std::span<const nox::SystemBase::PhaseRegister> nox::GarbageCollector::GetPhaseRegisterList()const noexcept
-{
-	static constexpr auto table = std::array{
-		PhaseRegister(k_phase_init),
-		PhaseRegister(k_phase_gc_update),
-		PhaseRegister(k_phase_terminal)
-	};
-	return table;
 }

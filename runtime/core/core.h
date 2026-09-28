@@ -11,6 +11,7 @@
 #include	"engine_module.h"
 #include	"core_module.h"
 #include	"asset_manager.h"
+#include	"garbage_collector.h"
 #include	"asset.h"
 #include	"asset_ref.h"
 #include	"world.h"

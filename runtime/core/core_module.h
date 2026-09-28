@@ -16,10 +16,8 @@ namespace nox
 		CoreModule();
 		~CoreModule()override;
 
-		/// @brief Core が持つServiceを登録する(SceneManager / AssetManager。開発ビルドではエディタ通信の SocketScheduler / EditorRemoteServer も)。
+		/// @brief Core が持つServiceを登録する(SceneManager / AssetManager / GarbageCollector。開発ビルドではエディタ通信の SocketScheduler / EditorRemoteServer も)。
 		void RegisterServices(nox::World& world)const override;
-
-		void CreateEngineSystems(nox::PmrVector<nox::SystemBase*>& out)const override;
 	public:
 	};
 }

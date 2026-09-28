@@ -41,7 +41,7 @@ kernel の単体テストがエンジン全部とコード生成器を引きず�
 | `updater_worker_count_test.cpp` | `--serial-updater` / `--updater-workers=N` の解析規則の検証 |
 | `studio_mode_test.cpp` | `--studio` の判定規則(`nox::ResolveStudioMode`。World と `SceneManager` が共有する純粋関数)の検証 |
 | `service_graph_test.cpp` | Service の寿命(`Depends` の順の初期化・逆順の終了・依存の誤りと `OnInitialize` の失敗)の検証。`World::TryInitializeServices` を直接叩く |
-| `core_service_registration_test.cpp` | Core が登録する `SceneManager` / `AssetManager` の `Depends` の宣言と解決の検証。`AssetManager` の依存(`EditorRemoteServer`)は開発ビルドだけなので、構成でケースを分けてある |
+| `core_service_registration_test.cpp` | Core が登録する `SceneManager` / `AssetManager` / `GarbageCollector` の `Depends` の宣言と解決の検証。`AssetManager` の依存(`EditorRemoteServer`)は開発ビルドだけなので、構成でケースを分けてある。`GarbageCollector::FrameGC` が生成コードの表に Presentation の排他ノードとして載ることも見る |
 | `updater_main_thread_test.cpp` | `kMainThreadOnly` を宣言したノードが呼び出しスレッドで走り、それ以外がワーカーへ配られることの検証。`nox::ExecuteUpdaterLayer` を自前の `JobSystem` で直接叩く |
 | `updater_service_node_test.cpp` | Service の属性付きメソッドと Task(属性付きのグローバル関数)がノードになることの検証。自己書き込みの暗黙宣言・同じ Service のメソッドの直列化・フェーズごとにちょうど1回の実行・生成コードの表(`entity_ecs_test.h` の `TestNodeService` / `TestNodeCountTask`)を見る |
 

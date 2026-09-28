@@ -30,13 +30,9 @@ void nox::CoreModule::RegisterServices(nox::World& world)const
 	//	(開発ビルドでは SocketScheduler → EditorRemoteServer → AssetManager の順に初期化され、逆順に終了する)。
 	world.RegisterService(*new nox::SceneManager());
 	world.RegisterService(*new nox::AssetManager());
+	world.RegisterService(*new nox::GarbageCollector());
 #if NOX_DEVELOP
 	world.RegisterService(*new nox::dev::net::SocketScheduler());
 	world.RegisterService(*new nox::dev::editor_remote::EditorRemoteServer());
 #endif // NOX_DEVELOP
-}
-
-void nox::CoreModule::CreateEngineSystems(nox::PmrVector<nox::SystemBase*>& out)const
-{
-	out.emplace_back(new nox::GarbageCollector());
 }
