@@ -85,6 +85,10 @@ sh tools/git-hooks/install.sh
 winget install Gitleaks.Gitleaks
 ```
 
+Claude Code on the web のセッションでは `.claude/hooks/session-start.sh`
+(SessionStart フック) が同じ導入を自動で行い、gitleaks も固定バージョンで入れる。
+クラウドからの push も `pre-push` で止まる。
+
 同じ検査は CI の `Secret scan` ワークフローでも走る。手元のフックを
 入れ忘れても、push された内容はそちらで検査される。
 

@@ -5,9 +5,11 @@ DIR=$(dirname "$0")
 
 # コミットする identity が noreply になっているか。履歴を浄化した意味を
 # 保つために、ここで個人メールでのコミットを止める。
+# noreply@anthropic.com は Claude Code on the web のセッションが使う identity
+# (.claude/hooks/session-start.sh がクラウドでもこのフックを有効にする)。
 email=$(git config user.email 2>/dev/null || true)
 case "$email" in
-  *@users.noreply.github.com|*@github.com) ;;
+  *@users.noreply.github.com|*@github.com|noreply@anthropic.com) ;;
   "")
     echo "pre-commit: user.email が未設定。git config user.email を設定すること" >&2
     exit 1 ;;

@@ -12,11 +12,12 @@ set -u
 
 find_gitleaks() {
   p=$(command -v gitleaks 2>/dev/null) && { printf '%s\n' "$p"; return 0; }
-  # winget で入れると PATH に載らないことがあるので直接見る
+  # winget で入れると PATH に載らないことがあるので直接見る。
+  # ~/.local/bin は .claude/hooks/session-start.sh が /usr/local/bin に書けないときの置き場。
   for p in \
     "${LOCALAPPDATA:-}/Microsoft/WinGet/Links/gitleaks.exe" \
     "${HOME:-}/AppData/Local/Microsoft/WinGet/Links/gitleaks.exe" \
-    /usr/local/bin/gitleaks /opt/homebrew/bin/gitleaks
+    /usr/local/bin/gitleaks /opt/homebrew/bin/gitleaks "${HOME:-}/.local/bin/gitleaks"
   do
     [ -n "$p" ] && [ -x "$p" ] && { printf '%s\n' "$p"; return 0; }
   done
