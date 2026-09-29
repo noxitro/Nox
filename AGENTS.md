@@ -14,7 +14,7 @@
 
 長命なブランチは `master` 1 本だけにする (作業ブランチと併存させて、同じ内容が別 SHA で二重に積まれた事故があった)。
 
-- エージェントは `work/<タスク名>` を切り、検証が通ったら `master` へマージしてブランチを消す。セッション側で作業ブランチが指定されている場合 (クラウドのセッションなど) はそれに従う。
+- エージェントは `work/<タスク名>` を切り、検証が通ったら `master` へマージしてブランチを消す。セッション側で作業ブランチが指定されている場合 (クラウドのセッションなど) はそれに従い、`master` への取り込みは PR にしてユーザーに委ねる。
 - ユーザーは `master` へ直接コミットし、実験だけ `user/<topic>` を切る。
 - **`master` への force-push は禁止。** ユーザーのコミットが失われる。
 
@@ -26,8 +26,8 @@
 
 **検証は CI に任せ、エージェントはローカルでビルド・テストしない** (ユーザーのマシンの負荷を抑えるため)。ユーザーが明示的に頼んだときだけ行い、手順は `docs/local-build.md` に従う。
 
-- 作業ブランチを push すると CI (`.github/workflows/ci.yml`) がビルド・テスト・`runtime.exe` の起動確認を走らせる。構成の詳細は `ci.yml` 冒頭のコメント。作業ブランチの push は確認なしでよい。
-- 落ちたら失敗したジョブのログを読み、直して push し直す。
+- 作業ブランチを push すると CI (`.github/workflows/ci.yml`) がビルド・テスト・`runtime.exe` の起動確認を走らせる。構成の詳細は `ci.yml` 冒頭のコメント。作業ブランチ (`work/*` またはセッションで指定されたブランチ。`master` は含まない) の push は確認なしでよい。`.github` 以下を変えると Workflow lint (actionlint / ruff) も走る。
+- 落ちたらログ (`gh run view <run-id> --log-failed` など) を読み、直して push し直す。
 - 文書だけの変更 (`paths-ignore` の対象) ではビルドの CI は走らない。File format の検査は走る。
 - テストは `runtime/core/test/` と `runtime/kernel/test/` (GoogleTest)。reflection / delegate / 型システム / メモリ管理を重点に書く。
 - ベンチマークは `runtime/bench/`。1 op あたりの確保回数が予算 (`alloc_budget`) を超えると CI が落ちる。詳細は `runtime/bench/README.md`。
