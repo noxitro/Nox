@@ -236,3 +236,6 @@ __pycache__/
 /bench-results/
 /_site/
 /tools/bench-site/data/
+
+# Claude Code のマシン固有の指示 (docs/local-build.md)
+/CLAUDE.local.md

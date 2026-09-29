@@ -14,41 +14,31 @@
 
 長命なブランチは `master` 1 本だけにする (作業ブランチと併存させて、同じ内容が別 SHA で二重に積まれた事故があった)。
 
-- エージェントは `work/<タスク名>` を切り、検証が通ったら `master` へマージしてブランチを消す。
+- エージェントは `work/<タスク名>` を切り、検証が通ったら `master` へマージしてブランチを消す。セッション側で作業ブランチが指定されている場合 (クラウドのセッションなど) はそれに従う。
 - ユーザーは `master` へ直接コミットし、実験だけ `user/<topic>` を切る。
 - **`master` への force-push は禁止。** ユーザーのコミットが失われる。
 
 ### ワークツリー
 
-**エージェントはメインのチェックアウトで編集もビルドもしない。** ユーザーが Visual Studio で作業しており、ファイルロックで長時間止まった実績がある。
-
-- `git worktree add` で専用のツリーを作り、編集とコミットはそこで行う。
-- メインのチェックアウトで行ってよいのは git 操作 (commit / merge / push) だけ。
-- 着手時に触るファイルを宣言すると、ユーザー側が避けられて衝突しない。
+**ユーザーのマシンでは、エージェントはメインのチェックアウトで編集しない** (Visual Studio のファイルロックで長時間止まった実績がある)。`git worktree add` で専用のツリーを作って編集・コミットし、メインで行うのは git 操作 (commit / merge / push) だけにする。着手時に触るファイルを宣言すると衝突を避けられる。
 
 ### 検証
 
-**エージェントはローカルでビルド・テストしない。** ユーザーが明示的に頼んだときだけ行う。
+**検証は CI に任せ、エージェントはローカルでビルド・テストしない** (ユーザーのマシンの負荷を抑えるため)。ユーザーが明示的に頼んだときだけ行い、手順は `docs/local-build.md` に従う。
 
-- `work/*` を push すると CI (`.github/workflows/ci.yml`) が 6 構成のビルドと `runtime.exe` の起動・終了、GoogleTest、Editor の UI テスト (FlaUI) を走らせる。`work/*` の push は確認なしでよい。
-- `.github` 以下を変えた push では、Workflow lint (actionlint / ruff) も CI 自身の書き間違いを検査する。
-- 落ちたら `gh run view <run-id> --log-failed` でログを読み、直して push し直す。
+- 作業ブランチを push すると CI (`.github/workflows/ci.yml`) がビルド・テスト・`runtime.exe` の起動確認を走らせる。構成の詳細は `ci.yml` 冒頭のコメント。作業ブランチの push は確認なしでよい。
+- 落ちたら失敗したジョブのログを読み、直して push し直す。
 - 文書だけの変更 (`paths-ignore` の対象) ではビルドの CI は走らない。File format の検査は走る。
 - テストは `runtime/core/test/` と `runtime/kernel/test/` (GoogleTest)。reflection / delegate / 型システム / メモリ管理を重点に書く。
-- ベンチマークは `runtime/bench/` (`bench_test.exe`)。CI が Release / Master で master の exe と同じ VM で交互に計測し、結果ページ (GitHub Pages) に積む。時間の変化では CI を落とさないが、1 op あたりの確保回数が予算 (`alloc_budget`) を超えると落ちる。詳細は `runtime/bench/README.md`。
+- ベンチマークは `runtime/bench/`。1 op あたりの確保回数が予算 (`alloc_budget`) を超えると CI が落ちる。詳細は `runtime/bench/README.md`。
 - Editor の見た目や操作は UI テストで拾いきれないので、Windows 上で手動確認する。
-
-ローカルでビルドする場合:
-
-- `OutDir` は `$(SolutionDir)build\` なのでワークツリーごとに独立する。vcpkg は環境変数 `NOX_VCPKG_INSTALLED_DIR` でメインのものを共有できる。
-- 生成器のバイナリ (`runtime/bin/`) は `.gitignore` 済みなのでコピーが要る。同ディレクトリには追跡ファイルも混ざっているので、コピー後に `git status` で巻き添えがないか確かめる。
 
 ### master へ入れる条件
 
 - CIビルド成功 (エラー 0)
 - 全テストが PASS
 - File format の検査が通る
-- `runtime.exe` がクラッシュせず起動・終了する (CI が 6 構成すべてで `runtime.exe --exit-after-frames=30` を起動して確かめる)
+- `runtime.exe` がクラッシュせず起動・終了する (CI が全構成で確かめる)
 - `git status` に意図しない変更がない
 
 ClangCL は必須ゲート。MSVC が見逃す非適合を実際に拾っているので、落ちたら原因を直す。`continue-on-error` で回避しない。
@@ -67,8 +57,7 @@ ClangCL は必須ゲート。MSVC が見逃す非適合を実際に拾ってい�
 
 文字コードは BOM なしの UTF-8 に統一している。改行コード (CRLF / LF) はファイルごとに混在している。**書き換えるときは改行コードを元の形式のまま保つ。**
 
-- BOM は付けない。C++ は `/utf-8` でコンパイルし、C# / XAML / MSBuild は BOM が無くても UTF-8 として読む。文字コードは `.editorconfig` の `charset` で決めてあり、Visual Studio もこれに従って保存する。
-- 例外として PowerShell スクリプト (Windows PowerShell 5.1 は BOM が無いと Shift-JIS として読む) と、日本語を含む VS テンプレート 2 本は BOM 付き。一覧は `.github/scripts/bom_policy.py` (`.editorconfig` と揃えてある)。
+- 例外 (BOM 付き) は PowerShell スクリプトなど。一覧と理由は `.github/scripts/bom_policy.py` (`.editorconfig` と揃えてある)。
 - VS がプロジェクトファイルを保存し直したときなどに BOM が付いたら、`python3 .github/scripts/strip-bom.py <パス>` で外す。
 - 変更後は `git diff --stat` の行数が実際の編集量と釣り合うか確かめる。
 - 手元では `python3 .github/scripts/check-file-format.py --base origin/master` で確かめられる (CI の File format と同じ検査)。壊したら、直すコミットを足せば通る。
