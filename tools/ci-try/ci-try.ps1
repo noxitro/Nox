@@ -13,6 +13,8 @@
 	- origin/master からの差分全体を tools/git-hooks の scan.sh と gitleaks で検査する
 	  (フックは前回の push との差分しか見ないので、それに頼らず全体を見る)
 	- 含まれる未追跡のファイルを一覧で見せ、y/n で確認する
+	- (選んだときだけ) 追加された行を Sonnet に読ませ、個人情報・所属先・秘密情報・
+	  ライセンスの観点でレビューする。指摘があれば既定で中止し、force と答えたときだけ進む
 
 .PARAMETER Branch
 	push 先のブランチ。master / main は拒否する。
@@ -24,7 +26,14 @@
 	未追跡のファイルを含めない (追跡中のファイルの変更と削除だけ)。
 
 .PARAMETER Yes
-	push 前の y/n 確認を飛ばす。検査は飛ばさない。
+	push 前の y/n 確認を飛ばす。検査は飛ばさない。LLM レビューの指摘は force で
+	越えられないので、指摘があれば中止する。
+
+.PARAMETER Review
+	LLM レビューをする (聞かない)。
+
+.PARAMETER NoReview
+	LLM レビューをしない (聞かない)。どちらも付けなければ最初に聞く (-Yes のときはしない)。
 
 .EXAMPLE
 	pwsh tools/ci-try/ci-try.ps1
@@ -33,7 +42,9 @@ param(
 	[string]$Branch = 'user/ci-try',
 	[switch]$NoWatch,
 	[switch]$NoUntracked,
-	[switch]$Yes
+	[switch]$Yes,
+	[switch]$Review,
+	[switch]$NoReview
 )
 
 $ErrorActionPreference = 'Stop'
@@ -68,7 +79,104 @@ function Find-Sh
 	return $null
 }
 
+function Find-Claude
+{
+	# claude.ps1 経由だと標準入力が渡らないので、npm の claude.cmd を優先する
+	$cmd = Get-Command claude.cmd -ErrorAction SilentlyContinue
+	if ($cmd) { return $cmd.Source }
+	$cmd = Get-Command claude.exe -ErrorAction SilentlyContinue
+	if ($cmd) { return $cmd.Source }
+	return $null
+}
+
+# 追加された行を Sonnet に読ませ、公開してはいけない情報が無いかだけを見る。
+# 返り値: 'pass' / 'flag' / 'error'
+function Invoke-LeakReview([string]$From, [string]$To)
+{
+	$claude = Find-Claude
+	if (-not $claude) { Write-Host 'ci-try: claude (Claude Code) が見つからない' -ForegroundColor Red; return 'error' }
+
+	# 費用を抑えるため、追加された行だけを渡す。生成物は人が書いた内容を含まないので外す。
+	$diff = Invoke-Git -c core.quotePath=false diff -U0 --no-color --no-ext-diff $From $To -- . `
+		':(exclude)runtime/reflection_generated/**' ':(exclude)docs/doxygen/**' ':(exclude)*.sha256'
+	$lines = foreach ($l in $diff)
+	{
+		if ($l.StartsWith('+++ ')) { if ($l -ne '+++ /dev/null') { $l } }
+		elseif ($l.StartsWith('+')) { $l }
+	}
+	$body = ($lines -join "`n")
+	if (-not ($lines | Where-Object { -not $_.StartsWith('+++ ') }))
+	{
+		Write-Host 'ci-try: レビューする追加行が無い' -ForegroundColor Cyan
+		return 'pass'
+	}
+	$limit = 60000
+	if ($body.Length -gt $limit)
+	{
+		Write-Host "ci-try: 追加行が多いので先頭 $limit 文字だけレビューする (残りは見ていない)" -ForegroundColor Yellow
+		$body = $body.Substring(0, $limit)
+	}
+
+	# 作業ディレクトリをリポジトリの外にして、プロジェクトの AGENTS.md などを読み込ませない。
+	# --bare は API キー認証 (従量課金) になるので使わない。サブスクのログインで動かす。
+	$work = Join-Path ([IO.Path]::GetTempPath()) 'nox-ci-try-review'
+	New-Item -ItemType Directory -Force $work | Out-Null
+	$prompt = Join-Path $PSScriptRoot 'review-prompt.md'
+	Write-Host "ci-try: Sonnet でレビューする ($($body.Length) 文字)" -ForegroundColor Cyan
+	Push-Location $work
+	try
+	{
+		$raw = $body | & $claude -p 'Review the diff on stdin and answer with the JSON only.' `
+			--model sonnet --effort low --tools '' --strict-mcp-config --disable-slash-commands `
+			--no-session-persistence --system-prompt-file $prompt --output-format json 2>&1 | Out-String
+		$code = $LASTEXITCODE
+	}
+	finally
+	{
+		Pop-Location
+	}
+	if ($code -ne 0) { Write-Host "ci-try: レビューに失敗した: $raw" -ForegroundColor Red; return 'error' }
+
+	try
+	{
+		$res = $raw | ConvertFrom-Json
+		if ($res.is_error) { throw "claude がエラーを返した: $($res.result)" }
+		$m = [regex]::Match([string]$res.result, '\{[\s\S]*\}')
+		if (-not $m.Success) { throw "JSON が返らなかった: $($res.result)" }
+		$verdict = $m.Value | ConvertFrom-Json
+	}
+	catch
+	{
+		Write-Host "ci-try: レビューの結果を読めなかった: $_" -ForegroundColor Red
+		return 'error'
+	}
+
+	$findings = @($verdict.findings | Where-Object { $_ })
+	if ($verdict.verdict -eq 'pass' -and $findings.Count -eq 0)
+	{
+		Write-Host 'ci-try: レビューの指摘なし' -ForegroundColor Green
+		return 'pass'
+	}
+	Write-Host "ci-try: レビューの指摘 $($findings.Count) 件" -ForegroundColor Red
+	foreach ($f in $findings)
+	{
+		Write-Host "  [$($f.category)] $($f.file)" -ForegroundColor Red
+		Write-Host "    $($f.text)" -ForegroundColor Red
+		Write-Host "    $($f.reason)" -ForegroundColor Red
+	}
+	return 'flag'
+}
+
 if ($Branch -match '^(refs/heads/)?(master|main)$') { Fail "$Branch へは push しない" }
+if ($Review -and $NoReview) { Fail '-Review と -NoReview は同時に付けない' }
+
+# LLM レビューをするか。どちらも指定が無ければ最初に聞く (検査の後で聞くと待たされるので)。
+$doReview = $Review.IsPresent
+if (-not $Review -and -not $NoReview -and -not $Yes)
+{
+	$answer = Read-Host 'Sonnet で公開前レビュー (個人情報・所属先・秘密情報・ライセンス) をするか (y/N)'
+	$doReview = $answer -match '^(y|yes)$'
+}
 if (-not (Get-Command gh -ErrorAction SilentlyContinue) -and -not $NoWatch)
 {
 	Fail 'gh (GitHub CLI) が見つからない。入れるか -NoWatch を付ける'
@@ -159,6 +267,21 @@ if ($emails.Count -gt 0)
 
 if (-not $scanOk) { Fail '検査で止まった。上の出力を見て直してから実行し直す (push はしていない)' }
 Write-Host 'ci-try: 検査は通った' -ForegroundColor Green
+
+# --- LLM レビュー --------------------------------------------------------------
+# 決まったルールで拾えない、文脈で判断するもの (氏名・職場を示す記述など) を見る。
+# 判定はぶれるので、指摘があれば既定で止め、誤検出と判断したときだけ force で進める。
+if ($doReview)
+{
+	$result = Invoke-LeakReview $base $commit
+	if ($result -eq 'error') { Fail 'レビューを完了できなかった。レビューなしで投げるなら -NoReview を付ける (push はしていない)' }
+	if ($result -eq 'flag')
+	{
+		if ($Yes) { Fail 'レビューで指摘があった (push はしていない)' }
+		$answer = Read-Host '誤検出なら force と入力すると先へ進む。それ以外は中止'
+		if ($answer -ne 'force') { Fail 'レビューの指摘で止めた (push はしていない)' }
+	}
+}
 
 # --- 新しく入る素材 ----------------------------------------------------------
 # フォント・モデル・画像・音声は、コードと違ってライセンスを中身から判定できない。
