@@ -30,11 +30,13 @@ PERSONAL_RE='[A-Za-z]:[\/]{1,2}Users[\/]{1,2}[A-Za-z0-9._-]+|[A-Za-z0-9._%+-]+@(
 # 大文字小文字は揃わないので -i で見る。reserve[d] と書いているのは、このファイル自身に当たらないため。
 LICENSE_RE='GNU (Lesser |Library |Affero )?General Public License|SPDX-License-Identifier:[[:space:]]*(A|L)?GPL|All rights reserve[d]'
 # 他者の著作権表示。自分の表示 (Copyright (c) 2023-XXXX noxitro) 以外は、コードの引き写しを疑う。
-COPYRIGHT_RE='copyright[[:space:]]*(\(c\)|©)'
+# (c) の無い、年が直後に続く形 (Copyright <年> <名前>) も拾う。
+COPYRIGHT_RE='copyright[[:space:]]*(\(c\)|©|[0-9]{4})'
 OWN_COPYRIGHT_RE='noxitro'
 # 家庭用ゲーム機の非公開 SDK (NDA 下で配布されるもの) の識別子。ヘッダ・名前空間・関数と
 # マクロの命名規則で見る。製品名ではなく、コードに現れる形だけを並べている。
-NDA_RE='#include[[:space:]]*[<"](nn|sce)[/_]|(^|[^A-Za-z0-9_])nn::[a-z]+::|(^|[^A-Za-z0-9_])SCE_[A-Z][A-Z_]+|(^|[^A-Za-z0-9_])sce[A-Z][a-z]+[A-Z][A-Za-z0-9]*[[:space:]]*\('
+# nn:: は直前が :: のもの (torch::nn::functional:: などのニューラルネット系) を外す。
+NDA_RE='#include[[:space:]]*[<"](nn|sce)[/_]|(^|[^A-Za-z0-9_:])nn::[a-z]+::|(^|[^A-Za-z0-9_])SCE_[A-Z][A-Z_]+|(^|[^A-Za-z0-9_])sce[A-Z][a-z]+[A-Z][A-Za-z0-9]*[[:space:]]*\('
 
 # このマシンのユーザー名・ホスト名。テスト結果 (.trx の runUser="HOST\user") や
 # ログに紛れ込む形で実際に混入したので、値を固定せず実行環境から取る。

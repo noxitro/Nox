@@ -317,11 +317,15 @@ def main() -> int:
             print(e, file=sys.stderr)
             return 2
         PRIVATE_LIST_PATH.parent.mkdir(parents=True, exist_ok=True)
-        existing = set()
+        text = ""
         if PRIVATE_LIST_PATH.exists():
-            existing = set(PRIVATE_LIST_PATH.read_text(encoding="utf-8").splitlines())
+            text = PRIVATE_LIST_PATH.read_text(encoding="utf-8")
+        existing = set(text.splitlines())
         added = [e for e in entries if e not in existing]
         with PRIVATE_LIST_PATH.open("a", encoding="utf-8", newline="\n") as f:
+            # 手で編集して末尾の改行が無いと、追記した行が最後の行にくっついてどちらも読めなくなる
+            if added and text and not text.endswith("\n"):
+                f.write("\n")
             for entry in added:
                 f.write(entry + "\n")
         print(f"{PRIVATE_LIST_PATH} に {len(added)} 件足した (既にあったもの {len(entries) - len(added)} 件)")
@@ -331,6 +335,11 @@ def main() -> int:
     for path in args.list or [LIST_PATH]:
         names.load(path)
     private = None
+    if os.environ.get("NOX_PRIVATE_NAMES") and not PRIVATE_LIST_PATH.exists():
+        # 既定の場所に無いのは「使っていない」だが、環境変数で明示したのに無いのは設定の誤り。
+        # 黙って飛ばすと検査が抜けたことに気付けない。
+        print(f"check-external-names: NOX_PRIVATE_NAMES の指すファイルが無い: {PRIVATE_LIST_PATH}", file=sys.stderr)
+        return 2
     if PRIVATE_LIST_PATH.exists():
         private = NameList()
         private.load(PRIVATE_LIST_PATH)

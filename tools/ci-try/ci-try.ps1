@@ -90,7 +90,7 @@ function Find-Claude
 }
 
 # 追加された行を Sonnet に読ませ、公開してはいけない情報が無いかだけを見る。
-# 返り値: 'pass' / 'flag' / 'error'
+# 返り値: 'pass' / 'flag' / 'toolarge' (多すぎてレビューしていない) / 'error'
 function Invoke-LeakReview([string]$From, [string]$To)
 {
 	$claude = Find-Claude
@@ -104,17 +104,35 @@ function Invoke-LeakReview([string]$From, [string]$To)
 		if ($l.StartsWith('+++ ')) { if ($l -ne '+++ /dev/null') { $l } }
 		elseif ($l.StartsWith('+')) { $l }
 	}
-	$body = ($lines -join "`n")
 	if (-not ($lines | Where-Object { -not $_.StartsWith('+++ ') }))
 	{
 		Write-Host 'ci-try: レビューする追加行が無い' -ForegroundColor Cyan
 		return 'pass'
 	}
+
+	# 1 回に渡す量には上限を置き、超えたら分けて全部を見る (見ないまま push しない)。
+	# 分け目はなるべくファイルの境目にし、続きの塊にはファイル名の行を付け直す。
 	$limit = 60000
-	if ($body.Length -gt $limit)
+	$maxChunks = 8
+	$chunks = [Collections.Generic.List[string]]::new()
+	$sb = [Text.StringBuilder]::new()
+	$header = ''
+	foreach ($l in $lines)
 	{
-		Write-Host "ci-try: 追加行が多いので先頭 $limit 文字だけレビューする (残りは見ていない)" -ForegroundColor Yellow
-		$body = $body.Substring(0, $limit)
+		if ($l.StartsWith('+++ ')) { $header = $l }
+		if ($sb.Length -gt 0 -and $sb.Length + $l.Length + 1 -gt $limit)
+		{
+			$chunks.Add($sb.ToString())
+			$sb.Clear() | Out-Null
+			if (-not $l.StartsWith('+++ ') -and $header) { $sb.Append($header).Append("`n") | Out-Null }
+		}
+		$sb.Append($l).Append("`n") | Out-Null
+	}
+	if ($sb.Length -gt 0) { $chunks.Add($sb.ToString()) }
+	if ($chunks.Count -gt $maxChunks)
+	{
+		Write-Host "ci-try: 追加行が多すぎる ($($chunks.Count) 回分、上限 $maxChunks 回)。レビューしていない" -ForegroundColor Red
+		return 'toolarge'
 	}
 
 	# 作業ディレクトリをリポジトリの外にして、プロジェクトの AGENTS.md などを読み込ませない。
@@ -122,37 +140,45 @@ function Invoke-LeakReview([string]$From, [string]$To)
 	$work = Join-Path ([IO.Path]::GetTempPath()) 'nox-ci-try-review'
 	New-Item -ItemType Directory -Force $work | Out-Null
 	$prompt = Join-Path $PSScriptRoot 'review-prompt.md'
-	Write-Host "ci-try: Sonnet でレビューする ($($body.Length) 文字)" -ForegroundColor Cyan
-	Push-Location $work
-	try
+	$findings = @()
+	$flagged = $false
+	for ($i = 0; $i -lt $chunks.Count; $i++)
 	{
-		$raw = $body | & $claude -p 'Review the diff on stdin and answer with the JSON only.' `
-			--model sonnet --effort low --tools '' --strict-mcp-config --disable-slash-commands `
-			--no-session-persistence --system-prompt-file $prompt --output-format json 2>&1 | Out-String
-		$code = $LASTEXITCODE
-	}
-	finally
-	{
-		Pop-Location
-	}
-	if ($code -ne 0) { Write-Host "ci-try: レビューに失敗した: $raw" -ForegroundColor Red; return 'error' }
+		$body = $chunks[$i]
+		Write-Host "ci-try: Sonnet でレビューする ($($i + 1)/$($chunks.Count)、$($body.Length) 文字)" -ForegroundColor Cyan
+		Push-Location $work
+		try
+		{
+			$raw = $body | & $claude -p 'Review the diff on stdin and answer with the JSON only.' `
+				--model sonnet --effort low --tools '' --strict-mcp-config --disable-slash-commands `
+				--no-session-persistence --system-prompt-file $prompt --output-format json 2>&1 | Out-String
+			$code = $LASTEXITCODE
+		}
+		finally
+		{
+			Pop-Location
+		}
+		if ($code -ne 0) { Write-Host "ci-try: レビューに失敗した: $raw" -ForegroundColor Red; return 'error' }
 
-	try
-	{
-		$res = $raw | ConvertFrom-Json
-		if ($res.is_error) { throw "claude がエラーを返した: $($res.result)" }
-		$m = [regex]::Match([string]$res.result, '\{[\s\S]*\}')
-		if (-not $m.Success) { throw "JSON が返らなかった: $($res.result)" }
-		$verdict = $m.Value | ConvertFrom-Json
-	}
-	catch
-	{
-		Write-Host "ci-try: レビューの結果を読めなかった: $_" -ForegroundColor Red
-		return 'error'
+		try
+		{
+			$res = $raw | ConvertFrom-Json
+			if ($res.is_error) { throw "claude がエラーを返した: $($res.result)" }
+			$m = [regex]::Match([string]$res.result, '\{[\s\S]*\}')
+			if (-not $m.Success) { throw "JSON が返らなかった: $($res.result)" }
+			$verdict = $m.Value | ConvertFrom-Json
+		}
+		catch
+		{
+			Write-Host "ci-try: レビューの結果を読めなかった: $_" -ForegroundColor Red
+			return 'error'
+		}
+		$found = @($verdict.findings | Where-Object { $_ })
+		$findings += $found
+		if ($verdict.verdict -ne 'pass' -or $found.Count -gt 0) { $flagged = $true }
 	}
 
-	$findings = @($verdict.findings | Where-Object { $_ })
-	if ($verdict.verdict -eq 'pass' -and $findings.Count -eq 0)
+	if (-not $flagged)
 	{
 		Write-Host 'ci-try: レビューの指摘なし' -ForegroundColor Green
 		return 'pass'
@@ -247,6 +273,13 @@ if ($files.Count -gt 0)
 	{
 		Remove-Item -LiteralPath $list -Force -ErrorAction SilentlyContinue
 	}
+	# フックは gitleaks が無ければ警告だけで通すが、ci-try は公開の直前の関門なので必須にする。
+	# 探す場所は gitleaks.sh の find_gitleaks と揃えてある。
+	$gitleaks = @(
+		(Get-Command gitleaks -ErrorAction SilentlyContinue).Source,
+		(Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Links\gitleaks.exe')
+	) | Where-Object { $_ -and (Test-Path -LiteralPath $_) }
+	if (-not $gitleaks) { Fail 'gitleaks が見つからない。入れてから実行する: winget install Gitleaks.Gitleaks' }
 	& $sh tools/git-hooks/gitleaks.sh "--log-opts=$base..$commit"
 	if ($LASTEXITCODE -ne 0) { $scanOk = $false }
 }
@@ -256,7 +289,10 @@ if ($files.Count -gt 0)
 if ($LASTEXITCODE -ne 0) { $scanOk = $false }
 
 # 作成者・コミッターのメールアドレス。スナップショット自体も user.email で作られる。
-$emails = @(Invoke-Git log --format='%ae%n%ce' "$base..$commit" | Where-Object { $_ -and $_ -notmatch 'noreply' } | Sort-Object -Unique)
+# 部分一致だと noreply.taro@example.jp のようなものまで通るので、許すものを列挙する
+# (GitHub の個人用 noreply と、GitHub・Claude がマージやクラウドのセッションで使う noreply)。
+$allowedEmail = '(@users\.noreply\.github\.com|^noreply@(github|anthropic)\.com)$'
+$emails = @(Invoke-Git log --format='%ae%n%ce' "$base..$commit" | Where-Object { $_ -and $_ -notmatch $allowedEmail } | Sort-Object -Unique)
 if ($emails.Count -gt 0)
 {
 	Write-Host 'ci-try: 公開用 (noreply) でないメールアドレスのコミットがある:' -ForegroundColor Red
@@ -275,10 +311,10 @@ if ($doReview)
 {
 	$result = Invoke-LeakReview $base $commit
 	if ($result -eq 'error') { Fail 'レビューを完了できなかった。レビューなしで投げるなら -NoReview を付ける (push はしていない)' }
-	if ($result -eq 'flag')
+	if ($result -eq 'flag' -or $result -eq 'toolarge')
 	{
-		if ($Yes) { Fail 'レビューで指摘があった (push はしていない)' }
-		$answer = Read-Host '誤検出なら force と入力すると先へ進む。それ以外は中止'
+		if ($Yes) { Fail 'レビューで指摘があった、または量が多すぎてレビューできなかった (push はしていない)' }
+		$answer = Read-Host '確かめたうえで進めるなら force と入力する。それ以外は中止'
 		if ($answer -ne 'force') { Fail 'レビューの指摘で止めた (push はしていない)' }
 	}
 }
