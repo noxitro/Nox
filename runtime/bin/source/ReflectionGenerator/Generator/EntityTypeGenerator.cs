@@ -392,7 +392,7 @@ public sealed class EntityTypeGenerator
                 {
                     codeWriter.WriteLine($"using OwnerType = {entityType.FullName};");
                     //  オーバーロードで曖昧にならないよう、必ず正確なメンバ関数ポインタ型へキャストする
-                    codeWriter.WriteLine($"using MethodPointerType = nox::ToMemberFunctionPointerType<{method.FunctionTypeFullName}, {entityType.FullName}>;");
+                    codeWriter.WriteLine($"using MethodPointerType = nox::to_member_function_pointer_t<{method.FunctionTypeFullName}, {entityType.FullName}>;");
                     codeWriter.WriteLine("using Signature = typename nox::EntityMethodTraits<MethodPointerType>::Signature;");
                     codeWriter.WriteLine($"friend void InvokeEntityLogicMethod({tagName}, void*, nox::World&, nox::Archetype&, nox::ArchetypeLocation, nox::EntityId);");
                 }

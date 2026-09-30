@@ -124,7 +124,7 @@ namespace nox::util
 		return *reinterpret_cast<const char*>(&str);
 	}
 
-	template<class T> requires(nox::IsCharTypeValue<T>)
+	template<class T> requires(nox::is_char_v<T>)
 	constexpr inline size_t GetStrLength(const T* strPtr)noexcept
 	{
 		return std::char_traits<T>::length(strPtr);
@@ -137,22 +137,22 @@ namespace nox::util
 	namespace detail
 	{
 		template<class T, class U>
-		struct IsSameStringClass : std::false_type {};
+		struct is_same_string_class : std::false_type {};
 
 		template<class T, class U> requires(std::is_same_v<T, U>)
-			struct IsSameStringClass<T, U> : std::true_type {};
+			struct is_same_string_class<T, U> : std::true_type {};
 
 		template<class T, class U> requires(std::is_same_v<typename T::value_type, U>)
-			struct IsSameStringClass<T, U> : std::true_type {};
+			struct is_same_string_class<T, U> : std::true_type {};
 
 		template<class T, class U> requires(std::is_same_v<T, typename U::value_type>)
-			struct IsSameStringClass<T, U> : std::true_type {};
+			struct is_same_string_class<T, U> : std::true_type {};
 
 		template<class T, class U> requires(std::is_same_v<typename T::value_type, typename U::value_type>)
-			struct IsSameStringClass<T, U> : std::true_type {};
+			struct is_same_string_class<T, U> : std::true_type {};
 
 		template<class T, class U>
-		constexpr bool IsSameStringClassValue = IsSameStringClass<T, U>::value;
+		constexpr bool is_same_string_class_v = is_same_string_class<T, U>::value;
 	}
 
 	//	formatで異なる文字列を変換するための関数
@@ -164,10 +164,10 @@ namespace nox::util
 	///// @return 
 	//template<class To, class From>
 	////	requires(
-	////nox::IsStringClassValue<To> &&
-	////!nox::IsCharTypeValue<std::remove_cvref_t<std::remove_pointer_t<From>>> &&
-	////!nox::IsStringClassValue<std::remove_cvref_t<From>> &&
-	////	!nox::IsStringViewClassValue<std::remove_cvref_t<From>>
+	////nox::is_string_class_v<To> &&
+	////!nox::is_char_v<std::remove_cvref_t<std::remove_pointer_t<From>>> &&
+	////!nox::is_string_class_v<std::remove_cvref_t<From>> &&
+	////	!nox::is_string_view_class_v<std::remove_cvref_t<From>>
 	////	)
 	//inline constexpr decltype(auto) ConvertStringSafe(From&& object)noexcept { return object; }
 
@@ -176,7 +176,7 @@ namespace nox::util
 	///// @tparam From 
 	///// @param object 
 	///// @return 
-	//template<class To, class From> requires(nox::IsCharTypeValue<From>)
+	//template<class To, class From> requires(nox::is_char_v<From>)
 	//inline To ConvertStringSafe(const From* object) { 
 	////	return util::ConvertString<To>(object); 
 	//	return To();
@@ -187,7 +187,7 @@ namespace nox::util
 	///// @tparam From 
 	///// @param object 
 	///// @return 
-	//template<class To, class From> requires(nox::IsStringClassValue<To>&& nox::IsCharTypeValue<From>)
+	//template<class To, class From> requires(nox::is_string_class_v<To>&& nox::is_char_v<From>)
 	//inline To ConvertStringSafe(const nox::StlBasicString<From>& object) { 
 	//	return nox::util::ConvertString<To>(object); 
 	//}
@@ -197,7 +197,7 @@ namespace nox::util
 	///// @tparam From 
 	///// @param object 
 	///// @return 
-	//template<class To, class From> requires(nox::IsStringClassValue<To>&& nox::IsCharTypeValue<From>)
+	//template<class To, class From> requires(nox::is_string_class_v<To>&& nox::is_char_v<From>)
 	//inline To ConvertStringSafe(const std::basic_string_view<From> object) { return nox::util::ConvertString<To>(object); }
 
 #pragma endregion

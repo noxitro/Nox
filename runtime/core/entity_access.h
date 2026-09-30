@@ -264,7 +264,7 @@ namespace nox
 				std::same_as<typename Traits<Parameters>::RawType, std::remove_cvref_t<T>>) || ... || false);
 
 		/// @brief 自分が触る全ComponentDataについて、OtherSignatureが書き込みを持たないか。
-		/// @details 片方向の判定。同時実行可否は nox::CanRunConcurrently で両方向を見る。
+		/// @details 片方向の判定。同時実行可否は nox::can_run_concurrently_v で両方向を見る。
 		template<class OtherSignature>
 		[[nodiscard]] static consteval bool IsUnwrittenBy()noexcept
 		{
@@ -319,7 +319,7 @@ namespace nox
 	/// @brief 2つのシグネチャが同一フェーズ内で並列実行できるか。
 	/// @details 同一ComponentDataにRWが絡めば直列化、全てROなら並列。UpdaterGraphの依存ルールそのもの。
 	template<class SignatureA, class SignatureB>
-	inline constexpr bool CanRunConcurrently =
+	inline constexpr bool can_run_concurrently_v =
 		SignatureA::template IsUnwrittenBy<SignatureB>() && SignatureB::template IsUnwrittenBy<SignatureA>();
 
 	namespace detail
@@ -346,10 +346,10 @@ namespace nox
 		{
 			if constexpr (std::is_member_function_pointer_v<T>)
 			{
-				return std::is_void_v<nox::FunctionResultType<T>> &&
-					nox::IsFunctionVolatileValue<T> == false &&
-					nox::IsFunctionLValueReference<T> == false &&
-					nox::IsFunctionRValueReference<T> == false;
+				return std::is_void_v<nox::function_result_t<T>> &&
+					nox::is_function_volatile_v<T> == false &&
+					nox::is_function_lvalue_reference_v<T> == false &&
+					nox::is_function_rvalue_reference_v<T> == false;
 			}
 			else
 			{
@@ -368,10 +368,10 @@ namespace nox
 		template<class MethodPointerType>
 		struct EntityMethodTraitsImpl<MethodPointerType, true>
 		{
-			using OwnerType = nox::FunctionClassType<MethodPointerType>;
+			using OwnerType = nox::function_class_t<MethodPointerType>;
 			using Signature = typename nox::detail::EntitySignatureFromTuple<
-				nox::FunctionArgsTupleType<MethodPointerType>>::Type;
-			static constexpr bool k_is_const = nox::IsFunctionConstValue<MethodPointerType>;
+				nox::function_args_tuple_t<MethodPointerType>>::Type;
+			static constexpr bool k_is_const = nox::is_function_const_v<MethodPointerType>;
 		};
 	}
 
@@ -400,13 +400,13 @@ namespace nox
 
 			if constexpr (std::is_member_function_pointer_v<MethodPointerType>)
 			{
-				static_assert(std::is_void_v<nox::FunctionResultType<MethodPointerType>>,
+				static_assert(std::is_void_v<nox::function_result_t<MethodPointerType>>,
 					"更新メソッドの戻り値は void にしてください");
-				static_assert(nox::IsFunctionVolatileValue<MethodPointerType> == false,
+				static_assert(nox::is_function_volatile_v<MethodPointerType> == false,
 					"volatile修飾したメソッドは更新メソッドにできません");
 				static_assert(
-					nox::IsFunctionLValueReference<MethodPointerType> == false &&
-					nox::IsFunctionRValueReference<MethodPointerType> == false,
+					nox::is_function_lvalue_reference_v<MethodPointerType> == false &&
+					nox::is_function_rvalue_reference_v<MethodPointerType> == false,
 					"参照修飾(& / &&)したメソッドは更新メソッドにできません");
 
 				if constexpr (nox::detail::IsEntityMethodPointer<MethodPointerType>())

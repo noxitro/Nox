@@ -10,17 +10,17 @@
 #pragma region メンバ関数
 ///	@brief	メンバ変数へのセット
 #define	NOX_VARIABLE_INFO_LAMBDA_SETTER(ClassName, FieldName) +[](nox::not_null<void*> instance_ptr, const void* const value){\
-	static_cast<ClassName*>(instance_ptr.get())->FieldName = *static_cast<nox::AddConstPointerType<std::add_pointer_t<decltype(ClassName::FieldName)>>>(value);\
+	static_cast<ClassName*>(instance_ptr.get())->FieldName = *static_cast<nox::add_const_pointer_t<std::add_pointer_t<decltype(ClassName::FieldName)>>>(value);\
 	}
 
 ///	@brief	メンバ変数の取得
 #define	NOX_VARIABLE_INFO_LAMBDA_GETTER(ClassName, FieldName) +[](nox::not_null<void*> outValue, nox::not_null<const void*> instance_ptr) {\
-	*static_cast<nox::RemoveConstPointerReferenceType<std::add_pointer_t<decltype(ClassName::FieldName)>>>(outValue.get()) = static_cast<const ClassName*>(instance_ptr.get())->FieldName;\
+	*static_cast<nox::remove_const_pointer_reference_t<std::add_pointer_t<decltype(ClassName::FieldName)>>>(outValue.get()) = static_cast<const ClassName*>(instance_ptr.get())->FieldName;\
 }
 
 ///	@brief	メンバ変数アドレスの取得
 #define	NOX_VARIABLE_INFO_LAMBDA_GETTER_ADDRESS(ClassName, FieldName) +[](nox::not_null<void*> outValue, nox::not_null<const void*> instance_ptr) {\
-	*static_cast<nox::RemoveConstPointerReferenceType<std::add_pointer_t<decltype(ClassName::FieldName)>>>(outValue.get()) = static_cast<const ClassName*>(instance_ptr.get())->FieldName;\
+	*static_cast<nox::remove_const_pointer_reference_t<std::add_pointer_t<decltype(ClassName::FieldName)>>>(outValue.get()) = static_cast<const ClassName*>(instance_ptr.get())->FieldName;\
 }
 
 /// @brief	メンバ変数へのセット（配列用）
@@ -28,7 +28,7 @@
 	if (nox::util::IsValidIndex(static_cast<const ClassName*>(instance_ptr.get())->FieldName, index) == false) {\
 		return false;\
 	}\
-	static_cast<ClassName*>(instance_ptr.get())->FieldName[index] = *static_cast<nox::AddConstPointerType<std::add_pointer_t<nox::ContainerElementType<decltype(ClassName::FieldName)>>>>(value);\
+	static_cast<ClassName*>(instance_ptr.get())->FieldName[index] = *static_cast<nox::add_const_pointer_t<std::add_pointer_t<nox::container_element_t<decltype(ClassName::FieldName)>>>>(value);\
 	return true;\
 	}
 
@@ -37,29 +37,29 @@
 	if (nox::util::IsValidIndex(static_cast<const ClassName*>(instance_ptr.get())->FieldName, index) == false) {\
 		return false;\
 	}\
-	*static_cast<RemoveConstPointerReferenceType<std::add_pointer_t<nox::ContainerElementType<decltype(ClassName::FieldName)>>>>(outValue.get()) = static_cast<const ClassName*>(instance_ptr.get())->FieldName[index];\
+	*static_cast<remove_const_pointer_reference_t<std::add_pointer_t<nox::container_element_t<decltype(ClassName::FieldName)>>>>(outValue.get()) = static_cast<const ClassName*>(instance_ptr.get())->FieldName[index];\
 	return true;\
 	}
 
 #define NOX_VARIABLE_INFO_LAMBDA_ADDRESS_GETTER(ClassName, FieldName) +[](nox::not_null<void*> outValue, nox::not_null<const void*> instance_ptr) {\
-	*static_cast<std::add_pointer_t<nox::AddConstPointerType<std::add_pointer_t<decltype(ClassName::FieldName)>>>>(outValue.get()) = &static_cast<const ClassName*>(instance_ptr.get())->FieldName;\
+	*static_cast<std::add_pointer_t<nox::add_const_pointer_t<std::add_pointer_t<decltype(ClassName::FieldName)>>>>(outValue.get()) = &static_cast<const ClassName*>(instance_ptr.get())->FieldName;\
 }
 
 
 	//	グローバル版
 #define	NOX_VARIABLE_INFO_LAMBDA_SETTER_GLOBAL(FieldName) +[]( const void* const value){\
-	FieldName = *static_cast<nox::AddConstPointerType<std::add_pointer_t<decltype(FieldName)>>>(value);\
+	FieldName = *static_cast<nox::add_const_pointer_t<std::add_pointer_t<decltype(FieldName)>>>(value);\
 	}
 
 #define	NOX_VARIABLE_INFO_LAMBDA_GETTER_GLOBAL(FieldName) +[](not_null<void*> outValue) {\
-	*static_cast<RemoveConstPointerReferenceType<std::add_pointer_t<decltype(FieldName)>>>(outValue.get()) = FieldName;\
+	*static_cast<remove_const_pointer_reference_t<std::add_pointer_t<decltype(FieldName)>>>(outValue.get()) = FieldName;\
 }
 
 #define	NOX_VARIABLE_INFO_LAMBDA_SETTER_ARRAY_GLOBAL(FieldName) +[](const void* const value, const u32 index) {\
 	if (nox::util::IsValidIndex(FieldName, index) == false) {\
 		return false;\
 	}\
-	FieldName[index] = *static_cast<nox::AddConstPointerType<std::add_po1inter_t<nox::ContainerElementType<decltype(FieldName)>>>>(value);\
+	FieldName[index] = *static_cast<nox::add_const_pointer_t<std::add_po1inter_t<nox::container_element_t<decltype(FieldName)>>>>(value);\
 	return true;\
 	}
 
@@ -67,7 +67,7 @@
 	if (nox::util::IsValidIndex(FieldName, index) == false) {\
 		return false;\
 	}\
-	*static_cast<RemoveConstPointerReferenceType<std::add_pointer_t<nox::ContainerElementType<decltype(FieldName)>>>>(outValue.get()) = FieldName[index];\
+	*static_cast<remove_const_pointer_reference_t<std::add_pointer_t<nox::container_element_t<decltype(FieldName)>>>>(outValue.get()) = FieldName[index];\
 	return true;\
 	}
 #pragma endregion
@@ -110,9 +110,9 @@
 #define NOX_VARIABLE_INFO_SETTER_SUBSCRIPT_MEMBER(_ClassType, VariableFullName) +[](nox::not_null<void*> instance, const void* const value, const std::uint32_t index) {\
 		using VariableType = decltype(VariableFullName);\
 		using ClassType = _ClassType;\
-		if constexpr (nox::HasIndexOperatorValue<VariableType> == true)\
+		if constexpr (nox::has_index_operator_v<VariableType> == true)\
 		{\
-			using ElementType = nox::ContainerElementType<VariableType>;\
+			using ElementType = nox::container_element_t<VariableType>;\
 			if (nox::util::IsValidIndex(static_cast<ClassType*>(instance.get())->VariableFullName, index) == false) {\
 				return;\
 			}\
@@ -130,9 +130,9 @@
 #define NOX_VARIABLE_INFO_GETTER_SUBSCRIPT_MEMBER(_ClassType, VariableFullName) +[](nox::not_null<void*> out, nox::not_null<const void*> instance, const std::uint32_t index) {\
 		using VariableType = decltype(VariableFullName);\
 		using ClassType = _ClassType;\
-		if constexpr (nox::HasIndexOperatorValue<VariableType> == true)\
+		if constexpr (nox::has_index_operator_v<VariableType> == true)\
 		{\
-			using ElementType = nox::ContainerElementType<VariableType>;\
+			using ElementType = nox::container_element_t<VariableType>;\
 			if (nox::util::IsValidIndex(static_cast<const ClassType*>(instance.get())->VariableFullName, index) == false) \
 			{\
 				return;\
@@ -151,14 +151,14 @@
 #define NOX_VARIABLE_INFO_GETTER_ADDRESS_SUBSCRIPT_MEMBER(_ClassType, VariableFullName) +[](nox::not_null<void*> out, nox::not_null<void*> instance, const std::uint32_t index) {\
 		using VariableType = decltype(VariableFullName);\
 		using ClassType = _ClassType;\
-		if constexpr (nox::HasIndexOperatorValue<VariableType> == true)\
+		if constexpr (nox::has_index_operator_v<VariableType> == true)\
 		{\
-			using ElementType = nox::ContainerElementType<VariableType>;\
+			using ElementType = nox::container_element_t<VariableType>;\
 			if constexpr (nox::concepts::Assignable<ElementType, ElementType>)\
 			{\
 				if (nox::util::IsValidIndex(static_cast<const ClassType*>(instance.get())->VariableFullName, index) == true) \
 				{\
-					*static_cast<std::add_pointer_t<nox::AddConstPointerType<ElementType*>>>(out.get()) = &static_cast<ClassType*>(instance.get())->VariableFullName[index];\
+					*static_cast<std::add_pointer_t<nox::add_const_pointer_t<ElementType*>>>(out.get()) = &static_cast<ClassType*>(instance.get())->VariableFullName[index];\
 					return true;\
 				}\
 			}\
@@ -197,9 +197,9 @@
 /// @brief	変数へのセット（配列用、グローバル変数用）
 #define NOX_VARIABLE_INFO_SETTER_SUBSCRIPT_GLOBAL(VariableFullName) +[](const void* const value, const std::uint32_t index) {\
 		using VariableType = decltype(VariableFullName);\
-		if constexpr (nox::HasIndexOperatorValue<VariableType> == true)\
+		if constexpr (nox::has_index_operator_v<VariableType> == true)\
 		{\
-			using ElementType = const nox::ContainerElementType<const VariableType>;\
+			using ElementType = const nox::container_element_t<const VariableType>;\
 			if (nox::util::IsValidIndex(VariableFullName, index) == false) {\
 				return false;\
 			}\
@@ -216,9 +216,9 @@
 /// @brief	変数の取得（配列用、グローバル変数用）
 #define NOX_VARIABLE_INFO_GETTER_SUBSCRIPT_GLOBAL(VariableFullName) +[](nox::not_null<void*> out, const std::uint32_t index) {\
 		using VariableType = decltype(VariableFullName);\
-		if constexpr (nox::HasIndexOperatorValue<VariableType> == true)\
+		if constexpr (nox::has_index_operator_v<VariableType> == true)\
 		{\
-			using ElementType = nox::ContainerElementType<VariableType>;\
+			using ElementType = nox::container_element_t<VariableType>;\
 			if (nox::util::IsValidIndex(VariableFullName, index) == false)\
 			{\
 				return false;\
@@ -236,13 +236,13 @@
 /// @brief	変数のアドレスを取得（配列用、グローバル変数用）
 #define NOX_VARIABLE_INFO_GETTER_ADDRESS_SUBSCRIPT_GLOBAL(VariableFullName) +[](nox::not_null<void*> out, const std::uint32_t index) {\
 		using VariableType = decltype(VariableFullName);\
-		if constexpr (nox::HasIndexOperatorValue<VariableType> == true)\
+		if constexpr (nox::has_index_operator_v<VariableType> == true)\
 		{\
-			using ElementType = nox::ContainerElementType<VariableType>;\
+			using ElementType = nox::container_element_t<VariableType>;\
 			if (nox::util::IsValidIndex(VariableFullName, index) == false) {\
 				return false;\
 			}\
-			*static_cast<std::add_pointer_t<nox::AddConstPointerType<ElementType*>>>(out.get()) = &VariableFullName[index];\
+			*static_cast<std::add_pointer_t<nox::add_const_pointer_t<ElementType*>>>(out.get()) = &VariableFullName[index];\
 			return true;\
 		}\
 		return false;\
@@ -269,7 +269,7 @@
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_SETTER(ClassName, FieldName); \
 			}\
-			else if constexpr (nox::IsInvokableDefaultOperatorValue<_T> == true)\
+			else if constexpr (nox::is_invocable_default_operator_v<_T> == true)\
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_SETTER(ClassName, FieldName); \
 			}\
@@ -293,7 +293,7 @@
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_GETTER(ClassName, FieldName);\
 			}\
-			else if constexpr (nox::IsInvokableDefaultOperatorValue<_T> == true)\
+			else if constexpr (nox::is_invocable_default_operator_v<_T> == true)\
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_GETTER(ClassName, FieldName);\
 			}\
@@ -306,7 +306,7 @@
 
 #define	NOX_VARIABLE_INFO_CREATE_LAMBDA_SETTER_ARRAY(ClassName, FieldName) +[]()constexpr{\
 		using _T = decltype(ClassName::FieldName);\
-		if constexpr ((std::is_array_v<_T> == false && nox::IsSequenceContainerClassValue<_T> == false) || std::is_const_v<RemoveExtentArraySequenceContainerT<_T>> == true)\
+		if constexpr ((std::is_array_v<_T> == false && nox::is_sequence_container_class_v<_T> == false) || std::is_const_v<RemoveExtentArraySequenceContainerT<_T>> == true)\
 		{\
 			return nullptr;\
 		}\
@@ -316,7 +316,7 @@
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_SETTER_ARRAY(ClassName, FieldName); \
 			}\
-			else if constexpr (nox::HasIndexOperatorValue<_T> == true)\
+			else if constexpr (nox::has_index_operator_v<_T> == true)\
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_SETTER_ARRAY(ClassName, FieldName); \
 			}\
@@ -329,7 +329,7 @@
 
 #define	NOX_VARIABLE_INFO_CREATE_LAMBDA_GETTER_ARRAY(ClassName, FieldName) +[]()constexpr{\
 		using _T = decltype(ClassName::FieldName);\
-		if constexpr (std::is_array_v<_T> == false && nox::IsSequenceContainerClassValue<_T> == false)\
+		if constexpr (std::is_array_v<_T> == false && nox::is_sequence_container_class_v<_T> == false)\
 		{\
 			return nullptr;\
 		}\
@@ -339,7 +339,7 @@
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_GETTER_ARRAY(ClassName, FieldName); \
 			}\
-			else if constexpr (nox::HasIndexOperatorValue<_T> == true)\
+			else if constexpr (nox::has_index_operator_v<_T> == true)\
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_GETTER_ARRAY(ClassName, FieldName); \
 			}\
@@ -363,7 +363,7 @@
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_SETTER_GLOBAL(FieldName); \
 			}\
-			else if constexpr (nox::IsInvokableDefaultOperatorValue<_T> == true)\
+			else if constexpr (nox::is_invocable_default_operator_v<_T> == true)\
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_SETTER_GLOBAL(FieldName); \
 			}\
@@ -387,7 +387,7 @@
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_GETTER_GLOBAL(FieldName);\
 			}\
-			else if constexpr (nox::IsInvokableDefaultOperatorValue<_T> == true)\
+			else if constexpr (nox::is_invocable_default_operator_v<_T> == true)\
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_GETTER_GLOBAL(FieldName);\
 			}\
@@ -400,7 +400,7 @@
 
 #define	NOX_VARIABLE_INFO_CREATE_LAMBDA_SETTER_ARRAY_GLOBAL(FieldName) +[]()constexpr{\
 		using _T = decltype(FieldName);\
-		if constexpr ((std::is_array_v<_T> == false && nox::IsSequenceContainerClassValue<_T> == false) || std::is_const_v<RemoveExtentArraySequenceContainerT<_T>> == true)\
+		if constexpr ((std::is_array_v<_T> == false && nox::is_sequence_container_class_v<_T> == false) || std::is_const_v<RemoveExtentArraySequenceContainerT<_T>> == true)\
 		{\
 			return nullptr;\
 		}\
@@ -410,7 +410,7 @@
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_SETTER_ARRAY_GLOBAL(FieldName); \
 			}\
-			else if constexpr (nox::HasIndexOperatorValue<_T> == true)\
+			else if constexpr (nox::has_index_operator_v<_T> == true)\
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_SETTER_ARRAY_GLOBAL(FieldName); \
 			}\
@@ -423,7 +423,7 @@
 
 #define	NOX_VARIABLE_INFO_CREATE_LAMBDA_GETTER_ARRAY_GLOBAL(FieldName) +[]()constexpr{\
 		using _T = decltype(FieldName);\
-		if constexpr (std::is_array_v<_T> == false && nox::IsSequenceContainerClassValue<_T> == false)\
+		if constexpr (std::is_array_v<_T> == false && nox::is_sequence_container_class_v<_T> == false)\
 		{\
 			return nullptr;\
 		}\
@@ -433,7 +433,7 @@
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_GETTER_ARRAY_GLOBAL(FieldName); \
 			}\
-			else if constexpr (nox::HasIndexOperatorValue<_T> == true)\
+			else if constexpr (nox::has_index_operator_v<_T> == true)\
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_GETTER_ARRAY_GLOBAL(FieldName); \
 			}\

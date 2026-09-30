@@ -27,7 +27,7 @@ namespace nox::util
 #pragma region STL拡張
 	template<std::ranges::range T, class FuncType>
 		requires(std::is_invocable_r_v<bool, FuncType, typename T::value_type>)
-	inline std::add_pointer_t<typename T::value_type> FindIf(const T& range, const FuncType func) noexcept(IsFunctionNoexceptValue<FuncType>)
+	inline std::add_pointer_t<typename T::value_type> FindIf(const T& range, const FuncType func) noexcept(is_function_noexcept_v<FuncType>)
 	{
 		decltype(auto) result = std::ranges::find_if(range, func);
 		if (result == std::end(range))
@@ -48,7 +48,7 @@ namespace nox::util
 	/// @param func 比較関数
 	/// @return 見つかった場合はnullptrを返す
 	template<nox::concepts::Pointer T, class FuncType> requires(std::is_invocable_r_v<bool, FuncType, std::remove_pointer_t<T>>)
-		inline constexpr T FindIf(const T begin, const T last, const FuncType func) noexcept(IsFunctionNoexceptValue<FuncType>)
+		inline constexpr T FindIf(const T begin, const T last, const FuncType func) noexcept(is_function_noexcept_v<FuncType>)
 
 	{
 		decltype(auto) result = std::ranges::find_if(begin, last, func);

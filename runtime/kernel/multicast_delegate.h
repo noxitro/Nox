@@ -72,7 +72,7 @@ namespace nox
 		}
 
 		/// @brief 通常関数のバインド
-		template<class T> requires((nox::IsGlobalFunctionPointerValue<T> || nox::IsFunctionObjectValue<std::decay_t<T>>) && std::is_constructible_v< DelegateType, std::decay_t<T>> == true)
+		template<class T> requires((nox::is_global_function_pointer_v<T> || nox::is_function_object_v<std::decay_t<T>>) && std::is_constructible_v< DelegateType, std::decay_t<T>> == true)
 			inline constexpr void Add(T&& func)
 		{
 			delegate_list_.emplace_back(DelegateType(std::forward<std::decay_t<T>>(func)));
@@ -106,7 +106,7 @@ namespace nox
 		}
 
 		/// @brief 関数、関数オブジェクトの登録解除
-		template<class T> requires((nox::IsGlobalFunctionPointerValue<T> || nox::IsFunctionObjectValue<std::decay_t<T>>) && std::is_constructible_v< DelegateType, std::decay_t<T>> == true)
+		template<class T> requires((nox::is_global_function_pointer_v<T> || nox::is_function_object_v<std::decay_t<T>>) && std::is_constructible_v< DelegateType, std::decay_t<T>> == true)
 		inline void Remove(T&& func)
 		{
 			util::RemoveEraseIf(delegate_list_, [&func](const DelegateType& v) {return v.Equal(std::forward<std::decay_t<T>>(func)) == true; });

@@ -9,34 +9,34 @@
 namespace nox
 {
 	template<class T, class U, class... Tail>
-	constexpr bool IsSameAndValue=false;
+	constexpr bool is_all_same_v=false;
 
 	template<class T, class U>
-	constexpr bool IsSameAndValue<T, U> = std::is_same_v<T, U>;
+	constexpr bool is_all_same_v<T, U> = std::is_same_v<T, U>;
 
 	template<class T, class U, class... Tail> requires(sizeof...(Tail) > 0)
-	constexpr bool IsSameAndValue<T, U, Tail...> = std::is_same_v<T, U> && std::is_same_v<T, Tail...>;
+	constexpr bool is_all_same_v<T, U, Tail...> = std::is_same_v<T, U> && nox::is_all_same_v<T, Tail...>;
 
 	namespace detail
 	{
 		template<class T, class... Tail>
-		struct IsSameOr;
+		struct is_same_or;
 
 		template<class T>
-		struct IsSameOr<T>
+		struct is_same_or<T>
 		{
 			static constexpr bool value = false;
 		};
 
 		template<class T, class U, class... Tail>
-		struct IsSameOr<T, U, Tail...>
+		struct is_same_or<T, U, Tail...>
 		{
-			static constexpr bool value = std::is_same_v<T, U> || IsSameOr<T, Tail...>::value;
+			static constexpr bool value = std::is_same_v<T, U> || is_same_or<T, Tail...>::value;
 		};
 	}
 
 	template<class T, class U, class... Tail>
-	constexpr bool IsSameOrValue = nox::detail::IsSameOr<T, U, Tail...>::value;
+	constexpr bool is_any_same_v = nox::detail::is_same_or<T, U, Tail...>::value;
 }
 
 namespace nox::reflection
@@ -119,7 +119,7 @@ namespace nox
 		using RemoveRef = std::remove_reference_t<T>;
 		using RemovePtr = std::remove_pointer_t<T>;*/
 
-		constexpr bool ea = !IsSameOrValue<
+		constexpr bool ea = !is_any_same_v<
 			std::add_const_t<int>,
 			std::add_lvalue_reference_t<int>,
 			std::add_rvalue_reference_t<int>,
@@ -132,7 +132,7 @@ namespace nox
 		>;
 		static_assert(ea);
 		
-		/*static_assert(!IsSameOrValue<
+		/*static_assert(!is_any_same_v<
 			std::add_const_t<T>,
 			std::add_lvalue_reference_t<T>,
 			std::add_volatile_t<T>,

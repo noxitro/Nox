@@ -26,8 +26,8 @@ namespace nox
 		{
 		public:
 			using FunctionType = _FunctionType;
-			using ResultType = nox::FunctionResultType<_FunctionType>;
-			using InvokeFunction = ResultType(*)(void*, _Args...) noexcept(nox::IsFunctionNoexceptValue<_FunctionType>);
+			using ResultType = nox::function_result_t<_FunctionType>;
+			using InvokeFunction = ResultType(*)(void*, _Args...) noexcept(nox::is_function_noexcept_v<_FunctionType>);
 			struct Operations
 			{
 				InvokeFunction invoke;
@@ -44,7 +44,7 @@ namespace nox
 			constexpr void Reset() noexcept { operations_ = nullptr; }
 			[[nodiscard]] constexpr const Operations* OperationTable() const noexcept { return operations_; }
 
-			ResultType Invoke(_Args... args) const noexcept(nox::IsFunctionNoexceptValue<_FunctionType>)
+			ResultType Invoke(_Args... args) const noexcept(nox::is_function_noexcept_v<_FunctionType>)
 			{
 				return operations_->invoke(const_cast<IDelegateBase*>(this), std::forward<_Args>(args)...);
 			}
@@ -57,9 +57,9 @@ namespace nox
 	}
 
 	template<nox::concepts::FunctionSignatureType _FunctionType>
-	class IDelegate : public detail::IDelegateBase<_FunctionType, nox::FunctionArgsTupleType<_FunctionType>>
+	class IDelegate : public detail::IDelegateBase<_FunctionType, nox::function_args_tuple_t<_FunctionType>>
 	{
-		using Base = detail::IDelegateBase<_FunctionType, nox::FunctionArgsTupleType<_FunctionType>>;
+		using Base = detail::IDelegateBase<_FunctionType, nox::function_args_tuple_t<_FunctionType>>;
 
 	public:
 		using typename Base::FunctionType;
@@ -71,43 +71,43 @@ namespace nox
 		constexpr IDelegate() noexcept = default;
 
 		template<class... _Args>
-		ResultType operator()(_Args&&... args) noexcept(nox::IsFunctionNoexceptValue<_FunctionType>)
-			requires(!nox::IsFunctionConstValue<_FunctionType> && !nox::IsFunctionVolatileValue<_FunctionType> && !nox::IsFunctionLValueReference<_FunctionType> && !nox::IsFunctionRValueReference<_FunctionType>)
+		ResultType operator()(_Args&&... args) noexcept(nox::is_function_noexcept_v<_FunctionType>)
+			requires(!nox::is_function_const_v<_FunctionType> && !nox::is_function_volatile_v<_FunctionType> && !nox::is_function_lvalue_reference_v<_FunctionType> && !nox::is_function_rvalue_reference_v<_FunctionType>)
 		{
 			return Base::Invoke(std::forward<_Args>(args)...);
 		}
 
 		template<class... _Args>
-		ResultType operator()(_Args&&... args) const noexcept(nox::IsFunctionNoexceptValue<_FunctionType>)
-			requires(nox::IsFunctionConstValue<_FunctionType> && !nox::IsFunctionVolatileValue<_FunctionType> && !nox::IsFunctionLValueReference<_FunctionType> && !nox::IsFunctionRValueReference<_FunctionType>)
+		ResultType operator()(_Args&&... args) const noexcept(nox::is_function_noexcept_v<_FunctionType>)
+			requires(nox::is_function_const_v<_FunctionType> && !nox::is_function_volatile_v<_FunctionType> && !nox::is_function_lvalue_reference_v<_FunctionType> && !nox::is_function_rvalue_reference_v<_FunctionType>)
 		{
 			return Base::Invoke(std::forward<_Args>(args)...);
 		}
 
 		template<class... _Args>
-		ResultType operator()(_Args&&... args) const & noexcept(nox::IsFunctionNoexceptValue<_FunctionType>)
-			requires(nox::IsFunctionConstValue<_FunctionType> && !nox::IsFunctionVolatileValue<_FunctionType> && nox::IsFunctionLValueReference<_FunctionType>)
+		ResultType operator()(_Args&&... args) const & noexcept(nox::is_function_noexcept_v<_FunctionType>)
+			requires(nox::is_function_const_v<_FunctionType> && !nox::is_function_volatile_v<_FunctionType> && nox::is_function_lvalue_reference_v<_FunctionType>)
 		{
 			return Base::Invoke(std::forward<_Args>(args)...);
 		}
 
 		template<class... _Args>
-		ResultType operator()(_Args&&... args) const && noexcept(nox::IsFunctionNoexceptValue<_FunctionType>)
-			requires(nox::IsFunctionConstValue<_FunctionType> && !nox::IsFunctionVolatileValue<_FunctionType> && nox::IsFunctionRValueReference<_FunctionType>)
+		ResultType operator()(_Args&&... args) const && noexcept(nox::is_function_noexcept_v<_FunctionType>)
+			requires(nox::is_function_const_v<_FunctionType> && !nox::is_function_volatile_v<_FunctionType> && nox::is_function_rvalue_reference_v<_FunctionType>)
 		{
 			return Base::Invoke(std::forward<_Args>(args)...);
 		}
 
 		template<class... _Args>
-		ResultType operator()(_Args&&... args) & noexcept(nox::IsFunctionNoexceptValue<_FunctionType>)
-			requires(nox::IsFunctionLValueReference<_FunctionType>)
+		ResultType operator()(_Args&&... args) & noexcept(nox::is_function_noexcept_v<_FunctionType>)
+			requires(nox::is_function_lvalue_reference_v<_FunctionType>)
 		{
 			return Base::Invoke(std::forward<_Args>(args)...);
 		}
 
 		template<class... _Args>
-		ResultType operator()(_Args&&... args) && noexcept(nox::IsFunctionNoexceptValue<_FunctionType>)
-			requires(nox::IsFunctionRValueReference<_FunctionType>)
+		ResultType operator()(_Args&&... args) && noexcept(nox::is_function_noexcept_v<_FunctionType>)
+			requires(nox::is_function_rvalue_reference_v<_FunctionType>)
 		{
 			return Base::Invoke(std::forward<_Args>(args)...);
 		}

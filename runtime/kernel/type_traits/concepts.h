@@ -92,14 +92,14 @@ namespace nox::concepts
 namespace nox
 {
 	template<class T>
-	constexpr bool IsInvokableDefaultOperatorValue = nox::concepts::detail::HasDefaultOperator<T>;
+	constexpr bool is_invocable_default_operator_v = nox::concepts::detail::HasDefaultOperator<T>;
 
 	/// @brief 添え字アクセスが可能
 	/// @tparam T 
 	template<class T>
-	constexpr bool HasIndexOperatorValue = nox::concepts::detail::HasIndexOperator<T>;
+	constexpr bool has_index_operator_v = nox::concepts::detail::HasIndexOperator<T>;
 
 	template<class T>
-	constexpr bool HasEqualityCompareValue = nox::concepts::detail::HasEqualityCompare<T>;
+	constexpr bool has_equality_compare_v = nox::concepts::detail::HasEqualityCompare<T>;
 
 }

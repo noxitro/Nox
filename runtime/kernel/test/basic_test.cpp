@@ -92,7 +92,7 @@ TEST(KernelBasicTest, PointerTypes)
 
 TEST(KernelBasicTest, MemberFunctionsAreNotMarkedStatic)
 {
-	using MemberFunction = nox::ToMemberFunctionPointerType<void() noexcept, ReflectionTypeUtilityTestType>;
+	using MemberFunction = nox::to_member_function_pointer_t<void() noexcept, ReflectionTypeUtilityTestType>;
 	using StaticFunction = decltype(&ReflectionTypeUtilityTestType::StaticFunction);
 	using FreeFunctionType = decltype(&FreeFunction);
 

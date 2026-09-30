@@ -45,7 +45,7 @@ namespace nox::reflection
 	/// @brief この属性を付けている場合、他の属性を付与できない
 	/// @tparam T 
 	template<class T> requires(!std::is_same_v<IAttribute, T>&& std::is_base_of_v<IAttribute, T>)
-		struct NOX_ATTR(nox::reflection::IgnoreReflection()) IsOnlyAttribute : std::false_type {};
+		struct NOX_ATTR(nox::reflection::IgnoreReflection()) is_only_attribute : std::false_type {};
 
 #pragma region 属性型チェック
 	namespace NOX_ATTR(nox::reflection::IgnoreReflection()) detail
@@ -58,9 +58,9 @@ namespace nox::reflection
 				static_assert(!std::is_same_v<struct nox::reflection::IAttribute, _FirstType>, "IAttirubte cannot be directly assigned");
 				return false;
 			}
-			else if constexpr (nox::reflection::IsOnlyAttribute< _FirstType>::value == true)
+			else if constexpr (nox::reflection::is_only_attribute< _FirstType>::value == true)
 			{
-				static_assert(!nox::reflection::IsOnlyAttribute< _FirstType>::value, "only attribute");
+				static_assert(!nox::reflection::is_only_attribute< _FirstType>::value, "only attribute");
 				return false;
 			}
 			else if constexpr (std::is_base_of_v<struct nox::reflection::IAttribute, _FirstType> == false)
@@ -191,10 +191,10 @@ namespace nox::reflection
 	}
 
 	template<>
-	struct IsOnlyAttribute<attr::IgnoreReflection> : std::true_type {};
+	struct is_only_attribute<attr::IgnoreReflection> : std::true_type {};
 
 	template<>
-	struct IsOnlyAttribute<attr::Reflection> : std::true_type {};
+	struct is_only_attribute<attr::Reflection> : std::true_type {};
 }
 
 ///@brief	属性の特殊化用マクロ

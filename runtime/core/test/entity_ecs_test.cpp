@@ -87,9 +87,9 @@ namespace
 	static_assert(MoveSignature::HasReadAccess<TestHealth> == false);
 
 	//	同一ComponentDataにRWが絡めば直列化、全てROなら並列。
-	static_assert(nox::CanRunConcurrently<ReadOnlySignature, ReadOnlySignature>);
-	static_assert(nox::CanRunConcurrently<MoveSignature, ReadOnlySignature> == false);
-	static_assert(nox::CanRunConcurrently<MoveSignature, HealthSignature>);
+	static_assert(nox::can_run_concurrently_v<ReadOnlySignature, ReadOnlySignature>);
+	static_assert(nox::can_run_concurrently_v<MoveSignature, ReadOnlySignature> == false);
+	static_assert(nox::can_run_concurrently_v<MoveSignature, HealthSignature>);
 
 	//	EntityIdは先頭にのみ1つ。ComponentDataの重複宣言も不可。
 	static_assert(nox::EntitySignature<TestPosition&, nox::EntityId>::k_is_valid == false);

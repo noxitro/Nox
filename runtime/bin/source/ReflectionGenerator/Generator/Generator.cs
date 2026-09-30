@@ -1068,7 +1068,7 @@ public class Generator
             //  getter, setterの記述
             //  reflection_generatedプロジェクトのsupport_functionsにあるマクロを使用する
             ReadOnlySpan<char> variableTypeDeclStr = $"using VariableType = decltype({variableInfo.FullName});";
-         //   ReadOnlySpan<char> elementTypeDeclStr = "using ElementType = nox::ContainerElementType<VariableType>;";
+         //   ReadOnlySpan<char> elementTypeDeclStr = "using ElementType = nox::container_element_t<VariableType>;";
 
             if (variableInfo.VariableAttributeFlags.IsOn(Parser2.VariableAttributeFlag.Static) == false)
             {
@@ -1193,7 +1193,7 @@ public class Generator
 					codeWriter.WriteLine(variableTypeDeclStr);
 					codeWriter.WriteLine(classTypeDeclStr);
 
-					codeWriter.WriteLine("if constexpr (nox::HasIndexOperatorValue<VariableType> == true)");
+					codeWriter.WriteLine("if constexpr (nox::has_index_operator_v<VariableType> == true)");
 					codeWriter.WriteLine("{");
 					codeWriter.Push();
                 codeWriter.WriteLine(elementTypeDeclStr);
@@ -1241,7 +1241,7 @@ public class Generator
 					codeWriter.WriteLine(variableTypeDeclStr);
 					codeWriter.WriteLine(classTypeDeclStr);
 
-					codeWriter.WriteLine("if constexpr (nox::HasIndexOperatorValue<VariableType> == true)");
+					codeWriter.WriteLine("if constexpr (nox::has_index_operator_v<VariableType> == true)");
 					codeWriter.WriteLine("{");
 					codeWriter.Push();
 					codeWriter.WriteLine(elementTypeDeclStr);
@@ -1289,7 +1289,7 @@ public class Generator
 					codeWriter.WriteLine(variableTypeDeclStr);
 					codeWriter.WriteLine(classTypeDeclStr);
 
-					codeWriter.WriteLine("if constexpr (nox::HasIndexOperatorValue<VariableType> == true)");
+					codeWriter.WriteLine("if constexpr (nox::has_index_operator_v<VariableType> == true)");
 					codeWriter.WriteLine("{");
 					codeWriter.Push();
 					codeWriter.WriteLine(elementTypeDeclStr);
@@ -1304,7 +1304,7 @@ public class Generator
 					codeWriter.WriteLine("if constexpr (nox::concepts::Assignable<ElementType, ElementType>)");
 					codeWriter.Push();
 					codeWriter.WriteLine("{");
-					codeWriter.WriteLine($"*static_cast<std::add_pointer_t<nox::AddConstPointerType<ElementType*>>>(out) = &static_cast<ClassType*>(instance)->{variableInfo.FullName}[index];");
+					codeWriter.WriteLine($"*static_cast<std::add_pointer_t<nox::add_const_pointer_t<ElementType*>>>(out) = &static_cast<ClassType*>(instance)->{variableInfo.FullName}[index];");
 					codeWriter.WriteLine("return true;");
 
 					codeWriter.Pop();
@@ -1413,7 +1413,7 @@ public class Generator
 					codeWriter.Push();
 					codeWriter.WriteLine(variableTypeDeclStr);
 
-					codeWriter.WriteLine("if constexpr (nox::HasIndexOperatorValue<VariableType> == true)");
+					codeWriter.WriteLine("if constexpr (nox::has_index_operator_v<VariableType> == true)");
 					codeWriter.WriteLine("{");
 					codeWriter.Push();
 					codeWriter.WriteLine(elementTypeDeclStr);
@@ -1460,7 +1460,7 @@ public class Generator
 					codeWriter.Push();
 					codeWriter.WriteLine(variableTypeDeclStr);
 
-					codeWriter.WriteLine("if constexpr (nox::HasIndexOperatorValue<VariableType> == true)");
+					codeWriter.WriteLine("if constexpr (nox::has_index_operator_v<VariableType> == true)");
 					codeWriter.WriteLine("{");
 					codeWriter.Push();
 					codeWriter.WriteLine(elementTypeDeclStr);
@@ -1507,7 +1507,7 @@ public class Generator
 					codeWriter.Push();
 					codeWriter.WriteLine(variableTypeDeclStr);
 
-					codeWriter.WriteLine("if constexpr (nox::HasIndexOperatorValue<VariableType> == true)");
+					codeWriter.WriteLine("if constexpr (nox::has_index_operator_v<VariableType> == true)");
 					codeWriter.WriteLine("{");
 					codeWriter.Push();
 					codeWriter.WriteLine(elementTypeDeclStr);
@@ -1522,7 +1522,7 @@ public class Generator
 					codeWriter.WriteLine("if constexpr (nox::concepts::Assignable<ElementType, ElementType>)");
 					codeWriter.Push();
 					codeWriter.WriteLine("{");
-					codeWriter.WriteLine($"*static_cast<std::add_pointer_t<nox::AddConstPointerType<ElementType*>>>(out) = &{variableInfo.FullName}[index];");
+					codeWriter.WriteLine($"*static_cast<std::add_pointer_t<nox::add_const_pointer_t<ElementType*>>>(out) = &{variableInfo.FullName}[index];");
 					codeWriter.WriteLine("return true;");
 
 					codeWriter.Pop();
@@ -1605,12 +1605,12 @@ public class Generator
         bool isStatic = functionInfo.FunctionAttributeFlags.IsOn(Parser2.FunctionAttributeFlag.Static);
         if (isStatic)
         {
-            functionTypeFqn = $"nox::ToFunctionPointerType<{functionInfo.TypeInfo.FullName}>";
+            functionTypeFqn = $"nox::to_function_pointer_t<{functionInfo.TypeInfo.FullName}>";
         }
         else
         {
             Util.Assert(declarationTypeInfo != null);
-            functionTypeFqn = $"nox::ToMemberFunctionPointerType<{functionInfo.TypeInfo.FullName}, {declarationTypeInfo.FullName}>";
+            functionTypeFqn = $"nox::to_member_function_pointer_t<{functionInfo.TypeInfo.FullName}, {declarationTypeInfo.FullName}>";
         }
 
         ReadOnlySpan<Parser2.FunctionDecl.ArgumentInfo> argumentList = functionInfo.ArgumentSpan;
@@ -1693,7 +1693,7 @@ public class Generator
 
 						//    preStr += $" -> {returnTypeFullName} {{ ";
 						//    preStr += $" -> decltype(auto) {{ ";
-						preStr += $" -> nox::FunctionResultType<{functionTypeFqn}> {{ ";
+						preStr += $" -> nox::function_result_t<{functionTypeFqn}> {{ ";
 
 					if (functionInfo.TypeInfo.ReturnType.TypeKind != Parser2.TypeKind.Void)
                 {

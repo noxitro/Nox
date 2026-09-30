@@ -791,7 +791,7 @@ namespace nox::reflection
 				.attribute_list_length = attribute_list_length,
 				.field_attribute_flgas = field_attribute_flgas,
 				.type = nox::reflection::Typeof<R>(),
-				.owner_class_type = nox::reflection::Typeof<nox::MemberObjectPointerClassType<decltype(object_pointer)>>(),
+				.owner_class_type = nox::reflection::Typeof<nox::member_object_pointer_class_t<decltype(object_pointer)>>(),
 				.setter_member_func = setter_member_func,
 				.getter_address_member_func = getter_address_member_func,
 				.setter_array_member_func = setter_array_member_func,
