@@ -185,7 +185,7 @@ jobs:
           src=""
           if [ -f bi-site-current/index.html ]; then
             src=bi-site-current/index.html
-          elif json=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=build-insights-site&per_page=30"); then
+          elif json=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=build-insights-site&per_page=100"); then
             run_id=$(jq -r '[.artifacts[] | select(.expired == false and .workflow_run.head_branch == "master")][0].workflow_run.id // empty' <<<"$json")
             if [ -n "$run_id" ] && gh run download "$run_id" -n build-insights-site -D bi-site-prev; then
               src=bi-site-prev/index.html

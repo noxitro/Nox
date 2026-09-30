@@ -2,7 +2,7 @@
 
 runtime の C++ ビルドで、どのヘッダ・テンプレート・関数に時間がかかっているかを計測してレポートにする。
 
-- CI では push ごとに、MSVC の Debug / Release / Master のビルドを計測している (`.github/workflows/ci.yml` の `Start Build Insights` から `Upload Build Insights data` まで、と `build-insights` ジョブ)。計測のためにビルドを増やしてはいない。
+- CI では push ごとに、MSVC の Debug / Release / Master のビルドを計測している。テンプレートの展開は負荷が大きいので Debug でだけ記録する (`.github/workflows/ci.yml` の `Start Build Insights` から `Upload Build Insights data` まで、と `build-insights` ジョブ)。計測のためにビルドを増やしてはいない。
 - レポートは 1 ファイルの HTML。CI の実行ページの Artifacts にある `build-insights-report.html` を落として開く。master の最新は GitHub Pages の `/build-insights/` でも見られる。
 - 実行ページの Summary には、構成ごとの重いヘッダ・テンプレート・関数の上位と、前回の master との比較が出る。
 
@@ -31,7 +31,7 @@ PCH に入っているヘッダは、PCH を作る翻訳単位でだけ解析さ
 
 ## 手元で計測する
 
-Windows と Visual Studio (C++ ワークロード) が要る。計測 (ETW) には管理者権限が要るので、管理者の PowerShell で実行する。
+Windows と Visual Studio (C++ ワークロード)、PowerShell 7 (`pwsh`) が要る (下の手順の `utf8NoBOM` は Windows PowerShell 5.1 に無い)。計測 (ETW) には管理者権限が要るので、管理者として起動した `pwsh` で実行する。
 
 ```powershell
 # 計測ツールをビルドする (SDK は NuGet から取得。版と SHA256 は build.ps1 に固定)
@@ -50,7 +50,7 @@ python .github\scripts\build-insights-report.py --data-dir bi-local --out-html b
 
 差分ビルドでは変わった翻訳単位しか計測されないので、全体を見るときは Rebuild する。
 
-同じ生の ETL は、Visual Studio に付属の計測ツール (`vcperf /analyze <raw.etl> <out.etl>`) で WPA 用に変換して深掘りすることもできる。CI では master と手動実行のときだけ、生の ETL を `build-insights-etl-<構成>` として 7 日間残している。
+同じ生の ETL は、Visual Studio に付属の計測ツール (`vcperf /analyze <raw.etl> <out.etl>`) で WPA 用に変換して深掘りすることもできる。CI では手動実行 (Actions の「Run workflow」) のときだけ、生の ETL を `build-insights-etl-<構成>` として 7 日間残している。
 
 ## レポートの見た目を直す
 

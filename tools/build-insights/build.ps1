@@ -27,8 +27,7 @@ $sdkNative = Join-Path $sdkRoot 'build\native'
 
 if (-not (Test-Path (Join-Path $sdkNative 'inc\CppBuildInsights.hpp'))) {
 	New-Item -ItemType Directory -Force -Path $sdkRoot | Out-Null
-	# Expand-Archive は拡張子 .zip しか受け付けない
-	$zip = Join-Path $sdkRoot 'sdk.zip'
+	$zip = Join-Path $sdkRoot 'sdk.nupkg'
 	$url = "https://www.nuget.org/api/v2/package/Microsoft.Cpp.BuildInsights/$SdkVersion"
 	Write-Host "SDK を取得: $url"
 	Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
@@ -36,7 +35,20 @@ if (-not (Test-Path (Join-Path $sdkNative 'inc\CppBuildInsights.hpp'))) {
 	if ($hash -ne $SdkSha256) {
 		throw "SDK のハッシュが一致しない (期待 $SdkSha256, 実際 $hash)"
 	}
-	Expand-Archive -Path $zip -DestinationPath $sdkRoot -Force
+	# Expand-Archive は Windows PowerShell 5.1 で nupkg の [Content_Types].xml に躓くので、
+	# 要る build/native/ の下だけを自前で取り出す
+	Add-Type -AssemblyName System.IO.Compression.FileSystem
+	$archive = [IO.Compression.ZipFile]::OpenRead($zip)
+	try {
+		foreach ($entry in $archive.Entries) {
+			if (-not $entry.FullName.StartsWith('build/native/') -or $entry.FullName.EndsWith('/')) { continue }
+			$dest = Join-Path $sdkRoot ($entry.FullName -replace '/', '\')
+			New-Item -ItemType Directory -Force -Path (Split-Path $dest) | Out-Null
+			[IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $dest, $true)
+		}
+	} finally {
+		$archive.Dispose()
+	}
 	Remove-Item $zip
 }
 
@@ -59,9 +71,10 @@ $lib = Join-Path $sdkNative 'x64\lib\CppBuildInsights.lib'
 # SDK のヘッダは C++17 で書かれている (クラス内の明示的特殊化など) ので C++17 に合わせる
 $cl = "cl /nologo /std:c++17 /permissive- /EHsc /O2 /MT /W3 /utf-8 /DNOMINMAX /DWIN32_LEAN_AND_MEAN " +
 	"/I`"$inc`" /Fo`"$objDir\\`" /Fe`"$exe`" `"$src`" /link `"$lib`" dbghelp.lib"
-# 引用符の入れ子を cmd /c に渡すと崩れやすいので、一時的なバッチに書いて実行する
+# 引用符の入れ子を cmd /c に渡すと崩れやすいので、一時的なバッチに書いて実行する。
+# cmd はバッチを OEM コードページで読むので、パスに日本語があっても化けないよう oem で書く
 $bat = Join-Path $objDir 'build.cmd'
-Set-Content -Path $bat -Encoding ascii -Value @('@echo off', "call `"$vcvars`" >nul || exit /b 1", $cl)
+Set-Content -Path $bat -Encoding oem -Value @('@echo off', "call `"$vcvars`" >nul || exit /b 1", $cl)
 & cmd.exe /d /c $bat
 if ($LASTEXITCODE -ne 0) { throw "ビルドに失敗 (exit $LASTEXITCODE)" }
 

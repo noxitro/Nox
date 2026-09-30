@@ -68,12 +68,6 @@
 		return "";
 	}
 
-	function h(html) {
-		const t = document.createElement("template");
-		t.innerHTML = html.trim();
-		return t.content;
-	}
-
 	function matches(text, q) {
 		return !q || String(text).toLowerCase().indexOf(q) >= 0;
 	}
@@ -262,7 +256,7 @@
 		return c.headers.filter((hd) => hd[5] === 0 && hd[4] >= 3).sort((a, b) => b[1] - a[1]);
 	}
 
-	function topList(items, label, value, onClick) {
+	function topList(items, label, value) {
 		if (!items.length) return '<div class="empty">データが無い</div>';
 		const max = Math.max.apply(null, items.map(value)) || 1;
 		const out = ['<ul class="toplist">'];
@@ -297,7 +291,7 @@
 		const t = c.totals || {};
 		const ltcg = c.functions.filter((f) => f.at !== "cl").reduce((s, f) => s + f.t, 0);
 		const tiles = [
-			tile("ビルドの実時間", ms(c.wall_us), (c.build_seconds ? "ビルドステップ全体 " + c.build_seconds.toFixed(0) + " 秒 · " : "") + deltaSub(d, "wall_us")),
+			tile("ビルドの実時間", ms(c.wall_us), [c.build_seconds ? "ビルドステップ全体 " + c.build_seconds.toFixed(0) + " 秒" : "", deltaSub(d, "wall_us")].filter(Boolean).join(" · ")),
 			tile("フロントエンド合計", ms(t.fe_us), deltaSub(d, "fe_us") || "解析とテンプレート展開 (全翻訳単位の和)"),
 			tile("バックエンド合計", ms(t.be_us), ltcg ? "リンク時のコード生成 " + ms(ltcg) + " は別" : deltaSub(d, "be_us")),
 			tile("翻訳単位", int(t.passes), "解析したファイル " + int(t.file_parses)),

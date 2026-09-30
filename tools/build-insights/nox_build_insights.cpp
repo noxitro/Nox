@@ -153,7 +153,7 @@ namespace
 		{
 			return decorated;
 		}
-		char buffer[4096];
+		char buffer[8192];
 		const DWORD flags = UNDNAME_NO_MS_KEYWORDS | UNDNAME_NO_ACCESS_SPECIFIERS | UNDNAME_NO_MEMBER_TYPE |
 			UNDNAME_NO_THROW_SIGNATURES | UNDNAME_NO_FUNCTION_RETURNS | UNDNAME_NO_ALLOCATION_MODEL |
 			UNDNAME_NO_ALLOCATION_LANGUAGE;
@@ -361,8 +361,6 @@ namespace
 	public:
 		bi::AnalysisControl OnTraceInfo(const bi::TraceInfo& info) override
 		{
-			trace_start_ = info.StartTimestamp();
-			tick_frequency_ = info.TickFrequency();
 			trace_duration_us_ = ToUs(info.Duration());
 			logical_processors_ = info.LogicalProcessorCount();
 			return bi::AnalysisControl::CONTINUE;
@@ -370,6 +368,13 @@ namespace
 
 		bi::AnalysisControl OnStartActivity(const bi::EventStack& stack) override
 		{
+			// 時刻は最初のイベントからの経過にする。TraceInfo の開始時刻はイベントの時刻と
+			// 基準が違い、引くと大きな負の値になる (CI の実データで確かめた)
+			if (origin_ == LLONG_MAX)
+			{
+				origin_ = stack.Back().StartTimestamp();
+				tick_frequency_ = stack.Back().TickFrequency();
+			}
 			switch (stack.Back().EventId())
 			{
 			case bi::EVENT_ID_FRONT_END_PASS:
@@ -451,11 +456,11 @@ namespace
 	private:
 		long long RelUs(long long ticks) const
 		{
-			if (tick_frequency_ <= 0)
+			if (tick_frequency_ <= 0 || origin_ == LLONG_MAX)
 			{
 				return 0;
 			}
-			const long long d = ticks - trace_start_;
+			const long long d = ticks - origin_;
 			return (d / tick_frequency_) * 1000000 + (d % tick_frequency_) * 1000000 / tick_frequency_;
 		}
 
@@ -807,7 +812,7 @@ namespace
 
 		void WriteTree(JsonWriter& w, const PassData& pass, const std::vector<std::vector<int32_t>>& children, int32_t index) const;
 
-		long long trace_start_ = 0;
+		long long origin_ = LLONG_MAX;
 		long long tick_frequency_ = 0;
 		long long trace_duration_us_ = 0;
 		unsigned long logical_processors_ = 0;
@@ -1296,7 +1301,7 @@ namespace
 	// コマンド
 	// ------------------------------------------------------------
 
-	bool ReadFile(const std::wstring& path, std::string& out)
+	bool ReadWholeFile(const std::wstring& path, std::string& out)
 	{
 		FILE* f = nullptr;
 		if (_wfopen_s(&f, path.c_str(), L"rb") != 0 || f == nullptr)
@@ -1313,7 +1318,7 @@ namespace
 		return true;
 	}
 
-	bool WriteFile(const std::wstring& path, const std::string& data)
+	bool WriteWholeFile(const std::wstring& path, const std::string& data)
 	{
 		FILE* f = nullptr;
 		if (_wfopen_s(&f, path.c_str(), L"wb") != 0 || f == nullptr)
@@ -1350,6 +1355,8 @@ namespace
 		}
 
 		bi::TRACING_SESSION_OPTIONS options{};
+		// system event は CPU サンプリングだけ。集計に使わないので取らない (トレースが小さく済む)。
+		// FAILURE_START_SYSTEM_TRACE が出るならここを疑う
 		options.SystemEventFlags = 0;
 		options.MsvcEventFlags = bi::TRACING_SESSION_MSVC_EVENT_FLAGS_BASIC |
 			bi::TRACING_SESSION_MSVC_EVENT_FLAGS_FRONTEND_FILES |
@@ -1391,7 +1398,7 @@ namespace
 		w.Key("system_buffers_lost");
 		w.Int(stats.SystemBuffersLost);
 		w.Raw("}");
-		WriteFile(StatsPath(raw), json);
+		WriteWholeFile(StatsPath(raw), json);
 		// イベントが欠けても ETL は書かれるので、集計は続けられる (欠落は JSON に残して警告する)
 		if (rc != bi::RESULT_CODE_SUCCESS && rc != bi::RESULT_CODE_FAILURE_DROPPED_EVENTS)
 		{
@@ -1413,8 +1420,8 @@ namespace
 			return 1;
 		}
 		std::string stats;
-		ReadFile(StatsPath(raw), stats);
-		if (!WriteFile(out_path, collector.ToJson(stats)))
+		ReadWholeFile(StatsPath(raw), stats);
+		if (!WriteWholeFile(out_path, collector.ToJson(stats)))
 		{
 			std::fprintf(stderr, "出力を書けなかった\n");
 			return 1;

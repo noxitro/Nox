@@ -165,9 +165,11 @@ jobs:
       # ETW を使うので管理者権限が要る。GitHub ホストのランナーは管理者で動くが、
       # 管理者でないセルフホストでは開始に失敗し、計測なしでビルドだけが走る。
       #
-      # テンプレートの展開は 3 構成とも記録する。イベントが最も多く負荷も大きいので、
-      # ビルドが目立って遅くなったり、イベントの欠落が続いたりするなら、Debug 以外は
-      # --no-templates に切り替える (フロントエンドの仕事は構成でほぼ変わらない)。
+      # テンプレートの展開は Debug だけで記録する。3 構成とも記録した初回の実測で、
+      # ビルドのステップが 30〜45% 延びた (Debug 5:19→7:05、Release 5:26→7:12、
+      # Master 3:43→5:26。ETL は Debug で 612 MB、イベントの欠落は 0)。
+      # 延びた分のほとんどはテンプレートのイベントで、フロントエンドの仕事
+      # (どのテンプレートを展開するか) は構成でほぼ変わらないので 1 構成で足りる。
       # 計測ツールは tools/build-insights (SDK の版は build.ps1 で固定)。
       # ---------------------------------------------------------
       - name: Cache Build Insights tool
@@ -180,12 +182,16 @@ jobs:
       - name: Start Build Insights
         id: bi-start
         if: matrix.compiler == 'MSVC'
+        env:
+          CONFIG: ${{ matrix.configuration }}
         run: |
           $ok = $false
           try {
             $exe = 'tools\build-insights\out\nox_build_insights.exe'
             if (-not (Test-Path $exe)) { & tools\build-insights\build.ps1 }
-            & $exe start NoxCI
+            $biArgs = @('start', 'NoxCI')
+            if ($env:CONFIG -ne 'Debug') { $biArgs += '--no-templates' }
+            & $exe @biArgs
             if ($LASTEXITCODE -eq 0) { $ok = $true }
             else { Write-Host "::warning::Build Insights の計測を開始できなかった (exit $LASTEXITCODE)。計測なしでビルドする" }
           } catch {
@@ -212,15 +218,16 @@ jobs:
 
       # ビルドが落ちても、そこまでの計測は集計する (どこで時間を使っていたかは失敗時も役に立つ)。
       # テストのビルドを計測に混ぜないよう、ビルドの直後に止める。
-      # 生の ETL は大きい (数百 MB〜) ので RUNNER_TEMP に置き、master と手動実行のときだけ上げる
-      # (手元で WPA に読ませて深掘りする用)。それ以外は集計したら消す。
+      # 生の ETL は大きい (Debug で 600 MB 前後) ので RUNNER_TEMP に置き、手動実行
+      # (workflow_dispatch) のときだけ上げる (手元で WPA に読ませて深掘りする用)。
+      # 毎回上げるとジョブが数分延びるので、それ以外は集計したら消す。
       - name: Stop Build Insights and analyze
         id: bi-stop
         if: always() && steps.bi-start.outputs.ok == 'true'
         env:
           CONFIG: ${{ matrix.configuration }}
           STARTED: ${{ steps.bi-start.outputs.started }}
-          KEEP_RAW: ${{ github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch' }}
+          KEEP_RAW: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           $exe = 'tools\build-insights\out\nox_build_insights.exe'
           $buildSeconds = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - [int64]$env:STARTED
@@ -249,7 +256,7 @@ jobs:
                 ref             = $env:GITHUB_REF_NAME
                 subject         = (git log -1 --format=%s)
                 workspace       = $env:GITHUB_WORKSPACE
-                templates       = $true
+                templates       = ($env:CONFIG -eq 'Debug')
                 build_seconds   = $buildSeconds
                 etl_mb          = $etlMb
                 analyze_seconds = $analyzeSeconds
@@ -873,7 +880,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if json=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=build-insights-data&per_page=30"); then
+          if json=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=build-insights-data&per_page=100"); then
             pick=$(jq -r --arg run "$GITHUB_RUN_ID" '[.artifacts[] | select(.expired == false and .workflow_run.head_branch == "master" and ((.workflow_run.id | tostring) != $run))][0] | if . then "\(.workflow_run.id) \(.workflow_run.head_sha)" else "" end' <<<"$json")
             if [ -n "$pick" ]; then
               run_id=${pick%% *}
@@ -933,8 +940,10 @@ jobs:
             echo "公開後は ${url%/}/build-insights/ でも見られる (master の最新)。" >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      # 比較元として読むのは master のものだけなので、master でだけ上げる
+      # (全ブランチで上げると、一覧の上位が作業ブランチのもので埋まり master のものを探しにくくなる)
       - name: Upload data (baseline for later runs)
-        if: env.has_data == 'true'
+        if: env.has_data == 'true' && github.ref == 'refs/heads/master'
         uses: actions/upload-artifact@v7
         with:
           name: build-insights-data

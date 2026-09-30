@@ -41,6 +41,12 @@ DIFF_MIN_SHARE_PT = 0.3
 DIFF_TOP = 40
 
 KIND_NAMES = {0: "class", 1: "function", 2: "variable", 3: "concept"}
+# 特殊化の名前は "struct nox::Foo<int> " のように種類の語と末尾の空白が付いて届く
+_SYMBOL_PREFIX = re.compile(r"^(?:struct|class|union|enum)\s+")
+
+
+def symbol(name):
+    return _SYMBOL_PREFIX.sub("", str(name).strip())
 
 
 def warning(message):
@@ -163,8 +169,9 @@ def build_config(name, data, meta):
     templates = []
     for t in data.get("templates") or []:
         templates.append({
-            "n": t["name"], "k": KIND_NAMES.get(t.get("kind"), "?"), "i": t["incl_us"], "e": t["excl_us"],
-            "c": t["count"], "u": t["passes"], "s": t.get("specs") or [], "sc": t.get("spec_count", 0),
+            "n": symbol(t["name"]), "k": KIND_NAMES.get(t.get("kind"), "?"), "i": t["incl_us"], "e": t["excl_us"],
+            "c": t["count"], "u": t["passes"], "s": [[symbol(sp[0])] + list(sp[1:]) for sp in t.get("specs") or []],
+            "sc": t.get("spec_count", 0),
             "f": t.get("files") or [],
         })
 
@@ -270,6 +277,8 @@ def fmt_ms(us):
     if us is None:
         return "-"
     ms = us / 1000
+    if ms >= 120_000:
+        return f"{ms / 60_000:,.1f} 分"
     if ms >= 10_000:
         return f"{ms / 1000:,.1f} s"
     if ms >= 100:
@@ -285,7 +294,7 @@ def md_code(text, limit=90):
     return "`" + s.replace("`", "'").replace("|", "\\|") + "`"
 
 
-def summary_markdown(configs, diffs, commit, report_url, missing):
+def summary_markdown(configs, diffs, report_url, missing):
     lines = ["## 🔎 Build Insights (C++ のビルド時間の内訳)", ""]
     if report_url:
         lines += [f"**[詳しいレポートを開く]({report_url})** — ヘッダ・インクルードツリー・テンプレート・関数・翻訳単位・前回 master との差分", ""]
@@ -439,7 +448,7 @@ def main():
 
     if args.summary:
         with open(args.summary, "a", encoding="utf-8") as f:
-            f.write(summary_markdown(configs, diffs, commit, args.report_url, missing))
+            f.write(summary_markdown(configs, diffs, args.report_url, missing))
     return 0
 
 
