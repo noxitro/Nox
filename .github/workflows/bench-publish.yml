@@ -16,6 +16,8 @@
 # 公開  : 初回だけ、リポジトリ管理者が Settings > Pages > Build and deployment > Source を
 #         "GitHub Actions" にする。未設定のあいだは公開を飛ばして notice を出すだけで、
 #         CI は落とさない (結果は bench-site / bench-history アーティファクトに残る)。
+# 同居  : ci.yml の build-insights ジョブが作るビルド計測のレポートを /build-insights/ に置く
+#         (Pages は 1 サイトしか持てないので、別のワークフローから公開すると互いに上書きする)。
 # 通知  : master で悪化または確保回数の予算超過があれば Discord へ投稿する
 #         (DISCORD_DEV_REPORT_WEBHOOK_URL、無ければ DISCORD_WEBHOOK_URL)。
 # 費用  : ubuntu ランナーだけ。
@@ -161,6 +163,41 @@ jobs:
           if [ -n "$PAGES_URL" ]; then report_args+=(--pages-url "$PAGES_URL"); fi
           if [ -f prev-history/history.js ]; then report_args+=(--history-file prev-history/history.js); fi
           python3 .github/scripts/bench-report.py "${report_args[@]}"
+
+      # ビルド計測のレポート (ci.yml の build-insights ジョブ) を /build-insights/ に同居させる。
+      # Pages は丸ごと差し替わるので、ここで置かないと公開中のレポートが消える。
+      # ci.yml から呼ばれたときは今回の実行のもの、単独で走ったとき (ページだけの変更・
+      # 手動実行) や今回の計測が無いときは、期限の切れていない master の最新を使う。
+      # どちらも無ければレポート抜きで公開する (次に master の CI が通れば戻る)。
+      - name: Download Build Insights report of this run
+        if: inputs.measured
+        uses: actions/download-artifact@v8
+        with:
+          pattern: build-insights-site
+          path: bi-site-current
+          merge-multiple: true
+
+      - name: Add Build Insights report
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          src=""
+          if [ -f bi-site-current/index.html ]; then
+            src=bi-site-current/index.html
+          elif json=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=build-insights-site&per_page=30"); then
+            run_id=$(jq -r '[.artifacts[] | select(.expired == false and .workflow_run.head_branch == "master")][0].workflow_run.id // empty' <<<"$json")
+            if [ -n "$run_id" ] && gh run download "$run_id" -n build-insights-site -D bi-site-prev; then
+              src=bi-site-prev/index.html
+              echo "master の最新 (run $run_id) のビルド計測レポートを使う"
+            fi
+          fi
+          if [ -n "$src" ] && [ -f "$src" ]; then
+            mkdir -p _site/build-insights
+            cp "$src" _site/build-insights/index.html
+          else
+            echo "::notice::ビルド計測のレポートが無いので /build-insights/ は載せない"
+          fi
 
       # どのブランチでも見られるように置く (展開して index.html を開けば動く)
       - name: Upload site

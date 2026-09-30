@@ -239,3 +239,7 @@ __pycache__/
 
 # Claude Code のマシン固有の指示 (docs/local-build.md)
 /CLAUDE.local.md
+
+# Build Insights の計測ツール (tools/build-insights/build.ps1 が SDK を取得してビルドする)
+/tools/build-insights/.sdk/
+/tools/build-insights/out/
