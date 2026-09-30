@@ -46,7 +46,7 @@ namespace nox
 		template<class CallableBase, class _FunctionType>
 		struct CallableDesc
 		{
-			nox::FunctionResultType<_FunctionType>(*const call)(const CallableBase&, const nox::FunctionArgsTupleType<_FunctionType>& args)noexcept(nox::IsFunctionNoexceptValue<_FunctionType>);
+			nox::function_result_t<_FunctionType>(*const call)(const CallableBase&, const nox::function_args_tuple_t<_FunctionType>& args)noexcept(nox::is_function_noexcept_v<_FunctionType>);
 		//	_Result(* const call_ref)(CallableBase&&, Args&&... args)noexcept(IsNoexcept);
 			void(* const copy)(const CallableBase&, std::span<nox::uint8>)noexcept(false);
 			void(* const move)(CallableBase&&, std::span<nox::uint8>)noexcept(false);
@@ -75,8 +75,8 @@ namespace nox
 		protected:
 			struct Desc
 			{
-				nox::FunctionResultType<_FunctionType>(* const call)(const CallableBase&, const nox::FunctionArgsTupleType<_FunctionType>& args)noexcept(nox::IsFunctionNoexceptValue<_FunctionType>);
-				nox::FunctionResultType<_FunctionType>(* const call_ref)(CallableBase&&, const nox::FunctionArgsTupleType<_FunctionType>& args)noexcept(nox::IsFunctionNoexceptValue<_FunctionType>);
+				nox::function_result_t<_FunctionType>(* const call)(const CallableBase&, const nox::function_args_tuple_t<_FunctionType>& args)noexcept(nox::is_function_noexcept_v<_FunctionType>);
+				nox::function_result_t<_FunctionType>(* const call_ref)(CallableBase&&, const nox::function_args_tuple_t<_FunctionType>& args)noexcept(nox::is_function_noexcept_v<_FunctionType>);
 				void(* const copy)(const CallableBase&, std::span<nox::uint8>)noexcept(false);
 				void(* const move)(CallableBase&&, std::span<nox::uint8>)noexcept(false);
 				bool(* const equal)(const CallableBase&, const CallableBase&)noexcept;
@@ -93,9 +93,9 @@ namespace nox
 			inline constexpr ~CallableBase()noexcept = default;
 
 			template<class... Args>
-			inline constexpr nox::FunctionResultType<_FunctionType> operator()(Args&&... args)const& noexcept
+			inline constexpr nox::function_result_t<_FunctionType> operator()(Args&&... args)const& noexcept
 			{
-				if constexpr (std::is_void_v<nox::FunctionResultType<_FunctionType>>)
+				if constexpr (std::is_void_v<nox::function_result_t<_FunctionType>>)
 				{
 					std::invoke(desc_.call, *this, std::make_tuple(std::forward<Args>(args)...));
 				}
@@ -106,9 +106,9 @@ namespace nox
 			}
 
 			template<class... Args>
-			inline constexpr nox::FunctionResultType<_FunctionType> operator()(Args&&... args)const&& noexcept
+			inline constexpr nox::function_result_t<_FunctionType> operator()(Args&&... args)const&& noexcept
 			{
-				if constexpr (std::is_void_v<nox::FunctionResultType<_FunctionType>>)
+				if constexpr (std::is_void_v<nox::function_result_t<_FunctionType>>)
 				{
 					desc_.call_ref(static_cast<CallableBase&&>(*this), std::forward<Args>(args)...);
 				}
@@ -220,12 +220,12 @@ namespace nox
 		private:
 			inline constexpr ~Callable()noexcept = default;
 
-			inline static constexpr nox::FunctionResultType<_FunctionType> Call(const CallableBase& self, const nox::FunctionArgsTupleType<_FunctionType>& args)noexcept(false)
+			inline static constexpr nox::function_result_t<_FunctionType> Call(const CallableBase& self, const nox::function_args_tuple_t<_FunctionType>& args)noexcept(false)
 			{
 				const Callable<_Functor>& self_impl = static_cast<const Callable<_Functor>&>(self);
 
 				//	メンバクラスインスタンスを加工せず、そのまま呼び出せる場合
-				if constexpr (std::is_void_v<nox::FunctionResultType<_FunctionType>>)
+				if constexpr (std::is_void_v<nox::function_result_t<_FunctionType>>)
 				{
 					std::apply(self_impl.functor_, args);
 					//std::invoke(self_impl.functor_, std::forward<Args>(args)...);
@@ -238,11 +238,11 @@ namespace nox
 			}
 
 			template<class... Args>
-			inline static constexpr nox::FunctionResultType<_FunctionType> CallRef(CallableBase&& self, Args&&... args)noexcept
+			inline static constexpr nox::function_result_t<_FunctionType> CallRef(CallableBase&& self, Args&&... args)noexcept
 			{
 				Callable<_Functor>&& self_impl = static_cast<Callable<_Functor>&&>(self);
 
-				if constexpr (std::is_void_v<nox::FunctionResultType<_FunctionType>>)
+				if constexpr (std::is_void_v<nox::function_result_t<_FunctionType>>)
 				{
 					std::apply(self_impl.functor_, std::forward<Args>(args)...);
 				}
@@ -328,12 +328,12 @@ namespace nox
 			}
 
 		private:
-			inline static constexpr nox::FunctionResultType<_FunctionType> Call(const CallableBase& self, const nox::FunctionArgsTupleType<_FunctionType>& args)noexcept
+			inline static constexpr nox::function_result_t<_FunctionType> Call(const CallableBase& self, const nox::function_args_tuple_t<_FunctionType>& args)noexcept
 			{
 				const CallableMember<_InstanceType, _MemberPointerValue>& self_impl = static_cast<const CallableMember<_InstanceType, _MemberPointerValue>&>(self);
 
 				//	メンバクラスインスタンスを加工せず、そのまま呼び出せる場合
-				if constexpr (std::is_void_v<nox::FunctionResultType<_FunctionType>>)
+				if constexpr (std::is_void_v<nox::function_result_t<_FunctionType>>)
 				{
 					std::apply(_MemberPointerValue, std::tuple_cat(std::make_tuple(self_impl.instance_), args));
 				}
@@ -343,11 +343,11 @@ namespace nox
 				}
 			}
 
-			inline static constexpr nox::FunctionResultType<_FunctionType> CallRef(CallableBase&& self, const nox::FunctionArgsTupleType<_FunctionType>& args)noexcept
+			inline static constexpr nox::function_result_t<_FunctionType> CallRef(CallableBase&& self, const nox::function_args_tuple_t<_FunctionType>& args)noexcept
 			{
 				CallableMember<_InstanceType, _MemberPointerValue>&& self_impl = static_cast<CallableMember<_InstanceType, _MemberPointerValue>&&>(self);
 
-				if constexpr (std::is_void_v<nox::FunctionResultType<_FunctionType>>)
+				if constexpr (std::is_void_v<nox::function_result_t<_FunctionType>>)
 				{
 					std::apply(_MemberPointerValue, std::tuple_cat(std::make_tuple(self_impl.instance_), args));
 				}
@@ -414,32 +414,32 @@ namespace nox
 			}
 
 		private:
-			inline static constexpr nox::FunctionResultType<_FunctionType> Call(const CallableBase&, const nox::FunctionArgsTupleType<_FunctionType>& )noexcept
+			inline static constexpr nox::function_result_t<_FunctionType> Call(const CallableBase&, const nox::function_args_tuple_t<_FunctionType>& )noexcept
 			{
 				NOX_ASSERT(false, u"Delegate Bad Call");
 
-				if constexpr (std::is_void_v<nox::FunctionResultType<_FunctionType>>)
+				if constexpr (std::is_void_v<nox::function_result_t<_FunctionType>>)
 				{
 					return;
 				}
 				else
 				{
-					nox::FunctionResultType<_FunctionType>(*dummy)() = nullptr;
+					nox::function_result_t<_FunctionType>(*dummy)() = nullptr;
 					return (*dummy)();
 				}
 			}
 
-			inline static constexpr nox::FunctionResultType<_FunctionType> CallRef(CallableBase&&, const nox::FunctionArgsTupleType<_FunctionType>&)noexcept
+			inline static constexpr nox::function_result_t<_FunctionType> CallRef(CallableBase&&, const nox::function_args_tuple_t<_FunctionType>&)noexcept
 			{
 				NOX_ASSERT(false, u"Delegate Bad Call");
 
-				if constexpr (std::is_void_v<nox::FunctionResultType<_FunctionType>>)
+				if constexpr (std::is_void_v<nox::function_result_t<_FunctionType>>)
 				{
 					return;
 				}
 				else
 				{
-					nox::FunctionResultType<_FunctionType>(*dummy)() = nullptr;
+					nox::function_result_t<_FunctionType>(*dummy)() = nullptr;
 					return (*dummy)();
 				}
 			}
@@ -485,14 +485,14 @@ namespace nox
 		static constexpr bool kDelegateRequiresFunctionPointer = false;
 
 		template<class _Functor> requires(
-			nox::IsStaticFunctionPointerValue<_Functor> &&
-			(std::is_function_v<_FunctionType> || nox::IsStaticFunctionPointerValue<_FunctionType>) &&
+			nox::is_static_function_pointer_v<_Functor> &&
+			(std::is_function_v<_FunctionType> || nox::is_static_function_pointer_v<_FunctionType>) &&
 
 			// is noexcept
-			(!nox::IsFunctionNoexceptValue<_FunctionType> || nox::IsFunctionNoexceptValue<_Functor>) &&
+			(!nox::is_function_noexcept_v<_FunctionType> || nox::is_function_noexcept_v<_Functor>) &&
 
 			//	is invocable
-			std::is_same_v<nox::FunctionResultType<_FunctionType>, nox::InvokeResultTypeWithTupleLike<_Functor, nox::FunctionArgsTupleType<_FunctionType>>>
+			std::is_same_v<nox::function_result_t<_FunctionType>, nox::invoke_result_with_tuple_like_t<_Functor, nox::function_args_tuple_t<_FunctionType>>>
 
 			)
 			static constexpr bool kDelegateRequiresFunctionPointer<_Functor> = true;
@@ -516,7 +516,7 @@ namespace nox
 		template<class>
 		static constexpr bool kDelegateRequiresFunctionObject = false;
 		template<class _Functor> requires(
-			nox::IsFunctionObjectWithTupleLikeValue<_Functor, nox::FunctionArgsTupleType<_FunctionType>> &&
+			nox::is_function_object_with_tuple_like_v<_Functor, nox::function_args_tuple_t<_FunctionType>> &&
 
 			// is not base of DelegateBase
 			!std::is_base_of_v<DelegateBase<_FunctionType>, std::decay_t<_Functor>>&&
@@ -524,13 +524,13 @@ namespace nox
 			std::is_function_v<_FunctionType> &&
 
 			// is const
-			(!nox::IsFunctionConstValue<_FunctionType> || nox::IsFunctionObjectConstWithTupleLikeValue<_Functor, nox::FunctionArgsTupleType<_FunctionType>>) &&
+			(!nox::is_function_const_v<_FunctionType> || nox::is_function_object_const_with_tuple_like_v<_Functor, nox::function_args_tuple_t<_FunctionType>>) &&
 
 			// is noexcept
-			(!nox::IsFunctionNoexceptValue<_FunctionType> || nox::IsFunctionObjectNoexceptWithTupleLikeValue<_Functor, nox::FunctionArgsTupleType<_FunctionType>>) &&
+			(!nox::is_function_noexcept_v<_FunctionType> || nox::is_function_object_noexcept_with_tuple_like_v<_Functor, nox::function_args_tuple_t<_FunctionType>>) &&
 
 			//	is invocable
-			std::is_same_v<nox::FunctionResultType<_FunctionType>, nox::FunctionObjectResultTypeWithTupleLike<_Functor, nox::FunctionArgsTupleType<_FunctionType>>>
+			std::is_same_v<nox::function_result_t<_FunctionType>, nox::function_object_result_with_tuple_like_t<_Functor, nox::function_args_tuple_t<_FunctionType>>>
 			)
 			static constexpr bool kDelegateRequiresFunctionObject<_Functor> = true;
 
@@ -554,13 +554,13 @@ namespace nox
 			(std::is_function_v<_FunctionType> || std::is_member_function_pointer_v<_FunctionType>) &&
 			
 			//	is const
-			(!nox::IsFunctionConstValue<_FunctionType> || nox::IsFunctionConstValue<decltype(_MemberPointerValue)>) &&
+			(!nox::is_function_const_v<_FunctionType> || nox::is_function_const_v<decltype(_MemberPointerValue)>) &&
 
 			//	is noexcept
-			(!nox::IsFunctionNoexceptValue<_FunctionType> || nox::IsFunctionNoexceptValue<decltype(_MemberPointerValue)>) &&
+			(!nox::is_function_noexcept_v<_FunctionType> || nox::is_function_noexcept_v<decltype(_MemberPointerValue)>) &&
 
 			//	is invocable
-			std::is_same_v<nox::FunctionResultType<_FunctionType>, nox::InvokeResultTypeWithTupleLike<decltype(_MemberPointerValue), nox::TupleCatType<_Instance, nox::FunctionArgsTupleType<_FunctionType>>>>
+			std::is_same_v<nox::function_result_t<_FunctionType>, nox::invoke_result_with_tuple_like_t<decltype(_MemberPointerValue), nox::tuple_cat_t<_Instance, nox::function_args_tuple_t<_FunctionType>>>>
 			)
 			static constexpr bool kDelegateRequiresMemberFunctionPointer< _MemberPointerValue, _Instance> = true;
 
@@ -590,7 +590,7 @@ namespace nox
 
 		
 			//	is invocable
-			std::is_same_v<nox::FunctionResultType<_FunctionType>, nox::InvokeResultTypeWithTupleLike<decltype(_MemberPointerValue), nox::TupleCatType<_Instance, nox::FunctionArgsTupleType<_FunctionType>>>>
+			std::is_same_v<nox::function_result_t<_FunctionType>, nox::invoke_result_with_tuple_like_t<decltype(_MemberPointerValue), nox::tuple_cat_t<_Instance, nox::function_args_tuple_t<_FunctionType>>>>
 			)
 			static constexpr bool kDelegateRequiresMemberObjectPointer< _MemberPointerValue, _Instance> = true;
 
@@ -623,7 +623,7 @@ namespace nox
 			(_Alignment >= alignof(typename DelegateBase<_FunctionType>::template CallableMember<_Instance, _MemberPointerValue>)) &&
 
 			//	is invocable
-			std::is_same_v<nox::FunctionResultType<_FunctionType>, nox::InvokeResultTypeWithTupleLike<decltype(_MemberPointerValue), nox::TupleCatType<_Instance, nox::FunctionArgsTupleType<_FunctionType>>>>
+			std::is_same_v<nox::function_result_t<_FunctionType>, nox::invoke_result_with_tuple_like_t<decltype(_MemberPointerValue), nox::tuple_cat_t<_Instance, nox::function_args_tuple_t<_FunctionType>>>>
 				)
 		*/
 
@@ -633,10 +633,10 @@ namespace nox
 	public:
 		static constexpr size_t kMinSize = sizeof(CallableBase);
 
-		template<class... Args> requires(std::is_invocable_v<_FunctionType, Args...> && !nox::IsFunctionRValueReference<_FunctionType>)
-		inline constexpr nox::FunctionResultType<_FunctionType> operator()(Args&&... args)const& noexcept(nox::IsFunctionNoexceptValue<_FunctionType>)
+		template<class... Args> requires(std::is_invocable_v<_FunctionType, Args...> && !nox::is_function_rvalue_reference_v<_FunctionType>)
+		inline constexpr nox::function_result_t<_FunctionType> operator()(Args&&... args)const& noexcept(nox::is_function_noexcept_v<_FunctionType>)
 		{
-			if constexpr (std::is_void_v<nox::FunctionResultType<_FunctionType>>)
+			if constexpr (std::is_void_v<nox::function_result_t<_FunctionType>>)
 			{
 				this->GetCallable()(std::forward<Args>(args)...);
 			}
@@ -646,10 +646,10 @@ namespace nox
 			}
 		}
 
-		template<class... Args> requires(std::is_invocable_v<_FunctionType, Args...> && nox::IsFunctionRValueReference<_FunctionType>)
-			inline constexpr nox::FunctionResultType<_FunctionType> operator()(Args&&... args)const&& noexcept(nox::IsFunctionNoexceptValue<_FunctionType>)
+		template<class... Args> requires(std::is_invocable_v<_FunctionType, Args...> && nox::is_function_rvalue_reference_v<_FunctionType>)
+			inline constexpr nox::function_result_t<_FunctionType> operator()(Args&&... args)const&& noexcept(nox::is_function_noexcept_v<_FunctionType>)
 		{
-			if constexpr (std::is_void_v<nox::FunctionResultType<_FunctionType>>)
+			if constexpr (std::is_void_v<nox::function_result_t<_FunctionType>>)
 			{
 				static_cast<CallableBase&&>(this->GetCallable())(std::forward<Args>(args)...);
 			}
@@ -859,7 +859,7 @@ namespace nox
 			(_Alignment >= alignof(typename DelegateBase<_FunctionType>::template CallableMember<_Instance, _MemberPointerValue>)) &&
 
 			//	is invocable
-			std::is_same_v<nox::FunctionResultType<_FunctionType>, nox::InvokeResultTypeWithTupleLike<decltype(_MemberPointerValue), nox::TupleCatType<_Instance, nox::FunctionArgsTupleType<_FunctionType>>>>
+			std::is_same_v<nox::function_result_t<_FunctionType>, nox::invoke_result_with_tuple_like_t<decltype(_MemberPointerValue), nox::tuple_cat_t<_Instance, nox::function_args_tuple_t<_FunctionType>>>>
 				)
 			inline constexpr Delegate(nox::NontypeTag<_MemberPointerValue>, _Instance&& instance)noexcept
 		{
@@ -1008,8 +1008,8 @@ namespace nox
 	class DelegateRef
 	{
 		/// @brief		"_FunctionType"のnoexcept性
-		/// @details	何故か"IsFunctionNoexceptValue"を直接使うとエラーになるため、定数定義を使用
-		static constexpr bool IsNoexcept = nox::IsFunctionNoexceptValue<_FunctionType>;
+		/// @details	何故か"is_function_noexcept_v"を直接使うとエラーになるため、定数定義を使用
+		static constexpr bool IsNoexcept = nox::is_function_noexcept_v<_FunctionType>;
 		
 	public:
 		using FunctionType = _FunctionType;
@@ -1037,14 +1037,14 @@ namespace nox
 		/// @brief 関数ポインタ
 		template<class _F> requires(
 			// functor type
-			nox::IsStaticFunctionPointerValue<_F> &&
-			(std::is_function_v<_FunctionType> || nox::IsStaticFunctionPointerValue<_F>) &&
+			nox::is_static_function_pointer_v<_F> &&
+			(std::is_function_v<_FunctionType> || nox::is_static_function_pointer_v<_F>) &&
 
 			//	is noexcept
-			(!nox::IsFunctionNoexceptValue<_FunctionType> || nox::IsFunctionNoexceptValue<_F>) &&
+			(!nox::is_function_noexcept_v<_FunctionType> || nox::is_function_noexcept_v<_F>) &&
 
 			//	invocable
-			nox::IsInvocableWithTupleLikeValue<_F, nox::FunctionArgsTupleType<_FunctionType>> 
+			nox::is_invocable_with_tuple_like_v<_F, nox::function_args_tuple_t<_FunctionType>> 
 			)
 		inline constexpr DelegateRef(_F&& functor)noexcept :
 			object_(const_cast<void*>(static_cast<const void*>(nox::util::AddressOfLvalueReference(functor)))),
@@ -1056,7 +1056,7 @@ namespace nox
 		template<class _F> 
 			requires(
 			// functor type
-			nox::IsFunctionObjectWithTupleLikeValue<_F, nox::FunctionArgsTupleType<_FunctionType>> &&
+			nox::is_function_object_with_tuple_like_v<_F, nox::function_args_tuple_t<_FunctionType>> &&
 			!std::is_same_v<std::decay_t<_F>, DelegateRef<_FunctionType>>&&
 			std::is_function_v<_FunctionType> &&
 
@@ -1064,13 +1064,13 @@ namespace nox
 			!std::is_same_v<std::decay_t<_F>, DelegateRef<_FunctionType>> &&
 
 			//	is const
-			(!nox::IsFunctionConstValue<_FunctionType> || nox::IsFunctionConstValue<_F>) &&
+			(!nox::is_function_const_v<_FunctionType> || nox::is_function_const_v<_F>) &&
 
 			//	is noexcept
-			(!nox::IsFunctionNoexceptValue<_FunctionType> || nox::IsFunctionNoexceptValue<_F>) &&
+			(!nox::is_function_noexcept_v<_FunctionType> || nox::is_function_noexcept_v<_F>) &&
 
 			// result type
-			std::is_same_v<nox::FunctionResultType<_FunctionType>, nox::FunctionObjectResultTypeWithTupleLike<_F, nox::FunctionArgsTupleType<_FunctionType>>>
+			std::is_same_v<nox::function_result_t<_FunctionType>, nox::function_object_result_with_tuple_like_t<_F, nox::function_args_tuple_t<_FunctionType>>>
 			)
 		inline constexpr DelegateRef(_F&& functor)noexcept :
 			object_(const_cast<void*>(static_cast<const void*>(nox::util::AddressOfLvalueReference(functor)))),
@@ -1086,13 +1086,13 @@ namespace nox
 			(std::is_function_v<_FunctionType> || std::is_member_function_pointer_v<_FunctionType>) &&
 
 			//	is const
-			(!nox::IsFunctionConstValue<_FunctionType> || nox::IsFunctionConstValue<decltype(_MemberPointerValue)>) &&
+			(!nox::is_function_const_v<_FunctionType> || nox::is_function_const_v<decltype(_MemberPointerValue)>) &&
 
 			//	is noexcept
-			(!nox::IsFunctionNoexceptValue<_FunctionType> || nox::IsFunctionNoexceptValue<decltype(_MemberPointerValue)>) &&
+			(!nox::is_function_noexcept_v<_FunctionType> || nox::is_function_noexcept_v<decltype(_MemberPointerValue)>) &&
 
 			//	is invocable
-			std::is_same_v<nox::FunctionResultType<_FunctionType>, nox::InvokeResultTypeWithTupleLike<decltype(_MemberPointerValue), nox::TupleCatType<_InstanceType, nox::FunctionArgsTupleType<_FunctionType>>>>
+			std::is_same_v<nox::function_result_t<_FunctionType>, nox::invoke_result_with_tuple_like_t<decltype(_MemberPointerValue), nox::tuple_cat_t<_InstanceType, nox::function_args_tuple_t<_FunctionType>>>>
 			)
 		inline constexpr DelegateRef(nox::NontypeTag<_MemberPointerValue>, _InstanceType&& instance)noexcept:
 			object_(const_cast<void*>(static_cast<const void*>(nox::util::AddressOfLvalueReference(instance)))),
@@ -1108,10 +1108,10 @@ namespace nox
 				(std::is_function_v<_FunctionType> || std::is_member_object_pointer_v<_FunctionType>) &&
 
 				// result type
-				std::is_same_v<nox::FunctionResultType<_FunctionType>, nox::ObjectPointerResultType<decltype(_MemberPointerValue)>>&&
+				std::is_same_v<nox::function_result_t<_FunctionType>, nox::object_pointer_result_t<decltype(_MemberPointerValue)>>&&
 
 					//	is invocable
-					std::is_same_v<nox::FunctionResultType<_FunctionType>, nox::InvokeResultTypeWithTupleLike<decltype(_MemberPointerValue), nox::TupleCatType<_InstanceType, nox::FunctionArgsTupleType<_FunctionType>>>>
+					std::is_same_v<nox::function_result_t<_FunctionType>, nox::invoke_result_with_tuple_like_t<decltype(_MemberPointerValue), nox::tuple_cat_t<_InstanceType, nox::function_args_tuple_t<_FunctionType>>>>
 			)
 			inline constexpr DelegateRef(nox::NontypeTag<_MemberPointerValue>, _InstanceType&& instance)noexcept :
 			object_(const_cast<void*>(static_cast<const void*>(nox::util::AddressOfLvalueReference(instance)))),
@@ -1131,7 +1131,7 @@ namespace nox
 		}
 	
 		template<class... Args>
-		inline constexpr nox::FunctionResultType<_FunctionType> operator()(Args&&... args)noexcept(nox::IsFunctionNoexceptValue<_FunctionType>)
+		inline constexpr nox::function_result_t<_FunctionType> operator()(Args&&... args)noexcept(nox::is_function_noexcept_v<_FunctionType>)
 		{
 			return call_(object_, std::make_tuple(std::forward<Args>(args)...));
 		}
@@ -1198,7 +1198,7 @@ namespace nox
 		void* object_;
 
 		/// @brief		呼び出し用関数ポインタ
-		nox::FunctionResultType<_FunctionType>(*call_)(void*, nox::FunctionArgsTupleType<_FunctionType>&&)noexcept(nox::IsFunctionNoexceptValue<_FunctionType>);
+		nox::function_result_t<_FunctionType>(*call_)(void*, nox::function_args_tuple_t<_FunctionType>&&)noexcept(nox::is_function_noexcept_v<_FunctionType>);
 
 		/// @brief 非メンバの呼び出し
 		/// @tparam _Functor 
@@ -1206,17 +1206,17 @@ namespace nox
 		/// @param args 
 		/// @return 
 		template<class _Functor>
-		inline static constexpr nox::FunctionResultType<_FunctionType> Call(void* functor, nox::FunctionArgsTupleType<_FunctionType>&& args)noexcept(IsNoexcept)
+		inline static constexpr nox::function_result_t<_FunctionType> Call(void* functor, nox::function_args_tuple_t<_FunctionType>&& args)noexcept(IsNoexcept)
 		{
 			decltype(auto) functor_impl = *reinterpret_cast<std::conditional_t<std::is_pointer_v<std::decay_t<_Functor>>, _Functor, std::add_pointer_t<_Functor>>>(functor);
 
-			if constexpr (std::is_void_v<nox::FunctionResultType<_FunctionType>>)
+			if constexpr (std::is_void_v<nox::function_result_t<_FunctionType>>)
 			{
-				std::apply(functor_impl, std::forward<nox::FunctionArgsTupleType<_FunctionType>>(args));
+				std::apply(functor_impl, std::forward<nox::function_args_tuple_t<_FunctionType>>(args));
 			}
 			else
 			{
-				return std::apply(functor_impl, std::forward<nox::FunctionArgsTupleType<_FunctionType>>(args));
+				return std::apply(functor_impl, std::forward<nox::function_args_tuple_t<_FunctionType>>(args));
 			}
 		}
 
@@ -1230,32 +1230,32 @@ namespace nox
 			std::is_member_object_pointer_v<decltype(_MemberFunctionPointer)> == true ||
 			std::is_member_function_pointer_v<decltype(_MemberFunctionPointer)> == true 
 			)
-		inline static constexpr nox::FunctionResultType<_FunctionType> MemberCall(void* instance, nox::FunctionArgsTupleType<_FunctionType>&& args)noexcept(IsNoexcept)
+		inline static constexpr nox::function_result_t<_FunctionType> MemberCall(void* instance, nox::function_args_tuple_t<_FunctionType>&& args)noexcept(IsNoexcept)
 		{
 			decltype(auto) instance_impl = *reinterpret_cast<std::conditional_t<std::is_pointer_v<_InstanceType>, _InstanceType, std::add_pointer_t<_InstanceType>>>(instance);
 			decltype(auto) instance_addr = nox::util::TryToAddress(instance_impl);
-			if constexpr (std::is_void_v<nox::FunctionResultType<_FunctionType>>)
+			if constexpr (std::is_void_v<nox::function_result_t<_FunctionType>>)
 			{
-				std::apply(_MemberFunctionPointer, std::tuple_cat(std::make_tuple(instance_addr), std::forward<nox::FunctionArgsTupleType<_FunctionType>>(args)));
+				std::apply(_MemberFunctionPointer, std::tuple_cat(std::make_tuple(instance_addr), std::forward<nox::function_args_tuple_t<_FunctionType>>(args)));
 			}
 			else
 			{
-				return std::apply(_MemberFunctionPointer, std::tuple_cat(std::make_tuple(instance_addr), std::forward<nox::FunctionArgsTupleType<_FunctionType>>(args)));
-//				return std::apply(_MemberFunctionPointer, instance_addr, std::forward<nox::FunctionArgsTupleType<_FunctionType>>(args));
+				return std::apply(_MemberFunctionPointer, std::tuple_cat(std::make_tuple(instance_addr), std::forward<nox::function_args_tuple_t<_FunctionType>>(args)));
+//				return std::apply(_MemberFunctionPointer, instance_addr, std::forward<nox::function_args_tuple_t<_FunctionType>>(args));
 			}
 		}
 
 		/// @brief 無効な呼び出し
-		inline static constexpr nox::FunctionResultType<_FunctionType> BadCall(void*, nox::FunctionArgsTupleType<_FunctionType>&&)noexcept(nox::IsFunctionNoexceptValue<_FunctionType>)
+		inline static constexpr nox::function_result_t<_FunctionType> BadCall(void*, nox::function_args_tuple_t<_FunctionType>&&)noexcept(nox::is_function_noexcept_v<_FunctionType>)
 		{
 			NOX_ASSERT(false, u"bad call");
-			if constexpr (std::is_void_v<nox::FunctionResultType<_FunctionType>>)
+			if constexpr (std::is_void_v<nox::function_result_t<_FunctionType>>)
 			{
 				return;
 			}
 			else
 			{
-				constexpr nox::FunctionResultType<_FunctionType>(*const dummy)() = nullptr;
+				constexpr nox::function_result_t<_FunctionType>(*const dummy)() = nullptr;
 				return (*dummy)();
 			}
 		}
@@ -1343,11 +1343,11 @@ namespace nox
 		}*/
 
 		template<class... Args>
-		inline constexpr nox::FunctionResultType<_FunctionType> operator()(Args&&... args)const&noexcept(nox::IsFunctionNoexceptValue<_FunctionType>)
+		inline constexpr nox::function_result_t<_FunctionType> operator()(Args&&... args)const&noexcept(nox::is_function_noexcept_v<_FunctionType>)
 		{
 			NOX_ASSERT(!delegate_list_.empty(), u"MulticastDelegate is empty");
 
-			if constexpr (std::is_void_v<nox::FunctionResultType<_FunctionType>>)
+			if constexpr (std::is_void_v<nox::function_result_t<_FunctionType>>)
 			{
 				for (const auto& delegate : delegate_list_)
 				{

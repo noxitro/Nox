@@ -33,11 +33,11 @@ namespace nox
 	/// @brief 変数の型
 	/// @tparam T 
 	template<class T>
-	using ObjectPointerResultType = typename nox::detail::ObjectPointerSignature<T>::ResultType;
+	using object_pointer_result_t = typename nox::detail::ObjectPointerSignature<T>::ResultType;
 
 	/// @brief メンバオブジェクトポインタのクラス型
 	/// @tparam T 
 	template<nox::concepts::MemberObjectPointer T>
-	using MemberObjectPointerClassType = typename nox::detail::ObjectPointerSignature<T>::ClassType;
+	using member_object_pointer_class_t = typename nox::detail::ObjectPointerSignature<T>::ClassType;
 
 }

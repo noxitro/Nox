@@ -110,6 +110,13 @@ dotnet build Editor/Studio.slnx
 
 定数・列挙子は `k_snake_case` / 接頭辞なし `PascalCase` からの移行中。触ったファイルでは `kPascalCase` へ寄せてよいが、無関係な箇所の一括リネームはしない。
 
+型特性 (型から bool・値・型を 1 つ求めるメタ関数) は標準ライブラリと同じ `snake_case` にし、`std::` の型特性と並べて読めるようにする。
+
+- bool は `is_xxx_v` / `has_xxx_v`、値は `xxx_v`、型の変換は `xxx_t`。`kPascalCase` の定数規則は当てはめない。
+- 構造体で実装するときは `detail::is_xxx` / `detail::xxx` に置き、結果はメンバ `::value` / `::type` で返す (`std::true_type` などを継承してよい)。
+- concept は `PascalCase` (`TupleLike`)。`Enum` / `Class` / `Char` のようにキーワードと衝突する名前があるため。
+- 複数のメンバを持つ解析用のクラス (`detail::FunctionSignature` など) は通常のクラスとして `PascalCase`。メンバ型 (`ResultType` / `ClassType` など) も `PascalCase` で、bool のメンバは `is_xxx`。
+
 ### 例外 (既存コードに合わせ、Google と異なる)
 
 - インデントはタブ。

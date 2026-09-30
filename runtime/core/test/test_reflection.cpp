@@ -53,11 +53,11 @@ inline constexpr auto TestFunctor(F&& f, Args&&... args)
 void nox::test::TestReflection()
 {
 
-	//using f = nox::ToMemberFunctionPointerType<nox::StringView(std::span<nox::char32>) const, nox::Object>;
+	//using f = nox::to_member_function_pointer_t<nox::StringView(std::span<nox::char32>) const, nox::Object>;
 	//static_cast<f>(& nox::Object::ToString);
-	//static_cast<nox::ToMemberFunctionPointerType<nox::StringView(std::span<nox::char32>) const, nox::Object>>(nox::Object::ToString) > ;
-	//nox::GetFunctionPointerId<static_cast<nox::ToMemberFunctionPointerType<nox::StringView(std::span<nox::char32>) const, nox::Object>>(&nox::Object::ToString)>(),	//	function_id
-	////nox::ToMemberFunctionPointerType<void()const, nox::Object>;
+	//static_cast<nox::to_member_function_pointer_t<nox::StringView(std::span<nox::char32>) const, nox::Object>>(nox::Object::ToString) > ;
+	//nox::GetFunctionPointerId<static_cast<nox::to_member_function_pointer_t<nox::StringView(std::span<nox::char32>) const, nox::Object>>(&nox::Object::ToString)>(),	//	function_id
+	////nox::to_member_function_pointer_t<void()const, nox::Object>;
 
 	////	getter
 	//void* out{};
@@ -170,7 +170,7 @@ void nox::test::TestReflection()
 //
 //	std::is_invocable<decltype(&LocalClass::Func), const std::shared_ptr<LocalClass>>::value;
 ////	using t = nox::util::ToAddressType<LocalClass>;
-////	nox::InvokeResultTypeWithTupleLike<decltype(&LocalClass::Func), nox::TupleCatType<t, std::tuple<>>>;
+////	nox::invoke_result_with_tuple_like_t<decltype(&LocalClass::Func), nox::tuple_cat_t<t, std::tuple<>>>;
 //
 //	decltype(auto) p = std::make_pair(nox::Nontype<&LocalClass::Func>, local_class);
 //	using t2 = typename decltype(p)::second_type;

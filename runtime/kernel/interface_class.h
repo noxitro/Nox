@@ -14,5 +14,5 @@ namespace nox
 	};
 
 	template<class T>
-	constexpr bool IsInterfaceValue = std::is_base_of_v<nox::Interface, T> && std::is_polymorphic_v<T> == false && sizeof(T) <= 1U;
+	constexpr bool is_interface_v = std::is_base_of_v<nox::Interface, T> && std::is_polymorphic_v<T> == false && sizeof(T) <= 1U;
 }

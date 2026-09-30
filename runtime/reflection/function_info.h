@@ -415,7 +415,7 @@ namespace nox::reflection
 		};
 
 		template<class RawFunction>
-		inline	constexpr	nox::reflection::detail::FunctionInfoImpl<nox::FunctionResultType<RawFunction>>	CreateFunctionInfo(
+		inline	constexpr	nox::reflection::detail::FunctionInfoImpl<nox::function_result_t<RawFunction>>	CreateFunctionInfo(
 			const nox::FunctionPointerId& function_id,
 			std::u8string_view	name,
 			std::u8string_view	fullname,
@@ -426,7 +426,7 @@ namespace nox::reflection
 			const std::reference_wrapper<const FunctionArgumentInfo>* function_param_list,
 			const std::uint8_t function_param_list_length,
 			const FunctionAttributeFlag extraAttributeFlags,
-			const std::tuple<nox::FunctionResultType<RawFunction>(*)(void**), std::uint8_t>* function_holder_table,
+			const std::tuple<nox::function_result_t<RawFunction>(*)(void**), std::uint8_t>* function_holder_table,
 			const std::uint8_t function_holder_table_length
 		)noexcept
 		{
@@ -435,7 +435,7 @@ namespace nox::reflection
 			
 			if constexpr (std::is_member_function_pointer_v<RawFunction> == true)
 			{
-				return nox::reflection::detail::FunctionInfoImpl<nox::FunctionResultType<RawFunction>>(
+				return nox::reflection::detail::FunctionInfoImpl<nox::function_result_t<RawFunction>>(
 					name,
 					fullname,
 					_namespace,
@@ -444,8 +444,8 @@ namespace nox::reflection
 					function_id,
 					function_param_list,
 					function_param_list_length,
-					nox::reflection::Typeof<nox::FunctionClassType<RawFunction>>(),
-					nox::reflection::Typeof<nox::FunctionResultType<RawFunction>>(),
+					nox::reflection::Typeof<nox::function_class_t<RawFunction>>(),
+					nox::reflection::Typeof<nox::function_result_t<RawFunction>>(),
 					access_level,
 					method_attribute_flags,
 					function_holder_table,
@@ -454,7 +454,7 @@ namespace nox::reflection
 			}
 			else
 			{
-				return nox::reflection::detail::FunctionInfoImpl<nox::FunctionResultType<RawFunction>>(
+				return nox::reflection::detail::FunctionInfoImpl<nox::function_result_t<RawFunction>>(
 					name,
 					fullname,
 					_namespace,
@@ -464,7 +464,7 @@ namespace nox::reflection
 					function_param_list,
 					function_param_list_length,
 					nox::reflection::GetInvalidType(),
-					nox::reflection::Typeof<nox::FunctionResultType<RawFunction>>(),
+					nox::reflection::Typeof<nox::function_result_t<RawFunction>>(),
 					access_level,
 					method_attribute_flags,
 					function_holder_table,

@@ -27,7 +27,7 @@ namespace nox::os
 		constinit std::span<const nox::char16* const> command_line_args_;
 
 		/// @brief os関数を初期化したネイティブスレッドID
-		constinit nox::FunctionResultType<decltype(&nox::os::Thread::GetNativeThreadId)> native_thread_id_ = {};
+		constinit nox::function_result_t<decltype(&nox::os::Thread::GetNativeThreadId)> native_thread_id_ = {};
 
 		/// @brief 
 		constinit void(*window_dispatch_function_)(const void*) = nullptr;

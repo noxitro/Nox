@@ -37,7 +37,7 @@ namespace nox::util
 		template<class CharType>
 		size_t GetStringMaxSize();
 
-		template<class CharType> requires(IsCharTypeValue<CharType>)
+		template<class CharType> requires(is_char_type_v<CharType>)
 			struct FormatStringHolder
 		{
 			template<class From> requires(!std::is_same_v< CharType, From>)
@@ -70,7 +70,7 @@ namespace nox::util
 		template<class To, class From>
 		inline consteval bool IsFormatArgNoConvertNeeded()
 		{
-			if constexpr (std::is_arithmetic_v<std::decay_t<From>> && !IsCharTypeValue<std::decay_t<From>>)
+			if constexpr (std::is_arithmetic_v<std::decay_t<From>> && !is_char_type_v<std::decay_t<From>>)
 			{
 				return true;
 			}
@@ -81,37 +81,37 @@ namespace nox::util
 		}
 
 		template<class To, class From>
-		struct CheckThroughFormatString : std::false_type {};
+		struct check_through_format_string : std::false_type {};
 
-		template<class To, class From> requires(std::is_arithmetic_v<std::decay_t<From>> && !IsCharTypeValue<std::decay_t<From>>)
-			struct CheckThroughFormatString<To, From> : std::true_type {};
+		template<class To, class From> requires(std::is_arithmetic_v<std::decay_t<From>> && !is_char_type_v<std::decay_t<From>>)
+			struct check_through_format_string<To, From> : std::true_type {};
 
 		template<class To, class From> requires(std::is_same_v<To, std::decay_t<std::remove_pointer_t<std::decay_t<From>>>>)
-			struct CheckThroughFormatString<To, From> : std::true_type {};
+			struct check_through_format_string<To, From> : std::true_type {};
 
-		template<class To, class From> requires(IsStringClassAllValue<std::decay_t<From>>&& std::is_same_v<To, typename std::decay_t<From>::value_type>)
-			struct CheckThroughFormatString<To, From> : std::true_type {};
+		template<class To, class From> requires(is_string_class_all_v<std::decay_t<From>>&& std::is_same_v<To, typename std::decay_t<From>::value_type>)
+			struct check_through_format_string<To, From> : std::true_type {};
 
-		template<class To, class From> requires(IsCharTypeValue<To>)
-			constexpr bool CheckThroughFormatStringValue = CheckThroughFormatString<To, From>::value;
+		template<class To, class From> requires(is_char_type_v<To>)
+			constexpr bool check_through_format_string_v = check_through_format_string<To, From>::value;
 
 		template<class From, class To>
-		inline constexpr bool IsFormatterValue = ::fmt::is_formattable<From, To>::value || std::is_convertible_v<From, std::basic_string_view<To>>;
+		inline constexpr bool is_formatter_v = ::fmt::is_formattable<From, To>::value || std::is_convertible_v<From, std::basic_string_view<To>>;
 
 
-		template<nox::concepts::Char To, class From> requires(IsFormatterValue<From, To>)
+		template<nox::concepts::Char To, class From> requires(is_formatter_v<From, To>)
 		inline auto ToFormatArg(From&& arg)
 		{
 			return arg;
 		}
 
-		template<nox::concepts::Char To, class From> requires(std::is_enum_v<std::remove_cvref_t<From>> && !IsFormatterValue<From, To>)
+		template<nox::concepts::Char To, class From> requires(std::is_enum_v<std::remove_cvref_t<From>> && !is_formatter_v<From, To>)
 		inline auto ToFormatArg(From&& arg)
 		{
 			return static_cast<std::underlying_type_t<std::remove_cvref_t<From>>>(arg);
 		}
 
-       template<nox::concepts::Char To, class From> requires(!IsFormatterValue<From, To> && !std::is_enum_v<std::remove_cvref_t<From>>)
+       template<nox::concepts::Char To, class From> requires(!is_formatter_v<From, To> && !std::is_enum_v<std::remove_cvref_t<From>>)
 		inline decltype(auto) ToFormatArg(From&& arg)
 		{
 			return FormatStringHolder<To>::Get(arg);
@@ -123,19 +123,19 @@ namespace nox::util
 		/// @param arg 
 		/// @param dest_buffer 
 		/// @return 
-		template<nox::concepts::Char To, class From> requires(IsFormatterValue<From, To>)
+		template<nox::concepts::Char To, class From> requires(is_formatter_v<From, To>)
 			inline auto ToFormatArg(From&& arg, std::span<To>)
 		{
 			return arg;
 		}
 
-		template<nox::concepts::Char To, class From> requires(std::is_enum_v<std::remove_cvref_t<From>> && !IsFormatterValue<From, To>)
+		template<nox::concepts::Char To, class From> requires(std::is_enum_v<std::remove_cvref_t<From>> && !is_formatter_v<From, To>)
 			inline auto ToFormatArg(From&& arg, std::span<To>)
 		{
 			return static_cast<std::underlying_type_t<std::remove_cvref_t<From>>>(arg);
 		}
 
-      template<nox::concepts::Char To, class From> requires(!IsFormatterValue<From, To> && !std::is_enum_v<std::remove_cvref_t<From>>)
+      template<nox::concepts::Char To, class From> requires(!is_formatter_v<From, To> && !std::is_enum_v<std::remove_cvref_t<From>>)
 			inline auto ToFormatArg(From&& arg, std::span<To> dest_buffer)
 		{
 			FormatStringHolder<To>::Get(arg, dest_buffer);
@@ -184,11 +184,11 @@ namespace nox::util
 		}
 
 		template <typename StrType, class... Args>
-		inline nox::StlBasicString<nox::StringCharType<StrType>> FormatImpl2(const StrType& format_str, const Args&... args)
+		inline nox::StlBasicString<nox::string_char_t<StrType>> FormatImpl2(const StrType& format_str, const Args&... args)
 		{
 			return nox::util::detail::FmtVFormat(
 				fmt::detail::to_string_view(format_str),
-				::fmt::make_format_args<::fmt::buffered_context<nox::StringCharType<StrType>>>(args...));
+				::fmt::make_format_args<::fmt::buffered_context<nox::string_char_t<StrType>>>(args...));
 		}
 
 		//	span ver
@@ -218,9 +218,9 @@ namespace nox::util
 	/// @param ...args 
 	/// @return 
 	template <typename StrType, class... Args>
-	inline nox::StlBasicString<nox::StringCharType<StrType>> Format(const StrType& format_str, Args&&... args)
+	inline nox::StlBasicString<nox::string_char_t<StrType>> Format(const StrType& format_str, Args&&... args)
 	{
-		return nox::util::detail::FormatImpl2(format_str, nox::util::detail::ToFormatArg< nox::StringCharType<StrType>>(std::forward<Args>(args))...);
+		return nox::util::detail::FormatImpl2(format_str, nox::util::detail::ToFormatArg< nox::string_char_t<StrType>>(std::forward<Args>(args))...);
 	}
 
 	/// @brief 指定バッファに格納するformat関数
@@ -231,17 +231,17 @@ namespace nox::util
 	/// @param format_str フォーマット用文字列
 	/// @param ...args 引数群
 	template <class S, size_t ArgumentBufferSize = 512, class... Args>
-	inline void Format(std::span<nox::StringCharType<S>> dest_buffer, const S& format_str, Args&&... args)
+	inline void Format(std::span<nox::string_char_t<S>> dest_buffer, const S& format_str, Args&&... args)
 	{
 		//	引数変換のための作業用バッファ
-		std::array<std::array<nox::StringCharType<S>, ArgumentBufferSize>, sizeof...(Args)> args_buffer{ 0 };
+		std::array<std::array<nox::string_char_t<S>, ArgumentBufferSize>, sizeof...(Args)> args_buffer{ 0 };
 
-		std::array<std::span<nox::StringCharType<S>>, sizeof...(Args)> args_span;
+		std::array<std::span<nox::string_char_t<S>>, sizeof...(Args)> args_span;
 		for (size_t i = 0; i < args_buffer.size(); ++i)
 		{
-			args_span[i] = std::span<nox::StringCharType<S>>(args_buffer[i]);
+			args_span[i] = std::span<nox::string_char_t<S>>(args_buffer[i]);
 		}
 
-		nox::util::detail::Format(dest_buffer, format_str, std::make_tuple(std::forward<Args>(args)...), std::span<std::span<nox::StringCharType<S>>>(args_span), std::make_index_sequence<sizeof...(Args)>());
+		nox::util::detail::Format(dest_buffer, format_str, std::make_tuple(std::forward<Args>(args)...), std::span<std::span<nox::string_char_t<S>>>(args_span), std::make_index_sequence<sizeof...(Args)>());
 	}
 }

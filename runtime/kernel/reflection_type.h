@@ -105,7 +105,7 @@ namespace nox::reflection
 		inline constexpr const Type& GetRemoveAllModifiersType()noexcept;
 
 		template<nox::concepts::FunctionSignatureType T>
-		inline constexpr std::array<std::reference_wrapper<const nox::reflection::Type>, nox::FunctionArgsLength<T>> GetArgumentTypeList()noexcept;
+		inline constexpr std::array<std::reference_wrapper<const nox::reflection::Type>, nox::function_args_length_v<T>> GetArgumentTypeList()noexcept;
 
 		template<class T>
 		inline constexpr const Type& GetOwnerType()noexcept;
@@ -506,7 +506,7 @@ namespace nox::reflection
 		{
 			inline static consteval std::uint32_t SafeSizeof()noexcept
 			{
-				if constexpr (nox::IsSizeofTypeValue<T>)
+				if constexpr (nox::is_sizeof_type_v<T>)
 				{
 					return sizeof(T);
 				}
@@ -518,7 +518,7 @@ namespace nox::reflection
 
 			inline static consteval std::uint32_t SafeAlignmentOf()noexcept
 			{
-				if constexpr (nox::IsSizeofTypeValue<T>)
+				if constexpr (nox::is_sizeof_type_v<T>)
 				{
 					return std::alignment_of_v<T>;
 				}
@@ -695,7 +695,7 @@ namespace nox::reflection
 		{
 		public:
 			inline constexpr CompileTimeTypeFunction()noexcept :
-				TypeImpl<T>(nox::FunctionArgsLength<T>, &GetArgumentTypeList),
+				TypeImpl<T>(nox::function_args_length_v<T>, &GetArgumentTypeList),
 				argument_type_table_(nox::reflection::detail::GetArgumentTypeList<T>())
 			{
 			}
@@ -708,7 +708,7 @@ namespace nox::reflection
 			}
 
 		private:
-			const std::array<std::reference_wrapper<const nox::reflection::Type>, nox::FunctionArgsLength<T>> argument_type_table_;
+			const std::array<std::reference_wrapper<const nox::reflection::Type>, nox::function_args_length_v<T>> argument_type_table_;
 		};
 	}
 
@@ -782,7 +782,7 @@ inline constexpr const nox::reflection::Type& nox::reflection::detail::GetResult
 {
 	if constexpr (nox::concepts::FunctionSignatureType<T> == true)
 	{
-		return nox::reflection::detail::ReflectionTypeHolder<nox::FunctionResultType<T>>::value;
+		return nox::reflection::detail::ReflectionTypeHolder<nox::function_result_t<T>>::value;
 	}
 	else
 	{
@@ -943,9 +943,9 @@ namespace nox::reflection::detail
 }
 
 template<nox::concepts::FunctionSignatureType T>
-inline constexpr std::array<std::reference_wrapper<const nox::reflection::Type>, nox::FunctionArgsLength<T>> nox::reflection::detail::GetArgumentTypeList()noexcept
+inline constexpr std::array<std::reference_wrapper<const nox::reflection::Type>, nox::function_args_length_v<T>> nox::reflection::detail::GetArgumentTypeList()noexcept
 {
-	return nox::reflection::detail::GetArgumentTypeListImpl<nox::FunctionArgsTupleType<T>>(std::make_integer_sequence<std::uint32_t, FunctionArgsLength<T>>{});
+	return nox::reflection::detail::GetArgumentTypeListImpl<nox::function_args_tuple_t<T>>(std::make_integer_sequence<std::uint32_t, function_args_length_v<T>>{});
 }
 
 template<class T>
@@ -953,11 +953,11 @@ inline constexpr const nox::reflection::Type& nox::reflection::detail::GetOwnerT
 {
 	if constexpr (std::is_member_function_pointer_v<T> == true)
 	{
-		return nox::reflection::detail::ReflectionTypeHolder<nox::FunctionClassType<T>>::value;
+		return nox::reflection::detail::ReflectionTypeHolder<nox::function_class_t<T>>::value;
 	}
 	else if constexpr (std::is_member_object_pointer_v<T> == true)
 	{
-		return nox::reflection::detail::ReflectionTypeHolder<nox::MemberObjectPointerClassType<T>>::value;
+		return nox::reflection::detail::ReflectionTypeHolder<nox::member_object_pointer_class_t<T>>::value;
 	}
 	else
 	{

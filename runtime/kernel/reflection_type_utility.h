@@ -223,10 +223,10 @@ namespace nox::reflection
 		template<class T> requires(std::is_class_v<T>)
 			struct TypeKindHolder<T> : ITypeKindHolder<nox::reflection::TypeKind::Class> {};
 
-		template<class T> requires(std::is_enum_v<T>&& nox::IsScopedEnumValue<T>)
+		template<class T> requires(std::is_enum_v<T>&& nox::is_scoped_enum_v<T>)
 			struct TypeKindHolder<T> : ITypeKindHolder<nox::reflection::TypeKind::ScopedEnum> {};
 
-		template<class T> requires(std::is_enum_v<T> && !nox::IsScopedEnumValue<T>)
+		template<class T> requires(std::is_enum_v<T> && !nox::is_scoped_enum_v<T>)
 			struct TypeKindHolder<T> : ITypeKindHolder<nox::reflection::TypeKind::Enum> {};
 
 		//	--- function ---
@@ -292,12 +292,12 @@ namespace nox::reflection
 	[[nodiscard]] inline constexpr FunctionAttributeFlag GetFunctionAttributeFlags()noexcept
 	{
 		FunctionAttributeFlag attr_flags = FunctionAttributeFlag::None;
-		attr_flags = nox::util::BitOrConditional<nox::IsFunctionConstValue<T>, FunctionAttributeFlag::Const>(attr_flags);
+		attr_flags = nox::util::BitOrConditional<nox::is_function_const_v<T>, FunctionAttributeFlag::Const>(attr_flags);
 		attr_flags = nox::util::BitOrConditional<std::is_member_function_pointer_v<T> == false, FunctionAttributeFlag::Static>(attr_flags);
-		attr_flags = nox::util::BitOrConditional<nox::IsFunctionVolatileValue<T>, FunctionAttributeFlag::Volatile>(attr_flags);
-		attr_flags = nox::util::BitOrConditional<nox::IsFunctionLValueReference<T>, FunctionAttributeFlag::LvalueRef>(attr_flags);
-		attr_flags = nox::util::BitOrConditional<nox::IsFunctionRValueReference<T>, FunctionAttributeFlag::RvalueRef>(attr_flags);
-		attr_flags = nox::util::BitOrConditional<nox::IsFunctionNoexceptValue<T>, FunctionAttributeFlag::Noexcept>(attr_flags);
+		attr_flags = nox::util::BitOrConditional<nox::is_function_volatile_v<T>, FunctionAttributeFlag::Volatile>(attr_flags);
+		attr_flags = nox::util::BitOrConditional<nox::is_function_lvalue_reference_v<T>, FunctionAttributeFlag::LvalueRef>(attr_flags);
+		attr_flags = nox::util::BitOrConditional<nox::is_function_rvalue_reference_v<T>, FunctionAttributeFlag::RvalueRef>(attr_flags);
+		attr_flags = nox::util::BitOrConditional<nox::is_function_noexcept_v<T>, FunctionAttributeFlag::Noexcept>(attr_flags);
 		attr_flags = nox::util::BitOrConditional<std::is_base_of_v<nox::Interface, T>, FunctionAttributeFlag::Noexcept>(attr_flags);
 
 		return attr_flags;

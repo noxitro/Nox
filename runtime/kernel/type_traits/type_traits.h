@@ -26,61 +26,61 @@ namespace nox
 	/// @brief new可能か
 	/// @tparam T 
 	template<class T>
-	inline constexpr bool IsNewableValue =
+	inline constexpr bool is_newable_v =
 		requires { new T(); };
 
 	/// @brief nothrow new可能か
 	/// @tparam T 
 	template<class T>
-	inline constexpr bool IsNothrowNewableValue =
+	inline constexpr bool is_nothrow_newable_v =
 		requires { { new T() } noexcept; };
 
 	template<class T>
-	inline constexpr bool IsDeleteableValue =
+	inline constexpr bool is_deletable_v =
 		requires(T * ptr) { delete ptr; };
 
-#pragma region ContainerElementType
+#pragma region container_element_t
 	namespace detail
 	{
 		template<class T>
-		struct ContainerElement
+		struct container_element
 		{
 			using type = T;
 		};
 
 		template<class T> requires(std::is_array_v<T>)
-			struct ContainerElement<T>
+			struct container_element<T>
 		{
 			using type = std::remove_extent_t<T>;
 		};
 
 		template<class T> requires(std::is_same_v<typename T::value_type, typename T::value_type> && !std::is_array_v<T>)
-		struct ContainerElement<T>
+		struct container_element<T>
 		{
 			using type = typename T::value_type;
 		};
 	}
 	template<class T>
-	using ContainerElementType = typename detail::ContainerElement<std::remove_reference_t<T>>::type;
+	using container_element_t = typename detail::container_element<std::remove_reference_t<T>>::type;
 
 	
 #pragma endregion
 
 	template<class>
-	constexpr bool IsTupleLikeValue = false;
+	constexpr bool is_tuple_like_v = false;
 
 	template<class... Types>
-	constexpr bool IsTupleLikeValue<std::tuple<Types...>> = true;
+	constexpr bool is_tuple_like_v<std::tuple<Types...>> = true;
 
 	template<class Type1, class Type2>
-	constexpr bool IsTupleLikeValue<std::pair<Type1, Type2>> = true;
+	constexpr bool is_tuple_like_v<std::pair<Type1, Type2>> = true;
 
 	template<class T, size_t _Size>
-	constexpr bool IsTupleLikeValue<std::array<T, _Size>> = true;
+	constexpr bool is_tuple_like_v<std::array<T, _Size>> = true;
 
 	/// @brief 文字列型か
 	template<class T>
-	constexpr bool IsCharTypeValue =
+	constexpr bool is_char_type_v =
 		std::is_same_v<T, char> ||
 		std::is_same_v<T, signed char> ||
 		std::is_same_v<T, unsigned char> ||
@@ -94,41 +94,41 @@ namespace nox
 #if __clang__
 
 	template<class T>
-	constexpr bool IsScopedEnumValue = false;
+	constexpr bool is_scoped_enum_v = false;
 
 	template<class T> requires(std::is_enum_v<T>&& std::is_convertible_v<T, std::underlying_type_t<T>>)
-		constexpr bool IsScopedEnumValue<T> = false;
+		constexpr bool is_scoped_enum_v<T> = false;
 #else
 	template<class T>
-	constexpr bool IsScopedEnumValue = std::is_scoped_enum_v<T>;
+	constexpr bool is_scoped_enum_v = std::is_scoped_enum_v<T>;
 #endif // __clang__
 
 
 	namespace detail
 	{
 		template<class T>
-		constexpr nox::uint8 TemplateParamLength = 0;
+		constexpr nox::uint8 template_param_length_v = 0;
 
 		template<template<class...> class T, class... Args> requires(sizeof...(Args) > 0)
-		constexpr nox::uint8 TemplateParamLength<T<Args...>> = sizeof...(Args);
+		constexpr nox::uint8 template_param_length_v<T<Args...>> = sizeof...(Args);
 
 		template<class T>
-		struct IsVector : std::false_type {};
+		struct is_vector : std::false_type {};
 
 		template<class... Args>
-		struct IsVector<std::vector<Args...>> : std::true_type {};
+		struct is_vector<std::vector<Args...>> : std::true_type {};
 
 		template<class T>
-		constexpr bool IsVectorV = IsVector<T>::value;
+		constexpr bool is_vector_v = is_vector<T>::value;
 
 		template <typename T>
-		struct IsStdArray : std::false_type {};
+		struct is_std_array : std::false_type {};
 
 		template <typename T, std::size_t N>
-		struct IsStdArray<std::array<T, N>> : std::true_type {};
+		struct is_std_array<std::array<T, N>> : std::true_type {};
 
 		template<class T>
-		constexpr bool IsStdArrayV = IsStdArray<T>::value;
+		constexpr bool is_std_array_v = is_std_array<T>::value;
 
 		/// @brief 文字列型かどうか
 		template<class T>
@@ -141,93 +141,93 @@ namespace nox
 		};
 
 		template<class T>
-		struct IsStringViewClass : ::std::false_type {};
+		struct is_string_view_class : ::std::false_type {};
 
 		/// @brief string_view型
 		template<class ValueType, class TraitsType>
-		struct IsStringViewClass<::std::basic_string_view<ValueType, TraitsType>> : ::std::true_type {};
+		struct is_string_view_class<::std::basic_string_view<ValueType, TraitsType>> : ::std::true_type {};
 
 		template<class T, class U>
-		struct TupleCatType;
+		struct tuple_cat;
 
-		template<class T, template<class...> class U, class... Args> requires(nox::IsTupleLikeValue<U<Args...>>)
-			struct TupleCatType<T, U<Args...>>
+		template<class T, template<class...> class U, class... Args> requires(nox::is_tuple_like_v<U<Args...>>)
+			struct tuple_cat<T, U<Args...>>
 		{
-			using Type = std::tuple<T, Args...>;
+			using type = std::tuple<T, Args...>;
 		};
 
-		template<template<class...> class T, class U, class... Args> requires(nox::IsTupleLikeValue<T<Args...>>)
-			struct TupleCatType<T<Args...>, U>
+		template<template<class...> class T, class U, class... Args> requires(nox::is_tuple_like_v<T<Args...>>)
+			struct tuple_cat<T<Args...>, U>
 		{
-			using Type = std::tuple<Args..., U>;
+			using type = std::tuple<Args..., U>;
 		};
 
-		template<template<class...> class T, template<class...> class U, class... TArgs, class... UArgs> requires(nox::IsTupleLikeValue<T<TArgs...>> && nox::IsTupleLikeValue<U<UArgs...>>)
-			struct TupleCatType<T<TArgs...>, U<UArgs...>>
+		template<template<class...> class T, template<class...> class U, class... TArgs, class... UArgs> requires(nox::is_tuple_like_v<T<TArgs...>> && nox::is_tuple_like_v<U<UArgs...>>)
+			struct tuple_cat<T<TArgs...>, U<UArgs...>>
 		{
-			using Type = std::tuple<TArgs..., UArgs...>;
+			using type = std::tuple<TArgs..., UArgs...>;
 		};
 
 		template<class T, class ArgsTuple>
-		struct InvokeResultTypeWithTupleLikeImpl;
+		struct invoke_result_with_tuple_like;
 
 		template<class T, template<class...> class ArgsTuple, class... Args> 
 			requires(
-			nox::IsTupleLikeValue<ArgsTuple<Args...>>&&
+			nox::is_tuple_like_v<ArgsTuple<Args...>>&&
 			std::is_invocable_v<T, Args...>
 				)
-		struct InvokeResultTypeWithTupleLikeImpl<T, ArgsTuple<Args...>>
+		struct invoke_result_with_tuple_like<T, ArgsTuple<Args...>>
 		{
-			using Type = std::invoke_result_t<T, Args...>;
+			using type = std::invoke_result_t<T, Args...>;
 		};
 	}
 
 	template<class T, class Args>
-	constexpr bool IsInvocableWithTupleLikeValue = false;
+	constexpr bool is_invocable_with_tuple_like_v = false;
 
-	template<class T, template<class...> class ArgsTuple, class... Args> requires(nox::IsTupleLikeValue<ArgsTuple<Args...>>)
-	constexpr bool IsInvocableWithTupleLikeValue<T, ArgsTuple<Args...>> = std::is_invocable_v<T, Args...>;
+	template<class T, template<class...> class ArgsTuple, class... Args> requires(nox::is_tuple_like_v<ArgsTuple<Args...>>)
+	constexpr bool is_invocable_with_tuple_like_v<T, ArgsTuple<Args...>> = std::is_invocable_v<T, Args...>;
 
 	/// @brief tuple_likeな呼び出しの戻り値の型
-	template<class T, class ArgsTuple> requires(nox::IsInvocableWithTupleLikeValue<T, ArgsTuple>)
-	using InvokeResultTypeWithTupleLike = typename nox::detail::InvokeResultTypeWithTupleLikeImpl<T, ArgsTuple>::Type;
+	template<class T, class ArgsTuple> requires(nox::is_invocable_with_tuple_like_v<T, ArgsTuple>)
+	using invoke_result_with_tuple_like_t = typename nox::detail::invoke_result_with_tuple_like<T, ArgsTuple>::type;
 
 	/// @brief string型かどうか
 	template<class T>
-	constexpr bool IsStringClassValue = detail::is_string_class<T>::value;
+	constexpr bool is_string_class_v = detail::is_string_class<T>::value;
 
 	/// @brief string_view型かどうか
 	template<class T>
-	constexpr bool IsStringViewClassValue = detail::IsStringViewClass<T>::value;
+	constexpr bool is_string_view_class_v = detail::is_string_view_class<T>::value;
 
 	/// @brief 文字列型かどうか
 	template<class T>
-	constexpr bool IsStringClassAllValue = nox::IsStringClassValue<T> || nox::IsStringViewClassValue<T>;
+	constexpr bool is_string_class_all_v = nox::is_string_class_v<T> || nox::is_string_view_class_v<T>;
 
 	namespace detail
 	{
 		/// @brief 文字列関係の型から文字型を表す
 		/// @tparam T 文字列関係の型
 		template<class T>
-		struct StringChar;
+		struct string_char;
 
 		/// @brief char type
-		template<class T> requires(nox::IsCharTypeValue<std::decay_t<std::remove_pointer_t<std::decay_t<T>>>>)
-			struct StringChar<T>
+		template<class T> requires(nox::is_char_type_v<std::decay_t<std::remove_pointer_t<std::decay_t<T>>>>)
+			struct string_char<T>
 		{
 			using type = std::decay_t<std::remove_pointer_t<std::decay_t<T>>>;
 		};
 
 		/// @brief string class
-		template<class T> requires(nox::IsStringClassValue<std::decay_t<T>>)
-			struct StringChar<T>
+		template<class T> requires(nox::is_string_class_v<std::decay_t<T>>)
+			struct string_char<T>
 		{
 			using type = typename std::decay_t<T>::value_type;
 		};
 
 		/// @brief string_view class
-		template<class T> requires(nox::IsStringViewClassValue<std::decay_t<T>>)
-			struct StringChar<T>
+		template<class T> requires(nox::is_string_view_class_v<std::decay_t<T>>)
+			struct string_char<T>
 		{
 			using type = typename std::decay_t<T>::value_type;
 		};
@@ -237,39 +237,39 @@ namespace nox
 
 	/// @brief 文字列関係の型から文字型を表す
 	/// @tparam T 文字列関係の型
-	template<class T> requires requires { typename nox::detail::StringChar<T>::type; }
-	using StringCharType = typename nox::detail::StringChar<T>::type;
+	template<class T> requires requires { typename nox::detail::string_char<T>::type; }
+	using string_char_t = typename nox::detail::string_char<T>::type;
 
-	template<class T, class U> requires(nox::IsTupleLikeValue<T> || nox::IsTupleLikeValue<U>)
-	using TupleCatType = typename nox::detail::TupleCatType<T, U>::Type;
+	template<class T, class U> requires(nox::is_tuple_like_v<T> || nox::is_tuple_like_v<U>)
+	using tuple_cat_t = typename nox::detail::tuple_cat<T, U>::type;
 
 	/// @brief グローバル関数ポインタ型か
 	/// @tparam T 型
 	template<class T>
-	constexpr bool IsGlobalFunctionPointerValue = 
+	constexpr bool is_global_function_pointer_v = 
 		std::is_function_v<std::remove_pointer_t<std::decay_t<T>>> && std::is_member_function_pointer_v<T> == false;
 
 
 	/// @brief  関数ポインタ型か
 	template<class T>
-	constexpr bool IsFunctionPointerValue = std::is_function_v<std::remove_pointer_t<T>>;
+	constexpr bool is_function_pointer_v = std::is_function_v<std::remove_pointer_t<T>>;
 
 	template<class T>
-	constexpr bool IsStaticFunctionPointerValue = std::is_function_v<std::remove_pointer_t<T>> && !std::is_member_function_pointer_v<T>;
+	constexpr bool is_static_function_pointer_v = std::is_function_v<std::remove_pointer_t<T>> && !std::is_member_function_pointer_v<T>;
 
 	/// @brief sizeof可能な型かどうか
 	template<typename T>
-	constexpr bool IsSizeofTypeValue = false;
+	constexpr bool is_sizeof_type_v = false;
 
 	template<typename T> requires(sizeof(T) >= 0)
-	constexpr bool IsSizeofTypeValue<T> = true;
+	constexpr bool is_sizeof_type_v<T> = true;
 
 	/**
 	 * @brief あらゆる関数型
 	*/
 	template<class T>
-	constexpr bool IsEveryFunctionV =
-		nox::IsFunctionPointerValue<T> ||
+	constexpr bool is_every_function_v =
+		nox::is_function_pointer_v<T> ||
 		std::is_function_v<T>;
 
 	namespace concepts
@@ -278,11 +278,11 @@ namespace nox
 		 * @brief あらゆる関数型
 		*/
 		template<class T>
-		concept EveryFunctionType = IsEveryFunctionV<T>;
+		concept EveryFunctionType = is_every_function_v<T>;
 
 		/// @brief 文字列型
 		template<class T>
-		concept Char = nox::IsCharTypeValue<T>;
+		concept Char = nox::is_char_type_v<T>;
 
 		template<class T, class U>
 		concept EqualityComparable = requires(const T & a, const U & b)
@@ -291,16 +291,16 @@ namespace nox
 		};
 
 		template<class T>
-		concept GlobalFunctionPointer = IsGlobalFunctionPointerValue<T>;
+		concept GlobalFunctionPointer = is_global_function_pointer_v<T>;
 
 		template<class T>
-		concept TupleLike = nox::IsTupleLikeValue<T>;
+		concept TupleLike = nox::is_tuple_like_v<T>;
 	}
 
 	/// @brief const pointer型を表現する
 	/// @tparam T 
 	template<class T>
-	using AddConstPointerType = std::conditional_t<
+	using add_const_pointer_t = std::conditional_t<
 		std::is_pointer_v<T>,
 		std::add_pointer_t<std::add_const_t<std::remove_pointer_t<T>>>,
 		T>;
@@ -309,7 +309,7 @@ namespace nox
 	 * @brief const pointerからconstを除去する
 	*/
 	template<class T>
-	using RemoveConstPointerType = std::conditional_t<
+	using remove_const_pointer_t = std::conditional_t<
 		std::is_pointer_v<T>,
 		std::add_pointer_t<std::remove_const_t<std::remove_pointer_t<T>>>,
 		T>;
@@ -318,7 +318,7 @@ namespace nox
 	 * @brief const lvalue reference型を表現する
 	*/
 	template<class T>
-	using RemoveConstLvalueReferenceType = std::conditional_t<
+	using remove_const_lvalue_reference_t = std::conditional_t<
 		std::is_lvalue_reference_v<T>,
 		std::add_lvalue_reference_t<std::remove_const_t<std::remove_reference_t<T>>>,
 		T>;
@@ -327,7 +327,7 @@ namespace nox
 	 * @brief lvalue reference型を表現する
 	*/
 	template<class T>
-	using AddConstLvalueReferenceType =
+	using add_const_lvalue_reference_t =
 		std::conditional_t<
 		std::is_lvalue_reference_v<T>,
 		std::add_lvalue_reference_t<std::add_const_t<std::remove_reference_t<T>>>,
@@ -337,7 +337,7 @@ namespace nox
 	 * @brief const rvalue reference型を表現する
 	*/
 	template<class T>
-	using RemoveConstRvalueReferenceType = std::conditional_t<
+	using remove_const_rvalue_reference_t = std::conditional_t<
 		std::is_rvalue_reference_v<T>,
 		std::add_rvalue_reference_t<std::remove_const_t<std::remove_reference_t<T>>>,
 		T>;
@@ -346,7 +346,7 @@ namespace nox
 	 * @brief rvalue reference型を表現する
 	*/
 	template<class T>
-	using AddConstRvalueReferenceType =
+	using add_const_rvalue_reference_t =
 		std::conditional_t<
 		std::is_rvalue_reference_v<T>,
 		std::add_rvalue_reference_t<std::add_const_t<std::remove_reference_t<T>>>,
@@ -356,41 +356,41 @@ namespace nox
 	 * @brief constを除去
 	*/
 	template<class T>
-	using RemoveConstPointerReferenceType = RemoveConstRvalueReferenceType<RemoveConstLvalueReferenceType<RemoveConstPointerType<T>>>;
+	using remove_const_pointer_reference_t = remove_const_rvalue_reference_t<remove_const_lvalue_reference_t<remove_const_pointer_t<T>>>;
 
 	/**
 	 * @brief const pointer型かどうか
 	*/
 	template<class T>
-	constexpr bool IsConstPointerValue = std::is_pointer_v<T> && std::is_same_v <T, AddConstPointerType<T>>;
+	constexpr bool is_const_pointer_v = std::is_pointer_v<T> && std::is_same_v <T, add_const_pointer_t<T>>;
 
 	/**
 	 * @brief const lvalue reference型かどうか
 	*/
 	template<class T>
-	constexpr bool IsConstLvalueReferenceValue = std::is_lvalue_reference_v<T> && std::is_same_v<T, AddConstLvalueReferenceType<T>>;
+	constexpr bool is_const_lvalue_reference_v = std::is_lvalue_reference_v<T> && std::is_same_v<T, add_const_lvalue_reference_t<T>>;
 
 	/**
 	 * @brief const rvalue reference型かどうか
 	*/
 	template<class T>
-	constexpr bool IsConstRvalueReferenceValue = std::is_rvalue_reference_v<T> && std::is_same_v<T, AddConstRvalueReferenceType<T>>;
+	constexpr bool is_const_rvalue_reference_v = std::is_rvalue_reference_v<T> && std::is_same_v<T, add_const_rvalue_reference_t<T>>;
 
 	/// @brief あらゆるconst型か
 	template<class T>
-	constexpr bool IsConstAllValue = std::is_const_v<T> || IsConstPointerValue<T> || IsConstLvalueReferenceValue<T> || IsConstRvalueReferenceValue<T>;
+	constexpr bool is_const_all_v = std::is_const_v<T> || is_const_pointer_v<T> || is_const_lvalue_reference_v<T> || is_const_rvalue_reference_v<T>;
 
 	/// @brief シーケンスコンテナ
 	template<class T>
-	constexpr bool IsSequenceContainerClassValue = detail::IsStdArrayV<T> || detail::IsVectorV<T>;
+	constexpr bool is_sequence_container_class_v = detail::is_std_array_v<T> || detail::is_vector_v<T>;
 
 	namespace detail
 	{
 		template<class T, class = void>
-		struct is_addressable_impl : std::false_type {};
+		struct is_addressable : std::false_type {};
 
 		template<class T>
-		struct is_addressable_impl<T, std::void_t<
+		struct is_addressable<T, std::void_t<
 			decltype(std::addressof(std::declval<std::remove_reference_t<T>&>()))
 			>> : std::true_type {};
 	}
@@ -399,11 +399,11 @@ namespace nox
 	/// @note ビットフィールドは型では判別できないため、この特性は true になり得ます。
 	///       実メンバのアドレス可否は bit 幅メタ情報と併用してください。
 	template<class T>
-	inline constexpr bool IsAddressableValue = nox::detail::is_addressable_impl<T>::value;
+	inline constexpr bool is_addressable_v = nox::detail::is_addressable<T>::value;
 
 	namespace concepts
 	{
 		template<class T>
-		concept Addressable = IsAddressableValue<T>;
+		concept Addressable = is_addressable_v<T>;
 	}
 }

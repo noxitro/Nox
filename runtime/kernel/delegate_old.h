@@ -107,7 +107,7 @@ namespace nox
 		{
 		public:
 			virtual ~ICallable() {}
-			virtual constexpr FunctionResultType<_FuncType> Invoke(const FunctionArgsTupleType<_FuncType>&)const = 0;
+			virtual constexpr function_result_t<_FuncType> Invoke(const function_args_tuple_t<_FuncType>&)const = 0;
 			inline constexpr bool Equal(const ICallable& rhs)const noexcept
 			{
 				if (GetTypeID() != rhs.GetTypeID())
@@ -155,9 +155,9 @@ namespace nox
 				return nox::GetTypeId<std::decay_t<std::remove_pointer_t<decltype(this)>>>();
 			}
 
-			inline constexpr FunctionResultType<_FuncType> Invoke(const FunctionArgsTupleType<_FuncType>& args)const override
+			inline constexpr function_result_t<_FuncType> Invoke(const function_args_tuple_t<_FuncType>& args)const override
 			{
-				if constexpr (std::is_void_v< FunctionResultType<_FuncType>> == true)
+				if constexpr (std::is_void_v< function_result_t<_FuncType>> == true)
 				{
 					std::apply(functor_, args);
 				}
@@ -195,9 +195,9 @@ namespace nox
 				return nox::GetTypeId<std::decay_t<std::remove_pointer_t<decltype(this)>>>();
 			}
 
-			inline constexpr FunctionResultType<_FuncType> Invoke(const FunctionArgsTupleType<_FuncType>& args)const override
+			inline constexpr function_result_t<_FuncType> Invoke(const function_args_tuple_t<_FuncType>& args)const override
 			{
-				if constexpr (std::is_void_v< FunctionResultType<_FuncType>> == true)
+				if constexpr (std::is_void_v< function_result_t<_FuncType>> == true)
 				{
 					std::apply(functor_, args);
 				}
@@ -246,9 +246,9 @@ namespace nox
 				return nullptr;
 			}
 
-			inline constexpr FunctionResultType<_FuncType> Invoke(const FunctionArgsTupleType<_FuncType>& args)const override
+			inline constexpr function_result_t<_FuncType> Invoke(const function_args_tuple_t<_FuncType>& args)const override
 			{
-				if constexpr (std::is_void_v< FunctionResultType<_FuncType>> == true)
+				if constexpr (std::is_void_v< function_result_t<_FuncType>> == true)
 				{
 					if constexpr (nox::detail::IsCallable_IDelegateGetInstance<InstanceType>::value == true)
 					{
@@ -338,11 +338,11 @@ namespace nox
 		template<class... Args> requires(
 			std::is_invocable_v<_FuncType, Args...>
 			)
-			inline constexpr FunctionResultType<_FuncType> Invoke(Args&&... args)const
+			inline constexpr function_result_t<_FuncType> Invoke(Args&&... args)const
 		{
 			NOX_ASSERT(this->callable_ptr_ != nullptr, U"");
 
-			if constexpr (std::is_void_v< FunctionResultType<_FuncType>> == true)
+			if constexpr (std::is_void_v< function_result_t<_FuncType>> == true)
 			{
 				this->callable_ptr_->Invoke(std::make_tuple(std::forward<Args>(args)...));
 			}
@@ -358,7 +358,7 @@ namespace nox
 		//requires(
 		//std::is_member_function_pointer_v<T> &&
 		//sizeof(CallableMemberFunction<T, std::decay_t<U>>) <= kRealBufferSize
-		////std::is_same_v<FunctionClassType<T>, std::decay_t<U>> 
+		////std::is_same_v<function_class_t<T>, std::decay_t<U>> 
 		//)
 		inline constexpr bool Equal(T&& functor, U&& instance)const noexcept
 		{
@@ -396,7 +396,7 @@ namespace nox
 			return callable_ptr_->Equal(CallableMemberFunctionEqualObject<T, U>());
 		}
 
-		template<class T> requires(nox::IsGlobalFunctionPointerValue < T> == true)
+		template<class T> requires(nox::is_global_function_pointer_v < T> == true)
 			inline constexpr bool Equal(T&& functor)const noexcept
 		{
 			if (IsEmpty() == true)
@@ -412,7 +412,7 @@ namespace nox
 			return callable_ptr_->Equal(CallableDefault<T>(std::forward<T>(functor)));
 		}
 
-		template<class T> requires(nox::IsFunctionObjectValue<std::decay_t<T>> == true)
+		template<class T> requires(nox::is_function_object_v<std::decay_t<T>> == true)
 			inline constexpr bool Equal(T&& functor)const noexcept
 		{
 			if (IsEmpty() == true)
@@ -563,7 +563,7 @@ namespace nox
 		/// @brief メンバ関数のバインド
 		template<class T, class U> requires(
 			std::is_member_function_pointer_v<T> &&
-			(std::is_same_v< nox::FunctionClassType<T>, std::decay_t<U>> || std::is_same_v<nox::FunctionClassType<T>, std::remove_pointer_t<std::decay_t<U>>>) &&
+			(std::is_same_v< nox::function_class_t<T>, std::decay_t<U>> || std::is_same_v<nox::function_class_t<T>, std::remove_pointer_t<std::decay_t<U>>>) &&
 			sizeof(CallableMemberFunctionType<T, std::decay_t<U>>) <= kRealBufferSize
 			)
 			inline constexpr void Bind(T&& func, U&& instance)
@@ -600,8 +600,8 @@ namespace nox
 
 		/// @brief 通常関数のバインド
 		template<class T> requires(
-			nox::IsFunctionObjectValue<T> == false &&
-			nox::IsGlobalFunctionPointerValue < T> == true &&
+			nox::is_function_object_v<T> == false &&
+			nox::is_global_function_pointer_v < T> == true &&
 			sizeof(CallableDefaultType<T>) <= kRealBufferSize
 			)
 			inline constexpr void Bind(T&& func)
@@ -621,7 +621,7 @@ namespace nox
 
 		/// @brief 関数オブジェクトのバインド
 		template<class T> requires(
-			nox::IsFunctionObjectValue<std::decay_t<T>> == true &&
+			nox::is_function_object_v<std::decay_t<T>> == true &&
 			sizeof(CallableFunctionObjectType<T>) <= kRealBufferSize
 			)
 			inline constexpr void Bind(T&& func)
@@ -646,7 +646,7 @@ namespace nox
 
 		/// @brief 通常関数
 		template<class T>  requires(
-			nox::IsGlobalFunctionPointerValue < T> == true &&
+			nox::is_global_function_pointer_v < T> == true &&
 			sizeof(CallableDefaultType<T>) <= kRealBufferSize
 			)
 			inline constexpr explicit Delegate(T&& func) : buffer_{ 0 }
@@ -656,7 +656,7 @@ namespace nox
 
 		/// @brief 関数オブジェクト
 		template<class T>  requires(
-			nox::IsFunctionObjectValue<std::decay_t<T>> == true &&
+			nox::is_function_object_v<std::decay_t<T>> == true &&
 			sizeof(CallableFunctionObjectType<T>) <= kRealBufferSize
 			)
 			inline constexpr Delegate(T&& func) : buffer_{ 0 }

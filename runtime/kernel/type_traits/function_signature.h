@@ -75,7 +75,7 @@ namespace nox
 			static constexpr bool is_lvalue_reference = false;
 			static constexpr bool is_rvalue_reference = false;
 
-			using ToFuncionType = Result(Args...);
+			using ToFunctionType = Result(Args...);
 			using ToFunctionPointerType = Result(*)(Args...);
 			template<class U>
 			using ToMemberFunctionPointerType = Result(U::*)(Args...);
@@ -90,7 +90,7 @@ namespace nox
 			static constexpr bool is_lvalue_reference = false;
 			static constexpr bool is_rvalue_reference = false;
 
-			using ToFuncionType = Result(Args...) const;
+			using ToFunctionType = Result(Args...) const;
 			using ToFunctionPointerType = Result(*)(Args...);
 			template<class U>
 			using ToMemberFunctionPointerType = Result(U::*)(Args...) const;
@@ -105,7 +105,7 @@ namespace nox
 			static constexpr bool is_lvalue_reference = false;
 			static constexpr bool is_rvalue_reference = false;
 
-			using ToFuncionType = Result(Args...) volatile;
+			using ToFunctionType = Result(Args...) volatile;
 			using ToFunctionPointerType = Result(*)(Args...);
 			template<class U>
 			using ToMemberFunctionPointerType = Result(U::*)(Args...) volatile;
@@ -120,7 +120,7 @@ namespace nox
 			static constexpr bool is_lvalue_reference = false;
 			static constexpr bool is_rvalue_reference = false;
 
-			using ToFuncionType = Result(Args...) noexcept;
+			using ToFunctionType = Result(Args...) noexcept;
 			using ToFunctionPointerType = Result(*)(Args...) noexcept;
 			template<class U>
 			using ToMemberFunctionPointerType = Result(U::*)(Args...) noexcept;
@@ -135,7 +135,7 @@ namespace nox
 			static constexpr bool is_lvalue_reference = false;
 			static constexpr bool is_rvalue_reference = false;
 
-			using ToFuncionType = Result(Args...) const noexcept;
+			using ToFunctionType = Result(Args...) const noexcept;
 			using ToFunctionPointerType = Result(*)(Args...) noexcept;
 			template<class U>
 			using ToMemberFunctionPointerType = Result(U::*)(Args...) const noexcept;
@@ -150,7 +150,7 @@ namespace nox
 			static constexpr bool is_lvalue_reference = false;
 			static constexpr bool is_rvalue_reference = false;
 
-			using ToFuncionType = Result(Args...) volatile noexcept;
+			using ToFunctionType = Result(Args...) volatile noexcept;
 			using ToFunctionPointerType = Result(*)(Args...) noexcept;
 			template<class U>
 			using ToMemberFunctionPointerType = Result(U::*)(Args...) volatile noexcept;
@@ -165,7 +165,7 @@ namespace nox
 			static constexpr bool is_lvalue_reference = false;
 			static constexpr bool is_rvalue_reference = false;
 
-			using ToFuncionType = Result(Args...)const volatile;
+			using ToFunctionType = Result(Args...)const volatile;
 			using ToFunctionPointerType = Result(*)(Args...) ;
 			template<class U>
 			using ToMemberFunctionPointerType = Result(U::*)(Args...) const volatile;
@@ -180,7 +180,7 @@ namespace nox
 			static constexpr bool is_lvalue_reference = false;
 			static constexpr bool is_rvalue_reference = false;
 
-			using ToFuncionType = Result(Args...) const volatile noexcept;
+			using ToFunctionType = Result(Args...) const volatile noexcept;
 			using ToFunctionPointerType = Result(*)(Args...) noexcept;
 			template<class U>
 			using ToMemberFunctionPointerType = Result(U::*)(Args...) const volatile noexcept;
@@ -195,7 +195,7 @@ namespace nox
 			static constexpr bool is_lvalue_reference = true;
 			static constexpr bool is_rvalue_reference = false;
 
-			using ToFuncionType = Result(Args...) const& noexcept;
+			using ToFunctionType = Result(Args...) const& noexcept;
 			using ToFunctionPointerType = Result(*)(Args...) noexcept;
 			template<class U>
 			using ToMemberFunctionPointerType = Result(U::*)(Args...) const& noexcept;
@@ -210,7 +210,7 @@ namespace nox
 			static constexpr bool is_lvalue_reference = true;
 			static constexpr bool is_rvalue_reference = false;
 
-			using ToFuncionType = Result(Args...)const volatile&;
+			using ToFunctionType = Result(Args...)const volatile&;
 			using ToFunctionPointerType = Result(*)(Args...) ;
 			template<class U>
 			using ToMemberFunctionPointerType = Result(U::*)(Args...) const volatile&;
@@ -225,7 +225,7 @@ namespace nox
 			static constexpr bool is_lvalue_reference = true;
 			static constexpr bool is_rvalue_reference = false;
 
-			using ToFuncionType = Result(Args...)&;
+			using ToFunctionType = Result(Args...)&;
 			using ToFunctionPointerType = Result(*)(Args...);
 			template<class U>
 			using ToMemberFunctionPointerType = Result(U::*)(Args...)&;
@@ -240,7 +240,7 @@ namespace nox
 			static constexpr bool is_lvalue_reference = false;
 			static constexpr bool is_rvalue_reference = true;
 
-			using ToFuncionType = Result(Args...)&&;
+			using ToFunctionType = Result(Args...)&&;
 			using ToFunctionPointerType = Result(*)(Args...);
 			template<class U>
 			using ToMemberFunctionPointerType = Result(U::*)(Args...)&&;
@@ -255,7 +255,7 @@ namespace nox
 			static constexpr bool is_lvalue_reference = true;
 			static constexpr bool is_rvalue_reference = false;
 
-			using ToFuncionType = Result(Args...) const&;
+			using ToFunctionType = Result(Args...) const&;
 			using ToFunctionPointerType = Result(*)(Args...);
 			template<class U>
 			using ToMemberFunctionPointerType = Result(U::*)(Args...) const&;
@@ -270,7 +270,7 @@ namespace nox
 			static constexpr bool is_lvalue_reference = true;
 			static constexpr bool is_rvalue_reference = false;
 
-			using ToFuncionType = Result(Args...) volatile&;
+			using ToFunctionType = Result(Args...) volatile&;
 			using ToFunctionPointerType = Result(*)(Args...);
 			template<class U>
 			using ToMemberFunctionPointerType = Result(U::*)(Args...) volatile&;
@@ -285,7 +285,7 @@ namespace nox
 			static constexpr bool is_lvalue_reference = true;
 			static constexpr bool is_rvalue_reference = false;
 
-			using ToFuncionType = Result(Args...) & noexcept;
+			using ToFunctionType = Result(Args...) & noexcept;
 			using ToFunctionPointerType = Result(*)(Args...) noexcept;
 			template<class U>
 			using ToMemberFunctionPointerType = Result(U::*)(Args...) & noexcept;
@@ -300,7 +300,7 @@ namespace nox
 			static constexpr bool is_lvalue_reference = true;
 			static constexpr bool is_rvalue_reference = false;
 
-			using ToFuncionType = Result(Args...) volatile& noexcept;
+			using ToFunctionType = Result(Args...) volatile& noexcept;
 			using ToFunctionPointerType = Result(*)(Args...) noexcept;
 			template<class U>
 			using ToMemberFunctionPointerType = Result(U::*)(Args...) volatile& noexcept;
@@ -315,7 +315,7 @@ namespace nox
 			static constexpr bool is_lvalue_reference = false;
 			static constexpr bool is_rvalue_reference = true;
 
-			using ToFuncionType = Result(Args...) const&&;
+			using ToFunctionType = Result(Args...) const&&;
 			using ToFunctionPointerType = Result(*)(Args...);
 			template<class U>
 			using ToMemberFunctionPointerType = Result(U::*)(Args...) const&&;
@@ -330,7 +330,7 @@ namespace nox
 			static constexpr bool is_lvalue_reference = false;
 			static constexpr bool is_rvalue_reference = true;
 
-			using ToFuncionType = Result(Args...) volatile&&;
+			using ToFunctionType = Result(Args...) volatile&&;
 			using ToFunctionPointerType = Result(*)(Args...);
 			template<class U>
 			using ToMemberFunctionPointerType = Result(U::*)(Args...) volatile&&;
@@ -345,7 +345,7 @@ namespace nox
 			static constexpr bool is_lvalue_reference = false;
 			static constexpr bool is_rvalue_reference = true;
 
-			using ToFuncionType = Result(Args...) const&& noexcept;
+			using ToFunctionType = Result(Args...) const&& noexcept;
 			using ToFunctionPointerType = Result(*)(Args...) noexcept;
 			template<class U>
 			using ToMemberFunctionPointerType = Result(U::*)(Args...) const&& noexcept;
@@ -360,7 +360,7 @@ namespace nox
 			static constexpr bool is_lvalue_reference = false;
 			static constexpr bool is_rvalue_reference = true;
 
-			using ToFuncionType = Result(Args...) volatile&& noexcept;
+			using ToFunctionType = Result(Args...) volatile&& noexcept;
 			using ToFunctionPointerType = Result(*)(Args...) noexcept;
 			template<class U>
 			using ToMemberFunctionPointerType = Result(U::*)(Args...) volatile&& noexcept;
@@ -375,7 +375,7 @@ namespace nox
 			static constexpr bool is_lvalue_reference = false;
 			static constexpr bool is_rvalue_reference = true;
 
-			using ToFuncionType = Result(Args...) volatile&& noexcept;
+			using ToFunctionType = Result(Args...) volatile&& noexcept;
 			using ToFunctionPointerType = Result(*)(Args...) noexcept;
 			template<class U>
 			using ToMemberFunctionPointerType = Result(U::*)(Args...) volatile&& noexcept;
@@ -389,7 +389,7 @@ namespace nox
 		{
 			static constexpr bool is_noexcept = false;
 
-			using ToFuncionType = Result(Args...);
+			using ToFunctionType = Result(Args...);
 			using ToFunctionPointerType = Result(*)(Args...);
 			template<class U>
 			using ToMemberFunctionPointerType = Result(U::*)(Args...);
@@ -400,7 +400,7 @@ namespace nox
 		{
 			static constexpr bool is_noexcept = true;
 
-			using ToFuncionType = Result(Args...)noexcept;
+			using ToFunctionType = Result(Args...)noexcept;
 			using ToFunctionPointerType = Result(*)(Args...)noexcept;
 			template<class U>
 			using ToMemberFunctionPointerType = Result(U::*)(Args...)noexcept;
@@ -654,42 +654,42 @@ namespace nox
 
 	/// @brief 関数の戻り値の型
 	template<concepts::FunctionSignatureType T>
-	using FunctionResultType = typename nox::detail::FunctionSignatureAdapter<T>::ResultType;
+	using function_result_t = typename nox::detail::FunctionSignatureAdapter<T>::ResultType;
 
 	/// @brief 修飾子情報を全て外した関数型
 	template<concepts::FunctionSignatureType T>
-	using FunctionRawType = typename nox::detail::FunctionSignatureAdapter<T>::FunctionType;
+	using function_raw_t = typename nox::detail::FunctionSignatureAdapter<T>::RawFunctionType;
 
 	/// @brief メンバ関数を持つクラスの型
 	template<class T> requires(std::is_member_function_pointer_v<T>)
-	using FunctionClassType = typename nox::detail::FunctionSignatureAdapter<T>::ClassType;
+	using function_class_t = typename nox::detail::FunctionSignatureAdapter<T>::ClassType;
 
 	template<class T>
-	using ToFunctionPointerType = typename nox::detail::FunctionSignatureAdapter<T>::ToFunctionPointerType;
+	using to_function_pointer_t = typename nox::detail::FunctionSignatureAdapter<T>::ToFunctionPointerType;
 
 	template<class T, class ClassType> requires(!std::is_member_object_pointer_v<T> && (std::is_class_v<ClassType> || std::is_union_v<ClassType>))
-	using ToMemberFunctionPointerType = typename nox::detail::FunctionSignatureAdapter<T>::template ToMemberFunctionPointerType<ClassType>;
+	using to_member_function_pointer_t = typename nox::detail::FunctionSignatureAdapter<T>::template ToMemberFunctionPointerType<ClassType>;
 
 	/// @brief 引数の型tuple
 	template<concepts::FunctionSignatureType T>
-	using FunctionArgsTupleType = typename nox::detail::FunctionSignatureAdapter<T>::ArgsTupleType;
+	using function_args_tuple_t = typename nox::detail::FunctionSignatureAdapter<T>::ArgsTupleType;
 
 	template<concepts::FunctionSignatureType T>
-	constexpr size_t FunctionArgsLength = std::tuple_size_v<FunctionArgsTupleType<T>>;
+	constexpr size_t function_args_length_v = std::tuple_size_v<function_args_tuple_t<T>>;
 
 	template<concepts::FunctionSignatureType T>
-	constexpr bool IsFunctionNoexceptValue = nox::detail::FunctionSignatureAdapter<T>::is_noexcept;
+	constexpr bool is_function_noexcept_v = nox::detail::FunctionSignatureAdapter<T>::is_noexcept;
 
 	template<concepts::FunctionSignatureType T>
-	constexpr bool IsFunctionConstValue = nox::detail::FunctionSignatureAdapter<T>::is_const;
+	constexpr bool is_function_const_v = nox::detail::FunctionSignatureAdapter<T>::is_const;
 
 	template<concepts::FunctionSignatureType T>
-	constexpr bool IsFunctionLValueReference = nox::detail::FunctionSignatureAdapter<T>::is_lvalue_reference;
+	constexpr bool is_function_lvalue_reference_v = nox::detail::FunctionSignatureAdapter<T>::is_lvalue_reference;
 	
 	template<concepts::FunctionSignatureType T>
-	constexpr bool IsFunctionRValueReference = nox::detail::FunctionSignatureAdapter<T>::is_rvalue_reference;
+	constexpr bool is_function_rvalue_reference_v = nox::detail::FunctionSignatureAdapter<T>::is_rvalue_reference;
 
 	template<concepts::FunctionSignatureType T>
-	constexpr bool IsFunctionVolatileValue = nox::detail::FunctionSignatureAdapter<T>::is_volatile;
+	constexpr bool is_function_volatile_v = nox::detail::FunctionSignatureAdapter<T>::is_volatile;
 }
 #pragma warning(pop)

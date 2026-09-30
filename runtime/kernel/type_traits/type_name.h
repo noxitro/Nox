@@ -214,7 +214,7 @@ namespace nox::util
 //	/// @brief 関数ポインタからIDを取得する
 //	/// @tparam obj 関数ポインタ
 //	/// @return ID
-//	template<auto obj> requires(IsEveryFunctionV<decltype(obj)> || IsLambdaValue<decltype(obj)>)
+//	template<auto obj> requires(is_every_function_v<decltype(obj)> || IsLambdaValue<decltype(obj)>)
 //	inline constexpr u32 GetFunctionID()noexcept
 //	{
 //#if defined(__clang__)
