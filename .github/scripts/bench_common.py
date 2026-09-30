@@ -50,6 +50,7 @@ _COMPILER_NAMES = {c.lower(): c for c in COMPILERS}
 
 # bench-run.py がアーティファクトの中で探す exe の名前
 BENCH_EXE_NAME = "bench_test.exe"
+RUNTIME_EXE_NAME = "runtime.exe"
 
 
 def variant_id(compiler, config):
@@ -265,6 +266,11 @@ def paired_analysis(name, head_rounds, base_rounds, threshold=DEFAULT_THRESHOLD,
             "verdict": verdict, "pairs": n}
 
 
+# 全体の変化 (比の幾何平均) に入れないグループ。起動 (startup) は OS のローダやウィンドウの作成を
+# 含む壁時計で、マイクロベンチマークと同じ重みで平均すると「エンジンが速くなったか」がぼやける
+GEOMEAN_EXCLUDED_GROUPS = ("startup",)
+
+
 def geomean_change(ratios):
     """比の幾何平均 - 1。全体として速くなったか遅くなったかの 1 つの数字。"""
     logs = [math.log(r) for r in ratios if is_num(r) and r > 0]
@@ -284,6 +290,134 @@ def alloc_verdict(head_allocs, base_allocs):
     if h < b:
         return "improved"
     return "unchanged"
+
+
+# ---------------------------------------------------------------------------
+# 起動の計測 (runtime.exe --startup-report)
+# ---------------------------------------------------------------------------
+
+STARTUP_SCHEMA = "nox-startup/1"
+STARTUP_GROUP = "startup"
+# 1 回の起動が 1 op。結果ページの「1 op」の欄にそのまま出る
+STARTUP_PER = "launch"
+
+# (名前, 始点, 終点, 表示名)。区切りの名前は runtime/core/startup_profile.cpp の kPointNames。
+# 始点 None は「OS がプロセスを作った時刻」(レポートの pre_main_ns で測る)。
+# 名前は履歴と結果ページをつなぐキーなので、一度決めたら変えない (bench の名前と同じ約束)。
+STARTUP_INTERVALS = (
+    ("startup/process_total", None, "first_frame_done",
+     "起動全体: プロセスの作成から最初のフレームを終えるまで"),
+    ("startup/pre_main", None, "entry_point",
+     "EntryPoint まで (OS のローダ・DLL の読み込み・静的初期化)"),
+    ("startup/engine_total", "entry_point", "first_frame_done",
+     "エンジンの起動: EntryPoint から最初のフレームを終えるまで"),
+    ("startup/memory_init", "entry_point", "memory_initialized",
+     "memory::Initialize"),
+    ("startup/reflection_init", "memory_initialized", "reflection_initialized",
+     "reflection::Initialize (生成コードの型登録)"),
+    ("startup/world_init", "reflection_initialized", "world_initialized",
+     "World の生成と Init (モジュール・システム・UpdaterGraph・JobSystem)"),
+    ("startup/init_phase", "world_initialized", "init_phase_done",
+     "Init フェーズ (ゲームスレッドの起動、ウィンドウやデバイスの作成)"),
+    ("startup/start_phase", "init_phase_done", "start_phase_done",
+     "Start フェーズ"),
+    ("startup/first_frame", "start_phase_done", "first_frame_done",
+     "最初のフレーム (Update フェーズ 1 回)"),
+)
+
+# 区間ごとのヒープ確保回数の予算 (1 回の起動あたり)。bench の alloc_budget と同じく、超えたら
+# bench-run.py が終了コード 3 を返して CI を落とす。実測を見てから決めるので、まだ空。
+# 例: {"startup/reflection_init": 0} (型の登録はコンパイル時に作った表を指すだけで、確保しない)
+STARTUP_ALLOC_BUDGETS = {}
+
+
+def parse_startup_report(obj):
+    """runtime.exe が書いた JSON を読み、(区切りの名前 → 項目, pre_main_ns) にする。
+
+    形が違えば ValueError。到達しなかった区切り (ns が null) は辞書に入れない。
+    """
+    if not isinstance(obj, dict) or obj.get("schema") != STARTUP_SCHEMA:
+        schema = obj.get("schema") if isinstance(obj, dict) else None
+        raise ValueError(f"スキーマが {STARTUP_SCHEMA} でない ({schema!r})")
+    points = obj.get("points")
+    if not isinstance(points, list):
+        raise ValueError("points が配列でない")
+    out = {}
+    for p in points:
+        if isinstance(p, dict) and isinstance(p.get("name"), str) and is_num(p.get("ns")):
+            out[p["name"]] = p
+    pre_main = obj.get("pre_main_ns")
+    return out, (float(pre_main) if is_num(pre_main) and pre_main >= 0 else None)
+
+
+def _startup_counters(point):
+    return tuple(float(point.get(k)) if is_num(point.get(k)) else None
+                 for k in ("allocs", "alloc_bytes", "frees"))
+
+
+def _startup_interval(points, pre_main, start, end):
+    """1 回の起動の 1 区間: (ナノ秒, (確保回数, 確保バイト, 解放回数))。測れなければ None。"""
+    e = points.get(end)
+    if e is None:
+        return None
+    end_counters = _startup_counters(e)
+    if start is None:
+        # 区切りの ns は EntryPoint からの経過。プロセスの作成からは pre_main を足す。
+        # 確保の累積値はプロセスの開始から数えているので、終点の値がそのまま区間の値
+        if pre_main is None:
+            return None
+        return pre_main + float(e["ns"]), end_counters
+    s = points.get(start)
+    if s is None:
+        return None
+    start_counters = _startup_counters(s)
+    diff = tuple(b - a if a is not None and b is not None else None
+                 for a, b in zip(start_counters, end_counters))
+    return float(e["ns"]) - float(s["ns"]), diff
+
+
+def startup_benchmarks(reports, budgets=None, check_budget=True):
+    """1 ラウンドぶんの起動レポート (parse_startup_report の結果の列) を、nox-bench-raw/1 の
+    benchmarks と同じ形の項目にする。1 回の起動を 1 サンプルとして samples_ns に並べる。
+
+    確保回数は最初の起動の値を使い、起動ごとに違えば alloc_stable を false にする
+    (ワーカースレッドの起動順などで揺れる区間を見分けるため)。
+    """
+    budgets = STARTUP_ALLOC_BUDGETS if budgets is None else budgets
+    out = []
+    for name, start, end, title in STARTUP_INTERVALS:
+        samples = []
+        counters = []
+        for points, pre_main in reports:
+            v = _startup_interval(points, pre_main, start, end)
+            if v is None or v[0] < 0:
+                continue
+            samples.append(v[0])
+            counters.append(v[1])
+        if not samples:
+            continue
+        allocs, alloc_bytes, frees = counters[0]
+        budget = budgets.get(name)
+        budget_ok = None
+        if check_budget and budget is not None and allocs is not None:
+            budget_ok = allocs <= budget
+        out.append({
+            "name": name,
+            "group": STARTUP_GROUP,
+            "title": title,
+            "per": STARTUP_PER,
+            "threads": 1,
+            "alloc_budget": budget,
+            "ops_per_sample": 1,
+            "samples_ns": samples,
+            "cycles_per_op": None,
+            "allocs_per_op": allocs,
+            "alloc_bytes_per_op": alloc_bytes,
+            "frees_per_op": frees,
+            "alloc_stable": all(c == counters[0] for c in counters),
+            "budget_ok": budget_ok,
+        })
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -669,6 +803,12 @@ def variant_markdown(result, level="##"):
     if summary.get("budget_violations"):
         out.append(f"❌ ヒープ確保の予算超過が {summary['budget_violations']} 件ある。\n\n")
 
+    # 起動 (runtime.exe) は区間の内訳として並べて読むものなので、変化の有無にかかわらず別の表にする
+    startup = [b for b in benches if b.get("group") == STARTUP_GROUP]
+    benches = [b for b in benches if b.get("group") != STARTUP_GROUP]
+    if startup:
+        out.append(startup_markdown(startup, level + "#"))
+
     notable = sorted([b for b in benches if is_notable(b)], key=notable_sort_key)
     if notable:
         out.append(md_table(TABLE_COLUMNS, [bench_cells(b) for b in notable]))
@@ -678,3 +818,23 @@ def variant_markdown(result, level="##"):
     out.append(md_table(TABLE_COLUMNS, [bench_cells(b) for b in benches]))
     out.append("\n</details>\n\n")
     return "".join(out)
+
+
+STARTUP_TABLE_COLUMNS = ("区間", "中央値", "変化 (95% CI)", "判定", "確保/起動")
+
+
+def startup_markdown(startup, level="###"):
+    """起動の区間の表。STARTUP_INTERVALS の順 (全体 → 内訳) に並べる。"""
+    order = {name: i for i, (name, _, _, _) in enumerate(STARTUP_INTERVALS)}
+    rows = []
+    for b in sorted(startup, key=lambda b: order.get(b.get("name"), len(order))):
+        paired = b.get("paired")
+        verdict = paired.get("verdict") if paired else None
+        title = b.get("title") or ""
+        rows.append([f"{title} `{b.get('name', '')}`" if title else f"`{b.get('name', '')}`",
+                     fmt_time((b.get("head") or {}).get("median")),
+                     fmt_change(paired), verdict_text(verdict), alloc_text(b)])
+    return (f"{level} 🚀 起動 (runtime.exe)\n\n"
+            "1 回の起動を 1 サンプルとし、最初のフレームを終えるまでを区間に分けて測った"
+            " (最初の冷えた起動は捨てている)。\n\n"
+            + md_table(STARTUP_TABLE_COLUMNS, rows) + "\n")

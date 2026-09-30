@@ -17,6 +17,32 @@ GitHub Pages の結果ページ (`tools/bench-site`) に積んでいく。
 一覧は `bench_test.exe --list` で出る。ベンチの名前 (`ecs/query_iterate/10k` など) は履歴と
 結果ページをつなぐキーなので、一度決めたら変えない。
 
+## 起動 (runtime.exe)
+
+`bench_test.exe` とは別に、`runtime.exe` の起動の速さも同じ仕組みで比べる (グループ `startup`)。
+起動は 1 回ごとにプロセスを作り直すので、`bench_test.exe` の中ではなく `bench-run.py` が外から起動する。
+
+- `runtime.exe --startup-report=<パス>` を渡すと、起動の区切りごとに `QueryPerformanceCounter` と
+  ヒープ確保の累積値を控え、終了前に JSON (`nox-startup/1`) を書く (`runtime/core/startup_profile.h`)。
+  区切りは EntryPoint → memory / reflection / os の初期化 → `World::Init` → Init フェーズ → Start フェーズ →
+  最初のフレーム。EntryPoint より前 (OS のローダ・DLL・静的初期化) は、プロセスの作成時刻
+  (`GetProcessTimes`) との差で測る。記録は固定長の配列へ書くだけで、Master を含む全構成で有効
+- `bench-run.py --startup-exe runtime.exe` が、各ラウンドで `bench_test.exe` の後に
+  `runtime.exe --exit-after-frames=1` を 3 回起動する (`--startup-launches`)。1 回の起動が 1 サンプル。
+  最初の冷えた起動 (ディスクのキャッシュに載っていない) は head / base とも 1 回捨てる
+- 区間の定義と表示名は `.github/scripts/bench_common.py` の `STARTUP_INTERVALS`。
+  見どころは `startup/reflection_init` と `startup/world_init` (エンジン自身の初期化)。
+  `startup/pre_main` と `startup/init_phase` は OS とウィンドウ・デバイスの作成が大半で揺れが大きい。
+  CI のランナーには GPU が無いので、デバイスまわりは実機と違う経路を通る
+- 区間ごとの確保回数も載る。予算は `STARTUP_ALLOC_BUDGETS` に書く (超えたら CI が落ちる)。実測を見てから決める
+- 起動は OS の仕事を含む壁時計なので、結果ページとサマリーの「全体の変化 (幾何平均)」には入れない
+
+手元で起動だけ見るとき:
+
+```powershell
+runtime\build\runtime\x64\Release\runtime.exe --exit-after-frames=1 --startup-report=startup.json
+```
+
 ## 計測のしかた
 
 `bench.h` の `nox::bench::State::Run` がやること:

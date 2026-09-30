@@ -109,6 +109,14 @@ CATALOG = [
     ("delegate/std_function_invoke", "delegate", "call", "1", 0, "比較用: std::function の呼び出し", 1.92, 0, 0),
     ("math/vec3_integrate/10k", "math", "entity", "1", 0, "Vec3 の位置更新 (1 万要素)", 0.41, 0, 0),
     ("lock/srw_uncontended", "lock", "pair", "1", 0, "StaticLock (SRWLOCK) の Lock/Unlock (競合なし)", 3.1, 0, 0),
+    # 起動 (runtime.exe --startup-report)。区間は bench_common.py の STARTUP_INTERVALS
+    ("startup/process_total", "startup", "launch", "1", None, "起動全体: プロセスの作成から最初のフレームを終えるまで", 182e6, 2410, 412000),
+    ("startup/pre_main", "startup", "launch", "1", None, "EntryPoint まで (OS のローダ・DLL の読み込み・静的初期化)", 38e6, 12, 1480),
+    ("startup/engine_total", "startup", "launch", "1", None, "エンジンの起動: EntryPoint から最初のフレームを終えるまで", 144e6, 2398, 410520),
+    ("startup/reflection_init", "startup", "launch", "1", None, "reflection::Initialize (生成コードの型登録)", 1.9e6, 310, 52000),
+    ("startup/world_init", "startup", "launch", "1", None, "World の生成と Init (モジュール・システム・UpdaterGraph・JobSystem)", 3.4e6, 180, 96000),
+    ("startup/init_phase", "startup", "launch", "1", None, "Init フェーズ (ゲームスレッドの起動、ウィンドウやデバイスの作成)", 121e6, 1850, 250000),
+    ("startup/first_frame", "startup", "launch", "1", None, "最初のフレーム (Update フェーズ 1 回)", 6.2e6, 40, 8400),
 ]
 
 SUBJECTS = [

@@ -59,6 +59,9 @@
 		bytes: { label: "確保バイト", axis: "1 op あたりのヒープ確保量" },
 	};
 	const DEFAULT_THRESHOLD = 0.05;
+	// 全体の変化 (比の幾何平均) に入れないグループ。bench_common.py の GEOMEAN_EXCLUDED_GROUPS と同じ。
+	// 起動 (startup) は OS のローダやウィンドウの作成を含む壁時計なので、マイクロベンチマークと混ぜない
+	const GEOMEAN_EXCLUDED_GROUPS = new Set(["startup"]);
 	const FOREST_DOMAIN = 0.15;
 	const SPARK_POINTS = 30;
 	const THEME_KEY = "nox-bench-theme";
@@ -490,10 +493,13 @@
 		const gmap = new Map();
 		for (const r of vm.rows) {
 			if (!gmap.has(r.group)) {
-				gmap.set(r.group, { name: r.group, count: 0, regressed: 0, improved: 0 });
+				gmap.set(r.group, { name: r.group, count: 0, regressed: 0, improved: 0, budget: 0 });
 			}
 			const g = gmap.get(r.group);
 			g.count++;
+			if (r.alloc && r.alloc.budgetOk === false) {
+				g.budget++;
+			}
 			if (r.verdict === "regressed") {
 				g.regressed++;
 			}
@@ -729,7 +735,7 @@
 		const before = vm.run ? (vm.extraRun ? Infinity : vm.runIdx) : vm.lastIdx;
 		for (const r of vm.rows) {
 			sm[r.verdict] = (sm[r.verdict] || 0) + 1;
-			if (r.paired && r.paired.ratio > 0) {
+			if (r.paired && r.paired.ratio > 0 && !GEOMEAN_EXCLUDED_GROUPS.has(r.group)) {
 				logSum += Math.log(r.paired.ratio);
 				sm.paired++;
 			}
@@ -960,9 +966,13 @@
 			const vm = model.variants.get(id);
 			const on = id === state.variant;
 			const reg = vm.summary.regressed;
-			const flag = reg ? '<span class="seg-flag" aria-hidden="true">▲</span>' : "";
-			const sr = reg ? '<span class="sr-only"> (悪化 ' + reg + " 件)</span>" : "";
-			const title = reg ? ' title="最新の計測で悪化 ' + reg + ' 件"' : "";
+			// CI を落とす予算超過は時間の悪化より先に知らせる (予算超過だけの構成にも印を付ける)
+			const bad = vm.summary.budgetViolations;
+			const flag = (bad ? '<span class="seg-flag" aria-hidden="true">✕</span>' : "")
+				+ (reg ? '<span class="seg-flag" aria-hidden="true">▲</span>' : "");
+			const notes = (bad ? ["予算超過 " + bad + " 件"] : []).concat(reg ? ["悪化 " + reg + " 件"] : []);
+			const sr = notes.length ? '<span class="sr-only"> (' + notes.join("、") + ")</span>" : "";
+			const title = notes.length ? ' title="最新の計測で' + notes.join("、") + '"' : "";
 			return '<button type="button" role="radio" data-variant="' + esc(id) + '" aria-checked="' + on + '" tabindex="' + (on ? 0 : -1) + '"' + title + ">" + esc(vm.label) + flag + sr + "</button>";
 		}).join("");
 		box.classList.add("seg");
@@ -975,7 +985,9 @@
 		sel.innerHTML = model.variantIds.map((id) => {
 			const vm = model.variants.get(id);
 			const reg = vm.summary.regressed;
-			return '<option value="' + esc(id) + '"' + (id === state.variant ? " selected" : "") + ">" + esc(vm.label) + (reg ? " ▲" + reg : "") + "</option>";
+			const bad = vm.summary.budgetViolations;
+			return '<option value="' + esc(id) + '"' + (id === state.variant ? " selected" : "") + ">" + esc(vm.label)
+				+ (bad ? " ✕" + bad : "") + (reg ? " ▲" + reg : "") + "</option>";
 		}).join("");
 	}
 
@@ -1251,14 +1263,17 @@
 
 	function renderChips() {
 		const vm = vmNow();
-		const chip = (key, label, count, flag) => {
+		const chip = (key, label, count, g) => {
 			const on = state.group === key;
+			const flag = !g ? ""
+				: g.budget ? '<span class="chip-flag" aria-hidden="true">✕</span><span class="sr-only">予算超過あり</span>'
+				: g.regressed ? '<span class="chip-flag" aria-hidden="true">▲</span><span class="sr-only">悪化あり</span>'
+				: "";
 			return '<button type="button" class="chip" data-group="' + esc(key) + '" aria-pressed="' + on + '">'
-				+ esc(label) + '<span class="chip-count">' + count + "</span>"
-				+ (flag ? '<span class="chip-flag" aria-hidden="true">▲</span><span class="sr-only">悪化あり</span>' : "") + "</button>";
+				+ esc(label) + '<span class="chip-count">' + count + "</span>" + flag + "</button>";
 		};
-		$("group-chips").innerHTML = chip("all", "すべて", vm.rows.length, false)
-			+ vm.groups.map((g) => chip(g.name, g.name, g.count, g.regressed > 0)).join("");
+		$("group-chips").innerHTML = chip("all", "すべて", vm.rows.length, null)
+			+ vm.groups.map((g) => chip(g.name, g.name, g.count, g)).join("");
 		$("search").value = state.query;
 		$("changed-only").checked = state.changedOnly;
 		$("sort").value = state.sort;
@@ -1351,6 +1366,9 @@
 					continue;
 				}
 				const flags = [];
+				if (g.budget) {
+					flags.push('<span><span class="c-regressed" aria-hidden="true">✕</span> 予算超過 ' + g.budget + "</span>");
+				}
 				if (g.regressed) {
 					flags.push('<span><span class="c-regressed" aria-hidden="true">▲</span> 悪化 ' + g.regressed + "</span>");
 				}
@@ -2851,9 +2869,13 @@
 			b = opts[0] || null;
 		}
 		if (!a && b) {
-			// 既定: B がブランチなら分岐元。そうでなければ、B より古い点のうち B と同じ CPU の最も新しいもの
+			// 既定: B が最新の計測 (ブランチのプレビューか master の最新) なら、その計測の比較対象 (base)。
+			// 概要の判定は head と base を同じ VM で交互に測った比なので、A を base にそろえないと
+			// 概要では「変化なし」の行がここでは「遅くなった」と出るような食い違いが起きる。
+			// それ以外は、B より古い点のうち B と同じ CPU の最も新しいもの
 			// (ランナーの CPU は実行ごとに入れ替わるので、1 つ前をそのまま選ぶと CPU の差を比べてしまう)
-			const baseSha = b.extra && vm.run && vm.run.base ? vm.run.base.sha : null;
+			const bIsRun = b.extra || (b.commit && vm.run && vm.run.commit && b.commit.sha === vm.run.commit.sha);
+			const baseSha = bIsRun && vm.run && vm.run.base ? vm.run.base.sha : null;
 			a = baseSha ? find(baseSha) : null;
 			if (!a) {
 				const i = opts.indexOf(b);
