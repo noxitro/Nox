@@ -658,7 +658,7 @@ namespace nox
 
 	/// @brief 修飾子情報を全て外した関数型
 	template<concepts::FunctionSignatureType T>
-	using function_raw_t = typename nox::detail::FunctionSignatureAdapter<T>::RawFunctionType;
+	using raw_function_t = typename nox::detail::FunctionSignatureAdapter<T>::RawFunctionType;
 
 	/// @brief メンバ関数を持つクラスの型
 	template<class T> requires(std::is_member_function_pointer_v<T>)

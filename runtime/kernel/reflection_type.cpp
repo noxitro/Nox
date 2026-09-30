@@ -9,13 +9,13 @@
 namespace nox
 {
 	template<class T, class U, class... Tail>
-	constexpr bool is_same_and_v=false;
+	constexpr bool is_all_same_v=false;
 
 	template<class T, class U>
-	constexpr bool is_same_and_v<T, U> = std::is_same_v<T, U>;
+	constexpr bool is_all_same_v<T, U> = std::is_same_v<T, U>;
 
 	template<class T, class U, class... Tail> requires(sizeof...(Tail) > 0)
-	constexpr bool is_same_and_v<T, U, Tail...> = std::is_same_v<T, U> && std::is_same_v<T, Tail...>;
+	constexpr bool is_all_same_v<T, U, Tail...> = std::is_same_v<T, U> && nox::is_all_same_v<T, Tail...>;
 
 	namespace detail
 	{
@@ -36,7 +36,7 @@ namespace nox
 	}
 
 	template<class T, class U, class... Tail>
-	constexpr bool is_same_or_v = nox::detail::is_same_or<T, U, Tail...>::value;
+	constexpr bool is_any_same_v = nox::detail::is_same_or<T, U, Tail...>::value;
 }
 
 namespace nox::reflection
@@ -119,7 +119,7 @@ namespace nox
 		using RemoveRef = std::remove_reference_t<T>;
 		using RemovePtr = std::remove_pointer_t<T>;*/
 
-		constexpr bool ea = !is_same_or_v<
+		constexpr bool ea = !is_any_same_v<
 			std::add_const_t<int>,
 			std::add_lvalue_reference_t<int>,
 			std::add_rvalue_reference_t<int>,
@@ -132,7 +132,7 @@ namespace nox
 		>;
 		static_assert(ea);
 		
-		/*static_assert(!is_same_or_v<
+		/*static_assert(!is_any_same_v<
 			std::add_const_t<T>,
 			std::add_lvalue_reference_t<T>,
 			std::add_volatile_t<T>,

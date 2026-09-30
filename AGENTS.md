@@ -113,7 +113,8 @@ dotnet build Editor/Studio.slnx
 型特性 (型から bool・値・型を 1 つ求めるメタ関数) は標準ライブラリと同じ `snake_case` にし、`std::` の型特性と並べて読めるようにする。
 
 - bool は `is_xxx_v` / `has_xxx_v`、値は `xxx_v`、型の変換は `xxx_t`。`kPascalCase` の定数規則は当てはめない。
-- 構造体で実装するときは `detail::is_xxx` / `detail::xxx` に置き、結果はメンバ `::value` / `::type` で返す (`std::true_type` などを継承してよい)。
+- 構造体で実装するときは `detail::is_xxx` / `detail::xxx` に置き、結果はメンバ `::value` / `::type` で返す (`std::true_type` などを継承してよい)。detail 内の変数テンプレートも `_v` を付ける。
+- 利用者に特殊化させる拡張点は、公開の構造体 `is_xxx` のままでよい (`nox::reflection::is_only_attribute`)。
 - concept は `PascalCase` (`TupleLike`)。`Enum` / `Class` / `Char` のようにキーワードと衝突する名前があるため。
 - 複数のメンバを持つ解析用のクラス (`detail::FunctionSignature` など) は通常のクラスとして `PascalCase`。メンバ型 (`ResultType` / `ClassType` など) も `PascalCase` で、bool のメンバは `is_xxx`。
 

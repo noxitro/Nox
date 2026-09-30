@@ -33,10 +33,10 @@ namespace nox
 		struct FunctionObjectWithTupleLikeSignature<T, ArgsTuple<Args...>> : nox::detail::FunctionObjectSignature<T, Args...> {};
 
 		/*template<class T, class ArgsTuple>
-		struct function_object_result_with_tuple_like_t;
+		struct function_object_result_with_tuple_like;
 
 		template<class T, template<class...> class ArgsTuple, class... Args> requires(nox::is_tuple_like_v< ArgsTuple<Args...>>)
-			struct function_object_result_with_tuple_like_t<T, ArgsTuple<Args...>>
+			struct function_object_result_with_tuple_like<T, ArgsTuple<Args...>>
 		{
 			using type = typename nox::detail::FunctionObjectWithTupleLikeSignature<T, ArgsTuple<Args...>>::ResultType;
 		};*/

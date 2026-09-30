@@ -269,7 +269,7 @@
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_SETTER(ClassName, FieldName); \
 			}\
-			else if constexpr (nox::is_invokable_default_operator_v<_T> == true)\
+			else if constexpr (nox::is_invocable_default_operator_v<_T> == true)\
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_SETTER(ClassName, FieldName); \
 			}\
@@ -293,7 +293,7 @@
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_GETTER(ClassName, FieldName);\
 			}\
-			else if constexpr (nox::is_invokable_default_operator_v<_T> == true)\
+			else if constexpr (nox::is_invocable_default_operator_v<_T> == true)\
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_GETTER(ClassName, FieldName);\
 			}\
@@ -363,7 +363,7 @@
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_SETTER_GLOBAL(FieldName); \
 			}\
-			else if constexpr (nox::is_invokable_default_operator_v<_T> == true)\
+			else if constexpr (nox::is_invocable_default_operator_v<_T> == true)\
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_SETTER_GLOBAL(FieldName); \
 			}\
@@ -387,7 +387,7 @@
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_GETTER_GLOBAL(FieldName);\
 			}\
-			else if constexpr (nox::is_invokable_default_operator_v<_T> == true)\
+			else if constexpr (nox::is_invocable_default_operator_v<_T> == true)\
 			{\
 				return NOX_VARIABLE_INFO_LAMBDA_GETTER_GLOBAL(FieldName);\
 			}\

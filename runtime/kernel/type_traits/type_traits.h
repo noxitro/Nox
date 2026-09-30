@@ -80,7 +80,7 @@ namespace nox
 
 	/// @brief 文字列型か
 	template<class T>
-	constexpr bool is_char_type_v =
+	constexpr bool is_char_v =
 		std::is_same_v<T, char> ||
 		std::is_same_v<T, signed char> ||
 		std::is_same_v<T, unsigned char> ||
@@ -202,7 +202,7 @@ namespace nox
 
 	/// @brief 文字列型かどうか
 	template<class T>
-	constexpr bool is_string_class_all_v = nox::is_string_class_v<T> || nox::is_string_view_class_v<T>;
+	constexpr bool is_any_string_class_v = nox::is_string_class_v<T> || nox::is_string_view_class_v<T>;
 
 	namespace detail
 	{
@@ -212,7 +212,7 @@ namespace nox
 		struct string_char;
 
 		/// @brief char type
-		template<class T> requires(nox::is_char_type_v<std::decay_t<std::remove_pointer_t<std::decay_t<T>>>>)
+		template<class T> requires(nox::is_char_v<std::decay_t<std::remove_pointer_t<std::decay_t<T>>>>)
 			struct string_char<T>
 		{
 			using type = std::decay_t<std::remove_pointer_t<std::decay_t<T>>>;
@@ -259,10 +259,10 @@ namespace nox
 
 	/// @brief sizeof可能な型かどうか
 	template<typename T>
-	constexpr bool is_sizeof_type_v = false;
+	constexpr bool is_complete_v = false;
 
 	template<typename T> requires(sizeof(T) >= 0)
-	constexpr bool is_sizeof_type_v<T> = true;
+	constexpr bool is_complete_v<T> = true;
 
 	/**
 	 * @brief あらゆる関数型
@@ -282,7 +282,7 @@ namespace nox
 
 		/// @brief 文字列型
 		template<class T>
-		concept Char = nox::is_char_type_v<T>;
+		concept Char = nox::is_char_v<T>;
 
 		template<class T, class U>
 		concept EqualityComparable = requires(const T & a, const U & b)
@@ -378,7 +378,7 @@ namespace nox
 
 	/// @brief あらゆるconst型か
 	template<class T>
-	constexpr bool is_const_all_v = std::is_const_v<T> || is_const_pointer_v<T> || is_const_lvalue_reference_v<T> || is_const_rvalue_reference_v<T>;
+	constexpr bool is_any_const_v = std::is_const_v<T> || is_const_pointer_v<T> || is_const_lvalue_reference_v<T> || is_const_rvalue_reference_v<T>;
 
 	/// @brief シーケンスコンテナ
 	template<class T>

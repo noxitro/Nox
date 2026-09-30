@@ -37,7 +37,7 @@ namespace nox::util
 		template<class CharType>
 		size_t GetStringMaxSize();
 
-		template<class CharType> requires(is_char_type_v<CharType>)
+		template<class CharType> requires(is_char_v<CharType>)
 			struct FormatStringHolder
 		{
 			template<class From> requires(!std::is_same_v< CharType, From>)
@@ -70,7 +70,7 @@ namespace nox::util
 		template<class To, class From>
 		inline consteval bool IsFormatArgNoConvertNeeded()
 		{
-			if constexpr (std::is_arithmetic_v<std::decay_t<From>> && !is_char_type_v<std::decay_t<From>>)
+			if constexpr (std::is_arithmetic_v<std::decay_t<From>> && !is_char_v<std::decay_t<From>>)
 			{
 				return true;
 			}
@@ -83,16 +83,16 @@ namespace nox::util
 		template<class To, class From>
 		struct check_through_format_string : std::false_type {};
 
-		template<class To, class From> requires(std::is_arithmetic_v<std::decay_t<From>> && !is_char_type_v<std::decay_t<From>>)
+		template<class To, class From> requires(std::is_arithmetic_v<std::decay_t<From>> && !is_char_v<std::decay_t<From>>)
 			struct check_through_format_string<To, From> : std::true_type {};
 
 		template<class To, class From> requires(std::is_same_v<To, std::decay_t<std::remove_pointer_t<std::decay_t<From>>>>)
 			struct check_through_format_string<To, From> : std::true_type {};
 
-		template<class To, class From> requires(is_string_class_all_v<std::decay_t<From>>&& std::is_same_v<To, typename std::decay_t<From>::value_type>)
+		template<class To, class From> requires(is_any_string_class_v<std::decay_t<From>>&& std::is_same_v<To, typename std::decay_t<From>::value_type>)
 			struct check_through_format_string<To, From> : std::true_type {};
 
-		template<class To, class From> requires(is_char_type_v<To>)
+		template<class To, class From> requires(is_char_v<To>)
 			constexpr bool check_through_format_string_v = check_through_format_string<To, From>::value;
 
 		template<class From, class To>

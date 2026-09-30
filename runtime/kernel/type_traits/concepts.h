@@ -92,7 +92,7 @@ namespace nox::concepts
 namespace nox
 {
 	template<class T>
-	constexpr bool is_invokable_default_operator_v = nox::concepts::detail::HasDefaultOperator<T>;
+	constexpr bool is_invocable_default_operator_v = nox::concepts::detail::HasDefaultOperator<T>;
 
 	/// @brief 添え字アクセスが可能
 	/// @tparam T 

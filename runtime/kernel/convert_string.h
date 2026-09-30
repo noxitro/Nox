@@ -124,7 +124,7 @@ namespace nox::util
 		return *reinterpret_cast<const char*>(&str);
 	}
 
-	template<class T> requires(nox::is_char_type_v<T>)
+	template<class T> requires(nox::is_char_v<T>)
 	constexpr inline size_t GetStrLength(const T* strPtr)noexcept
 	{
 		return std::char_traits<T>::length(strPtr);
@@ -165,7 +165,7 @@ namespace nox::util
 	//template<class To, class From>
 	////	requires(
 	////nox::is_string_class_v<To> &&
-	////!nox::is_char_type_v<std::remove_cvref_t<std::remove_pointer_t<From>>> &&
+	////!nox::is_char_v<std::remove_cvref_t<std::remove_pointer_t<From>>> &&
 	////!nox::is_string_class_v<std::remove_cvref_t<From>> &&
 	////	!nox::is_string_view_class_v<std::remove_cvref_t<From>>
 	////	)
@@ -176,7 +176,7 @@ namespace nox::util
 	///// @tparam From 
 	///// @param object 
 	///// @return 
-	//template<class To, class From> requires(nox::is_char_type_v<From>)
+	//template<class To, class From> requires(nox::is_char_v<From>)
 	//inline To ConvertStringSafe(const From* object) { 
 	////	return util::ConvertString<To>(object); 
 	//	return To();
@@ -187,7 +187,7 @@ namespace nox::util
 	///// @tparam From 
 	///// @param object 
 	///// @return 
-	//template<class To, class From> requires(nox::is_string_class_v<To>&& nox::is_char_type_v<From>)
+	//template<class To, class From> requires(nox::is_string_class_v<To>&& nox::is_char_v<From>)
 	//inline To ConvertStringSafe(const nox::StlBasicString<From>& object) { 
 	//	return nox::util::ConvertString<To>(object); 
 	//}
@@ -197,7 +197,7 @@ namespace nox::util
 	///// @tparam From 
 	///// @param object 
 	///// @return 
-	//template<class To, class From> requires(nox::is_string_class_v<To>&& nox::is_char_type_v<From>)
+	//template<class To, class From> requires(nox::is_string_class_v<To>&& nox::is_char_v<From>)
 	//inline To ConvertStringSafe(const std::basic_string_view<From> object) { return nox::util::ConvertString<To>(object); }
 
 #pragma endregion

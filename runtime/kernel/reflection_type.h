@@ -506,7 +506,7 @@ namespace nox::reflection
 		{
 			inline static consteval std::uint32_t SafeSizeof()noexcept
 			{
-				if constexpr (nox::is_sizeof_type_v<T>)
+				if constexpr (nox::is_complete_v<T>)
 				{
 					return sizeof(T);
 				}
@@ -518,7 +518,7 @@ namespace nox::reflection
 
 			inline static consteval std::uint32_t SafeAlignmentOf()noexcept
 			{
-				if constexpr (nox::is_sizeof_type_v<T>)
+				if constexpr (nox::is_complete_v<T>)
 				{
 					return std::alignment_of_v<T>;
 				}
