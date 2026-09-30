@@ -142,8 +142,34 @@ if ($files.Count -gt 0)
 	& $sh tools/git-hooks/gitleaks.sh "--log-opts=$base..$commit"
 	if ($LASTEXITCODE -ne 0) { $scanOk = $false }
 }
+
+# コミットメッセージ (外部資料名・手元の非公開リスト)。push される手元のコミット全部を見る。
+& $sh -c 'PY=$(sh tools/git-hooks/find-python.sh); [ -z "$PY" ] || "$PY" tools/git-hooks/check-external-names.py --commits "$1"' ci-try "$base..$commit"
+if ($LASTEXITCODE -ne 0) { $scanOk = $false }
+
+# 作成者・コミッターのメールアドレス。スナップショット自体も user.email で作られる。
+$emails = @(Invoke-Git log --format='%ae%n%ce' "$base..$commit" | Where-Object { $_ -and $_ -notmatch 'noreply' } | Sort-Object -Unique)
+if ($emails.Count -gt 0)
+{
+	Write-Host 'ci-try: 公開用 (noreply) でないメールアドレスのコミットがある:' -ForegroundColor Red
+	$emails | ForEach-Object { Write-Host "  $_" -ForegroundColor Red }
+	Write-Host '  git config user.email <ID>+<ユーザー名>@users.noreply.github.com にする' -ForegroundColor Red
+	$scanOk = $false
+}
+
 if (-not $scanOk) { Fail '検査で止まった。上の出力を見て直してから実行し直す (push はしていない)' }
 Write-Host 'ci-try: 検査は通った' -ForegroundColor Green
+
+# --- 新しく入る素材 ----------------------------------------------------------
+# フォント・モデル・画像・音声は、コードと違ってライセンスを中身から判定できない。
+# 一覧を出して、y/n の前に出どころを確かめてもらう。
+$assetExt = '\.(ttf|otf|ttc|woff2?|fbx|gltf|glb|blend|max|ma|mb|png|jpe?g|gif|bmp|tga|dds|hdr|exr|psd|wav|ogg|mp3|flac|mp4|mov)$'
+$assets = @(Invoke-Git -c core.quotePath=false diff --name-only --diff-filter=A $base $commit | Where-Object { $_ -match $assetExt })
+if ($assets.Count -gt 0)
+{
+	Write-Host "ci-try: 新しい素材 $($assets.Count) 本が入る。ライセンス (再配布できるか・クレジット表記) を確かめる" -ForegroundColor Yellow
+	$assets | ForEach-Object { Write-Host "  $_" -ForegroundColor Yellow }
+}
 
 # --- 未追跡のファイルの確認 --------------------------------------------------
 # 手元のメモやログなど、コミットするつもりの無いファイルがそのまま公開されるのを防ぐ。
