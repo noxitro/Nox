@@ -7,7 +7,7 @@
 #         レビューの基準は CLAUDE.md (→ AGENTS.md) の規約。
 # 使い方: コメントの先頭に「/claude」と書き、空白か改行を挟んで頼む。
 #         例:「/claude review」「/claude この変更で性能は落ちない?」
-#         「/claudeレビューして」のように続けて書くと反応しない。
+#         「/claudeレビューして」のように続けて書くと反応しない (ランナーは立つが Claude は動かない)。
 # モデル: 「/claude fable レビューして」のように /claude の直後にモデル名を書くと
 #         そのモデルで動く (fable / opus / sonnet / haiku、省くと opus)。
 #         名前に近い打ち間違い (fabel など) は Claude を起動せず「もしかして」を返す。

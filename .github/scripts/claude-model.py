@@ -6,7 +6,8 @@
 
 モデル名に近いが一致しない語 (fabel / opsu / sonet など) は打ち間違いとみなし、
 Claude を起動せずに「もしかして」を返す。違うモデルで走って利用枠を無駄にしないため。
-英単語の取り違え (table → fable など) を避けるため、先頭の文字が同じ語だけを候補にする。
+英単語の取り違え (table → fable など) を避けるため、先頭の文字が同じ語だけを候補にし、
+近い英単語 (false / oops など) は NOT_TYPOS で除く。
 
 入力 : 環境変数 BODY (コメント本文)。
 出力 : GITHUB_OUTPUT に次を書く (未設定なら標準出力)。
@@ -28,7 +29,7 @@ MODELS = {
     "fable": "claude-fable-5-1",
     "opus": "claude-opus-5-5",
     "sonnet": "claude-sonnet-5-5",
-    "haiku": "claude-haiku-4-5-20251001",
+    "haiku": "claude-haiku-4-5",
 }
 ALIASES = {
     "fable": "fable",
@@ -43,6 +44,8 @@ ALIASES = {
 DEFAULT_MODEL = "opus"
 
 TRIGGER = "/claude"
+# モデル名に近いが、依頼文の書き出しとしてありうる英単語。打ち間違いとみなさない
+NOT_TYPOS = {"false", "oops", "ops", "fables", "fabled", "sonnets", "haikus"}
 # 打ち間違いとみなす近さ (difflib の ratio)。fabel / opsu / sonet / hiaku が 0.75 以上になる
 TYPO_RATIO = 0.75
 
@@ -55,13 +58,18 @@ def normalize(word):
 
 
 def first_word(body):
-    """/claude の直後の語。/claude に続けて書いた場合は claude.yml 側で弾かれるので考えない。"""
+    """/claude の直後の語。
+
+    「/claudeレビュー」のように続けて書いたコメントでも job は起動するが、
+    claude-code-action のトリガー判定で Claude は動かない。ここでは区別しない。
+    """
     rest = body.lstrip()[len(TRIGGER):]
     words = rest.split()
     if not words:
         return ""
     # 「fableで」「opus?」のように続けて書いた日本語や記号は外す
-    m = re.match(r"[A-Za-z0-9._-]+", words[0])
+    # 「`fable`」「**fable**」のような Markdown の装飾も外す
+    m = re.match(r"[A-Za-z0-9._-]+", words[0].lstrip("`*_"))
     return m.group(0).rstrip(".-_") if m else ""
 
 
@@ -72,7 +80,7 @@ def choose(body):
     if key in ALIASES:
         return ALIASES[key], None
     # 英数字の語だけが候補になる (first_word が日本語などを外してある)
-    if key:
+    if key and key not in NOT_TYPOS:
         base = re.sub(r"[0-9]+$", "", key)
         for name in MODELS:
             if base and base[0] == name[0] and difflib.SequenceMatcher(None, base, name).ratio() >= TYPO_RATIO:
