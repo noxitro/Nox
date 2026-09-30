@@ -75,11 +75,21 @@ sh tools/git-hooks/install.sh
 パスを 1 行で足して除外する (理由をコメントで残すこと)。
 
 検査は 2 段になっている。`scan.sh` がこのリポジトリ固有のもの
-(ビルド成果物の混入、ローカル絶対パス、個人メール) を見て、
+(ビルド成果物の混入、ローカル絶対パス、個人メール、MIT と両立しないライセンスの文言や
+他者の著作権表示、家庭用ゲーム機の非公開 SDK の識別子) を見て、
 `gitleaks` が汎用の秘密情報を見る。外部資料の名前 (ファイルの中身と
 コミットメッセージ) は `check-external-names.py` が見る。これは Python 3 を使い、
 無ければ手元では飛ばして CI の Secret scan だけで検査する。gitleaks は任意だが、入れると
-検出できるトークン形式が大幅に増えるので推奨する。
+検出できるトークン形式が大幅に増えるので推奨する。`pre-push` は、コミットの作成者・
+コミッターのメールアドレスが noreply でなければ止める。
+
+所属先など、ハッシュにしてもリポジトリに置きたくない名前は、手元だけの非公開リスト
+(`~/.config/nox/private-names.sha256`) に入れる。フックが同じように止める
+(CI には無いので、止めるのは手元のフックだけ)。
+
+```sh
+python3 tools/git-hooks/check-external-names.py --add-private '<名前>'
+```
 
 ```sh
 winget install Gitleaks.Gitleaks

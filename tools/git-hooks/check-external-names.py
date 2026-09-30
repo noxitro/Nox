@@ -23,11 +23,17 @@
 ハッシュは総当たりで元に戻せる。目的は「名前を平文で置かない」ことであって、
 秘密にすることではない。
 
+リポジトリの外に置く非公開リストも併せて見る (既定 ~/.config/nox/private-names.sha256、
+環境変数 NOX_PRIVATE_NAMES で変えられる)。所属先など、ハッシュでもリポジトリに置くと
+候補の総当たりで関係が知られてしまう名前はこちらへ入れる。書式は禁止リストと同じで、
+--add-private で追記できる。無ければ飛ばす (CI には無いので、止めるのは手元のフックだけ)。
+
 使い方:
   check-external-names.py --blobs          標準入力の "<path>\\t<blob-ish>" を検査 (scan.sh と同じ形式)
   check-external-names.py --message FILE   コミットメッセージを検査 (commit-msg フック)
   check-external-names.py --commits REV... 範囲内のコミットメッセージを検査 (pre-push / CI)
   check-external-names.py --hash NAME...   禁止リストへ足す行を出力する
+  check-external-names.py --add-private NAME...   非公開リストへ追記する (名前は画面にも出さない)
 
   --list FILE で禁止リストを指定できる (複数可)。省略時は隣の external-names.sha256。
 
@@ -38,6 +44,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
 import pathlib
 import re
 import subprocess
@@ -48,6 +55,8 @@ from collections.abc import Iterator
 
 HERE = pathlib.Path(__file__).resolve().parent
 LIST_PATH = HERE / "external-names.sha256"
+PRIVATE_LIST_PATH = pathlib.Path(
+    os.environ.get("NOX_PRIVATE_NAMES") or pathlib.Path.home() / ".config" / "nox" / "private-names.sha256")
 SALT = "nox-external-name:"
 MAX_BYTES = 5 * 1024 * 1024
 MAX_JOIN = 3
@@ -162,13 +171,27 @@ def find_in_line(line: str, names: NameList, hints: bool = True) -> str | None:
     return None
 
 
-def scan_text(label: str, text: str, names: NameList) -> int:
+class Checks:
+    """照合するリストの組。公開の禁止リストと、手元にだけある非公開リスト。"""
+
+    def __init__(self, names: NameList, private: NameList | None) -> None:
+        self.names = names
+        self.private = private
+
+
+def scan_text(label: str, text: str, checks: Checks) -> int:
     found = 0
     for no, line in enumerate(text.splitlines(), 1):
-        hit = find_in_line(line, names)
+        hit = find_in_line(line, checks.names)
         if hit:
             print(f"  [EXTERNAL-NAME] {label}:{no}\n    {hit} — 外部資料の名前 / 外部資料への言及", file=sys.stderr)
             found += 1
+            continue
+        if checks.private is not None:
+            hit = find_in_line(line, checks.private, hints=False)
+            if hit:
+                print(f"  [PRIVATE-NAME] {label}:{no}\n    {hit} — 手元の非公開リストの名前 (所属先など)", file=sys.stderr)
+                found += 1
     return found
 
 
@@ -234,7 +257,7 @@ def iter_blobs(pairs: list[tuple[str, str]]) -> Iterator[tuple[str, bytes]]:
         raise RuntimeError(f"git cat-file --batch が途中で終了した (終了コード {code})")
 
 
-def cmd_blobs(names: NameList) -> int:
+def cmd_blobs(names: Checks) -> int:
     pairs = []
     for line in sys.stdin.read().splitlines():
         path, sep, obj = line.partition("\t")
@@ -248,7 +271,7 @@ def cmd_blobs(names: NameList) -> int:
     return found
 
 
-def cmd_message(path: str, names: NameList) -> int:
+def cmd_message(path: str, names: Checks) -> int:
     text = pathlib.Path(path).read_text(encoding="utf-8", errors="replace")
     # git commit -v の差分や # で始まるコメントは記録されないので見ない。
     text = text.split("# ------------------------ >8 ------------------------", 1)[0]
@@ -256,7 +279,7 @@ def cmd_message(path: str, names: NameList) -> int:
     return scan_text("コミットメッセージ", text, names)
 
 
-def cmd_commits(rev_range: list[str], names: NameList) -> int:
+def cmd_commits(rev_range: list[str], names: Checks) -> int:
     out = subprocess.run(["git", "log", "--format=%H%x00%B%x01", *rev_range],
                          capture_output=True, check=True).stdout.decode("utf-8", errors="replace")
     found = 0
@@ -274,6 +297,7 @@ def main() -> int:
     group.add_argument("--message")
     group.add_argument("--commits", nargs=argparse.REMAINDER, metavar="REV")
     group.add_argument("--hash", nargs="+", metavar="NAME")
+    group.add_argument("--add-private", nargs="+", metavar="NAME")
     parser.add_argument("--list", action="append", type=pathlib.Path, metavar="FILE")
     args = parser.parse_args()
 
@@ -286,9 +310,40 @@ def main() -> int:
             return 2
         return 0
 
+    if args.add_private:
+        try:
+            entries = [list_entry(name) for name in args.add_private]
+        except ValueError as e:
+            print(e, file=sys.stderr)
+            return 2
+        PRIVATE_LIST_PATH.parent.mkdir(parents=True, exist_ok=True)
+        text = ""
+        if PRIVATE_LIST_PATH.exists():
+            text = PRIVATE_LIST_PATH.read_text(encoding="utf-8")
+        existing = set(text.splitlines())
+        added = [e for e in entries if e not in existing]
+        with PRIVATE_LIST_PATH.open("a", encoding="utf-8", newline="\n") as f:
+            # 手で編集して末尾の改行が無いと、追記した行が最後の行にくっついてどちらも読めなくなる
+            if added and text and not text.endswith("\n"):
+                f.write("\n")
+            for entry in added:
+                f.write(entry + "\n")
+        print(f"{PRIVATE_LIST_PATH} に {len(added)} 件足した (既にあったもの {len(entries) - len(added)} 件)")
+        return 0
+
     names = NameList()
     for path in args.list or [LIST_PATH]:
         names.load(path)
+    private = None
+    if os.environ.get("NOX_PRIVATE_NAMES") and not PRIVATE_LIST_PATH.exists():
+        # 既定の場所に無いのは「使っていない」だが、環境変数で明示したのに無いのは設定の誤り。
+        # 黙って飛ばすと検査が抜けたことに気付けない。
+        print(f"check-external-names: NOX_PRIVATE_NAMES の指すファイルが無い: {PRIVATE_LIST_PATH}", file=sys.stderr)
+        return 2
+    if PRIVATE_LIST_PATH.exists():
+        private = NameList()
+        private.load(PRIVATE_LIST_PATH)
+    names = Checks(names, private)
     try:
         if args.blobs:
             found = cmd_blobs(names)
@@ -302,7 +357,8 @@ def main() -> int:
 
     if found:
         print(
-            "\n  外部資料の名前は書かないこと。設計の説明は資料名を出さずに自分の言葉で書く。\n"
+            "\n  外部資料の名前や、手元の非公開リストの名前 (所属先など) は書かないこと。\n"
+            "  設計の説明は資料名を出さずに自分の言葉で書く。\n"
             "  コミットメッセージなら書き直してから push する (git commit --amend / rebase)。",
             file=sys.stderr)
         return 1

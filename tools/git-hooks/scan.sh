@@ -26,6 +26,17 @@ note() { FOUND=1; printf '  [%s] %s\n    %s\n' "$1" "$2" "$3" >&2; }
 SECRET_RE='BEGIN (RSA|OPENSSH|DSA|EC|PGP) PRIVATE KEY|gh[pousr]_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{30}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|xox[abprs]-[0-9A-Za-z-]{10}|sk-ant-[A-Za-z0-9_-]{20}|discord(app)?\.com/api/(v[0-9]+/)?webhooks/[0-9]{17,20}/[A-Za-z0-9_-]{60}|(mongodb\+srv|mongodb|postgresql|postgres|mysql|redis|amqp)://[^:/[:space:]]+:[^@[:space:]]+@'
 # 個人情報。履歴から除去済みなので、再流入をここで止める。
 PERSONAL_RE='[A-Za-z]:[\/]{1,2}Users[\/]{1,2}[A-Za-z0-9._-]+|[A-Za-z0-9._%+-]+@(gmail|outlook|yahoo|icloud|hotmail)\.[A-Za-z.]{2,}'
+# ライセンス。このリポジトリは MIT なので、コピーレフトや再配布を禁じる文言が入ったら止める。
+# 大文字小文字は揃わないので -i で見る。reserve[d] と書いているのは、このファイル自身に当たらないため。
+LICENSE_RE='GNU (Lesser |Library |Affero )?General Public License|SPDX-License-Identifier:[[:space:]]*(A|L)?GPL|All rights reserve[d]'
+# 他者の著作権表示。自分の表示 (Copyright (c) 2023-XXXX noxitro) 以外は、コードの引き写しを疑う。
+# (c) の無い、年が直後に続く形 (Copyright <年> <名前>) も拾う。
+COPYRIGHT_RE='copyright[[:space:]]*(\(c\)|©|[0-9]{4})'
+OWN_COPYRIGHT_RE='noxitro'
+# 家庭用ゲーム機の非公開 SDK (NDA 下で配布されるもの) の識別子。ヘッダ・名前空間・関数と
+# マクロの命名規則で見る。製品名ではなく、コードに現れる形だけを並べている。
+# nn:: は直前が :: のもの (torch::nn::functional:: などのニューラルネット系) を外す。
+NDA_RE='#include[[:space:]]*[<"](nn|sce)[/_]|(^|[^A-Za-z0-9_:])nn::[a-z]+::|(^|[^A-Za-z0-9_])SCE_[A-Z][A-Z_]+|(^|[^A-Za-z0-9_])sce[A-Z][a-z]+[A-Z][A-Za-z0-9]*[[:space:]]*\('
 
 # このマシンのユーザー名・ホスト名。テスト結果 (.trx の runUser="HOST\user") や
 # ログに紛れ込む形で実際に混入したので、値を固定せず実行環境から取る。
@@ -85,7 +96,9 @@ done < "$TMP/big.txt"
 
 # --- 3. 中身 (まず全体を一度だけ走査する) -----------------------------------
 cut -f2 "$TMP/objs.txt" | git cat-file --batch 2>/dev/null > "$TMP/blobs.bin"
-if grep -a -q -E "$SECRET_RE|$PERSONAL_RE" "$TMP/blobs.bin" \
+if grep -a -q -E "$SECRET_RE|$PERSONAL_RE|$NDA_RE" "$TMP/blobs.bin" \
+   || grep -a -q -i -E "$LICENSE_RE" "$TMP/blobs.bin" \
+   || grep -a -i -E "$COPYRIGHT_RE" "$TMP/blobs.bin" | grep -a -q -v -i -E "$OWN_COPYRIGHT_RE" \
    || { [ -n "$LOCAL_RE" ] && grep -a -q -i -E "$LOCAL_RE" "$TMP/blobs.bin"; }; then
   # ここに来るのは異常時だけなので、個別に読み直して場所を特定する。
   while IFS="$(printf '\t')" read -r path obj; do
@@ -98,6 +111,16 @@ if grep -a -q -E "$SECRET_RE|$PERSONAL_RE" "$TMP/blobs.bin" \
       hit=$(printf '%s' "$body" | grep -a -o -i -E "$LOCAL_RE" 2>/dev/null | head -1)
       [ -n "$hit" ] && note PERSONAL "$path" "$hit — このマシンのユーザー名 / ホスト名の露出"
     fi
+    hit=$(printf '%s' "$body" | grep -a -o -E "$NDA_RE" 2>/dev/null | head -1)
+    [ -n "$hit" ] && note NDA "$path" "$hit — 非公開 SDK の識別子。NDA 下のコードやヘッダの混入を疑うこと"
+    # Doxygen の生成物は同梱ライブラリの著作権表示を含むので、ライセンスの検査から外す。
+    case "$path" in
+      docs/doxygen/*) continue ;;
+    esac
+    hit=$(printf '%s' "$body" | grep -a -o -i -E "$LICENSE_RE" 2>/dev/null | head -1)
+    [ -n "$hit" ] && note LICENSE "$path" "$hit — MIT と両立しないライセンス / 再配布を禁じる文言"
+    hit=$(printf '%s' "$body" | grep -a -i -E "$COPYRIGHT_RE" 2>/dev/null | grep -a -v -i -E "$OWN_COPYRIGHT_RE" | head -1 | cut -c1-80)
+    [ -n "$hit" ] && note LICENSE "$path" "$hit — 他者の著作権表示。引き写したコードならライセンスを確かめること"
   done < "$TMP/objs.txt"
 fi
 
@@ -108,7 +131,7 @@ PY=$(sh "$(dirname "$0")/find-python.sh")
 if [ -n "$PY" ]; then
   "$PY" "$(dirname "$0")/check-external-names.py" --blobs < "$TMP/objs.txt" || FOUND=1
 else
-  echo "scan.sh: Python が見つからないので外部資料名の検査を飛ばした" >&2
+  echo "scan.sh: Python が見つからないので外部資料名 (と手元の非公開リスト) の検査を飛ばした" >&2
 fi
 
 if [ "$FOUND" -ne 0 ]; then
