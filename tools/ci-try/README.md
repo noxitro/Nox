@@ -6,8 +6,12 @@
 ## 何をするか
 
 1. 作業ツリーのスナップショットを 1 コミットにする (未コミットの変更・削除・未追跡のファイルを含む。`.gitignore` で除外されたものは含まない)。
-2. そのコミットを試し用のブランチ `user/ci-try` へ force-push する。**master には push しない。**
-3. CI の実行を見つけて URL を表示し、終わるまで待って合否を出す。
+2. 公開前の検査をする。どれかで止まったら push しない。
+   - pre-push フック (`tools/git-hooks`) が有効か。無効なら中止する (`sh tools/git-hooks/install.sh` で有効にする)。
+   - `origin/master` からの差分全体を、フックと同じ `scan.sh` (秘密情報・個人情報・ビルド生成物・外部資料名) と gitleaks で検査する。フックは前回 push した分との差分しか見ないので、それに頼らず全体を見る。
+   - 含まれる未追跡のファイルを一覧で出し、`y` で答えたときだけ先へ進む。
+3. そのコミットを試し用のブランチ `user/ci-try` へ force-push する。**master には push しない。** push のときにもフックがもう一度走る。
+4. CI の実行を見つけて URL を表示し、終わるまで待って合否を出す。
 
 手元の HEAD・index・作業ツリー・stash は変えません (一時的な index で組み立てるため)。
 コミットしたり stash したりする必要はなく、ブランチも切り替えません。
@@ -31,6 +35,7 @@ pwsh tools/ci-try/ci-try.ps1
 | `-NoWatch` | push して URL を表示したら終わる (結果は待たない) |
 | `-NoUntracked` | 未追跡のファイルを含めない |
 | `-Branch <名前>` | push 先を変える (既定 `user/ci-try`。master / main は拒否) |
+| `-Yes` | push 前の y/n 確認を飛ばす (検査は飛ばさない) |
 
 いつもは 11〜14 分かかります。待っている途中で Ctrl+C で抜けても、CI は GitHub 上で続きます。
 不合格なら、表示される `gh run view <id> --log-failed` で失敗したジョブのログを読めます。
@@ -39,11 +44,12 @@ pwsh tools/ci-try/ci-try.ps1
 
 - `git` と、結果を待つなら [GitHub CLI](https://cli.github.com/) (`gh`、`gh auth login` 済み)。
 - `origin` へ push できること。
+- フックが有効なこと (`sh tools/git-hooks/install.sh`)。gitleaks は入っていれば使う (`winget install Gitleaks.Gitleaks`)。
 
 ## 注意
 
 - 続けて実行すると `user/ci-try` を上書きし、走っている前の実行は打ち切られます (CI の concurrency)。
 - 文書だけの変更 (`*.md` や `docs/` など) では CI のビルドは走らず、「実行が見つからない」で終わります。
 - 失敗すると、master と同じく Discord に通知が流れます。
-- pre-push フック (外部資料名・秘密情報の検査) を入れていれば、push の前にそれも走ります。
 - リポジトリは公開なので、push した内容は誰でも見られます。
+- 検査は決まった形式のもの (トークン、`C:\Users\<名前>` 形式のパス、主要なフリーメールのアドレスなど) しか拾えません。氏名・住所・電話番号・それ以外のドメインのメールアドレスは止まらないので、未追跡のファイルの一覧は必ず目で確かめてください。

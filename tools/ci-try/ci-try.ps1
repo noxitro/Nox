@@ -8,6 +8,12 @@
 	手元の HEAD・index・作業ツリー・stash は一切変えない (一時 index で組み立てる)。
 	.gitignore で除外されたファイルは含まれない。
 
+	公開リポジトリへ上げるので、push の前に次を必ず通す。
+	- pre-push フック (tools/git-hooks) が有効であること
+	- origin/master からの差分全体を tools/git-hooks の scan.sh と gitleaks で検査する
+	  (フックは前回の push との差分しか見ないので、それに頼らず全体を見る)
+	- 含まれる未追跡のファイルを一覧で見せ、y/n で確認する
+
 .PARAMETER Branch
 	push 先のブランチ。master / main は拒否する。
 
@@ -17,16 +23,23 @@
 .PARAMETER NoUntracked
 	未追跡のファイルを含めない (追跡中のファイルの変更と削除だけ)。
 
+.PARAMETER Yes
+	push 前の y/n 確認を飛ばす。検査は飛ばさない。
+
 .EXAMPLE
 	pwsh tools/ci-try/ci-try.ps1
 #>
 param(
 	[string]$Branch = 'user/ci-try',
 	[switch]$NoWatch,
-	[switch]$NoUntracked
+	[switch]$NoUntracked,
+	[switch]$Yes
 )
 
 $ErrorActionPreference = 'Stop'
+# git の出力 (日本語のパス) を化けさせず、sh へ渡す入力も UTF-8 にする
+[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+$OutputEncoding = [Text.UTF8Encoding]::new($false)
 
 function Fail([string]$Message)
 {
@@ -41,6 +54,20 @@ function Invoke-Git
 	return $out
 }
 
+function Find-Sh
+{
+	# Git for Windows 同梱の sh。フックと同じものを使う。
+	$gitExe = (Get-Command git).Source
+	foreach ($rel in '..\bin\sh.exe', '..\usr\bin\sh.exe', '..\..\bin\sh.exe')
+	{
+		$p = Join-Path (Split-Path $gitExe) $rel
+		if (Test-Path -LiteralPath $p) { return (Resolve-Path -LiteralPath $p).Path }
+	}
+	$cmd = Get-Command sh -ErrorAction SilentlyContinue
+	if ($cmd) { return $cmd.Source }
+	return $null
+}
+
 if ($Branch -match '^(refs/heads/)?(master|main)$') { Fail "$Branch へは push しない" }
 if (-not (Get-Command gh -ErrorAction SilentlyContinue) -and -not $NoWatch)
 {
@@ -51,6 +78,18 @@ $root = (& git rev-parse --show-toplevel 2>$null)
 if ($LASTEXITCODE -ne 0 -or -not $root) { Fail 'git リポジトリの中で実行する' }
 Set-Location $root
 
+# --- フックが有効か --------------------------------------------------------
+# 自前の検査に加えて push 時にも同じ関門を通すため、無効なら先へ進まない。
+$hooks = (Invoke-Git rev-parse --path-format=absolute --git-path hooks).Trim()
+$expected = Join-Path $root 'tools/git-hooks'
+if ([IO.Path]::GetFullPath($hooks).TrimEnd('\', '/') -ne [IO.Path]::GetFullPath($expected).TrimEnd('\', '/'))
+{
+	Fail "pre-push フックが有効になっていない (hooks: $hooks)。先に次を実行する: sh tools/git-hooks/install.sh"
+}
+$sh = Find-Sh
+if (-not $sh) { Fail 'sh が見つからない (Git for Windows の bin\sh.exe を探した)' }
+
+# --- スナップショット ------------------------------------------------------
 # 一時 index にスナップショットを組み立てる。本物の index をコピーしてから足すので、
 # 変更の無いファイルは stat 情報で飛ばされて速い。
 $head = (Invoke-Git rev-parse HEAD).Trim()
@@ -73,9 +112,62 @@ $stamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
 $commit = (Invoke-Git commit-tree $tree -p $head -m "ci-try: 作業ツリーのスナップショット ($stamp)").Trim()
 
 Write-Host "ci-try: HEAD $($head.Substring(0, 8)) からの差分" -ForegroundColor Cyan
-$stat = Invoke-Git diff --stat $head $commit
+$stat = Invoke-Git -c core.quotePath=false diff --stat $head $commit
 if ($stat) { $stat | ForEach-Object { Write-Host "  $_" } } else { Write-Host '  (差分なし。HEAD のまま CI に投げる)' }
 
+# --- 公開前の検査 ----------------------------------------------------------
+# origin/master から今回のスナップショットまでに増えた・変わったファイルを全部見る。
+# pre-push フックは「前回 push したもの」との差分しか見ないので、それに頼らない。
+Invoke-Git fetch --quiet origin master | Out-Null
+$base = (Invoke-Git merge-base origin/master $commit).Trim()
+$files = @(Invoke-Git -c core.quotePath=false diff --name-only --diff-filter=d $base $commit | Where-Object { $_ })
+Write-Host "ci-try: origin/master からの $($files.Count) ファイルを検査する" -ForegroundColor Cyan
+$scanOk = $true
+if ($files.Count -gt 0)
+{
+	# PowerShell からパイプで渡すと行末が CRLF になり、scan.sh が各ファイルを読めずに
+	# 黙って飛ばす。LF のファイルに書いてリダイレクトで渡す。
+	$list = Join-Path ([IO.Path]::GetTempPath()) "nox-ci-try-$PID.scan"
+	$body = ($files | ForEach-Object { "$_`t${commit}:$_" }) -join "`n"
+	[IO.File]::WriteAllText($list, "$body`n", [Text.UTF8Encoding]::new($false))
+	try
+	{
+		& $sh -c 'sh tools/git-hooks/scan.sh < "$1"' ci-try $list
+		if ($LASTEXITCODE -ne 0) { $scanOk = $false }
+	}
+	finally
+	{
+		Remove-Item -LiteralPath $list -Force -ErrorAction SilentlyContinue
+	}
+	& $sh tools/git-hooks/gitleaks.sh "--log-opts=$base..$commit"
+	if ($LASTEXITCODE -ne 0) { $scanOk = $false }
+}
+if (-not $scanOk) { Fail '検査で止まった。上の出力を見て直してから実行し直す (push はしていない)' }
+Write-Host 'ci-try: 検査は通った' -ForegroundColor Green
+
+# --- 未追跡のファイルの確認 --------------------------------------------------
+# 手元のメモやログなど、コミットするつもりの無いファイルがそのまま公開されるのを防ぐ。
+if (-not $NoUntracked)
+{
+	$untracked = @(Invoke-Git -c core.quotePath=false ls-files --others --exclude-standard | Where-Object { $_ })
+	if ($untracked.Count -gt 0)
+	{
+		Write-Host "ci-try: 次の未追跡のファイル $($untracked.Count) 本も push される" -ForegroundColor Yellow
+		$untracked | ForEach-Object { Write-Host "  $_" -ForegroundColor Yellow }
+	}
+	else
+	{
+		Write-Host 'ci-try: 未追跡のファイルは含まれない' -ForegroundColor Cyan
+	}
+}
+
+if (-not $Yes)
+{
+	$answer = Read-Host "公開リポジトリの $Branch へ push する。よいか (y/N)"
+	if ($answer -notmatch '^(y|yes)$') { Fail 'やめた (push はしていない)' }
+}
+
+# --- push ------------------------------------------------------------------
 # 試し用ブランチは毎回上書きする。前の実行は CI の concurrency で打ち切られる。
 Write-Host "ci-try: $Branch へ push する" -ForegroundColor Cyan
 & git push --force origin "${commit}:refs/heads/$Branch"
