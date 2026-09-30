@@ -18,7 +18,7 @@
 #include	"bench.h"
 
 #include	"core/world.h"
-#include	"core/entity_system.h"
+#include	"core/entity_system_legacy.h"
 #include	"core/entity_query.h"
 #include	"core/entity_commands.h"
 #include	"core/updater_graph.h"
@@ -50,7 +50,7 @@ namespace nox::bench::ecs
 	struct BL7 : nox::IComponentData { nox::float32 value; };
 
 	/// @brief 位置 += 速度 (直列)
-	class BMoveSystem final : public nox::EntitySystem<nox::bench::ecs::BMoveSystem>
+	class BMoveSystem final : public nox::legacy::EntitySystem<nox::bench::ecs::BMoveSystem>
 	{
 	public:
 		void OnUpdate(nox::bench::ecs::BPosition& position, const nox::bench::ecs::BVelocity& velocity)
@@ -62,10 +62,10 @@ namespace nox::bench::ecs
 	};
 
 	/// @brief 位置 += 速度 (Chunk 単位の並列列挙を許す)
-	class BMoveParallelSystem final : public nox::EntitySystem<nox::bench::ecs::BMoveParallelSystem>
+	class BMoveParallelSystem final : public nox::legacy::EntitySystem<nox::bench::ecs::BMoveParallelSystem>
 	{
 	public:
-		//	この名前はエンジンが読む固定名 (nox::IsParallelForEachEntitySystem)。kPascalCase へ変えないこと
+		//	この名前はエンジンが読む固定名 (nox::legacy::IsParallelForEachEntitySystem)。kPascalCase へ変えないこと
 		static constexpr bool k_parallel_for_each = true;
 
 		void OnUpdate(nox::bench::ecs::BPosition& position, const nox::bench::ecs::BVelocity& velocity)
@@ -77,42 +77,42 @@ namespace nox::bench::ecs
 	};
 
 	//	UpdaterGraph::Rebuild 用の 8 個。書き込み 4 個 → 2 段の合流 → 最終段で 4 レイヤーになる
-	class BLWrite0System final : public nox::EntitySystem<nox::bench::ecs::BLWrite0System>
+	class BLWrite0System final : public nox::legacy::EntitySystem<nox::bench::ecs::BLWrite0System>
 	{
 	public:
 		void OnUpdate(nox::bench::ecs::BL0& value) { value.value += 1.0f; }
 	};
-	class BLWrite1System final : public nox::EntitySystem<nox::bench::ecs::BLWrite1System>
+	class BLWrite1System final : public nox::legacy::EntitySystem<nox::bench::ecs::BLWrite1System>
 	{
 	public:
 		void OnUpdate(nox::bench::ecs::BL1& value) { value.value += 1.0f; }
 	};
-	class BLWrite2System final : public nox::EntitySystem<nox::bench::ecs::BLWrite2System>
+	class BLWrite2System final : public nox::legacy::EntitySystem<nox::bench::ecs::BLWrite2System>
 	{
 	public:
 		void OnUpdate(nox::bench::ecs::BL2& value) { value.value += 1.0f; }
 	};
-	class BLWrite3System final : public nox::EntitySystem<nox::bench::ecs::BLWrite3System>
+	class BLWrite3System final : public nox::legacy::EntitySystem<nox::bench::ecs::BLWrite3System>
 	{
 	public:
 		void OnUpdate(nox::bench::ecs::BL3& value) { value.value += 1.0f; }
 	};
-	class BLMerge01System final : public nox::EntitySystem<nox::bench::ecs::BLMerge01System>
+	class BLMerge01System final : public nox::legacy::EntitySystem<nox::bench::ecs::BLMerge01System>
 	{
 	public:
 		void OnUpdate(nox::bench::ecs::BL4& out, const nox::bench::ecs::BL0& a, const nox::bench::ecs::BL1& b) { out.value = a.value + b.value; }
 	};
-	class BLMerge23System final : public nox::EntitySystem<nox::bench::ecs::BLMerge23System>
+	class BLMerge23System final : public nox::legacy::EntitySystem<nox::bench::ecs::BLMerge23System>
 	{
 	public:
 		void OnUpdate(nox::bench::ecs::BL5& out, const nox::bench::ecs::BL2& a, const nox::bench::ecs::BL3& b) { out.value = a.value + b.value; }
 	};
-	class BLMerge45System final : public nox::EntitySystem<nox::bench::ecs::BLMerge45System>
+	class BLMerge45System final : public nox::legacy::EntitySystem<nox::bench::ecs::BLMerge45System>
 	{
 	public:
 		void OnUpdate(nox::bench::ecs::BL6& out, const nox::bench::ecs::BL4& a, const nox::bench::ecs::BL5& b) { out.value = a.value + b.value; }
 	};
-	class BLFinalSystem final : public nox::EntitySystem<nox::bench::ecs::BLFinalSystem>
+	class BLFinalSystem final : public nox::legacy::EntitySystem<nox::bench::ecs::BLFinalSystem>
 	{
 	public:
 		void OnUpdate(nox::bench::ecs::BL7& out, const nox::bench::ecs::BL6& a) { out.value = a.value * 0.5f; }
@@ -196,7 +196,7 @@ namespace
 	struct ChunkJobContext final
 	{
 		nox::World* world;
-		nox::EntitySystemBase* system;
+		nox::legacy::EntitySystemBase* system;
 		nox::Archetype* archetype;
 		nox::uint32 chunk_index;
 	};
@@ -207,7 +207,7 @@ namespace
 		job_context->system->ExecuteChunk(*job_context->world, *job_context->archetype, job_context->chunk_index);
 	}
 
-	void RunEntitySystemParallel(nox::World& world, nox::JobSystem& job_system, nox::EntitySystemBase& system)
+	void RunEntitySystemParallel(nox::World& world, nox::JobSystem& job_system, nox::legacy::EntitySystemBase& system)
 	{
 		static constexpr nox::uint32 kMaxChunkJobsPerDispatch = 256u;
 
@@ -484,7 +484,7 @@ namespace
 		nox::bench::ecs::BLMerge23System merge23;
 		nox::bench::ecs::BLMerge45System merge45;
 		nox::bench::ecs::BLFinalSystem final_system;
-		const std::array<nox::EntitySystemBase*, 8> systems{
+		const std::array<nox::legacy::EntitySystemBase*, 8> systems{
 			&write0, &write1, &write2, &write3, &merge01, &merge23, &merge45, &final_system,
 		};
 
@@ -494,7 +494,7 @@ namespace
 				for (nox::uint64 op = 0u; op < op_count; ++op)
 				{
 					graph.Rebuild(
-						std::span<nox::EntitySystemBase* const>(systems.data(), systems.size()),
+						std::span<nox::legacy::EntitySystemBase* const>(systems.data(), systems.size()),
 						std::span<nox::EntityLogicStorage* const>());
 				}
 				nox::bench::DoNotOptimize(graph);

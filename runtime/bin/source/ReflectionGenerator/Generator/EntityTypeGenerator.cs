@@ -9,7 +9,7 @@ using System.Text;
 namespace ReflectionGenerator.Generator;
 
 /// <summary>
-/// nox::EntitySystem / nox::EntityLogic を継承した型の購読テーブルを出力する
+/// nox::legacy::EntitySystem / nox::EntityLogic を継承した型の購読テーブルを出力する
 /// </summary>
 /// <remarks>
 /// ヘッダにクラスを定義するだけで購読されるようにするため、型ごとの .g.cpp と
@@ -26,7 +26,7 @@ namespace ReflectionGenerator.Generator;
 public sealed class EntityTypeGenerator
 {
     #region 定義
-    private const string ENTITY_SYSTEM_BASE_PREFIX = "nox::EntitySystem<";
+    private const string ENTITY_SYSTEM_BASE_PREFIX = "nox::legacy::EntitySystem<";
     private const string ENTITY_LOGIC_BASE_PREFIX = "nox::EntityLogic<";
     private const string ENTITY_LOGIC_METHOD_ATTRIBUTE = "nox::attr::EntityLogicMethod";
 
@@ -532,7 +532,7 @@ public sealed class EntityTypeGenerator
         }
         else
         {
-            codeWriter.WriteLine($"template const nox::EntitySystemTypeDescriptor nox::k_entity_system_type_descriptor<{entityType.FullName}>;");
+            codeWriter.WriteLine($"template const nox::legacy::EntitySystemTypeDescriptor nox::legacy::k_entity_system_type_descriptor<{entityType.FullName}>;");
         }
 
         WriteFileFooter(codeWriter);
@@ -560,7 +560,7 @@ public sealed class EntityTypeGenerator
         codeWriter.WriteLine("{");
         using (codeWriter.Indent())
         {
-            WriteTableArray(codeWriter, "nox::EntitySystemTypeDescriptor", "k_entity_system_type_table", systemList);
+            WriteTableArray(codeWriter, "nox::legacy::EntitySystemTypeDescriptor", "k_entity_system_type_table", systemList);
             codeWriter.WriteNewLine();
             WriteTableArray(codeWriter, "nox::EntityLogicTypeDescriptor", "k_entity_logic_type_table", logicList);
             codeWriter.WriteNewLine();
@@ -568,7 +568,7 @@ public sealed class EntityTypeGenerator
             //  定数初期化されていることの証明。動的初期化が要るならconstinitがコンパイルエラーにする
             if (systemList.Count > 0)
             {
-                codeWriter.WriteLine("constinit const nox::EntitySystemTypeDescriptor* const* const k_entity_system_type_table_head = k_entity_system_type_table;");
+                codeWriter.WriteLine("constinit const nox::legacy::EntitySystemTypeDescriptor* const* const k_entity_system_type_table_head = k_entity_system_type_table;");
             }
             if (logicList.Count > 0)
             {
@@ -578,7 +578,7 @@ public sealed class EntityTypeGenerator
         codeWriter.WriteLine("}");
         codeWriter.WriteNewLine();
 
-        WriteTableAccessor(codeWriter, "nox::EntitySystemTypeDescriptor", "GetEntitySystemTypes", "k_entity_system_type_table", systemList.Count);
+        WriteTableAccessor(codeWriter, "nox::legacy::EntitySystemTypeDescriptor", "GetEntitySystemTypes", "k_entity_system_type_table", systemList.Count);
         codeWriter.WriteNewLine();
         WriteTableAccessor(codeWriter, "nox::EntityLogicTypeDescriptor", "GetEntityLogicTypes", "k_entity_logic_type_table", logicList.Count);
 
@@ -603,7 +603,7 @@ public sealed class EntityTypeGenerator
             foreach (EntityTypeInfo entityType in entityTypeList)
             {
                 string address = entityType.Kind == EntityTypeKind.System
-                    ? $"&nox::k_entity_system_type_descriptor<{entityType.FullName}>"
+                    ? $"&nox::legacy::k_entity_system_type_descriptor<{entityType.FullName}>"
                     : $"&nox::gen::{GetLogicDescriptorName(entityType)}";
                 codeWriter.WriteLine($"{address},	//	{entityType.SourceLocation}");
             }

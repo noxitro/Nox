@@ -4,16 +4,38 @@
 ///	@file	atomic.h
 ///	@brief	atomic
 #pragma once
+#include	<atomic>
 #include	"../basic_definition.h"
-
-#if NOX_WIN64
-#include	"detail/atomic_win64.h"
-#else
-static_assert(false);
-#endif // NOX_WIN64
+#include	"../type_traits/concepts.h"
 
 namespace nox
 {
 	template<class T>
 	using Atomic = std::atomic<T>;
+}
+
+namespace nox::os::atomic
+{
+	/// @brief 1加算し、加算後の値を返す。
+	/// @details 戻り値は加算と同じ不可分操作で得た値。value を読み直すと他スレッドの更新が混ざる。
+	template<nox::concepts::Arithmetic T>
+	inline T Increment(T& value)noexcept
+	{
+		return ++std::atomic_ref<T>{value};
+	}
+
+	/// @brief 1減算し、減算後の値を返す。
+	template<nox::concepts::Arithmetic T>
+	inline T Decrement(T& value)noexcept
+	{
+		return --std::atomic_ref<T>{value};
+	}
+
+	/// @brief 不可分に読み出す。
+	/// @details const メンバ関数からも呼べるよう const 参照で受ける。load は書き込みを伴わない。
+	template<nox::concepts::Arithmetic T>
+	inline T Read(const T& value)noexcept
+	{
+		return std::atomic_ref<T>{const_cast<T&>(value)}.load();
+	}
 }

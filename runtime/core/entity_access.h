@@ -47,7 +47,7 @@ namespace nox
 
 	/// @brief ComponentDataとして引数に取れる型。
 	template<class T>
-	concept ComponentDataParameter = nox::IsComponentDataType<std::remove_cv_t<T>>();
+	concept ComponentDataParameter = std::is_base_of_v<nox::IComponentData, std::remove_cv_t<T>>;
 
 	/// @brief Serviceとして引数に取れる型。
 	template<class T>
@@ -97,7 +97,7 @@ namespace nox
 	};
 
 	//	Serviceは参照でも受けられる。ComponentDataの T& / const T& 特殊化とは制約が排他なので
-	//	曖昧にならない(ServiceはObject派生で仮想デストラクタを持つため、IsComponentDataTypeを満たし得ない)。
+	//	曖昧にならない(ServiceはIComponentDataを継承しないため、ComponentDataParameterを満たし得ない)。
 	//	参照で受けた場合は未登録時にnullを渡せないため、呼び出し側が実行を打ち切る。
 	template<nox::ServiceParameter T>
 	struct EntityParameterTraits<T&>

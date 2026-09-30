@@ -22,6 +22,6 @@ namespace nox::render
 		void Release();
 
 	private:
-		volatile nox::int32 ref_count_;
+		nox::int32 ref_count_;
 	};
 }

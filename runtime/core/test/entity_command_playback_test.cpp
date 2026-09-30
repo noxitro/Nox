@@ -398,7 +398,7 @@ TEST(EntityCommandPlayback, EmitsFlagComesFromTheArgumentList)
 	//	テスト用System(TestMoveSystem / TestParallelAddSystem)はどちらも
 	//	nox::EntityCommands& を宣言していないので、バッファは1本も要らない。
 	nox::uint32 system_emitter_count = 0u;
-	for (const nox::EntitySystemTypeDescriptor* const descriptor : nox::GetEntitySystemTypes())
+	for (const nox::legacy::EntitySystemTypeDescriptor* const descriptor : nox::GetEntitySystemTypes())
 	{
 		ASSERT_NE(descriptor, nullptr);
 		if (descriptor->emits_structural_change)
@@ -443,8 +443,8 @@ TEST(EntityCommandPlayback, EmitsFlagComesFromTheArgumentList)
 TEST(EntityCommandPlayback, GraphAssignsBufferIndicesOnlyToEmitters)
 {
 	//	購読済みの実型から、Worldと同じ手順でグラフを組む。
-	nox::Vector<nox::EntitySystemBase*> systems;
-	for (const nox::EntitySystemTypeDescriptor* const descriptor : nox::GetEntitySystemTypes())
+	nox::Vector<nox::legacy::EntitySystemBase*> systems;
+	for (const nox::legacy::EntitySystemTypeDescriptor* const descriptor : nox::GetEntitySystemTypes())
 	{
 		systems.push_back(descriptor->create());
 	}
@@ -457,7 +457,7 @@ TEST(EntityCommandPlayback, GraphAssignsBufferIndicesOnlyToEmitters)
 	{
 		nox::UpdaterGraph graph;
 		graph.Rebuild(
-			std::span<nox::EntitySystemBase* const>(systems.data(), systems.size()),
+			std::span<nox::legacy::EntitySystemBase* const>(systems.data(), systems.size()),
 			std::span<nox::EntityLogicStorage* const>(storages.data(), storages.size()));
 
 		const std::span<const nox::UpdaterNode> nodes = graph.GetNodes(nox::SystemPhaseType::Update);
@@ -495,7 +495,7 @@ TEST(EntityCommandPlayback, GraphAssignsBufferIndicesOnlyToEmitters)
 	{
 		delete storage;
 	}
-	for (nox::EntitySystemBase* const system : systems)
+	for (nox::legacy::EntitySystemBase* const system : systems)
 	{
 		system->Destroy();
 	}

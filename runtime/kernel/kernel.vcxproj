@@ -550,6 +550,10 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="os\atomic.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="os\detail\file_base.cpp">
       <SubType>
       </SubType>

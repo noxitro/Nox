@@ -42,7 +42,7 @@
 #include	"../../reflection/reflection.h"
 
 #include	"../updater_graph.h"
-#include	"../entity_system.h"
+#include	"../entity_system_legacy.h"
 #include	"../entity_logic.h"
 #include	"../service.h"
 
@@ -73,21 +73,21 @@ namespace nox::test::updater_graph
 	//	=================================================================================
 
 	/// @brief LayerA へ書き込む。
-	class WriteASystem final : public nox::EntitySystem<nox::test::updater_graph::WriteASystem>
+	class WriteASystem final : public nox::legacy::EntitySystem<nox::test::updater_graph::WriteASystem>
 	{
 	public:
 		void OnUpdate(nox::test::updater_graph::LayerA& a) { a.value += 1.0f; }
 	};
 
 	/// @brief LayerB へ書き込む。WriteASystem とは宣言が重ならない。
-	class WriteBSystem final : public nox::EntitySystem<nox::test::updater_graph::WriteBSystem>
+	class WriteBSystem final : public nox::legacy::EntitySystem<nox::test::updater_graph::WriteBSystem>
 	{
 	public:
 		void OnUpdate(nox::test::updater_graph::LayerB& b) { b.value += 1.0f; }
 	};
 
 	/// @brief LayerA を読むだけ。読み同士は衝突しない。
-	class ReadASystem final : public nox::EntitySystem<nox::test::updater_graph::ReadASystem>
+	class ReadASystem final : public nox::legacy::EntitySystem<nox::test::updater_graph::ReadASystem>
 	{
 	public:
 		void OnUpdate(const nox::test::updater_graph::LayerA& a, nox::test::updater_graph::LayerC& c)
@@ -97,7 +97,7 @@ namespace nox::test::updater_graph
 	};
 
 	/// @brief LayerA を読むだけ (別の型)。ReadASystem と同一レイヤーへ載るべき。
-	class ReadA2System final : public nox::EntitySystem<nox::test::updater_graph::ReadA2System>
+	class ReadA2System final : public nox::legacy::EntitySystem<nox::test::updater_graph::ReadA2System>
 	{
 	public:
 		void OnUpdate(const nox::test::updater_graph::LayerA& a, nox::test::updater_graph::LayerD& d)
@@ -107,7 +107,7 @@ namespace nox::test::updater_graph
 	};
 
 	/// @brief Service を書き込みで受ける。
-	class ServiceWriteSystem final : public nox::EntitySystem<nox::test::updater_graph::ServiceWriteSystem>
+	class ServiceWriteSystem final : public nox::legacy::EntitySystem<nox::test::updater_graph::ServiceWriteSystem>
 	{
 	public:
 		void OnUpdate(nox::test::updater_graph::LayerE& e, nox::test::updater_graph::LayerServiceX* service)
@@ -117,7 +117,7 @@ namespace nox::test::updater_graph
 	};
 
 	/// @brief 同じ Service を読み取りで受ける。ComponentData は誰とも重ならない。
-	class ServiceReadSystem final : public nox::EntitySystem<nox::test::updater_graph::ServiceReadSystem>
+	class ServiceReadSystem final : public nox::legacy::EntitySystem<nox::test::updater_graph::ServiceReadSystem>
 	{
 	public:
 		void OnUpdate(nox::test::updater_graph::LayerF& f, const nox::test::updater_graph::LayerServiceX* service)
@@ -127,7 +127,7 @@ namespace nox::test::updater_graph
 	};
 
 	/// @brief 別の Service を読み取りで受ける。上の2つのどちらとも衝突しない。
-	class OtherServiceReadSystem final : public nox::EntitySystem<nox::test::updater_graph::OtherServiceReadSystem>
+	class OtherServiceReadSystem final : public nox::legacy::EntitySystem<nox::test::updater_graph::OtherServiceReadSystem>
 	{
 	public:
 		void OnUpdate(nox::test::updater_graph::LayerG& g, const nox::test::updater_graph::LayerServiceY* service)
@@ -504,7 +504,7 @@ namespace
 			storages_.push_back(&other_logic_storage_);
 
 			graph_.Rebuild(
-				std::span<nox::EntitySystemBase* const>(systems_.data(), systems_.size()),
+				std::span<nox::legacy::EntitySystemBase* const>(systems_.data(), systems_.size()),
 				std::span<nox::EntityLogicStorage* const>(storages_.data(), storages_.size()));
 		}
 
@@ -522,7 +522,7 @@ namespace
 		nox::EntityLogicStorage two_method_storage_{ k_two_method_logic_descriptor };
 		nox::EntityLogicStorage other_logic_storage_{ k_other_logic_descriptor };
 
-		std::vector<nox::EntitySystemBase*> systems_;
+		std::vector<nox::legacy::EntitySystemBase*> systems_;
 		std::vector<nox::EntityLogicStorage*> storages_;
 		nox::UpdaterGraph graph_;
 	};

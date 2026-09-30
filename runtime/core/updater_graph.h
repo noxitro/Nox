@@ -14,7 +14,7 @@
 ///          レイヤー分けは構築時に一度だけ行い、実行時はノード配列を順に舐めるだけ。
 ///          stage 2b では「同一レイヤーのノード群」をそのままワーカーへ配ればよい。
 #pragma once
-#include	"entity_system.h"
+#include	"entity_system_legacy.h"
 #include	"entity_logic.h"
 
 namespace nox
@@ -72,7 +72,7 @@ namespace nox
 		nox::UpdaterNodeAccess access;
 		nox::UpdaterNodeKind kind = nox::UpdaterNodeKind::EntitySystem;
 		/// @brief kind == EntitySystem のときの実体。
-		nox::EntitySystemBase* system = nullptr;
+		nox::legacy::EntitySystemBase* system = nullptr;
 		/// @brief kind == EntityLogicMethod のときのインスタンス置き場。
 		nox::EntityLogicStorage* storage = nullptr;
 		/// @brief kind == EntityLogicMethod のときの更新メソッド。
@@ -105,7 +105,7 @@ namespace nox
 		/// @brief EntitySystem / EntityLogicの集合からグラフを組み直す。
 		/// @details 登録順のキーは「systemsの並び → storagesの並び → メソッド表の並び」。
 		void Rebuild(
-			std::span<nox::EntitySystemBase* const> systems,
+			std::span<nox::legacy::EntitySystemBase* const> systems,
 			std::span<nox::EntityLogicStorage* const> storages);
 
 		/// @brief フェーズ内の全ノード。(レイヤー, 登録順)で整列済み。
@@ -129,7 +129,7 @@ namespace nox
 	private:
 		void RebuildPhase(
 			nox::SystemPhaseType phase_type,
-			std::span<nox::EntitySystemBase* const> systems,
+			std::span<nox::legacy::EntitySystemBase* const> systems,
 			std::span<nox::EntityLogicStorage* const> storages);
 
 	private:
