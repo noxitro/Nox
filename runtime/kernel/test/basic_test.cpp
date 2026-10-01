@@ -144,6 +144,60 @@ TEST(KernelBasicTest, TypeNameIsNormalizedAcrossToolsets)
 	EXPECT_EQ(nox::util::GetTypeName<void>(), "void");
 }
 
+namespace
+{
+	//	上位の cv 修飾・参照だけが違う型の名前は、元の型の名前に綴りを足して作っている
+	//	(コンパイル時間を削るため)。正規化し直した場合と同じ文字列になることを確かめる。
+	//	一致しないと型IDも変わってしまう。違っていれば両方の綴りが失敗のメッセージに出る。
+	template<class T>
+	void ExpectComposedTypeName()
+	{
+		static_assert(nox::util::detail::is_composable_type_name_v<T>);
+		EXPECT_EQ(nox::util::GetTypeName<T>(), nox::util::detail::NormalizedTypeName<T>::View());
+	}
+
+	template<class U>
+	void ExpectComposedTypeNames()
+	{
+		ExpectComposedTypeName<const U>();
+		ExpectComposedTypeName<volatile U>();
+		ExpectComposedTypeName<const volatile U>();
+		if constexpr (!std::is_void_v<U>)
+		{
+			ExpectComposedTypeName<U&>();
+			ExpectComposedTypeName<const U&>();
+			ExpectComposedTypeName<volatile U&>();
+			ExpectComposedTypeName<const volatile U&>();
+			ExpectComposedTypeName<U&&>();
+			ExpectComposedTypeName<const U&&>();
+			ExpectComposedTypeName<volatile U&&>();
+			ExpectComposedTypeName<const volatile U&&>();
+		}
+	}
+}
+
+TEST(KernelBasicTest, QualifiedTypeNameMatchesNormalizedName)
+{
+	ExpectComposedTypeNames<TypeNameProbe>();
+	ExpectComposedTypeNames<type_name_probe::Nested::Value>();
+	ExpectComposedTypeNames<type_name_probe::Nested::Kind>();
+	ExpectComposedTypeNames<type_name_probe::Box<TypeNameProbe>>();
+	ExpectComposedTypeNames<type_name_probe::Pair<nox::int32, type_name_probe::Nested::Kind>>();
+	ExpectComposedTypeNames<nox::int64>();
+	ExpectComposedTypeNames<nox::uint64>();
+	ExpectComposedTypeNames<float>();
+	ExpectComposedTypeNames<bool>();
+	ExpectComposedTypeNames<char16_t>();
+	ExpectComposedTypeNames<std::nullptr_t>();
+	ExpectComposedTypeNames<void>();
+
+	//	ポインタ・配列は修飾の位置が変わるので組み立ての対象外 (正規化に任せる)
+	static_assert(!nox::util::detail::is_composable_type_name_v<TypeNameProbe* const>);
+	static_assert(!nox::util::detail::is_composable_type_name_v<const TypeNameProbe*&>);
+	static_assert(!nox::util::detail::is_composable_type_name_v<const int(&)[3]>);
+	static_assert(!nox::util::detail::is_composable_type_name_v<TypeNameProbe>);
+}
+
 //	型IDは正規化済みの型名のCRC32。ツールセットによらず同じ値になる。
 TEST(KernelBasicTest, UniqueTypeIdIsCrc32OfTypeName)
 {
