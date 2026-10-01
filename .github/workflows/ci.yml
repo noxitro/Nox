@@ -880,8 +880,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if json=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=build-insights-data&per_page=100"); then
-            pick=$(jq -r --arg run "$GITHUB_RUN_ID" '[.artifacts[] | select(.expired == false and .workflow_run.head_branch == "master" and ((.workflow_run.id | tostring) != $run))][0] | if . then "\(.workflow_run.id) \(.workflow_run.head_sha)" else "" end' <<<"$json")
+          # 全ページを見てから最新の master を選ぶ (一覧は新しい順)。今は master でしか上げていないが、
+          # 上げ方を変えても先頭ページが作業ブランチのもので埋まって見失わないようにしておく
+          if picks=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/artifacts?name=build-insights-data&per_page=100" \
+                --jq ".artifacts[] | select(.expired == false and .workflow_run.head_branch == \"master\" and ((.workflow_run.id | tostring) != \"$GITHUB_RUN_ID\")) | \"\\(.workflow_run.id) \\(.workflow_run.head_sha)\""); then
+            pick=${picks%%$'\n'*}
             if [ -n "$pick" ]; then
               run_id=${pick%% *}
               sha=${pick#* }

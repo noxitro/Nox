@@ -264,17 +264,25 @@ def compute_diff(cur, base):
         t = cfg["totals"] or {}
         return t.get("codegen_cl_us", 0) + t.get("codegen_ltcg_us", 0)
 
+    # 表示用の名前は別々の項目で同じになりうる (struct / class を外したテンプレート名、
+    # 非装飾の関数名、同じソースを別のオプションで翻訳した翻訳単位)。上書きせずに足し込む
+    def summed(pairs):
+        out = {}
+        for key, value in pairs:
+            out[key] = out.get(key, 0) + value
+        return out
+
     def header_map(cfg):
-        return {cfg["paths"][h[0]]: h[1] for h in cfg["headers"]}
+        return summed((cfg["paths"][h[0]], h[1]) for h in cfg["headers"])
 
     def template_map(cfg):
-        return {t["n"]: t["i"] for t in cfg["templates_list"]}
+        return summed((t["n"], t["i"]) for t in cfg["templates_list"])
 
     def function_map(cfg):
-        return {f["n"]: f["t"] for f in cfg["functions"]}
+        return summed((f["n"], f["t"]) for f in cfg["functions"])
 
     def unit_map(cfg):
-        return {u["src"]: u["fe"] + max(0, u["be"]) for u in cfg["units"]}
+        return summed((u["src"], u["fe"] + max(0, u["be"])) for u in cfg["units"])
 
     keys = ("fe_us", "be_us", "template_instantiations", "functions", "file_parses", "passes")
     totals = {k: [(base["totals"] or {}).get(k, 0), (cur["totals"] or {}).get(k, 0)] for k in keys}
@@ -395,8 +403,10 @@ def write_html(site_src, out_html, payload):
     html = read("index.html")
     css = read("style.css")
     js = read("app.js")
-    # </script> がデータ中に現れても閉じタグとして解釈されないようにする
-    data = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    # </script> がデータ中に現れても閉じタグとして解釈されないようにする。<!-- も、後ろに <script が
+    # 続くとスクリプトの終わりの解釈が変わるので崩しておく (JSON の文字列の中の \u0021 は ! として読まれる)
+    data = (json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+            .replace("</", "<\\/").replace("<!--", "<\\u0021--"))
     replacements = {
         '<link rel="stylesheet" href="style.css">': f"<style>\n{css}\n</style>",
         '<script src="data.js"></script>': f"<script>window.BI_DATA = {data};</script>",
