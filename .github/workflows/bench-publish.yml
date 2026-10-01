@@ -185,8 +185,12 @@ jobs:
           src=""
           if [ -f bi-site-current/index.html ]; then
             src=bi-site-current/index.html
-          elif json=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=build-insights-site&per_page=100"); then
-            run_id=$(jq -r '[.artifacts[] | select(.expired == false and .workflow_run.head_branch == "master")][0].workflow_run.id // empty' <<<"$json")
+          # build-insights-site は全ブランチで上がるので、全ページを見てから最新の master を選ぶ
+          # (先頭の 1 ページだけだと、作業ブランチのもので埋まって master のものを見失う)。
+          # 一覧は新しい順に返る
+          elif ids=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/artifacts?name=build-insights-site&per_page=100" \
+                --jq '.artifacts[] | select(.expired == false and .workflow_run.head_branch == "master") | .workflow_run.id'); then
+            run_id=${ids%%$'\n'*}
             if [ -n "$run_id" ] && gh run download "$run_id" -n build-insights-site -D bi-site-prev; then
               src=bi-site-prev/index.html
               echo "master の最新 (run $run_id) のビルド計測レポートを使う"

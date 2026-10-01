@@ -135,6 +135,8 @@ def build_config(name, data, meta):
     stats = data.get("stats") or {}
     build = data.get("build") or {}
     lost = int(stats.get("msvc_events_lost") or 0) + int(stats.get("msvc_buffers_lost") or 0)
+    # 停止時の統計に出なくても、解析でイベントの欠落が見つかることがある
+    dropped = data.get("analyze_result") == "FAILURE_DROPPED_EVENTS"
 
     headers = []
     for h in data.get("headers") or []:
@@ -190,7 +192,7 @@ def build_config(name, data, meta):
         "compiler": meta.get("compiler", "MSVC"),
         "templates": bool(meta.get("templates", True)),
         "build_seconds": meta.get("build_seconds"),
-        "partial": lost > 0,
+        "partial": lost > 0 or dropped,
         "lost": lost,
         "stop_result": stats.get("result"),
         "wall_us": max(0, end - start),
@@ -305,7 +307,8 @@ def summary_markdown(configs, diffs, report_url, missing):
         lines.append(f"- ⚠️ {name}: 計測結果が無い (ビルドジョブの Build Insights のステップを参照)")
     for cfg in configs:
         if cfg["partial"]:
-            lines.append(f"- ⚠️ {cfg['name']}: イベントが {cfg['lost']:,} 件欠けた。時間が実際より長く出ている項目がある (差分は出さない)")
+            count = f" {cfg['lost']:,} 件" if cfg["lost"] else ""
+            lines.append(f"- ⚠️ {cfg['name']}: イベントが{count}欠けた。時間が実際より長く出ている項目がある (差分は出さない)")
     if missing or any(c["partial"] for c in configs):
         lines.append("")
 

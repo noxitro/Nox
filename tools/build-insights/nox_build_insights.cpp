@@ -420,7 +420,7 @@ namespace
 			return bi::AnalysisControl::CONTINUE;
 		}
 
-		std::string ToJson(const std::string& stats_json) const;
+		std::string ToJson(const std::string& stats_json, const char* analyze_result) const;
 
 	private:
 		long long RelUs(long long ticks) const
@@ -847,7 +847,7 @@ namespace
 		w.Raw("]");
 	}
 
-	std::string Collector::ToJson(const std::string& stats_json) const
+	std::string Collector::ToJson(const std::string& stats_json, const char* analyze_result) const
 	{
 		std::string out;
 		out.reserve(8 * 1024 * 1024);
@@ -858,6 +858,9 @@ namespace
 		w.Raw(",");
 		w.Key("stats");
 		w.Raw(stats_json.empty() ? std::string("null") : stats_json);
+		w.Raw(",");
+		w.Key("analyze_result");
+		w.Str(analyze_result);
 		w.Raw(",");
 
 		w.Key("trace");
@@ -1383,14 +1386,20 @@ namespace
 		Collector collector;
 		auto group = bi::MakeStaticAnalyzerGroup(&collector);
 		const bi::RESULT_CODE rc = bi::Analyze(raw.c_str(), 1, group);
-		if (rc != bi::RESULT_CODE_SUCCESS)
+		// イベントが欠けたトレースでも、読めた分は集計できている。欠けたことを JSON に残して
+		// 部分的な集計として書き出す (レポートは警告を出し、前回との比較はしない)
+		if (rc == bi::RESULT_CODE_FAILURE_DROPPED_EVENTS)
+		{
+			std::fprintf(stderr, "イベントが欠けたトレースなので、部分的な集計として書き出す\n");
+		}
+		else if (rc != bi::RESULT_CODE_SUCCESS)
 		{
 			std::fprintf(stderr, "解析に失敗した: %s (%d)\n", ResultCodeName(rc), static_cast<int>(rc));
 			return 1;
 		}
 		std::string stats;
 		ReadWholeFile(StatsPath(raw), stats);
-		if (!WriteWholeFile(out_path, collector.ToJson(stats)))
+		if (!WriteWholeFile(out_path, collector.ToJson(stats, rc == bi::RESULT_CODE_SUCCESS ? "SUCCESS" : "FAILURE_DROPPED_EVENTS")))
 		{
 			std::fprintf(stderr, "出力を書けなかった\n");
 			return 1;

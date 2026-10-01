@@ -785,7 +785,7 @@
 
 		const notices = [];
 		(DATA.missing || []).forEach((m) => notices.push('<div class="notice">' + esc(m) + " の計測結果が無い (ビルドジョブのログを参照)。</div>"));
-		if (c && c.partial) notices.push('<div class="notice">この構成ではイベントが ' + int(c.lost) + " 件欠けた。欠けた箇所では時間が実際より長く出ることがある。</div>");
+		if (c && c.partial) notices.push('<div class="notice">この構成ではイベントが' + (c.lost ? " " + int(c.lost) + " 件" : "") + "欠けた。欠けた箇所では時間が実際より長く出ることがある。</div>");
 		document.getElementById("notices").innerHTML = notices.join("");
 
 		document.getElementById("footer").innerHTML =
