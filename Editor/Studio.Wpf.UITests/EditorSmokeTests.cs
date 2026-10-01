@@ -574,6 +574,22 @@ public sealed class EditorSmokeTests
 		return diagnostics.Count == 0 ? "No matching runtime.exe process was found." : string.Join("; ", diagnostics);
 	}
 
+	/// <summary>
+	/// 起動に失敗した Editor のプロセスの様子 (メインウィンドウ、応答の有無、トップレベルのウィンドウ) を返す。
+	/// </summary>
+	private static string GetEditorProcessDiagnostics(int processId)
+	{
+		try
+		{
+			using Process process = Process.GetProcessById(processId);
+			return $"PID={process.Id}, MainWindowHandle=0x{process.MainWindowHandle.ToInt64():X}, Title='{process.MainWindowTitle}', Responding={process.Responding}, Threads={process.Threads.Count}, Windows={GetProcessWindowDiagnostics(process)}";
+		}
+		catch (Exception ex)
+		{
+			return $"<editor process diagnostics failed: {ex.GetType().Name}: {ex.Message}>";
+		}
+	}
+
 	private static string GetProcessWindowDiagnostics(Process process)
 	{
 		try
@@ -668,9 +684,16 @@ public sealed class EditorSmokeTests
 				// Application.Kill は終了済みなら何もせず、中で起きた例外も握りつぶす (FlaUI 5.0.0)。
 				// HasExited は投げうる (HasEditorExited を参照) ので、どちらも try に入れ、automation は finally で必ず破棄する。
 				bool editorExited;
+				string processDiagnostics = string.Empty;
 				try
 				{
 					editorExited = HasEditorExited(application);
+					// 生きているのにメインウィンドウが見つからないときは、何で止まっているか
+					// (モーダルのダイアログ、応答なし など) を Kill する前に拾っておく
+					if (editorExited == false)
+					{
+						processDiagnostics = " " + GetEditorProcessDiagnostics(application.ProcessId);
+					}
 					application.Kill();
 				}
 				finally
@@ -679,7 +702,7 @@ public sealed class EditorSmokeTests
 				}
 
 				throw new InvalidOperationException(
-					$"Nox Studio main window was not created within {LaunchTimeout.TotalSeconds} seconds. EditorExited={editorExited}.{DescribeLastException(mainWindowResult)}");
+					$"Nox Studio main window was not created within {LaunchTimeout.TotalSeconds} seconds. EditorExited={editorExited}.{processDiagnostics}{DescribeLastException(mainWindowResult)}");
 			}
 
 			return new EditorApp(application, automation, mainWindow);

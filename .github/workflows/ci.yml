@@ -6,7 +6,8 @@
 # 構成  : Build & test (MSVC / ClangCL x Debug / Release / Master の 6 並列) と
 #         Editor ジョブを並列実行。GoogleTest と FlaUI は独立したジョブではなく、
 #         マトリクスジョブの中で走る。同じ構成を 2 回建てないため。
-#         GoogleTest は Master 以外の 4 ジョブ、FlaUI は MSVC の Debug / Release。
+#         GoogleTest は Master 以外の 4 ジョブ、FlaUI は MSVC の Debug / Release
+#         (ClangCL の Debug / Release では接続テストだけ)。
 #         FlaUI には Editor と runtime.exe の接続テスト (Reboot → attach) も含む。
 #         runtime.exe の起動・終了 (スモーク) は 6 ジョブすべてで走る。
 #         Master だけテストを飛ばしているのは、reflection_generated の pch.h /
@@ -93,8 +94,8 @@ jobs:
   # Core.csproj の RuntimeTypeDB だけで、それは runtime/ の下にある)。
   #
   # build の 6 ジョブは、runtime 側の検証 (ビルド・スモーク・GoogleTest・件数・
-  # ベンチ) が全部通った時点で nox-runtime-v1-<key>-<Compiler>-<Config> を保存する。
-  # MSVC の Debug / Release は FlaUI に要る runtime.exe と TypeDB を、他の 4 つは
+  # ベンチ) が全部通った時点で nox-runtime-v2-<key>-<Compiler>-<Config> を保存する。
+  # Debug / Release の 4 つは FlaUI に要る runtime.exe と TypeDB を、Master の 2 つは
   # 中身のないマーカーを入れる。6 つ全部が、今の ref か master から読める形で
   # 残っているときだけ reuse=true にする (= 同じ入力で 6 構成とも runtime 側が緑だった)。
   # ここで言う「検証済み」は runtime 側 (ビルド・スモーク・GoogleTest・件数・ベンチ) だけを指す。
@@ -102,13 +103,13 @@ jobs:
   # (FlaUI は reuse した run でも毎回走らせる)。
   #
   # 一覧の取得に失敗したときは reuse=false (フルビルド) に倒し、plan 自体は落とさない。
-  # 一覧を見てから restore するまでの間にキャッシュが追い出されると、MSVC ジョブの
+  # 一覧を見てから restore するまでの間にキャッシュが追い出されると、Debug / Release の
   # restore が落ちる。reuse の run を「Re-run failed jobs」で回したときも、plan の
   # reuse=true がそのまま使われるので、追い出された後なら同じく落ちる。どちらも
   # 「Re-run all jobs」で plan からやり直せば、キャッシュが無いと判定してフルビルドになる。
   #
   # cache の version には path の文字列が入るので、保存・復元の path を変えたら
-  # キーの v1 を上げること (古いエントリが見えなくなり、6 つ揃わず永久にフルになる)。
+  # キーの v2 を上げること (古いエントリが見えなくなり、6 つ揃わず永久にフルになる)。
   # =========================================================
   plan:
     name: Plan
@@ -161,7 +162,7 @@ jobs:
           elif [ "$FULL" = "true" ]; then
             reason='workflow_dispatch で full が指定された'
           else
-            prefix="nox-runtime-v1-$KEY-"
+            prefix="nox-runtime-v2-$KEY-"
             found=''
             ok=true
             # 同じキーでも ref ごとに別エントリなので、読める ref (今の ref と master) ごとに引く
@@ -209,7 +210,8 @@ jobs:
   # テストのビルドは約 30 秒、実行は数秒なので、各ジョブへの上乗せは僅か。
   # 副作用として、これまで MSVC/Debug でしか走っていなかった GoogleTest が
   # ClangCL と Release でも走るようになる (最適化や /GL で初めて出る不具合は
-  # Debug では原理的に拾えない)。FlaUI も MSVC の Debug / Release で走る。
+  # Debug では原理的に拾えない)。FlaUI も MSVC の Debug / Release で走り、
+  # ClangCL の Debug / Release では Editor との接続テストだけを走らせる。
   #
   # Master でテストを走らせないのは、reflection_generated の pch.h /
   # reflect.cpp が test_support のテスト型を #if !NOX_MASTER で囲っており、
@@ -232,7 +234,7 @@ jobs:
     permissions:
       contents: read
       actions: read
-    # NOX_REUSE=true のときは runtime 側のステップを全部飛ばし、MSVC の Debug / Release
+    # NOX_REUSE=true のときは runtime 側のステップを全部飛ばし、Debug / Release の 4 ジョブ
     # だけキャッシュから runtime.exe と TypeDB を戻して Editor + FlaUI を走らせる。
     # 6 ジョブのまま残すのは、チェック名 (必須チェックや通知の集計) を変えないため。
     env:
@@ -280,7 +282,7 @@ jobs:
 
     steps:
       - name: Checkout
-        if: env.NOX_REUSE != 'true' || (matrix.compiler == 'MSVC' && matrix.configuration != 'Master')
+        if: env.NOX_REUSE != 'true' || matrix.configuration != 'Master'
         uses: actions/checkout@v7
 
       - name: Setup build prerequisites
@@ -289,20 +291,20 @@ jobs:
 
       # 再利用時は setup-nox-build を通さないので、Editor のビルドに要る .NET SDK だけ入れる
       - name: Setup .NET SDK (reuse)
-        if: env.NOX_REUSE == 'true' && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
+        if: env.NOX_REUSE == 'true' && matrix.configuration != 'Master'
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
       # path は下の「Save runtime cache」と文字列として一致させること (cache の version に入る)
       - name: Restore runtime cache (reuse)
-        if: env.NOX_REUSE == 'true' && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
+        if: env.NOX_REUSE == 'true' && matrix.configuration != 'Master'
         uses: actions/cache/restore@v6
         with:
           path: |
             runtime/build/runtime/x64/${{ matrix.configuration }}/runtime.exe
             runtime/reflection_generated/gen/RuntimeTypeDB.x64.${{ matrix.configuration }}.bin
-          key: nox-runtime-v1-${{ env.NOX_RUNTIME_KEY }}-${{ matrix.compiler }}-${{ matrix.configuration }}
+          key: nox-runtime-v2-${{ env.NOX_RUNTIME_KEY }}-${{ matrix.compiler }}-${{ matrix.configuration }}
           fail-on-cache-miss: true
 
       # ---------------------------------------------------------
@@ -450,8 +452,8 @@ jobs:
       # AGENTS.md の「master へ入れる条件」にある「runtime.exe がクラッシュせず
       # 起動・終了する」を確かめる。FlaUI の Reboot テストも runtime.exe を起こすが、
       # 最後は強制終了するので、正常終了の経路 (Terminate フェーズ、World の後始末、
-      # reflection / memory の終了処理) は通らない。しかも FlaUI は MSVC の
-      # Debug / Release でしか走らないので、Master と ClangCL の runtime.exe は
+      # reflection / memory の終了処理) は通らない。しかも FlaUI は Master では
+      # 走らない (Editor と繋ぐ口が NOX_DEVELOP で消える) ので、Master の runtime.exe は
       # これまで一度も起動されていなかった。
       #
       # --exit-after-frames=N を渡すと、N フレーム目にメインウィンドウを閉じ、
@@ -708,26 +710,26 @@ jobs:
       # PDB は容量を食うので入れない (FlaUI には要らない)。
       # ---------------------------------------------------------
       - name: Save runtime cache
-        if: success() && env.NOX_REUSE != 'true' && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
+        if: success() && env.NOX_REUSE != 'true' && matrix.configuration != 'Master'
         uses: actions/cache/save@v6
         with:
           path: |
             runtime/build/runtime/x64/${{ matrix.configuration }}/runtime.exe
             runtime/reflection_generated/gen/RuntimeTypeDB.x64.${{ matrix.configuration }}.bin
-          key: nox-runtime-v1-${{ env.NOX_RUNTIME_KEY }}-${{ matrix.compiler }}-${{ matrix.configuration }}
+          key: nox-runtime-v2-${{ env.NOX_RUNTIME_KEY }}-${{ matrix.compiler }}-${{ matrix.configuration }}
 
       - name: Write runtime verified marker
-        if: success() && env.NOX_REUSE != 'true' && !(matrix.compiler == 'MSVC' && matrix.configuration != 'Master')
+        if: success() && env.NOX_REUSE != 'true' && matrix.configuration == 'Master'
         run: |
           New-Item -ItemType Directory -Force ci-runtime-verified | Out-Null
           "$env:GITHUB_SHA $env:NOX_RUNTIME_KEY" | Out-File ci-runtime-verified/marker.txt -Encoding utf8
 
       - name: Save runtime verified marker
-        if: success() && env.NOX_REUSE != 'true' && !(matrix.compiler == 'MSVC' && matrix.configuration != 'Master')
+        if: success() && env.NOX_REUSE != 'true' && matrix.configuration == 'Master'
         uses: actions/cache/save@v6
         with:
           path: ci-runtime-verified
-          key: nox-runtime-v1-${{ env.NOX_RUNTIME_KEY }}-${{ matrix.compiler }}-${{ matrix.configuration }}
+          key: nox-runtime-v2-${{ env.NOX_RUNTIME_KEY }}-${{ matrix.compiler }}-${{ matrix.configuration }}
 
       # master の成果物を手元へ取れるように残す (tools/fetch-runtime.ps1 が取りに来る)。
       # runtime_key を同梱し、手元のツリーと食い違えばスクリプトが警告する。
@@ -766,8 +768,13 @@ jobs:
       # 場所は環境変数 NOX_RUNTIME_TYPEDB_DIR で明示し、%TEMP% のポインタ
       # ファイルには頼らない。
       #
-      # ClangCL では走らせない。FlaUI が見るのは C# 側の挙動で、C++ の
-      # ツールセットには依存しないため、2 回回しても得るものが無い。
+      # ClangCL では Editor と runtime.exe の接続テストだけを走らせる。UI のテストが
+      # 見るのは C# 側の挙動で C++ のツールセットに依存しないが、接続テストは
+      # runtime 側のソケット通信とプロトコル処理 (C++) を実際に動かすので、
+      # ClangCL でだけ壊れる不具合はここでしか拾えない。ClangCL のジョブは MSVC より
+      # 数分早く終わるので、足しても run 全体の所要は延びない。
+      # Master では走らせない。Editor と繋ぐ口 (editor_remote_server など) が
+      # #if NOX_DEVELOP で消えるため。
       #
       # Editor が参照する runtime の構成は NOX_RUNTIME_CONFIGURATION で渡す。
       # Core.RuntimeConfiguration.ResolveDefault() がこれを読み、
@@ -784,7 +791,7 @@ jobs:
       # セルフホストへ回す場合はサービスではなく対話セッションで動かすこと。
       # ---------------------------------------------------------
       - name: Verify RuntimeTypeDB exists
-        if: always() && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
+        if: always() && matrix.configuration != 'Master'
         run: |
           $bin = 'runtime/reflection_generated/gen/RuntimeTypeDB.x64.${{ matrix.configuration }}.bin'
           if (-not (Test-Path $bin)) { throw "TypeDB が無い: $bin (runtime.slnx の ${{ matrix.configuration }} ビルドで生成されるはず)" }
@@ -794,22 +801,35 @@ jobs:
       # リポジトリルートからの相対で探す (EditorApp.ResolveBuildConfiguration が
       # テスト自身の出力ディレクトリから構成名を導く) ので、同じ構成で建てる。
       - name: Build Editor/Studio.slnx
-        if: always() && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
+        if: always() && matrix.configuration != 'Master'
         run: |
           dotnet build Editor/Studio.slnx -c ${{ matrix.configuration }} --no-incremental -v minimal
           if ($LASTEXITCODE -ne 0) { throw "Editor のビルドに失敗 (exit $LASTEXITCODE)" }
 
       - name: Run FlaUI tests
-        if: always() && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
+        if: always() && matrix.configuration != 'Master'
         id: flaui
         env:
           NOX_RUNTIME_TYPEDB_DIR: ${{ github.workspace }}/runtime/reflection_generated/gen
           NOX_RUNTIME_CONFIGURATION: ${{ matrix.configuration }}
         run: |
-          dotnet test Editor/Studio.Wpf.UITests/Studio.Wpf.UITests.csproj -c ${{ matrix.configuration }} --no-build -v minimal `
-            --blame-hang-timeout 5m `
-            --logger "trx;LogFileName=flaui.trx" --results-directory flaui-results
+          $testArgs = @(
+            'test', 'Editor/Studio.Wpf.UITests/Studio.Wpf.UITests.csproj', '-c', '${{ matrix.configuration }}', '--no-build', '-v', 'minimal',
+            '--blame-hang-timeout', '5m',
+            '--logger', 'trx;LogFileName=flaui.trx', '--results-directory', 'flaui-results'
+          )
+          $clang = '${{ matrix.compiler }}' -eq 'ClangCL'
+          if ($clang) { $testArgs += @('--filter', 'FullyQualifiedName~RebootButtonLaunchesRuntimeAndHostsWindowInRuntimeView') }
+          & dotnet @testArgs
           if ($LASTEXITCODE -ne 0) { throw "FlaUI テストに失敗 (exit $LASTEXITCODE)" }
+
+          # フィルタが外れて 0 件になっても dotnet test は緑で終わるので、件数で確かめる
+          if ($clang) {
+            $trx = Get-ChildItem flaui-results -Filter *.trx | Select-Object -First 1
+            if (-not $trx) { throw 'trx が無い (接続テストが走っていない)' }
+            $executed = [int]([xml](Get-Content $trx.FullName)).TestRun.ResultSummary.Counters.executed
+            if ($executed -ne 1) { throw "接続テストの実行数が 1 でない ($executed 件)。フィルタかテスト名を確かめること" }
+          }
 
       # ---------------------------------------------------------
       # 要約とアーティファクト
@@ -821,7 +841,7 @@ jobs:
         if: always()
         run: |
           if ($env:NOX_REUSE -eq 'true') {
-            $what = if ('${{ matrix.compiler }}' -eq 'MSVC' -and '${{ matrix.configuration }}' -ne 'Master') { 'キャッシュの runtime.exe / TypeDB で Editor + FlaUI だけ走らせた' } else { 'この構成は何もしていない' }
+            $what = if ('${{ matrix.configuration }}' -ne 'Master') { 'キャッシュの runtime.exe / TypeDB で Editor + FlaUI だけ走らせた' } else { 'この構成は何もしていない' }
             @('', "## :recycle: runtime は検証済みを再利用 (${{ matrix.compiler }} / ${{ matrix.configuration }})", '',
               "runtime_key ``$env:NOX_RUNTIME_KEY`` は同じ入力で 6 構成とも検証済み。$what。") |
               Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
@@ -903,11 +923,11 @@ jobs:
 
       # trx を読んで件数を要約する。0 件の緑は緑ではないので、実行数も見る
       - name: Write FlaUI summary
-        if: always() && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
+        if: always() && matrix.configuration != 'Master'
         run: |
           $ok = '${{ steps.flaui.outcome }}' -eq 'success'
           $icon = if ($ok) { ':white_check_mark:' } else { ':x:' }
-          $lines = @('', "## $icon Editor UI test (FlaUI / ${{ matrix.configuration }})", '')
+          $lines = @('', "## $icon Editor UI test (FlaUI / ${{ matrix.compiler }} / ${{ matrix.configuration }})", '')
           $trx = Get-ChildItem flaui-results -Filter *.trx -ErrorAction SilentlyContinue | Select-Object -First 1
           if ($trx) {
             [xml]$x = Get-Content $trx.FullName
@@ -917,7 +937,8 @@ jobs:
             $lines += "| $($c.executed) | $($c.passed) | $($c.failed) | $($c.total) |"
             $bad = $x.TestRun.Results.UnitTestResult | Where-Object { $_.outcome -ne 'Passed' }
             foreach ($r in $bad) { $lines += "- ``$($r.testName)``: $($r.outcome)" }
-            if ([int]$c.executed -lt 10) { $lines += ''; $lines += ':warning: 実行数が少なすぎる。フィルタか検出の設定を疑うこと。' }
+            # ClangCL は接続テスト 1 件だけに絞って走らせるので、下限は MSVC だけに当てる
+            if ('${{ matrix.compiler }}' -eq 'MSVC' -and [int]$c.executed -lt 10) { $lines += ''; $lines += ':warning: 実行数が少なすぎる。フィルタか検出の設定を疑うこと。' }
           } else {
             $lines += ':warning: trx が見つからない (テストランナーが起動していない)'
           }
@@ -927,7 +948,7 @@ jobs:
       # としか残らない。理由は Windows のイベントログ (.NET Runtime の未処理例外、
       # Application Error) にあるので、直近分を拾って summary とアーティファクトに残す。
       - name: Collect Editor crash diagnostics
-        if: always() && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
+        if: always() && matrix.configuration != 'Master'
         run: |
           $since = (Get-Date).AddMinutes(-30)
           $events = Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $since } -ErrorAction SilentlyContinue |
@@ -965,10 +986,10 @@ jobs:
       # trx は実行ユーザー名と絶対パスを含むので、リポジトリには入れず
       # アーティファクトにだけ残す (.gitignore でも除外している)
       - name: Upload FlaUI results
-        if: always() && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
+        if: always() && matrix.configuration != 'Master'
         uses: actions/upload-artifact@v7
         with:
-          name: flaui-results-${{ matrix.configuration }}
+          name: flaui-results-${{ matrix.compiler }}-${{ matrix.configuration }}
           path: flaui-results/
           if-no-files-found: warn
 
