@@ -9,7 +9,7 @@
 #include	"component_type.h"
 #include	"entity.h"
 #include	"entity_commands.h"
-#include	"service.h"
+#include	"service_legacy.h"
 
 namespace nox
 {
