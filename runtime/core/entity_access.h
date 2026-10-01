@@ -51,7 +51,7 @@ namespace nox
 
 	/// @brief Serviceとして引数に取れる型。
 	template<class T>
-	concept ServiceParameter = std::derived_from<std::remove_cv_t<T>, nox::Service>;
+	concept ServiceParameter = std::derived_from<std::remove_cv_t<T>, nox::legacy::Service>;
 
 	/// @brief 引数1つの分類。特殊化に該当しない型はInvalidのまま残り、検証でコンパイルエラーになる。
 	template<class T>

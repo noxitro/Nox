@@ -74,7 +74,7 @@ namespace nox
 	namespace detail
 	{
 		template<class T>
-		struct Phase
+		struct Phase;
 	}
 
 	class SampleService final : public nox::Service<SampleService>
@@ -87,11 +87,4 @@ namespace nox
 
 		}
 	};
-
-	namespace detail
-	{
-		/// @brief Worldに登録済みのServiceを型で引く。
-		/// @details entity_query.hがworld.hに依存しないための橋渡し。
-		[[nodiscard]] nox::Service* TryGetServiceOfWorld(nox::World& world, const nox::reflection::Type& type)noexcept;
-	}
 }

@@ -44,7 +44,7 @@
 #include	"../updater_graph.h"
 #include	"../entity_system_legacy.h"
 #include	"../entity_logic.h"
-#include	"../service.h"
+#include	"../service_legacy.h"
 
 namespace nox::test::updater_graph
 {
@@ -64,8 +64,8 @@ namespace nox::test::updater_graph
 	struct LayerG : nox::IComponentData { nox::float32 value; };
 
 	/// @brief Service の同一性は型情報のアドレスで見るので、中身は要らない。
-	class LayerServiceX final : public nox::Service {};
-	class LayerServiceY final : public nox::Service {};
+	class LayerServiceX final : public nox::legacy::Service {};
+	class LayerServiceY final : public nox::legacy::Service {};
 
 	//	=================================================================================
 	//	テスト用の EntitySystem

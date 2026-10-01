@@ -11,7 +11,7 @@
 #include	"entity_system_legacy.h"
 #include	"entity_logic.h"
 #include	"updater_graph.h"
-#include	"service.h"
+#include	"service_legacy.h"
 #include	"../kernel/job_system.h"
 
 namespace nox
@@ -188,7 +188,7 @@ namespace nox
 		struct ServiceEntry
 		{
 			const nox::reflection::Type* type;
-			nox::Service* service;
+			nox::legacy::Service* service;
 		};
 
 		struct EntityRecordPage
@@ -399,14 +399,14 @@ namespace nox
 
 #pragma region Service
 		/// @brief Serviceを登録する。所有権はWorldに移り、World破棄時に解放される。
-		void RegisterService(const nox::reflection::Type& type, nox::Service& service);
+		void RegisterService(const nox::reflection::Type& type, nox::legacy::Service& service);
 
-		template<std::derived_from<nox::Service> T>
+		template<std::derived_from<nox::legacy::Service> T>
 		void RegisterService(T& service) { RegisterService(nox::reflection::Typeof<T>(), service); }
 
-		[[nodiscard]] nox::Service* TryGetService(const nox::reflection::Type& type)const noexcept;
+		[[nodiscard]] nox::legacy::Service* TryGetService(const nox::reflection::Type& type)const noexcept;
 
-		template<std::derived_from<nox::Service> T>
+		template<std::derived_from<nox::legacy::Service> T>
 		[[nodiscard]] T* TryGetService()const noexcept
 		{
 			return static_cast<T*>(TryGetService(nox::reflection::Typeof<T>()));

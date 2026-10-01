@@ -204,6 +204,9 @@
     <ClInclude Include="service.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="service_legacy.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
     <ClInclude Include="entity_logic.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>

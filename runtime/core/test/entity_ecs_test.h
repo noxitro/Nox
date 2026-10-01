@@ -9,7 +9,7 @@
 #pragma once
 #include	"../component_type.h"
 #include	"../entity_commands.h"
-#include	"../service.h"
+#include	"../service_legacy.h"
 #include	"../entity_system_legacy.h"
 #include	"../entity_logic.h"
 #include	"../entity_logic_attribute.h"
@@ -33,9 +33,9 @@ namespace nox::test::ecs
 		nox::int32 value;
 	};
 
-	class TestCounterService final : public nox::Service
+	class TestCounterService final : public nox::legacy::Service
 	{
-		NOX_DECLARE_OBJECT(TestCounterService, nox::Service);
+		NOX_DECLARE_OBJECT(TestCounterService, nox::legacy::Service);
 	public:
 		nox::int32 call_count = 0;
 	};

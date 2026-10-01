@@ -1967,13 +1967,13 @@ void nox::World::BuildQuery(nox::EntityQuery& query, const nox::ComponentMask& r
 
 #pragma region Service
 
-void nox::World::RegisterService(const nox::reflection::Type& type, nox::Service& service)
+void nox::World::RegisterService(const nox::reflection::Type& type, nox::legacy::Service& service)
 {
 	NOX_ASSERT(TryGetService(type) == nullptr, u8"Serviceが二重に登録されました: {0}", type.GetTypeName());
 	services_.PushBack(nox::World::ServiceEntry{ .type = &type, .service = &service });
 }
 
-nox::Service* nox::World::TryGetService(const nox::reflection::Type& type)const noexcept
+nox::legacy::Service* nox::World::TryGetService(const nox::reflection::Type& type)const noexcept
 {
 	for (nox::uint32 service_index = 0u; service_index < services_.GetLength(); ++service_index)
 	{
@@ -1986,7 +1986,7 @@ nox::Service* nox::World::TryGetService(const nox::reflection::Type& type)const 
 	return nullptr;
 }
 
-nox::Service* nox::detail::TryGetServiceOfWorld(nox::World& world, const nox::reflection::Type& type)noexcept
+nox::legacy::Service* nox::detail::TryGetServiceOfWorld(nox::World& world, const nox::reflection::Type& type)noexcept
 {
 	return world.TryGetService(type);
 }
