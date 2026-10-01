@@ -67,10 +67,6 @@
         ローカルでは通るのにCIで C1128 になった。/bigobj で上限を引き上げる。
       -->
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
-      <!-- 1 つの unity ファイルに束ねる生成ファイルの上限。既定の束ね方だと 5 本に
-           偏って束ねられ、重い 2 本 (約 100 秒) の終わりをほかのコアが待っていた。
-           細かく束ねて並列に流す (束をまたいで同じ型を実体化し直す分は増える) -->
-      <MaxFilesInUnityFile>6</MaxFilesInUnityFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -92,10 +88,6 @@
         ローカルでは通るのにCIで C1128 になった。/bigobj で上限を引き上げる。
       -->
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
-      <!-- 1 つの unity ファイルに束ねる生成ファイルの上限。既定の束ね方だと 5 本に
-           偏って束ねられ、重い 2 本 (約 100 秒) の終わりをほかのコアが待っていた。
-           細かく束ねて並列に流す (束をまたいで同じ型を実体化し直す分は増える) -->
-      <MaxFilesInUnityFile>6</MaxFilesInUnityFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -115,10 +107,6 @@
         ローカルでは通るのにCIで C1128 になった。/bigobj で上限を引き上げる。
       -->
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
-      <!-- 1 つの unity ファイルに束ねる生成ファイルの上限。既定の束ね方だと 5 本に
-           偏って束ねられ、重い 2 本 (約 100 秒) の終わりをほかのコアが待っていた。
-           細かく束ねて並列に流す (束をまたいで同じ型を実体化し直す分は増える) -->
-      <MaxFilesInUnityFile>6</MaxFilesInUnityFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
