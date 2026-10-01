@@ -261,7 +261,7 @@ nox::UpdaterGraph::UpdaterGraph() :
 nox::UpdaterGraph::~UpdaterGraph() = default;
 
 void nox::UpdaterGraph::Rebuild(
-	const std::span<nox::EntitySystemBase* const> systems,
+	const std::span<nox::legacy::EntitySystemBase* const> systems,
 	const std::span<nox::EntityLogicStorage* const> storages)
 {
 	for (nox::uint8 phase_index = 0u; phase_index < nox::util::ToUnderlying(nox::SystemPhaseType::_Max); ++phase_index)
@@ -272,7 +272,7 @@ void nox::UpdaterGraph::Rebuild(
 
 void nox::UpdaterGraph::RebuildPhase(
 	const nox::SystemPhaseType phase_type,
-	const std::span<nox::EntitySystemBase* const> systems,
+	const std::span<nox::legacy::EntitySystemBase* const> systems,
 	const std::span<nox::EntityLogicStorage* const> storages)
 {
 	const nox::uint32 phase_index = nox::util::ToUnderlying(phase_type);
@@ -287,9 +287,9 @@ void nox::UpdaterGraph::RebuildPhase(
 	//	昇順に振るので、番号順の再生とノード登録順の再生は同じ並びになる。
 	nox::uint32 command_buffer_index = 0u;
 	nox::Vector<nox::UpdaterNode> nodes;
-	for (nox::EntitySystemBase* const system : systems)
+	for (nox::legacy::EntitySystemBase* const system : systems)
 	{
-		const nox::EntitySystemTypeDescriptor& descriptor = system->GetDescriptor();
+		const nox::legacy::EntitySystemTypeDescriptor& descriptor = system->GetDescriptor();
 		if (descriptor.phase != phase_type)
 		{
 			continue;

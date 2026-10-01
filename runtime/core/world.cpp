@@ -315,7 +315,7 @@ nox::World::~World()
 		delete storage;
 	}
 
-	for (nox::EntitySystemBase* const entity_system : entity_systems_)
+	for (nox::legacy::EntitySystemBase* const entity_system : entity_systems_)
 	{
 		entity_system->Destroy();
 	}
@@ -460,7 +460,7 @@ void nox::World::Init()
 	//	EntitySystem / EntityLogicの集合が確定してからUpdaterGraphを組む。
 	//	以降この集合が変わったら Rebuild を呼び直すこと。
 	updater_graph_.Rebuild(
-		std::span<nox::EntitySystemBase* const>(entity_systems_.data(), entity_systems_.size()),
+		std::span<nox::legacy::EntitySystemBase* const>(entity_systems_.data(), entity_systems_.size()),
 		std::span<nox::EntityLogicStorage* const>(entity_logic_storages_.data(), entity_logic_storages_.size()));
 
 	//	遅延構造変更の記録先をノード単位に分ける。
@@ -681,9 +681,9 @@ void nox::World::ExecutePhase(const nox::SystemPhaseType phase_type)
 
 void nox::World::CreateEntitySystems()
 {
-	for (const nox::EntitySystemTypeDescriptor* const descriptor : nox::GetEntitySystemTypes())
+	for (const nox::legacy::EntitySystemTypeDescriptor* const descriptor : nox::GetEntitySystemTypes())
 	{
-		nox::EntitySystemBase* const entity_system = descriptor->create();
+		nox::legacy::EntitySystemBase* const entity_system = descriptor->create();
 		if (entity_system == nullptr)
 		{
 			NOX_ASSERT(false, u8"EntitySystemの生成に失敗しました");
@@ -727,7 +727,7 @@ void nox::World::ExecuteEntitySystemChunkJob(void* const context)
 	job_context->system->ExecuteChunk(*job_context->world, *job_context->archetype, job_context->chunk_index);
 }
 
-void nox::World::ExecuteEntitySystemParallel(nox::EntitySystemBase& system, const nox::uint32 node_index)
+void nox::World::ExecuteEntitySystemParallel(nox::legacy::EntitySystemBase& system, const nox::uint32 node_index)
 {
 	//	Chunkは互いに素なメモリブロックなので、2つのワーカーが同じバイトへ触ることはない。
 	//	ノード同士の排他は呼び出し元(ExecuteNode)が既に取っている。
@@ -846,7 +846,7 @@ void nox::World::ExecuteNode(const nox::UpdaterNode& node)
 	//	  ・1つのノードの内部、Chunkジョブ同士の競合 … 検出できない
 	//	    (Chunkが互いに素なメモリであることと、k_parallel_for_eachを宣言したSystemが
 	//	     entity間で共有される状態に触れないこと、の2点で担保する。後者はSystem作者の責務。
-	//	     nox::IsParallelForEachEntitySystem のコメントに条件を明記してある)
+	//	     nox::legacy::IsParallelForEachEntitySystem のコメントに条件を明記してある)
 	EnterNodeAccessScope(node.access);
 #endif // !NOX_MASTER
 
@@ -1883,7 +1883,7 @@ nox::Archetype& nox::World::GetOrCreateArchetype(const nox::ComponentMask& mask)
 	archetypes_.push_back(archetype);
 
 	//	既存のQueryへ即座に通知する。以降このArchetypeの照合は二度と走らない。
-	for (nox::EntitySystemBase* const entity_system : entity_systems_)
+	for (nox::legacy::EntitySystemBase* const entity_system : entity_systems_)
 	{
 		entity_system->GetQuery().TryAddArchetype(*archetype);
 	}

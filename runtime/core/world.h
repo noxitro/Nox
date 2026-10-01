@@ -8,7 +8,7 @@
 #include	"entity.h"
 #include	"entity_command_buffer.h"
 #include	"archetype.h"
-#include	"entity_system.h"
+#include	"entity_system_legacy.h"
 #include	"entity_logic.h"
 #include	"updater_graph.h"
 #include	"service.h"
@@ -208,7 +208,7 @@ namespace nox
 		struct ChunkJobContext
 		{
 			nox::World* world;
-			nox::EntitySystemBase* system;
+			nox::legacy::EntitySystemBase* system;
 			nox::Archetype* archetype;
 			nox::uint32 chunk_index;
 			/// @brief 配り元のノード番号。ジョブを引いたワーカーが記録先を束ね直すために要る。
@@ -368,28 +368,24 @@ namespace nox
 		/// @brief ComponentDataを追加する。Archetype間の移動を伴うため列挙中・System実行中は呼べない。
 		/// @return 追加された(既に持っていた場合は既存の)ComponentDataへのポインタ。
 		template<class T>
-			requires(nox::IsComponentDataType<T>())
 		T* AddComponent(const nox::EntityId entity)
 		{
 			return static_cast<T*>(AddComponent(entity, nox::ComponentTypeOf<T>()));
 		}
 
 		template<class T>
-			requires(nox::IsComponentDataType<T>())
 		void RemoveComponent(const nox::EntityId entity)
 		{
 			RemoveComponent(entity, nox::ComponentTypeOf<T>());
 		}
 
 		template<class T>
-			requires(nox::IsComponentDataType<T>())
 		[[nodiscard]] T* TryGetComponent(const nox::EntityId entity)noexcept
 		{
 			return static_cast<T*>(TryGetComponent(entity, nox::ComponentTypeIndexOf<T>()));
 		}
 
 		template<class T>
-			requires(nox::IsComponentDataType<T>())
 		[[nodiscard]] bool HasComponent(const nox::EntityId entity)const noexcept
 		{
 			return HasComponent(entity, nox::ComponentTypeIndexOf<T>());
@@ -476,7 +472,7 @@ namespace nox
 		/// @brief EntitySystemの列挙をChunk単位でワーカーへ配る(stage 2c)。
 		/// @details ノードの排他はExecuteNodeが既に取っている前提。Chunk同士は互いに素なメモリなので、
 		///          この内側では追加の排他は要らない。
-		void ExecuteEntitySystemParallel(nox::EntitySystemBase& system, nox::uint32 node_index);
+		void ExecuteEntitySystemParallel(nox::legacy::EntitySystemBase& system, nox::uint32 node_index);
 		/// @brief ExecuteChunkをジョブとして呼ぶためのthunk。contextはChunkJobContext*。
 		static void ExecuteEntitySystemChunkJob(void* context);
 		/// @brief entityのComponentData構成が変わったので、EntityLogicの生成/破棄を追従させる。
@@ -588,7 +584,7 @@ namespace nox
 		nox::Vector<nox::Archetype*> archetypes_;
 
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
-		nox::Vector<nox::EntitySystemBase*> entity_systems_;
+		nox::Vector<nox::legacy::EntitySystemBase*> entity_systems_;
 
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
 		nox::Vector<nox::EntityLogicStorage*> entity_logic_storages_;

@@ -11,7 +11,7 @@
 
 #include "entity_ecs_test.h"
 #include "../world.h"
-#include "../entity_system.h"
+#include "../entity_system_legacy.h"
 #include "../entity_logic.h"
 #include "../entity_type_registry.h"
 #include "../updater_graph.h"
@@ -64,10 +64,10 @@ namespace
 	using nox::test::ecs::TestPlayerLogic;
 
 	//	Chunk並列の宣言はオプトイン。宣言していない型は既定でfalseのままでなければならない。
-	static_assert(nox::IsParallelForEachEntitySystem<TestParallelAddSystem>());
-	static_assert(nox::IsParallelForEachEntitySystem<TestMoveSystem>() == false);
-	static_assert(nox::k_entity_system_type_descriptor<TestParallelAddSystem>.parallel_for_each);
-	static_assert(nox::k_entity_system_type_descriptor<TestMoveSystem>.parallel_for_each == false);
+	static_assert(nox::legacy::IsParallelForEachEntitySystem<TestParallelAddSystem>());
+	static_assert(nox::legacy::IsParallelForEachEntitySystem<TestMoveSystem>() == false);
+	static_assert(nox::legacy::k_entity_system_type_descriptor<TestParallelAddSystem>.parallel_for_each);
+	static_assert(nox::legacy::k_entity_system_type_descriptor<TestMoveSystem>.parallel_for_each == false);
 
 #pragma region シグネチャ解析のコンパイル時検証
 
@@ -167,9 +167,9 @@ namespace
 
 #pragma endregion
 
-	[[nodiscard]] const nox::EntitySystemTypeDescriptor* FindEntitySystemType(const std::string_view name)noexcept
+	[[nodiscard]] const nox::legacy::EntitySystemTypeDescriptor* FindEntitySystemType(const std::string_view name)noexcept
 	{
-		for (const nox::EntitySystemTypeDescriptor* const descriptor : nox::GetEntitySystemTypes())
+		for (const nox::legacy::EntitySystemTypeDescriptor* const descriptor : nox::GetEntitySystemTypes())
 		{
 			if (descriptor->name.find(name) != std::string_view::npos)
 			{
@@ -299,7 +299,7 @@ namespace
 	void TestEntitySystemExecution(nox::World& world)
 	{
 		//	ヘッダに定義しただけで、生成コードの表に型記述子が載っている。
-		const nox::EntitySystemTypeDescriptor* const registered = FindEntitySystemType("TestMoveSystem");
+		const nox::legacy::EntitySystemTypeDescriptor* const registered = FindEntitySystemType("TestMoveSystem");
 		NOX_ASSERT(registered != nullptr, u"EntitySystemが自動登録されていません");
 		NOX_ASSERT(registered != nullptr && registered->execute != nullptr, u"EntitySystemの実行本体が束縛されていません");
 
@@ -343,7 +343,7 @@ namespace
 	///          Worldのjob_system_はInit()でしか起動されないため、テストは自前のJobSystemを持つ。
 	void ExecuteEntitySystemChunkParallel(
 		nox::World& world,
-		nox::EntitySystemBase& system,
+		nox::legacy::EntitySystemBase& system,
 		nox::JobSystem& job_system)
 	{
 		static constexpr nox::uint32 k_max_chunk_jobs = 256u;
@@ -351,7 +351,7 @@ namespace
 		struct ChunkJobContext
 		{
 			nox::World* world;
-			nox::EntitySystemBase* system;
+			nox::legacy::EntitySystemBase* system;
 			nox::Archetype* archetype;
 			nox::uint32 chunk_index;
 		};
@@ -404,7 +404,7 @@ namespace
 	/// @brief 複数Chunkにまたがるentity群を、ワーカー0本 / 既定本数の双方で処理して結果が一致することを見る。
 	void TestParallelForEachEntitySystem(nox::World& world)
 	{
-		const nox::EntitySystemTypeDescriptor* const registered = FindEntitySystemType("TestParallelAddSystem");
+		const nox::legacy::EntitySystemTypeDescriptor* const registered = FindEntitySystemType("TestParallelAddSystem");
 		NOX_ASSERT(registered != nullptr, u"Chunk並列SystemがWorldの表に載っていません");
 		NOX_ASSERT(registered != nullptr && registered->parallel_for_each,
 			u"k_parallel_for_eachの宣言が記述子に伝わっていません");
@@ -671,7 +671,7 @@ namespace
 			u"Service以外の引数がServiceの宣言に混ざっています");
 
 		//	記述子経由でも同じ宣言が読める。
-		const nox::EntitySystemTypeDescriptor* const move_system = FindEntitySystemType("TestMoveSystem");
+		const nox::legacy::EntitySystemTypeDescriptor* const move_system = FindEntitySystemType("TestMoveSystem");
 		NOX_ASSERT(move_system != nullptr && move_system->get_service_accesses != nullptr,
 			u"EntitySystemの記述子にServiceの宣言が載っていません");
 		NOX_ASSERT(move_system != nullptr && move_system->get_service_accesses().empty(),

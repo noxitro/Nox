@@ -27,7 +27,7 @@
 ///				いずれも private で、core_test からフェーズ実行そのものを駆動できない。
 ///				そこでここでは自前の nox::JobSystem を持ち、world.cpp の2つの配り方を
 ///				同じ形で書き写している。測っているのは
-///				  ・実物の nox::EntitySystem (nox::EntitySystemBase::Execute / ExecuteChunk)
+///				  ・実物の nox::legacy::EntitySystem (nox::legacy::EntitySystemBase::Execute / ExecuteChunk)
 ///				  ・実物の nox::UpdaterGraph が算出したレイヤー分割
 ///				  ・実物の nox::JobSystem の配り・待ち
 ///				であり、写しているのは「レイヤーを回してジョブを積むループ」だけ。
@@ -46,7 +46,7 @@
 
 #include	"../world.h"
 #include	"../updater_graph.h"
-#include	"../entity_system.h"
+#include	"../entity_system_legacy.h"
 
 #include	<cmath>
 #include	<cstdio>
@@ -85,22 +85,22 @@ namespace nox::test::bench
 	///          4つ全部を同一レイヤーへ載せる。つまりレイヤー内ノード数が4になり、
 	///          並列ディスパッチのコードパスが踏まれる。
 	///          k_parallel_for_each は宣言しない (ノードレベルだけを測るため)。
-	class BenchScalarASystem final : public nox::EntitySystem<nox::test::bench::BenchScalarASystem>
+	class BenchScalarASystem final : public nox::legacy::EntitySystem<nox::test::bench::BenchScalarASystem>
 	{
 	public:
 		void OnUpdate(nox::test::bench::BenchScalarA& s) { s.value = BenchKernel(s.value, 24u); }
 	};
-	class BenchScalarBSystem final : public nox::EntitySystem<nox::test::bench::BenchScalarBSystem>
+	class BenchScalarBSystem final : public nox::legacy::EntitySystem<nox::test::bench::BenchScalarBSystem>
 	{
 	public:
 		void OnUpdate(nox::test::bench::BenchScalarB& s) { s.value = BenchKernel(s.value, 24u); }
 	};
-	class BenchScalarCSystem final : public nox::EntitySystem<nox::test::bench::BenchScalarCSystem>
+	class BenchScalarCSystem final : public nox::legacy::EntitySystem<nox::test::bench::BenchScalarCSystem>
 	{
 	public:
 		void OnUpdate(nox::test::bench::BenchScalarC& s) { s.value = BenchKernel(s.value, 24u); }
 	};
-	class BenchScalarDSystem final : public nox::EntitySystem<nox::test::bench::BenchScalarDSystem>
+	class BenchScalarDSystem final : public nox::legacy::EntitySystem<nox::test::bench::BenchScalarDSystem>
 	{
 	public:
 		void OnUpdate(nox::test::bench::BenchScalarD& s) { s.value = BenchKernel(s.value, 24u); }
@@ -108,8 +108,8 @@ namespace nox::test::bench
 
 	/// @brief チャンクレベル並列を測るための System。
 	/// @details 宣言した ComponentData の自分の行しか触らないので k_parallel_for_each を宣言できる
-	///          (条件は nox::IsParallelForEachEntitySystem のコメントを参照)。
-	class BenchMoveSystem final : public nox::EntitySystem<nox::test::bench::BenchMoveSystem>
+	///          (条件は nox::legacy::IsParallelForEachEntitySystem のコメントを参照)。
+	class BenchMoveSystem final : public nox::legacy::EntitySystem<nox::test::bench::BenchMoveSystem>
 	{
 	public:
 		static constexpr bool k_parallel_for_each = true;
@@ -152,7 +152,7 @@ namespace
 	struct ChunkJobContext final
 	{
 		nox::World* world;
-		nox::EntitySystemBase* system;
+		nox::legacy::EntitySystemBase* system;
 		nox::Archetype* archetype;
 		nox::uint32 chunk_index;
 	};
@@ -208,7 +208,7 @@ namespace
 	void RunEntitySystemParallel(
 		nox::World& world,
 		nox::JobSystem& job_system,
-		nox::EntitySystemBase& system)
+		nox::legacy::EntitySystemBase& system)
 	{
 		static constexpr nox::uint32 k_max_chunk_jobs_per_dispatch = 256u;
 
@@ -331,15 +331,15 @@ TEST(UpdaterGraphBenchmark, DISABLED_NodeLevelParallel)
 	BenchScalarCSystem system_c;
 	BenchScalarDSystem system_d;
 
-	std::vector<nox::EntitySystemBase*> systems{ &system_a, &system_b, &system_c, &system_d };
-	for (nox::EntitySystemBase* const system : systems)
+	std::vector<nox::legacy::EntitySystemBase*> systems{ &system_a, &system_b, &system_c, &system_d };
+	for (nox::legacy::EntitySystemBase* const system : systems)
 	{
 		world.BuildQuery(system->GetQuery(), system->GetDescriptor().make_read_write_mask());
 	}
 
 	nox::UpdaterGraph graph;
 	graph.Rebuild(
-		std::span<nox::EntitySystemBase* const>(systems.data(), systems.size()),
+		std::span<nox::legacy::EntitySystemBase* const>(systems.data(), systems.size()),
 		std::span<nox::EntityLogicStorage* const>());
 
 	//	前提の確認。1レイヤーに4ノードが載っていなければ、並列ディスパッチは踏まれない。

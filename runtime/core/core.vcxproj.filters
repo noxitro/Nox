@@ -195,6 +195,9 @@
     <ClInclude Include="entity_system.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="entity_system_legacy.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
     <ClInclude Include="updater_graph.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -211,6 +214,9 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="entity_type_registry.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="ecs_definitions.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
@@ -399,6 +405,9 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="asset_format.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="ecs_definitions.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

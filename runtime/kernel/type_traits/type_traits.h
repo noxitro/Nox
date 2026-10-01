@@ -406,4 +406,7 @@ namespace nox
 		template<class T>
 		concept Addressable = is_addressable_v<T>;
 	}
+
+	template<class... Types>
+	struct type_identities_t {};
 }

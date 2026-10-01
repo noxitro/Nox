@@ -10,7 +10,7 @@
 #include	"../component_type.h"
 #include	"../entity_commands.h"
 #include	"../service.h"
-#include	"../entity_system.h"
+#include	"../entity_system_legacy.h"
 #include	"../entity_logic.h"
 #include	"../entity_logic_attribute.h"
 
@@ -41,7 +41,7 @@ namespace nox::test::ecs
 	};
 
 	/// @brief 定義しただけでWorldに購読されるSystem。関数名はOnUpdateで固定。
-	class TestMoveSystem final : public nox::EntitySystem<nox::test::ecs::TestMoveSystem>
+	class TestMoveSystem final : public nox::legacy::EntitySystem<nox::test::ecs::TestMoveSystem>
 	{
 	public:
 		void OnUpdate(nox::EntityId entity, nox::test::ecs::TestPosition& position, const nox::test::ecs::TestVelocity& velocity)
@@ -63,7 +63,7 @@ namespace nox::test::ecs
 	///
 	///          対照的に nox::test::ecs::TestMoveSystem は processed_count / last_entity という
 	///          entity間で共有されるメンバを更新するので、並列化の宣言をしてはならない。
-	class TestParallelAddSystem final : public nox::EntitySystem<nox::test::ecs::TestParallelAddSystem>
+	class TestParallelAddSystem final : public nox::legacy::EntitySystem<nox::test::ecs::TestParallelAddSystem>
 	{
 	public:
 		/// @brief Chunk単位で並列に走ってよい、という宣言。既定はfalse。

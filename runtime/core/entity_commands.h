@@ -77,7 +77,6 @@ namespace nox
 		/// @details 初期値はコマンドバッファへ複製されるので、呼び出し側の一時オブジェクトで構わない。
 		///          反映はフェーズ終端。同一フェーズ内では読み出せない。
 		template<class T>
-			requires(nox::IsComponentDataType<T>())
 		inline void Add(const nox::EntityId entity, const T& value)noexcept
 		{
 			nox::detail::QueueAddComponentOfWorld(*world_, entity, nox::ComponentTypeOf<T>(), &value);
@@ -85,7 +84,6 @@ namespace nox
 
 		/// @brief ComponentDataの追加を、ゼロ初期化で予約する。
 		template<class T>
-			requires(nox::IsComponentDataType<T>())
 		inline void Add(const nox::EntityId entity)noexcept
 		{
 			nox::detail::QueueAddComponentOfWorld(*world_, entity, nox::ComponentTypeOf<T>(), nullptr);
@@ -93,7 +91,6 @@ namespace nox
 
 		/// @brief ComponentDataの削除を予約する。反映はフェーズ終端。
 		template<class T>
-			requires(nox::IsComponentDataType<T>())
 		inline void Remove(const nox::EntityId entity)noexcept
 		{
 			nox::detail::QueueRemoveComponentOfWorld(*world_, entity, nox::ComponentTypeOf<T>());

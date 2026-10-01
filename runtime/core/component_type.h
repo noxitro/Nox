@@ -160,7 +160,6 @@ namespace nox
 
 	/// @brief ComponentData型の静的型情報を取得する。初回アクセス時に一度だけ登録される。
 	template<class T>
-		requires(nox::IsComponentDataType<T>())
 	[[nodiscard]] inline const nox::ComponentTypeInfo& ComponentTypeOf()noexcept
 	{
 		static const nox::ComponentTypeInfo info = []() noexcept
@@ -182,7 +181,6 @@ namespace nox
 	}
 
 	template<class T>
-		requires(nox::IsComponentDataType<T>())
 	[[nodiscard]] inline nox::ComponentTypeIndex ComponentTypeIndexOf()noexcept
 	{
 		return nox::ComponentTypeOf<T>().index;
@@ -190,7 +188,6 @@ namespace nox
 
 	/// @brief 指定した型集合からComponentMaskを構築する。
 	template<class... ComponentTypes>
-		requires((nox::IsComponentDataType<std::remove_cvref_t<ComponentTypes>>() && ...))
 	[[nodiscard]] inline nox::ComponentMask MakeComponentMask()noexcept
 	{
 		nox::ComponentMask mask{};

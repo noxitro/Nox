@@ -7,19 +7,85 @@
 ///          シングルトンのような特別な終了処理・再初期化を持たない。
 ///          System / EntityLogic は引数に Service* を書くだけで受け取れる。
 #pragma once
-#include	"object.h"
+#include	"ecs_definitions.h"
 
 namespace nox
 {
 	class World;
 
-	/// @brief Worldに登録される共有機能の基底。
-	class Service : public ::nox::Object
+
+	/// @brief	System,EntityLogic,Service間で参照可能な機能
+	///			Systemなどと同じ実行ノードを持ち、Init,Update,Terminateの各フェーズを定義可能
+	///			Phase関数の引数は、ServiceとExtraResrouceのみ定義可能
+	class ServiceBase
 	{
-		friend class World;
-		NOX_DECLARE_OBJECT(Service, nox::Object);
+	public:
+		enum class ServicePhaseType : nox::uint8
+		{
+			Init,
+			Update,
+			Terminate,
+		};
+
 	protected:
-		inline constexpr Service()noexcept = default;
+		struct Phase
+		{
+			void operator()()const
+			{
+
+			}
+
+			ServicePhaseType type;
+		};
+
+		template<ServicePhaseType phase_type, auto Func>
+		struct PhaseImpl : public Phase
+		{
+
+		};
+
+		template<auto Func>
+		using PhaseInit = PhaseImpl<ServicePhaseType::Init, Func>;
+		template<auto Func>
+		using PhaseUpdate = PhaseImpl<ServicePhaseType::Update, Func>;
+		template<auto Func>
+		using PhaseTerminate = PhaseImpl<ServicePhaseType::Terminate, Func>;
+
+		template<class... Phases>
+		struct PhaseRegister;
+	};
+
+	template<class T>
+	class Service : public nox::ServiceBase
+	{
+	public:
+		//	static constexpr auto GetPhaseList()noexcept {}
+
+	protected:
+		static consteval bool StaticDeclareVerify()noexcept
+		{
+			static_assert(std::is_polymorphic_v<T> == false, "Service must not be polymorphic");
+			// GetPhaseList()を実装しているかチェック
+			static_assert(requires { T::GetPhaseList(); }, "Service must implement GetPhaseList()");
+			return true;
+		}
+	};
+
+	namespace detail
+	{
+		template<class T>
+		struct Phase
+	}
+
+	class SampleService final : public nox::Service<SampleService>
+	{
+		NOX_ECS_DECLARE_VERIFY(SampleService);
+
+	public:
+		static constexpr void GetPhaseList()noexcept
+		{
+
+		}
 	};
 
 	namespace detail

@@ -154,7 +154,6 @@ namespace nox
 	/// @tparam ExtraRequiredComponents どのメソッドも引数に取らないが、存在を必須にしたいComponentData
 	///         (タグ用)。通常は指定しない。
 	template<class TDerived, class... ExtraRequiredComponents>
-		requires((nox::IsComponentDataType<ExtraRequiredComponents>() && ...))
 	class EntityLogic
 	{
 	public:

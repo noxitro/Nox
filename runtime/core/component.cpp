@@ -4,4 +4,10 @@
 ///	@file	component.cpp
 ///	@brief	component
 #include	"pch.h"
+#include	<format>
 #include	"component.h"
+
+namespace nox
+{
+
+}
