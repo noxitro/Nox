@@ -124,7 +124,8 @@ foreach ($cfg in $Configuration)
 		if (-not $placed[$typeDbName]) { Fail "$name に $typeDbName が入っていない" }
 
 		$keyFile = Get-ChildItem $tmp -Recurse -File -Filter runtime_key.txt | Select-Object -First 1
-		$remoteKey, $remoteSha = if ($keyFile) { (Get-Content $keyFile.FullName) | ForEach-Object { $_.Trim() } } else { $null, $null }
+		# 書き手は pwsh 7 (BOM なし) だが、Windows PowerShell 5.1 で書かれた BOM が先頭に付いていても比べられるよう落とす
+		$remoteKey, $remoteSha = if ($keyFile) { (Get-Content $keyFile.FullName) | ForEach-Object { $_.TrimStart([char]0xFEFF).Trim() } } else { $null, $null }
 		Write-Host "run $runId (commit $remoteSha)"
 		foreach ($path in $placed.Values) { Write-Host "  -> $path" }
 

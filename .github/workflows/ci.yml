@@ -93,11 +93,16 @@ jobs:
   # ベンチ) が全部通った時点で nox-runtime-v1-<key>-<Compiler>-<Config> を保存する。
   # MSVC の Debug / Release は FlaUI に要る runtime.exe と TypeDB を、他の 4 つは
   # 中身のないマーカーを入れる。6 つ全部が、今の ref か master から読める形で
-  # 残っているときだけ reuse=true にする (= 同じ入力で 6 構成とも緑だった)。
+  # 残っているときだけ reuse=true にする (= 同じ入力で 6 構成とも runtime 側が緑だった)。
+  # ここで言う「検証済み」は runtime 側 (ビルド・スモーク・GoogleTest・件数・ベンチ) だけを指す。
+  # キャッシュは FlaUI より前に保存するので、FlaUI まで緑だったことは意味しない
+  # (FlaUI は reuse した run でも毎回走らせる)。
   #
   # 一覧の取得に失敗したときは reuse=false (フルビルド) に倒し、plan 自体は落とさない。
   # 一覧を見てから restore するまでの間にキャッシュが追い出されると、MSVC ジョブの
-  # restore が落ちる。そのときは「Re-run all jobs」で plan からやり直せばフルビルドになる。
+  # restore が落ちる。reuse の run を「Re-run failed jobs」で回したときも、plan の
+  # reuse=true がそのまま使われるので、追い出された後なら同じく落ちる。どちらも
+  # 「Re-run all jobs」で plan からやり直せば、キャッシュが無いと判定してフルビルドになる。
   #
   # cache の version には path の文字列が入るので、保存・復元の path を変えたら
   # キーの v1 を上げること (古いエントリが見えなくなり、6 つ揃わず永久にフルになる)。
