@@ -28,6 +28,7 @@
 
 - 作業ブランチを push すると CI (`.github/workflows/ci.yml`) がビルド・テスト・`runtime.exe` の起動確認を走らせる。構成の詳細は `ci.yml` 冒頭のコメント。作業ブランチ (`work/*` またはセッションで指定されたブランチ。`master` は含まない) の push は確認なしでよい。`.github` 以下を変えると Workflow lint (actionlint / ruff) も走る。
 - 落ちたらログ (`gh run view <run-id> --log-failed` など) を読み、直して push し直す。
+- runtime に効く入力が検証済みの run と同じ push (Editor だけの変更など) では、runtime の 6 構成のビルドとテストを飛ばし、キャッシュした `runtime.exe` と TypeDB で Editor と FlaUI だけを走らせる。判定は `ci.yml` の plan ジョブ。FlaUI だけ落ちて直すときは「Re-run all jobs」を使う。
 - 文書だけの変更 (`paths-ignore` の対象) ではビルドの CI は走らない。File format の検査は走る。
 - テストは `runtime/core/test/` と `runtime/kernel/test/` (GoogleTest)。reflection / delegate / 型システム / メモリ管理を重点に書く。
 - ベンチマークは `runtime/bench/`。1 op あたりの確保回数が予算 (`alloc_budget`) を超えると CI が落ちる。詳細は `runtime/bench/README.md`。
