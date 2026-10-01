@@ -14,6 +14,9 @@
 #         #if !NOX_MASTER で囲っており、Master ではテスト型のリフレクションが
 #         生成されず core_test が成立しないため。
 #         前準備は .github/actions/setup-nox-build に切り出してある。
+#         MSVC の 3 ジョブは Build runtime.slnx を C++ Build Insights で計測し、
+#         build-insights ジョブが重いヘッダ・テンプレート・関数のレポートにする
+#         (tools/build-insights/README.md)。
 # 再利用: runtime に効く入力が前に検証済みの run と同じなら (Editor だけの変更など)、
 #         6 構成のビルド・テストを飛ばし、キャッシュした runtime.exe と TypeDB で
 #         Editor のビルドと FlaUI だけを走らせる。判定は plan ジョブ、詳細はそこの
@@ -302,6 +305,56 @@ jobs:
           key: nox-runtime-v1-${{ env.NOX_RUNTIME_KEY }}-${{ matrix.compiler }}-${{ matrix.configuration }}
           fail-on-cache-miss: true
 
+      # ---------------------------------------------------------
+      # Build Insights (C++ のビルド時間の内訳) の計測
+      #
+      # 下の Build runtime.slnx を計測で挟み、重いヘッダ・テンプレート・関数を集計する。
+      # ビルドを増やさずに済むよう、既存のフルビルドをそのまま計る。MSVC だけ
+      # (Build Insights は MSVC のイベントを使う)。レポートは build-insights ジョブが作る。
+      #
+      # 計測はビルドの合否に影響させない。失敗したら ::warning:: を出して ok=false を返し、
+      # 後続の停止・集計・アップロードを飛ばすだけ (continue-on-error は使わない)。
+      # ETW を使うので管理者権限が要る。GitHub ホストのランナーは管理者で動くが、
+      # 管理者でないセルフホストでは開始に失敗し、計測なしでビルドだけが走る。
+      #
+      # テンプレートの展開は Debug だけで記録する。イベントの大半を占め (Debug の ETL は
+      # 600 MB 前後)、どのテンプレートを展開するかは構成でほぼ変わらないので 1 構成で足りる。
+      # 計測によるビルドの延びは、共有ランナーの揺れに埋もれて測れていない。導入時の
+      # 2 回の実行では MSVC のビルドが master より 30〜45% 長かったが、計測していない
+      # ClangCL も同じ実行で 0〜70% 長かった。延びが続くようなら計測の有無で比べ直す。
+      # 計測ツールは tools/build-insights (SDK の版は build.ps1 で固定)。
+      # runtime の検証済みキャッシュを再利用する run (NOX_REUSE) ではビルドしないので計測もしない。
+      # ---------------------------------------------------------
+      - name: Cache Build Insights tool
+        if: env.NOX_REUSE != 'true' && matrix.compiler == 'MSVC'
+        uses: actions/cache@v6
+        with:
+          path: tools/build-insights/out
+          key: build-insights-tool-${{ runner.os }}-${{ hashFiles('tools/build-insights/nox_build_insights.cpp', 'tools/build-insights/build.ps1') }}
+
+      - name: Start Build Insights
+        id: bi-start
+        if: env.NOX_REUSE != 'true' && matrix.compiler == 'MSVC'
+        env:
+          CONFIG: ${{ matrix.configuration }}
+        run: |
+          $ok = $false
+          try {
+            $exe = 'tools\build-insights\out\nox_build_insights.exe'
+            if (-not (Test-Path $exe)) { & tools\build-insights\build.ps1 }
+            $biArgs = @('start', 'NoxCI')
+            if ($env:CONFIG -ne 'Debug') { $biArgs += '--no-templates' }
+            & $exe @biArgs
+            if ($LASTEXITCODE -eq 0) { $ok = $true }
+            else { Write-Host "::warning::Build Insights の計測を開始できなかった (exit $LASTEXITCODE)。計測なしでビルドする" }
+          } catch {
+            Write-Host "::warning::Build Insights の準備に失敗した: $_ 。計測なしでビルドする"
+          }
+          "ok=$($ok.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "started=$([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          # 計測の失敗でステップを落とさない (pwsh は最後の $LASTEXITCODE をステップの結果にする)
+          exit 0
+
       # runtime.sln ではなく runtime.slnx。VS2026 / MSBuild 18 の
       # 新しいソリューション形式で、リポジトリに .sln は存在しない
       - name: Build runtime.slnx
@@ -316,6 +369,80 @@ jobs:
             /v:minimal `
             /nologo `
             "/flp:logfile=build.log;verbosity=normal"
+
+      # ビルドが落ちても、そこまでの計測は集計する (どこで時間を使っていたかは失敗時も役に立つ)。
+      # テストのビルドを計測に混ぜないよう、ビルドの直後に止める。
+      # 生の ETL は大きい (Debug で 600 MB 前後) ので RUNNER_TEMP に置き、手動実行
+      # (workflow_dispatch) のときだけ上げる (手元で WPA に読ませて深掘りする用)。
+      # 毎回上げるとジョブが数分延びるので、それ以外は集計したら消す。
+      - name: Stop Build Insights and analyze
+        id: bi-stop
+        if: always() && steps.bi-start.outputs.ok == 'true'
+        env:
+          CONFIG: ${{ matrix.configuration }}
+          STARTED: ${{ steps.bi-start.outputs.started }}
+          KEEP_RAW: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          $exe = 'tools\build-insights\out\nox_build_insights.exe'
+          $buildSeconds = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - [int64]$env:STARTED
+          $dir = Join-Path $env:RUNNER_TEMP 'build-insights'
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          $raw = Join-Path $dir "raw-$env:CONFIG.etl"
+          New-Item -ItemType Directory -Force -Path bi-out | Out-Null
+          $ok = $false
+          & $exe stop NoxCI $raw
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path $raw)) {
+            Write-Host "::warning::Build Insights の計測を止められなかった (exit $LASTEXITCODE)"
+          } else {
+            $etlMb = [math]::Round((Get-Item $raw).Length / 1MB, 1)
+            $sw = [Diagnostics.Stopwatch]::StartNew()
+            & $exe analyze $raw "bi-out\bi-$env:CONFIG.json"
+            $analyzeSeconds = [math]::Round($sw.Elapsed.TotalSeconds, 1)
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "::warning::Build Insights の集計に失敗した (exit $LASTEXITCODE)"
+            } else {
+              $ok = $true
+              Write-Host "ETL $etlMb MB / 集計 $analyzeSeconds 秒 / ビルド $buildSeconds 秒"
+              [ordered]@{
+                config          = $env:CONFIG
+                compiler        = 'MSVC'
+                sha             = $env:GITHUB_SHA
+                ref             = $env:GITHUB_REF_NAME
+                subject         = (git log -1 --format=%s)
+                workspace       = $env:GITHUB_WORKSPACE
+                templates       = ($env:CONFIG -eq 'Debug')
+                build_seconds   = $buildSeconds
+                etl_mb          = $etlMb
+                analyze_seconds = $analyzeSeconds
+              } | ConvertTo-Json | Set-Content -Path "bi-out\bi-$env:CONFIG.meta.json" -Encoding utf8NoBOM
+            }
+          }
+          if ($env:KEEP_RAW -eq 'true' -and (Test-Path $raw)) {
+            "raw=$raw" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          } else {
+            Remove-Item -Force -ErrorAction SilentlyContinue $raw
+          }
+          Remove-Item -Force -ErrorAction SilentlyContinue "$raw.stats.json"
+          "ok=$($ok.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          exit 0
+
+      - name: Upload Build Insights data
+        if: always() && steps.bi-stop.outputs.ok == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-insights-MSVC-${{ matrix.configuration }}
+          path: bi-out/
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Upload Build Insights raw trace
+        if: always() && steps.bi-stop.outputs.raw != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-insights-etl-${{ matrix.configuration }}
+          path: ${{ steps.bi-stop.outputs.raw }}
+          retention-days: 7
+          if-no-files-found: warn
 
       # ---------------------------------------------------------
       # runtime.exe の起動・終了 (スモーク)
@@ -924,6 +1051,142 @@ jobs:
           if-no-files-found: warn
 
   # =========================================================
+  # Build insights: 各構成のビルド計測をまとめ、レポート (単一 HTML) と要約を作る
+  #
+  # build マトリクスの MSVC ジョブが上げた build-insights-MSVC-<構成> を集め、
+  # .github/scripts/build-insights-report.py でレポートにする。
+  #   - build-insights-report.html: 1 ファイルで開けるレポート (zip にせず上げる。
+  #     upload-artifact は archive: false のときファイル名をアーティファクト名にする)
+  #   - build-insights-data: 次の実行の比較元 (master のものだけを比較に使う)
+  #   - build-insights-site: bench-publish が GitHub Pages の /build-insights/ に置く
+  # 比較元は「今回以外で、期限の切れていない master の build-insights-data の最新」。
+  # 計測が 1 つも無いとき (全構成で計測に失敗した等) は要約にそう書くだけで落とさない。
+  # =========================================================
+  # runtime の検証済みキャッシュを再利用した run (plan の reuse) ではビルドも計測もしていないので飛ばす。
+  # そのとき bench-publish は master の最新のレポートを Pages に置く (今回分が無いときと同じ扱い)。
+  build-insights:
+    name: Build Insights report
+    needs: [plan, build]
+    if: always() && !cancelled() && needs.plan.outputs.reuse != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read   # 比較元 (master の build-insights-data) を探して取るため
+      pages: read     # 公開先の URL を要約に載せるため
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            .github/scripts
+            tools/build-insights/site
+
+      # 無い構成があっても (計測の失敗・dependabot/nuget の縮小マトリクス) 取れた分で進める
+      - name: Download measurements
+        uses: actions/download-artifact@v8
+        with:
+          pattern: build-insights-MSVC-*
+          path: bi-data
+          merge-multiple: true
+
+      - name: Restore baseline (latest master)
+        id: base
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # 全ページを見てから最新の master を選ぶ (一覧は新しい順)。今は master でしか上げていないが、
+          # 上げ方を変えても先頭ページが作業ブランチのもので埋まって見失わないようにしておく
+          if picks=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/artifacts?name=build-insights-data&per_page=100" \
+                --jq ".artifacts[] | select(.expired == false and .workflow_run.head_branch == \"master\" and ((.workflow_run.id | tostring) != \"$GITHUB_RUN_ID\")) | \"\\(.workflow_run.id) \\(.workflow_run.head_sha)\""); then
+            pick=${picks%%$'\n'*}
+            if [ -n "$pick" ]; then
+              run_id=${pick%% *}
+              sha=${pick#* }
+              if gh run download "$run_id" -n build-insights-data -D bi-base; then
+                echo "sha=$sha" >> "$GITHUB_OUTPUT"
+                echo "run_url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$run_id" >> "$GITHUB_OUTPUT"
+                echo "比較元: run $run_id ($sha)"
+              else
+                echo "::warning::比較元の build-insights-data を取得できなかった (run $run_id)。差分なしで作る"
+              fi
+            else
+              echo "比較元 (master の build-insights-data) はまだ無い"
+            fi
+          else
+            echo "::warning::build-insights-data の一覧を取得できなかった。差分なしで作る"
+          fi
+
+      - name: Build report
+        env:
+          BASE_SHA: ${{ steps.base.outputs.sha }}
+          BASE_RUN_URL: ${{ steps.base.outputs.run_url }}
+        shell: bash
+        run: |
+          mkdir -p bi-report
+          python3 .github/scripts/build-insights-report.py \
+            --data-dir bi-data --base-dir bi-base \
+            --base-sha "$BASE_SHA" --base-run-url "$BASE_RUN_URL" \
+            --site-src tools/build-insights/site \
+            --out-html bi-report/build-insights-report.html
+          if compgen -G 'bi-data/bi-*.json' > /dev/null; then echo "has_data=true" >> "$GITHUB_ENV"; fi
+
+      - name: Upload report
+        id: upload-report
+        uses: actions/upload-artifact@v7
+        with:
+          path: bi-report/build-insights-report.html
+          archive: false
+          retention-days: 30
+
+      - name: Write summary
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_SHA: ${{ steps.base.outputs.sha }}
+          BASE_RUN_URL: ${{ steps.base.outputs.run_url }}
+          REPORT_URL: ${{ steps.upload-report.outputs.artifact-url }}
+          EXPECT: ${{ startsWith(github.ref, 'refs/heads/dependabot/nuget/') && 'Debug' || 'Debug,Release,Master' }}
+        run: |
+          python3 .github/scripts/build-insights-report.py \
+            --data-dir bi-data --base-dir bi-base \
+            --base-sha "$BASE_SHA" --base-run-url "$BASE_RUN_URL" \
+            --report-url "$REPORT_URL" --expect "$EXPECT" \
+            --skip-html --summary "$GITHUB_STEP_SUMMARY"
+          # master では bench-publish が GitHub Pages にも置く
+          if [ "$GITHUB_REF" = "refs/heads/master" ] && url=$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq 'select(.build_type == "workflow") | .html_url' 2>/dev/null) && [ -n "$url" ]; then
+            echo "公開後は ${url%/}/build-insights/ でも見られる (master の最新)。" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # 比較元として読むのは master のものだけなので、master でだけ上げる
+      # (全ブランチで上げると、一覧の上位が作業ブランチのもので埋まり master のものを探しにくくなる)
+      - name: Upload data (baseline for later runs)
+        if: env.has_data == 'true' && github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-insights-data
+          path: bi-data/
+          retention-days: 90
+
+      # bench-publish が GitHub Pages の /build-insights/index.html に置く
+      - name: Prepare site
+        if: env.has_data == 'true'
+        run: |
+          mkdir -p bi-site
+          cp bi-report/build-insights-report.html bi-site/index.html
+        shell: bash
+
+      - name: Upload site artifact
+        if: env.has_data == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-insights-site
+          path: bi-site/
+          retention-days: 90
+
+  # =========================================================
   # Benchmark publish: 各構成の計測結果を履歴へ積み、結果ページを作り直す
   #
   # 中身は bench-publish.yml (ページだけの変更でも単独で走らせたいので分けてある)。
@@ -932,9 +1195,11 @@ jobs:
   # 今回の結果を重ねたプレビューをアーティファクト bench-site に置く。
   # pages / id-token は公開ジョブ (master のみ) が使う。
   # =========================================================
+  # build-insights も待つのは、その結果 (build-insights-site) を Pages の /build-insights/ に
+  # 一緒に置くため。build-insights が落ちてもベンチマークの公開は止めない。
   bench-publish:
     name: Benchmark publish
-    needs: [plan, build]
+    needs: [plan, build, build-insights]
     if: always() && !cancelled()
     uses: ./.github/workflows/bench-publish.yml
     permissions:
@@ -963,7 +1228,9 @@ jobs:
     name: Notify Discord
     # bench-publish も含める。含めないと、結果ページの生成・公開が落ちても通知されず、
     # 次の成功で「復旧」だけが流れる。
-    needs: [plan, build, editor, bench-publish]
+    # build-insights も同じ理由で含める (レポートの生成が落ちたら気付きたい。計測自体の失敗は
+    # ビルドの合否に影響させず、警告として要約に出る)。
+    needs: [plan, build, editor, build-insights, bench-publish]
     # 判定は step 側で needs.*.result を見るので、ここでは always() で拾うだけ。
     if: always() && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
