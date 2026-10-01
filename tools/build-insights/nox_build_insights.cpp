@@ -637,13 +637,19 @@ namespace
 				return it == pass.names.end() ? std::string("<unknown>") : it->second;
 			};
 			std::unordered_map<unsigned long long, TemplateStat*> resolved;
+			// 同じ名前の primary template が 1 つのパスで複数のキーを持つことがあるので、
+			// 翻訳単位の数は名前ごとに 1 回だけ数える
+			std::unordered_set<const TemplateStat*> counted;
 			for (const auto& [key, local] : pass.templates)
 			{
 				TemplateStat& t = templates_[name_of(key)];
 				t.incl_us += local.incl_us;
 				t.excl_us += local.excl_us;
 				t.count += local.count;
-				t.passes += 1;
+				if (counted.insert(&t).second)
+				{
+					t.passes += 1;
+				}
 				t.kind = local.kind;
 				resolved[key] = &t;
 			}

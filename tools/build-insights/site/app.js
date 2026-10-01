@@ -155,7 +155,8 @@
 		out.push('<div class="table-wrap"><table class="data"><thead><tr>');
 		for (const c of columns) {
 			const arrow = c.key === ts.sort ? '<span class="arrow">' + (ts.desc ? "▼" : "▲") + "</span>" : "";
-			out.push('<th class="sortable' + (c.num ? " num" : "") + '" data-sort="' + c.key + '"' +
+			const sortState = c.key === ts.sort ? (ts.desc ? "descending" : "ascending") : "none";
+			out.push('<th class="sortable' + (c.num ? " num" : "") + '" data-sort="' + c.key + '" aria-sort="' + sortState + '"' +
 				(c.title ? ' title="' + esc(c.title) + '"' : "") + ">" + esc(c.label) + arrow + "</th>");
 		}
 		out.push("</tr></thead><tbody>");
@@ -188,7 +189,7 @@
 		host.innerHTML = out.join("");
 
 		host.querySelectorAll("th.sortable").forEach((th) =>
-			th.addEventListener("click", () => {
+			activatable(th, () => {
 				const k = th.dataset.sort;
 				if (ts.sort === k) ts.desc = !ts.desc;
 				else {
@@ -197,6 +198,8 @@
 					ts.desc = !!c.num;
 				}
 				renderTable(host, key, rows, columns, opts);
+				const again = host.querySelector('th.sortable[data-sort="' + k + '"]');
+				if (again) again.focus();
 			})
 		);
 		host.querySelectorAll("tr.row").forEach((tr) => {
@@ -271,9 +274,15 @@
 		return hd[5] > 0 && hd[5] === hd[4];
 	}
 
+	/// PCH の外で 3 つ以上の翻訳単位が取り込んでいるヘッダ。ある PCH に入っていても、
+	/// 別の 3 つ以上の翻訳単位で PCH の外から取り込まれていれば候補にする
+	function isPchCandidate(hd) {
+		return hd[4] - hd[5] >= 3;
+	}
+
 	function pchCandidates(c) {
 		// PCH の外で、3 つ以上の翻訳単位が取り込んでいるヘッダ。PCH に入れれば解析が 1 回で済む
-		return c.headers.filter((hd) => hd[5] === 0 && hd[4] >= 3).sort((a, b) => b[1] - a[1]);
+		return c.headers.filter(isPchCandidate).sort((a, b) => b[1] - a[1]);
 	}
 
 	function topList(items, label, value) {
@@ -324,7 +333,7 @@
 			'<div class="tiles">' + tiles.join("") + "</div>" +
 			'<div class="grid-2">' +
 			card("重いヘッダ", "全翻訳単位での解析時間の合計", "headers", topList(c.headers.slice(0, 10), (hd) => catBadge(c, c.cats[hd[0]]) + esc(c.paths[hd[0]]), (hd) => hd[1]), "ov-headers") +
-			card("PCH に入れる候補", "PCH の外で 3 つ以上の翻訳単位が取り込んでいるヘッダ", "headers", topList(cands, (hd) => catBadge(c, c.cats[hd[0]]) + esc(c.paths[hd[0]]) + ' <span class="muted">×' + hd[4] + "</span>", (hd) => hd[1]), "ov-cands") +
+			card("PCH に入れる候補", "PCH の外で 3 つ以上の翻訳単位が取り込んでいるヘッダ", "headers", topList(cands, (hd) => catBadge(c, c.cats[hd[0]]) + esc(c.paths[hd[0]]) + ' <span class="muted">×' + (hd[4] - hd[5]) + "</span>", (hd) => hd[1]), "ov-cands") +
 			(c.templates
 				? card("重いテンプレート", "primary template ごと (再帰の二重計上は除く)", "templates", topList(c.templates_list.slice(0, 10), (tp) => esc(tp.n), (tp) => tp.i), "ov-templates")
 				: card("テンプレート", "", "templates", '<div class="empty">この構成ではテンプレートの展開を記録していない</div>', "ov-templates")) +
@@ -367,7 +376,7 @@
 			}) + '<div id="tbl"></div></div>';
 		const host = view.querySelector("#tbl");
 		const columns = [
-			{ key: "path", label: "ヘッダ", sort: (r) => c.paths[r[0]], cell: (r) => catBadge(c, c.cats[r[0]]) + esc(c.paths[r[0]]) + (headerIsPchOnly(r) ? '<span class="badge pch">PCH 内</span>' : (r[5] === 0 && r[4] >= 3 ? '<span class="badge cand" title="PCH の外で 3 つ以上の翻訳単位が取り込んでいる">PCH 候補</span>' : "")) },
+			{ key: "path", label: "ヘッダ", sort: (r) => c.paths[r[0]], cell: (r) => catBadge(c, c.cats[r[0]]) + esc(c.paths[r[0]]) + (headerIsPchOnly(r) ? '<span class="badge pch">PCH 内</span>' : (isPchCandidate(r) ? '<span class="badge cand" title="PCH の外で 3 つ以上の翻訳単位が取り込んでいる">PCH 候補</span>' : "")) },
 			{ key: "incl", label: "合計", num: true, title: "全翻訳単位での解析時間 (中で取り込んだヘッダを含む) の合計", sort: (r) => r[1], cell: (r) => ms(r[1]), bar: (r) => r[1] / (maxIncl || 1) },
 			{ key: "share", label: "FE 比", num: true, title: "フロントエンド合計に占める割合", sort: (r) => r[1], cell: (r) => pct(r[1], fe) },
 			{ key: "excl", label: "自身", num: true, title: "このファイル自身の解析時間 (中で取り込んだヘッダを除く)", sort: (r) => r[2], cell: (r) => ms(r[2]) },
@@ -690,21 +699,35 @@
 			})
 		);
 		const tip = document.getElementById("tooltip");
+		const describe = (it) => it.label + " — " + (it.kind === "unit" ? "フロントエンド " + ms(it.fe) + "、バックエンド " + ms(it.be) : "リンク " + ms(it.dur));
+		const showTip = (it, x, y) => {
+			tip.innerHTML = '<div class="mono">' + esc(it.label) + "</div>" +
+				(it.kind === "unit" ? "フロントエンド " + ms(it.fe) + " · バックエンド " + ms(it.be) + (it.pch ? " · PCH を作る" : "") : "リンク " + ms(it.dur)) +
+				'<div class="muted">開始 ' + ms(it.start) + "</div>";
+			tip.hidden = false;
+			tip.style.left = Math.max(8, Math.min(window.innerWidth - tip.offsetWidth - 8, x + 14)) + "px";
+			tip.style.top = y + 14 + "px";
+		};
+		// バックエンドの棒はフロントエンドの棒と同じ翻訳単位なので、フォーカスは翻訳単位ごとに 1 つ (フロントエンド側) にする
 		view.querySelectorAll(".tl-bar").forEach((r) => {
-			r.addEventListener("mousemove", (e) => {
-				const it = items[+r.dataset.i];
-				tip.innerHTML = '<div class="mono">' + esc(it.label) + "</div>" +
-					(it.kind === "unit" ? "フロントエンド " + ms(it.fe) + " · バックエンド " + ms(it.be) + (it.pch ? " · PCH を作る" : "") : "リンク " + ms(it.dur)) +
-					'<div class="muted">開始 ' + ms(it.start) + "</div>";
-				tip.hidden = false;
-				tip.style.left = Math.min(window.innerWidth - tip.offsetWidth - 8, e.clientX + 14) + "px";
-				tip.style.top = e.clientY + 14 + "px";
-			});
+			const it = items[+r.dataset.i];
+			r.addEventListener("mousemove", (e) => showTip(it, e.clientX, e.clientY));
 			r.addEventListener("mouseleave", () => (tip.hidden = true));
-			r.addEventListener("click", () => {
-				const it = items[+r.dataset.i];
+			const open = () => {
 				if (it.kind === "unit") go({ tab: "tree", unit: it.label, q: "", hl: null });
+			};
+			if (r.classList.contains("tl-be")) {
+				r.addEventListener("click", open);
+				return;
+			}
+			r.setAttribute("role", it.kind === "unit" ? "link" : "img");
+			r.setAttribute("aria-label", describe(it));
+			activatable(r, open);
+			r.addEventListener("focus", () => {
+				const box = r.getBoundingClientRect();
+				showTip(it, box.left, box.bottom - 10);
 			});
+			r.addEventListener("blur", () => (tip.hidden = true));
 		});
 	}
 

@@ -33,6 +33,15 @@ PCH に入っているヘッダは、PCH を作る翻訳単位でだけ解析さ
 
 Windows と Visual Studio (C++ ワークロード)、PowerShell 7 (`pwsh`) が要る (下の手順の `utf8NoBOM` は Windows PowerShell 5.1 に無い)。計測 (ETW) には管理者権限が要るので、管理者として起動した `pwsh` で実行する。
 
+ふつうの `pwsh` では `msbuild` に PATH が通っていない (`build.ps1` が読む開発者環境はその中の `cmd` にだけ効く)。先に開発者環境を読み込んでおく。
+
+```powershell
+# Visual Studio の開発者環境 (msbuild / cl) をこの pwsh に読み込む
+$vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -property installationPath
+Import-Module (Join-Path $vs 'Common7\Tools\Microsoft.VisualStudio.DevShell.dll')
+Enter-VsDevShell -VsInstallPath $vs -SkipAutomaticLocation -DevCmdArguments '-arch=x64 -host_arch=x64'
+```
+
 ```powershell
 # 計測ツールをビルドする (SDK は NuGet から取得。版と SHA256 は build.ps1 に固定)
 tools\build-insights\build.ps1

@@ -1101,6 +1101,13 @@ table.mini td.name {
 	opacity: 0.9;
 }
 
+.tl-bar:focus-visible {
+	outline: none;
+	opacity: 1;
+	stroke: var(--text);
+	stroke-width: 2;
+}
+
 .tl-bar:hover {
 	opacity: 1;
 	stroke: var(--text);
