@@ -14,6 +14,12 @@
 #         #if !NOX_MASTER で囲っており、Master ではテスト型のリフレクションが
 #         生成されず core_test が成立しないため。
 #         前準備は .github/actions/setup-nox-build に切り出してある。
+# 再利用: runtime に効く入力が前に検証済みの run と同じなら (Editor だけの変更など)、
+#         6 構成のビルド・テストを飛ばし、キャッシュした runtime.exe と TypeDB で
+#         Editor のビルドと FlaUI だけを走らせる。判定は plan ジョブ、詳細はそこの
+#         コメント。master では常にフルで建てる。FlaUI だけ落ちて直したいときは
+#         「Re-run failed jobs」ではなく「Re-run all jobs」を使う (plan が再評価され、
+#         FlaUI の前に保存済みの runtime キャッシュが使われる)。
 # 環境  : windows。runtime は PlatformToolset=v145 (runtime/Directory.Build.props)
 #         (Visual Studio 2026) を要求するため windows-2022 では動かない。
 # 費用  : 公開リポジトリなので GitHub ホストランナーは無料 (実行の usage で
@@ -48,6 +54,11 @@ on:
   # 6 構成ビルドだけ飛ばす。C# の依存が C++ ランタイムに影響しないため。
   # actions の更新は CI 自身を書き換えるので何も飛ばさない (各ジョブの if を参照)。
   workflow_dispatch:   # GitHub UI の「Run workflow」から手動実行
+    inputs:
+      full:
+        description: 'runtime の検証済みキャッシュを使わず、6 構成をフルで建てる'
+        type: boolean
+        default: false
 
 # 同じ ref に新しい push が来たら、走っている古い実行を打ち切る。
 # ただし master は打ち切らない。master へ連続 push すると完了した結果が
@@ -67,6 +78,120 @@ defaults:
     shell: pwsh
 
 jobs:
+  # =========================================================
+  # Plan: runtime の検証を前の run から再利用できるか決める
+  #
+  # runtime_key は「runtime のビルドと検証に効く入力」の内容アドレス。
+  # git ls-tree HEAD のトップレベル項目から、効かないもの (Editor・文書・
+  # エージェントやフックの設定) を除いた行を sha256 したもの。tools は 1 段掘って
+  # bench-site / ci-try / fetch-runtime / git-hooks を除く。除外は効かないと言い切れるものだけにし、
+  # 迷うもの (.github・sandbox・Nox.noxproj.json・.gitattributes など) はキーに残す。
+  # Editor/** は runtime のビルドから参照されない (Editor → runtime の参照は
+  # Core.csproj の RuntimeTypeDB だけで、それは runtime/ の下にある)。
+  #
+  # build の 6 ジョブは、runtime 側の検証 (ビルド・スモーク・GoogleTest・件数・
+  # ベンチ) が全部通った時点で nox-runtime-v1-<key>-<Compiler>-<Config> を保存する。
+  # MSVC の Debug / Release は FlaUI に要る runtime.exe と TypeDB を、他の 4 つは
+  # 中身のないマーカーを入れる。6 つ全部が、今の ref か master から読める形で
+  # 残っているときだけ reuse=true にする (= 同じ入力で 6 構成とも runtime 側が緑だった)。
+  # ここで言う「検証済み」は runtime 側 (ビルド・スモーク・GoogleTest・件数・ベンチ) だけを指す。
+  # キャッシュは FlaUI より前に保存するので、FlaUI まで緑だったことは意味しない
+  # (FlaUI は reuse した run でも毎回走らせる)。
+  #
+  # 一覧の取得に失敗したときは reuse=false (フルビルド) に倒し、plan 自体は落とさない。
+  # 一覧を見てから restore するまでの間にキャッシュが追い出されると、MSVC ジョブの
+  # restore が落ちる。reuse の run を「Re-run failed jobs」で回したときも、plan の
+  # reuse=true がそのまま使われるので、追い出された後なら同じく落ちる。どちらも
+  # 「Re-run all jobs」で plan からやり直せば、キャッシュが無いと判定してフルビルドになる。
+  #
+  # cache の version には path の文字列が入るので、保存・復元の path を変えたら
+  # キーの v1 を上げること (古いエントリが見えなくなり、6 つ揃わず永久にフルになる)。
+  # =========================================================
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read   # キャッシュの一覧 (actions/caches) を読むため
+    outputs:
+      reuse: ${{ steps.decide.outputs.reuse }}
+      runtime_key: ${{ steps.key.outputs.runtime_key }}
+    steps:
+      # ls-tree は木だけ読めれば足りるので、作業ツリーは .github だけにする
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: .github
+
+      - name: Compute runtime key
+        id: key
+        shell: bash
+        run: |
+          set -euo pipefail
+          exclude='^(Editor|docs|LICENSE|tools|\.claude|\.editorconfig|\.gitignore|\.githooks-allow|\.git-blame-ignore-revs|\.gitleaks\.toml|startup\.ps1|[^/]*\.md)$'
+          tools_exclude='^(bench-site|ci-try|fetch-runtime|git-hooks)$'
+          src=$(
+            # 正規表現は ENVIRON で渡す (awk -v はバックスラッシュを解釈して \. を . にしてしまう)
+            git ls-tree HEAD | re="$exclude" awk -F'\t' '$2 !~ ENVIRON["re"]'
+            git ls-tree HEAD:tools | re="$tools_exclude" awk -F'\t' '$2 !~ ENVIRON["re"] { print $1 "\ttools/" $2 }'
+          )
+          echo "--- キーに入れた項目 ---"
+          echo "$src"
+          key=$(printf '%s\n' "$src" | sha256sum | cut -c1-40)
+          echo "runtime_key=$key" >> "$GITHUB_OUTPUT"
+          echo "runtime_key: $key"
+
+      - name: Decide reuse
+        id: decide
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KEY: ${{ steps.key.outputs.runtime_key }}
+          FULL: ${{ inputs.full && 'true' || 'false' }}
+        run: |
+          set -uo pipefail
+          reuse=false
+          reason=''
+          if [ "$GITHUB_REF" = "refs/heads/master" ]; then
+            reason='master は常にフルで建てる (ベンチ履歴・通知・イメージ更新の検出のため)'
+          elif [ "$FULL" = "true" ]; then
+            reason='workflow_dispatch で full が指定された'
+          else
+            prefix="nox-runtime-v1-$KEY-"
+            found=''
+            ok=true
+            # 同じキーでも ref ごとに別エントリなので、読める ref (今の ref と master) ごとに引く
+            for ref in "$GITHUB_REF" refs/heads/master; do
+              if keys=$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/caches" \
+                  -f key="$prefix" -f ref="$ref" -F per_page=100 --jq '.actions_caches[].key'); then
+                found+="$keys"$'\n'
+              else
+                ok=false
+              fi
+            done
+            missing=''
+            for c in MSVC-Debug MSVC-Release MSVC-Master ClangCL-Debug ClangCL-Release ClangCL-Master; do
+              grep -qxF "$prefix$c" <<<"$found" || missing+=" $c"
+            done
+            if [ -z "$missing" ]; then
+              reuse=true
+              reason="runtime_key が同じで 6 構成とも検証済み"
+            elif [ "$ok" = false ]; then
+              reason="キャッシュ一覧の取得に失敗したのでフルで建てる"
+            else
+              reason="未検証の構成がある:$missing"
+            fi
+          fi
+          echo "reuse=$reuse" >> "$GITHUB_OUTPUT"
+          echo "reuse=$reuse ($reason)"
+          {
+            echo "## Plan"
+            echo ""
+            echo "- runtime_key: \`$KEY\`"
+            echo "- reuse: **$reuse** ($reason)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   # =========================================================
   # Build & test: runtime.slnx を 2 コンパイラ x 3 構成で建て、
   #               そのジョブの中で GoogleTest と FlaUI まで走らせる
@@ -90,6 +215,7 @@ jobs:
   # =========================================================
   build:
     name: Build & test (${{ matrix.compiler }} / ${{ matrix.configuration }})
+    needs: [plan]
     # 既定は GitHub ホストの windows-latest。リポジトリ変数 NOX_RUNNER を
     # 設定するとそちらへ回す (例: NOX_RUNNER=self-hosted)。セルフホストの
     # 実行時間は無料枠を消費しないので、6 構成を毎 push で建てるならこれ。
@@ -103,6 +229,12 @@ jobs:
     permissions:
       contents: read
       actions: read
+    # NOX_REUSE=true のときは runtime 側のステップを全部飛ばし、MSVC の Debug / Release
+    # だけキャッシュから runtime.exe と TypeDB を戻して Editor + FlaUI を走らせる。
+    # 6 ジョブのまま残すのは、チェック名 (必須チェックや通知の集計) を変えないため。
+    env:
+      NOX_REUSE: ${{ needs.plan.outputs.reuse }}
+      NOX_RUNTIME_KEY: ${{ needs.plan.outputs.runtime_key }}
 
     strategy:
       fail-fast: false   # 片方が転んでももう片方は最後まで走らせる
@@ -145,15 +277,36 @@ jobs:
 
     steps:
       - name: Checkout
+        if: env.NOX_REUSE != 'true' || (matrix.compiler == 'MSVC' && matrix.configuration != 'Master')
         uses: actions/checkout@v7
 
       - name: Setup build prerequisites
+        if: env.NOX_REUSE != 'true'
         uses: ./.github/actions/setup-nox-build
+
+      # 再利用時は setup-nox-build を通さないので、Editor のビルドに要る .NET SDK だけ入れる
+      - name: Setup .NET SDK (reuse)
+        if: env.NOX_REUSE == 'true' && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      # path は下の「Save runtime cache」と文字列として一致させること (cache の version に入る)
+      - name: Restore runtime cache (reuse)
+        if: env.NOX_REUSE == 'true' && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            runtime/build/runtime/x64/${{ matrix.configuration }}/runtime.exe
+            runtime/reflection_generated/gen/RuntimeTypeDB.x64.${{ matrix.configuration }}.bin
+          key: nox-runtime-v1-${{ env.NOX_RUNTIME_KEY }}-${{ matrix.compiler }}-${{ matrix.configuration }}
+          fail-on-cache-miss: true
 
       # runtime.sln ではなく runtime.slnx。VS2026 / MSBuild 18 の
       # 新しいソリューション形式で、リポジトリに .sln は存在しない
       - name: Build runtime.slnx
         id: build
+        if: env.NOX_REUSE != 'true'
         run: |
           msbuild runtime\runtime.slnx `
             /p:Configuration=${{ matrix.configuration }} `
@@ -190,6 +343,7 @@ jobs:
       # テストのビルドより前に置いているのは、テストを建てない Master でも走らせるため。
       # ---------------------------------------------------------
       - name: Run runtime.exe (start / exit)
+        if: env.NOX_REUSE != 'true'
         run: |
           $exe = (Resolve-Path 'runtime\build\runtime\x64\${{ matrix.configuration }}\runtime.exe').Path
           $frames = 30
@@ -267,7 +421,7 @@ jobs:
       # 時間的に重ならないので、構成によらずこの衝突は起きない。
       # ---------------------------------------------------------
       - name: Build test projects
-        if: matrix.configuration != 'Master'
+        if: env.NOX_REUSE != 'true' && matrix.configuration != 'Master'
         run: |
           # vcxproj を直接建てると MSBuild はソリューション由来のプロパティを
           # 設定しない ($(SolutionPath) は *Undefined* という文字列になる)。
@@ -316,7 +470,7 @@ jobs:
       # gtest.dll は各テスト vcxproj の PostBuildEvent が隣へ置く。
       - name: Run GoogleTest suites
         id: gtest
-        if: matrix.configuration != 'Master'
+        if: env.NOX_REUSE != 'true' && matrix.configuration != 'Master'
         run: |
           $outDir = 'runtime\build\runtime\x64\${{ matrix.configuration }}'
           New-Item -ItemType Directory -Force test-results | Out-Null
@@ -338,7 +492,7 @@ jobs:
       # 「通った」と誤読される。件数を数えるのが唯一の証明。
       # 実測は kernel_test 21 + core_test 81 = 102 件。その 9 割を下限に置く。
       - name: 実行件数を確かめる
-        if: always() && matrix.configuration != 'Master'
+        if: always() && env.NOX_REUSE != 'true' && matrix.configuration != 'Master'
         shell: pwsh
         run: |
           python .github/scripts/check-test-results.py test-results --min 91 --label GoogleTest
@@ -418,6 +572,59 @@ jobs:
           if-no-files-found: warn
 
       # ---------------------------------------------------------
+      # runtime の検証済みキャッシュ (plan ジョブの説明を参照)
+      #
+      # FlaUI より前に置く。Editor 側で FlaUI が落ちても runtime の検証は済んでいるので、
+      # Editor を直した次の push で再利用できるようにするため。success() はここまでの
+      # ステップ (always() 付きの件数確認も含む) に失敗が無いことを意味する。
+      # 同じキーが既にあれば保存は警告だけで飛ばされる。
+      # PDB は容量を食うので入れない (FlaUI には要らない)。
+      # ---------------------------------------------------------
+      - name: Save runtime cache
+        if: success() && env.NOX_REUSE != 'true' && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            runtime/build/runtime/x64/${{ matrix.configuration }}/runtime.exe
+            runtime/reflection_generated/gen/RuntimeTypeDB.x64.${{ matrix.configuration }}.bin
+          key: nox-runtime-v1-${{ env.NOX_RUNTIME_KEY }}-${{ matrix.compiler }}-${{ matrix.configuration }}
+
+      - name: Write runtime verified marker
+        if: success() && env.NOX_REUSE != 'true' && !(matrix.compiler == 'MSVC' && matrix.configuration != 'Master')
+        run: |
+          New-Item -ItemType Directory -Force ci-runtime-verified | Out-Null
+          "$env:GITHUB_SHA $env:NOX_RUNTIME_KEY" | Out-File ci-runtime-verified/marker.txt -Encoding utf8
+
+      - name: Save runtime verified marker
+        if: success() && env.NOX_REUSE != 'true' && !(matrix.compiler == 'MSVC' && matrix.configuration != 'Master')
+        uses: actions/cache/save@v6
+        with:
+          path: ci-runtime-verified
+          key: nox-runtime-v1-${{ env.NOX_RUNTIME_KEY }}-${{ matrix.compiler }}-${{ matrix.configuration }}
+
+      # master の成果物を手元へ取れるように残す (tools/fetch-runtime.ps1 が取りに来る)。
+      # runtime_key を同梱し、手元のツリーと食い違えばスクリプトが警告する。
+      # FlaUI の結果によらず runtime 側の検証が通った時点のものを上げる。
+      - name: Write runtime key file
+        if: success() && github.ref == 'refs/heads/master' && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
+        run: |
+          "$env:NOX_RUNTIME_KEY`n$env:GITHUB_SHA" |
+            Out-File 'runtime/build/runtime/x64/${{ matrix.configuration }}/runtime_key.txt' -Encoding utf8
+
+      - name: Upload runtime artifact
+        if: success() && github.ref == 'refs/heads/master' && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
+        uses: actions/upload-artifact@v7
+        with:
+          name: runtime-MSVC-${{ matrix.configuration }}
+          path: |
+            runtime/build/runtime/x64/${{ matrix.configuration }}/runtime.exe
+            runtime/build/runtime/x64/${{ matrix.configuration }}/runtime.pdb
+            runtime/build/runtime/x64/${{ matrix.configuration }}/runtime_key.txt
+            runtime/reflection_generated/gen/RuntimeTypeDB.x64.${{ matrix.configuration }}.bin
+          retention-days: 90
+          if-no-files-found: error
+
+      # ---------------------------------------------------------
       # Editor UI test (FlaUI, MIT)
       #
       # Studio.Wpf.exe を実際に起動し、主要パネルの表示・テーマ切替・
@@ -486,6 +693,13 @@ jobs:
       - name: Write job summary
         if: always()
         run: |
+          if ($env:NOX_REUSE -eq 'true') {
+            $what = if ('${{ matrix.compiler }}' -eq 'MSVC' -and '${{ matrix.configuration }}' -ne 'Master') { 'キャッシュの runtime.exe / TypeDB で Editor + FlaUI だけ走らせた' } else { 'この構成は何もしていない' }
+            @('', "## :recycle: runtime は検証済みを再利用 (${{ matrix.compiler }} / ${{ matrix.configuration }})", '',
+              "runtime_key ``$env:NOX_RUNTIME_KEY`` は同じ入力で 6 構成とも検証済み。$what。") |
+              Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+            exit 0
+          }
           $ok = '${{ steps.build.outcome }}' -eq 'success'
           $icon = if ($ok) { ':white_check_mark:' } else { ':x:' }
           $status = if ($ok) { 'Build succeeded' } else { 'Build failed' }
@@ -515,7 +729,7 @@ jobs:
           }
 
       - name: Write test summary
-        if: always() && matrix.configuration != 'Master'
+        if: always() && env.NOX_REUSE != 'true' && matrix.configuration != 'Master'
         run: |
           $ok = '${{ steps.gtest.outcome }}' -eq 'success'
           $icon = if ($ok) { ':white_check_mark:' } else { ':x:' }
@@ -614,7 +828,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload test results
-        if: always() && matrix.configuration != 'Master'
+        if: always() && env.NOX_REUSE != 'true' && matrix.configuration != 'Master'
         uses: actions/upload-artifact@v7
         with:
           name: gtest-results-${{ matrix.compiler }}-${{ matrix.configuration }}
@@ -720,7 +934,7 @@ jobs:
   # =========================================================
   bench-publish:
     name: Benchmark publish
-    needs: [build]
+    needs: [plan, build]
     if: always() && !cancelled()
     uses: ./.github/workflows/bench-publish.yml
     permissions:
@@ -730,7 +944,8 @@ jobs:
       id-token: write
     secrets: inherit
     with:
-      measured: true
+      # 再利用した run ではベンチを走らせていない
+      measured: ${{ needs.plan.outputs.reuse != 'true' }}
 
   # =========================================================
   # Notify: 転んだとき / 転んだ状態から戻ったときだけ Discord に流す
@@ -748,7 +963,7 @@ jobs:
     name: Notify Discord
     # bench-publish も含める。含めないと、結果ページの生成・公開が落ちても通知されず、
     # 次の成功で「復旧」だけが流れる。
-    needs: [build, editor, bench-publish]
+    needs: [plan, build, editor, bench-publish]
     # 判定は step 側で needs.*.result を見るので、ここでは always() で拾うだけ。
     if: always() && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
