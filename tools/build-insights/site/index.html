@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Nox ランタイムの C++ ビルド時間の内訳 (重いヘッダ・テンプレート・関数)">
+<title>Nox ビルド計測</title>
+<link rel="stylesheet" href="style.css">
+<script>
+	// 保存済みのテーマを最初の描画より前に当てる (app.js を待つと一瞬ちらつくため)
+	try {
+		var t = localStorage.getItem("nox-bi-theme");
+		if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+	} catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">本文へ移動</a>
+
+<header class="appbar">
+	<div class="appbar-inner">
+		<a class="brand" href="#" id="brand-link" aria-label="Nox ビルド計測 (概要へ)">
+			<svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+				<rect width="32" height="32" rx="8" class="brand-bg"/>
+				<path class="brand-moon" d="M18.2 6.4a10 10 0 1 0 8.4 14.4A8 8 0 0 1 18.2 6.4z"/>
+				<rect class="brand-bar" x="17" y="14" width="3" height="8" rx="1"/>
+				<rect class="brand-bar" x="21.5" y="11" width="3" height="11" rx="1"/>
+			</svg>
+			<span class="brand-text">Nox <span class="brand-sub">ビルド計測</span></span>
+		</a>
+		<div class="commit-info" id="commit-info"></div>
+		<div class="appbar-spacer"></div>
+		<div class="config-picker" id="config-picker" role="radiogroup" aria-label="構成"></div>
+		<div class="theme-switch" role="radiogroup" aria-label="テーマ">
+			<button type="button" role="radio" data-theme-choice="auto" aria-checked="true" title="テーマ: 自動 (OS の設定に合わせる)">
+				<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="6.25" class="i-stroke"/><path d="M10 3.75a6.25 6.25 0 0 1 0 12.5z" class="i-fill"/></svg>
+				<span class="sr-only">自動</span>
+			</button>
+			<button type="button" role="radio" data-theme-choice="light" aria-checked="false" title="テーマ: ライト">
+				<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="3.5" class="i-stroke"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4" class="i-stroke"/></svg>
+				<span class="sr-only">ライト</span>
+			</button>
+			<button type="button" role="radio" data-theme-choice="dark" aria-checked="false" title="テーマ: ダーク">
+				<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M15.8 12.6A6.5 6.5 0 0 1 7.4 4.2a6.5 6.5 0 1 0 8.4 8.4z" class="i-stroke"/></svg>
+				<span class="sr-only">ダーク</span>
+			</button>
+		</div>
+	</div>
+	<nav class="tabs" aria-label="表示の切り替え" id="tabs">
+		<a class="tab" data-tab="overview" href="#tab=overview">概要</a>
+		<a class="tab" data-tab="headers" href="#tab=headers">ヘッダ</a>
+		<a class="tab" data-tab="tree" href="#tab=tree">インクルードツリー</a>
+		<a class="tab" data-tab="templates" href="#tab=templates">テンプレート</a>
+		<a class="tab" data-tab="functions" href="#tab=functions">関数</a>
+		<a class="tab" data-tab="units" href="#tab=units">翻訳単位</a>
+		<a class="tab" data-tab="timeline" href="#tab=timeline">タイムライン</a>
+		<a class="tab" data-tab="diff" href="#tab=diff">差分</a>
+	</nav>
+</header>
+
+<main id="main" class="main">
+	<div id="notices"></div>
+	<section id="view"></section>
+</main>
+
+<footer class="footer" id="footer"></footer>
+
+<div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
