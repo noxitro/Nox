@@ -68,6 +68,24 @@
 		return "";
 	}
 
+	/// クリックで動く要素を、キーボード (Tab で移動、Enter / Space で実行) でも操作できるようにする
+	function activatable(el, fn) {
+		el.tabIndex = 0;
+		el.addEventListener("click", fn);
+		el.addEventListener("keydown", (e) => {
+			if (e.target !== el || (e.key !== "Enter" && e.key !== " ")) return;
+			e.preventDefault();
+			fn(e);
+		});
+	}
+
+	/// 描き直した後も、操作していた要素にフォーカスを戻す
+	function refocus(root, selector, id) {
+		if (id == null) return;
+		const el = Array.from(root.querySelectorAll(selector)).find((x) => x.dataset.id === id);
+		if (el) el.focus();
+	}
+
 	function matches(text, q) {
 		return !q || String(text).toLowerCase().indexOf(q) >= 0;
 	}
@@ -181,9 +199,10 @@
 				renderTable(host, key, rows, columns, opts);
 			})
 		);
-		host.querySelectorAll("tr.row").forEach((tr) =>
-			tr.addEventListener("click", (e) => {
-				if (e.target.closest("a")) return;
+		host.querySelectorAll("tr.row").forEach((tr) => {
+			if (opts.detail) tr.setAttribute("aria-expanded", ts.open.has(tr.dataset.id));
+			activatable(tr, (e) => {
+				if (e.target.closest && e.target.closest("a")) return;
 				if (!opts.detail) {
 					if (opts.onClick) opts.onClick(tr.dataset.id);
 					return;
@@ -192,8 +211,9 @@
 				if (ts.open.has(id)) ts.open.delete(id);
 				else ts.open.add(id);
 				renderTable(host, key, rows, columns, opts);
-			})
-		);
+				refocus(host, "tr.row", id);
+			});
+		});
 		const more = host.querySelector(".show-more");
 		if (more)
 			more.addEventListener("click", () => {
@@ -270,7 +290,7 @@
 
 	function bindTopList(root, sel, items, onClick) {
 		root.querySelectorAll(sel + " li").forEach((li) =>
-			li.addEventListener("click", () => onClick(items[+li.dataset.i]))
+			activatable(li, () => onClick(items[+li.dataset.i]))
 		);
 	}
 
@@ -361,7 +381,7 @@
 		const detail = (r) => {
 			const rows = (r[8] || []).map((p) => '<tr><td class="name">' + catBadge(c, c.cats[p[0]]) + esc(c.paths[p[0]]) + '</td><td class="num">' + int(p[1]) + ' 回</td><td class="num">' + ms(p[2]) + "</td></tr>").join("");
 			return '<div class="detail-grid"><div><h4>取り込み元 (直接 #include しているファイル)</h4><table class="mini">' + (rows || '<tr><td class="muted">無し</td></tr>') + "</table></div>" +
-				'<div><h4>この先</h4><p class="muted">' + (headerIsPchOnly(r) ? "PCH を作るときにだけ解析されている。各翻訳単位では再解析されない。" : "PCH の外で " + int(r[4]) + " 個の翻訳単位が取り込んでいる。1 回あたり平均 " + ms(r[1] / Math.max(1, r[6])) + "。") + "</p>" +
+				'<div><h4>この先</h4><p class="muted">' + (headerIsPchOnly(r) ? "PCH を作るときにだけ解析されている。各翻訳単位では再解析されない。" : "PCH の外で " + int(r[4] - r[5]) + " 個の翻訳単位が取り込んでいる。1 回あたり平均 " + ms(r[1] / Math.max(1, r[6])) + "。") + "</p>" +
 				'<a class="btn" href="#' + hashFor({ tab: "tree", cfg: state.cfg, q: "", unit: null, hl: c.paths[r[0]] }) + '">インクルードツリーで経路を見る →</a></div></div>';
 		};
 		const refresh = () => {
@@ -433,7 +453,7 @@
 				(u.pch ? '<span class="badge pch">PCH</span>' : "") + '<span class="v">' + ms(u.fe) + "</span></li>"
 			).join("") || '<li class="muted">該当なし</li>';
 			list.querySelectorAll("li[data-src]").forEach((li) =>
-				li.addEventListener("click", () => {
+				activatable(li, () => {
 					state.unit = li.dataset.src;
 					history.replaceState(null, "", "#" + hashFor(state));
 					unit = units.find((u) => u.src === state.unit);
@@ -461,11 +481,10 @@
 				pane.innerHTML = '<div class="empty">翻訳単位が無い</div>';
 				return;
 			}
-			const ts = tabState("tree:" + unit.src, () => {
-				const open = new Set(["0"]);
-				if (target >= 0) collectHitIds(unit.tree, target, "0", open);
-				return { open: open };
-			});
+			const ts = tabState("tree:" + unit.src, () => ({ open: new Set(["0"]), target: -1 }));
+			// 一度開いた翻訳単位でも、別のヘッダの経路を求められたらそこまでを開き直す
+			if (target >= 0 && ts.target !== target) collectHitIds(unit.tree, target, "0", ts.open);
+			ts.target = target;
 			head.innerHTML = '<span class="title">' + esc(unit.src) + "</span>" + (unit.pch ? '<span class="badge pch">PCH を作る翻訳単位</span>' : "") +
 				'<span class="muted">フロントエンド ' + ms(unit.fe) + " · バックエンド " + ms(unit.be) + " · 解析したファイル " + int(unit.parses) + "</span>" +
 				'<span class="btns"><button type="button" class="btn" data-act="expand">すべて開く</button><button type="button" class="btn" data-act="collapse">閉じる</button></span>';
@@ -489,13 +508,13 @@
 			};
 			walk(unit.tree, "0", 0);
 			pane.innerHTML = rows.join("");
-			pane.querySelectorAll(".tree-row[data-id]").forEach((row) =>
-				row.addEventListener("click", () => {
-					if (!row.hasAttribute("aria-expanded")) return;
+			pane.querySelectorAll(".tree-row[aria-expanded]").forEach((row) =>
+				activatable(row, () => {
 					const id = row.dataset.id;
 					if (ts.open.has(id)) ts.open.delete(id);
 					else ts.open.add(id);
 					renderTreePane();
+					refocus(pane, ".tree-row[data-id]", id);
 				})
 			);
 			head.querySelector('[data-act="expand"]').addEventListener("click", () => {

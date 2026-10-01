@@ -33,7 +33,8 @@ TEMPLATES = ["std::vector", "std::basic_string", "std::tuple", "std::unordered_m
 
 
 def build(seed, config, scale):
-    rnd = random.Random(seed * 100 + hash(config) % 97)
+    # hash() は実行ごとにランダム化されるので使わない (文字列の種は毎回同じ乱数列になる)
+    rnd = random.Random(f"{seed}-{config}")
     paths = []
     index = {}
 

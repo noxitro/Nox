@@ -76,42 +76,11 @@ namespace
 		return out;
 	}
 
+	/// 過長表現・サロゲート・U+10FFFF 超も不正として扱う (MB_ERR_INVALID_CHARS)。
+	/// 先頭ビットだけ見る判定だと、後段の Python が読めないバイト列を JSON に通してしまう。
 	bool IsValidUtf8(const char* s)
 	{
-		const auto* p = reinterpret_cast<const unsigned char*>(s);
-		while (*p != 0)
-		{
-			int extra = 0;
-			if (*p < 0x80)
-			{
-				extra = 0;
-			}
-			else if ((*p & 0xE0) == 0xC0)
-			{
-				extra = 1;
-			}
-			else if ((*p & 0xF0) == 0xE0)
-			{
-				extra = 2;
-			}
-			else if ((*p & 0xF8) == 0xF0)
-			{
-				extra = 3;
-			}
-			else
-			{
-				return false;
-			}
-			++p;
-			for (int i = 0; i < extra; ++i, ++p)
-			{
-				if ((*p & 0xC0) != 0x80)
-				{
-					return false;
-				}
-			}
-		}
-		return true;
+		return MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, s, -1, nullptr, 0) > 0;
 	}
 
 	/// イベントの char* はシステムのコードページのことがある。UTF-8 として正しければそのまま使う。
