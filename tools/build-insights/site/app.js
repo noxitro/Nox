@@ -770,8 +770,12 @@
 			return '<div class="card"><div class="card-head"><h3>' + esc(title) + '</h3></div><div class="table-wrap"><table class="data"><thead><tr><th>名前</th><th class="num">前回</th><th class="num">今回</th><th class="num">変化</th><th class="num">全体に占める割合</th><th class="num">割合の変化</th></tr></thead><tbody>' + body + "</tbody></table></div></div>";
 		};
 		const baseLink = base.sha ? (base.run_url ? '<a href="' + esc(base.run_url) + '">' + esc(base.sha.slice(0, 7)) + "</a>" : esc(base.sha.slice(0, 7))) : "前回の master";
+		// イベントが欠けた計測の集計は時間が崩れているので、比較そのものを出さない (概要と Job Summary も同じ)
+		if (!d.reliable) {
+			view.innerHTML = '<div class="notice">今回か比較元の計測でイベントが欠けているので、前回との比較は出さない。</div>';
+			return;
+		}
 		view.innerHTML =
-			(d.reliable ? "" : '<div class="notice">どちらかの計測でイベントが欠けているので、下の比較は当てにならない。</div>') +
 			'<div class="notice info">比較元: ' + baseLink + "。共有ランナーの実行時間は ±10% 程度揺れるので、時間だけでなく「全体に占める割合」の変化も見る。割合は 0.3 pt 以上、時間は 20 ms かつ 15% 以上動いたものだけを出している。</div>" +
 			'<div class="card"><div class="card-head"><h3>全体</h3></div><div class="table-wrap"><table class="data"><thead><tr><th>項目</th><th class="num">前回</th><th class="num">今回</th><th class="num">変化</th></tr></thead><tbody>' + totalRows + "</tbody></table></div></div>" +
 			section("ヘッダ", d.headers, (n) => esc(n)) +

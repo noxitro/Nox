@@ -546,9 +546,12 @@ namespace
 			{
 				t.incl_us += incl;
 				s.incl_us += incl;
-				if (file_path != nullptr)
+				// ファイルの解析の外 (翻訳単位の最後にまとめて行う関数テンプレートの展開など) では、
+				// 翻訳単位のソースを展開した場所として数える
+				const char* where = file_path != nullptr ? file_path : pass->source.c_str();
+				if (*where != '\0')
 				{
-					pass->template_files[primary][InternPath(file_path)] += incl;
+					pass->template_files[primary][InternPath(where)] += incl;
 				}
 			}
 			++template_instantiations_;
