@@ -161,11 +161,13 @@ namespace nox::util
 			return length;
 		}
 
-		/// @brief 正規化済みの型名の実体。
+		/// @brief コンパイラの綴りを正規化して作った型名の実体。
 		/// @details 定数初期化された静的記憶域なので、ヒープも動的初期化も使わない。
 		///          正規化は元のシグネチャ文字列の部分列にならないため、実体を1つ持つ必要がある。
+		///          1文字ずつトークンを照合するので、コンパイル時の評価は重い。
+		///          上位の cv 修飾・参照だけが違う型は TypeNameHolder が綴りを足して作り、ここを通さない。
 		template<class T>
-		struct TypeNameHolder final
+		struct NormalizedTypeName final
 		{
 			static constexpr size_t k_length = nox::util::detail::WriteNormalizedTypeName(
 				nox::util::detail::RawTypeName<T>(), nullptr);
@@ -176,6 +178,108 @@ namespace nox::util
 					const size_t written = nox::util::detail::WriteNormalizedTypeName(
 						nox::util::detail::RawTypeName<T>(), buffer.data());
 					static_cast<void>(written);
+					return buffer;
+				}();
+
+			[[nodiscard]] static constexpr std::string_view View()noexcept
+			{
+				return std::string_view(k_value.data(), k_length);
+			}
+		};
+
+		/// @brief 上位の cv 修飾・参照を外した型の名前に、修飾の綴りを足すだけで正規化済みの名前になる型か。
+		/// @details リフレクションは型ごとに const / volatile / 参照を付けた型 (1つの型につき最大12通り) の
+		///          型情報も作るため、それぞれを正規化し直すとコンパイル時間の大半を占めていた。
+		///          修飾を前に置く綴りになる型 (クラス・列挙・算術型など) に限る。
+		///          ポインタ・配列・関数などは修飾の位置が変わる (`T*const` など) ので対象外にして正規化に任せる。
+		template<class T, class Base = std::remove_cvref_t<T>>
+		inline constexpr bool is_composable_type_name_v =
+			!std::is_same_v<T, Base> &&
+			(std::is_class_v<Base> || std::is_union_v<Base> || std::is_enum_v<Base> ||
+				std::is_arithmetic_v<Base> || std::is_void_v<Base> || std::is_null_pointer_v<Base>);
+
+		/// @brief 上位の cv 修飾の綴り。正規化の結果と同じにする (両方付くときの順番はツールセットで違う)。
+		template<class T>
+		[[nodiscard]] consteval std::string_view TypeNameCvPrefix()noexcept
+		{
+			using NoRef = std::remove_reference_t<T>;
+			if constexpr (std::is_const_v<NoRef> && std::is_volatile_v<NoRef>)
+			{
+#if defined(__clang__)
+				return "const volatile ";
+#else
+				return "volatile const ";
+#endif
+			}
+			else if constexpr (std::is_const_v<NoRef>)
+			{
+				return "const ";
+			}
+			else if constexpr (std::is_volatile_v<NoRef>)
+			{
+				return "volatile ";
+			}
+			else
+			{
+				return "";
+			}
+		}
+
+		/// @brief 参照の綴り。正規化で `&` の前の空白は落ちる。
+		template<class T>
+		[[nodiscard]] consteval std::string_view TypeNameRefSuffix()noexcept
+		{
+			if constexpr (std::is_lvalue_reference_v<T>)
+			{
+				return "&";
+			}
+			else if constexpr (std::is_rvalue_reference_v<T>)
+			{
+				return "&&";
+			}
+			else
+			{
+				return "";
+			}
+		}
+
+		/// @brief 正規化済みの型名の実体 (GetTypeName が返す文字列の置き場所)。
+		/// @details 上位の cv 修飾・参照だけが違う型は、元の型の正規化済みの名前に綴りを足して作る。
+		///          出来上がる文字列は正規化した場合と同じ (kernel/test/basic_test.cpp で両ツールセットについて確かめる)。
+		template<class T, bool Composable = nox::util::detail::is_composable_type_name_v<T>>
+		struct TypeNameHolder final
+		{
+			static constexpr size_t k_length = nox::util::detail::NormalizedTypeName<T>::k_length;
+			static constexpr const std::array<char, k_length + 1u>& k_value = nox::util::detail::NormalizedTypeName<T>::k_value;
+		};
+
+		template<class T>
+		struct TypeNameHolder<T, true> final
+		{
+		private:
+			using Base = nox::util::detail::NormalizedTypeName<std::remove_cvref_t<T>>;
+			static constexpr std::string_view k_prefix = nox::util::detail::TypeNameCvPrefix<T>();
+			static constexpr std::string_view k_suffix = nox::util::detail::TypeNameRefSuffix<T>();
+
+		public:
+			static constexpr size_t k_length = k_prefix.size() + Base::k_length + k_suffix.size();
+
+			static constexpr std::array<char, k_length + 1u> k_value = []()constexpr noexcept
+				{
+					std::array<char, k_length + 1u> buffer{};
+					size_t length = 0u;
+					for (const char c : k_prefix)
+					{
+						buffer[length++] = c;
+					}
+					for (size_t i = 0u; i < Base::k_length; ++i)
+					{
+						buffer[length++] = Base::k_value[i];
+					}
+					for (const char c : k_suffix)
+					{
+						buffer[length++] = c;
+					}
 					return buffer;
 				}();
 		};
