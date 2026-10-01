@@ -71,8 +71,10 @@ namespace
 		{
 			return {};
 		}
-		std::string out(static_cast<size_t>(len - 1), '\0');
+		// 書き込み先は終端の NUL を含む len 文字ぶん確保し、変換後に NUL を落とす
+		std::string out(static_cast<size_t>(len), '\0');
 		WideCharToMultiByte(CP_UTF8, 0, s, -1, out.data(), len, nullptr, nullptr);
+		out.pop_back();
 		return out;
 	}
 
@@ -99,8 +101,9 @@ namespace
 		{
 			return {};
 		}
-		std::wstring w(static_cast<size_t>(wlen - 1), L'\0');
+		std::wstring w(static_cast<size_t>(wlen), L'\0');
 		MultiByteToWideChar(CP_ACP, 0, s, -1, w.data(), wlen);
+		w.pop_back();
 		return WideToUtf8(w.c_str());
 	}
 
@@ -301,6 +304,8 @@ namespace
 	{
 		std::string name;
 		long long dur_us = 0;
+		long long cl_us = 0;
+		long long ltcg_us = 0;
 		long long wctr_us = 0;
 		long long count = 0;
 		long long max_us = 0;
@@ -709,6 +714,9 @@ namespace
 			s.count += 1;
 			s.max_us = std::max(s.max_us, dur);
 			(ltcg ? s.in_ltcg : s.in_cl) = true;
+			(ltcg ? s.ltcg_us : s.cl_us) += dur;
+			// 出力は上位だけに切り詰めるので、全体の割合に使う合計はここで切り詰め前に取る
+			(ltcg ? codegen_ltcg_us_ : codegen_cl_us_) += dur;
 			auto it = pending_inlinees_.find(f.EventInstanceId());
 			if (it != pending_inlinees_.end())
 			{
@@ -800,6 +808,8 @@ namespace
 		long long total_be_wctr_us_ = 0;
 		long long template_instantiations_ = 0;
 		long long function_count_ = 0;
+		long long codegen_cl_us_ = 0;
+		long long codegen_ltcg_us_ = 0;
 		long long file_parses_ = 0;
 
 		std::vector<std::string> paths_;
@@ -913,6 +923,20 @@ namespace
 		w.Raw(",");
 		w.Key("passes");
 		w.Int(static_cast<long long>(pass_order_.size()));
+		w.Raw(",");
+		// 関数のコード生成時間の切り詰め前の合計 (cl / リンク時)
+		w.Key("codegen_cl_us");
+		w.Int(codegen_cl_us_);
+		w.Raw(",");
+		w.Key("codegen_ltcg_us");
+		w.Int(codegen_ltcg_us_);
+		w.Raw(",");
+		// 切り詰め前の種類数。出力の件数より多ければ、出力は上位だけ
+		w.Key("template_names");
+		w.Int(static_cast<long long>(templates_.size()));
+		w.Raw(",");
+		w.Key("function_names");
+		w.Int(static_cast<long long>(functions_.size()));
 		w.Raw("},");
 
 		// 起動順に並べる
@@ -1244,6 +1268,12 @@ namespace
 			w.Raw(",");
 			w.Key("max_us");
 			w.Int(f.max_us);
+			w.Raw(",");
+			w.Key("cl_us");
+			w.Int(f.cl_us);
+			w.Raw(",");
+			w.Key("ltcg_us");
+			w.Int(f.ltcg_us);
 			w.Raw(",");
 			w.Key("where");
 			w.Str(f.in_cl && f.in_ltcg ? "both" : (f.in_ltcg ? "ltcg" : "cl"));

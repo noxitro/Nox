@@ -318,7 +318,8 @@
 	function viewOverview(view, c) {
 		const d = diff();
 		const t = c.totals || {};
-		const ltcg = c.functions.filter((f) => f.at !== "cl").reduce((s, f) => s + f.t, 0);
+		// 切り詰め前の合計 (生成側で cl とリンク時に分けて数えてある)
+		const ltcg = t.codegen_ltcg_us || 0;
 		const tiles = [
 			tile("ビルドの実時間", ms(c.wall_us), [c.build_seconds ? "ビルドステップ全体 " + c.build_seconds.toFixed(0) + " 秒" : "", deltaSub(d, "wall_us")].filter(Boolean).join(" · ")),
 			tile("フロントエンド合計", ms(t.fe_us), deltaSub(d, "fe_us") || "解析とテンプレート展開 (全翻訳単位の和)"),

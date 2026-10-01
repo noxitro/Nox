@@ -185,6 +185,13 @@ def build_config(name, data, meta):
             "ti": f.get("top_inlinees") or [],
         })
 
+    # 関数のコード生成時間の合計は、切り詰め前の値を生成側から受け取る。
+    # 古い形式 (この値が無い) では、残っている上位の関数から近似する
+    if "codegen_cl_us" not in totals:
+        totals = dict(totals)
+        totals["codegen_cl_us"] = sum(f["t"] for f in functions if f["at"] == "cl")
+        totals["codegen_ltcg_us"] = sum(f["t"] for f in functions if f["at"] != "cl")
+
     start = build.get("start_us", 0)
     end = build.get("end_us", 0)
     return {
@@ -206,6 +213,9 @@ def build_config(name, data, meta):
         "invocations": invocations,
         "templates_list": templates,
         "functions": functions,
+        # 上位だけに切り詰めてあるか。切り詰めてあれば、片側にだけ無い項目は「新規」「消えた」と言えない
+        "templates_truncated": int(totals.get("template_names", len(templates))) > len(templates),
+        "functions_truncated": int(totals.get("function_names", len(functions))) > len(functions),
     }
 
 
@@ -213,14 +223,19 @@ def build_config(name, data, meta):
 # 差分
 # ---------------------------------------------------------------------------
 
-def _diff_rows(cur_items, base_items, cur_total, base_total):
+def _diff_rows(cur_items, base_items, cur_total, base_total, cur_truncated=False, base_truncated=False):
     """(キー → 時間) 同士を比べ、変化の大きいものを返す。
 
     時間そのものに加え、全体に占める割合 (pt) も出す。ランナーが遅い日は全部が一様に
     遅くなるが、割合はあまり動かないので、本当に重くなったものを見分けやすい。
+
+    片側が上位だけに切り詰めてあるとき、その側に無い項目は「順位が境界をまたいだだけ」の
+    ことがあり、値が分からないので比べない。
     """
     rows = []
     for key in set(cur_items) | set(base_items):
+        if (key not in base_items and base_truncated) or (key not in cur_items and cur_truncated):
+            continue
         c = cur_items.get(key, 0)
         b = base_items.get(key, 0)
         delta = c - b
@@ -242,8 +257,12 @@ def compute_diff(cur, base):
         return None
     cur_fe = (cur["totals"] or {}).get("fe_us", 0)
     base_fe = (base["totals"] or {}).get("fe_us", 0)
-    cur_be = (cur["totals"] or {}).get("be_us", 0) + sum(f["t"] for f in cur["functions"] if f["at"] != "cl")
-    base_be = (base["totals"] or {}).get("be_us", 0) + sum(f["t"] for f in base["functions"] if f["at"] != "cl")
+    cur_be = (cur["totals"] or {}).get("be_us", 0)
+    base_be = (base["totals"] or {}).get("be_us", 0)
+
+    def codegen(cfg):
+        t = cfg["totals"] or {}
+        return t.get("codegen_cl_us", 0) + t.get("codegen_ltcg_us", 0)
 
     def header_map(cfg):
         return {cfg["paths"][h[0]]: h[1] for h in cfg["headers"]}
@@ -265,8 +284,11 @@ def compute_diff(cur, base):
         "reliable": not cur["partial"] and not base["partial"],
         "totals": totals,
         "headers": _diff_rows(header_map(cur), header_map(base), cur_fe, base_fe),
-        "templates": _diff_rows(template_map(cur), template_map(base), cur_fe, base_fe) if both_templates else [],
-        "functions": _diff_rows(function_map(cur), function_map(base), cur_be, base_be),
+        "templates": _diff_rows(template_map(cur), template_map(base), cur_fe, base_fe,
+                                cur["templates_truncated"], base["templates_truncated"]) if both_templates else [],
+        # 関数の割合の分母は、切り詰め前のコード生成時間の合計 (cl とリンク時の和)
+        "functions": _diff_rows(function_map(cur), function_map(base), codegen(cur), codegen(base),
+                                cur["functions_truncated"], base["functions_truncated"]),
         "units": _diff_rows(unit_map(cur), unit_map(base), cur_fe + cur_be, base_fe + base_be),
     }
 
