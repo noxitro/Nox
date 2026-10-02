@@ -18,6 +18,17 @@
      (判定の中身は bench_common.py)
   4. <out-dir>/result.json (スキーマ nox-bench-run/1) を書き、ジョブのサマリーに表を足す
 
+--startup-exe に runtime.exe を渡すと、起動の速さも同じ仕組みで比べる。各ラウンドで bench_test の
+後に runtime.exe を --startup-launches 回 (既定 3) 起動し、1 フレーム回して終了させる。runtime.exe が
+書く起動レポート (--startup-report、スキーマ nox-startup/1) を区間に分け、startup/* のベンチマーク
+として同じラウンドの結果に足す (区間の定義は bench_common.py の STARTUP_INTERVALS)。
+  - 最初の 1 回は head / base とも捨てる。ディスクのキャッシュに載っていない冷えた起動は
+    桁が変わることがあり、ラウンド 1 だけが外れ値になるため
+  - base の runtime.exe は bench_test.exe と同じアーティファクトから取る。起動レポートに対応する
+    前のコミットや、アーティファクトに runtime.exe が無いときは、起動だけ比べずに head を測る
+  - 起動の失敗では CI を落とさない (起動・終了そのものは ci.yml の別のステップが確かめている)。
+    確保回数の予算 (STARTUP_ALLOC_BUDGETS) を超えたときは bench と同じく終了コード 3
+
 時間の変化では CI を落とさない (報告だけ)。ヒープ確保の予算 (回数は決定的に数えられる)
 を超えたときだけ失敗にする。
 
@@ -58,6 +69,10 @@ import bench_common as bc  # noqa: E402
 EXE_TIMEOUT = 600
 # gh の 1 回の呼び出しの上限 (exe の取得を含む)
 GH_TIMEOUT = 300
+# runtime.exe を 1 回起動して終わるまでの上限。普段は 1 秒程度
+STARTUP_TIMEOUT = 120
+# runtime.exe に回させるフレーム数。1 フレーム目を終えたところが計測の終点なので 1 で足りる
+STARTUP_FRAMES = 1
 # 失敗したときにログへ出す行数
 LOG_TAIL_LINES = 60
 
@@ -160,6 +175,15 @@ def to_int(x):
         return int(str(x))
     except (TypeError, ValueError):
         return None
+
+
+def find_named(root, name):
+    """root の下から name のファイルを探す (大文字小文字は区別しない)。無ければ None。"""
+    wanted = name.lower()
+    for path in sorted(glob.glob(os.path.join(root, "**", "*"), recursive=True)):
+        if os.path.basename(path).lower() == wanted and os.path.isfile(path):
+            return path
+    return None
 
 
 def find_exe(root):
@@ -330,6 +354,91 @@ def run_exe(exe, out_path, smoke, extra, timeout=EXE_TIMEOUT):
     return raw, proc.returncode, None, log, elapsed
 
 
+def run_startup(exe, report_path, timeout=STARTUP_TIMEOUT):
+    """runtime.exe を 1 回起動し、起動レポートを読む。(parse_startup_report の結果, 失敗理由, ログ)。
+
+    作業ディレクトリは exe の置き場所 (Editor の Core.RuntimeSession、ci.yml の起動確認と同じ)。
+    """
+    try:
+        os.remove(report_path)
+    except FileNotFoundError:
+        pass
+    cmd = [exe, f"--exit-after-frames={STARTUP_FRAMES}", f"--startup-report={report_path}"]
+    try:
+        proc = subprocess.run(cmd, cwd=os.path.dirname(exe), stdin=subprocess.DEVNULL,
+                              capture_output=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return None, f"{timeout:g} 秒で終わらない", ""
+    except OSError as e:
+        return None, f"起動できない ({e})", ""
+    log = "--- stderr ---\n" + tail(decode(proc.stderr)) + "\n--- stdout ---\n" + tail(decode(proc.stdout))
+    if proc.returncode != 0:
+        return None, describe_exit(proc.returncode), log
+    try:
+        report = bc.parse_startup_report(bc.read_json(report_path))
+    except FileNotFoundError:
+        return None, "起動レポートが書かれていない (--startup-report に対応していない exe)", log
+    except (OSError, ValueError) as e:
+        return None, f"起動レポートを読めない ({e})", log
+    return report, None, log
+
+
+class StartupRunner:
+    """head / base の runtime.exe を起動して、ラウンドごとの startup/* の項目を作る。
+
+    どちらかが失敗したら、その側の起動の計測をそこでやめる (bench_test の計測は続ける)。
+    base だけが欠けたラウンドは対にならないので、比較から自然に外れる。
+    """
+
+    def __init__(self, exes, launches, raw_dir, smoke):
+        self.exes = dict(exes)
+        self.launches = launches
+        self.raw_dir = raw_dir
+        self.smoke = smoke
+        self.problems = []
+
+    def enabled(self, side):
+        return self.exes.get(side) is not None
+
+    def _disable(self, side, reason, log):
+        self.exes[side] = None
+        message = f"{side} の runtime.exe の起動を測れない ({reason})。以降は測らない"
+        if side == "head":
+            self.problems.append(f"⚠️ {message}")
+            warning(message)
+        else:
+            # 起動レポートに対応する前の base (master) では普通に起きる
+            self.problems.append(f"ℹ️ {message}。起動は比べずに head だけ載せている")
+            notice(message)
+        print_group(f"{side} の runtime.exe の出力 (末尾)", log)
+
+    def warm_up(self):
+        """冷えた起動を 1 回ずつ捨てる。base が起動レポートに対応しているかもここで分かる。"""
+        for side in ("head", "base"):
+            if not self.enabled(side):
+                continue
+            report, reason, log = run_startup(self.exes[side], os.path.join(self.raw_dir, f"startup-{side}-warmup.json"))
+            if report is None:
+                self._disable(side, f"準備の起動: {reason}", log)
+
+    def measure(self, side, r):
+        """1 ラウンドぶん起動し、startup/* の項目の列を返す。測れなければ空。"""
+        if not self.enabled(side):
+            return []
+        reports = []
+        t0 = time.monotonic()
+        for i in range(self.launches):
+            path = os.path.join(self.raw_dir, f"startup-{side}-{r}-{i}.json")
+            report, reason, log = run_startup(self.exes[side], path)
+            if report is None:
+                self._disable(side, f"ラウンド {r + 1} の {i + 1} 回目: {reason}", log)
+                return []
+            reports.append(report)
+        entries = bc.startup_benchmarks(reports, check_budget=not self.smoke)
+        print(f"    {side}: runtime.exe を {len(reports)} 回起動, {time.monotonic() - t0:.1f} 秒", flush=True)
+        return entries
+
+
 # ---------------------------------------------------------------------------
 # 集計
 # ---------------------------------------------------------------------------
@@ -452,7 +561,7 @@ def summarize(benchmarks):
         p = b.get("paired")
         if p:
             s[p["verdict"]] += 1
-            if p["verdict"] != "insufficient" and p.get("ratio"):
+            if p["verdict"] != "insufficient" and p.get("ratio") and b.get("group") not in bc.GEOMEAN_EXCLUDED_GROUPS:
                 ratios.append(p["ratio"])
     s["geomean_change"] = bc.dec_round(bc.geomean_change(ratios), 6)
     s["alloc_regressed"] = sum(1 for b in benchmarks if (b.get("alloc") or {}).get("verdict") == "regressed")
@@ -523,6 +632,10 @@ def main():
     ap.add_argument("--out-dir", default="bench-out", help="結果を書くディレクトリ (既定: bench-out)")
     ap.add_argument("--smoke", action="store_true", help="各ベンチマークを 1 回だけ動かす (Debug 向け。base と比べない)")
     ap.add_argument("--rounds", type=int, help="ラウンド数 (既定: base ありで 10、なしで 5、スモークで 1)")
+    ap.add_argument("--startup-exe", help="起動を測る runtime.exe (head)。省くと起動は測らない")
+    ap.add_argument("--startup-launches", type=int, default=3,
+                    help="1 ラウンドで runtime.exe を起動する回数 (既定: 3。スモークでは 1)")
+    ap.add_argument("--base-startup-exe", help="--base-exe と組で使う、比較対象の runtime.exe")
     group = ap.add_mutually_exclusive_group()
     group.add_argument("--base-exe", help="比較対象の exe を直接指定する")
     group.add_argument("--base", choices=("auto", "none"), default="auto",
@@ -541,6 +654,8 @@ def main():
         ap.error("--rounds は 1 以上")
     if not (0 < args.threshold < 1):
         ap.error("--threshold は 0 と 1 の間")
+    if args.startup_launches < 1:
+        ap.error("--startup-launches は 1 以上")
 
     variant = bc.variant_id(args.compiler, args.config)
     head_exe = os.path.abspath(args.exe)
@@ -566,6 +681,26 @@ def main():
     elif args.base == "auto":
         base_exe, base_info = resolve_base([f"bench-exe-{variant}", f"bench-exe-{args.compiler}-{args.config}"], out_dir)
 
+    # 起動の計測 (runtime.exe)。base の runtime.exe は bench_test.exe と同じアーティファクトに入っている
+    startup = None
+    if args.startup_exe:
+        head_startup = os.path.abspath(args.startup_exe)
+        if not os.path.isfile(head_startup):
+            warning(f"runtime.exe が無いので起動は測らない: {args.startup_exe}")
+        else:
+            base_startup = None
+            if args.base_startup_exe:
+                base_startup = os.path.abspath(args.base_startup_exe) if os.path.isfile(args.base_startup_exe) else None
+            elif base_exe and base_info and base_info.get("kind") != "explicit":
+                base_startup = find_named(os.path.dirname(base_exe), bc.RUNTIME_EXE_NAME)
+                if base_startup is None:
+                    notice("base のアーティファクトに runtime.exe が無い (起動の計測を始める前のコミット)。"
+                           "起動は比べずに head だけ測る")
+            if base_exe is None:
+                base_startup = None
+            startup = StartupRunner({"head": head_startup, "base": base_startup},
+                                    1 if args.smoke else args.startup_launches, raw_dir, args.smoke)
+
     if args.smoke:
         rounds = 1
     elif args.rounds is not None:
@@ -577,6 +712,9 @@ def main():
     label = bc.variant_label(variant)
     print(f"{label}: {rounds} ラウンド" + (" (スモーク)" if args.smoke else "")
           + (f" / base: {bc.base_kind_label(base_info['kind'])}" if base_info else " / base なし"), flush=True)
+
+    if startup and not args.smoke:
+        startup.warm_up()
 
     head_raws, base_raws = [], []
     head_error = None
@@ -612,6 +750,9 @@ def main():
             n = len(raw.get("benchmarks") or [])
             print(f"[{r + 1}/{rounds}] {side}: {n} 件, {elapsed:.1f} 秒"
                   + (" (予算超過あり)" if code == 3 and side == "head" else ""), flush=True)
+            if startup:
+                # 同じラウンドの raw に足す。以降の集計は bench_test のベンチマークと区別しない
+                raw.setdefault("benchmarks", []).extend(startup.measure(side, r))
         if head_error:
             break
 
@@ -640,6 +781,8 @@ def main():
         exit_code = 1
 
     markdown = bc.variant_markdown(result)
+    if startup and startup.problems:
+        markdown += "".join(f"{p}\n\n" for p in startup.problems)
     if head_error:
         markdown += f"❌ head の bench_test が失敗した ({head_error})。集まった分だけ載せている。\n\n"
     print(markdown)

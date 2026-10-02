@@ -33,7 +33,8 @@ latest を古いコミットへ戻さず、前に公開した latest をその�
 読む環境変数: GITHUB_REPOSITORY, GITHUB_SERVER_URL, GITHUB_RUN_ID, GH_TOKEN (--backfill の gh)
 
 ステップの出力 (--output): regressed, improved, budget_violations, alloc_regressed,
-has_results (今回の計測結果があるか), discord (Discord 用の本文を書いたか)
+has_results (今回の計測結果があるか), discord (Discord 用の本文を書いたか),
+discord_title / discord_color (Discord の見出しと色。予算超過があれば red、悪化だけなら yellow)
 
 終了コード: 0 = 成功、1 = 履歴を取れない・読めない (publish のみ)・サイトを書けない、
 2 = 引数の誤り。
@@ -51,6 +52,7 @@ import sys
 import tempfile
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -59,8 +61,6 @@ import bench_common as bc  # noqa: E402
 FETCH_TIMEOUT = 30
 GH_TIMEOUT = 300
 DISCORD_LIMIT = 3500
-# Discord では 1 構成あたりこの件数まで載せる (全構成の見出しが必ず見えるように)
-DISCORD_ITEMS_PER_VARIANT = 8
 # GitHub が 1 ステップで表示する注釈は 10 件程度なので、それ以上はまとめて 1 件にする
 MAX_ANNOTATIONS = 10
 # サイトへ写さないもの (開発用の道具と説明、手元で作ったデモデータ)
@@ -688,42 +688,114 @@ def summary_markdown(current, others, history, mode, pages_url, stats, missing=(
     return "".join(out)
 
 
-def discord_markdown(current, pages_url):
-    """master で悪化・予算超過があったときの Discord 本文。"""
+def bench_link(pages_url, variant, name):
+    """結果ページの、その構成・そのベンチマークの詳細へのリンク (Discord の Markdown)。"""
+    if not pages_url:
+        return f"`{name}`"
+    return f"[`{name}`]({pages_url}#v={urllib.parse.quote(variant)}&b={urllib.parse.quote(name, safe='/')})"
+
+
+def variants_text(hits, total):
+    """"4/4 構成" / "1/4 構成: ClangCL / Master"。全構成でそろって悪化していれば本物の可能性が高く、
+    1 構成だけならその VM の揺れかもしれない。その手がかりを数字で見せる。"""
+    text = f"{len(hits)}/{total} 構成"
+    if len(hits) < total:
+        text += ": " + ", ".join(bc.variant_label(r["variant"]) for r, _ in hits)
+    return text
+
+
+def change_range_text(hits):
+    """構成ごとの変化の幅。1 構成なら信頼区間付き、複数なら最小〜最大。"""
+    if len(hits) == 1:
+        return bc.fmt_change(hits[0][1]["paired"])
+    changes = sorted(b["paired"]["change"] for _, b in hits if bc.is_num(b["paired"].get("change")))
+    if not changes:
+        return "—"
+    if len(changes) == 1 or bc.fmt_pct(changes[0]) == bc.fmt_pct(changes[-1]):
+        return bc.fmt_pct(changes[-1])
+    return f"{bc.fmt_pct(changes[0])} 〜 {bc.fmt_pct(changes[-1])}"
+
+
+def discord_message(current, pages_url, server, repo):
+    """master で悪化・予算超過があったときの Discord の (タイトル, 色, 本文)。
+
+    同じベンチマークの悪化は構成をまたいで 1 行にまとめる (4 構成で同じ名前が 4 回並ぶと読めない)。
+    名前は結果ページの詳細へのリンクにする。予算超過は CI を落とすので先頭に置き、色を赤にする。
+    """
     c = max(current, key=lambda r: run_rank(r["commit"]))["commit"]
-    head = f"**`{bc.short_sha(c.get('sha'))}`** {(c.get('subject') or '').strip()}\n"
-    footer = f"\n結果ページ: {pages_url}\n" if pages_url else ""
+    sha = c.get("sha") or ""
+    short = bc.short_sha(sha)
+    commit = f"[`{short}`]({server}/{repo}/commit/{sha})" if repo and sha else f"`{short}`"
+    head = f"{commit} {(c.get('subject') or '').strip()}\n"
+    total = len(current)
+    order = {r["variant"]: i for i, r in enumerate(current)}
+
+    def gather(pick):
+        by_name = {}
+        for r in current:
+            for b in pick(r):
+                by_name.setdefault(b["name"], []).append((r, b))
+        for hits in by_name.values():
+            hits.sort(key=lambda h: order[h[0]["variant"]])
+        return by_name
+
+    budget = gather(budget_violations)
+    slow = gather(regressed)
+    more_allocs = gather(lambda r: [b for b in alloc_regressed(r) if (b.get("alloc") or {}).get("budget_ok") is not False])
+
     lines = []
-    for r in current:
-        items = []
-        for b in budget_violations(r):
-            a = b["alloc"]
-            items.append(f"✕ `{b['name']}` 確保 {bc.fmt_count(a.get('allocs'))} 回/op (予算 {bc.fmt_count(a.get('budget'))})")
-        for b in sorted(regressed(r), key=lambda b: -(b["paired"].get("change") or 0)):
-            items.append(f"▲ `{b['name']}` {bc.fmt_change(b['paired'])} {bc.fmt_time((b.get('head') or {}).get('median'))}")
-        for b in alloc_regressed(r):
-            if (b.get("alloc") or {}).get("budget_ok") is False:
-                continue
-            a = b["alloc"]
-            items.append(f"▲ `{b['name']}` 確保 {bc.fmt_count(a.get('base_allocs'))} → {bc.fmt_count(a.get('allocs'))} 回/op")
-        if not items:
-            continue
-        if len(items) > DISCORD_ITEMS_PER_VARIANT:
-            rest = len(items) - DISCORD_ITEMS_PER_VARIANT + 1
-            items = items[:DISCORD_ITEMS_PER_VARIANT - 1] + [f"…ほか {rest} 件"]
-        env = bc.short_cpu((r.get("env") or {}).get("cpu"))
-        lines.append(f"\n**{bc.variant_label(r['variant'])}** — {env} ・ 比較: {bc.base_text(r)}")
-        lines.extend(items)
-    body = head
-    budget = DISCORD_LIMIT - len(head) - len(footer) - 40
+    for name, hits in sorted(budget.items()):
+        r, b = hits[0]
+        a = b["alloc"]
+        per = b.get("per") or "op"
+        lines.append(f"✕ {bench_link(pages_url, r['variant'], name)} 確保 {bc.fmt_count(a.get('allocs'))} 回/{per}"
+                     f" (予算 {bc.fmt_count(a.get('budget'))}) · {variants_text(hits, total)}")
+    # 時間の悪化と確保の増加が同じベンチマークなら 1 行にまとめる
+    for name, hits in sorted(slow.items(), key=lambda kv: -max(b["paired"].get("change") or 0 for _, b in kv[1])):
+        r, b = hits[0]
+        line = (f"▲ {bench_link(pages_url, r['variant'], name)} {change_range_text(hits)}"
+                f" · {bc.fmt_time((b.get('head') or {}).get('median'))}")
+        alloc_hits = more_allocs.pop(name, None)
+        if alloc_hits:
+            a = alloc_hits[0][1]["alloc"]
+            line += (f" · 確保 {bc.fmt_count(a.get('base_allocs'))} → {bc.fmt_count(a.get('allocs'))}"
+                     f" 回/{b.get('per') or 'op'}")
+        lines.append(line + f" · {variants_text(hits, total)}")
+    for name, hits in sorted(more_allocs.items()):
+        r, b = hits[0]
+        a = b["alloc"]
+        per = b.get("per") or "op"
+        lines.append(f"▲ {bench_link(pages_url, r['variant'], name)} 確保 {bc.fmt_count(a.get('base_allocs'))}"
+                     f" → {bc.fmt_count(a.get('allocs'))} 回/{per} · {variants_text(hits, total)}")
+
+    cpus = [bc.short_cpu((r.get("env") or {}).get("cpu")) for r in current]
+    if len(set(cpus)) == 1:
+        footer = f"\nCPU: {cpus[0]} (全構成) ・ 比較: {bc.base_text(current[0])}\n"
+    else:
+        footer = ("\nCPU: " + " ・ ".join(f"{bc.variant_label(r['variant'])} {cpu}" for r, cpu in zip(current, cpus))
+                  + f"\n比較: {bc.base_text(current[0])}\n")
+    if pages_url:
+        footer += f"結果ページ: {pages_url}\n"
+
+    body = head + "\n"
+    budget_chars = DISCORD_LIMIT - len(head) - len(footer) - 40
     for i, line in enumerate(lines):
-        if len(line) + 1 > budget:
-            rest = sum(1 for x in lines[i:] if not x.startswith("\n"))
-            body += f"…ほか {rest} 件\n"
+        if len(line) + 1 > budget_chars:
+            body += f"…ほか {len(lines) - i} 件\n"
             break
         body += line + "\n"
-        budget -= len(line) + 1
-    return body + footer
+        budget_chars -= len(line) + 1
+    body += footer
+
+    if budget:
+        title = f"❌ ヒープ確保の予算超過 {len(budget)} 件"
+        if slow:
+            title += f" ・ 悪化 {len(slow)} 件"
+        color = "red"
+    else:
+        title = f"📉 ベンチマークの悪化 {len(slow)} 件"
+        color = "yellow"
+    return f"{title} — {short}", color, body
 
 
 def write_outputs(path, values):
@@ -875,15 +947,18 @@ def main():
             bc.annotate("warning", message, title=title)
 
     discord = args.mode == "publish" and bool(current) and (counts["regressed"] or counts["budget_violations"])
+    discord_title, discord_color = "", ""
     if args.discord_md:
         if discord:
-            bc.write_text(args.discord_md, discord_markdown(current, args.pages_url))
+            discord_title, discord_color, body = discord_message(current, args.pages_url, server, repo)
+            bc.write_text(args.discord_md, body)
         elif os.path.exists(args.discord_md):
             os.remove(args.discord_md)
 
     if args.output:
         write_outputs(args.output, dict(counts, has_results="true" if current else "false",
-                                        discord="true" if discord else "false"))
+                                        discord="true" if discord else "false",
+                                        discord_title=discord_title, discord_color=discord_color))
     return 0
 
 

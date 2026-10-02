@@ -9,6 +9,7 @@
 #include "engine_module.h"
 #include "entity_type_registry.h"
 #include "log_id.h"
+#include "startup_profile.h"
 
 namespace nox
 {
@@ -359,7 +360,9 @@ void nox::World::Run()
 	game_thread.Dispatch([this]()
 		{
 			ExecutePhase(nox::SystemPhaseType::Init);
+			nox::startup_profile::Mark(nox::startup_profile::Point::InitPhaseDone);
 			ExecutePhase(nox::SystemPhaseType::Start);
+			nox::startup_profile::Mark(nox::startup_profile::Point::StartPhaseDone);
 
 			while (!kill_.load(std::memory_order_acquire))
 			{
@@ -507,6 +510,8 @@ void nox::World::Init()
 		(updater_worker_count_ == 0u) ? u8"直列" : u8"並列",
 		job_system_.GetWorkerCount(),
 		nox::os::GetLogicalProcessorCount());
+
+	nox::startup_profile::Mark(nox::startup_profile::Point::WorldInitialized);
 }
 
 void nox::World::Update()
@@ -523,6 +528,11 @@ void nox::World::Update()
 
 	ExecutePhase(nox::SystemPhaseType::Update);
 	++frame_counter_;
+	if (frame_counter_ == 1u)
+	{
+		//	起動計測の終点。分岐は毎フレーム 1 回だけで、以降は常に偽なので予測も外れない
+		nox::startup_profile::Mark(nox::startup_profile::Point::FirstFrameDone);
+	}
 
 	next_elapsed_milli_seconds_ += (1000.0f / static_cast<nox::float_t>(target_frame_rate_));
 	stop_watch_.Restart();

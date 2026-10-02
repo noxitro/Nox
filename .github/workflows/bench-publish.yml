@@ -20,6 +20,8 @@
 #         (Pages は 1 サイトしか持てないので、別のワークフローから公開すると互いに上書きする)。
 # 通知  : master で悪化または確保回数の予算超過があれば Discord へ投稿する
 #         (DISCORD_DEV_REPORT_WEBHOOK_URL、無ければ DISCORD_WEBHOOK_URL)。
+#         同じベンチマークは構成をまたいで 1 行にまとめ (「4/4 構成」)、名前は結果ページの
+#         詳細へのリンクにする。予算超過があれば見出しを「❌ 予算超過」、色を赤にする。
 # 費用  : ubuntu ランナーだけ。
 # ============================================================
 
@@ -234,12 +236,13 @@ jobs:
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_DEV_REPORT_WEBHOOK_URL || secrets.DISCORD_WEBHOOK_URL }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          SHA: ${{ github.sha }}
+          TITLE: ${{ steps.report.outputs.discord_title }}
+          COLOR: ${{ steps.report.outputs.discord_color }}
         run: |
           python3 .github/scripts/discord_webhook.py \
-            --title "📉 ベンチマークの悪化 — ${SHA:0:7}" \
+            --title "$TITLE" \
             --description-file bench-discord.md \
-            --color yellow --url "$RUN_URL" \
+            --color "$COLOR" --url "$RUN_URL" \
             --footer "$GITHUB_WORKFLOW #$GITHUB_RUN_NUMBER"
 
   # =========================================================

@@ -643,6 +643,11 @@ jobs:
       #
       # 時間の変化では CI を落とさない (共有ランナーの揺れで誤判定するため)。
       # 確保回数は揺れないので、予算を超えたとき (終了コード 3) だけ落とす。
+      #
+      # Release / Master では runtime.exe の起動も同じ枠組みで測る (--startup-exe)。
+      # 各ラウンドで runtime.exe を 3 回起動し、runtime.exe が書く起動レポートを区間
+      # (reflection の登録、World::Init、最初のフレームなど) に分けて startup/* として載せる。
+      # 比較元の runtime.exe も bench-exe-<構成> に同梱する。
       # ---------------------------------------------------------
       - name: Build bench_test
         id: bench-build
@@ -678,7 +683,11 @@ jobs:
             '--out-dir', 'bench-out',
             '--summary', $env:GITHUB_STEP_SUMMARY
           )
-          if ('${{ matrix.configuration }}' -eq 'Debug') { $benchArgs += '--smoke' } else { $benchArgs += @('--base', 'auto') }
+          if ('${{ matrix.configuration }}' -eq 'Debug') {
+            $benchArgs += '--smoke'
+          } else {
+            $benchArgs += @('--base', 'auto', '--startup-exe', 'runtime\build\runtime\x64\${{ matrix.configuration }}\runtime.exe')
+          }
           python .github/scripts/bench-run.py @benchArgs
           if ($LASTEXITCODE -ne 0) { throw "ベンチマークが失敗 (exit $LASTEXITCODE)" }
 
@@ -690,13 +699,16 @@ jobs:
           path: bench-out/result.json
           if-no-files-found: warn
 
-      # 後続の push が比較元として取りに来る。master のものだけ長く残す
+      # 後続の push が比較元として取りに来る。master のものだけ長く残す。
+      # runtime.exe は起動の計測 (startup/*) の比較元
       - name: Upload bench_test.exe
         if: always() && steps.bench-build.outcome == 'success' && matrix.configuration != 'Debug'
         uses: actions/upload-artifact@v7
         with:
           name: bench-exe-${{ matrix.compiler }}-${{ matrix.configuration }}
-          path: runtime/build/runtime/x64/${{ matrix.configuration }}/bench_test.exe
+          path: |
+            runtime/build/runtime/x64/${{ matrix.configuration }}/bench_test.exe
+            runtime/build/runtime/x64/${{ matrix.configuration }}/runtime.exe
           retention-days: ${{ github.ref == 'refs/heads/master' && 90 || 7 }}
           if-no-files-found: warn
 
