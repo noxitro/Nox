@@ -136,8 +136,11 @@ void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive(nox::World& worl
 		return;
 	}
 
-	alignas(alignof(std::max_align_t)) std::array<nox::uint8, 1024> entity_buffer{ 0 };
-	alignas(alignof(std::max_align_t)) std::array<nox::uint8, 4096> receive_buffer{ 0 };
+	//	どちらのバッファにも nox::Object の派生 (Query / Response) を配置構築するので、
+	//	nox::Object のアラインメント (alignas(16)) に揃える。std::max_align_t は x64 Windows では 8 しかなく、
+	//	MSVC はたまたま 16 に揃えるが ClangCL では 8 になり、応答の構築でアサートに掛かっていた。
+	alignas(alignof(nox::Object)) std::array<nox::uint8, 1024> entity_buffer{ 0 };
+	alignas(alignof(nox::Object)) std::array<nox::uint8, 4096> receive_buffer{ 0 };
 		std::array<nox::char8, 256> entity_name_buffer{};
 
     NOX_LOCAL_SCOPE(nox::os::ScopedLock(mutex_reader_));
