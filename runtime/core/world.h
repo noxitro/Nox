@@ -11,6 +11,7 @@
 #include	"entity_system_legacy.h"
 #include	"entity_logic.h"
 #include	"updater_graph.h"
+#include	"service.h"
 #include	"service_legacy.h"
 #include	"../kernel/job_system.h"
 
@@ -183,12 +184,6 @@ namespace nox
 				location(nox::ArchetypeLocation::Invalid())
 			{
 			}
-		};
-
-		struct ServiceEntry
-		{
-			const nox::reflection::Type* type;
-			nox::legacy::Service* service;
 		};
 
 		struct EntityRecordPage
@@ -398,12 +393,20 @@ namespace nox
 #pragma endregion
 
 #pragma region Service
-		/// @brief Serviceを登録する。所有権はWorldに移り、World破棄時に解放される。
+		/// @brief Service(nox::Service<T>)を生成する。Init が生成器の表(nox::GetServiceTypes())を渡して1回だけ呼ぶ。
+		/// @details 全 Service をアラインメント込みで1つの領域へ並べて構築する。確保はこの1回だけで、
+		///          破棄は World の破棄時に生成と逆の順で行う。
+		///          Init が private なので、テストは必要な Service の記述子
+		///          (&nox::kServiceTypeDescriptor<T>)だけを並べてここを直接呼べる。
+		void CreateServices(std::span<const nox::ServiceTypeDescriptor* const> service_types);
+
+		/// @brief 旧Service(nox::legacy::Service)を登録する。所有権はWorldに移り、World破棄時に解放される。
 		void RegisterService(const nox::reflection::Type& type, nox::legacy::Service& service);
 
 		template<std::derived_from<nox::legacy::Service> T>
 		void RegisterService(T& service) { RegisterService(nox::reflection::Typeof<T>(), service); }
 
+		/// @brief 旧Serviceを型で引く。新しいServiceは nox::World::TryGetServiceInstance で引く。
 		[[nodiscard]] nox::legacy::Service* TryGetService(const nox::reflection::Type& type)const noexcept;
 
 		template<std::derived_from<nox::legacy::Service> T>
@@ -411,6 +414,18 @@ namespace nox
 		{
 			return static_cast<T*>(TryGetService(nox::reflection::Typeof<T>()));
 		}
+
+		/// @brief Serviceを型で引く。新旧どちらでも引ける。戻り値は実体の先頭(その型へ static_cast してよい)。
+		[[nodiscard]] void* TryGetServiceInstance(const nox::reflection::Type& type)const noexcept;
+
+		template<std::derived_from<nox::ServiceBase> T>
+		[[nodiscard]] T* TryGetService()const noexcept
+		{
+			return static_cast<T*>(TryGetServiceInstance(nox::reflection::Typeof<T>()));
+		}
+
+		/// @brief World に置かれた Service の一覧(生成・登録した順)。UpdaterGraph がフェーズをノードにするのに使う。
+		[[nodiscard]] std::span<const nox::ServiceInstance> GetServices()const noexcept;
 #pragma endregion
 
 		/// @brief 指定したComponentDataを全て持つArchetypeにマッチするQueryを構築する。
@@ -614,8 +629,13 @@ namespace nox
 		std::array<nox::util::RWParallelExecuteChecker, k_max_service_count> service_execute_checkers_;
 #endif // !NOX_MASTER
 
+		/// @brief World に置かれた Service。CreateServices で生成したものと RegisterService で登録した旧Serviceが並ぶ。
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
-		nox::FixedVector<nox::World::ServiceEntry, k_max_service_count> services_;
+		nox::FixedVector<nox::ServiceInstance, k_max_service_count> services_;
+
+		/// @brief CreateServices で確保した、全 Service を並べた1つの領域。
+		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
+		nox::uint8* service_memory_;
 
 		nox::Vector<nox::EngineModule*> modules_;
 		nox::Vector<nox::SystemBase*> systems_;

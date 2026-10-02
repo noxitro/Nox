@@ -284,6 +284,7 @@ nox::World::World() :
 		nox::JobSystem::GetDefaultWorkerCount())),
 	exit_after_frames_(nox::ResolveExitAfterFrames(nox::os::GetCommandLineArgList())),
 	services_(),
+	service_memory_(nullptr),
 	modules_(),
 	systems_(),
 	system_map_(),
@@ -325,9 +326,24 @@ nox::World::~World()
 		delete archetype;
 	}
 
-	for (nox::uint32 service_index = 0u; service_index < services_.GetLength(); ++service_index)
+	//	生成・登録と逆の順で破棄する。後から置いた Service ほど先に壊す。
+	for (nox::uint32 service_index = services_.GetLength(); service_index > 0u; --service_index)
 	{
-		delete services_.GetStorage()[service_index].service;
+		const nox::ServiceInstance& service = services_.GetStorage()[service_index - 1u];
+		if (service.descriptor != nullptr)
+		{
+			service.descriptor->destruct(service.instance);
+		}
+		else
+		{
+			delete static_cast<nox::legacy::Service*>(service.instance);
+		}
+	}
+
+	if (service_memory_ != nullptr)
+	{
+		nox::memory::Deallocate(service_memory_);
+		service_memory_ = nullptr;
 	}
 
 	for (nox::SystemBase* const system : systems_)
@@ -454,14 +470,17 @@ void nox::World::Init()
 	}
 
 	BuildExecuteNodeList(system_list);
+	//	Service は System / EntityLogic の生成より先に置く。どちらも引数で Service を受けるため。
+	CreateServices(nox::GetServiceTypes());
 	CreateEntitySystems();
 	CreateEntityLogicStorages();
 
-	//	EntitySystem / EntityLogicの集合が確定してからUpdaterGraphを組む。
+	//	Service / EntitySystem / EntityLogicの集合が確定してからUpdaterGraphを組む。
 	//	以降この集合が変わったら Rebuild を呼び直すこと。
 	updater_graph_.Rebuild(
 		std::span<nox::legacy::EntitySystemBase* const>(entity_systems_.data(), entity_systems_.size()),
-		std::span<nox::EntityLogicStorage* const>(entity_logic_storages_.data(), entity_logic_storages_.size()));
+		std::span<nox::EntityLogicStorage* const>(entity_logic_storages_.data(), entity_logic_storages_.size()),
+		GetServices());
 
 	//	遅延構造変更の記録先をノード単位に分ける。
 	//
@@ -875,6 +894,11 @@ void nox::World::ExecuteNode(const nox::UpdaterNode& node)
 			}
 			node.method->invoke(entry.instance, *this, *entity_record->archetype, entity_record->location, entry.entity);
 		}
+		break;
+
+	case nox::UpdaterNodeKind::ServicePhaseMethod:
+		//	引数は Rebuild で解決済み。ここでは Service を探さない。
+		node.service_method->invoke(node.service_instance, node.service_arguments);
 		break;
 
 	default:
@@ -1967,28 +1991,103 @@ void nox::World::BuildQuery(nox::EntityQuery& query, const nox::ComponentMask& r
 
 #pragma region Service
 
+void nox::World::CreateServices(const std::span<const nox::ServiceTypeDescriptor* const> service_types)
+{
+	NOX_ASSERT(service_memory_ == nullptr, u8"CreateServicesは1回だけ呼べます");
+	if ((service_memory_ != nullptr) || service_types.empty())
+	{
+		return;
+	}
+
+	//	1回目の走査で、アラインメント込みの配置と領域全体の大きさを決める。
+	size_t total_size = 0u;
+	size_t max_alignment = 1u;
+	for (const nox::ServiceTypeDescriptor* const descriptor : service_types)
+	{
+		const size_t alignment = std::max<size_t>(descriptor->instance_alignment, 1u);
+		total_size = ((total_size + alignment - 1u) & ~(alignment - 1u)) + descriptor->instance_size;
+		max_alignment = std::max(max_alignment, alignment);
+	}
+
+	//	確保はこの1回だけ。以降フレーム中に Service のための確保は走らない。
+	service_memory_ = static_cast<nox::uint8*>(nox::memory::Allocate(
+		total_size,
+		max_alignment,
+		nox::memory::InstanceType::Other));
+
+	//	2回目の走査で、1回目と同じ配置に構築する。並びは表の順(生成器が型名で並べて決定的にしている)。
+	size_t offset = 0u;
+	for (const nox::ServiceTypeDescriptor* const descriptor : service_types)
+	{
+		const size_t alignment = std::max<size_t>(descriptor->instance_alignment, 1u);
+		offset = (offset + alignment - 1u) & ~(alignment - 1u);
+		void* const memory = service_memory_ + offset;
+		offset += descriptor->instance_size;
+
+		if (TryGetServiceInstance(*descriptor->type) != nullptr)
+		{
+			NOX_ASSERT(false, u8"Serviceが二重に登録されました: {0}", descriptor->name);
+			continue;
+		}
+
+		if (services_.GetLength() >= k_max_service_count)
+		{
+			NOX_ASSERT(false, u8"Serviceの数が上限を超えました: {0}", descriptor->name);
+			break;
+		}
+
+		void* const instance = descriptor->construct(memory);
+		services_.PushBack(nox::ServiceInstance{ .type = descriptor->type, .instance = instance, .descriptor = descriptor });
+
+#if !NOX_MASTER
+		//	「ヘッダに定義しただけで購読される」ことを起動ログで確認できるようにする。
+		NOX_INFO_LINE(nox::log_id::CoreCommon, u8"Service購読: {0}", descriptor->name);
+#endif // !NOX_MASTER
+	}
+}
+
 void nox::World::RegisterService(const nox::reflection::Type& type, nox::legacy::Service& service)
 {
-	NOX_ASSERT(TryGetService(type) == nullptr, u8"Serviceが二重に登録されました: {0}", type.GetTypeName());
-	services_.PushBack(nox::World::ServiceEntry{ .type = &type, .service = &service });
+	NOX_ASSERT(TryGetServiceInstance(type) == nullptr, u8"Serviceが二重に登録されました: {0}", type.GetTypeName());
+	services_.PushBack(nox::ServiceInstance{ .type = &type, .instance = static_cast<void*>(&service), .descriptor = nullptr });
 }
 
 nox::legacy::Service* nox::World::TryGetService(const nox::reflection::Type& type)const noexcept
 {
 	for (nox::uint32 service_index = 0u; service_index < services_.GetLength(); ++service_index)
 	{
-		const nox::World::ServiceEntry& entry = services_.GetStorage()[service_index];
-		if (entry.type == &type)
+		const nox::ServiceInstance& service = services_.GetStorage()[service_index];
+		if ((service.descriptor == nullptr) && (service.type == &type))
 		{
-			return entry.service;
+			return static_cast<nox::legacy::Service*>(service.instance);
 		}
 	}
 	return nullptr;
 }
 
-nox::legacy::Service* nox::detail::TryGetServiceOfWorld(nox::World& world, const nox::reflection::Type& type)noexcept
+void* nox::World::TryGetServiceInstance(const nox::reflection::Type& type)const noexcept
 {
-	return world.TryGetService(type);
+	//	Serviceの数は上限64なので線形走査で足りる。フェーズ関数の引数は Rebuild で解決済みなので、
+	//	ここを毎フレーム呼ぶのは System / EntityLogic の列挙ごとの解決だけ。
+	for (nox::uint32 service_index = 0u; service_index < services_.GetLength(); ++service_index)
+	{
+		const nox::ServiceInstance& service = services_.GetStorage()[service_index];
+		if (service.type == &type)
+		{
+			return service.instance;
+		}
+	}
+	return nullptr;
+}
+
+std::span<const nox::ServiceInstance> nox::World::GetServices()const noexcept
+{
+	return std::span<const nox::ServiceInstance>(services_.GetStorage().data(), services_.GetLength());
+}
+
+void* nox::detail::TryGetServiceOfWorld(nox::World& world, const nox::reflection::Type& type)noexcept
+{
+	return world.TryGetServiceInstance(type);
 }
 
 #pragma endregion

@@ -30,7 +30,8 @@ namespace nox::legacy
 
 namespace nox::detail
 {
-	/// @brief Worldに登録済みのServiceを型で引く。
+	/// @brief Worldに置かれたServiceを型で引く。新しいService(nox::Service<T>)も旧Serviceも引ける。
 	/// @details entity_query.hがworld.hに依存しないための橋渡し。
-	[[nodiscard]] nox::legacy::Service* TryGetServiceOfWorld(nox::World& world, const nox::reflection::Type& type)noexcept;
+	///          戻り値は実体の先頭。引数に書いたServiceの型へ static_cast して使う。
+	[[nodiscard]] void* TryGetServiceOfWorld(nox::World& world, const nox::reflection::Type& type)noexcept;
 }

@@ -4,11 +4,12 @@
 /// @file	entity_ecs_test.h
 /// @brief	ECSセルフテスト用の型。
 /// @details ここに定義した型は、マクロも登録呼び出しも書かずにWorldへ購読される。
-///          リフレクション生成コードが nox::GetEntitySystemTypes() / nox::GetEntityLogicTypes()
-///          の表を書き出すため、「ヘッダに定義するだけ」が成立していることの実証を兼ねる。
+///          リフレクション生成コードが nox::GetEntitySystemTypes() / nox::GetEntityLogicTypes() /
+///          nox::GetServiceTypes() の表を書き出すため、「ヘッダに定義するだけ」が成立していることの実証を兼ねる。
 #pragma once
 #include	"../component_type.h"
 #include	"../entity_commands.h"
+#include	"../service.h"
 #include	"../service_legacy.h"
 #include	"../entity_system_legacy.h"
 #include	"../entity_logic.h"
@@ -38,6 +39,25 @@ namespace nox::test::ecs
 		NOX_DECLARE_OBJECT(TestCounterService, nox::legacy::Service);
 	public:
 		nox::int32 call_count = 0;
+	};
+
+	/// @brief 定義しただけでWorldに購読されるService。生成器の表(nox::GetServiceTypes())に載ることを確かめる。
+	/// @details Debug / Release の runtime.exe にも購読され、毎フレーム tick_count を1つ進めるだけの仕事をする。
+	class TestTickService final : public nox::Service<TestTickService>
+	{
+		NOX_ECS_DECLARE_VERIFY(TestTickService);
+
+	private:
+		void Tick()
+		{
+			++tick_count;
+		}
+
+	public:
+		static constexpr auto kTickPhase = PhaseUpdate<&TestTickService::Tick>{};
+		static constexpr auto kPhaseList = PhaseRegister{ kTickPhase };
+
+		nox::int32 tick_count = 0;
 	};
 
 	/// @brief 定義しただけでWorldに購読されるSystem。関数名はOnUpdateで固定。

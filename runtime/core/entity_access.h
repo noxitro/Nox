@@ -14,6 +14,9 @@
 namespace nox
 {
 	class World;
+	//	service.h はこのヘッダを使う側なので、ここでは前方宣言だけで済ませる。
+	//	基底が不完全型のままでも std::is_base_of は使える(派生側が完全型であればよい)。
+	class ServiceBase;
 
 	/// @brief 引数1つが表すアクセスの種別。
 	enum class EntityParameterKind : nox::uint8
@@ -49,9 +52,11 @@ namespace nox
 	template<class T>
 	concept ComponentDataParameter = std::is_base_of_v<nox::IComponentData, std::remove_cv_t<T>>;
 
-	/// @brief Serviceとして引数に取れる型。
+	/// @brief Serviceとして引数に取れる型。nox::Service<T> を継承した型と、旧Service(nox::legacy::Service)。
 	template<class T>
-	concept ServiceParameter = std::derived_from<std::remove_cv_t<T>, nox::legacy::Service>;
+	concept ServiceParameter =
+		std::derived_from<std::remove_cv_t<T>, nox::legacy::Service> ||
+		std::is_base_of_v<nox::ServiceBase, std::remove_cv_t<T>>;
 
 	/// @brief 引数1つの分類。特殊化に該当しない型はInvalidのまま残り、検証でコンパイルエラーになる。
 	template<class T>

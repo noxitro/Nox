@@ -35,6 +35,7 @@
     <ClCompile Include="entity_structural_change_test.cpp" />
     <ClCompile Include="reflection_variable_test.cpp" />
     <ClCompile Include="updater_graph_layering_test.cpp" />
+    <ClCompile Include="service_phase_test.cpp" />
     <ClCompile Include="updater_graph_benchmark.cpp" />
     <ClCompile Include="updater_worker_count_test.cpp" />
     <ClCompile Include="exit_after_frames_test.cpp" />

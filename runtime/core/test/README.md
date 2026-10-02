@@ -37,6 +37,7 @@ kernel の単体テストがエンジン全部とコード生成器を引きず�
 | `core_self_test.cpp` | 同ディレクトリの `NOX_ASSERT` ベースのセルフテスト（`delegate_test.cpp` / `entity_command_buffer_test.cpp` / `entity_ecs_test.cpp` / `job_system_test.cpp` / `test_reflection.cpp`）を gtest のケースとして走らせる |
 | `reflection_variable_test.cpp` | `nox::reflection::VariableInfo` の getter / setter / アドレス取得の回帰テスト |
 | `updater_graph_layering_test.cpp` | `UpdaterGraph` の衝突判定とレイヤリングの検証。時間に依存しない |
+| `service_phase_test.cpp` | `Service` のフェーズ関数の検証。記述子・`World::CreateServices` での配置と破棄・After / Before による並べ替え・`UpdaterGraph` での引数の解決と実行順 |
 | `updater_graph_benchmark.cpp` | 並列化が実際に効くかの実測。全ケース `DISABLED_` で CI では走らない |
 | `updater_worker_count_test.cpp` | `--serial-updater` / `--updater-workers=N` の解析規則の検証 |
 

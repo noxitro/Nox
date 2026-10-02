@@ -11,11 +11,16 @@
 ///          このためレイヤー計算はBuildExecuteNodeListと同じ最長経路レイヤリングでありながら、
 ///          登録順がそのままトポロジカル順になり、前方への一度の走査で閉じる(訪問状態も再帰も要らない)。
 ///
+///          明示的な順序の指定(Service のフェーズの After / Before)があるときは、最初にその指定だけで
+///          登録順を安定に並べ替える(nox::SortUpdaterNodeOrder)。並べ替えた後は指定の辺も
+///          登録順の小さい方から大きい方へ向くので、レイヤー計算は同じ前方への一度の走査で閉じる。
+///
 ///          レイヤー分けは構築時に一度だけ行い、実行時はノード配列を順に舐めるだけ。
 ///          stage 2b では「同一レイヤーのノード群」をそのままワーカーへ配ればよい。
 #pragma once
 #include	"entity_system_legacy.h"
 #include	"entity_logic.h"
+#include	"service.h"
 
 namespace nox
 {
@@ -26,6 +31,8 @@ namespace nox
 		EntitySystem,
 		/// @brief EntityLogicの (ストレージ, 更新メソッド) 1組。
 		EntityLogicMethod,
+		/// @brief Serviceの (実体, フェーズ関数) 1組。
+		ServicePhaseMethod,
 	};
 
 	/// @brief インスタンス状態を共有しないことを表すグループ番号。
@@ -50,6 +57,15 @@ namespace nox
 		nox::uint32 group_index = nox::k_invalid_updater_group_index;
 	};
 
+	/// @brief 明示的な順序の指定1つ。from のノードを to のノードより先に実行する。
+	/// @details 番号はノードの並び(呼び出し側が渡す accesses や dest_order の添字)。
+	///          衝突の有無に関わらず守る。衝突しないノード同士でも、指定があれば別のレイヤーへ分ける。
+	struct UpdaterNodeOrderEdge final
+	{
+		nox::uint32 from;
+		nox::uint32 to;
+	};
+
 	/// @brief 2つのノードが同一フェーズ内で同時実行できないか。
 	/// @details (a) 同一ComponentDataにRWが絡む (b) 同一Serviceにwriteが絡む (c) インスタンス状態を共有する
 	///          のいずれかで衝突する。read同士は衝突しない。
@@ -57,12 +73,35 @@ namespace nox
 		const nox::UpdaterNodeAccess& a,
 		const nox::UpdaterNodeAccess& b)noexcept;
 
+	/// @brief 明示的な順序の指定を満たすよう、登録順を安定に並べ替える。
+	/// @details 元の登録順にノードを訪ね、まだ並んでいない先行ノードがあれば、それをノードの直前へ前倒しする
+	///          (先行ノードが複数あれば元の番号の小さい順)。
+	///          指定の無いノード同士は元の登録順を保ち、どのノードも元の位置より後ろへは下がらない。
+	///          ヒープを一切使わないため、テストからスタック上の配列だけで呼べる。
+	/// @param order_edges 元の並びの番号で表した順序の指定。
+	/// @param dest_order 並べ替えた結果。dest_order[k] は k 番目に実行するノードの元の番号。要素数がノード数になる。
+	/// @param scratch_state 作業領域。要素数はノード数以上。
+	/// @return 指定に循環が無ければ true。循環があれば、循環を作る指定を1本ずつ無視して並べ、false を返す。
+	[[nodiscard]] bool SortUpdaterNodeOrder(
+		std::span<const nox::UpdaterNodeOrderEdge> order_edges,
+		std::span<nox::uint32> dest_order,
+		std::span<nox::uint8> scratch_state)noexcept;
+
 	/// @brief 宣言リストからレイヤー番号を計算する。
 	/// @details accessesは登録順に並んでいること。dest_layer_indicesはaccessesと同じ長さが必要。
 	///          ヒープを一切使わないため、テストからスタック上の配列だけで呼べる。
 	/// @return 使われたレイヤー数(最大レイヤー番号 + 1)。空なら0。
 	nox::uint32 BuildUpdaterLayerIndices(
 		std::span<const nox::UpdaterNodeAccess> accesses,
+		std::span<nox::uint32> dest_layer_indices)noexcept;
+
+	/// @brief 宣言リストと明示的な順序の指定からレイヤー番号を計算する。
+	/// @details order_edges は accesses の添字で表し、from < to であること(nox::SortUpdaterNodeOrder で並べ替えた後の形)。
+	///          指定のある2ノードは、衝突しなくても to の方が後のレイヤーへ載る。
+	/// @return 使われたレイヤー数(最大レイヤー番号 + 1)。空なら0。
+	nox::uint32 BuildUpdaterLayerIndices(
+		std::span<const nox::UpdaterNodeAccess> accesses,
+		std::span<const nox::UpdaterNodeOrderEdge> order_edges,
 		std::span<nox::uint32> dest_layer_indices)noexcept;
 
 	/// @brief 実行ノード1つ。実行時に必要な情報だけを持ち、確保を伴う操作は何も持たない。
@@ -77,6 +116,13 @@ namespace nox
 		nox::EntityLogicStorage* storage = nullptr;
 		/// @brief kind == EntityLogicMethod のときの更新メソッド。
 		const nox::EntityLogicMethodDescriptor* method = nullptr;
+		/// @brief kind == ServicePhaseMethod のときの Service の実体。
+		void* service_instance = nullptr;
+		/// @brief kind == ServicePhaseMethod のときのフェーズ関数。
+		const nox::ServicePhaseMethodDescriptor* service_method = nullptr;
+		/// @brief kind == ServicePhaseMethod のときの解決済みの引数。フェーズ関数の引数と同じ並び。
+		/// @details UpdaterGraph が構築時に一度だけ解決して持つ配列を指す。実行時に Service を探さない。
+		void* const* service_arguments = nullptr;
 		/// @brief 登録順。衝突したノードはこの順で直列化される。
 		nox::uint32 order_index = 0u;
 		/// @brief 小さいほど先に実行。同一レイヤーは同時実行可能。
@@ -102,11 +148,17 @@ namespace nox
 		UpdaterGraph(const UpdaterGraph&) = delete;
 		UpdaterGraph& operator=(const UpdaterGraph&) = delete;
 
-		/// @brief EntitySystem / EntityLogicの集合からグラフを組み直す。
-		/// @details 登録順のキーは「systemsの並び → storagesの並び → メソッド表の並び」。
+		/// @brief EntitySystem / EntityLogic / Serviceのフェーズ関数の集合からグラフを組み直す。
+		/// @details 登録順のキーは「servicesの並び → systemsの並び → storagesの並び」(各メソッド表の並び)。
+		///          Terminateだけは Service を最後に回す(System / EntityLogic の終了処理が Service を使えるように)。
+		///          Service のフェーズの After / Before があれば、その指定を満たすよう登録順を並べ替える。
+		///
+		///          フェーズ関数の引数の Service は、services の中から型で探してここで一度だけ解決する。
+		///          参照で受けた引数が見つからないフェーズ関数はノードにしない(アサートで知らせる)。
 		void Rebuild(
 			std::span<nox::legacy::EntitySystemBase* const> systems,
-			std::span<nox::EntityLogicStorage* const> storages);
+			std::span<nox::EntityLogicStorage* const> storages,
+			std::span<const nox::ServiceInstance> services = {});
 
 		/// @brief フェーズ内の全ノード。(レイヤー, 登録順)で整列済み。
 		[[nodiscard]] std::span<const nox::UpdaterNode> GetNodes(nox::SystemPhaseType phase_type)const noexcept;
@@ -122,7 +174,7 @@ namespace nox
 			nox::uint32 layer_index)const noexcept;
 
 #if !NOX_MASTER
-		/// @brief グラフをログへ書き出す。ノードのレイヤー・宣言・衝突辺が読める。
+		/// @brief グラフをログへ書き出す。ノードのレイヤー・宣言・衝突辺・順序の指定が読める。
 		void Trace()const;
 #endif // !NOX_MASTER
 
@@ -130,7 +182,8 @@ namespace nox
 		void RebuildPhase(
 			nox::SystemPhaseType phase_type,
 			std::span<nox::legacy::EntitySystemBase* const> systems,
-			std::span<nox::EntityLogicStorage* const> storages);
+			std::span<nox::EntityLogicStorage* const> storages,
+			std::span<const nox::ServiceInstance> services);
 
 	private:
 		/// @brief フェーズごとのノード列。(レイヤー, 登録順)で整列済み。
@@ -139,5 +192,7 @@ namespace nox
 		std::array<nox::Vector<nox::uint32>, nox::util::ToUnderlying(nox::SystemPhaseType::_Max)> phase_layer_offsets_;
 		/// @brief フェーズごとの、遅延構造変更を出しうるノード数。
 		std::array<nox::uint32, nox::util::ToUnderlying(nox::SystemPhaseType::_Max)> phase_command_buffer_counts_;
+		/// @brief フェーズごとの、Serviceのフェーズ関数の解決済みの引数。ノードの service_arguments が指す。
+		std::array<nox::Vector<void*>, nox::util::ToUnderlying(nox::SystemPhaseType::_Max)> phase_service_arguments_;
 	};
 }
