@@ -221,7 +221,9 @@ if (-not (Test-Path -LiteralPath "$hookDir/pre-push") -or -not (Test-Path -Liter
 {
 	Fail "pre-push フックが有効になっていない (hooks: $hookDir)。README の「開発フックの導入」の手順で入れる"
 }
-if ((& git config --bool nox.hooks) -eq 'false')
+# 未設定のときは --default で true を返させる (未設定だと git は終了コード 1 を返し、
+# $PSNativeCommandUseErrorActionPreference が有効な環境では例外になる)。
+if ((Invoke-Git config --bool --default true nox.hooks).Trim() -eq 'false')
 {
 	Fail 'このリポジトリでフックが無効になっている (git config nox.hooks false)。外してから実行する: git config --unset nox.hooks'
 }
