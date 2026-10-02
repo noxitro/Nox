@@ -50,8 +50,8 @@ ClangCL は必須ゲート。MSVC が見逃す非適合を実際に拾ってい�
 
 コード・コメント・ドキュメント・コミットメッセージ・PR に、参考にした外部資料 (発表・書籍・記事・他社の製品や設計) の名前を書かない。「〇〇式」「〇〇の規則そのまま」のような出典の明示も同じ。設計の説明は資料名を出さずに自分の言葉で書く。
 
-- 禁止する名前は `tools/git-hooks/external-names.sha256` にハッシュで置いてあり、フック (commit-msg / pre-commit / pre-push) と CI の Secret scan が検査する。
-- 新しく避けたい名前が出たら `python3 tools/git-hooks/check-external-names.py --hash '<名前>'` の出力を追記する。名前そのものはコメントにも書かない。
+- 禁止する名前は共通の git フック (`noxitro/github-templates` の `git-hooks/external-names.sha256`) にハッシュで置いてあり、フック (commit-msg / pre-commit / pre-push) と CI の Secret scan が検査する。
+- 新しく避けたい名前が出たら `python3 ~/.config/nox/github-templates/git-hooks/check-external-names.py --hash '<名前>'` の出力を github-templates の `external-names.sha256` に追記する (PR で入れる)。名前そのものはコメントにも書かない。
 - ユーザーの所属先など、リポジトリにハッシュでも置かない名前は手元の非公開リスト (`~/.config/nox/private-names.sha256`) にあり、フックが `[PRIVATE-NAME]` で止める。止まったら、その語を消して書き直す (リストの中身を調べたり、該当語を推測して書いたりしない)。
 - 手元の資料は `docs/references/local/` (`.gitignore` 済み) に置き、コミットしない。
 

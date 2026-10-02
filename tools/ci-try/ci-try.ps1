@@ -9,8 +9,8 @@
 	.gitignore で除外されたファイルは含まれない。
 
 	公開リポジトリへ上げるので、push の前に次を必ず通す。
-	- pre-push フック (tools/git-hooks) が有効であること
-	- origin/master からの差分全体を tools/git-hooks の scan.sh と gitleaks で検査する
+	- pre-push フック (共通の git-hooks。README の「開発フックの導入」) が有効であること
+	- origin/master からの差分全体を、そのフックの scan.sh と gitleaks で検査する
 	  (フックは前回の push との差分しか見ないので、それに頼らず全体を見る)
 	- 含まれる未追跡のファイルを一覧で見せ、y/n で確認する
 	- (選んだときだけ) 追加された行を Sonnet に読ませ、個人情報・所属先・秘密情報・
@@ -214,11 +214,16 @@ Set-Location $root
 
 # --- フックが有効か --------------------------------------------------------
 # 自前の検査に加えて push 時にも同じ関門を通すため、無効なら先へ進まない。
-$hooks = (Invoke-Git rev-parse --path-format=absolute --git-path hooks).Trim()
-$expected = Join-Path $root 'tools/git-hooks'
-if ([IO.Path]::GetFullPath($hooks).TrimEnd('\', '/') -ne [IO.Path]::GetFullPath($expected).TrimEnd('\', '/'))
+# フックの本体は noxitro/github-templates の git-hooks/ にあり、global の core.hooksPath で指す。
+# 検査にも同じディレクトリの scan.sh などを使う。
+$hookDir = (Invoke-Git rev-parse --path-format=absolute --git-path hooks).Trim() -replace '\\', '/'
+if (-not (Test-Path -LiteralPath "$hookDir/pre-push") -or -not (Test-Path -LiteralPath "$hookDir/scan.sh"))
 {
-	Fail "pre-push フックが有効になっていない (hooks: $hooks)。先に次を実行する: sh tools/git-hooks/install.sh"
+	Fail "pre-push フックが有効になっていない (hooks: $hookDir)。README の「開発フックの導入」の手順で入れる"
+}
+if ((& git config --bool nox.hooks) -eq 'false')
+{
+	Fail 'このリポジトリでフックが無効になっている (git config nox.hooks false)。外してから実行する: git config --unset nox.hooks'
 }
 $sh = Find-Sh
 if (-not $sh) { Fail 'sh が見つからない (Git for Windows の bin\sh.exe を探した)' }
@@ -266,7 +271,7 @@ if ($files.Count -gt 0)
 	[IO.File]::WriteAllText($list, "$body`n", [Text.UTF8Encoding]::new($false))
 	try
 	{
-		& $sh -c 'sh tools/git-hooks/scan.sh < "$1"' ci-try $list
+		& $sh -c 'sh "$2/scan.sh" < "$1"' ci-try $list $hookDir
 		if ($LASTEXITCODE -ne 0) { $scanOk = $false }
 	}
 	finally
@@ -280,12 +285,12 @@ if ($files.Count -gt 0)
 		(Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Links\gitleaks.exe')
 	) | Where-Object { $_ -and (Test-Path -LiteralPath $_) }
 	if (-not $gitleaks) { Fail 'gitleaks が見つからない。入れてから実行する: winget install Gitleaks.Gitleaks' }
-	& $sh tools/git-hooks/gitleaks.sh "--log-opts=$base..$commit"
+	& $sh "$hookDir/gitleaks.sh" "--log-opts=$base..$commit"
 	if ($LASTEXITCODE -ne 0) { $scanOk = $false }
 }
 
 # コミットメッセージ (外部資料名・手元の非公開リスト)。push される手元のコミット全部を見る。
-& $sh -c 'PY=$(sh tools/git-hooks/find-python.sh); [ -z "$PY" ] || "$PY" tools/git-hooks/check-external-names.py --commits "$1"' ci-try "$base..$commit"
+& $sh -c 'PY=$(sh "$2/find-python.sh"); [ -z "$PY" ] || "$PY" "$2/check-external-names.py" --commits "$1"' ci-try "$base..$commit" $hookDir
 if ($LASTEXITCODE -ne 0) { $scanOk = $false }
 
 # 作成者・コミッターのメールアドレス。スナップショット自体も user.email で作られる。

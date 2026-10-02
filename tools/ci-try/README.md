@@ -7,7 +7,7 @@
 
 1. 作業ツリーのスナップショットを 1 コミットにする (未コミットの変更・削除・未追跡のファイルを含む。`.gitignore` で除外されたものは含まない)。
 2. 公開前の検査をする。どれかで止まったら push しない。
-   - pre-push フック (`tools/git-hooks`) が有効か。無効なら中止する (`sh tools/git-hooks/install.sh` で有効にする)。
+   - pre-push フック (共通の `git-hooks`。ルートの README の「開発フックの導入」) が有効か。無効なら中止する。
    - `origin/master` からの差分全体を、フックと同じ `scan.sh` (秘密情報・個人情報・ビルド生成物・ライセンス・非公開 SDK・外部資料名・手元の非公開リストの名前) と gitleaks で検査する。フックは前回 push した分との差分しか見ないので、それに頼らず全体を見る。フックと違い、gitleaks が無ければ中止する。
    - push される手元のコミットのメッセージ (外部資料名・非公開リスト) と、作成者・コミッターのメールアドレス (noreply でなければ止める) を見る。
    - (最初に選んだときだけ) Sonnet による公開前レビュー。下の「LLM レビュー」を参照。
@@ -66,7 +66,7 @@ pwsh tools/ci-try/ci-try.ps1
 - `git` と、結果を待つなら [GitHub CLI](https://cli.github.com/) (`gh`、`gh auth login` 済み)。
 - `origin` へ push できること。
 - LLM レビューを使うなら、Claude Code (`claude`) にサブスクでログインしていること。
-- フックが有効なこと (`sh tools/git-hooks/install.sh`)。
+- フックが有効なこと (ルートの README の「開発フックの導入」)。
 - gitleaks (`winget install Gitleaks.Gitleaks`)。
 
 ## 注意
