@@ -2010,10 +2010,16 @@ void nox::World::CreateServices(const std::span<const nox::ServiceTypeDescriptor
 	}
 
 	//	確保はこの1回だけ。以降フレーム中に Service のための確保は走らない。
+	//	nox::memory::Allocate は今のところ alignment を確保サイズの計算にしか使わず、返すポインタを揃えない
+	//	(64バイト境界の Service が16バイト境界にしか置かれなかった)。そのため最大の境界ぶん余分に確保し、
+	//	領域の先頭をここで揃える。解放には確保したままのポインタ(service_memory_)を渡す。
 	service_memory_ = static_cast<nox::uint8*>(nox::memory::Allocate(
-		total_size,
+		total_size + (max_alignment - 1u),
 		max_alignment,
 		nox::memory::InstanceType::Other));
+	const std::uintptr_t raw_address = reinterpret_cast<std::uintptr_t>(service_memory_);
+	const std::uintptr_t aligned_address = (raw_address + (max_alignment - 1u)) & ~static_cast<std::uintptr_t>(max_alignment - 1u);
+	nox::uint8* const base = service_memory_ + (aligned_address - raw_address);
 
 	//	2回目の走査で、1回目と同じ配置に構築する。並びは表の順(生成器が型名で並べて決定的にしている)。
 	size_t offset = 0u;
@@ -2021,7 +2027,7 @@ void nox::World::CreateServices(const std::span<const nox::ServiceTypeDescriptor
 	{
 		const size_t alignment = std::max<size_t>(descriptor->instance_alignment, 1u);
 		offset = (offset + alignment - 1u) & ~(alignment - 1u);
-		void* const memory = service_memory_ + offset;
+		void* const memory = base + offset;
 		offset += descriptor->instance_size;
 
 		if (TryGetServiceInstance(*descriptor->type) != nullptr)

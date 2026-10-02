@@ -633,7 +633,8 @@ namespace nox
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
 		nox::FixedVector<nox::ServiceInstance, k_max_service_count> services_;
 
-		/// @brief CreateServices で確保した、全 Service を並べた1つの領域。
+		/// @brief CreateServices で確保した、全 Service を並べた1つの領域(確保したままのポインタ。解放に使う)。
+		/// @details Service はこの中を最大の境界に揃えた位置から並ぶ。揃える理由は CreateServices を参照。
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
 		nox::uint8* service_memory_;
 
