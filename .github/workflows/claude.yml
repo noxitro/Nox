@@ -7,7 +7,11 @@
 #         レビューの基準は CLAUDE.md (→ AGENTS.md) の規約。
 # 使い方: コメントの先頭に「/claude」と書き、空白か改行を挟んで頼む。
 #         例:「/claude review」「/claude この変更で性能は落ちない?」
-#         「/claudeレビューして」のように続けて書くと反応しない。
+#         「/claudeレビューして」のように続けて書くと反応しない (ランナーは立つが Claude は動かない)。
+# モデル: 「/claude fable レビューして」のように /claude の直後にモデル名を書くと
+#         そのモデルで動く (fable / opus / sonnet / haiku、省くと opus)。
+#         名前に近い打ち間違い (fabel など) は Claude を起動せず「もしかして」を返す。
+#         対応表と判定は .github/scripts/claude-model.py。
 # @claude にしない理由: GitHub の実在のユーザー `claude` へのメンションになり、
 #         Anthropic の Claude GitHub App も反応して 👀 を付ける (Code Review が
 #         「@claude review」をコマンドとして使う)。GitHub の Agent HQ の Claude
@@ -68,11 +72,30 @@ jobs:
         with:
           fetch-depth: 1
 
+      # コメント本文は式で run: に埋め込まず、環境変数で渡す (任意のコマンドを
+      # 差し込まれないため)。スクリプトが返すのは許可リストにあるモデル ID だけ
+      - name: Choose model
+        id: model
+        env:
+          BODY: ${{ github.event.comment.body || github.event.review.body }}
+        run: python3 .github/scripts/claude-model.py
+
+      - name: Suggest model name
+        if: steps.model.outputs.suggestion != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+          SUGGESTION: ${{ steps.model.outputs.suggestion }}
+        run: gh issue comment "$NUMBER" --body "$SUGGESTION"
+
       - uses: anthropics/claude-code-action@v1
+        if: steps.model.outputs.suggestion == ''
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # 既定の @claude から変える (理由は冒頭)
           trigger_phrase: "/claude"
+          claude_args: --model ${{ steps.model.outputs.model }}
           # job の actions: read だけでは Claude 側のトークンに渡らないので、
           # ここでも渡して CI の結果を読めるようにする (claude-code-action の FAQ)
           additional_permissions: |
