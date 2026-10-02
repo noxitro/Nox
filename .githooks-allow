@@ -1,4 +1,4 @@
-# tools/git-hooks/scan.sh の検出から除外するパス (1 行 1 パス、完全一致)。
+# 共通の git フック (noxitro/github-templates の git-hooks/scan.sh) の検出から除外するパス (1 行 1 パス、完全一致)。
 # 除外する理由を必ずコメントで書き残すこと。
 
 # app.vcxproj のプリビルドが呼ぶツールバイナリ。ビルドに必要なので追跡している。
