@@ -15,7 +15,7 @@ nox::SceneView::~SceneView()
 {
 }
 
-void nox::SceneView::MakeWindow(const nox::os::WindowSetupDesc& window_desc)
+void nox::SceneView::MakeWindow(const nox::WindowSetupDesc& window_desc)
 {
 	window_.Create(window_desc);
 }

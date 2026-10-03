@@ -191,7 +191,7 @@ namespace nox
 		nox::int32 stack_size_;
 
 		/// @brief スレッド実行関数
-		std::function<void()> thread_func_;
+		std::move_only_function<void()> thread_func_;
 
 		/// @brief スレッド終了時の関数
 		std::function<void()> terminate_func_;

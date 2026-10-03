@@ -22,8 +22,10 @@
 
 //	os
 #include	"os.h"
+#include	"os_utility.h"
 #include	"atomic.h"
 #include	"mutex.h"
+#include	"scoped_lock.h"
 #include	"read_write_lock.h"
 #include	"thread.h"
 #include	"clipboard.h"

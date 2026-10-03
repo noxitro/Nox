@@ -4,6 +4,10 @@
 ///	@file	dev_net_definition.h
 ///	@brief	dev_net_definition
 #pragma once
+#include	"../../../kernel/basic_definition.h"
+#if NOX_WINDOWS
+#include	"../../../kernel/win64_socket.h"
+#endif // NOX_WINDOWS
 
 namespace nox::dev::net
 {

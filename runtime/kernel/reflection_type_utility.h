@@ -32,7 +32,7 @@ namespace nox::reflection
 		///	@param	value		変数を参照した式
 		///	@return				複製できる型なら値、複製できない型なら std::nullopt
 		///	@details
-		///		複製できない型 (nox::StopWatch, std::atomic_bool, nox::os::Thread 等) を弾く
+		///		複製できない型 (nox::StopWatch, std::atomic_bool, nox::Thread 等) を弾く
 		///		if constexpr は、必ず「テンプレートの中」に置かなければならない。
 		///		非テンプレートな関数 (生成コードの非ジェネリックラムダ) の中に直接書くと、
 		///		[stmt.if]/2 の緩和が効かず、破棄される側の分岐も完全に意味検査されてしまう。

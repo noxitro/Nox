@@ -13,7 +13,7 @@ namespace nox
 	class GarbageCollector::Impl
 	{
 	public:
-		nox::os::Mutex mutex_;
+		nox::Mutex mutex_;
 		nox::Vector<std::reference_wrapper<class nox::Object>> destroy_objects_;
 		nox::Vector<std::reference_wrapper<class nox::Object>> managed_objects_;
 	};
@@ -21,7 +21,7 @@ namespace nox
 
 void	nox::GarbageCollector::Register(nox::Object& managed_object)
 {
-	NOX_LOCAL_SCOPE(nox::os::Mutex{ impl_->mutex_ });
+	NOX_LOCAL_SCOPE(nox::ScopedLock{ impl_->mutex_ });
 	impl_->managed_objects_.emplace_back(managed_object);
 }
 

@@ -14,15 +14,17 @@ namespace nox
 
 struct nox::detail::MutexDetail final
 {
-	static constexpr ::PSRWLOCK GetNativeLock(const nox::Mutex& mutex) noexcept
+	static inline ::PSRWLOCK GetNativeLock(const nox::Mutex& mutex) noexcept
 	{
-		return static_cast<::PSRWLOCK>(mutex.lock_);
+		static_assert(sizeof(mutex.lock_) == sizeof(::SRWLOCK), "Mutex size mismatch.");
+		//	lock_ 自体が ::SRWLOCK の実体 (ポインタ 1 個分) なので、そのアドレスを渡す
+		return reinterpret_cast<::PSRWLOCK>(const_cast<void**>(&mutex.lock_));
 	}
 };
 
 namespace nox::detail
 {
-	constexpr ::PSRWLOCK GetNativeLock(const nox::Mutex& mutex)
+	inline ::PSRWLOCK GetNativeLock(const nox::Mutex& mutex) noexcept
 	{
 		return nox::detail::MutexDetail::GetNativeLock(mutex);
 	}

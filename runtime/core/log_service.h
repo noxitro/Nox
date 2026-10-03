@@ -69,8 +69,8 @@ namespace nox
 		std::array<nox::uint8, k_buffer_size> buffer_;
 		std::uint32_t read_position_;
 		nox::dev::editor_remote::EditorRemoteServer* server_;
-		nox::os::Mutex mutex_;
+		nox::Mutex mutex_;
 		std::atomic<nox::uint32> write_position_;
-		nox::os::ReadWriteLock rw_lock_;
+		nox::ReadWriteLock rw_lock_;
 	};
 }
