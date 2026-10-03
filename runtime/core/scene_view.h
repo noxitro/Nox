@@ -17,11 +17,11 @@ namespace nox
 		SceneView()noexcept;
 		~SceneView()override;
 
-		inline constexpr nox::os::Window& GetWindow() noexcept { return window_; }
-		inline constexpr const nox::os::Window& GetWindow()const noexcept { return window_; }
+		inline constexpr nox::Window& GetWindow() noexcept { return window_; }
+		inline constexpr const nox::Window& GetWindow()const noexcept { return window_; }
 
-		void MakeWindow(const nox::os::WindowSetupDesc& window_desc);
+		void MakeWindow(const nox::WindowSetupDesc& window_desc);
 	private:
-		nox::os::Window window_;
+		nox::Window window_;
 	};
 }

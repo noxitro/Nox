@@ -6,7 +6,7 @@
 #pragma once
 #include	"advanced_type.h"
 //#include	"os/mutex.h"
-#include	"os/read_write_lock.h"
+#include	"read_write_lock.h"
 
 namespace nox
 {
@@ -49,6 +49,6 @@ namespace nox
 	private:
 		nox::Vector<DelegateHandle> handle_list_;
 		nox::Vector<std::function<F>> delegate_list_;
-		nox::os::ReadWriteLock rw_lock_;
+		nox::ReadWriteLock rw_lock_;
 	};
 }

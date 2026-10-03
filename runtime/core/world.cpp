@@ -354,7 +354,7 @@ void nox::World::Run()
 	Init();
 	stop_watch_.Start();
 
-	nox::os::Thread game_thread;
+	nox::Thread game_thread;
 	game_thread.SetThreadName(u"Game");
 	game_thread.Dispatch([this]()
 		{
@@ -506,7 +506,7 @@ void nox::World::Init()
 		u8"UpdaterGraph実行モード: {0} ワーカー数={1} 論理プロセッサ数={2}",
 		(updater_worker_count_ == 0u) ? u8"直列" : u8"並列",
 		job_system_.GetWorkerCount(),
-		nox::os::GetLogicalProcessorCount());
+		nox::GetLogicalProcessorCount());
 }
 
 void nox::World::Update()

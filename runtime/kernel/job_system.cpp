@@ -9,8 +9,8 @@
 #include	"assertion.h"
 #include	"log_id.h"
 #include	"log_trace.h"
-#include	"os/os_utility.h"
-
+#include	"os_utility.h"
+#include	"cpu_relax.h"
 namespace
 {
 	/// @brief キューが空だったときに、ブロックへ移行する前に回す空回しの回数。
@@ -49,7 +49,6 @@ nox::JobSystem::JobSystem()noexcept :
 	quit_(false),
 	initialized_(false)
 {
-	::InitializeConditionVariable(&job_available_);
 }
 
 nox::JobSystem::~JobSystem()
@@ -102,7 +101,7 @@ void nox::JobSystem::Finalize()
 	queue_mutex_.Lock();
 	quit_.store(true, std::memory_order_release);
 	queue_mutex_.Unlock();
-	::WakeAllConditionVariable(&job_available_);
+	job_available_.NotifyAll();
 
 	for (nox::uint32 index = 0u; index < worker_count_; ++index)
 	{
@@ -197,13 +196,13 @@ void nox::JobSystem::Dispatch(const std::span<const nox::Job> jobs, nox::JobCoun
 	//	Wait も条件変数では眠らない(YieldProcessor で回る)ので待ち手が取り残されることもない。
 	if (enqueued_count >= static_cast<size_t>(worker_count_))
 	{
-		::WakeAllConditionVariable(&job_available_);
+		job_available_.NotifyAll();
 	}
 	else
 	{
 		for (size_t index = 0u; index < enqueued_count; ++index)
 		{
-			::WakeConditionVariable(&job_available_);
+			job_available_.NotifyOne();
 		}
 	}
 
@@ -233,7 +232,7 @@ void nox::JobSystem::Wait(nox::JobCounter& counter)
 		}
 
 		//	キューは空だが未完了のジョブがある(他スレッドが実行中)。完了を待つだけ。
-		::YieldProcessor();
+		nox::CpuRelax();
 	}
 }
 
@@ -243,7 +242,7 @@ void nox::JobSystem::WorkerMain(const nox::uint32 worker_index)
 
 	std::array<nox::char16, k_worker_thread_name_capacity> thread_name{};
 	make_worker_thread_name(thread_name, worker_index);
-	nox::os::Thread::SetThreadName(std::u16string_view(thread_name.data()));
+	//nox::Thread::SetThreadName(std::u16string_view(thread_name.data()));
 
 	nox::JobSystem::QueuedJob queued;
 	while (quit_.load(std::memory_order_acquire) == false)
@@ -258,7 +257,7 @@ void nox::JobSystem::WorkerMain(const nox::uint32 worker_index)
 		bool found = false;
 		for (nox::uint32 spin = 0u; spin < k_job_spin_count; ++spin)
 		{
-			::YieldProcessor();
+			nox::CpuRelax();
 			if (TryPopJob(queued))
 			{
 				found = true;
@@ -276,10 +275,7 @@ void nox::JobSystem::WorkerMain(const nox::uint32 worker_index)
 		queue_mutex_.Lock();
 		while (head_ == tail_ && quit_.load(std::memory_order_acquire) == false)
 		{
-			::SleepConditionVariableCS(
-				&job_available_,
-				const_cast<::CRITICAL_SECTION*>(&queue_mutex_.GetCriticalSection()),
-				INFINITE);
+			job_available_.Wait(queue_mutex_);
 		}
 		queue_mutex_.Unlock();
 	}

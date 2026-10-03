@@ -8,18 +8,18 @@
 #include <array>
 #include <optional>
 
-#include "../os/file.h"
-#include "../os/os_definition.h"
-#include "../os/windows.h"
+#include "../io/file.h"
+#include "../os_definition.h"
+#include "../win64_api.h"
 #include "../unicode_converter.h"
 
 namespace
 {
 	struct TempFilePath
 	{
-		static constexpr std::size_t k_utf8_path_buffer_size = static_cast<std::size_t>(nox::os::k_max_path_length) * 4;
+		static constexpr std::size_t k_utf8_path_buffer_size = static_cast<std::size_t>(nox::k_max_path_length) * 4;
 
-		std::array<wchar_t, nox::os::k_max_path_length> native_path{};
+		std::array<wchar_t, nox::k_max_path_length> native_path{};
 		std::array<nox::char8, k_utf8_path_buffer_size> utf8_path{};
 		std::size_t native_length = 0;
 		std::size_t utf8_length = 0;
@@ -98,13 +98,13 @@ TEST(KernelFileWin64Test, WriteAndReadBinaryWithUtf8Path)
 		std::byte{ 0x40 }
 	};
 
-	nox::os::File writer;
+	nox::io::File writer;
 	ASSERT_TRUE(writer.Open(temp_file_path->Utf8Path(), u8"wb"));
 	writer.Write(expected);
 	writer.Close();
 
 	std::array<std::byte, expected.size()> actual{};
-	nox::os::File reader;
+	nox::io::File reader;
 	ASSERT_TRUE(reader.Open(temp_file_path->Utf8Path(), u8"rb"));
 	const std::span<std::byte> read_span = reader.Read(actual);
 	reader.Close();
@@ -139,18 +139,18 @@ TEST(KernelFileWin64Test, AppendModeWritesAtEnd)
 		tail[1]
 	};
 
-	nox::os::File writer;
+	nox::io::File writer;
 	ASSERT_TRUE(writer.Open(temp_file_path->Utf8Path(), u8"wb"));
 	writer.Write(head);
 	writer.Close();
 
-	nox::os::File appender;
+	nox::io::File appender;
 	ASSERT_TRUE(appender.Open(temp_file_path->Utf8Path(), u8"ab"));
 	appender.Write(tail);
 	appender.Close();
 
 	std::array<std::byte, expected.size()> actual{};
-	nox::os::File reader;
+	nox::io::File reader;
 	ASSERT_TRUE(reader.Open(temp_file_path->Utf8Path(), u8"rb"));
 	const std::span<std::byte> read_span = reader.Read(actual);
 	reader.Close();

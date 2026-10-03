@@ -5,7 +5,7 @@
 ///	@brief	stackクラス
 #pragma once
 #include	"advanced_type.h"
-#include	"os/atomic.h"
+#include	"atomic.h"
 
 namespace nox
 {
@@ -51,36 +51,36 @@ namespace nox
 
 		inline	void PushAsync(const T& value)
 		{
-			const nox::int32 index = nox::os::atomic::Read(top_);
+			const nox::int32 index = nox::atomic::Read(top_);
 			NOX_ASSERT(index < static_cast<nox::int32>(Size - 1), u"Stack overflow");
-			stack_[nox::os::atomic::Increment(top_)] = value;
+			stack_[nox::atomic::Increment(top_)] = value;
 		}
 
 		inline	void PushAsync(T&& value)
 		{
-			const nox::int32 index = nox::os::atomic::Read(top_);
+			const nox::int32 index = nox::atomic::Read(top_);
 			NOX_ASSERT(index < static_cast<nox::int32>(Size - 1), u"Stack overflow");
-			stack_[nox::os::atomic::Increment(top_)] = value;
+			stack_[nox::atomic::Increment(top_)] = value;
 		}
 
 		inline	T& PopAsync()
 		{
-			const nox::int32 index = nox::os::atomic::Read(top_);
+			const nox::int32 index = nox::atomic::Read(top_);
 			NOX_ASSERT(index >= 0, u"Stack underflow");
-			nox::os::atomic::Decrement(top_);
+			nox::atomic::Decrement(top_);
 			return stack_[index];
 		}
 
 		inline	T& Peek()
 		{
-			const nox::int32 index = nox::os::atomic::Read(top_);
+			const nox::int32 index = nox::atomic::Read(top_);
 			NOX_ASSERT(index >= 0, u"Stack underflow");
 			return stack_[index];
 		}
 
 		inline constexpr nox::uint32 GetSize()const noexcept
 		{
-			return static_cast<nox::uint32>(nox::os::atomic::Read(top_) + 1);
+			return static_cast<nox::uint32>(nox::atomic::Read(top_) + 1);
 		}
 	private:
 		std::array<T, Size> stack_;

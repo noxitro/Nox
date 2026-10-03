@@ -12,7 +12,7 @@
 #include    "assertion.h"
 
 #if NOX_WINDOWS
-#include    "os/windows.h"
+#include    "win64_api.h"
 #endif // NOX_WINDOWS
 
 static_assert(sizeof(nox::wchar16) == sizeof(nox::char16), "wchar16 and char16 are not the same size");

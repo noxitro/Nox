@@ -20,7 +20,7 @@ namespace nox
 		/// @brief uriをnative pathに変換する
 		/// @param uri
 		/// @return
-		::nox::U8FixedString<nox::os::k_max_path_length> GetNativeResourcePath(std::u8string_view uri);
+		::nox::U8FixedString<nox::k_max_path_length> GetNativeResourcePath(std::u8string_view uri);
 	}
 
 	class Asset;
@@ -91,11 +91,11 @@ namespace nox
 		nox::UnorderedMap<std::u8string_view, std::reference_wrapper<const nox::reflection::ClassInfo>> resource_typeinfo_map_with_extension_;
 		nox::Queue<nox::Asset*> load_queue_;
 		bool is_resource_class_cache_built_ = false;
-		mutable nox::os::ReadWriteLock rw_lock_;
-		nox::os::ReadWriteLock load_queue_rw_lock_;
+		mutable nox::ReadWriteLock rw_lock_;
+		nox::ReadWriteLock load_queue_rw_lock_;
 		std::counting_semaphore<> load_queue_signal_;
 
-		nox::os::Thread load_thread_;
+		nox::Thread load_thread_;
 		std::atomic_bool is_kill_;
 	};
 }

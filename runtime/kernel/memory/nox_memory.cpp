@@ -7,16 +7,19 @@
 
 #include	"../algorithm.h"
 
-#include	"../os/thread.h"
-#include    "../os/static_lock.h"
-#include    "../os/atomic.h"
-#include    "../os/os_utility.h"
+#include	"../thread.h"
+#include    "../mutex.h"
+#include    "../atomic.h"
+#include    "../os_utility.h"
 #include    "../log_id.h"
 #include    "memory_profile.h"
 #include    "../bit_flag.h"
 #include    "../stack.h"
 #include    "../stack_trace.h"
 #include    "../math/math.h"
+#include    "../scoped_lock.h"
+
+#include	"../win64_api.h"
 
 namespace nox::memory
 {
@@ -79,11 +82,9 @@ namespace nox::memory
 		/// @brief		ヒープ情報を接続する時用のロック
 		/// @details	グローバルoperator new/deleteを経由するため、このロックはプロセスの
 		///				どの時点(静的初期化中・静的デストラクタ後)でも取得され得る。
-		///				動的初期化が必要なnox::os::Mutexでは成立しないので、
-		///				constinitで完成するnox::os::StaticLockを使う(詳細はos/static_lock.h)。
 		///				MEMO:	ロック区間内では連結リストのポインタ操作しか行わず、
 		///						メモリ確保/解放への再入は発生しないので非再帰ロックで問題ない。
-		constinit nox::os::StaticLock heap_list_lock_;
+		constinit nox::Mutex heap_list_lock_;
 
         /// @brief ヒープ情報の先頭
         constinit HeapInfo* head_heap_info_ptr_ = nullptr;
@@ -92,7 +93,7 @@ namespace nox::memory
         constinit HeapInfo* tail_heap_info_ptr_ = nullptr;
 
         /// @brief スレッドごとの情報テーブル
-        constinit std::array<ThreadMemoryInfo, nox::os::MAX_THREAD_ID> k_thread_memory_info_table_{};
+        constinit std::array<ThreadMemoryInfo, nox::MAX_THREAD_ID> k_thread_memory_info_table_{};
 
         /// @brief セグメントごとの情報テーブル
         constinit std::array< InfoWithSegment, nox::util::ToUnderlying(nox::memory::SegmentType::_Max)> info_with_segment_table_{};
@@ -125,7 +126,7 @@ namespace nox::memory
                 return nox::memory::SegmentType::Boot;
             }
 
-            const nox::int8 thread_id = nox::os::Thread::GetThreadId();
+            const nox::int8 thread_id = nox::Thread::GetThreadId();
             nox::memory::ThreadMemoryInfo& thread_memory_info = k_thread_memory_info_table_[thread_id];
             if (on_dirty_flag)
             {
@@ -300,7 +301,7 @@ void nox::memory::CollectHeapInfoList(std::move_only_function<void(const nox::me
 
 void    nox::memory::detail::BeginMemorySegment(const SegmentType segment)
 {
-    const auto thread_id = nox::os::Thread::GetThreadId();
+    const auto thread_id = nox::Thread::GetThreadId();
 	nox::memory::ThreadMemoryInfo& thread_memory_info = k_thread_memory_info_table_[thread_id];
 	thread_memory_info.segment_stack[thread_memory_info.segment_counter++] = segment;
 
@@ -311,7 +312,7 @@ void    nox::memory::detail::BeginMemorySegment(const SegmentType segment)
 
 void    nox::memory::detail::EndMemorySegment()
 {
-    const auto thread_id = nox::os::Thread::GetThreadId();
+    const auto thread_id = nox::Thread::GetThreadId();
     nox::memory::ThreadMemoryInfo& thread_memory_info = k_thread_memory_info_table_[thread_id];
     --thread_memory_info.segment_counter;
 
@@ -384,7 +385,7 @@ namespace nox::memory
 
             // 連結リストに接続
             {
-                nox::os::ScopedLock lock(nox::memory::heap_list_lock_);
+                nox::ScopedLock lock(nox::memory::heap_list_lock_);
 
                 if (nox::memory::head_heap_info_ptr_ == nullptr)
                 {
@@ -485,7 +486,7 @@ void* nox::memory::Allocate(const size_t size, size_t align_mask, const Instance
     }
     else
     {
-        const nox::int8 thread_id = nox::os::Thread::GetThreadId();
+        const nox::int8 thread_id = nox::Thread::GetThreadId();
         nox::memory::ThreadMemoryInfo& thread_memory_info = k_thread_memory_info_table_[thread_id];
         thread_memory_info.is_dirty = true;
         segment_type = thread_memory_info.segment_stack[thread_memory_info.segment_counter - 1];
@@ -514,7 +515,7 @@ void* nox::memory::Allocate(const size_t size, size_t align_mask, const Instance
 
     //  連結
     {
-		nox::os::ScopedLock lock(nox::memory::heap_list_lock_);
+		nox::ScopedLock lock(nox::memory::heap_list_lock_);
 
 		++allocation_counters_.allocate_count;
 		allocation_counters_.allocate_bytes += size;
@@ -556,7 +557,7 @@ void	nox::memory::Deallocate(nox::not_null<void*> ptr)
     }
 
     {
-        nox::os::ScopedLock lock(nox::memory::heap_list_lock_);
+        nox::ScopedLock lock(nox::memory::heap_list_lock_);
 
 		++allocation_counters_.deallocate_count;
 
@@ -592,13 +593,13 @@ void	nox::memory::Deallocate(nox::not_null<void*> ptr, [[maybe_unused]] size_t a
 
 nox::memory::AllocationCounters nox::memory::GetAllocationCounters()noexcept
 {
-	nox::os::ScopedLock lock(nox::memory::heap_list_lock_);
+	nox::ScopedLock lock(nox::memory::heap_list_lock_);
 	return allocation_counters_;
 }
 
 nox::uint32 nox::memory::GetMemorySize(const nox::memory::SegmentType segment)noexcept
 {
-	return nox::os::atomic::Read(info_with_segment_table_[nox::util::ToUnderlying(segment)].total_size);
+	return nox::atomic::Read(info_with_segment_table_[nox::util::ToUnderlying(segment)].total_size);
 }
 
 bool nox::memory::IsHeapPtr(nox::not_null<const void*> ptr)noexcept

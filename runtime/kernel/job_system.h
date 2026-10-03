@@ -15,9 +15,9 @@
 
 #include	"basic_definition.h"
 #include	"basic_type.h"
-#include	"os/mutex.h"
-#include	"os/thread.h"
-#include	"os/windows.h"
+#include	"mutex.h"
+#include	"thread.h"
+#include	"condition_variable.h"
 
 namespace nox
 {
@@ -106,10 +106,10 @@ namespace nox
 		/// @brief 次に積む位置(単調増加)。
 		nox::uint32 tail_;
 
-		mutable nox::os::Mutex queue_mutex_;
-		::CONDITION_VARIABLE job_available_;
+		mutable nox::Mutex queue_mutex_;
+		nox::ConditionVariable job_available_;
 
-		std::array<nox::os::Thread, k_max_worker_count> workers_;
+		std::array<nox::Thread, k_max_worker_count> workers_;
 
 		nox::uint32 worker_count_;
 		std::atomic<bool> quit_;

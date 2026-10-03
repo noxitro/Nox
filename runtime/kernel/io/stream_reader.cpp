@@ -6,7 +6,7 @@
 #include	"pch.h"
 #include	"stream_reader.h"
 
-#include	"../os/file.h"
+#include	"../io/file.h"
 #include	"../assertion.h"
 
 nox::io::FileStreamReader::FileStreamReader(std::u8string_view path) :

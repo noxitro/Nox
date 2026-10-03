@@ -26,10 +26,10 @@ void	nox::SceneManager::Initialize(nox::World& world)
 
 	//	windowを生成
 	{
-		nox::os::WindowSetupDesc desc;
+		nox::WindowSetupDesc desc;
 		desc.width = 1280;
 		desc.height = 720;
-		desc.window_style = nox::os::WindowStyle::Normal;
+		desc.window_style = nox::WindowStyle::Normal;
 		desc.title_ptr = u"runtime";
 
 		main_scene_view_ = new nox::SceneView();

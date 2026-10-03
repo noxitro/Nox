@@ -21,14 +21,14 @@
 #include	"memory/pmr_buffer.h"
 
 //	os
-#include	"os/os.h"
-#include	"os/atomic.h"
-#include	"os/mutex.h"
-#include	"os/read_write_lock.h"
-#include	"os/thread.h"
-#include	"os/clipboard.h"
-#include	"os/window.h"
-#include	"os/file.h"
+#include	"os.h"
+#include	"atomic.h"
+#include	"mutex.h"
+#include	"read_write_lock.h"
+#include	"thread.h"
+#include	"clipboard.h"
+#include	"window.h"
+#include	"io/file.h"
 
 #include	"platform_type.h"
 //	end os
@@ -48,7 +48,7 @@
 #include	"preprocessor/repeat.h"
 //#include	"delegate.h"
 
-#include	"os/file_system.h"
+#include	"file_system.h"
 
 #include	"type_id.h"
 #include	"debug_break.h"

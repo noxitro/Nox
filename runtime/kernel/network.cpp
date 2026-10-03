@@ -1,0 +1,30 @@
+//	Copyright (c) 2023-2026 noxitro
+//	SPDX-License-Identifier: MIT
+
+///	@file	network.cpp
+///	@brief	network
+#include	"pch.h"
+#include	"network.h"
+
+#include    "win64_socket.h"
+#include    "assertion.h"
+#include    "string_format.h"
+
+namespace
+{
+    
+}
+
+void	nox::os::network::Initialize()
+{
+#if NOX_WIN64
+
+    ::WSADATA wsa_data;
+    const int32 error_code = ::WSAStartup(MAKEWORD(2, 2), &wsa_data);
+ //   util::Format(u"error code:{0}", error_code);
+    NOX_ASSERT(error_code != 0, u"error code:{0}", error_code);
+
+ //   ::GetHostNameW
+#endif // NOXWIN64
+
+}

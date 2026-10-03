@@ -8,7 +8,7 @@
 #include	<algorithm>
 #include	<mdspan>
 //#include	"advanced_type.h"
-#include	"os/os_definition.h"
+#include	"os_definition.h"
 #include	"nox_string_view.h"
 
 namespace nox
@@ -82,12 +82,12 @@ namespace nox::io
 		inline constexpr Path() noexcept : buffer_{ 0 } {}
 		inline constexpr explicit Path(std::u8string_view path) noexcept
 		{
-			std::size_t copy_size = std::min(path.size(), static_cast<std::size_t>(nox::os::k_max_path_length - 1));
+			std::size_t copy_size = std::min(path.size(), static_cast<std::size_t>(nox::k_max_path_length - 1));
 			std::ranges::copy_n(path.data(), copy_size, buffer_.data());
 			buffer_[copy_size] = u8'\0';
 		}
 		std::span<nox::U8StringView> GetExtensions()const noexcept;
 	private:
-		std::array<nox::char8, nox::os::k_max_path_length> buffer_;
+		std::array<nox::char8, nox::k_max_path_length> buffer_;
 	};
 }

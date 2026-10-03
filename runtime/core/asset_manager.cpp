@@ -25,13 +25,13 @@ namespace nox
 		/// @brief ネイティブコンバート待ちで再試行するまでの待機時間(ms)
 		constexpr nox::uint32 k_load_retry_interval_ms = 100;
 
-		inline nox::U8FixedString<nox::os::k_max_path_length> GetFullPath(std::u8string_view native_path)
+		inline nox::U8FixedString<nox::k_max_path_length> GetFullPath(std::u8string_view native_path)
 		{
 			//	���[�J����fullpath
-			std::array<nox::char8, nox::os::k_max_path_length> project_dir_buffer{};
+			std::array<nox::char8, nox::k_max_path_length> project_dir_buffer{};
 			const std::u8string_view project_dir = nox::util::GetProjectDir(project_dir_buffer);
 
-			std::array<std::byte, nox::os::k_max_path_length> full_path_buffer{};
+			std::array<std::byte, nox::k_max_path_length> full_path_buffer{};
 			nox::SpanAllocStlU8String full_path_string(full_path_buffer);
 			auto& native_full_path_pmr = full_path_string.GetContainer();
 			native_full_path_pmr.append(project_dir);
@@ -41,7 +41,7 @@ namespace nox
 			}
 			native_full_path_pmr.append(std::u8string_view(native_path));
 
-			nox::U8FixedString<nox::os::k_max_path_length> native_full_path;
+			nox::U8FixedString<nox::k_max_path_length> native_full_path;
 			native_full_path = std::u8string_view(native_full_path_pmr.data(), native_full_path_pmr.size());
 
 			return native_full_path;
@@ -58,7 +58,7 @@ namespace nox
 
 namespace nox::util
 {
-	nox::U8FixedString<nox::os::k_max_path_length> nox::util::GetNativeResourcePath(std::u8string_view uri)
+	nox::U8FixedString<nox::k_max_path_length> nox::util::GetNativeResourcePath(std::u8string_view uri)
 	{
 		//	�v���W�F�N�g�f�B���N�g����native�p�X�����ɍs��
 		//	uri:assets/aaa/bbb/ccc.ext
@@ -78,7 +78,7 @@ namespace nox::util
 			relative_path.remove_prefix(1);
 		}
 
-		std::array<std::byte, nox::os::k_max_path_length> buffer{};
+		std::array<std::byte, nox::k_max_path_length> buffer{};
 		nox::SpanAllocStlU8String stack_string(buffer);
 		auto& native_path = stack_string.GetContainer();
 
@@ -87,7 +87,7 @@ namespace nox::util
 		native_path.push_back(u8'/');
 		AppendCanonicalResourceRelativePath(native_path, relative_path);
 
-		nox::U8FixedString<nox::os::k_max_path_length> result;
+		nox::U8FixedString<nox::k_max_path_length> result;
 		result = std::u8string_view(native_path.data(), native_path.size());
 		return result;
 	}
@@ -109,7 +109,7 @@ nox::Asset& nox::AssetManager::CreateAssetImpl(std::u8string_view uri)
 {
 	{
 		//	���\�[�X�L���b�V���ɑ��݂��邩
-		NOX_LOCAL_SCOPE(nox::os::ScopedReadLock(rw_lock_));
+		NOX_LOCAL_SCOPE(nox::ScopedReadLock(rw_lock_));
 
 		const auto it = resource_cache_.find(uri);
 		if (it != resource_cache_.end())
@@ -120,7 +120,7 @@ nox::Asset& nox::AssetManager::CreateAssetImpl(std::u8string_view uri)
 
 	nox::Asset* new_asset = nullptr;
 	{
-		NOX_LOCAL_SCOPE(nox::os::ScopedWriteLock(rw_lock_));
+		NOX_LOCAL_SCOPE(nox::ScopedWriteLock(rw_lock_));
 
 		const auto it = resource_cache_.find(uri);
 		if (it != resource_cache_.end())
@@ -140,7 +140,7 @@ nox::Asset& nox::AssetManager::CreateAssetImpl(std::u8string_view uri)
 
 	//	���[�h�L���[�ɒǉ�
 	{
-		NOX_LOCAL_SCOPE(nox::os::ScopedWriteLock(load_queue_rw_lock_));
+		NOX_LOCAL_SCOPE(nox::ScopedWriteLock(load_queue_rw_lock_));
 		load_queue_.push(new_asset);
 
 		//	�R���o�[�g���N�G�X�g
@@ -235,7 +235,7 @@ void nox::AssetManager::LoadThread([[maybe_unused]] nox::World& world)
 			//	先頭をピークする（popはしない）。キューへのアクセス時のみロックする
 			nox::Asset* asset = nullptr;
 			{
-				NOX_LOCAL_SCOPE(nox::os::ScopedReadLock(load_queue_rw_lock_));
+				NOX_LOCAL_SCOPE(nox::ScopedReadLock(load_queue_rw_lock_));
 				if (load_queue_.empty() == true)
 				{
 					break;
@@ -252,7 +252,7 @@ void nox::AssetManager::LoadThread([[maybe_unused]] nox::World& world)
 			}
 
 			//	完了または破損したので先頭を取り除く
-			NOX_LOCAL_SCOPE(nox::os::ScopedWriteLock(load_queue_rw_lock_));
+			NOX_LOCAL_SCOPE(nox::ScopedWriteLock(load_queue_rw_lock_));
 			load_queue_.pop();
 		}
 	}
@@ -272,7 +272,7 @@ nox::AssetManager::LoadStatus nox::AssetManager::ProcessLoad(nox::Asset& asset)
 
 	//	2. 初期化チェック
 	{
-		nox::os::File file;
+		nox::io::File file;
 
 		//	(a) ファイルを正常にオープンできるか(コンバート書き込み中はオープンに失敗し得る)
 		if (file.Open(full_native_path, u8"rb") == false)

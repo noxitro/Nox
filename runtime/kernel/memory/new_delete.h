@@ -7,10 +7,9 @@
 ///				inline展開させると、ビルドエラーになるのでcppに分離
 
 #pragma once
+#include	<new>
 #include	"nox_memory.h"
-#if NOX_WIN64
 
-#include	"../os/windows.h"
 _NODISCARD _Ret_notnull_ _Post_writable_byte_size_(_Size) _VCRT_ALLOCATOR
 void* __CRTDECL operator new(std::size_t _Size)
 {
@@ -106,5 +105,3 @@ void __CRTDECL operator delete[](void* _Block, ::std::align_val_t      _Al, ::st
 	}
 	nox::memory::Deallocate(_Block, static_cast<size_t>(_Al));
 }
-
-#endif // NOX_WIN64

@@ -8,8 +8,8 @@
 
 #if !NOX_MASTER
 
-#include	"os/atomic.h"
-#include	"os/thread.h"
+#include	"atomic.h"
+#include	"thread.h"
 #include	"assertion.h"
 #include	"log_id.h"
 #include	"stack_trace.h"
@@ -84,7 +84,7 @@ nox::util::WriteParallelExecuteCheckScope::~WriteParallelExecuteCheckScope()
 
 void nox::util::ParallelExecuteChecker::Enter(nox::util::detail::ParallelExecuteCheckOption option, const std::source_location& location)
 {
-	if (nox::os::atomic::Increment(ref_counter_) > 1)
+	if (nox::atomic::Increment(ref_counter_) > 1)
 	{
 		if (option == nox::util::detail::ParallelExecuteCheckOption::SourceLocation)
 		{
@@ -102,7 +102,7 @@ void nox::util::ParallelExecuteChecker::Enter(nox::util::detail::ParallelExecute
 
 void nox::util::ParallelExecuteChecker::Exit()
 {
-	nox::os::atomic::Decrement(ref_counter_);
+	nox::atomic::Decrement(ref_counter_);
 }
 
 void nox::util::RWParallelExecuteChecker::ReportViolation(
@@ -133,7 +133,7 @@ void nox::util::RWParallelExecuteChecker::ReportViolation(
 
 void nox::util::RWParallelExecuteChecker::EnterRead(const nox::util::detail::ParallelExecuteCheckOption option, const std::source_location& location)
 {
-	const nox::uint32 this_thread_id = nox::os::Thread::GetThisThreadNativeThreadId();
+	const nox::uint32 this_thread_id = nox::Thread::GetThisThreadNativeThreadId();
 
 	nox::uint64 state = state_.load(std::memory_order_acquire);
 	for (;;)
@@ -164,7 +164,7 @@ void nox::util::RWParallelExecuteChecker::ExitRead()
 
 void nox::util::RWParallelExecuteChecker::EnterWrite(const nox::util::detail::ParallelExecuteCheckOption option, const std::source_location& location)
 {
-	const nox::uint32 this_thread_id = nox::os::Thread::GetThisThreadNativeThreadId();
+	const nox::uint32 this_thread_id = nox::Thread::GetThisThreadNativeThreadId();
 
 	nox::uint64 state = state_.load(std::memory_order_acquire);
 	for (;;)

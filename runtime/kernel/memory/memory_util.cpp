@@ -7,8 +7,8 @@
 #include	"memory_util.h"
 
 #if NOX_WINDOWS
-#include	"../os/windows.h"
-#endif // NOX_WIN64
+#include	"../win64_api.h"
+#endif // NOX_WINDOWS
 
 #include	"assertion.h"
 

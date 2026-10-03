@@ -5,7 +5,7 @@
 ///	@brief	stream_reader
 #pragma once
 #include	"stream.h"
-#include	"../os/file.h"
+#include	"../io/file.h"
 
 namespace nox::io
 {
@@ -50,6 +50,6 @@ namespace nox::io
 
 		void Read(std::span<std::byte> dest)override;
 	private:
-		nox::os::File file_;
+		nox::io::File file_;
 	};
 }

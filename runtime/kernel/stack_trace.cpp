@@ -8,7 +8,8 @@
 #include	"basic_definition.h"
 
 #if NOX_WINDOWS
-#include	"os/windows.h"
+#include	"win64_api.h"
+#include	"detail/win64_sdk_begin.h"
 #pragma warning(push, 0)
 #pragma warning(disable:4514)
 #pragma warning(disable:4820)
@@ -16,10 +17,12 @@
 #pragma	warning(pop)
 #pragma comment(lib, "imagehlp.lib")
 #pragma comment(lib, "Dbghelp.lib")
+#include	"detail/win64_sdk_end.h"
 #endif // NITRO_WIN64
 
-#include	"os/static_lock.h"
-#include	"os/os_utility.h"
+#include	"mutex.h"
+#include	"scoped_lock.h"
+#include	"os_utility.h"
 #include	"string_format.h"
 #include	"log_id.h"
 #include	"math/math_algorithm.h"
@@ -43,13 +46,13 @@ namespace nox
 		/// @brief		dbghelpの呼び出しを直列化するロック
 		/// @details	nox::stack_walker::Traceは公開APIで、名前空間スコープのオブジェクトの
 		///				コンストラクタ/デストラクタからも呼べる。動的初期化が必要な
-		///				nox::os::Mutexではこのモジュールの初期化子より前・
+		///				nox::Mutexではこのモジュールの初期化子より前・
 		///				静的デストラクタの後にアクセス違反になっていた。
 		///				MEMO:	ロック区間はdbghelp呼び出し・文字コード変換・ログ出力だけで、
 		///						NOX_ASSERTもスタック採取も走らない
 		///						(NOX_ASSERT経路はGetStackListを見るだけでこのロックを取らない)。
 		///						よって非再帰ロックで問題ない。
-		constinit nox::os::StaticLock g_resolve_mutex;
+		constinit nox::Mutex g_resolve_mutex;
 
 		//	関数
 		inline bool	ResolveStack(std::span<nox::stack_walker::StackFrame> stack_table)
@@ -82,7 +85,7 @@ namespace nox
 
 			//	hbgHelpはスレッドセーフではないので、ロックする必要がある
 			//	https://learn.microsoft.com/ja-jp/windows/win32/api/dbghelp/nf-dbghelp-symfromaddr
-			NOX_LOCAL_SCOPE(nox::os::ScopedLock{ g_resolve_mutex });
+			NOX_LOCAL_SCOPE(nox::ScopedLock{ g_resolve_mutex });
 
 			//	シンボルハンドラの初期化
 			::SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES | SYMOPT_UNDNAME);
@@ -446,7 +449,7 @@ void	nox::stack_walker::detail::WalkerSlimBase::Trace()const
 
 	//	hbgHelpはスレッドセーフではないので、ロックする必要がある
 	//	https://learn.microsoft.com/ja-jp/windows/win32/api/dbghelp/nf-dbghelp-symfromaddr
-	NOX_LOCAL_SCOPE(nox::os::ScopedLock{ g_resolve_mutex });
+	NOX_LOCAL_SCOPE(nox::ScopedLock{ g_resolve_mutex });
 
 	//	シンボルハンドラの初期化
 	::SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES | SYMOPT_UNDNAME);

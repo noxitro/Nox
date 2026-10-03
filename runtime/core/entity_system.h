@@ -19,6 +19,45 @@ namespace nox
 		constexpr EntitySystemBase()noexcept = delete;
 	};
 
+	template<class... Types>
+	struct RequireComponents {};
+
+	template<class... Types>
+	struct RunAfter{};
+
+	template<class... Types>
+	struct RunBefore{};
+
+	namespace detail
+	{
+		template<class T>
+		struct is_require_components : std::false_type {};
+
+		template<class... Types>
+		struct is_require_components<nox::RequireComponents<Types...>> : std::true_type {};
+
+		template<class T>
+		struct is_run_after : std::false_type {};
+
+		template<class... Types>
+		struct is_run_after<nox::RunAfter<Types...>> : std::true_type {};
+
+		template<class T>
+		struct is_run_before : std::false_type {};
+
+		template<class... Types>
+		struct is_run_before<nox::RunBefore<Types...>> : std::true_type {};
+
+		template<class T>
+		constexpr static bool is_require_components_v = nox::detail::is_require_components<T>::value;
+
+		template<class T>
+		constexpr static bool is_run_after_v = nox::detail::is_run_after<T>::value;
+
+		template<class T>
+		constexpr static bool is_run_before_v = nox::detail::is_run_before<T>::value;
+	}
+
 	namespace concepts
 	{
 		/// @brief ECSのSystemか

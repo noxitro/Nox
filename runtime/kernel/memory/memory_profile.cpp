@@ -10,7 +10,7 @@
 
 #include	"../stack_trace.h"
 #include	"../algorithm.h"
-#include	"../os/atomic.h"
+#include	"../atomic.h"
 #include	"../string_format.h"
 #include	"../stack.h"
 #include	"../log_trace.h"
@@ -60,7 +60,7 @@ namespace nox::memory::profile
 		/// @return 
 		inline nox::uint16 IssueHandle()
 		{
-			nox::os::atomic::Increment(g_handle_counter);
+			nox::atomic::Increment(g_handle_counter);
 			const nox::uint16 handle = g_profile_handle_stack.PopAsync();
 
 			//NOX_LOCAL_SCOPE(nox::memory::ScopeMemorySegment<nox::memory::SegmentType::Develop>);
@@ -75,7 +75,7 @@ namespace nox::memory::profile
 			//	NOX_LOCAL_SCOPE(nox::memory::ScopeMemorySegment<nox::memory::SegmentType::Develop>);
 			//	NOX_INFO_LINE(nox::log_id::Memory, U"MemoryProfileHandle Release:{0}", handle);
 
-			nox::os::atomic::Decrement(g_handle_counter);
+			nox::atomic::Decrement(g_handle_counter);
 			g_profile_handle_stack.PushAsync(handle);
 		}
 	}
