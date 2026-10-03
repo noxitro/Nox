@@ -63,44 +63,50 @@ Runtime は **C++23** (`/std:c++latest`) の x64 ビルドで、以下 2 つの�
 
 ### 開発フックの導入
 
-clone したら 1 回だけ実行する。コミット時と push 時に、秘密情報・
-ビルド成果物・ローカル絶対パスが混ざっていないかを検査するようになる。
+フックの本体は全リポジトリ共通で、`noxitro/github-templates` の `git-hooks/` にある
+(このリポジトリには置かない)。マシンごとに 1 回だけ実行する。コミット時と push 時に、
+秘密情報・ビルド成果物・ローカル絶対パスが混ざっていないかを検査するようになる。
 
 ```sh
-sh tools/git-hooks/install.sh
+git clone https://github.com/noxitro/github-templates ~/.config/nox/github-templates
+sh ~/.config/nox/github-templates/git-hooks/install.sh
 ```
 
-`core.hooksPath` を設定するだけなので、無効化は
-`git config --unset core.hooksPath`。誤検出は `.githooks-allow` に
-パスを 1 行で足して除外する (理由をコメントで残すこと)。
+global の `core.hooksPath` を設定するので、`noxitro/` の全リポジトリ・全ブランチで効く。
+更新は `git -C ~/.config/nox/github-templates pull` だけでよい。
+以前の手順 (`sh tools/git-hooks/install.sh`) で入れていたら、このリポジトリの中で `install.sh` を
+実行する。残っているローカルの `core.hooksPath` を外す (外さないと global より優先され、
+フックが黙って走らなくなる)。
 
-検査は 2 段になっている。`scan.sh` がこのリポジトリ固有のもの
+誤検出は `.githooks-allow` にパスを 1 行で足して除外する (理由をコメントで残すこと)。
+gitleaks の誤検知は `.gitleaks.toml` の allowlist に足す。
+
+検査は 2 段になっている。`scan.sh` が汎用のスキャナで拾えないもの
 (ビルド成果物の混入、ローカル絶対パス、個人メール、MIT と両立しないライセンスの文言や
-他者の著作権表示、家庭用ゲーム機の非公開 SDK の識別子) を見て、
-`gitleaks` が汎用の秘密情報を見る。外部資料の名前 (ファイルの中身と
-コミットメッセージ) は `check-external-names.py` が見る。これは Python 3 を使い、
-無ければ手元では飛ばして CI の Secret scan だけで検査する。gitleaks は任意だが、入れると
-検出できるトークン形式が大幅に増えるので推奨する。`pre-push` は、コミットの作成者・
+他者の著作権表示、家庭用ゲーム機の非公開 SDK の識別子、外部資料の名前) を見て、
+`gitleaks` が汎用の秘密情報を見る。外部資料の名前は Python 3 を使い、無ければ手元では
+飛ばして CI の Secret scan だけで検査する。gitleaks は任意だが、入れると検出できる
+トークン形式が大幅に増えるので推奨する。`pre-push` は、コミットの作成者・
 コミッターのメールアドレスが noreply でなければ止める。
+
+```sh
+winget install Gitleaks.Gitleaks
+```
 
 所属先など、ハッシュにしてもリポジトリに置きたくない名前は、手元だけの非公開リスト
 (`~/.config/nox/private-names.sha256`) に入れる。フックが同じように止める
 (CI には無いので、止めるのは手元のフックだけ)。
 
 ```sh
-python3 tools/git-hooks/check-external-names.py --add-private '<名前>'
-```
-
-```sh
-winget install Gitleaks.Gitleaks
+python3 ~/.config/nox/github-templates/git-hooks/check-external-names.py --add-private '<名前>'
 ```
 
 Claude Code on the web のセッションでは `.claude/hooks/session-start.sh`
 (SessionStart フック) が同じ導入を自動で行い、gitleaks も固定バージョンで入れる。
 クラウドからの push も `pre-push` で止まる。
 
-同じ検査は CI の `Secret scan` ワークフローでも走る。手元のフックを
-入れ忘れても、push された内容はそちらで検査される。
+同じ検査は CI の `Secret scan` ワークフロー (本体は github-templates の共通ワークフロー) でも走る。
+手元のフックを入れ忘れても、push された内容はそちらで検査される。
 
 ただし CI は push の後に走るので、流出そのものは防げない。
 外に出る前に止まるのは `pre-push` と、GitHub 側の push protection

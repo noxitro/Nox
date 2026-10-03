@@ -14,9 +14,11 @@
 
 長命なブランチは `master` 1 本だけにする (作業ブランチと併存させて、同じ内容が別 SHA で二重に積まれた事故があった)。
 
-- エージェントは `work/<タスク名>` を切り、検証が通ったら `master` へマージしてブランチを消す。セッション側で作業ブランチが指定されている場合 (クラウドのセッションなど) はそれに従い、`master` への取り込みは PR にしてユーザーに委ねる。
+- エージェントは `work/<タスク名>` を切り (セッション側で作業ブランチが指定されている場合はそれに従う)、検証が通ったら PR を作って止める。`master` への取り込み (PR のマージ) はユーザーが行う。「進めて」「再開して」などは取り込みの許可ではない。
 - ユーザーは `master` へ直接コミットし、実験だけ `user/<topic>` を切る。
 - **`master` への force-push は禁止。** ユーザーのコミットが失われる。
+
+`master` はルールセットで守っている。PR 必須 (承認 1。回避できるのはリポジトリ管理者 = ユーザーだけ) で、削除と force-push は誰もできない。手元のエージェントは GitHub App (`noxitro-claude[bot]`) の身元で push と PR 作成をするので、`master` へ直接 push できず、自分の PR もマージできない。ユーザーの身元で動くエージェント (クラウドのセッションなど) はルールセットでは止まらないので、上の規則を守る。
 
 ### ワークツリー
 
@@ -44,14 +46,12 @@
 
 ClangCL は必須ゲート。MSVC が見逃す非適合を実際に拾っているので、落ちたら原因を直す。`continue-on-error` で回避しない。
 
-マージ前にメインのチェックアウトの `git status` が綺麗か確かめる。汚れていたら (ユーザーが作業中) 手を止めて報告する。
-
 ### 外部資料の名前を書かない
 
 コード・コメント・ドキュメント・コミットメッセージ・PR に、参考にした外部資料 (発表・書籍・記事・他社の製品や設計) の名前を書かない。「〇〇式」「〇〇の規則そのまま」のような出典の明示も同じ。設計の説明は資料名を出さずに自分の言葉で書く。
 
-- 禁止する名前は `tools/git-hooks/external-names.sha256` にハッシュで置いてあり、フック (commit-msg / pre-commit / pre-push) と CI の Secret scan が検査する。
-- 新しく避けたい名前が出たら `python3 tools/git-hooks/check-external-names.py --hash '<名前>'` の出力を追記する。名前そのものはコメントにも書かない。
+- 禁止する名前は共通の git フック (`noxitro/github-templates` の `git-hooks/external-names.sha256`) にハッシュで置いてあり、フック (commit-msg / pre-commit / pre-push) と CI の Secret scan が検査する。
+- 新しく避けたい名前が出たら `python3 ~/.config/nox/github-templates/git-hooks/check-external-names.py --hash '<名前>'` の出力を github-templates の `external-names.sha256` に追記する (PR で入れる)。名前そのものはコメントにも書かない。
 - ユーザーの所属先など、リポジトリにハッシュでも置かない名前は手元の非公開リスト (`~/.config/nox/private-names.sha256`) にあり、フックが `[PRIVATE-NAME]` で止める。止まったら、その語を消して書き直す (リストの中身を調べたり、該当語を推測して書いたりしない)。
 - 手元の資料は `docs/references/local/` (`.gitignore` 済み) に置き、コミットしない。
 
