@@ -67,7 +67,9 @@ ClangCL は必須ゲート。MSVC が見逃す非適合を実際に拾ってい�
 
 ## 環境とビルド
 
-Windows 専用 (Linux / macOS ではビルド・実行できない)。Visual Studio (C++ ワークロード) と .NET SDK を使う。
+現在は Windows のみ実装済み (Linux / Android / macOS ではまだビルド・実行できない)。Runtime は Linux / Android / macOS への対応を予定しているので、Windows 専用を前提にした設計をしない。OS 固有の型やヘッダーは実装ファイルに閉じ込め、公開ヘッダーへ持ち込まない。
+
+ビルドには Visual Studio (C++ ワークロード) と .NET SDK を使う。
 
 ### Runtime (C++)
 

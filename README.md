@@ -8,7 +8,8 @@
 [![Benchmarks](https://img.shields.io/badge/benchmarks-dashboard-8250df)](https://noxitro.github.io/Nox/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**Nox** は、Windows プラットフォームに特化した **ArchetypeベースのECS** を採用するハイパフォーマンスゲームエンジンです。
+**Nox** は、**ArchetypeベースのECS** を採用するハイパフォーマンスゲームエンジンです。
+Runtime は現在 Windows のみ実装済みで、Linux / Android / macOS に対応予定です。
 ランタイム（C++）と WPF ベースのエディタ（C#）はプロセス分離されており、Editor の安定性を保ちながら、フレームループ中の**ゼロアロケーション**を徹底することで、予測可能なリアルタイム性能を実現します。
 
 ## ✨ コア特徴 (Key Features)
@@ -28,7 +29,7 @@
 ## 🛠️ クイックスタート (ビルド)
 
 ### 要件 (Prerequisites)
-- **Windows 10 / 11**
+- **Windows 10 / 11**（現在ビルド・実行できるのは Windows のみ）
 - **Visual Studio 2026** (C++ ワークロード)
   - Runtime の各プロジェクトは PlatformToolset `v145` を指定しています。
   - ソリューションは `.slnx` 形式のため、MSBuild 18 以降が必要です（`.sln` はリポジトリに存在しません）。
