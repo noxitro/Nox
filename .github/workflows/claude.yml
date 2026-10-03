@@ -1,6 +1,9 @@
 # ============================================================
 # Claude (PR / Issue で /claude と書いたときだけ動く)
 #
+# 本体は noxitro/github-templates の共通ワークフロー (.github/workflows/claude-agent.yml)。
+# 使い方・認証・権限の詳細はそちらの冒頭と github-templates の README。
+#
 # 目的  : PR のコメントやレビューで「/claude review」などと書くと、Claude が
 #         差分をレビューしたり質問に答えたりする。Copilot のレビュー枠が
 #         尽きたときや、大きな変更を念入りに見てほしいときに使う。
@@ -15,16 +18,10 @@
 # 自動では走らせない: Nox の PR は大半が Claude のセッションで作られて検証済みで、
 #         Copilot の自動レビューと日次の Dev report もある。PR ごとに自動で
 #         走らせると重複が多く、利用枠も減る。
-# 認証  : CLAUDE_CODE_OAUTH_TOKEN (手元の Claude Code CLI で `claude setup-token`)。
-#         Claude のサブスクリプションの利用枠を使い、API の従量課金はかからない。
-#         Claude Code を普段使う枠と同じなので、使った分だけ普段の枠が減る。
-# 権限  : 公開リポジトリなので誰でもコメントできる。他人の /claude で枠を
-#         使われないよう、オーナー・メンバー・共同編集者のコメントだけに反応する。
-#         用途はレビューと回答。ただし下の permissions が効くのは GITHUB_TOKEN
-#         だけで、Claude は Claude GitHub App のトークン (contents / pull-requests /
-#         issues が write) で動く。頼めば新しいブランチへ push はできる。
-#         PR は作らない (作成ページへのリンクを返すだけ)。
-# 詳細  : https://code.claude.com/docs/en/github-actions
+# Secret: CLAUDE_CODE_OAUTH_TOKEN (必須)。AGENT_APP_ID / AGENT_APP_PRIVATE_KEY を
+#         足すと、自前の GitHub App の名義で動く (無ければ Claude GitHub App)。
+# 注意  : issue_comment で起動するワークフローは既定ブランチ (master) の版が使われる。
+#         ここを変えても、master に入るまでは前の版のまま動く。
 # ============================================================
 
 name: Claude
@@ -42,38 +39,12 @@ permissions:
 
 jobs:
   claude:
-    # 先頭が /claude のコメントだけで走らせる。contains にすると
-    # 「https://claude.ai/...」のような URL にも当たり、ランナーが無駄に立ち上がる。
-    if: >-
-      (
-        (github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/claude') &&
-          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
-        (github.event_name == 'pull_request_review_comment' && startsWith(github.event.comment.body, '/claude') &&
-          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
-        (github.event_name == 'pull_request_review' && startsWith(github.event.review.body, '/claude') &&
-          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.review.author_association))
-      )
-    runs-on: ubuntu-latest
-    # 暴走して利用枠を使い切らないための上限
-    timeout-minutes: 30
+    # 共通側の job が使う権限。呼び出し側で与えないと共通側では広げられない。
     permissions:
       contents: read
       pull-requests: write   # レビューコメントを書く
       issues: write          # 会話欄に返信する
       id-token: write        # Claude GitHub App の認証に使う
       actions: read          # CI の結果を読んで答えられるように
-
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 1
-
-      - uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # 既定の @claude から変える (理由は冒頭)
-          trigger_phrase: "/claude"
-          # job の actions: read だけでは Claude 側のトークンに渡らないので、
-          # ここでも渡して CI の結果を読めるようにする (claude-code-action の FAQ)
-          additional_permissions: |
-            actions: read
+    uses: noxitro/github-templates/.github/workflows/claude-agent.yml@main
+    secrets: inherit
