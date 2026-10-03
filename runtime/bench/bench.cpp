@@ -11,6 +11,7 @@
 #include	"bench.h"
 
 #include	<intrin.h>
+#include	"kernel/win64_api.h"
 #include	<realtimeapiset.h>
 
 #include	<array>

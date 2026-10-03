@@ -5,3 +5,6 @@
 ///	@brief	condition_variable
 #include	"pch.h"
 #include	"condition_variable.h"
+
+//	::CONDITION_VARIABLE は破棄処理が要らない
+nox::ConditionVariable::~ConditionVariable() noexcept = default;

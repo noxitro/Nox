@@ -65,7 +65,7 @@ namespace nox::dev::net
 
 		nox::Vector<std::reference_wrapper<Client>>	client_list_;
 
-		nox::os::Thread thread_;
-		nox::os::Mutex mutex_server_list_;
+		nox::Thread thread_;
+		nox::Mutex mutex_server_list_;
 	};
 }

@@ -396,6 +396,7 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="window.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="advanced_definition.cpp" />
@@ -781,6 +782,7 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="window.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="kernel.vcxproj.bak" />

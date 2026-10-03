@@ -130,8 +130,8 @@ namespace nox::dev::editor_remote
 		/// @brief TODO:	現状は1つだけ対応
 		nox::dev::net::ConnectionContext main_client_;
 
-		nox::os::Mutex mutex_writer_;
-		nox::os::Mutex mutex_reader_;
+		nox::Mutex mutex_writer_;
+		nox::Mutex mutex_reader_;
 
 		/// @brief リモートインスタンス連想配列
 		///	key:インスタンスID	正:エディタ側のインスタンス、負:Runtime側のインスタンス

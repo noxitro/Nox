@@ -9,11 +9,11 @@
 #include	"memory/stl_allocate_adapter.h"
 #include	"unicode_converter.h"
 #include	"string_format.h"
-#include	"os/thread.h"
+#include	"thread.h"
 #include	"ascii.h"
 
 #if NOX_WINDOWS
-#include	"os/windows.h"
+#include	"win64_api.h"
 #endif // NOX_WIN64
 
 namespace nox

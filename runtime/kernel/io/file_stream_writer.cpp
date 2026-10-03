@@ -6,7 +6,7 @@
 #include	"pch.h"
 #include	"file_stream_writer.h"
 //#include	<filesystem>
-#include	"../os/windows.h"
+#include	"../win64_api.h"
 
 nox::io::FileStreamWriter::~FileStreamWriter()
 {

@@ -62,9 +62,9 @@ nox::dev::editor_remote::EditorRemoteServer::~EditorRemoteServer()
 
 void	nox::dev::editor_remote::EditorRemoteServer::SendQuery(nox::dev::editor_remote::Query& query, std::function<void(const nox::dev::editor_remote::Response&)> callback)
 {
-	const nox::uint32 query_id = nox::os::atomic::Increment(query_id_counter_);
+	const nox::uint32 query_id = nox::atomic::Increment(query_id_counter_);
 
-	NOX_LOCAL_SCOPE(nox::os::ScopedLock(mutex_writer_));
+	NOX_LOCAL_SCOPE(nox::ScopedLock(mutex_writer_));
 	query.Serialize(query_id, writer_);
 
 	if (callback != nullptr)
@@ -143,7 +143,7 @@ void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive(nox::World& worl
 	alignas(alignof(nox::Object)) std::array<nox::uint8, 4096> receive_buffer{ 0 };
 		std::array<nox::char8, 256> entity_name_buffer{};
 
-    NOX_LOCAL_SCOPE(nox::os::ScopedLock(mutex_reader_));
+    NOX_LOCAL_SCOPE(nox::ScopedLock(mutex_reader_));
 
 	//	1パケット分が読み取れる限りループ
 	while (reader_.CanReadBody())
@@ -192,7 +192,7 @@ void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive(nox::World& worl
 				nox::PlacementObject<nox::dev::editor_remote::Response> response = query.Execute(world, receive_buffer);
 				if (response != nullptr)
 				{
-                    NOX_LOCAL_SCOPE(nox::os::ScopedLock(mutex_writer_));
+                    NOX_LOCAL_SCOPE(nox::ScopedLock(mutex_writer_));
 					response->Serialize(query.GetId(), writer_);
 					writer_.Flush();
 				}
@@ -234,7 +234,7 @@ void nox::dev::editor_remote::EditorRemoteServer::OnServerReceive(nox::World& wo
 	if (receive_size > 0)
 	{
 		{
-			NOX_LOCAL_SCOPE(nox::os::ScopedLock(mutex_reader_));
+			NOX_LOCAL_SCOPE(nox::ScopedLock(mutex_reader_));
 			reader_.AddReceiveBuffer(std::span(receive_buffer.data(), static_cast<std::size_t>(receive_size)));
 		}
 		UpdateReceive(world);
@@ -280,7 +280,7 @@ void	nox::dev::editor_remote::EditorRemoteServer::RegisterRemoteInstance(nox::Ob
 
 	if (instance_id == 0)
 	{
-       instance_id = -nox::os::atomic::Increment(instance_id_counter_);
+       instance_id = -nox::atomic::Increment(instance_id_counter_);
 	}
 
 	remote_instance_dict_.emplace(instance_id, std::ref(object));

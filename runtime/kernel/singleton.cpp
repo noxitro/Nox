@@ -10,7 +10,8 @@
 #include	"convert_string.h"
 #include	"string_format.h"
 
-#include	"os/static_lock.h"
+#include	"mutex.h"
+#include	"scoped_lock.h"
 #include	"preprocessor/util.h"
 
 namespace nox
@@ -26,13 +27,13 @@ namespace nox
 		///						Unregister先頭のNOX_ASSERTだけ。アサート経路は
 		///						シングルトンの登録/解除へ戻ってこないため、
 		///						非再帰ロックで問題ない。
-		constinit nox::os::StaticLock singleton_mutex_;
+		constinit nox::Mutex singleton_mutex_;
 	}
 }
 
 void	nox::detail::SingletonManager::Register(nox::detail::ISingletonBase& obj)
 {
-	NOX_LOCAL_SCOPE(nox::os::ScopedLock{ singleton_mutex_ });
+	NOX_LOCAL_SCOPE(nox::ScopedLock{ singleton_mutex_ });
 	if (root_ == nullptr)
 	{
 		root_ = &obj;
@@ -55,7 +56,7 @@ void	nox::detail::SingletonManager::Register(nox::detail::ISingletonBase& obj)
 
 void	nox::detail::SingletonManager::Unregister(nox::detail::ISingletonBase& obj)
 {
-	NOX_LOCAL_SCOPE(nox::os::ScopedLock{ singleton_mutex_ });
+	NOX_LOCAL_SCOPE(nox::ScopedLock{ singleton_mutex_ });
 	NOX_ASSERT(root_ != nullptr, u"シングルトンが登録されていません");
 
 	if (root_->next_ == nullptr)

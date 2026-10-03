@@ -70,7 +70,7 @@ bool nox::Asset::Initialize(std::u8string_view native_path)
 	is_initialized_ = false;
 
 	//	ネイティブファイルをメモリマップする（ペイロードはゼロコピーで in-place 参照）
-	nox::os::ReadOnlyMappedFile mapped;
+	nox::io::ReadOnlyMappedFile mapped;
 	if (mapped.Open(native_path) == false)
 	{
 		return false;

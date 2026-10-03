@@ -506,7 +506,7 @@ void nox::World::Init()
 		u8"UpdaterGraph実行モード: {0} ワーカー数={1} 論理プロセッサ数={2}",
 		(updater_worker_count_ == 0u) ? u8"直列" : u8"並列",
 		job_system_.GetWorkerCount(),
-		nox::GetLogicalProcessorCount());
+		nox::os::GetLogicalProcessorCount());
 }
 
 void nox::World::Update()
@@ -516,7 +516,7 @@ void nox::World::Update()
 	{
 		if (elapsed_milli_seconds_ < next_elapsed_milli_seconds_)
 		{
-			nox::os::Thread::Sleep(1);
+			nox::Thread::Sleep(1);
 			return;
 		}
 	}

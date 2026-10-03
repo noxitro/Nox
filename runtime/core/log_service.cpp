@@ -46,7 +46,7 @@ nox::LogService::LogService():
 void nox::LogService::AttachServer(nox::dev::editor_remote::EditorRemoteServer& server)
 {
 	{
-		NOX_LOCAL_SCOPE(nox::os::ScopedWriteLock(rw_lock_));
+		NOX_LOCAL_SCOPE(nox::ScopedWriteLock(rw_lock_));
 		server_ = &server;
 	}
 	Flush();
@@ -54,13 +54,13 @@ void nox::LogService::AttachServer(nox::dev::editor_remote::EditorRemoteServer& 
 
 void nox::LogService::DetachServer()
 {
-	NOX_LOCAL_SCOPE(nox::os::ScopedWriteLock(rw_lock_));
+	NOX_LOCAL_SCOPE(nox::ScopedWriteLock(rw_lock_));
 	server_ = nullptr;
 }
 
 void nox::LogService::AddLog(std::u8string_view message, std::u8string_view callstack, std::u8string_view channel, nox::debug::LogLevel level)
 {
-	NOX_LOCAL_SCOPE(nox::os::ScopedReadLock(rw_lock_));
+	NOX_LOCAL_SCOPE(nox::ScopedReadLock(rw_lock_));
 
 	if (server_ != nullptr)
 	{
@@ -85,7 +85,7 @@ void nox::LogService::AddLog(std::u8string_view message, std::u8string_view call
 			return;
 		}
 
-		NOX_LOCAL_SCOPE(nox::os::ScopedLock(mutex_));
+		NOX_LOCAL_SCOPE(nox::ScopedLock(mutex_));
 
 		const nox::uint32 write_position = write_position_.load();
 		NOX_ASSERT(write_position <= k_buffer_size, u8"LogService buffer is broken.");
@@ -137,13 +137,13 @@ void nox::LogService::AddLog(std::u8string_view message, std::u8string_view call
 
 void nox::LogService::Flush()
 {
-	NOX_LOCAL_SCOPE(nox::os::ScopedReadLock(rw_lock_));
+	NOX_LOCAL_SCOPE(nox::ScopedReadLock(rw_lock_));
 	if (server_ == nullptr)
 	{
 		return;
 	}
 
-	NOX_LOCAL_SCOPE(nox::os::ScopedLock(mutex_));
+	NOX_LOCAL_SCOPE(nox::ScopedLock(mutex_));
 
 	const nox::uint32 write_position = write_position_.load();
 	nox::uint32 position = read_position_;

@@ -54,7 +54,7 @@ void	nox::dev::net::SocketScheduler::Initialize(nox::World& world)
 #endif // NOX_WINDOWS
 
 	thread_.SetThreadName(u"SocketScheduler");
-	thread_.SetThreadPriority(nox::os::ThreadPriority::Lowest);
+	thread_.SetThreadPriority(nox::ThreadPriority::Lowest);
 	thread_.Dispatch([this, &world]() {
 		this->UpdateTask(world);
 		});
@@ -78,7 +78,7 @@ void	nox::dev::net::SocketScheduler::UpdateTask(nox::World& world)
 		//	保留リストから本リストへ移動
 		if (pending_server_list_.empty() == false)
 		{
-			NOX_LOCAL_SCOPE(nox::os::ScopedLock(mutex_server_list_));
+			NOX_LOCAL_SCOPE(nox::ScopedLock(mutex_server_list_));
 
 			for (const auto& [server_ref, is_register] : pending_server_list_)
 			{
@@ -165,7 +165,7 @@ void	nox::dev::net::SocketScheduler::DoConnectionServerClient()
 
 void	nox::dev::net::SocketScheduler::RegisterEntity(Server& entity)
 {
-	NOX_LOCAL_SCOPE(nox::os::ScopedLock(mutex_server_list_));
+	NOX_LOCAL_SCOPE(nox::ScopedLock(mutex_server_list_));
 	pending_server_list_.emplace_back(std::make_tuple(std::ref(entity), true));
 }
 
@@ -175,7 +175,7 @@ void	nox::dev::net::SocketScheduler::RegisterEntity(Client&)
 
 void	nox::dev::net::SocketScheduler::UnregisterEntity(nox::dev::net::Server& entity)
 {
-	NOX_LOCAL_SCOPE(nox::os::ScopedLock(mutex_server_list_));
+	NOX_LOCAL_SCOPE(nox::ScopedLock(mutex_server_list_));
 
 	auto it = std::ranges::find_if(server_list_,
 		[&entity](const std::reference_wrapper<Server>& r)noexcept

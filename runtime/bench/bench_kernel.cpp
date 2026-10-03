@@ -16,7 +16,8 @@
 #include	"kernel/memory/pmr_buffer.h"
 #include	"kernel/string_format.h"
 #include	"kernel/unicode_converter.h"
-#include	"kernel/os/static_lock.h"
+#include	"kernel/mutex.h"
+#include	"kernel/scoped_lock.h"
 
 #include	<array>
 #include	<functional>
@@ -310,9 +311,9 @@ namespace
 	//	ロック
 	//	---------------------------------------------------------------------------------
 
-	constinit nox::os::StaticLock g_static_lock;
+	constinit nox::Mutex g_static_lock;
 
-	/// @brief StaticLock (SRWLOCK) を競合なしで取って放す。nox::memory::Allocate が毎回取るロック
+	/// @brief nox::Mutex (SRWLOCK) を競合なしで取って放す。nox::memory::Allocate が毎回取るロック
 	void BenchStaticLockUncontended(nox::bench::State& state)
 	{
 		nox::uint64 counter = 0u;
@@ -320,7 +321,7 @@ namespace
 			{
 				for (nox::uint64 op = 0u; op < op_count; ++op)
 				{
-					nox::os::ScopedLock lock(g_static_lock);
+					nox::ScopedLock lock(g_static_lock);
 					++counter;
 				}
 				nox::bench::DoNotOptimize(counter);
@@ -344,7 +345,7 @@ std::span<const nox::bench::Definition> nox::bench::GetKernelBenchmarks()noexcep
 		{ .name = "delegate/move_only_invoke", .title = "MoveOnlyDelegate の呼び出し", .per = "call", .alloc_budget = 0, .function = &BenchMoveOnlyDelegateInvoke },
 		{ .name = "delegate/std_function_invoke", .title = "比較用: std::function の呼び出し", .per = "call", .alloc_budget = 0, .function = &BenchStdFunctionInvoke },
 		{ .name = "math/vec3_integrate/10k", .title = "Vec3 の位置更新 (1 万要素)", .per = "entity", .alloc_budget = 0, .function = &BenchVec3Integrate },
-		{ .name = "lock/srw_uncontended", .title = "StaticLock (SRWLOCK) の Lock/Unlock (競合なし)", .per = "pair", .alloc_budget = 0, .function = &BenchStaticLockUncontended },
+		{ .name = "lock/srw_uncontended", .title = "Mutex (SRWLOCK) の Lock/Unlock (競合なし)", .per = "pair", .alloc_budget = 0, .function = &BenchStaticLockUncontended },
 	} };
 	return kDefinitions;
 }

@@ -9,15 +9,15 @@
 
 void	nox::Mutex::Lock()noexcept
 {
-	::AcquireSRWLockExclusive(static_cast<::PSRWLOCK>(lock_));
+	::AcquireSRWLockExclusive(nox::detail::GetNativeLock(*this));
 }
 
 void	nox::Mutex::Unlock()noexcept
 {
-	::ReleaseSRWLockExclusive(static_cast<::PSRWLOCK>(lock_));
+	::ReleaseSRWLockExclusive(nox::detail::GetNativeLock(*this));
 }
 
 bool	nox::Mutex::TryLock()noexcept
 {
-	return ::TryAcquireSRWLockExclusive(static_cast<::PSRWLOCK>(lock_)) != FALSE;
+	return ::TryAcquireSRWLockExclusive(nox::detail::GetNativeLock(*this)) != FALSE;
 }

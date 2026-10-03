@@ -13,7 +13,7 @@ std::u16string_view nox::util::GetProjectDir()noexcept
 	return r.value();
 }
 
-std::u8string_view nox::util::GetProjectDir(std::array<nox::char8, nox::os::k_max_path_length>& buffer)noexcept
+std::u8string_view nox::util::GetProjectDir(std::array<nox::char8, nox::k_max_path_length>& buffer)noexcept
 {
 	const auto r = nox::os::GetCommandLineArgValue(u"--project-dir");
 	NOX_ASSERT(r.has_value(), u"--project-dir is not specified.");
