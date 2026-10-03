@@ -36,10 +36,12 @@ STAGES = {
 #   LINK : fatal error LNK1104: cannot open file 'foo.lib' [D:\...\runtime.vcxproj]
 #   C:\...\Microsoft.CppCommon.targets(254,5): error MSB3073: The command ... exited with code 1. [D:\...\core.vcxproj]
 #   error MSB1009: Project file does not exist.
+# clang-tidy 本体の出力がそのまま流れたときの "D:\...\x.cpp:12:5: error: ..." の形も受ける。
+# 末尾の括弧はプロジェクトのほか、ソリューション単位のエラーなら .slnx になる。
 ERROR_RE = re.compile(
-    r"^\s*(?:\d+>)?\s*(?:(?P<loc>(?:[A-Za-z]:)?[^:\n]*?)\s*:\s*)?"
+    r"^\s*(?:\d+>)?\s*(?:(?P<loc>(?:[A-Za-z]:)?[^:\n]*?)(?::(?P<line2>\d+):(?P<col2>\d+))?\s*:\s*)?"
     r"(?P<level>(?:fatal\s+)?error)\s*(?P<code>[A-Za-z]+\d+)?\s*:\s*(?P<msg>.*?)"
-    r"(?:\s*\[(?P<project>[^\]]*\.[A-Za-z]+proj)\])?\s*$"
+    r"(?:\s*\[(?P<project>[^\]]*\.(?:[A-Za-z]+proj|slnx?))\])?\s*$"
 )
 # ファイルの位置。"foo.cpp(12,5)" / "foo.cpp(12)" の行・桁の部分
 POS_RE = re.compile(r"^(?P<path>.*?)(?P<pos>\(\d+(?:,\d+)*\))?$")
@@ -71,12 +73,17 @@ def format_error(m, root):
     if loc:
         pm = POS_RE.match(loc)
         path, pos = to_slash(pm.group("path")), pm.group("pos") or ""
-        # "LINK" / "CSC" のようなツール名は位置ではないので、そのまま出してプロジェクトを添える
-        is_path = bool(pos) or "/" in path or "." in posixpath.basename(path)
-        if not is_path and project:
-            suffix = f" ({posixpath.basename(project)})"
-        elif is_path:
-            if not posixpath.isabs(path) and not re.match(r"^[A-Za-z]:/", path) and project:
+        if m.group("line2"):
+            pos = f"({m.group('line2')},{m.group('col2')})"
+        is_abs = posixpath.isabs(path) or re.match(r"^[A-Za-z]:/", path) is not None
+        # 位置 (行・桁) の付いた相対パスはソースなので、プロジェクトの場所で補う。
+        # "LINK" / "CSC" のようなツール名や "foo.obj" のような中間ファイルは、どこにあるかを
+        # 決められないのでそのまま出し、プロジェクトを添える。
+        if not is_abs and not (pos and project):
+            if project:
+                suffix = f" ({posixpath.basename(project)})"
+        else:
+            if not is_abs:
                 path = posixpath.join(posixpath.dirname(project), path)
             path = posixpath.normpath(path)
             rel = relative_to_root(path, root)
@@ -121,6 +128,8 @@ def commit_line():
         ).stdout.strip()
     except (OSError, subprocess.CalledProcessError):
         subject = ""
+    # 件名の記号を Markdown の装飾として読ませない
+    subject = re.sub(r"([\\`*_~|>\[\]])", r"\\\1", discord_webhook.clip(subject, 120))
     if not sha:
         return subject or None
     server = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
@@ -136,12 +145,14 @@ def build_description(stage, errors, max_errors, run_url):
     commit = commit_line()
     if commit:
         lines.append(f"コミット: {commit}")
-    lines.append("")
+    if lines:
+        lines.append("")
 
     if stage == "build":
         if errors:
             shown = errors[:max_errors]
-            lines.append(f"**エラー ({len(errors)} 件{'、先頭 ' + str(len(shown)) + ' 件' if len(errors) > len(shown) else ''})**")
+            more = f"、先頭 {len(shown)} 件" if len(errors) > len(shown) else ""
+            lines.append(f"**エラー (重複を除いて {len(errors)} 件{more})**")
             lines.append("```")
             # 文面に ``` があるとコードブロックが閉じてしまうので崩す
             lines += [e.replace("```", "'''") for e in shown]

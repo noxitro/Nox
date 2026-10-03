@@ -31,6 +31,7 @@ on:
       - '.github/workflows/clang-tidy.yml'
       - '.github/scripts/clang-tidy-report.py'
       - '.github/scripts/clang-tidy-failure.py'
+      - '.github/scripts/discord_webhook.py'
 
 # 設定を試す push が続いたら古いものは打ち切る。定期実行と手動実行は打ち切らない。
 concurrency:
