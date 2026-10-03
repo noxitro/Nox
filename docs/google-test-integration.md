@@ -26,6 +26,7 @@
 |---|---|---|
 | `kernel_test` | `runtime/kernel/test/` | `kernel` のみ |
 | `core_test` | `runtime/core/test/` | `kernel` / `reflection` / `core` / `reflection_generated` |
+| `<モジュール名>_test` | `runtime/modules/<モジュール名>/test/` | `core_test` と同じ組 + モジュール本体 + それが依存するモジュール |
 
 ユニットテストを対象コードと同居させるのは Chromium のスタイルガイドおよび
 Pitchfork Layout の Merged Test Placement に沿った形。かつて core 内部に
@@ -36,6 +37,32 @@ core 本体へ混ぜてビルドしていたが、起動時テストの廃止に
 プロジェクト名は `_test` 終わりで統一する。ReflectionGenerator が
 このサフィックスでテスト実行ファイルを判別し、「全部入りヘッダ」の
 include 生成から除外している（`bin/source/ReflectionGenerator/Entry.cs`）。
+
+#### モジュールのテスト
+
+モジュールはこれから増えていくので、テストプロジェクトは手で作らずに生成する。
+
+```powershell
+pwsh tools/module-test/new-module-test.ps1 <モジュール名>
+```
+
+- 元になるファイルは `tools/module-test/template/`。
+- gtest まわりの設定 (`GTEST_LINKED_AS_SHARED_LIBRARY` / `gtest.lib` / `gtest.dll` のコピー /
+  Console サブシステム) は `runtime/property_sheet/nox_test.props` に集めてあり、
+  生成したプロジェクトはこれを読む。gtest の扱いを変えるときはここだけ直せばよい。
+- `main.cpp` は `core_test` と同じく `nox::memory` と `nox::reflection` を初期化してから走る。
+- `runtime.slnx` の `/tests/` へ `<Build Project="false" />` 付きで登録する (理由は下の CI の項)。
+
+**依存関係**: static library はリンク時に依存先を連れてこないので、テストの実行ファイル側で
+依存するライブラリを全部参照する必要がある。スクリプトは次をまとめて参照に入れる。
+
+- `kernel` / `reflection` / `core` / `reflection_generated` (どのモジュールも core の上に載るので常に)
+- テスト対象のモジュール
+- そのモジュールが依存している他のモジュール。`runtime.slnx` の `BuildDependency`
+  (VS の「プロジェクトの依存関係」) と vcxproj の `ProjectReference` を推移的に辿って拾う
+
+生成した**後で**モジュールに依存を足した場合は、テスト側にも同じ `ProjectReference` を
+手で足す (VS の「参照の追加」)。足し忘れると未解決の外部シンボル (LNK2019) で気付ける。
 
 #### kernel_test
 
@@ -54,7 +81,7 @@ include 生成から除外している（`bin/source/ReflectionGenerator/Entry.c
 
 ### 3. ソリューションへの登録
 
-- **`runtime/runtime.slnx`**: `/tests/` フォルダに `kernel_test` / `core_test` を置く
+- **`runtime/runtime.slnx`**: `/tests/` フォルダに `kernel_test` / `core_test` / 各モジュールのテストを置く
   - それぞれのテスト対象プロジェクトを `BuildDependency` に持つ
   - 出力は `runtime/build/runtime/x64/<Configuration>/` に落ちる
     （`OutDir` が `build\$(SolutionName)\...` のため、ランタイム本体と同じ場所）
@@ -67,6 +94,8 @@ include 生成から除外している（`bin/source/ReflectionGenerator/Entry.c
 1. vcpkg のセットアップ（Google Test のインストールのため）
 2. `Build & test` マトリクスジョブで `runtime.slnx` をビルド
 3. テスト実行ステップ
+   - `runtime.slnx` にある `*_test.vcxproj` を全部拾ってビルド・実行する
+     (テストを足しても `ci.yml` の追記は要らない)
    - 独立したジョブではなく、各マトリクスジョブの中で実行する
      （同じ構成を 2 回建てないため。かつては Build ジョブと Test ジョブに
      分かれており、Debug のフルビルドが 1 push につき 2 回走っていた）
