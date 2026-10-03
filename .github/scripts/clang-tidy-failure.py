@@ -43,8 +43,8 @@ ERROR_RE = re.compile(
     r"(?P<level>(?:fatal\s+)?error)\s*(?P<code>[A-Za-z]+\d+)?\s*:\s*(?P<msg>.*?)"
     r"(?:\s*\[(?P<project>[^\]]*\.(?:[A-Za-z]+proj|slnx?))\])?\s*$"
 )
-# ファイルの位置。"foo.cpp(12,5)" / "foo.cpp(12)" の行・桁の部分
-POS_RE = re.compile(r"^(?P<path>.*?)(?P<pos>\(\d+(?:,\d+)*\))?$")
+# ファイルの位置。"foo.cpp(12,5)" / "foo.cpp(12)" / "foo.cpp(12,5-12,20)" の行・桁の部分
+POS_RE = re.compile(r"^(?P<path>.*?)(?P<pos>\(\d+(?:[,-]\d+)*\))?$")
 # エラー行の上限。Discord で読み切れる量にとどめる (全件はアーティファクトのログ)
 DEFAULT_MAX = 10
 LINE_CHARS = 300
