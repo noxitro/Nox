@@ -4,7 +4,7 @@
 ///	@file	dynamic_array.h
 ///	@brief	dynamic_array
 #pragma once
-#include	"advanced_type.h"
+#include	"basic_type.h"
 #include	"assertion.h"
 
 #include	<algorithm>

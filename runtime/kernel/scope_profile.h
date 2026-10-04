@@ -5,7 +5,7 @@
 ///	@brief	scope_profile
 #pragma once
 #include	"stop_watch.h"
-#include	"advanced_type.h"
+#include	"basic_type.h"
 #include	"utility.h"
 
 namespace nox::util

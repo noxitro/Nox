@@ -7,7 +7,7 @@
 #include	<functional>
 #include	"basic_definition.h"
 #include	"os_definition.h"
-#include	"advanced_type.h"
+#include	"basic_type.h"
 #include	"advanced_definition.h"
 
 namespace nox

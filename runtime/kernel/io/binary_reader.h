@@ -5,7 +5,7 @@
 ///	@brief	binary_reader
 #pragma once
 #include	<span>
-#include	"../advanced_type.h"
+#include	"../basic_type.h"
 
 namespace nox::io
 {

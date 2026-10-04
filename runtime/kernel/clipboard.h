@@ -6,7 +6,7 @@
 #pragma once
 
 #include	"basic_definition.h"
-#include	"advanced_type.h"
+#include	"basic_type.h"
 #include	"nox_string.h"
 #include	"nox_string_view.h"
 
