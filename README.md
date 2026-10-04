@@ -8,6 +8,8 @@
 [![Benchmarks](https://img.shields.io/badge/benchmarks-dashboard-8250df)](https://noxitro.github.io/Nox/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+CI の各ワークフローが何をするかは [docs/ci.md](docs/ci.md) にまとめています。
+
 **Nox** は、**ArchetypeベースのECS** を採用するハイパフォーマンスゲームエンジンです。
 Runtime は現在 Windows のみ実装済みで、Linux / Android / macOS に対応予定です。
 ランタイム（C++）と WPF ベースのエディタ（C#）はプロセス分離されており、Editor の安定性を保ちながら、フレームループ中の**ゼロアロケーション**を徹底することで、予測可能なリアルタイム性能を実現します。
