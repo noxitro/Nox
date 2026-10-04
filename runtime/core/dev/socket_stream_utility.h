@@ -5,6 +5,7 @@
 ///	@brief	socket_stream_utility
 #pragma once
 #include	<span>
+#include	"../../kernel/basic_definition.h"
 #if NOX_DEVELOP
 
 namespace nox

@@ -12,6 +12,7 @@
 #include	"system.h"
 #include	"../kernel/queue.h"
 #include	"../kernel/unordered_map.h"
+#include	"../kernel/basic_definition.h"
 
 #if NOX_DEVELOP
 namespace nox::dev::editor_remote

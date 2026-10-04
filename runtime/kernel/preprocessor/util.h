@@ -5,6 +5,8 @@
 ///	@brief	util
 #pragma once
 #include	"cat.h"
+#include	"../basic_definition.h"
+#include	"va_length.h"
 
 ///@brief 受け取った引数をそのまま返す
 #define	NOX_PP_IDENTITY(...) __VA_ARGS__

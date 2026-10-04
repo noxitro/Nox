@@ -12,6 +12,7 @@
 #include	"archetype.h"
 #include	"entity_access.h"
 #include	"../kernel/vector.h"
+#include	"../kernel/assertion.h"
 
 namespace nox
 {

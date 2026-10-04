@@ -17,6 +17,7 @@
 #include	"../kernel/job_system.h"
 #include	"../kernel/unordered_map.h"
 #include	"../kernel/vector.h"
+#include	"../kernel/reflection_attribute.h"
 
 namespace nox
 {

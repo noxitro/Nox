@@ -6,6 +6,7 @@
 #pragma once
 #include	<string_view>
 #include	"attribute.h"
+#include	"../kernel/reflection_attribute.h"
 
 namespace nox::attr::dev
 {

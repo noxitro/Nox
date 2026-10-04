@@ -11,6 +11,7 @@
 #include	<span>
 #include	<utility>
 #include	"../../kernel/vector.h"
+#include	"../../kernel/assertion.h"
 
 namespace nox
 {

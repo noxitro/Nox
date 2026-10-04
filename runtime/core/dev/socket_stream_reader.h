@@ -8,6 +8,8 @@
 #include	<span>
 #include	<string_view>
 #include	"../../kernel/stl_string.h"
+#include	"../../kernel/assertion.h"
+#include	"../../kernel/basic_definition.h"
 
 //	Editor との通信 (editor_remote) 用。実装 (.cpp) と同じく開発ビルドだけに置く。
 //	宣言だけ Master に残っていると、リフレクション生成器がメンバ関数を登録しようとして、
