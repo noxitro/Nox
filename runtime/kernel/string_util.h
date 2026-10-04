@@ -4,6 +4,9 @@
 ///	@file	string_util.h
 ///	@brief	string_util
 #pragma once
+#include	<ranges>
+#include	<span>
+#include	<string_view>
 #include	"advanced_type.h"
 #include	"type_traits/type_traits.h"
 

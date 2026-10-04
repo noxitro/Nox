@@ -7,6 +7,7 @@
 ///			制約としてfmtフォーマット処理が使えません
 #pragma once
 #include	<source_location>
+#include	<concepts>
 #include	"basic_definition.h"
 #include	"assertion_id.h"
 

@@ -4,6 +4,10 @@
 ///	@file	database.h
 ///	@brief	型情報データベース
 #pragma once
+#include	<concepts>
+#include	<span>
+#include	<string_view>
+#include	<utility>
 
 namespace nox::reflection
 {

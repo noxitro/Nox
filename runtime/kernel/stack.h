@@ -4,6 +4,8 @@
 ///	@file	stack.h
 ///	@brief	stackクラス
 #pragma once
+#include	<array>
+#include	<utility>
 #include	"advanced_type.h"
 #include	"atomic.h"
 

@@ -16,6 +16,7 @@
 #include	"../log_service.h"
 #include	"../object.h"
 #include	"remote/remote_system.g.h"
+#include	"../../kernel/vector.h"
 
 namespace nox::dev::editor_remote
 {

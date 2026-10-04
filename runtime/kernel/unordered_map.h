@@ -5,6 +5,7 @@
 ///	@brief	unordered_map
 #pragma once
 #include	<unordered_map>
+#include	<utility>
 #include	"memory/stl_allocate_adapter.h"
 
 namespace nox

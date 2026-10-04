@@ -7,6 +7,8 @@
 #include "updater_graph.h"
 
 #include "log_id.h"
+#include <ranges>
+#include "../kernel/vector.h"
 
 namespace nox
 {

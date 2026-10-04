@@ -4,6 +4,7 @@
 /// @file	file_base.h
 /// @brief	file_base
 #pragma once
+#include	<concepts>
 #include	"../advanced_type.h"
 
 namespace nox::detail

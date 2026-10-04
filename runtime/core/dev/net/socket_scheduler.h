@@ -4,8 +4,11 @@
 ///	@file	socket_scheduler.h
 ///	@brief	socket_scheduler
 #pragma once
+#include	<functional>
+#include	<span>
 #include	"../../system.h"
 #include	"dev_net_definition.h"
+#include	"../../../kernel/vector.h"
 //	RegisterEntity / UnregisterEntity のリフレクション生成コードは引数の完全型を要求する。
 //	前方宣言だけだと、editor_remote_server.h (NOX_DEVELOP 限定) 経由で server.h / client.h が
 //	来ない Master 構成で不完全型のまま参照されて壊れるので、ここで直接取り込む。

@@ -4,6 +4,7 @@
 ///	@file	garbage_collector.h
 ///	@brief	garbage_collector
 #pragma once
+#include	<span>
 #include	"system.h"
 
 namespace nox

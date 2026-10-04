@@ -4,6 +4,9 @@
 ///	@file	class_info.h
 ///	@brief	クラス情報
 #pragma once
+#include	<functional>
+#include	<span>
+#include	<string_view>
 
 namespace nox::reflection
 {

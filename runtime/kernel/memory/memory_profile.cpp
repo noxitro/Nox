@@ -15,6 +15,7 @@
 #include	"../stack.h"
 #include	"../log_trace.h"
 #include	"../log_id.h"
+#include	"../vector.h"
 
 namespace nox::memory::profile
 {

@@ -4,6 +4,8 @@
 ///	@file	assertion.h
 ///	@brief	assertion
 #pragma once
+#include	<array>
+#include	<source_location>
 #include	"basic_definition.h"
 #include	"basic_type.h"
 

@@ -4,6 +4,7 @@
 /// @file	dev_graphic.h
 /// @brief	開発用デバッグ描画
 #pragma once
+#include	<span>
 #include	"../system.h"
 
 namespace nox::dev

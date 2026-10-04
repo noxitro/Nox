@@ -4,6 +4,8 @@
 ///	@file	FileWin64.h
 ///	@brief	FileWin64
 #pragma once
+#include	<span>
+#include	<string_view>
 #include	"../basic_definition.h"
 #if NOX_WIN64
 #include	"file_base.h"

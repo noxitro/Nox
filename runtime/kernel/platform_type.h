@@ -4,6 +4,7 @@
 /// @file	platform_type.h
 /// @brief	platform_type
 #pragma once
+#include	<string_view>
 #include	"basic_definition.h"
 #include	"advanced_type.h"
 

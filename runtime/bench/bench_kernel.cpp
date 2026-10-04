@@ -24,6 +24,7 @@
 #include	<span>
 #include	<string_view>
 #include	<utility>
+#include	"kernel/vector.h"
 
 namespace
 {

@@ -10,6 +10,7 @@
 #include	"client.h"
 #include	"../../world.h"
 #include	"dev_net_log_id.h"
+#include	<ranges>
 
 
 namespace nox

@@ -4,6 +4,10 @@
 ///	@file	fixed_string.h
 ///	@brief	fixed_string
 #pragma once
+#include	<array>
+#include	<ranges>
+#include	<span>
+#include	<string>
 #include	"type_traits/type_traits.h"
 #include	"memory/memory_util.h"
 #include    "math/math_algorithm.h"

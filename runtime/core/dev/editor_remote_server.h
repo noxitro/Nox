@@ -5,12 +5,15 @@
 ///	@brief	remote_host
 #pragma once
 #if NOX_DEVELOP
+#include	<functional>
+#include	<span>
 #include	"net/server.h"
 #include	"net/client.h"
 #include	"../system.h"
 
 #include	"socket_stream_writer.h"
 #include	"socket_stream_reader.h"
+#include	"../../kernel/unordered_map.h"
 
 namespace nox
 {

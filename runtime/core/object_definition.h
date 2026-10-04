@@ -4,6 +4,7 @@
 ///	@file	object_definition.h
 ///	@brief	object_definition
 #pragma once
+#include	<utility>
 
 namespace nox
 {

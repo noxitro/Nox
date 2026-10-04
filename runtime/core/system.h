@@ -4,6 +4,12 @@
 /// @file	system.h
 /// @brief	system
 #pragma once
+#include	<array>
+#include	<concepts>
+#include	<functional>
+#include	<span>
+#include	<string_view>
+#include	<utility>
 #include	"system_phase_type.h"
 #include	"object.h"
 #include	"entity.h"

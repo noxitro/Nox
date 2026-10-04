@@ -12,6 +12,7 @@
 #include "../os_definition.h"
 #include "../win64_api.h"
 #include "../unicode_converter.h"
+#include <span>
 
 namespace
 {

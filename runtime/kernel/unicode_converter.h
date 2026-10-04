@@ -5,7 +5,11 @@
 ///	@brief	unicode_converter
 #pragma once
 
+#include	<concepts>
+#include	<span>
+#include	<utility>
 #include	"convert_string.h"
+#include	"stl_string.h"
 
 namespace nox::unicode
 {

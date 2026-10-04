@@ -74,6 +74,15 @@
 #include	"fixed_vector.h"
 #include	"nameof.h"
 
+//	STL コンテナ (nox のアロケータを使う別名)
+#include	"vector.h"
+#include	"queue.h"
+#include	"list.h"
+#include	"unordered_map.h"
+#include	"unordered_set.h"
+#include	"stl_string.h"
+//	end STL コンテナ
+
 //	io
 #include	"io/binary_reader.h"
 #include	"io/stream_reader.h"

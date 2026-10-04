@@ -12,6 +12,7 @@
 
 #if NOX_WINDOWS
 #include	"windows.h"
+#include	<array>
 #endif // NOX_WINDOWS
 
 nox::U16String	nox::filesystem::GetCurrentPath()

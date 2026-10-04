@@ -4,6 +4,10 @@
 ///	@file	fixed_vector.h
 ///	@brief	fixed_vector
 #pragma once
+#include	<array>
+#include	<ranges>
+#include	<span>
+#include	<utility>
 #include	"advanced_type.h"
 #include	"assertion_kernel.h"
 

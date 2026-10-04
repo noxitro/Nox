@@ -5,6 +5,12 @@
 ///	@brief	function
 #pragma once
 #include	<tuple>
+#include	<array>
+#include	<functional>
+#include	<optional>
+#include	<span>
+#include	<string_view>
+#include	<utility>
 
 namespace nox::reflection
 {

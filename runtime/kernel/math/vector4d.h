@@ -4,6 +4,7 @@
 ///	@file	vector4d.h
 ///	@brief	vector4d
 #pragma once
+#include	<array>
 #include	"vector3d.h"
 #include	"point4d.h"
 

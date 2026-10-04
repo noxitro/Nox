@@ -4,6 +4,7 @@
 ///	@file	definition_dx12.h
 ///	@brief	definition_dx12
 #pragma once
+#include	<array>
 #include	"os_dx12.h"
 
 namespace nox::render::os

@@ -5,6 +5,7 @@
 ///	@brief	convert_string
 #pragma once
 #include	<string_view>
+#include	<string>
 #include	"basic_definition.h"
 #include	"basic_type.h"
 

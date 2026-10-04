@@ -7,6 +7,7 @@
 #include	"binary_reader.h"
 
 #include	"stream_reader.h"
+#include	<span>
 
 void nox::io::BinaryReader::ReadBytes(std::span<std::byte> dest)const
 {

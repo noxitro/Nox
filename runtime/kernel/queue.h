@@ -5,6 +5,7 @@
 ///	@brief	queue
 #pragma once
 #include	<queue>
+#include	<deque>
 #include	"memory/stl_allocate_adapter.h"
 
 namespace nox

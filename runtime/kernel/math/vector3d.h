@@ -5,6 +5,9 @@
 ///	@brief	vector3d
 #pragma once
 
+#include	<array>
+#include	<span>
+#include	<string_view>
 #include	"vector2d.h"
 #include	"point3d.h"
 

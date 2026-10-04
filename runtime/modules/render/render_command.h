@@ -4,6 +4,7 @@
 ///	@file	render_command.h
 ///	@brief	render_command
 #pragma once
+#include	<string_view>
 #include	"render_command_type.h"
 
 namespace nox::render::commands

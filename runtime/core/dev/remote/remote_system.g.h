@@ -6,6 +6,9 @@
 //	written from RuntimeRemoteCodeGenerator
 
 #if	NOX_DEVELOP
+#include	<array>
+#include	<span>
+#include	<string_view>
 #include	"../editor_remote_query.h"
 #include	"../editor_remote_response.h"
 

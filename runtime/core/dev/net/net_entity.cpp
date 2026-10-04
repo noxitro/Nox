@@ -7,6 +7,7 @@
 #include	"net_entity.h"
 
 #include	"dev_net_api.h"
+#include	<expected>
 
 namespace nox::dev::net
 {

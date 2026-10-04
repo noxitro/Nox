@@ -7,6 +7,9 @@
 //#include	<filesystem>
 #include	<algorithm>
 #include	<mdspan>
+#include	<array>
+#include	<ranges>
+#include	<utility>
 //#include	"advanced_type.h"
 #include	"os_definition.h"
 #include	"nox_string_view.h"

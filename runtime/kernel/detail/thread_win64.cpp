@@ -16,6 +16,7 @@
 #include	"../convert_string.h"
 #include	"../log_trace.h"
 #include	"../log_id.h"
+#include	<utility>
 
 namespace nox::detail
 {

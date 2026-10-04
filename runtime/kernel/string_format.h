@@ -6,8 +6,12 @@
 #pragma once
 
 #include	<format>
+#include	<array>
+#include	<span>
+#include	<utility>
 //#include	"convert_string.h"
 #include	"unicode_converter.h"
+#include	"stl_string.h"
 
 #pragma warning(push, 0)
 #pragma warning(disable: 26498)

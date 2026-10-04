@@ -4,6 +4,7 @@
 ///	@file	point4x4.h
 ///	@brief	point4x4
 #pragma once
+#include	<array>
 #include	"point4d.h"
 #include	"matrix4d.h"
 

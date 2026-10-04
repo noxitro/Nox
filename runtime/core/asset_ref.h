@@ -4,6 +4,7 @@
 /// @file	asset_ref.h
 /// @brief	asset_ref
 #pragma once
+#include	<concepts>
 
 namespace nox
 {

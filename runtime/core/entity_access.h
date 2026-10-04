@@ -6,6 +6,10 @@
 /// @details 宣言(引数リスト)と実際に触れる範囲が型で一致するため、UpdaterGraphの依存解析の入力と
 ///          実アクセス権限が乖離しない。宣言外アクセスはコンパイルエラーになる。
 #pragma once
+#include	<array>
+#include	<concepts>
+#include	<span>
+#include	<utility>
 #include	"component_type.h"
 #include	"entity.h"
 #include	"entity_commands.h"

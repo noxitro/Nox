@@ -4,6 +4,7 @@
 ///	@file	thread.h
 ///	@brief	thread
 #pragma once
+#include	<functional>
 #include	"basic_definition.h"
 #include	"os_definition.h"
 #include	"advanced_type.h"

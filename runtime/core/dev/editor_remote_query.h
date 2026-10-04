@@ -5,6 +5,7 @@
 ///	@brief	editor_remote_query
 #pragma once
 #if NOX_DEVELOP
+#include	<span>
 #include	"editor_remote_entity.h"
 
 namespace nox

@@ -4,7 +4,14 @@
 /// @file	asset_manager.h
 /// @brief	asset_manager
 #pragma once
+#include	<concepts>
+#include	<functional>
+#include	<semaphore>
+#include	<span>
+#include	<string_view>
 #include	"system.h"
+#include	"../kernel/queue.h"
+#include	"../kernel/unordered_map.h"
 
 #if NOX_DEVELOP
 namespace nox::dev::editor_remote

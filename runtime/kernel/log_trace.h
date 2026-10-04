@@ -5,6 +5,11 @@
 ///	@brief	ログ出力
 #pragma once
 
+#include	<array>
+#include	<concepts>
+#include	<functional>
+#include	<source_location>
+#include	<utility>
 #include	"advanced_type.h"
 #include	"convert_string.h"
 #include	"string_format.h"

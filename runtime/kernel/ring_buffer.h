@@ -4,6 +4,9 @@
 ///	@file	ring_buffer.h
 ///	@brief	ring_buffer
 #pragma once
+#include    <array>
+#include    <concepts>
+#include    <utility>
 #include    "advanced_type.h"
 
 namespace nox

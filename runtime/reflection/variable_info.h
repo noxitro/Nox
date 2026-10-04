@@ -4,6 +4,11 @@
 ///	@file	field_info.h
 ///	@brief	field_info
 #pragma once
+#include	<functional>
+#include	<optional>
+#include	<span>
+#include	<string_view>
+#include	<utility>
 
 namespace nox::reflection
 {

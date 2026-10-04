@@ -10,6 +10,7 @@
 #if NOX_WINDOWS
 #include	"win64_api.h"
 #include	"detail/win64_sdk_begin.h"
+#include	<array>
 #pragma warning(push, 0)
 #pragma warning(disable:4514)
 #pragma warning(disable:4820)

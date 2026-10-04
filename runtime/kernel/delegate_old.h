@@ -4,6 +4,7 @@
 ///	@file	delegate_old.h
 ///	@brief	delegate_old
 #pragma once
+#include	<utility>
 #include	"algorithm.h"
 #include	"assertion.h"
 #include	"memory/memory_util.h"

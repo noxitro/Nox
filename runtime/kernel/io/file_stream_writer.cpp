@@ -7,6 +7,8 @@
 #include	"file_stream_writer.h"
 //#include	<filesystem>
 #include	"../win64_api.h"
+#include	<array>
+#include	<string_view>
 
 nox::io::FileStreamWriter::~FileStreamWriter()
 {

@@ -8,6 +8,7 @@
 #include	"test.g.h"
 #include	"../socket_stream_writer.h"
 #include	"../socket_stream_reader.h"
+#include	"../../../kernel/vector.h"
 
 void nox::dev::editor_remote::ConvertQuery::OnSerialize(SocketStreamWriter& writer)
 {

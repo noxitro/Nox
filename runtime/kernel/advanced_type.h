@@ -23,6 +23,8 @@
 //#include	<filesystem>
 //#include	<semaphore>
 #include	<iostream>
+#include	<fstream>
+#include	<string>
 
 #include	"basic_type.h"
 

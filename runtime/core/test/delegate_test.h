@@ -4,6 +4,13 @@
 ///	@file	delegate_test.h
 ///	@brief	delegate_test
 #pragma once
+#include	<array>
+#include	<concepts>
+#include	<functional>
+#include	<ranges>
+#include	<span>
+#include	<utility>
+#include	"../../kernel/vector.h"
 
 namespace nox
 {

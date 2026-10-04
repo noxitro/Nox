@@ -7,6 +7,7 @@
 #include	<string_view>
 #include	<span>
 #include	<memory>
+#include	<utility>
 #include	"basic_type.h"
 #include	"reflection_type_utility.h"
 #include	"type_traits/function_signature.h"

@@ -4,7 +4,9 @@
 ///	@file	multicast_delegate.h
 ///	@brief	multicast_delegate
 #pragma once
+#include	<ranges>
 #include	"delegate.h"
+#include	"vector.h"
 #if false
 namespace nox
 {
