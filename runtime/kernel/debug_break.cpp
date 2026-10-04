@@ -11,8 +11,10 @@
 void ::nox::DebugBreak()
 {
 #if !NOX_MASTER
-#if NOX_COMPILER_MSVC
+#if NOX_COMPILER_CLANG
+	__builtin_debugtrap();
+#elif NOX_COMPILER_MSVC
 	::__debugbreak();
-#endif // NOX_COMPILER_MSVC
+#endif // NOX_COMPILER_CLANG
 #endif // !NOX_MASTER
 }
