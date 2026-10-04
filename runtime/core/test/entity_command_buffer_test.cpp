@@ -20,9 +20,11 @@ void nox::test::TestEntityCommandBuffer()
 		.index = 42u,
 	};
 
-	NOX_ASSERT(commands.TryDestroy(entity), u"EntityCommandBufferへの記録に失敗しました");
+	[[maybe_unused]] const bool queued = commands.TryDestroy(entity);
+	NOX_ASSERT(queued, u"EntityCommandBufferへの記録に失敗しました");
 	nox::EntityCommand recorded{};
-	NOX_ASSERT(commands.TryGet(0u, recorded), u"EntityCommandBufferの記録取得に失敗しました");
+	[[maybe_unused]] const bool ready = commands.TryGet(0u, recorded);
+	NOX_ASSERT(ready, u"EntityCommandBufferの記録取得に失敗しました");
 	NOX_ASSERT(commands.GetLength() == 1u, u"EntityCommandBufferの記録数が不正です");
 	NOX_ASSERT(recorded.type == nox::EntityCommandType::Destroy, u"EntityCommandBufferのコマンド種別が不正です");
 	NOX_ASSERT(recorded.entity_raw == entity.raw, u"EntityCommandBufferのEntityIdが不正です");
@@ -62,7 +64,8 @@ void nox::test::TestEntityCommandBuffer()
 	for (nox::uint32 command_index = 0u; command_index < command_count; ++command_index)
 	{
 		nox::EntityCommand concurrent_command{};
-		NOX_ASSERT(concurrent_commands.TryGet(command_index, concurrent_command), u"並列EntityCommandBufferのコマンド取得に失敗しました");
+		[[maybe_unused]] const bool concurrent_ready = concurrent_commands.TryGet(command_index, concurrent_command);
+		NOX_ASSERT(concurrent_ready, u"並列EntityCommandBufferのコマンド取得に失敗しました");
 		NOX_ASSERT(concurrent_command.type == nox::EntityCommandType::Destroy, u"並列EntityCommandBufferのコマンド種別が不正です");
 	}
 	concurrent_commands.Clear();
