@@ -6,6 +6,7 @@
 #pragma once
 #include	<span>
 #include	<string_view>
+#include	"../iostream.h"
 #include	"stream.h"
 #include	"../io/file.h"
 

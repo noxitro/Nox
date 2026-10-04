@@ -10,7 +10,7 @@
 #include	<list>
 #include	<vector>
 #include	"pmr.h"
-#include	"../advanced_type.h"
+#include	"../basic_type.h"
 #include	"../assertion_kernel.h"
 
 namespace nox

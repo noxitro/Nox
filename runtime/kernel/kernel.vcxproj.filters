@@ -459,6 +459,9 @@
     <ClInclude Include="stl_string.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="iostream.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="basic_definition.cpp">
@@ -897,6 +900,9 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="stl_string.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="iostream.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
