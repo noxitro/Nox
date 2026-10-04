@@ -133,7 +133,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          exclude='^(Editor|docs|LICENSE|tools|\.claude|\.editorconfig|\.gitignore|\.githooks-allow|\.git-blame-ignore-revs|\.gitleaks\.toml|startup\.ps1|[^/]*\.md)$'
+          exclude='^(Editor|docs|LICENSE|tools|\.claude|\.editorconfig|\.gitignore|\.githooks-allow|\.git-blame-ignore-revs|\.gitleaks\.toml|startup\.bat|[^/]*\.md)$'
           tools_exclude='^(bench-site|ci-try|fetch-runtime|git-hooks)$'
           src=$(
             # 正規表現は ENVIRON で渡す (awk -v はバックスラッシュを解釈して \. を . にしてしまう)

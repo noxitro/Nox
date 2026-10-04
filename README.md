@@ -56,11 +56,15 @@ Runtime は **C++23** (`/std:c++latest`) の x64 ビルドで、以下 2 つの�
 
 ### ビルド手順
 
-1. **リフレクション生成** (C++ビルドの前に必須)
-   ```powershell
-   cd runtime/bin/source/ReflectionGenerator/
-   dotnet build ReflectionGenerator.slnx
-   ```
+1. **コード生成器の準備** (C++ビルドの前に必須)
+
+   リポジトリ直下の `startup.bat` をダブルクリックする (PowerShell からは `./startup.ps1`)。必要なのは .NET 10 SDK。
+
+   `runtime/bin/source` にある C# 製のコード生成器 (CustomTask と ReflectionGenerator) をビルドして `runtime/bin/` に置く。ここに置くバイナリは `.gitignore` 済みで、pull しても更新されない。**初回と、生成器のソースが変わった pull の後に実行する。**
+
+   - 生成器が古いまま runtime をビルドすると、`reflection_generated` のビルドが「startup.bat を実行してください」というエラーで止まる。
+   - Visual Studio はビルド中に読み込んだ `runtime/bin/CustomTask.dll` を掴んだままにする。CustomTask のソースが変わったときは、Visual Studio を閉じてから実行する (中身の変わっていないファイルは上書きしないので、それ以外は開いたままでよい)。
+   - CI (`.github/actions/setup-nox-build`) も同じ `startup.ps1` を呼ぶ。
 
 ### 開発フックの導入
 

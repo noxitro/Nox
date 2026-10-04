@@ -49,6 +49,39 @@
 	</PropertyGroup>
 
 	<!--変数定義end-->
+
+	<!--
+		コード生成器の鮮度検査
+
+		runtime\bin の CustomTask.dll / ReflectionGenerator.exe は .gitignore 済みで、
+		リポジトリ直下の startup.ps1 (startup.bat) が runtime\bin\source から建てて配置する。
+		pull で生成器のソースだけが新しくなり配置済みのバイナリが古いままだと、生成コードが
+		今のソースと食い違い、原因の見えにくいコンパイルエラーが大量に出る。
+		そこで、生成器のソースが startup.ps1 の書く印 (startup.stamp) より新しいか、印が無ければ
+		ここで止めて startup.bat の実行を促す。
+
+		ここで建て直さないのは、CustomTask.dll を Visual Studio の MSBuild が読み込んで
+		掴んだままにするため (ビルドの途中では上書きできない)。
+		git は pull で書き換えたファイルの更新日時を新しくするので、更新日時の比較で足りる。
+	-->
+	<PropertyGroup>
+		<NoxCodeGeneratorSourceDir>$(SolutionDir)bin\source\</NoxCodeGeneratorSourceDir>
+		<NoxCodeGeneratorStamp>$(SolutionDir)bin\startup.stamp</NoxCodeGeneratorStamp>
+	</PropertyGroup>
+	<ItemGroup>
+		<NoxCodeGeneratorSource Include="$(NoxCodeGeneratorSourceDir)CustomTask\*.cs;$(NoxCodeGeneratorSourceDir)CustomTask\*.csproj" />
+		<NoxCodeGeneratorSource Include="$(NoxCodeGeneratorSourceDir)RuntimeTypeDB\*.cs;$(NoxCodeGeneratorSourceDir)RuntimeTypeDB\*.csproj" />
+		<NoxCodeGeneratorSource Include="$(NoxCodeGeneratorSourceDir)ReflectionGenerator\*.cs;$(NoxCodeGeneratorSourceDir)ReflectionGenerator\*.csproj" />
+		<NoxCodeGeneratorSource Include="$(NoxCodeGeneratorSourceDir)ReflectionGenerator\Generator\**\*.cs;$(NoxCodeGeneratorSourceDir)ReflectionGenerator\Parser\**\*.cs" />
+	</ItemGroup>
+
+	<Target
+		Name="NoxCheckCodeGenerator"
+		BeforeTargets="ReflectionGeneratorPreProcess"
+		Inputs="@(NoxCodeGeneratorSource)"
+		Outputs="$(NoxCodeGeneratorStamp)">
+		<Error Text="runtime\bin のコード生成器 (CustomTask.dll / ReflectionGenerator.exe) が runtime\bin\source のソースより古いか、配置されていません。リポジトリ直下の startup.bat を実行してから、ビルドし直してください。" />
+	</Target>
 	
   <!-- 独自ターゲット -->
   <Target

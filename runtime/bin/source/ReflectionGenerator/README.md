@@ -6,34 +6,17 @@
 
 ## ビルドと配置
 
-```
-dotnet build ReflectionGenerator.csproj -c Debug
-```
-
-配置先の `runtime/bin/ReflectionGenerator.exe` / `.dll` / `.pdb` は .gitignore 済み (リポジトリに入っていない) なので、ビルド後に手でコピーする必要がある。現在配置されているのは **Debug** 構成 (`bin/Debug/net10.0/`、従来から配置されてきた構成に合わせている)。
+リポジトリ直下の `startup.ps1` (ダブルクリック用は `startup.bat`) を実行する。CustomTask → ReflectionGenerator (+ ProjectReference の RuntimeTypeDB) の順に **Debug** 構成でビルドし、出力を `runtime/bin/` へ配置する。CI (`.github/actions/setup-nox-build`) も同じスクリプトを呼ぶ。
 
 ```powershell
-Copy-Item -Force `
-  ".\bin\Debug\net10.0\ReflectionGenerator.exe", `
-  ".\bin\Debug\net10.0\ReflectionGenerator.dll", `
-  ".\bin\Debug\net10.0\ReflectionGenerator.pdb" `
-  "..\..\"
+./startup.ps1
 ```
 
-`RuntimeTypeDB` (`../RuntimeTypeDB/RuntimeTypeDB.csproj`) を変更したときは `runtime/bin/RuntimeTypeDB.dll` も同時に入れ替えること (`ReflectionGenerator.csproj` の ProjectReference なので、同じ `bin/Debug/net10.0/` に出ている)。
-
-```powershell
-Copy-Item -Force ".\bin\Debug\net10.0\RuntimeTypeDB.dll", ".\bin\Debug\net10.0\RuntimeTypeDB.pdb" "..\..\"
-```
-
-なお Editor (`Editor/Core/Core.csproj`) はこの DLL を `runtime/bin/source/RuntimeTypeDB/bin/Release/net10.0/RuntimeTypeDB.dll` から参照している。TypeDB の読み書きに手を入れたときは **Release 構成もビルドし直さないと Editor 側が古い実装のまま**になる。
-
-`Nox.CustomTask` (`../CustomTask/CustomTask.csproj`) を変更したときは `runtime/bin/CustomTask.dll` も更新すること。ReflectionGenerator はこの DLL を参照しており、前処理データの読み書きを両者で共有しているため、**必ず両方を同時に入れ替える**。
-
-```powershell
-dotnet build ..\CustomTask\CustomTask.csproj -c Debug
-Copy-Item -Force "..\CustomTask\bin\Debug\netstandard2.0\CustomTask.dll" "..\..\"
-```
+- 配置先のバイナリは .gitignore 済み (リポジトリに入っていない) なので、`dotnet build` だけでは `runtime/bin/` は更新されない。
+- 配置するのは `bin/Debug/net10.0/` の中身すべて。dotnet build の出力は単一ファイルではなく、ClangSharp / MessagePack / Microsoft.Build と `runtimes/win-x64` の libclang ネイティブが揃って初めて動く。
+- ReflectionGenerator と CustomTask は前処理データの読み書きを共有しているので、片方だけを入れ替えない。`startup.ps1` は常に両方を建てる。
+- 生成器のソースが配置済みのバイナリより新しいと、`reflection_generated` のビルドがエラー (`runtime/reflection_generated/Directory.Build.targets` の `NoxCheckCodeGenerator`) で止まる。判定は、生成器のソースと `startup.ps1` が最後に書いた `runtime/bin/startup.stamp` の更新日時の比較。
+- Editor (`Editor/Core/Core.csproj`) は RuntimeTypeDB を ProjectReference で参照しているので、Editor のビルドで建て直される。
 
 ## 前処理データ (バイナリ) の置き場所
 
