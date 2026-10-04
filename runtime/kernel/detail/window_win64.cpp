@@ -28,6 +28,7 @@ namespace nox::detail
 
 struct nox::Window::Detail
 {
+	Detail()noexcept = delete;
 	static inline ::LRESULT CALLBACK CallbackWindow(const ::HWND hWnd, const ::UINT message, const ::WPARAM wParam, ::LPARAM lParam)
 	{
 		if (message == WM_NCCREATE)

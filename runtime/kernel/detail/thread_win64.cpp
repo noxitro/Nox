@@ -32,6 +32,8 @@ namespace nox::detail
 
 struct nox::Thread::Detail
 {
+	Detail()noexcept = delete;
+
 	/// @brief スレッドに登録するコールバック関数
 	/// @param argPtr ThreadHandleWin64のアドレス 
 	/// @return エラーコード
