@@ -10,9 +10,9 @@
 
 void ::nox::DebugBreak()
 {
-#if! NOX_MASTER
-#if defined(_MSC_VER)
+#if !NOX_MASTER
+#if NOX_COMPILER_MSVC
 	::__debugbreak();
-#endif // defined(_MSC_VER)
-#endif // NOX_DEBUG
+#endif // NOX_COMPILER_MSVC
+#endif // !NOX_MASTER
 }

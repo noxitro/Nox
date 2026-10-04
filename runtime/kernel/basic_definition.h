@@ -29,28 +29,20 @@ namespace nox
 ///	@brief	Debugビルドか
 #define NOX_DEBUG 1
 #else
-/**
- * @brief	Debugビルドか
-*/
+/// @brief	Debugビルドか
 #define NOX_DEBUG 0
 #endif // _DEBUG
 
 #if _MASTER
-/**
- * @brief	Masterビルドか
-*/
+/// @brief	Masterビルドか
 #define	NOX_MASTER 1
 #else
-/**
- * @brief	Masterビルドか
-*/
+/// @brief	Masterビルドか
 #define	NOX_MASTER 0
 #endif // _MASTER
 
 #if !NOX_DEBUG && !NOX_MASTER
-/**
- * @brief	Releaseビルドか
-*/
+/// @brief	Releaseビルドか
 #define	NOX_RELEASE 1
 #else
 /**
@@ -60,22 +52,29 @@ namespace nox
 #endif // NOX_DEBUG
 
 #if NOX_DEBUG || NOX_RELEASE
-/**
- * @brief	開発ビルドか
-*/
+
+/// @brief	開発ビルドか
 #define	NOX_DEVELOP 1
 #else
-/**
- * @brief	開発ビルドか
-*/
+/// @brief	開発ビルドか
 #define	NOX_DEVELOP 0
 #endif // NOX_DEBUG || NOX_RELEASE
 
-
-#if !defined(_MSC_VER) && !defined(__clang__)
+#if defined(_MSC_VER)
+#define NOX_COMPILER_MSVC 1
+#define NOX_COMPILER_CLANG 0
+#define NOX_COMPILER_GCC 0
+#elif defined(__clang__)
+#define NOX_COMPILER_MSVC 0
+#define NOX_COMPILER_CLANG 1
+#define NOX_COMPILER_GCC 0
+#elif defined(__GNUC__)
+#define NOX_COMPILER_MSVC 0
+#define NOX_COMPILER_CLANG 0
+#define NOX_COMPILER_GCC 1
+#else
 static_assert(false, "not support compiler");
-#endif // defined()
-
+#endif // defined(_MSC_VER)
 
 #if NOX_DEBUG || NOX_RELEASE
 #define	NOX_CONDITINAL_DEVELOP(x) x

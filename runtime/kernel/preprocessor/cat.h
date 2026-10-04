@@ -14,9 +14,6 @@
 #define NOX_PP_TO_STRING_I(x) NOX_PP_TO_STRING(x)
 #define NOX_PP_TO_STRING_U32(x) NOX_PP_CAT(U, #x)
 
-#if defined(__clang__)
-
-#else
 ///	u8文字列に置き換え
 #define	NOX_DETAIL_TO_U8STRING(x) NOX_PP_CAT(u8, x)
 #endif // 0

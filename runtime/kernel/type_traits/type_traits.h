@@ -91,7 +91,7 @@ namespace nox
 
 
 	/// @brief スコープ付きの列挙型か
-#if __clang__
+#if NOX_COMPILER_CLANG
 
 	template<class T>
 	constexpr bool is_scoped_enum_v = false;

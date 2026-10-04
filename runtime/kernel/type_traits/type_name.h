@@ -27,7 +27,7 @@ namespace nox::util
 		template<class T>
 		[[nodiscard]] consteval std::string_view RawTypeName()noexcept
 		{
-#if defined(__clang__)
+#if NOX_COMPILER_CLANG
 			constexpr std::string_view signature = __PRETTY_FUNCTION__;
 			constexpr std::string_view marker = "[T = ";
 			constexpr char terminator = ']';
