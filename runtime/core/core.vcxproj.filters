@@ -132,7 +132,7 @@
     <ClInclude Include="system.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="world.h">
+    <ClInclude Include="world_legacy.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="local_transform.h">
@@ -177,19 +177,19 @@
     <ClInclude Include="entities.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="entity_command_buffer.h">
+    <ClInclude Include="entity_command_buffer_legacy.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="component_type.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="entity_access.h">
+    <ClInclude Include="entity_access_legacy.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="archetype.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="entity_query.h">
+    <ClInclude Include="entity_query_legacy.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="entity_system.h">
@@ -198,7 +198,7 @@
     <ClInclude Include="entity_system_legacy.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="updater_graph.h">
+    <ClInclude Include="updater_graph_legacy.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="service.h">
@@ -207,19 +207,22 @@
     <ClInclude Include="service_legacy.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="entity_logic.h">
+    <ClInclude Include="entity_logic_legacy.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="entity_commands.h">
+    <ClInclude Include="entity_commands_legacy.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="entity_logic_attribute.h">
+    <ClInclude Include="entity_logic_attribute_legacy.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="entity_type_registry.h">
+    <ClInclude Include="entity_type_registry_legacy.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="ecs_definitions.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="world.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
@@ -254,7 +257,7 @@
     <ClCompile Include="entity_system.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="updater_graph.cpp">
+    <ClCompile Include="updater_graph_legacy.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="engine_module.cpp">
@@ -302,7 +305,7 @@
     <ClCompile Include="log_id.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="entity_logic_attribute.cpp">
+    <ClCompile Include="entity_logic_attribute_legacy.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="update_order_attribute.cpp">
@@ -350,7 +353,7 @@
     <ClCompile Include="system.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="world.cpp">
+    <ClCompile Include="world_legacy.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="local_transform.cpp">
@@ -401,16 +404,19 @@
     <ClCompile Include="service.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="entity_logic.cpp">
+    <ClCompile Include="entity_logic_legacy.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="entity_commands.cpp">
+    <ClCompile Include="entity_commands_legacy.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="asset_format.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="ecs_definitions.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="world.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

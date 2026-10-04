@@ -6,7 +6,7 @@
 #include	"pch.h"
 #include	"scene_manager.h"
 
-#include	"world.h"
+#include	"world_legacy.h"
 #include	"scene_view.h"
 
 nox::SceneManager::SceneManager()noexcept:
@@ -21,7 +21,7 @@ nox::SceneManager::~SceneManager()
 
 }
 
-void	nox::SceneManager::Initialize(nox::World& world)
+void	nox::SceneManager::Initialize(nox::legacy::World& world)
 {
 
 	//	windowを生成
@@ -43,7 +43,7 @@ void	nox::SceneManager::Initialize(nox::World& world)
 	}
 }
 
-void	nox::SceneManager::Update(nox::World& world)
+void	nox::SceneManager::Update(nox::legacy::World& world)
 {
 	//	--exit-after-frames=N (CI のスモーク実行用)。N フレーム目にメインウィンドウを閉じる。
 	//	ユーザーがウィンドウを閉じたときと同じ経路 (WM_CLOSE → WM_DESTROY → WM_QUIT) で終わるので、
@@ -60,7 +60,7 @@ void	nox::SceneManager::Update(nox::World& world)
 	}
 }
 
-void	nox::SceneManager::Finalize([[maybe_unused]] nox::World& world)
+void	nox::SceneManager::Finalize([[maybe_unused]] nox::legacy::World& world)
 {
 	nox::util::SafeDelete(main_scene_view_);
 }

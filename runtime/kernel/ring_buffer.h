@@ -7,6 +7,7 @@
 #include    <array>
 #include    <concepts>
 #include    <utility>
+#include    "basic_type.h"
 #include    "advanced_type.h"
 
 namespace nox

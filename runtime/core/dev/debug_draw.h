@@ -15,9 +15,9 @@ namespace nox::dev
 
 	private:
 
-		void Init(nox::World& world);
-		void Update(nox::World& world);
-		void Terminate(nox::World& world);
+		void Init(nox::legacy::World& world);
+		void Update(nox::legacy::World& world);
+		void Terminate(nox::legacy::World& world);
 		std::span<const nox::SystemBase::PhaseRegister> GetPhaseRegisterList()const noexcept override;
 	public:
 //		void DrawPoint(const nox::Float3& position, const nox::Color color, nox::float_t size = 1.0f);

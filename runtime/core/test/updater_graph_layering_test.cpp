@@ -12,12 +12,12 @@
 ///
 ///				検証は3層に分かれている。
 ///
-///				1. 規則そのもの (nox::ConflictsUpdaterNodeAccess)
+///				1. 規則そのもの (nox::legacy::ConflictsUpdaterNodeAccess)
 ///				   ComponentData の read/write、Service の read/write、
 ///				   EntityLogic のインスタンス状態共有 (group_index) の3系統。
-///				2. レイヤリング (nox::BuildUpdaterLayerIndices)
+///				2. レイヤリング (nox::legacy::BuildUpdaterLayerIndices)
 ///				   規則からレイヤー番号が導かれること。独立なノードが同一レイヤーへ載ること。
-///				3. 本番の構築経路 (nox::UpdaterGraph::Rebuild)
+///				3. 本番の構築経路 (nox::legacy::UpdaterGraph::Rebuild)
 ///				   EntitySystem / EntityLogic の「引数リスト」からアクセス宣言が導出され、
 ///				   1 と 2 が実型に対しても成立すること。
 ///
@@ -27,11 +27,11 @@
 ///				を全数検査する。ここが「たまたま通っている」を排除する本体で、
 ///				衝突判定を壊すと必ず落ちる。
 ///
-///	@note		World は使わない。nox::World::Init() は private で、core_test から
+///	@note		World は使わない。nox::legacy::World::Init() は private で、core_test から
 ///				本番のフェーズ実行を駆動できないため。
-///				nox::UpdaterGraph::Rebuild / nox::BuildUpdaterLayerIndices /
-///				nox::ConflictsUpdaterNodeAccess はいずれも public かつ World 非依存で、
-///				updater_graph.h にも「Worldを介さずに組み立てられるため、テストから直接
+///				nox::legacy::UpdaterGraph::Rebuild / nox::legacy::BuildUpdaterLayerIndices /
+///				nox::legacy::ConflictsUpdaterNodeAccess はいずれも public かつ World 非依存で、
+///				updater_graph_legacy.h にも「Worldを介さずに組み立てられるため、テストから直接
 ///				レイヤリングを検証できる」と明記されている。World の公開範囲は広げていない。
 
 #include	"pch.h"
@@ -129,7 +129,7 @@ namespace nox::test::updater_graph
 	//	=================================================================================
 	//	テスト用の EntityLogic
 	//	更新メソッドの購読は通常リフレクション生成コードが行うが、
-	//	nox::EntityLogicMethodTable の手書き特殊化 (entity_logic.h が明記している
+	//	nox::legacy::EntityLogicMethodTable の手書き特殊化 (entity_logic_legacy.h が明記している
 	//	エスケープハッチ) を使えば生成器を通さずに同じ経路へ載せられる。
 	//	core_test 専用の型を core/test/test_types.h へ足さずに済み、
 	//	Master でテスト型のリフレクションが生成されない問題とも無関係でいられる。
@@ -138,7 +138,7 @@ namespace nox::test::updater_graph
 	/// @brief 宣言が全く重ならない2メソッドを持つ EntityLogic。
 	/// @details インスタンス状態 (メンバ) を共有するため、宣言が重ならなくても
 	///          この2つは直列化されなければならない。その規則の検証対象。
-	class TwoMethodLogic final : public nox::EntityLogic<nox::test::updater_graph::TwoMethodLogic>
+	class TwoMethodLogic final : public nox::legacy::EntityLogic<nox::test::updater_graph::TwoMethodLogic>
 	{
 	public:
 		//	手書きの記述子はメソッドのアドレスを通常の文脈で取るので public に置く。
@@ -149,7 +149,7 @@ namespace nox::test::updater_graph
 	};
 
 	/// @brief 上とは別の型。宣言も重ならないので TwoMethodLogic のどのメソッドとも衝突しない。
-	class OtherLogic final : public nox::EntityLogic<nox::test::updater_graph::OtherLogic>
+	class OtherLogic final : public nox::legacy::EntityLogic<nox::test::updater_graph::OtherLogic>
 	{
 	public:
 		void MethodC(const nox::test::updater_graph::LayerA& a, nox::test::updater_graph::LayerB& b)
@@ -159,35 +159,35 @@ namespace nox::test::updater_graph
 	};
 }
 
-namespace nox
+namespace nox::legacy
 {
 	template<>
 	struct EntityLogicMethodTable<nox::test::updater_graph::TwoMethodLogic> final
 	{
-		static constexpr std::array<nox::EntityLogicMethodDescriptor, 2> k_methods{
-			nox::MakeEntityLogicMethodDescriptor<
+		static constexpr std::array<nox::legacy::EntityLogicMethodDescriptor, 2> k_methods{
+			nox::legacy::MakeEntityLogicMethodDescriptor<
 				&nox::test::updater_graph::TwoMethodLogic::MethodA, nox::SystemPhaseType::Update>("MethodA"),
-			nox::MakeEntityLogicMethodDescriptor<
+			nox::legacy::MakeEntityLogicMethodDescriptor<
 				&nox::test::updater_graph::TwoMethodLogic::MethodB, nox::SystemPhaseType::Update>("MethodB"),
 		};
 
-		[[nodiscard]] static constexpr std::span<const nox::EntityLogicMethodDescriptor> GetMethods()noexcept
+		[[nodiscard]] static constexpr std::span<const nox::legacy::EntityLogicMethodDescriptor> GetMethods()noexcept
 		{
-			return std::span<const nox::EntityLogicMethodDescriptor>(k_methods.data(), k_methods.size());
+			return std::span<const nox::legacy::EntityLogicMethodDescriptor>(k_methods.data(), k_methods.size());
 		}
 	};
 
 	template<>
 	struct EntityLogicMethodTable<nox::test::updater_graph::OtherLogic> final
 	{
-		static constexpr std::array<nox::EntityLogicMethodDescriptor, 1> k_methods{
-			nox::MakeEntityLogicMethodDescriptor<
+		static constexpr std::array<nox::legacy::EntityLogicMethodDescriptor, 1> k_methods{
+			nox::legacy::MakeEntityLogicMethodDescriptor<
 				&nox::test::updater_graph::OtherLogic::MethodC, nox::SystemPhaseType::Update>("MethodC"),
 		};
 
-		[[nodiscard]] static constexpr std::span<const nox::EntityLogicMethodDescriptor> GetMethods()noexcept
+		[[nodiscard]] static constexpr std::span<const nox::legacy::EntityLogicMethodDescriptor> GetMethods()noexcept
 		{
-			return std::span<const nox::EntityLogicMethodDescriptor>(k_methods.data(), k_methods.size());
+			return std::span<const nox::legacy::EntityLogicMethodDescriptor>(k_methods.data(), k_methods.size());
 		}
 	};
 }
@@ -197,21 +197,21 @@ namespace
 	using namespace nox::test::updater_graph;
 
 	/// @brief ComponentData のマスクだけを持つアクセス宣言を作る。
-	[[nodiscard]] nox::UpdaterNodeAccess MakeAccess(
+	[[nodiscard]] nox::legacy::UpdaterNodeAccess MakeAccess(
 		const nox::ComponentMask& read_write_mask,
 		const nox::ComponentMask& write_mask)noexcept
 	{
-		nox::UpdaterNodeAccess access{};
+		nox::legacy::UpdaterNodeAccess access{};
 		access.read_write_mask = read_write_mask;
 		access.write_mask = write_mask;
 		return access;
 	}
 
 	/// @brief Service だけを持つアクセス宣言を作る。
-	[[nodiscard]] nox::UpdaterNodeAccess MakeServiceAccess(
-		const std::span<const nox::ServiceAccess> service_accesses)noexcept
+	[[nodiscard]] nox::legacy::UpdaterNodeAccess MakeServiceAccess(
+		const std::span<const nox::legacy::ServiceAccess> service_accesses)noexcept
 	{
-		nox::UpdaterNodeAccess access{};
+		nox::legacy::UpdaterNodeAccess access{};
 		access.service_accesses = service_accesses;
 		return access;
 	}
@@ -234,12 +234,12 @@ namespace
 
 	/// @brief グラフのノードを名前で引く。EntitySystem は型名、EntityLogic は「型名::メソッド名」。
 	[[nodiscard]] nox::uint32 FindLayerIndexByName(
-		const std::span<const nox::UpdaterNode> nodes,
+		const std::span<const nox::legacy::UpdaterNode> nodes,
 		const std::string_view name)
 	{
-		for (const nox::UpdaterNode& node : nodes)
+		for (const nox::legacy::UpdaterNode& node : nodes)
 		{
-			if (node.kind == nox::UpdaterNodeKind::EntitySystem)
+			if (node.kind == nox::legacy::UpdaterNodeKind::EntitySystem)
 			{
 				if (MatchesUnqualifiedName(node.system->GetDescriptor().name, name))
 				{
@@ -266,33 +266,33 @@ namespace
 TEST(UpdaterGraphConflict, WriteWriteOnSameComponentConflicts)
 {
 	const nox::ComponentMask mask_a = nox::MakeComponentMask<LayerA>();
-	const nox::UpdaterNodeAccess left = MakeAccess(mask_a, mask_a);
-	const nox::UpdaterNodeAccess right = MakeAccess(mask_a, mask_a);
+	const nox::legacy::UpdaterNodeAccess left = MakeAccess(mask_a, mask_a);
+	const nox::legacy::UpdaterNodeAccess right = MakeAccess(mask_a, mask_a);
 
-	EXPECT_TRUE(nox::ConflictsUpdaterNodeAccess(left, right));
-	EXPECT_TRUE(nox::ConflictsUpdaterNodeAccess(right, left));
+	EXPECT_TRUE(nox::legacy::ConflictsUpdaterNodeAccess(left, right));
+	EXPECT_TRUE(nox::legacy::ConflictsUpdaterNodeAccess(right, left));
 }
 
 ///	@brief	write と read が同じ ComponentData で当たれば衝突する (両向き)。
 TEST(UpdaterGraphConflict, WriteReadOnSameComponentConflicts)
 {
 	const nox::ComponentMask mask_a = nox::MakeComponentMask<LayerA>();
-	const nox::UpdaterNodeAccess writer = MakeAccess(mask_a, mask_a);
-	const nox::UpdaterNodeAccess reader = MakeAccess(mask_a, nox::ComponentMask{});
+	const nox::legacy::UpdaterNodeAccess writer = MakeAccess(mask_a, mask_a);
+	const nox::legacy::UpdaterNodeAccess reader = MakeAccess(mask_a, nox::ComponentMask{});
 
-	EXPECT_TRUE(nox::ConflictsUpdaterNodeAccess(writer, reader));
-	EXPECT_TRUE(nox::ConflictsUpdaterNodeAccess(reader, writer));
+	EXPECT_TRUE(nox::legacy::ConflictsUpdaterNodeAccess(writer, reader));
+	EXPECT_TRUE(nox::legacy::ConflictsUpdaterNodeAccess(reader, writer));
 }
 
 ///	@brief	read 同士は衝突しない。ここが並列度の源。
 TEST(UpdaterGraphConflict, ReadReadDoesNotConflict)
 {
 	const nox::ComponentMask mask_a = nox::MakeComponentMask<LayerA>();
-	const nox::UpdaterNodeAccess left = MakeAccess(mask_a, nox::ComponentMask{});
-	const nox::UpdaterNodeAccess right = MakeAccess(mask_a, nox::ComponentMask{});
+	const nox::legacy::UpdaterNodeAccess left = MakeAccess(mask_a, nox::ComponentMask{});
+	const nox::legacy::UpdaterNodeAccess right = MakeAccess(mask_a, nox::ComponentMask{});
 
-	EXPECT_FALSE(nox::ConflictsUpdaterNodeAccess(left, right));
-	EXPECT_FALSE(nox::ConflictsUpdaterNodeAccess(right, left));
+	EXPECT_FALSE(nox::legacy::ConflictsUpdaterNodeAccess(left, right));
+	EXPECT_FALSE(nox::legacy::ConflictsUpdaterNodeAccess(right, left));
 }
 
 ///	@brief	触る ComponentData が全く重ならなければ衝突しない。
@@ -300,11 +300,11 @@ TEST(UpdaterGraphConflict, DisjointComponentsDoNotConflict)
 {
 	const nox::ComponentMask mask_a = nox::MakeComponentMask<LayerA>();
 	const nox::ComponentMask mask_b = nox::MakeComponentMask<LayerB>();
-	const nox::UpdaterNodeAccess left = MakeAccess(mask_a, mask_a);
-	const nox::UpdaterNodeAccess right = MakeAccess(mask_b, mask_b);
+	const nox::legacy::UpdaterNodeAccess left = MakeAccess(mask_a, mask_a);
+	const nox::legacy::UpdaterNodeAccess right = MakeAccess(mask_b, mask_b);
 
-	EXPECT_FALSE(nox::ConflictsUpdaterNodeAccess(left, right));
-	EXPECT_FALSE(nox::ConflictsUpdaterNodeAccess(right, left));
+	EXPECT_FALSE(nox::legacy::ConflictsUpdaterNodeAccess(left, right));
+	EXPECT_FALSE(nox::legacy::ConflictsUpdaterNodeAccess(right, left));
 }
 
 ///	@brief	Service でも ComponentData と同じ規則が成立する。
@@ -313,48 +313,48 @@ TEST(UpdaterGraphConflict, ServiceAccessFollowsTheSameRule)
 	const nox::reflection::Type& type_x = nox::reflection::Typeof<LayerServiceX>();
 	const nox::reflection::Type& type_y = nox::reflection::Typeof<LayerServiceY>();
 
-	const std::array<nox::ServiceAccess, 1> write_x{ nox::ServiceAccess{ .type = &type_x, .write = true } };
-	const std::array<nox::ServiceAccess, 1> read_x{ nox::ServiceAccess{ .type = &type_x, .write = false } };
-	const std::array<nox::ServiceAccess, 1> read_x2{ nox::ServiceAccess{ .type = &type_x, .write = false } };
-	const std::array<nox::ServiceAccess, 1> write_y{ nox::ServiceAccess{ .type = &type_y, .write = true } };
+	const std::array<nox::legacy::ServiceAccess, 1> write_x{ nox::legacy::ServiceAccess{ .type = &type_x, .write = true } };
+	const std::array<nox::legacy::ServiceAccess, 1> read_x{ nox::legacy::ServiceAccess{ .type = &type_x, .write = false } };
+	const std::array<nox::legacy::ServiceAccess, 1> read_x2{ nox::legacy::ServiceAccess{ .type = &type_x, .write = false } };
+	const std::array<nox::legacy::ServiceAccess, 1> write_y{ nox::legacy::ServiceAccess{ .type = &type_y, .write = true } };
 
 	//	write 同士
-	EXPECT_TRUE(nox::ConflictsUpdaterNodeAccess(MakeServiceAccess(write_x), MakeServiceAccess(write_x)));
+	EXPECT_TRUE(nox::legacy::ConflictsUpdaterNodeAccess(MakeServiceAccess(write_x), MakeServiceAccess(write_x)));
 	//	write と read (両向き)
-	EXPECT_TRUE(nox::ConflictsUpdaterNodeAccess(MakeServiceAccess(write_x), MakeServiceAccess(read_x)));
-	EXPECT_TRUE(nox::ConflictsUpdaterNodeAccess(MakeServiceAccess(read_x), MakeServiceAccess(write_x)));
+	EXPECT_TRUE(nox::legacy::ConflictsUpdaterNodeAccess(MakeServiceAccess(write_x), MakeServiceAccess(read_x)));
+	EXPECT_TRUE(nox::legacy::ConflictsUpdaterNodeAccess(MakeServiceAccess(read_x), MakeServiceAccess(write_x)));
 	//	read 同士は衝突しない
-	EXPECT_FALSE(nox::ConflictsUpdaterNodeAccess(MakeServiceAccess(read_x), MakeServiceAccess(read_x2)));
+	EXPECT_FALSE(nox::legacy::ConflictsUpdaterNodeAccess(MakeServiceAccess(read_x), MakeServiceAccess(read_x2)));
 	//	別 Service なら write 同士でも衝突しない
-	EXPECT_FALSE(nox::ConflictsUpdaterNodeAccess(MakeServiceAccess(write_x), MakeServiceAccess(write_y)));
+	EXPECT_FALSE(nox::legacy::ConflictsUpdaterNodeAccess(MakeServiceAccess(write_x), MakeServiceAccess(write_y)));
 }
 
 ///	@brief	インスタンス状態を共有するノード同士は、宣言が全く重ならなくても衝突する。
-///	@details	updater_graph.cpp が最初に見る規則。EntityLogic のメソッドは
+///	@details	updater_graph_legacy.cpp が最初に見る規則。EntityLogic のメソッドは
 ///				同一インスタンスのメンバを共有するので、依存解析だけでは安全にならない。
 TEST(UpdaterGraphConflict, SharedInstanceStateAlwaysConflicts)
 {
 	const nox::ComponentMask mask_a = nox::MakeComponentMask<LayerA>();
 	const nox::ComponentMask mask_b = nox::MakeComponentMask<LayerB>();
 
-	nox::UpdaterNodeAccess left = MakeAccess(mask_a, mask_a);
-	nox::UpdaterNodeAccess right = MakeAccess(mask_b, mask_b);
+	nox::legacy::UpdaterNodeAccess left = MakeAccess(mask_a, mask_a);
+	nox::legacy::UpdaterNodeAccess right = MakeAccess(mask_b, mask_b);
 
 	//	group が無ければ衝突しない (対照)。
-	ASSERT_FALSE(nox::ConflictsUpdaterNodeAccess(left, right));
+	ASSERT_FALSE(nox::legacy::ConflictsUpdaterNodeAccess(left, right));
 
 	left.group_index = 7u;
 	right.group_index = 7u;
-	EXPECT_TRUE(nox::ConflictsUpdaterNodeAccess(left, right));
+	EXPECT_TRUE(nox::legacy::ConflictsUpdaterNodeAccess(left, right));
 
 	//	group が違えば元どおり衝突しない。
 	right.group_index = 8u;
-	EXPECT_FALSE(nox::ConflictsUpdaterNodeAccess(left, right));
+	EXPECT_FALSE(nox::legacy::ConflictsUpdaterNodeAccess(left, right));
 
 	//	無効値同士は「共有相手がいない」であって「同じグループ」ではない。
-	left.group_index = nox::k_invalid_updater_group_index;
-	right.group_index = nox::k_invalid_updater_group_index;
-	EXPECT_FALSE(nox::ConflictsUpdaterNodeAccess(left, right));
+	left.group_index = nox::legacy::k_invalid_updater_group_index;
+	right.group_index = nox::legacy::k_invalid_updater_group_index;
+	EXPECT_FALSE(nox::legacy::ConflictsUpdaterNodeAccess(left, right));
 }
 
 //	=====================================================================================
@@ -371,14 +371,14 @@ TEST(UpdaterGraphLayering, IndependentNodesShareOneLayer)
 	const nox::ComponentMask mask_b = nox::MakeComponentMask<LayerB>();
 	const nox::ComponentMask mask_c = nox::MakeComponentMask<LayerC>();
 
-	const std::array<nox::UpdaterNodeAccess, 3> accesses{
+	const std::array<nox::legacy::UpdaterNodeAccess, 3> accesses{
 		MakeAccess(mask_a, mask_a),
 		MakeAccess(mask_b, mask_b),
 		MakeAccess(mask_c, mask_c),
 	};
 
 	std::array<nox::uint32, 3> layers{};
-	const nox::uint32 layer_count = nox::BuildUpdaterLayerIndices(accesses, layers);
+	const nox::uint32 layer_count = nox::legacy::BuildUpdaterLayerIndices(accesses, layers);
 
 	EXPECT_EQ(layer_count, 1u);
 	EXPECT_EQ(layers[0], 0u);
@@ -390,14 +390,14 @@ TEST(UpdaterGraphLayering, IndependentNodesShareOneLayer)
 TEST(UpdaterGraphLayering, WritersOnSameComponentSerializeInRegistrationOrder)
 {
 	const nox::ComponentMask mask_a = nox::MakeComponentMask<LayerA>();
-	const std::array<nox::UpdaterNodeAccess, 3> accesses{
+	const std::array<nox::legacy::UpdaterNodeAccess, 3> accesses{
 		MakeAccess(mask_a, mask_a),
 		MakeAccess(mask_a, mask_a),
 		MakeAccess(mask_a, mask_a),
 	};
 
 	std::array<nox::uint32, 3> layers{};
-	const nox::uint32 layer_count = nox::BuildUpdaterLayerIndices(accesses, layers);
+	const nox::uint32 layer_count = nox::legacy::BuildUpdaterLayerIndices(accesses, layers);
 
 	EXPECT_EQ(layer_count, 3u);
 	EXPECT_EQ(layers[0], 0u);
@@ -412,14 +412,14 @@ TEST(UpdaterGraphLayering, ReadersAfterAWriterShareTheNextLayer)
 {
 	const nox::ComponentMask mask_a = nox::MakeComponentMask<LayerA>();
 
-	const std::array<nox::UpdaterNodeAccess, 3> accesses{
+	const std::array<nox::legacy::UpdaterNodeAccess, 3> accesses{
 		MakeAccess(mask_a, mask_a),                  //	n0: write A
 		MakeAccess(mask_a, nox::ComponentMask{}),    //	n1: read  A
 		MakeAccess(mask_a, nox::ComponentMask{}),    //	n2: read  A
 	};
 
 	std::array<nox::uint32, 3> layers{};
-	const nox::uint32 layer_count = nox::BuildUpdaterLayerIndices(accesses, layers);
+	const nox::uint32 layer_count = nox::legacy::BuildUpdaterLayerIndices(accesses, layers);
 
 	EXPECT_EQ(layer_count, 2u);
 	EXPECT_EQ(layers[0], 0u);
@@ -435,7 +435,7 @@ TEST(UpdaterGraphLayering, LayerIsLongestPathFromConflictingPredecessors)
 	nox::ComponentMask mask_ab = mask_a;
 	mask_ab.Merge(mask_b);
 
-	const std::array<nox::UpdaterNodeAccess, 4> accesses{
+	const std::array<nox::legacy::UpdaterNodeAccess, 4> accesses{
 		MakeAccess(mask_a, mask_a),     //	n0: write A          -> layer 0
 		MakeAccess(mask_a, mask_a),     //	n1: write A (n0と衝突) -> layer 1
 		MakeAccess(mask_b, mask_b),     //	n2: write B (独立)    -> layer 0
@@ -443,7 +443,7 @@ TEST(UpdaterGraphLayering, LayerIsLongestPathFromConflictingPredecessors)
 	};
 
 	std::array<nox::uint32, 4> layers{};
-	const nox::uint32 layer_count = nox::BuildUpdaterLayerIndices(accesses, layers);
+	const nox::uint32 layer_count = nox::legacy::BuildUpdaterLayerIndices(accesses, layers);
 
 	EXPECT_EQ(layer_count, 3u);
 	EXPECT_EQ(layers[0], 0u);
@@ -456,22 +456,22 @@ TEST(UpdaterGraphLayering, LayerIsLongestPathFromConflictingPredecessors)
 TEST(UpdaterGraphLayering, EmptyInputProducesNoLayer)
 {
 	std::array<nox::uint32, 1> layers{};
-	EXPECT_EQ(nox::BuildUpdaterLayerIndices(std::span<const nox::UpdaterNodeAccess>(), layers), 0u);
+	EXPECT_EQ(nox::legacy::BuildUpdaterLayerIndices(std::span<const nox::legacy::UpdaterNodeAccess>(), layers), 0u);
 }
 
 //	=====================================================================================
-//	3. 本番の構築経路 (nox::UpdaterGraph::Rebuild)
+//	3. 本番の構築経路 (nox::legacy::UpdaterGraph::Rebuild)
 //	=====================================================================================
 
 namespace
 {
-	//	nox::EntityLogicStorage は記述子を参照で保持するので、実体に静的記憶域が要る。
+	//	nox::legacy::EntityLogicStorage は記述子を参照で保持するので、実体に静的記憶域が要る。
 	//	生成コードも型ごとに名前付きの constexpr オブジェクトを1つ置いている
 	//	(entity_type_*.g.cpp の k_entity_logic_type_descriptor_*)。同じ形にする。
-	constexpr nox::EntityLogicTypeDescriptor k_two_method_logic_descriptor =
-		nox::MakeEntityLogicTypeDescriptor<TwoMethodLogic>();
-	constexpr nox::EntityLogicTypeDescriptor k_other_logic_descriptor =
-		nox::MakeEntityLogicTypeDescriptor<OtherLogic>();
+	constexpr nox::legacy::EntityLogicTypeDescriptor k_two_method_logic_descriptor =
+		nox::legacy::MakeEntityLogicTypeDescriptor<TwoMethodLogic>();
+	constexpr nox::legacy::EntityLogicTypeDescriptor k_other_logic_descriptor =
+		nox::legacy::MakeEntityLogicTypeDescriptor<OtherLogic>();
 
 	/// @brief 上で定義した System / EntityLogic を実際に組み上げてグラフを作る一式。
 	/// @details World は介さない。Rebuild は span を受け取るだけなので、
@@ -495,10 +495,10 @@ namespace
 
 			graph_.Rebuild(
 				std::span<nox::legacy::EntitySystemBase* const>(systems_.data(), systems_.size()),
-				std::span<nox::EntityLogicStorage* const>(storages_.data(), storages_.size()));
+				std::span<nox::legacy::EntityLogicStorage* const>(storages_.data(), storages_.size()));
 		}
 
-		[[nodiscard]] const nox::UpdaterGraph& GetGraph()const noexcept { return graph_; }
+		[[nodiscard]] const nox::legacy::UpdaterGraph& GetGraph()const noexcept { return graph_; }
 
 	private:
 		WriteASystem write_a_;
@@ -509,12 +509,12 @@ namespace
 		ServiceReadSystem service_read_;
 		OtherServiceReadSystem other_service_read_;
 
-		nox::EntityLogicStorage two_method_storage_{ k_two_method_logic_descriptor };
-		nox::EntityLogicStorage other_logic_storage_{ k_other_logic_descriptor };
+		nox::legacy::EntityLogicStorage two_method_storage_{ k_two_method_logic_descriptor };
+		nox::legacy::EntityLogicStorage other_logic_storage_{ k_other_logic_descriptor };
 
 		std::vector<nox::legacy::EntitySystemBase*> systems_;
-		std::vector<nox::EntityLogicStorage*> storages_;
-		nox::UpdaterGraph graph_;
+		std::vector<nox::legacy::EntityLogicStorage*> storages_;
+		nox::legacy::UpdaterGraph graph_;
 	};
 }
 
@@ -524,7 +524,7 @@ namespace
 TEST(UpdaterGraphRebuild, SomeLayerHoldsMoreThanOneNode)
 {
 	const GraphFixture fixture;
-	const nox::UpdaterGraph& graph = fixture.GetGraph();
+	const nox::legacy::UpdaterGraph& graph = fixture.GetGraph();
 
 	const nox::uint32 layer_count = graph.GetLayerCount(nox::SystemPhaseType::Update);
 	ASSERT_GT(layer_count, 0u);
@@ -532,7 +532,7 @@ TEST(UpdaterGraphRebuild, SomeLayerHoldsMoreThanOneNode)
 	nox::uint32 max_nodes_in_layer = 0u;
 	for (nox::uint32 layer_index = 0u; layer_index < layer_count; ++layer_index)
 	{
-		const std::span<const nox::UpdaterNode> layer_nodes =
+		const std::span<const nox::legacy::UpdaterNode> layer_nodes =
 			graph.GetLayerNodes(nox::SystemPhaseType::Update, layer_index);
 		max_nodes_in_layer = std::max(max_nodes_in_layer, static_cast<nox::uint32>(layer_nodes.size()));
 	}
@@ -544,9 +544,9 @@ TEST(UpdaterGraphRebuild, SomeLayerHoldsMoreThanOneNode)
 TEST(UpdaterGraphRebuild, LayerPartitionCoversEveryNodeExactlyOnce)
 {
 	const GraphFixture fixture;
-	const nox::UpdaterGraph& graph = fixture.GetGraph();
+	const nox::legacy::UpdaterGraph& graph = fixture.GetGraph();
 
-	const std::span<const nox::UpdaterNode> nodes = graph.GetNodes(nox::SystemPhaseType::Update);
+	const std::span<const nox::legacy::UpdaterNode> nodes = graph.GetNodes(nox::SystemPhaseType::Update);
 	//	EntitySystem 7本 + TwoMethodLogic 2メソッド + OtherLogic 1メソッド。
 	ASSERT_EQ(nodes.size(), 10u);
 
@@ -554,9 +554,9 @@ TEST(UpdaterGraphRebuild, LayerPartitionCoversEveryNodeExactlyOnce)
 	size_t total = 0u;
 	for (nox::uint32 layer_index = 0u; layer_index < layer_count; ++layer_index)
 	{
-		const std::span<const nox::UpdaterNode> layer_nodes =
+		const std::span<const nox::legacy::UpdaterNode> layer_nodes =
 			graph.GetLayerNodes(nox::SystemPhaseType::Update, layer_index);
-		for (const nox::UpdaterNode& node : layer_nodes)
+		for (const nox::legacy::UpdaterNode& node : layer_nodes)
 		{
 			EXPECT_EQ(node.layer_index, layer_index);
 		}
@@ -569,7 +569,7 @@ TEST(UpdaterGraphRebuild, LayerPartitionCoversEveryNodeExactlyOnce)
 TEST(UpdaterGraphRebuild, IndependentSystemsShareALayer)
 {
 	const GraphFixture fixture;
-	const std::span<const nox::UpdaterNode> nodes =
+	const std::span<const nox::legacy::UpdaterNode> nodes =
 		fixture.GetGraph().GetNodes(nox::SystemPhaseType::Update);
 
 	const nox::uint32 write_a = FindLayerIndexByName(nodes, "WriteASystem");
@@ -585,7 +585,7 @@ TEST(UpdaterGraphRebuild, IndependentSystemsShareALayer)
 TEST(UpdaterGraphRebuild, ReadersShareALayerBehindTheWriter)
 {
 	const GraphFixture fixture;
-	const std::span<const nox::UpdaterNode> nodes =
+	const std::span<const nox::legacy::UpdaterNode> nodes =
 		fixture.GetGraph().GetNodes(nox::SystemPhaseType::Update);
 
 	const nox::uint32 write_a = FindLayerIndexByName(nodes, "WriteASystem");
@@ -607,7 +607,7 @@ TEST(UpdaterGraphRebuild, ReadersShareALayerBehindTheWriter)
 TEST(UpdaterGraphRebuild, ServiceWriteSeparatesLayers)
 {
 	const GraphFixture fixture;
-	const std::span<const nox::UpdaterNode> nodes =
+	const std::span<const nox::legacy::UpdaterNode> nodes =
 		fixture.GetGraph().GetNodes(nox::SystemPhaseType::Update);
 
 	const nox::uint32 service_write = FindLayerIndexByName(nodes, "ServiceWriteSystem");
@@ -632,7 +632,7 @@ TEST(UpdaterGraphRebuild, ServiceWriteSeparatesLayers)
 TEST(UpdaterGraphRebuild, MethodsOfTheSameEntityLogicAreSerialized)
 {
 	const GraphFixture fixture;
-	const std::span<const nox::UpdaterNode> nodes =
+	const std::span<const nox::legacy::UpdaterNode> nodes =
 		fixture.GetGraph().GetNodes(nox::SystemPhaseType::Update);
 
 	const nox::uint32 method_a = FindLayerIndexByName(nodes, "MethodA");
@@ -647,9 +647,9 @@ TEST(UpdaterGraphRebuild, MethodsOfTheSameEntityLogicAreSerialized)
 	//	(重なっていたら、このテストは共有規則ではなく依存解析を見ていることになる)。
 	nox::ComponentMask rw_a{};
 	nox::ComponentMask rw_b{};
-	for (const nox::UpdaterNode& node : nodes)
+	for (const nox::legacy::UpdaterNode& node : nodes)
 	{
-		if (node.kind != nox::UpdaterNodeKind::EntityLogicMethod) { continue; }
+		if (node.kind != nox::legacy::UpdaterNodeKind::EntityLogicMethod) { continue; }
 		if (node.method->name == "MethodA") { rw_a = node.access.read_write_mask; }
 		if (node.method->name == "MethodB") { rw_b = node.access.read_write_mask; }
 	}
@@ -660,7 +660,7 @@ TEST(UpdaterGraphRebuild, MethodsOfTheSameEntityLogicAreSerialized)
 TEST(UpdaterGraphRebuild, MethodsOfDifferentEntityLogicsAreIndependent)
 {
 	const GraphFixture fixture;
-	const std::span<const nox::UpdaterNode> nodes =
+	const std::span<const nox::legacy::UpdaterNode> nodes =
 		fixture.GetGraph().GetNodes(nox::SystemPhaseType::Update);
 
 	const nox::uint32 method_a = FindLayerIndexByName(nodes, "MethodA");
@@ -673,16 +673,16 @@ TEST(UpdaterGraphRebuild, MethodsOfDifferentEntityLogicsAreIndependent)
 	//	LayerB の writer とだけ直列化される。MethodA とは無関係でいられる。
 	nox::ComponentMask rw_a{};
 	nox::ComponentMask rw_c{};
-	for (const nox::UpdaterNode& node : nodes)
+	for (const nox::legacy::UpdaterNode& node : nodes)
 	{
-		if (node.kind != nox::UpdaterNodeKind::EntityLogicMethod) { continue; }
+		if (node.kind != nox::legacy::UpdaterNodeKind::EntityLogicMethod) { continue; }
 		if (node.method->name == "MethodA") { rw_a = node.access.read_write_mask; }
 		if (node.method->name == "MethodC") { rw_c = node.access.read_write_mask; }
 	}
 	ASSERT_FALSE(rw_a.Intersects(rw_c));
-	EXPECT_FALSE(nox::ConflictsUpdaterNodeAccess(
-		nox::UpdaterNodeAccess{ .read_write_mask = rw_a, .write_mask = rw_a, .service_accesses = {}, .group_index = 0u },
-		nox::UpdaterNodeAccess{ .read_write_mask = rw_c, .write_mask = rw_c, .service_accesses = {}, .group_index = 1u }));
+	EXPECT_FALSE(nox::legacy::ConflictsUpdaterNodeAccess(
+		nox::legacy::UpdaterNodeAccess{ .read_write_mask = rw_a, .write_mask = rw_a, .service_accesses = {}, .group_index = 0u },
+		nox::legacy::UpdaterNodeAccess{ .read_write_mask = rw_c, .write_mask = rw_c, .service_accesses = {}, .group_index = 1u }));
 }
 
 //	=====================================================================================
@@ -696,20 +696,20 @@ TEST(UpdaterGraphRebuild, MethodsOfDifferentEntityLogicsAreIndependent)
 TEST(UpdaterGraphInvariant, NoTwoNodesInTheSameLayerConflict)
 {
 	const GraphFixture fixture;
-	const nox::UpdaterGraph& graph = fixture.GetGraph();
+	const nox::legacy::UpdaterGraph& graph = fixture.GetGraph();
 
 	const nox::uint32 layer_count = graph.GetLayerCount(nox::SystemPhaseType::Update);
 	ASSERT_GT(layer_count, 0u);
 
 	for (nox::uint32 layer_index = 0u; layer_index < layer_count; ++layer_index)
 	{
-		const std::span<const nox::UpdaterNode> layer_nodes =
+		const std::span<const nox::legacy::UpdaterNode> layer_nodes =
 			graph.GetLayerNodes(nox::SystemPhaseType::Update, layer_index);
 		for (size_t i = 0u; i < layer_nodes.size(); ++i)
 		{
 			for (size_t j = i + 1u; j < layer_nodes.size(); ++j)
 			{
-				EXPECT_FALSE(nox::ConflictsUpdaterNodeAccess(layer_nodes[i].access, layer_nodes[j].access))
+				EXPECT_FALSE(nox::legacy::ConflictsUpdaterNodeAccess(layer_nodes[i].access, layer_nodes[j].access))
 					<< "layer " << layer_index << " のノード " << layer_nodes[i].order_index
 					<< " と " << layer_nodes[j].order_index << " が衝突している";
 			}
@@ -723,17 +723,17 @@ TEST(UpdaterGraphInvariant, NoTwoNodesInTheSameLayerConflict)
 TEST(UpdaterGraphInvariant, ConflictingPairsAreStrictlyOrderedByLayer)
 {
 	const GraphFixture fixture;
-	const std::span<const nox::UpdaterNode> nodes =
+	const std::span<const nox::legacy::UpdaterNode> nodes =
 		fixture.GetGraph().GetNodes(nox::SystemPhaseType::Update);
 	ASSERT_FALSE(nodes.empty());
 
 	nox::uint32 conflict_pair_count = 0u;
-	for (const nox::UpdaterNode& from : nodes)
+	for (const nox::legacy::UpdaterNode& from : nodes)
 	{
-		for (const nox::UpdaterNode& to : nodes)
+		for (const nox::legacy::UpdaterNode& to : nodes)
 		{
 			if (from.order_index >= to.order_index) { continue; }
-			if (nox::ConflictsUpdaterNodeAccess(from.access, to.access) == false) { continue; }
+			if (nox::legacy::ConflictsUpdaterNodeAccess(from.access, to.access) == false) { continue; }
 
 			++conflict_pair_count;
 			EXPECT_LT(from.layer_index, to.layer_index)
@@ -751,7 +751,7 @@ TEST(UpdaterGraphInvariant, ConflictingPairsAreStrictlyOrderedByLayer)
 TEST(UpdaterGraphInvariant, EveryLayerIsNonEmpty)
 {
 	const GraphFixture fixture;
-	const nox::UpdaterGraph& graph = fixture.GetGraph();
+	const nox::legacy::UpdaterGraph& graph = fixture.GetGraph();
 
 	const nox::uint32 layer_count = graph.GetLayerCount(nox::SystemPhaseType::Update);
 	for (nox::uint32 layer_index = 0u; layer_index < layer_count; ++layer_index)

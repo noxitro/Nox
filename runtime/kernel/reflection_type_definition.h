@@ -5,6 +5,7 @@
 ///	@brief	type_definition
 #pragma once
 
+#include	"basic_type.h"
 #include	"advanced_type.h"
 #include	"reflection_attribute.h"
 

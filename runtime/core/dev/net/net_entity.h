@@ -7,7 +7,7 @@
 #include "dev_net_definition.h"
 #include "../../object.h"
 
-namespace nox
+namespace nox::legacy
 {
 	class World;
 }
@@ -46,7 +46,7 @@ namespace nox::dev::net
 
 	protected:
 		virtual void OnSent() {}
-		virtual void OnReceive([[maybe_unused]] nox::World& world) {}
+		virtual void OnReceive([[maybe_unused]] nox::legacy::World& world) {}
 
 	protected:
 		static inline nox::dev::net::port_t base_port_ = 0;

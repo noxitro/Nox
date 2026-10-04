@@ -12,9 +12,13 @@
 #include	"socket_stream_writer.h"
 #include	"socket_stream_reader.h"
 
-namespace nox
+namespace nox::legacy
 {
 	class World;
+}
+
+namespace nox
+{
 	class Object;
 }
 
@@ -60,7 +64,7 @@ namespace nox::dev::editor_remote
 				owner_.OnServerDisconnected(context);
 			}
 
-			void OnServerReceive(nox::World& world) override
+			void OnServerReceive(nox::legacy::World& world) override
 			{
 				owner_.OnServerReceive(world);
 			}
@@ -92,15 +96,15 @@ namespace nox::dev::editor_remote
 		std::span<const nox::SystemBase::PhaseRegister> GetPhaseRegisterList()const noexcept override;
 	private:
 		/// @brief main threadから呼び出される更新処理
-		void	Start(nox::World& world);
+		void	Start(nox::legacy::World& world);
 		void	Shutdown();
-		void	Update(nox::World& world);
-		void	Terminate(nox::World& world);
+		void	Update(nox::legacy::World& world);
+		void	Terminate(nox::legacy::World& world);
 
 		void	OnServerConnected(const nox::dev::net::ConnectionContext& context);
 		void	OnServerDisconnected([[maybe_unused]] const nox::dev::net::ConnectionContext& context);
-		void	OnServerReceive(nox::World& world);
-		void UpdateReceive(nox::World& world);
+		void	OnServerReceive(nox::legacy::World& world);
+		void UpdateReceive(nox::legacy::World& world);
 	public:
 		static constexpr SystemPhaseInit k_phase_init{
 			&EditorRemoteServer::Start,

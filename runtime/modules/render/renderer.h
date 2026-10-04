@@ -16,9 +16,9 @@ namespace nox::render
 		Renderer();
 		~Renderer()override;
 
-		void Init(nox::World& world);
-		void Update(nox::World& world);
-		void Terminate(nox::World& world);
+		void Init(nox::legacy::World& world);
+		void Update(nox::legacy::World& world);
+		void Terminate(nox::legacy::World& world);
 
 	public:
 		static constexpr nox::SystemBase::SystemPhaseInit kPhaseInit{ &Renderer::Init, u8"Renderer::Init" };

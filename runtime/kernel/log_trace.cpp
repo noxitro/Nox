@@ -11,6 +11,7 @@
 #include	"string_format.h"
 #include	"thread.h"
 #include	"ascii.h"
+#include	<iostream>
 
 #if NOX_WINDOWS
 #include	"win64_api.h"

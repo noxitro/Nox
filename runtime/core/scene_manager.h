@@ -21,9 +21,9 @@ namespace nox
 		inline const nox::SceneView& GetMainSceneView()const noexcept { return *main_scene_view_; }
 
 	private:
-		void	Initialize(nox::World& world);
-		void	Update(nox::World& world);
-		void	Finalize(nox::World& world);
+		void	Initialize(nox::legacy::World& world);
+		void	Update(nox::legacy::World& world);
+		void	Finalize(nox::legacy::World& world);
 
 		std::span<const nox::SystemBase::PhaseRegister> GetPhaseRegisterList()const noexcept override;
 	public:

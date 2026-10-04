@@ -12,7 +12,7 @@
 #include	"editor_remote_query.h"
 #include	"net/dev_net_api.h"
 #include	"net/dev_net_log_id.h"
-#include	"../world.h"
+#include	"../world_legacy.h"
 #include	"../log_service.h"
 #include	"../object.h"
 #include	"remote/remote_system.g.h"
@@ -87,7 +87,7 @@ void	nox::dev::editor_remote::EditorRemoteServer::SendBuffer(std::span<const nox
 	}
 }
 
-void	nox::dev::editor_remote::EditorRemoteServer::Start(nox::World& world)
+void	nox::dev::editor_remote::EditorRemoteServer::Start(nox::legacy::World& world)
 {
     const bool started = server_.Startup(nox::dev::net::Server::InitializeContext{
 		.max_connection = 1,
@@ -116,12 +116,12 @@ void nox::dev::editor_remote::EditorRemoteServer::Shutdown()
 	server_.Shutdown();
 }
 
-void nox::dev::editor_remote::EditorRemoteServer::Terminate([[maybe_unused]] nox::World& world)
+void nox::dev::editor_remote::EditorRemoteServer::Terminate([[maybe_unused]] nox::legacy::World& world)
 {
 	Shutdown();
 }
 
-void	nox::dev::editor_remote::EditorRemoteServer::Update(nox::World& world)
+void	nox::dev::editor_remote::EditorRemoteServer::Update(nox::legacy::World& world)
 {
 	if (main_client_.socket != nox::dev::net::k_raw_invalid_socket)
 	{
@@ -129,7 +129,7 @@ void	nox::dev::editor_remote::EditorRemoteServer::Update(nox::World& world)
 	}
 }
 
-void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive(nox::World& world)
+void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive(nox::legacy::World& world)
 {
 	if (reader_.GetReceivedSize() <= 0)
 	{
@@ -220,7 +220,7 @@ void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive(nox::World& worl
 	}
 }
 
-void nox::dev::editor_remote::EditorRemoteServer::OnServerReceive(nox::World& world)
+void nox::dev::editor_remote::EditorRemoteServer::OnServerReceive(nox::legacy::World& world)
 {
 	//	受信バッファ 未初期化でOK
 	std::array<nox::uint8, 2048> receive_buffer;

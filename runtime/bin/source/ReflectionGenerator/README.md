@@ -94,18 +94,18 @@ runtime/reflection_generated/gen/RuntimeTypeDB.<Platform>.<Configuration>.bin
 
 ## EntitySystem / EntityLogic の規則
 
-`Generator/EntityTypeGenerator.cs` が持つ規則。基底が `nox::EntitySystem<` なら System、`nox::EntityLogic<` なら Logic として扱う。エラーが 1 つでも出ると生成器は終了コード 1 を返し、ビルドは失敗する。
+`Generator/EntityTypeGenerator.cs` が持つ規則。基底が `nox::EntitySystem<` なら System、`nox::legacy::EntityLogic<` なら Logic として扱う。エラーが 1 つでも出ると生成器は終了コード 1 を返し、ビルドは失敗する。
 
 ### エラー (ビルドを止める)
 
-- **無名名前空間の型** — 生成コードが型名を綴れないため購読できない。名前付き名前空間へ移すか、`nox::EntityLogicMethodTable` の特殊化を手書きする。
+- **無名名前空間の型** — 生成コードが型名を綴れないため購読できない。名前付き名前空間へ移すか、`nox::legacy::EntityLogicMethodTable` の特殊化を手書きする。
 - **クラステンプレート** — 同じく購読できない。特殊化を手書きする。パーサはクラステンプレートの宣言を `IDeclarationContainer.TemplateRecordList` に載せ、生成器はそこを見て診断する (メンバまでは走査していないので、名前・基底・ソース位置だけを当てにする)。基底が依存型で `BaseSpecifierDecl` を作れないため、`TemplateClassDecl.BaseTypeNameList` に基底の綴りだけを別途持たせている。
-- **`nox::attr::EntityLogicMethod` を EntityLogic 以外のメソッドに付けた** — 属性は EntityLogic 専用。`EntitySystem` の派生型でも、`EntitySystem` でも `EntityLogic` でもない素のクラスでもエラーになる。属性の数え上げは基底に関わらず行い、購読対象かどうかはその後で判定する (黙って無視すると、更新メソッドが呼ばれない理由が分からなくなるため)。
+- **`nox::legacy::attr::EntityLogicMethod` を EntityLogic 以外のメソッドに付けた** — 属性は EntityLogic 専用。`EntitySystem` の派生型でも、`EntitySystem` でも `EntityLogic` でもない素のクラスでもエラーになる。属性の数え上げは基底に関わらず行い、購読対象かどうかはその後で判定する (黙って無視すると、更新メソッドが呼ばれない理由が分からなくなるため)。
 
 ### 警告 (ビルドは通る)
 
-- **`nox::EntityLogic` を継承しているが `nox::attr::EntityLogicMethod` を付けたメソッドが 1 つも無い** — 購読対象が無いだけなので失敗はさせない。その型は購読されず、`entity_type_*.g.cpp` も生成されない。
+- **`nox::legacy::EntityLogic` を継承しているが `nox::legacy::attr::EntityLogicMethod` を付けたメソッドが 1 つも無い** — 購読対象が無いだけなので失敗はさせない。その型は購読されず、`entity_type_*.g.cpp` も生成されない。
 
 ### 検査しないこと
 
-生成器は「型と属性付きメソッドの数え上げ」だけを行う。更新メソッドのアクセス指定 (private でよい)、引数リストの妥当性、デフォルト構築可能性などは C++ 側の `static_assert` で検査する (`runtime/core/entity_logic.h` を参照)。
+生成器は「型と属性付きメソッドの数え上げ」だけを行う。更新メソッドのアクセス指定 (private でよい)、引数リストの妥当性、デフォルト構築可能性などは C++ 側の `static_assert` で検査する (`runtime/core/entity_logic_legacy.h` を参照)。

@@ -290,7 +290,7 @@ void	nox::dev::net::Server::Connection(::fd_set& fds)
 	}
 }
 
-void nox::dev::net::Server::Update(nox::World& world)
+void nox::dev::net::Server::Update(nox::legacy::World& world)
 {
 	if (IsStartup() == false)
 	{

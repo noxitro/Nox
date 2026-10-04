@@ -48,8 +48,8 @@ namespace nox
 		}
 
 	private:
-		void Init(nox::World& world);
-		void Terminate(nox::World& world);
+		void Init(nox::legacy::World& world);
+		void Terminate(nox::legacy::World& world);
 		nox::Asset& CreateAssetImpl(std::u8string_view uri);
 
 		std::span<const nox::SystemBase::PhaseRegister> GetPhaseRegisterList()const noexcept override;
@@ -65,7 +65,7 @@ namespace nox
 			Corrupted,
 		};
 
-		void LoadThread(nox::World& world);
+		void LoadThread(nox::legacy::World& world);
 
 		/// @brief 単一アセットのロード処理（存在チェック・初期化チェック・初期化）
 		/// @param asset 対象アセット

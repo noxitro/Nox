@@ -26,9 +26,9 @@ namespace nox::render::debug
 		std::span<const nox::SystemBase::PhaseRegister> GetPhaseRegisterList()const noexcept override;
 
 	private:
-		void Init(nox::World& world);
-		void UpdateDraw(nox::World& world);
-		void Terminate(nox::World& world);
+		void Init(nox::legacy::World& world);
+		void UpdateDraw(nox::legacy::World& world);
+		void Terminate(nox::legacy::World& world);
 
 	public:
 		static constexpr SystemPhaseInit kPhaseInit{ &DebugDraw::Init, u8"DebugDraw::Initialize" };

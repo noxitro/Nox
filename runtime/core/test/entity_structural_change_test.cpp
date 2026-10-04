@@ -6,15 +6,15 @@
 ///	@details	検証しているのは次の3点。
 ///
 ///				1. 即時系の制約
-///				   nox::World::GetStructuralChangePermission() が、列挙中に
-///				   nox::StructuralChangePermission::DeniedDuringIteration を返すこと。
+///				   nox::legacy::World::GetStructuralChangePermission() が、列挙中に
+///				   nox::legacy::StructuralChangePermission::DeniedDuringIteration を返すこと。
 ///				   これは即時系4本(CreateEntity / DestroyEntity / AddComponent / RemoveComponent)が
 ///				   実際に分岐している唯一の判定点なので、ここを見れば
 ///				   「列挙中に即時系を呼んだら弾かれる」ことが確認できる。
 ///
 ///				2. 遅延系がフェーズ終端まで反映されないこと
 ///				   列挙中に積んだ Destroy / Add / Remove が、列挙直後にはまだ効いておらず、
-///				   Playbackポイント(nox::World::FlushEntityCommands)を通して初めて反映されること。
+///				   Playbackポイント(nox::legacy::World::FlushEntityCommands)を通して初めて反映されること。
 ///
 ///				3. コマンドバッファの容量超過
 ///				   コマンド枠とペイロード枠のどちらが尽きても、記録が false を返すだけで
@@ -42,15 +42,15 @@ namespace
 	};
 
 	/// @brief 列挙の内側から観測を行うだけの購読者。
-	/// @details Worldは保持しない。フェーズ中に許される操作は nox::EntityCommands& で受け取る、
+	/// @details Worldは保持しない。フェーズ中に許される操作は nox::legacy::EntityCommands& で受け取る、
 	///          という本来の書き方をそのままなぞっている。
 	class PermissionProbe final
 	{
 	public:
 		void Visit(
-			const nox::EntityId entity,
+			const nox::Entity entity,
 			StructuralPosition& position,
-			nox::EntityCommands& commands)
+			nox::legacy::EntityCommands& commands)
 		{
 			++visit_count;
 			last_permission = world->GetStructuralChangePermission();
@@ -58,10 +58,10 @@ namespace
 			last_alive = commands.IsAlive(entity);
 		}
 
-		nox::World* world = nullptr;
+		nox::legacy::World* world = nullptr;
 		nox::int32 visit_count = 0;
 		bool last_alive = false;
-		nox::StructuralChangePermission last_permission = nox::StructuralChangePermission::Allowed;
+		nox::legacy::StructuralChangePermission last_permission = nox::legacy::StructuralChangePermission::Allowed;
 	};
 
 	/// @brief 列挙中に遅延系だけを使って構造を変える購読者。
@@ -69,13 +69,13 @@ namespace
 	{
 	public:
 		void Visit(
-			const nox::EntityId entity,
+			const nox::Entity entity,
 			const StructuralPosition& position,
-			nox::EntityCommands& commands)
+			nox::legacy::EntityCommands& commands)
 		{
 			(void)position;
 			//	生成はその場でIdが返る(EntityRecordを1件触るだけでArchetypeを動かさないため)。
-			const nox::EntityId spawned = commands.Create();
+			const nox::Entity spawned = commands.Create();
 			spawned_entities[static_cast<size_t>(spawn_count)] = spawned;
 			//	初期値つきでComponentDataの追加を予約する。反映はPlaybackポイント。
 			commands.Add<StructuralHealth>(spawned, StructuralHealth{ .value = 40 + spawn_count });
@@ -85,7 +85,7 @@ namespace
 			commands.Destroy(entity);
 		}
 
-		std::array<nox::EntityId, 8> spawned_entities{};
+		std::array<nox::Entity, 8> spawned_entities{};
 		nox::int32 spawn_count = 0;
 	};
 
@@ -103,13 +103,13 @@ namespace
 ///	@brief	ネガティブコントロール: 列挙していないときは即時系が許可され、実際に効く。
 TEST(EntityStructuralChange, ImmediateIsAllowedOutsideIteration)
 {
-	nox::World world;
+	nox::legacy::World world;
 
-	EXPECT_EQ(world.GetStructuralChangePermission(), nox::StructuralChangePermission::Allowed);
+	EXPECT_EQ(world.GetStructuralChangePermission(), nox::legacy::StructuralChangePermission::Allowed);
 	EXPECT_FALSE(world.IsIteratingEntities());
 	EXPECT_FALSE(world.IsExecutingSystemPhase());
 
-	const nox::EntityId entity = world.CreateEntity();
+	const nox::Entity entity = world.CreateEntity();
 	EXPECT_TRUE(world.IsAlive(entity));
 
 	//	即時系はその場で反映される。生成→初期化→参照が一続きに書ける。
@@ -126,61 +126,61 @@ TEST(EntityStructuralChange, ImmediateIsAllowedOutsideIteration)
 
 	world.DestroyEntity(entity);
 	EXPECT_FALSE(world.IsAlive(entity));
-	EXPECT_EQ(world.GetStructuralChangePermission(), nox::StructuralChangePermission::Allowed);
+	EXPECT_EQ(world.GetStructuralChangePermission(), nox::legacy::StructuralChangePermission::Allowed);
 }
 
 ///	@brief	ポジティブコントロール: 列挙中は即時系が弾かれる状態になる。
 ///	@details	即時系4本が分岐している判定値そのものを、実際の列挙の内側で観測する。
 TEST(EntityStructuralChange, ImmediateIsDeniedDuringIteration)
 {
-	nox::World world;
+	nox::legacy::World world;
 
 	for (nox::uint32 index = 0u; index < 3u; ++index)
 	{
-		const nox::EntityId entity = world.CreateEntity();
+		const nox::Entity entity = world.CreateEntity();
 		world.AddComponent<StructuralPosition>(entity)->x = static_cast<nox::float32>(index);
 	}
 
-	nox::EntityQuery query;
+	nox::legacy::EntityQuery query;
 	world.BuildQuery(query, MakePositionMask());
 
 	PermissionProbe probe;
 	probe.world = &world;
 
 	//	列挙に入る前は許可されている。
-	ASSERT_EQ(world.GetStructuralChangePermission(), nox::StructuralChangePermission::Allowed);
+	ASSERT_EQ(world.GetStructuralChangePermission(), nox::legacy::StructuralChangePermission::Allowed);
 
-	using Invoker = nox::detail::EntityInvoker<nox::EntityId, StructuralPosition&, nox::EntityCommands&>;
+	using Invoker = nox::legacy::detail::EntityInvoker<nox::Entity, StructuralPosition&, nox::legacy::EntityCommands&>;
 	Invoker::ForEachEntity(world, query, probe, &PermissionProbe::Visit);
 
 	EXPECT_EQ(probe.visit_count, 3);
 	EXPECT_TRUE(probe.last_alive);
 
 	//	これがこのテストの本体。列挙の内側では即時系が弾かれる状態になっている。
-	EXPECT_EQ(probe.last_permission, nox::StructuralChangePermission::DeniedDuringIteration);
+	EXPECT_EQ(probe.last_permission, nox::legacy::StructuralChangePermission::DeniedDuringIteration);
 
 	//	列挙を抜けたら元に戻る(スコープが釣り合っている)。
-	EXPECT_EQ(world.GetStructuralChangePermission(), nox::StructuralChangePermission::Allowed);
+	EXPECT_EQ(world.GetStructuralChangePermission(), nox::legacy::StructuralChangePermission::Allowed);
 	EXPECT_FALSE(world.IsIteratingEntities());
 }
 
 ///	@brief	列挙スコープは入れ子にできる(Chunk単位の列挙が外側の列挙の内側に入る形)。
 TEST(EntityStructuralChange, IterationScopeNests)
 {
-	nox::World world;
-	const nox::EntityId entity = world.CreateEntity();
+	nox::legacy::World world;
+	const nox::Entity entity = world.CreateEntity();
 	world.AddComponent<StructuralPosition>(entity);
 
 	world.EnterEntityIteration();
-	EXPECT_EQ(world.GetStructuralChangePermission(), nox::StructuralChangePermission::DeniedDuringIteration);
+	EXPECT_EQ(world.GetStructuralChangePermission(), nox::legacy::StructuralChangePermission::DeniedDuringIteration);
 	world.EnterEntityIteration();
-	EXPECT_EQ(world.GetStructuralChangePermission(), nox::StructuralChangePermission::DeniedDuringIteration);
+	EXPECT_EQ(world.GetStructuralChangePermission(), nox::legacy::StructuralChangePermission::DeniedDuringIteration);
 	world.LeaveEntityIteration();
 
 	//	内側を抜けただけでは解除されない。
-	EXPECT_EQ(world.GetStructuralChangePermission(), nox::StructuralChangePermission::DeniedDuringIteration);
+	EXPECT_EQ(world.GetStructuralChangePermission(), nox::legacy::StructuralChangePermission::DeniedDuringIteration);
 	world.LeaveEntityIteration();
-	EXPECT_EQ(world.GetStructuralChangePermission(), nox::StructuralChangePermission::Allowed);
+	EXPECT_EQ(world.GetStructuralChangePermission(), nox::legacy::StructuralChangePermission::Allowed);
 }
 
 ///	@brief	列挙スコープは別スレッドから見ても立っている(並列列挙中の即時系を弾くため)。
@@ -189,21 +189,21 @@ TEST(EntityStructuralChange, IterationScopeNests)
 ///				弾けることの土台になる。
 TEST(EntityStructuralChange, IterationScopeIsVisibleFromOtherThreads)
 {
-	nox::World world;
+	nox::legacy::World world;
 
 	world.EnterEntityIteration();
 
-	nox::StructuralChangePermission observed = nox::StructuralChangePermission::Allowed;
+	nox::legacy::StructuralChangePermission observed = nox::legacy::StructuralChangePermission::Allowed;
 	std::thread worker([&world, &observed]()
 		{
 			observed = world.GetStructuralChangePermission();
 		});
 	worker.join();
 
-	EXPECT_EQ(observed, nox::StructuralChangePermission::DeniedDuringIteration);
+	EXPECT_EQ(observed, nox::legacy::StructuralChangePermission::DeniedDuringIteration);
 
 	world.LeaveEntityIteration();
-	EXPECT_EQ(world.GetStructuralChangePermission(), nox::StructuralChangePermission::Allowed);
+	EXPECT_EQ(world.GetStructuralChangePermission(), nox::legacy::StructuralChangePermission::Allowed);
 }
 
 //	=====================================================================================
@@ -213,33 +213,33 @@ TEST(EntityStructuralChange, IterationScopeIsVisibleFromOtherThreads)
 ///	@brief	列挙中に積んだ構造変更は、列挙中は反映されず、Playbackポイントで反映される。
 TEST(EntityStructuralChange, DeferredCommandsApplyOnlyAtPlayback)
 {
-	nox::World world;
+	nox::legacy::World world;
 
-	std::array<nox::EntityId, 3> sources{};
+	std::array<nox::Entity, 3> sources{};
 	for (nox::uint32 index = 0u; index < sources.size(); ++index)
 	{
 		sources[index] = world.CreateEntity();
 		world.AddComponent<StructuralPosition>(sources[index])->x = static_cast<nox::float32>(index);
 	}
 
-	nox::EntityQuery query;
+	nox::legacy::EntityQuery query;
 	world.BuildQuery(query, MakePositionMask());
 
 	DeferredSpawnProbe probe;
-	using Invoker = nox::detail::EntityInvoker<nox::EntityId, const StructuralPosition&, nox::EntityCommands&>;
+	using Invoker = nox::legacy::detail::EntityInvoker<nox::Entity, const StructuralPosition&, nox::legacy::EntityCommands&>;
 	Invoker::ForEachEntity(world, query, probe, &DeferredSpawnProbe::Visit);
 
 	ASSERT_EQ(probe.spawn_count, 3);
 
 	//	--- 列挙直後 (Playback前) ---
-	for (const nox::EntityId source : sources)
+	for (const nox::Entity source : sources)
 	{
 		//	Destroyを積んだだけなので、まだ生きている。
 		EXPECT_TRUE(world.IsAlive(source));
 	}
 	for (nox::int32 index = 0; index < probe.spawn_count; ++index)
 	{
-		const nox::EntityId spawned = probe.spawned_entities[static_cast<size_t>(index)];
+		const nox::Entity spawned = probe.spawned_entities[static_cast<size_t>(index)];
 		//	Createは即時にIdを返すので、生成そのものは既に効いている。
 		EXPECT_TRUE(world.IsAlive(spawned));
 		//	ただしComponentDataの追加は遅延なので、まだ持っていない。
@@ -249,13 +249,13 @@ TEST(EntityStructuralChange, DeferredCommandsApplyOnlyAtPlayback)
 	//	--- Playbackポイント (フェーズ終端に相当) ---
 	world.FlushEntityCommands();
 
-	for (const nox::EntityId source : sources)
+	for (const nox::Entity source : sources)
 	{
 		EXPECT_FALSE(world.IsAlive(source));
 	}
 	for (nox::int32 index = 0; index < probe.spawn_count; ++index)
 	{
-		const nox::EntityId spawned = probe.spawned_entities[static_cast<size_t>(index)];
+		const nox::Entity spawned = probe.spawned_entities[static_cast<size_t>(index)];
 		EXPECT_TRUE(world.IsAlive(spawned));
 		ASSERT_TRUE(world.HasComponent<StructuralHealth>(spawned));
 		const StructuralHealth* const health = world.TryGetComponent<StructuralHealth>(spawned);
@@ -268,15 +268,15 @@ TEST(EntityStructuralChange, DeferredCommandsApplyOnlyAtPlayback)
 ///	@brief	遅延系のRemoveもPlaybackポイントで反映される。
 TEST(EntityStructuralChange, DeferredRemoveComponentAppliesAtPlayback)
 {
-	nox::World world;
+	nox::legacy::World world;
 
-	const nox::EntityId entity = world.CreateEntity();
+	const nox::Entity entity = world.CreateEntity();
 	world.AddComponent<StructuralPosition>(entity);
 	world.AddComponent<StructuralHealth>(entity)->value = 7;
 
 	world.EnterEntityIteration();
 	{
-		nox::EntityCommands commands(world);
+		nox::legacy::EntityCommands commands(world);
 		commands.Remove<StructuralHealth>(entity);
 		//	列挙中は効かない。
 		EXPECT_TRUE(world.HasComponent<StructuralHealth>(entity));
@@ -297,18 +297,18 @@ TEST(EntityStructuralChange, DeferredRemoveComponentAppliesAtPlayback)
 ///				アサートで止めてはならない。Removeが昔から黙ってreturnしているのと同じ扱いにする。
 TEST(EntityStructuralChange, DeferredAddOnEntityDestroyedInSamePhaseIsSkipped)
 {
-	nox::World world;
+	nox::legacy::World world;
 
-	const nox::EntityId victim = world.CreateEntity();
+	const nox::Entity victim = world.CreateEntity();
 	world.AddComponent<StructuralPosition>(victim);
 
 	//	巻き添えにならないことを見るための隣人。
-	const nox::EntityId bystander = world.CreateEntity();
+	const nox::Entity bystander = world.CreateEntity();
 	world.AddComponent<StructuralPosition>(bystander);
 
 	world.EnterEntityIteration();
 	{
-		nox::EntityCommands commands(world);
+		nox::legacy::EntityCommands commands(world);
 		//	System A: 破棄を積む。
 		commands.Destroy(victim);
 		//	System B: 同じフェーズで、同じentityへ状態を付与しようとする。
@@ -333,12 +333,12 @@ TEST(EntityStructuralChange, DeferredAddOnEntityDestroyedInSamePhaseIsSkipped)
 ///	@brief	初期値を渡さないAddは、ゼロ初期化のまま追加される。
 TEST(EntityStructuralChange, DeferredAddWithoutValueIsZeroInitialized)
 {
-	nox::World world;
+	nox::legacy::World world;
 
 	world.EnterEntityIteration();
-	nox::EntityId spawned{ 0u };
+	nox::Entity spawned{ 0u };
 	{
-		nox::EntityCommands commands(world);
+		nox::legacy::EntityCommands commands(world);
 		spawned = commands.Create();
 		commands.Add<StructuralHealth>(spawned);
 	}
@@ -358,8 +358,8 @@ TEST(EntityStructuralChange, DeferredAddWithoutValueIsZeroInitialized)
 ///	@brief	コマンド枠が尽きたら記録がfalseを返す。
 TEST(EntityCommandBufferCapacity, RejectsWhenCommandSlotsAreExhausted)
 {
-	nox::EntityCommandBuffer<2u, 256u> buffer;
-	const nox::EntityId entity{ .generation = 1u, .index = 1u };
+	nox::legacy::EntityCommandBuffer<2u, 256u> buffer;
+	const nox::Entity entity{ .generation = 1u, .index = 1u };
 
 	EXPECT_TRUE(buffer.TryDestroy(entity));
 	EXPECT_TRUE(buffer.TryDestroy(entity));
@@ -378,8 +378,8 @@ TEST(EntityCommandBufferCapacity, RejectsWhenCommandSlotsAreExhausted)
 TEST(EntityCommandBufferCapacity, RejectsWhenPayloadBytesAreExhausted)
 {
 	//	ペイロードは StructuralHealth 1個分しか無い。
-	nox::EntityCommandBuffer<8u, sizeof(StructuralHealth)> buffer;
-	const nox::EntityId entity{ .generation = 1u, .index = 1u };
+	nox::legacy::EntityCommandBuffer<8u, sizeof(StructuralHealth)> buffer;
+	const nox::Entity entity{ .generation = 1u, .index = 1u };
 	const StructuralHealth value{ .value = 5 };
 	const nox::ComponentTypeInfo& type_info = nox::ComponentTypeOf<StructuralHealth>();
 
@@ -399,16 +399,16 @@ TEST(EntityCommandBufferCapacity, RejectsWhenPayloadBytesAreExhausted)
 ///	@brief	記録した初期値がそのまま読み戻せる。
 TEST(EntityCommandBufferCapacity, CarriesComponentPayload)
 {
-	nox::EntityCommandBuffer<4u, 256u> buffer;
-	const nox::EntityId entity{ .generation = 2u, .index = 9u };
+	nox::legacy::EntityCommandBuffer<4u, 256u> buffer;
+	const nox::Entity entity{ .generation = 2u, .index = 9u };
 	const StructuralHealth value{ .value = 1234 };
 
 	ASSERT_TRUE(buffer.TryAddComponent(entity, nox::ComponentTypeOf<StructuralHealth>(), &value));
 
-	nox::EntityCommand command{};
+	nox::legacy::EntityCommand command{};
 	ASSERT_TRUE(buffer.TryGet(0u, command));
-	EXPECT_EQ(command.type, nox::EntityCommandType::AddComponent);
-	EXPECT_EQ(command.entity_raw, entity.raw);
+	EXPECT_EQ(command.type, nox::legacy::EntityCommandType::AddComponent);
+	EXPECT_EQ(command.entity_raw, entity());
 	EXPECT_EQ(command.payload_size, sizeof(StructuralHealth));
 
 	const void* const payload = buffer.TryGetPayload(command);
@@ -420,8 +420,8 @@ TEST(EntityCommandBufferCapacity, CarriesComponentPayload)
 ///	@details	溢れたら abort する設計なので、出荷前に容量を実測で根拠づけるための安全弁。
 TEST(EntityCommandBufferCapacity, TracksHighWaterMarkAcrossClear)
 {
-	nox::EntityCommandBuffer<8u, 256u> buffer;
-	const nox::EntityId entity{ .generation = 1u, .index = 1u };
+	nox::legacy::EntityCommandBuffer<8u, 256u> buffer;
+	const nox::Entity entity{ .generation = 1u, .index = 1u };
 	const StructuralHealth value{ .value = 3 };
 	const nox::ComponentTypeInfo& type_info = nox::ComponentTypeOf<StructuralHealth>();
 
@@ -455,15 +455,15 @@ TEST(EntityCommandBufferCapacity, TracksHighWaterMarkAcrossClear)
 ///	@brief	Worldからもhigh-water markを引ける(容量を出荷前に裏付けるため)。
 TEST(EntityCommandBufferCapacity, WorldExposesHighWaterMark)
 {
-	nox::World world;
+	nox::legacy::World world;
 	EXPECT_EQ(world.GetEntityCommandPeakLength(), 0u);
 
-	const nox::EntityId entity = world.CreateEntity();
+	const nox::Entity entity = world.CreateEntity();
 	world.AddComponent<StructuralPosition>(entity);
 
 	world.EnterEntityIteration();
 	{
-		nox::EntityCommands commands(world);
+		nox::legacy::EntityCommands commands(world);
 		commands.Add<StructuralHealth>(entity, StructuralHealth{ .value = 1 });
 		commands.Destroy(entity);
 	}
@@ -472,14 +472,14 @@ TEST(EntityCommandBufferCapacity, WorldExposesHighWaterMark)
 
 	EXPECT_EQ(world.GetEntityCommandPeakLength(), 2u);
 	EXPECT_EQ(world.GetEntityCommandPeakPayloadLength(), sizeof(StructuralHealth));
-	EXPECT_LT(world.GetEntityCommandPeakLength(), nox::World::GetEntityCommandCapacity());
+	EXPECT_LT(world.GetEntityCommandPeakLength(), nox::legacy::World::GetEntityCommandCapacity());
 }
 
 ///	@brief	Playbackを開始したら新しい記録を受け付けない。
 TEST(EntityCommandBufferCapacity, RejectsRecordingDuringPlayback)
 {
-	nox::EntityCommandBuffer<4u, 256u> buffer;
-	const nox::EntityId entity{ .generation = 1u, .index = 1u };
+	nox::legacy::EntityCommandBuffer<4u, 256u> buffer;
+	const nox::Entity entity{ .generation = 1u, .index = 1u };
 
 	ASSERT_TRUE(buffer.TryDestroy(entity));
 	buffer.BeginPlayback();

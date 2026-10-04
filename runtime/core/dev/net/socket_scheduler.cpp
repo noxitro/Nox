@@ -8,7 +8,7 @@
 
 #include	"server.h"
 #include	"client.h"
-#include	"../../world.h"
+#include	"../../world_legacy.h"
 #include	"dev_net_log_id.h"
 
 
@@ -44,7 +44,7 @@ nox::dev::net::SocketScheduler::~SocketScheduler()
 {
 }
 
-void	nox::dev::net::SocketScheduler::Initialize(nox::World& world)
+void	nox::dev::net::SocketScheduler::Initialize(nox::legacy::World& world)
 {
 #if NOX_WINDOWS
 	::WSADATA wsaData;
@@ -60,7 +60,7 @@ void	nox::dev::net::SocketScheduler::Initialize(nox::World& world)
 		});
 }
 
-void	nox::dev::net::SocketScheduler::Finalize([[maybe_unused]] nox::World& world)
+void	nox::dev::net::SocketScheduler::Finalize([[maybe_unused]] nox::legacy::World& world)
 {
 	thread_.Wait();
 
@@ -71,7 +71,7 @@ void	nox::dev::net::SocketScheduler::Finalize([[maybe_unused]] nox::World& world
 
 }
 
-void	nox::dev::net::SocketScheduler::UpdateTask(nox::World& world)
+void	nox::dev::net::SocketScheduler::UpdateTask(nox::legacy::World& world)
 {
 	while (world.IsKill() == false)
 	{

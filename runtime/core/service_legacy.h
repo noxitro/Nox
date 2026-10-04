@@ -11,7 +11,7 @@
 #pragma once
 #include	"object.h"
 
-namespace nox
+namespace nox::legacy
 {
 	class World;
 }
@@ -21,7 +21,7 @@ namespace nox::legacy
 	/// @brief Worldに登録される共有機能の基底。
 	class Service : public ::nox::Object
 	{
-		friend class nox::World;
+		friend class nox::legacy::World;
 		NOX_DECLARE_OBJECT(Service, nox::Object);
 	protected:
 		inline constexpr Service()noexcept = default;
@@ -31,6 +31,6 @@ namespace nox::legacy
 namespace nox::detail
 {
 	/// @brief Worldに登録済みのServiceを型で引く。
-	/// @details entity_query.hがworld.hに依存しないための橋渡し。
-	[[nodiscard]] nox::legacy::Service* TryGetServiceOfWorld(nox::World& world, const nox::reflection::Type& type)noexcept;
+	/// @details entity_query_legacy.hがworld_legacy.hに依存しないための橋渡し。
+	[[nodiscard]] nox::legacy::Service* TryGetServiceOfWorld(nox::legacy::World& world, const nox::reflection::Type& type)noexcept;
 }

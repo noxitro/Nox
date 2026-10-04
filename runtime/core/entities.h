@@ -8,6 +8,6 @@
 
 namespace nox::entities
 {
-	constexpr nox::EntityId kInvalidEntityId{ 0u };
-	constexpr nox::EntityId kInitialEntityId{ 1u };
+	constexpr nox::Entity kInvalidEntityId{ 0u };
+	constexpr nox::Entity kInitialEntityId{ 1u };
 }

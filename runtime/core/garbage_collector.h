@@ -15,9 +15,9 @@ namespace nox
 		static void	Register(class nox::Object& managed_object);
 
 	private:
-		void Initialize(nox::World& world);
-		void FrameGC(nox::World& world);
-		void Finalize(nox::World& world);
+		void Initialize(nox::legacy::World& world);
+		void FrameGC(nox::legacy::World& world);
+		void Finalize(nox::legacy::World& world);
 
 		std::span<const nox::SystemBase::PhaseRegister> GetPhaseRegisterList()const noexcept override;
 	public:

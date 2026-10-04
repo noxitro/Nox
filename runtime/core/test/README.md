@@ -42,13 +42,13 @@ kernel の単体テストがエンジン全部とコード生成器を引きず�
 
 ### UpdaterGraph のテストについて
 
-`updater_graph_layering_test.cpp` は `nox::ConflictsUpdaterNodeAccess` /
-`nox::BuildUpdaterLayerIndices` / `nox::UpdaterGraph::Rebuild` を直接叩く。
+`updater_graph_layering_test.cpp` は `nox::legacy::ConflictsUpdaterNodeAccess` /
+`nox::legacy::BuildUpdaterLayerIndices` / `nox::legacy::UpdaterGraph::Rebuild` を直接叩く。
 いずれも public かつ `World` 非依存なので、`World::Init()` が private でも検証できる
-（`updater_graph.h` にもその意図が書いてある）。
+（`updater_graph_legacy.h` にもその意図が書いてある）。
 
 EntityLogic の更新メソッドは通常リフレクション生成コードが購読するが、ここでは
-`nox::EntityLogicMethodTable` の手書き特殊化（`entity_logic.h` が用意している
+`nox::legacy::EntityLogicMethodTable` の手書き特殊化（`entity_logic_legacy.h` が用意している
 エスケープハッチ）を使っている。おかげでテスト専用の型を `core/test/test_types.h` へ
 足す必要がなく、Master でテスト型のリフレクションが生成されない事情とも無関係でいられる。
 
@@ -61,7 +61,7 @@ build\runtime\x64\Release\core_test.exe --gtest_also_run_disabled_tests --gtest_
 ワーカー数を振って中央値を表で出す。`runtime.exe` 側で同じことをするには
 `--serial-updater`（0本）か `--updater-workers=N` を渡す。
 
-その解析は `nox::ResolveUpdaterWorkerCount`（`world.h`。`World` のメンバではなく
+その解析は `nox::legacy::ResolveUpdaterWorkerCount`（`world_legacy.h`。`World` のメンバではなく
 自由関数）が担う。「引数列 + 既定値」だけを見る純粋関数なので、
 `World` を組み立てず、プロセスの実引数にも論理プロセッサ数にも依存せずに
 `updater_worker_count_test.cpp` から全分岐を踏める。

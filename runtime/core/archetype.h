@@ -60,17 +60,17 @@ namespace nox
 		Archetype& operator=(Archetype&&) = delete;
 
 		/// @brief 末尾にentityを1行追加する。ComponentDataはゼロ初期化される。
-		[[nodiscard]] nox::ArchetypeLocation AddEntity(nox::EntityId entity);
+		[[nodiscard]] nox::ArchetypeLocation AddEntity(nox::Entity entity);
 
 		/// @brief 指定行をswap-removeで詰める。
 		/// @return 詰めるために移動してきたentity。移動が発生しなかった場合はraw==0。
-		nox::EntityId RemoveEntity(nox::ArchetypeLocation location)noexcept;
+		nox::Entity RemoveEntity(nox::ArchetypeLocation location)noexcept;
 
 		/// @brief 指定Chunkにおける指定ComponentDataの列の先頭。宣言外の型を渡すとnullptr。
 		[[nodiscard]] void* TryGetComponentArray(nox::uint32 chunk_index, nox::ComponentTypeIndex type_index)noexcept;
 
 		/// @brief 指定Chunkにおけるentity列の先頭。
-		[[nodiscard]] nox::EntityId* GetEntityArray(nox::uint32 chunk_index)noexcept;
+		[[nodiscard]] nox::Entity* GetEntityArray(nox::uint32 chunk_index)noexcept;
 
 		[[nodiscard]] inline const nox::ComponentMask& GetMask()const noexcept { return mask_; }
 		[[nodiscard]] inline nox::uint32 GetChunkCapacity()const noexcept { return chunk_capacity_; }

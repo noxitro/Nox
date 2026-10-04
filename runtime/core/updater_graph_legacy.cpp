@@ -1,26 +1,26 @@
 // Copyright (c) 2023-2026 noxitro
 // SPDX-License-Identifier: MIT
 
-/// @file	updater_graph.cpp
+/// @file	updater_graph_legacy.cpp
 /// @brief	updater_graph
 #include "pch.h"
-#include "updater_graph.h"
+#include "updater_graph_legacy.h"
 
 #include "log_id.h"
 
-namespace nox
+namespace nox::legacy
 {
 	namespace
 	{
 		/// @brief 2つのノードが同一Serviceを取り合っているか。
 		/// @details 型情報のアドレスで同一性を見る。片方でも書き込みがあれば衝突。
 		[[nodiscard]] bool conflicts_service_access(
-			const std::span<const nox::ServiceAccess> a,
-			const std::span<const nox::ServiceAccess> b)noexcept
+			const std::span<const nox::legacy::ServiceAccess> a,
+			const std::span<const nox::legacy::ServiceAccess> b)noexcept
 		{
-			for (const nox::ServiceAccess& left : a)
+			for (const nox::legacy::ServiceAccess& left : a)
 			{
-				for (const nox::ServiceAccess& right : b)
+				for (const nox::legacy::ServiceAccess& right : b)
 				{
 					if (left.type != right.type)
 					{
@@ -107,7 +107,7 @@ namespace nox
 
 		void append_service_accesses(
 			UpdaterGraphTextBuilder& builder,
-			const std::span<const nox::ServiceAccess> accesses)noexcept
+			const std::span<const nox::legacy::ServiceAccess> accesses)noexcept
 		{
 			builder.Append(u8"[");
 			for (size_t i = 0; i < accesses.size(); ++i)
@@ -123,9 +123,9 @@ namespace nox
 		}
 
 		/// @brief ノードの表示名。EntitySystemは型名、EntityLogicは「型名::メソッド名」。
-		void append_node_name(UpdaterGraphTextBuilder& builder, const nox::UpdaterNode& node)noexcept
+		void append_node_name(UpdaterGraphTextBuilder& builder, const nox::legacy::UpdaterNode& node)noexcept
 		{
-			if (node.kind == nox::UpdaterNodeKind::EntitySystem)
+			if (node.kind == nox::legacy::UpdaterNodeKind::EntitySystem)
 			{
 				builder.Append(node.system->GetDescriptor().name);
 				return;
@@ -139,10 +139,10 @@ namespace nox
 		/// @brief 衝突理由を1つだけ書き出す(先に見つかったもの)。
 		void append_conflict_reason(
 			UpdaterGraphTextBuilder& builder,
-			const nox::UpdaterNodeAccess& a,
-			const nox::UpdaterNodeAccess& b)noexcept
+			const nox::legacy::UpdaterNodeAccess& a,
+			const nox::legacy::UpdaterNodeAccess& b)noexcept
 		{
-			if ((a.group_index != nox::k_invalid_updater_group_index) && (a.group_index == b.group_index))
+			if ((a.group_index != nox::legacy::k_invalid_updater_group_index) && (a.group_index == b.group_index))
 			{
 				builder.Append(u8"logic-state");
 				return;
@@ -181,9 +181,9 @@ namespace nox
 				return;
 			}
 
-			for (const nox::ServiceAccess& left : a.service_accesses)
+			for (const nox::legacy::ServiceAccess& left : a.service_accesses)
 			{
-				for (const nox::ServiceAccess& right : b.service_accesses)
+				for (const nox::legacy::ServiceAccess& right : b.service_accesses)
 				{
 					if ((left.type == right.type) && (left.write || right.write))
 					{
@@ -200,12 +200,12 @@ namespace nox
 	}
 }
 
-bool nox::ConflictsUpdaterNodeAccess(
-	const nox::UpdaterNodeAccess& a,
-	const nox::UpdaterNodeAccess& b)noexcept
+bool nox::legacy::ConflictsUpdaterNodeAccess(
+	const nox::legacy::UpdaterNodeAccess& a,
+	const nox::legacy::UpdaterNodeAccess& b)noexcept
 {
 	//	同一EntityLogic型のメソッド同士はメンバ変数を共有するため、宣言が重ならなくても直列化する。
-	if ((a.group_index != nox::k_invalid_updater_group_index) && (a.group_index == b.group_index))
+	if ((a.group_index != nox::legacy::k_invalid_updater_group_index) && (a.group_index == b.group_index))
 	{
 		return true;
 	}
@@ -219,8 +219,8 @@ bool nox::ConflictsUpdaterNodeAccess(
 	return conflicts_service_access(a.service_accesses, b.service_accesses);
 }
 
-nox::uint32 nox::BuildUpdaterLayerIndices(
-	const std::span<const nox::UpdaterNodeAccess> accesses,
+nox::uint32 nox::legacy::BuildUpdaterLayerIndices(
+	const std::span<const nox::legacy::UpdaterNodeAccess> accesses,
 	const std::span<nox::uint32> dest_layer_indices)noexcept
 {
 	NOX_ASSERT(dest_layer_indices.size() >= accesses.size(), u8"レイヤー番号の出力先が足りません");
@@ -237,7 +237,7 @@ nox::uint32 nox::BuildUpdaterLayerIndices(
 		nox::uint32 layer_index = 0u;
 		for (nox::uint32 earlier_index = 0u; earlier_index < index; ++earlier_index)
 		{
-			if (nox::ConflictsUpdaterNodeAccess(accesses[earlier_index], accesses[index]) == false)
+			if (nox::legacy::ConflictsUpdaterNodeAccess(accesses[earlier_index], accesses[index]) == false)
 			{
 				continue;
 			}
@@ -251,18 +251,18 @@ nox::uint32 nox::BuildUpdaterLayerIndices(
 	return layer_count;
 }
 
-nox::UpdaterGraph::UpdaterGraph() :
+nox::legacy::UpdaterGraph::UpdaterGraph() :
 	phase_nodes_{},
 	phase_layer_offsets_{},
 	phase_command_buffer_counts_{}
 {
 }
 
-nox::UpdaterGraph::~UpdaterGraph() = default;
+nox::legacy::UpdaterGraph::~UpdaterGraph() = default;
 
-void nox::UpdaterGraph::Rebuild(
+void nox::legacy::UpdaterGraph::Rebuild(
 	const std::span<nox::legacy::EntitySystemBase* const> systems,
-	const std::span<nox::EntityLogicStorage* const> storages)
+	const std::span<nox::legacy::EntityLogicStorage* const> storages)
 {
 	for (nox::uint8 phase_index = 0u; phase_index < nox::util::ToUnderlying(nox::SystemPhaseType::_Max); ++phase_index)
 	{
@@ -270,13 +270,13 @@ void nox::UpdaterGraph::Rebuild(
 	}
 }
 
-void nox::UpdaterGraph::RebuildPhase(
+void nox::legacy::UpdaterGraph::RebuildPhase(
 	const nox::SystemPhaseType phase_type,
 	const std::span<nox::legacy::EntitySystemBase* const> systems,
-	const std::span<nox::EntityLogicStorage* const> storages)
+	const std::span<nox::legacy::EntityLogicStorage* const> storages)
 {
 	const nox::uint32 phase_index = nox::util::ToUnderlying(phase_type);
-	nox::Vector<nox::UpdaterNode>& dest_nodes = phase_nodes_[phase_index];
+	nox::Vector<nox::legacy::UpdaterNode>& dest_nodes = phase_nodes_[phase_index];
 	nox::Vector<nox::uint32>& dest_offsets = phase_layer_offsets_[phase_index];
 	dest_nodes.clear();
 	dest_offsets.clear();
@@ -286,7 +286,7 @@ void nox::UpdaterGraph::RebuildPhase(
 	//	コマンドバッファ番号は「遅延構造変更を出しうるノードだけ」に、この登録順で詰めて振る。
 	//	昇順に振るので、番号順の再生とノード登録順の再生は同じ並びになる。
 	nox::uint32 command_buffer_index = 0u;
-	nox::Vector<nox::UpdaterNode> nodes;
+	nox::Vector<nox::legacy::UpdaterNode> nodes;
 	for (nox::legacy::EntitySystemBase* const system : systems)
 	{
 		const nox::legacy::EntitySystemTypeDescriptor& descriptor = system->GetDescriptor();
@@ -295,43 +295,43 @@ void nox::UpdaterGraph::RebuildPhase(
 			continue;
 		}
 
-		nox::UpdaterNode node{};
+		nox::legacy::UpdaterNode node{};
 		node.access.read_write_mask = descriptor.make_read_write_mask();
 		node.access.write_mask = descriptor.make_write_mask();
 		node.access.service_accesses = descriptor.get_service_accesses();
-		node.access.group_index = nox::k_invalid_updater_group_index;
-		node.kind = nox::UpdaterNodeKind::EntitySystem;
+		node.access.group_index = nox::legacy::k_invalid_updater_group_index;
+		node.kind = nox::legacy::UpdaterNodeKind::EntitySystem;
 		node.system = system;
 		node.order_index = static_cast<nox::uint32>(nodes.size());
 		node.command_buffer_index = descriptor.emits_structural_change
 			? command_buffer_index++
-			: nox::k_invalid_updater_command_buffer_index;
+			: nox::legacy::k_invalid_updater_command_buffer_index;
 		nodes.push_back(node);
 	}
 
 	for (nox::uint32 storage_index = 0u; storage_index < storages.size(); ++storage_index)
 	{
-		nox::EntityLogicStorage* const storage = storages[storage_index];
-		for (const nox::EntityLogicMethodDescriptor& method : storage->GetDescriptor().get_methods())
+		nox::legacy::EntityLogicStorage* const storage = storages[storage_index];
+		for (const nox::legacy::EntityLogicMethodDescriptor& method : storage->GetDescriptor().get_methods())
 		{
 			if (method.phase != phase_type)
 			{
 				continue;
 			}
 
-			nox::UpdaterNode node{};
+			nox::legacy::UpdaterNode node{};
 			node.access.read_write_mask = method.make_read_write_mask();
 			node.access.write_mask = method.make_write_mask();
 			node.access.service_accesses = method.get_service_accesses();
 			//	同一EntityLogic型のメソッド同士を必ず衝突させるためのグループ。
 			node.access.group_index = storage_index;
-			node.kind = nox::UpdaterNodeKind::EntityLogicMethod;
+			node.kind = nox::legacy::UpdaterNodeKind::EntityLogicMethod;
 			node.storage = storage;
 			node.method = &method;
 			node.order_index = static_cast<nox::uint32>(nodes.size());
 			node.command_buffer_index = method.emits_structural_change
 				? command_buffer_index++
-				: nox::k_invalid_updater_command_buffer_index;
+				: nox::legacy::k_invalid_updater_command_buffer_index;
 			nodes.push_back(node);
 		}
 	}
@@ -343,16 +343,16 @@ void nox::UpdaterGraph::RebuildPhase(
 		return;
 	}
 
-	nox::Vector<nox::UpdaterNodeAccess> accesses;
+	nox::Vector<nox::legacy::UpdaterNodeAccess> accesses;
 	accesses.reserve(nodes.size());
-	for (const nox::UpdaterNode& node : nodes)
+	for (const nox::legacy::UpdaterNode& node : nodes)
 	{
 		accesses.push_back(node.access);
 	}
 
 	nox::Vector<nox::uint32> layer_indices(nodes.size(), 0u);
-	const nox::uint32 layer_count = nox::BuildUpdaterLayerIndices(
-		std::span<const nox::UpdaterNodeAccess>(accesses.data(), accesses.size()),
+	const nox::uint32 layer_count = nox::legacy::BuildUpdaterLayerIndices(
+		std::span<const nox::legacy::UpdaterNodeAccess>(accesses.data(), accesses.size()),
 		std::span<nox::uint32>(layer_indices.data(), layer_indices.size()));
 
 	//	(レイヤー, 登録順)で整列する。登録順の走査を外に出さないので安定。
@@ -368,7 +368,7 @@ void nox::UpdaterGraph::RebuildPhase(
 				continue;
 			}
 
-			nox::UpdaterNode node = nodes[index];
+			nox::legacy::UpdaterNode node = nodes[index];
 			node.layer_index = layer_index;
 			dest_nodes.push_back(node);
 		}
@@ -377,48 +377,48 @@ void nox::UpdaterGraph::RebuildPhase(
 	dest_offsets.push_back(static_cast<nox::uint32>(dest_nodes.size()));
 }
 
-std::span<const nox::UpdaterNode> nox::UpdaterGraph::GetNodes(const nox::SystemPhaseType phase_type)const noexcept
+std::span<const nox::legacy::UpdaterNode> nox::legacy::UpdaterGraph::GetNodes(const nox::SystemPhaseType phase_type)const noexcept
 {
-	const nox::Vector<nox::UpdaterNode>& nodes = phase_nodes_[nox::util::ToUnderlying(phase_type)];
-	return std::span<const nox::UpdaterNode>(nodes.data(), nodes.size());
+	const nox::Vector<nox::legacy::UpdaterNode>& nodes = phase_nodes_[nox::util::ToUnderlying(phase_type)];
+	return std::span<const nox::legacy::UpdaterNode>(nodes.data(), nodes.size());
 }
 
-nox::uint32 nox::UpdaterGraph::GetLayerCount(const nox::SystemPhaseType phase_type)const noexcept
+nox::uint32 nox::legacy::UpdaterGraph::GetLayerCount(const nox::SystemPhaseType phase_type)const noexcept
 {
 	const nox::Vector<nox::uint32>& offsets = phase_layer_offsets_[nox::util::ToUnderlying(phase_type)];
 	return offsets.empty() ? 0u : static_cast<nox::uint32>(offsets.size() - 1u);
 }
 
-nox::uint32 nox::UpdaterGraph::GetCommandBufferCount(const nox::SystemPhaseType phase_type)const noexcept
+nox::uint32 nox::legacy::UpdaterGraph::GetCommandBufferCount(const nox::SystemPhaseType phase_type)const noexcept
 {
 	return phase_command_buffer_counts_[nox::util::ToUnderlying(phase_type)];
 }
 
-std::span<const nox::UpdaterNode> nox::UpdaterGraph::GetLayerNodes(
+std::span<const nox::legacy::UpdaterNode> nox::legacy::UpdaterGraph::GetLayerNodes(
 	const nox::SystemPhaseType phase_type,
 	const nox::uint32 layer_index)const noexcept
 {
 	if (layer_index >= GetLayerCount(phase_type))
 	{
-		return std::span<const nox::UpdaterNode>();
+		return std::span<const nox::legacy::UpdaterNode>();
 	}
 
-	const nox::Vector<nox::UpdaterNode>& nodes = phase_nodes_[nox::util::ToUnderlying(phase_type)];
+	const nox::Vector<nox::legacy::UpdaterNode>& nodes = phase_nodes_[nox::util::ToUnderlying(phase_type)];
 	const nox::Vector<nox::uint32>& offsets = phase_layer_offsets_[nox::util::ToUnderlying(phase_type)];
 	const nox::uint32 begin = offsets[layer_index];
 	const nox::uint32 end = offsets[layer_index + 1u];
-	return std::span<const nox::UpdaterNode>(nodes.data() + begin, static_cast<size_t>(end - begin));
+	return std::span<const nox::legacy::UpdaterNode>(nodes.data() + begin, static_cast<size_t>(end - begin));
 }
 
 #if !NOX_MASTER
-void nox::UpdaterGraph::Trace()const
+void nox::legacy::UpdaterGraph::Trace()const
 {
 	UpdaterGraphTextBuilder builder;
 
 	for (nox::uint8 phase_index = 0u; phase_index < nox::util::ToUnderlying(nox::SystemPhaseType::_Max); ++phase_index)
 	{
 		const nox::SystemPhaseType phase_type = static_cast<nox::SystemPhaseType>(phase_index);
-		const std::span<const nox::UpdaterNode> nodes = GetNodes(phase_type);
+		const std::span<const nox::legacy::UpdaterNode> nodes = GetNodes(phase_type);
 		if (nodes.empty())
 		{
 			continue;
@@ -435,7 +435,7 @@ void nox::UpdaterGraph::Trace()const
 			GetCommandBufferCount(phase_type),
 			static_cast<nox::uint32>(nodes.size()));
 
-		for (const nox::UpdaterNode& node : nodes)
+		for (const nox::legacy::UpdaterNode& node : nodes)
 		{
 			builder.Clear();
 			append_node_name(builder, node);
@@ -453,15 +453,15 @@ void nox::UpdaterGraph::Trace()const
 		}
 
 		//	衝突辺(=直列化の理由)。登録順の小さい方から大きい方へ張られる。
-		for (const nox::UpdaterNode& from : nodes)
+		for (const nox::legacy::UpdaterNode& from : nodes)
 		{
-			for (const nox::UpdaterNode& to : nodes)
+			for (const nox::legacy::UpdaterNode& to : nodes)
 			{
 				if (from.order_index >= to.order_index)
 				{
 					continue;
 				}
-				if (nox::ConflictsUpdaterNodeAccess(from.access, to.access) == false)
+				if (nox::legacy::ConflictsUpdaterNodeAccess(from.access, to.access) == false)
 				{
 					continue;
 				}

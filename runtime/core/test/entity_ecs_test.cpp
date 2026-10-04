@@ -13,8 +13,8 @@ namespace nox::test::ecs::manual
 {
 	/// @brief 生成器が名前を書けない型のための手動購読経路の検証用。
 	/// @details .cppに閉じているためリフレクション生成コードからは見えない。
-	///          nox::EntityLogicMethodTableの特殊化を手書きすれば同じ記述子が作れる。
-	class ManualHealthLogic final : public nox::EntityLogic<nox::test::ecs::manual::ManualHealthLogic>
+	///          nox::legacy::EntityLogicMethodTableの特殊化を手書きすれば同じ記述子が作れる。
+	class ManualHealthLogic final : public nox::legacy::EntityLogic<nox::test::ecs::manual::ManualHealthLogic>
 	{
 	public:
 		void Tick(nox::test::ecs::TestHealth& health)
@@ -29,17 +29,17 @@ namespace nox::test::ecs::manual
 
 //	明示的特殊化はnoxを囲む名前空間に書く必要があるため、グローバルスコープに置く。
 template<>
-struct nox::EntityLogicMethodTable<nox::test::ecs::manual::ManualHealthLogic>
+struct nox::legacy::EntityLogicMethodTable<nox::test::ecs::manual::ManualHealthLogic>
 {
-	static constexpr nox::EntityLogicMethodDescriptor k_methods[]{
-		nox::MakeEntityLogicMethodDescriptor<
+	static constexpr nox::legacy::EntityLogicMethodDescriptor k_methods[]{
+		nox::legacy::MakeEntityLogicMethodDescriptor<
 			&nox::test::ecs::manual::ManualHealthLogic::Tick,
 			nox::SystemPhaseType::Update>("Tick"),
 	};
 
-	[[nodiscard]] static constexpr std::span<const nox::EntityLogicMethodDescriptor> GetMethods()noexcept
+	[[nodiscard]] static constexpr std::span<const nox::legacy::EntityLogicMethodDescriptor> GetMethods()noexcept
 	{
-		return std::span<const nox::EntityLogicMethodDescriptor>(k_methods);
+		return std::span<const nox::legacy::EntityLogicMethodDescriptor>(k_methods);
 	}
 };
 
@@ -61,9 +61,9 @@ namespace
 
 #pragma region シグネチャ解析のコンパイル時検証
 
-	using MoveSignature = nox::EntitySignature<nox::EntityId, TestPosition&, const TestVelocity&>;
-	using ReadOnlySignature = nox::EntitySignature<const TestPosition&, const TestVelocity&>;
-	using HealthSignature = nox::EntitySignature<TestHealth&>;
+	using MoveSignature = nox::legacy::EntitySignature<nox::Entity, TestPosition&, const TestVelocity&>;
+	using ReadOnlySignature = nox::legacy::EntitySignature<const TestPosition&, const TestVelocity&>;
+	using HealthSignature = nox::legacy::EntitySignature<TestHealth&>;
 
 	static_assert(MoveSignature::k_is_valid);
 	static_assert(MoveSignature::k_parameter_count == 3u);
@@ -77,49 +77,49 @@ namespace
 	static_assert(MoveSignature::HasReadAccess<TestHealth> == false);
 
 	//	同一ComponentDataにRWが絡めば直列化、全てROなら並列。
-	static_assert(nox::can_run_concurrently_v<ReadOnlySignature, ReadOnlySignature>);
-	static_assert(nox::can_run_concurrently_v<MoveSignature, ReadOnlySignature> == false);
-	static_assert(nox::can_run_concurrently_v<MoveSignature, HealthSignature>);
+	static_assert(nox::legacy::can_run_concurrently_v<ReadOnlySignature, ReadOnlySignature>);
+	static_assert(nox::legacy::can_run_concurrently_v<MoveSignature, ReadOnlySignature> == false);
+	static_assert(nox::legacy::can_run_concurrently_v<MoveSignature, HealthSignature>);
 
 	//	EntityIdは先頭にのみ1つ。ComponentDataの重複宣言も不可。
-	static_assert(nox::EntitySignature<TestPosition&, nox::EntityId>::k_is_valid == false);
-	static_assert(nox::EntitySignature<nox::EntityId, nox::EntityId>::k_is_valid == false);
-	static_assert(nox::EntitySignature<TestPosition&, const TestPosition&>::k_is_valid == false);
+	static_assert(nox::legacy::EntitySignature<TestPosition&, nox::Entity>::k_is_valid == false);
+	static_assert(nox::legacy::EntitySignature<nox::Entity, nox::Entity>::k_is_valid == false);
+	static_assert(nox::legacy::EntitySignature<TestPosition&, const TestPosition&>::k_is_valid == false);
 	//	ComponentDataでもServiceでもない型は引数にできない。
-	static_assert(nox::EntitySignature<nox::int32&>::k_all_parameters_valid == false);
+	static_assert(nox::legacy::EntitySignature<nox::int32&>::k_all_parameters_valid == false);
 	//	ComponentDataはポインタでなく参照で受ける(値渡し・ポインタ渡しは宣言として認めない)。
-	static_assert(nox::EntitySignature<TestPosition*>::k_all_parameters_valid == false);
-	static_assert(nox::EntitySignature<TestPosition>::k_all_parameters_valid == false);
+	static_assert(nox::legacy::EntitySignature<TestPosition*>::k_all_parameters_valid == false);
+	static_assert(nox::legacy::EntitySignature<TestPosition>::k_all_parameters_valid == false);
 	//	Serviceはポインタでも参照でも受けられる。constの有無が読み書き権限になるのはComponentDataと同じ。
-	static_assert(nox::EntitySignature<TestCounterService*>::k_is_valid);
-	static_assert(nox::EntitySignature<const TestCounterService*>::k_is_valid);
-	static_assert(nox::EntitySignature<TestCounterService&>::k_is_valid);
-	static_assert(nox::EntitySignature<const TestCounterService&>::k_is_valid);
-	static_assert(nox::EntityParameterTraits<TestCounterService&>::k_kind == nox::EntityParameterKind::ServiceWrite);
-	static_assert(nox::EntityParameterTraits<const TestCounterService&>::k_kind == nox::EntityParameterKind::ServiceRead);
+	static_assert(nox::legacy::EntitySignature<TestCounterService*>::k_is_valid);
+	static_assert(nox::legacy::EntitySignature<const TestCounterService*>::k_is_valid);
+	static_assert(nox::legacy::EntitySignature<TestCounterService&>::k_is_valid);
+	static_assert(nox::legacy::EntitySignature<const TestCounterService&>::k_is_valid);
+	static_assert(nox::legacy::EntityParameterTraits<TestCounterService&>::k_kind == nox::legacy::EntityParameterKind::ServiceWrite);
+	static_assert(nox::legacy::EntityParameterTraits<const TestCounterService&>::k_kind == nox::legacy::EntityParameterKind::ServiceRead);
 	//	Serviceは引数に並べてもComponentDataの宣言には算入されない(Queryの必須条件を変えない)。
-	static_assert(nox::EntitySignature<TestPosition&, TestCounterService&>::k_component_parameter_count == 1u);
-	static_assert(nox::EntitySignature<TestPosition&, TestCounterService&>::k_service_parameter_count == 1u);
+	static_assert(nox::legacy::EntitySignature<TestPosition&, TestCounterService&>::k_component_parameter_count == 1u);
+	static_assert(nox::legacy::EntitySignature<TestPosition&, TestCounterService&>::k_service_parameter_count == 1u);
 
-	//	nox::EntityCommandsは引数として並べられるが、ComponentDataにもServiceにも算入されない。
-	static_assert(nox::EntitySignature<nox::EntityId, TestPosition&, nox::EntityCommands&>::k_is_valid);
-	static_assert(nox::EntitySignature<nox::EntityCommands&>::k_component_parameter_count == 0u);
-	static_assert(nox::EntitySignature<nox::EntityCommands&>::k_service_parameter_count == 0u);
+	//	nox::legacy::EntityCommandsは引数として並べられるが、ComponentDataにもServiceにも算入されない。
+	static_assert(nox::legacy::EntitySignature<nox::Entity, TestPosition&, nox::legacy::EntityCommands&>::k_is_valid);
+	static_assert(nox::legacy::EntitySignature<nox::legacy::EntityCommands&>::k_component_parameter_count == 0u);
+	static_assert(nox::legacy::EntitySignature<nox::legacy::EntityCommands&>::k_service_parameter_count == 0u);
 	//	constではDestroyを呼べず宣言として意味を成さないため、const参照では受けられない。
-	static_assert(nox::EntitySignature<const nox::EntityCommands&>::k_all_parameters_valid == false);
+	static_assert(nox::legacy::EntitySignature<const nox::legacy::EntityCommands&>::k_all_parameters_valid == false);
 
 	//	EntityLogicの基底はentityだけを持つ(Worldへの参照は保持しない)。
-	static_assert(sizeof(nox::EntityLogic<TestPlayerLogic>) == 8u);
+	static_assert(sizeof(nox::legacy::EntityLogic<TestPlayerLogic>) == 8u);
 
 	//	引数リストがそのままメソッドの宣言として解釈される。
 	struct SignatureProbe
 	{
-		void Process00(nox::EntityId entity, TestPosition& position, TestCounterService* service);
+		void Process00(nox::Entity entity, TestPosition& position, TestCounterService* service);
 	};
-	static_assert(nox::EntityMethod<decltype(&SignatureProbe::Process00)>);
+	static_assert(nox::legacy::EntityMethod<decltype(&SignatureProbe::Process00)>);
 	static_assert(std::same_as<
-		nox::EntityMethodTraits<decltype(&SignatureProbe::Process00)>::Signature,
-		nox::EntitySignature<nox::EntityId, TestPosition&, TestCounterService*>>);
+		nox::legacy::EntityMethodTraits<decltype(&SignatureProbe::Process00)>::Signature,
+		nox::legacy::EntitySignature<nox::Entity, TestPosition&, TestCounterService*>>);
 
 	//	const / noexcept は付けられる。const性は k_is_const に出る。
 	struct QualifiedProbe
@@ -129,15 +129,15 @@ namespace
 		void Noexcept(TestPosition& position)noexcept;
 		void ConstNoexcept(const TestPosition& position)const noexcept;
 	};
-	static_assert(nox::EntityMethod<decltype(&QualifiedProbe::Plain)>);
-	static_assert(nox::EntityMethod<decltype(&QualifiedProbe::Const)>);
-	static_assert(nox::EntityMethod<decltype(&QualifiedProbe::Noexcept)>);
-	static_assert(nox::EntityMethod<decltype(&QualifiedProbe::ConstNoexcept)>);
-	static_assert(nox::EntityMethodTraits<decltype(&QualifiedProbe::Plain)>::k_is_const == false);
-	static_assert(nox::EntityMethodTraits<decltype(&QualifiedProbe::Const)>::k_is_const);
-	static_assert(nox::EntityMethodTraits<decltype(&QualifiedProbe::ConstNoexcept)>::k_is_const);
+	static_assert(nox::legacy::EntityMethod<decltype(&QualifiedProbe::Plain)>);
+	static_assert(nox::legacy::EntityMethod<decltype(&QualifiedProbe::Const)>);
+	static_assert(nox::legacy::EntityMethod<decltype(&QualifiedProbe::Noexcept)>);
+	static_assert(nox::legacy::EntityMethod<decltype(&QualifiedProbe::ConstNoexcept)>);
+	static_assert(nox::legacy::EntityMethodTraits<decltype(&QualifiedProbe::Plain)>::k_is_const == false);
+	static_assert(nox::legacy::EntityMethodTraits<decltype(&QualifiedProbe::Const)>::k_is_const);
+	static_assert(nox::legacy::EntityMethodTraits<decltype(&QualifiedProbe::ConstNoexcept)>::k_is_const);
 	static_assert(std::same_as<
-		nox::EntityMethodTraits<decltype(&QualifiedProbe::ConstNoexcept)>::OwnerType, QualifiedProbe>);
+		nox::legacy::EntityMethodTraits<decltype(&QualifiedProbe::ConstNoexcept)>::OwnerType, QualifiedProbe>);
 
 	//	更新メソッドにできない形。concept評価がハードエラーにならずfalseになること。
 	struct RejectedProbe
@@ -147,19 +147,19 @@ namespace
 		void LValueRefQualified(TestPosition& position)&;
 		void RValueRefQualified(TestPosition& position)&&;
 	};
-	static_assert(nox::EntityMethod<decltype(&RejectedProbe::NonVoidReturn)> == false);
-	static_assert(nox::EntityMethod<decltype(&RejectedProbe::Volatile)> == false);
-	static_assert(nox::EntityMethod<decltype(&RejectedProbe::LValueRefQualified)> == false);
-	static_assert(nox::EntityMethod<decltype(&RejectedProbe::RValueRefQualified)> == false);
+	static_assert(nox::legacy::EntityMethod<decltype(&RejectedProbe::NonVoidReturn)> == false);
+	static_assert(nox::legacy::EntityMethod<decltype(&RejectedProbe::Volatile)> == false);
+	static_assert(nox::legacy::EntityMethod<decltype(&RejectedProbe::LValueRefQualified)> == false);
+	static_assert(nox::legacy::EntityMethod<decltype(&RejectedProbe::RValueRefQualified)> == false);
 	//	メンバ関数ポインタ以外を渡してもハードエラーにしない。
-	static_assert(nox::EntityMethod<nox::int32> == false);
-	static_assert(nox::EntityMethod<void(*)(TestPosition&)> == false);
+	static_assert(nox::legacy::EntityMethod<nox::int32> == false);
+	static_assert(nox::legacy::EntityMethod<void(*)(TestPosition&)> == false);
 
 #pragma endregion
 
 	[[nodiscard]] const nox::legacy::EntitySystemTypeDescriptor* FindEntitySystemType(const std::string_view name)noexcept
 	{
-		for (const nox::legacy::EntitySystemTypeDescriptor* const descriptor : nox::GetEntitySystemTypes())
+		for (const nox::legacy::EntitySystemTypeDescriptor* const descriptor : nox::legacy::GetEntitySystemTypes())
 		{
 			if (descriptor->name.find(name) != std::string_view::npos)
 			{
@@ -169,9 +169,9 @@ namespace
 		return nullptr;
 	}
 
-	[[nodiscard]] const nox::EntityLogicTypeDescriptor* FindEntityLogicType(const std::string_view name)noexcept
+	[[nodiscard]] const nox::legacy::EntityLogicTypeDescriptor* FindEntityLogicType(const std::string_view name)noexcept
 	{
-		for (const nox::EntityLogicTypeDescriptor* const descriptor : nox::GetEntityLogicTypes())
+		for (const nox::legacy::EntityLogicTypeDescriptor* const descriptor : nox::legacy::GetEntityLogicTypes())
 		{
 			if (descriptor->name.find(name) != std::string_view::npos)
 			{
@@ -211,7 +211,7 @@ namespace
 		nox::Vector<nox::ArchetypeLocation> locations;
 		for (nox::uint32 entity_index = 0u; entity_index < entity_count; ++entity_index)
 		{
-			const nox::EntityId entity{ .generation = 1u, .index = entity_index };
+			const nox::Entity entity{ .generation = 1u, .index = entity_index };
 			const nox::ArchetypeLocation location = archetype.AddEntity(entity);
 			locations.push_back(location);
 
@@ -234,7 +234,7 @@ namespace
 		}
 
 		//	swap-removeで末尾のentityが穴に移動してくる。
-		const nox::EntityId moved = archetype.RemoveEntity(locations[0]);
+		const nox::Entity moved = archetype.RemoveEntity(locations[0]);
 		NOX_ASSERT(moved.index == entity_count - 1u, u"swap-removeで移動したentityが不正です");
 		const auto* const positions = static_cast<const TestPosition*>(
 			archetype.TryGetComponentArray(locations[0].chunk_index, nox::ComponentTypeIndexOf<TestPosition>()));
@@ -246,9 +246,9 @@ namespace
 			u"Archetypeが持たない型の列が引けてしまいました");
 	}
 
-	void TestWorldStructuralChange(nox::World& world)
+	void TestWorldStructuralChange(nox::legacy::World& world)
 	{
-		const nox::EntityId entity = world.CreateEntity();
+		const nox::Entity entity = world.CreateEntity();
 		NOX_ASSERT(world.IsAlive(entity), u"生成直後のentityが生存していません");
 		NOX_ASSERT(world.HasComponent<TestPosition>(entity) == false, u"未追加のComponentDataを持っています");
 
@@ -274,7 +274,7 @@ namespace
 			u"ComponentData削除で他の値が失われました");
 
 		//	同じentityに2つ目を足してswap-removeを起こしても、他entityの位置情報が壊れない。
-		const nox::EntityId other = world.CreateEntity();
+		const nox::Entity other = world.CreateEntity();
 		world.AddComponent<TestPosition>(other)->x = 99.0f;
 		world.DestroyEntity(entity);
 		NOX_ASSERT(world.IsAlive(entity) == false, u"破棄したentityが生存しています");
@@ -286,24 +286,24 @@ namespace
 		world.DestroyEntity(other);
 	}
 
-	void TestEntitySystemExecution(nox::World& world)
+	void TestEntitySystemExecution(nox::legacy::World& world)
 	{
 		//	ヘッダに定義しただけで、生成コードの表に型記述子が載っている。
 		const nox::legacy::EntitySystemTypeDescriptor* const registered = FindEntitySystemType("TestMoveSystem");
 		NOX_ASSERT(registered != nullptr, u"EntitySystemが自動登録されていません");
 		NOX_ASSERT(registered != nullptr && registered->execute != nullptr, u"EntitySystemの実行本体が束縛されていません");
 
-		nox::FixedVector<nox::EntityId, 4> entities;
+		nox::FixedVector<nox::Entity, 4> entities;
 		for (nox::uint32 entity_index = 0u; entity_index < 4u; ++entity_index)
 		{
-			const nox::EntityId entity = world.CreateEntity();
+			const nox::Entity entity = world.CreateEntity();
 			entities.PushBack(entity);
 			world.AddComponent<TestPosition>(entity)->x = static_cast<nox::float32>(entity_index);
 			world.AddComponent<TestVelocity>(entity)->x = 2.0f;
 		}
 
 		//	宣言したComponentDataを持たないentityは走査対象に入らない。
-		const nox::EntityId ignored = world.CreateEntity();
+		const nox::Entity ignored = world.CreateEntity();
 		world.AddComponent<TestPosition>(ignored)->x = 1000.0f;
 
 		TestMoveSystem system;
@@ -313,7 +313,7 @@ namespace
 		NOX_ASSERT(system.processed_count == 4, u"EntitySystemの処理対象数が不正です");
 		for (nox::uint32 entity_index = 0u; entity_index < 4u; ++entity_index)
 		{
-			const nox::EntityId entity = entities.GetStorage()[entity_index];
+			const nox::Entity entity = entities.GetStorage()[entity_index];
 			NOX_ASSERT(world.TryGetComponent<TestPosition>(entity)->x == static_cast<nox::float32>(entity_index) + 2.0f,
 				u"EntitySystemの書き込み結果が不正です");
 		}
@@ -328,11 +328,11 @@ namespace
 	}
 
 	/// @brief Worldがstage 2cで通る経路をそのまま組み立ててSystemを1回走らせる。
-	/// @details nox::World::ExecuteEntitySystemParallel と同じ部品(Queryのchunk列挙 → 記述子の
+	/// @details nox::legacy::World::ExecuteEntitySystemParallel と同じ部品(Queryのchunk列挙 → 記述子の
 	///          execute_chunk → JobSystemのDispatch/Wait)を、テストからワーカー数を切り替えられる形で並べたもの。
 	///          Worldのjob_system_はInit()でしか起動されないため、テストは自前のJobSystemを持つ。
 	void ExecuteEntitySystemChunkParallel(
-		nox::World& world,
+		nox::legacy::World& world,
 		nox::legacy::EntitySystemBase& system,
 		nox::JobSystem& job_system)
 	{
@@ -340,13 +340,13 @@ namespace
 
 		struct ChunkJobContext
 		{
-			nox::World* world;
+			nox::legacy::World* world;
 			nox::legacy::EntitySystemBase* system;
 			nox::Archetype* archetype;
 			nox::uint32 chunk_index;
 		};
 
-		const nox::EntityQuery& query = system.GetQuery();
+		const nox::legacy::EntityQuery& query = system.GetQuery();
 		const nox::uint32 total_chunk_count = query.GetTotalChunkCount();
 		if (total_chunk_count <= 1u || job_system.GetWorkerCount() == 0u)
 		{
@@ -354,13 +354,13 @@ namespace
 			return;
 		}
 
-		std::array<nox::EntityChunkRef, k_max_chunk_jobs> chunk_refs{};
+		std::array<nox::legacy::EntityChunkRef, k_max_chunk_jobs> chunk_refs{};
 		std::array<ChunkJobContext, k_max_chunk_jobs> contexts{};
 		std::array<nox::Job, k_max_chunk_jobs> jobs{};
 
 		for (nox::uint32 start = 0u; start < total_chunk_count; start += k_max_chunk_jobs)
 		{
-			const nox::uint32 job_count = query.FillChunkRefs(start, std::span<nox::EntityChunkRef>(chunk_refs));
+			const nox::uint32 job_count = query.FillChunkRefs(start, std::span<nox::legacy::EntityChunkRef>(chunk_refs));
 			if (job_count == 0u)
 			{
 				break;
@@ -392,7 +392,7 @@ namespace
 	}
 
 	/// @brief 複数Chunkにまたがるentity群を、ワーカー0本 / 既定本数の双方で処理して結果が一致することを見る。
-	void TestParallelForEachEntitySystem(nox::World& world)
+	void TestParallelForEachEntitySystem(nox::legacy::World& world)
 	{
 		const nox::legacy::EntitySystemTypeDescriptor* const registered = FindEntitySystemType("TestParallelAddSystem");
 		NOX_ASSERT(registered != nullptr, u"Chunk並列SystemがWorldの表に載っていません");
@@ -402,7 +402,7 @@ namespace
 			u"Chunk単位の実行本体が束縛されていません");
 
 		//	Chunk容量はArchetypeが決めるので、まず1つ作って容量を読む。
-		const nox::EntityId probe = world.CreateEntity();
+		const nox::Entity probe = world.CreateEntity();
 		world.AddComponent<TestPosition>(probe)->x = 0.0f;
 		world.AddComponent<TestVelocity>(probe)->x = 1.0f;
 
@@ -417,12 +417,12 @@ namespace
 		//	1Chunkに収まらない数を作る。複数Chunkに割れていることは後段でGetChunkCountを見て確認する。
 		const nox::uint32 entity_count = archetype->GetChunkCapacity() + 5u;
 
-		nox::Vector<nox::EntityId> entities;
+		nox::Vector<nox::Entity> entities;
 		entities.reserve(entity_count);
 		entities.push_back(probe);
 		for (nox::uint32 index = 1u; index < entity_count; ++index)
 		{
-			const nox::EntityId entity = world.CreateEntity();
+			const nox::Entity entity = world.CreateEntity();
 			entities.push_back(entity);
 			world.AddComponent<TestPosition>(entity)->x = 0.0f;
 			world.AddComponent<TestVelocity>(entity)->x = 1.0f;
@@ -435,8 +435,8 @@ namespace
 		NOX_ASSERT(chunk_count >= 2u, u"複数Chunkにまたがっていません(テストの前提が崩れています)");
 
 		//	chunk参照の列挙は「空でないChunkをちょうど1回ずつ」でなければならない。
-		std::array<nox::EntityChunkRef, 64> refs{};
-		const nox::uint32 filled = system.GetQuery().FillChunkRefs(0u, std::span<nox::EntityChunkRef>(refs));
+		std::array<nox::legacy::EntityChunkRef, 64> refs{};
+		const nox::uint32 filled = system.GetQuery().FillChunkRefs(0u, std::span<nox::legacy::EntityChunkRef>(refs));
 		NOX_ASSERT(filled == chunk_count, u"chunk参照の列挙数が総数と一致しません");
 		for (nox::uint32 i = 0u; i < filled; ++i)
 		{
@@ -487,9 +487,9 @@ namespace
 		}
 	}
 
-	void TestEntityLogicLifecycle(nox::World& world)
+	void TestEntityLogicLifecycle(nox::legacy::World& world)
 	{
-		const nox::EntityLogicTypeDescriptor* const logic_descriptor = FindEntityLogicType("TestPlayerLogic");
+		const nox::legacy::EntityLogicTypeDescriptor* const logic_descriptor = FindEntityLogicType("TestPlayerLogic");
 		NOX_ASSERT(logic_descriptor != nullptr, u"EntityLogicが自動登録されていません");
 		if (logic_descriptor == nullptr)
 		{
@@ -507,8 +507,8 @@ namespace
 		world.RegisterService(*counter_service);
 		NOX_ASSERT(world.TryGetService<TestCounterService>() == counter_service, u"Serviceが引けません");
 
-		nox::EntityLogicStorage storage(*logic_descriptor);
-		const nox::EntityId entity = world.CreateEntity();
+		nox::legacy::EntityLogicStorage storage(*logic_descriptor);
+		const nox::Entity entity = world.CreateEntity();
 
 		//	必須ComponentDataが揃うまでインスタンスは作られない。
 		world.AddComponent<TestPosition>(entity)->x = 5.0f;
@@ -525,12 +525,12 @@ namespace
 		NOX_ASSERT(storage.GetEntries().size() == 1u, u"EntityLogicのインスタンス数が不正です");
 
 		//	メソッド呼び出しは引数リストどおりに束縛される。
-		for (const nox::EntityLogicMethodDescriptor& method : logic_descriptor->get_methods())
+		for (const nox::legacy::EntityLogicMethodDescriptor& method : logic_descriptor->get_methods())
 		{
-			for (const nox::EntityLogicStorage::Entry& entry : storage.GetEntries())
+			for (const nox::legacy::EntityLogicStorage::Entry& entry : storage.GetEntries())
 			{
 				auto* const logic = static_cast<TestPlayerLogic*>(entry.instance);
-				NOX_ASSERT(logic->GetEntity().raw == entity.raw, u"EntityLogicが保持するentityが不正です");
+				NOX_ASSERT(logic->GetEntity() == entity, u"EntityLogicが保持するentityが不正です");
 				method.invoke(
 					entry.instance,
 					world,
@@ -543,8 +543,8 @@ namespace
 		auto* const logic = static_cast<TestPlayerLogic*>(storage.GetEntries()[0].instance);
 		NOX_ASSERT(logic->process0_count == 1 && logic->process1_count == 1 && logic->process2_count == 1,
 			u"EntityLogicの各メソッドが1回ずつ呼ばれていません");
-		//	nox::EntityCommands&を引数に並べたメソッドへ、Worldへのビューが束縛されている。
-		NOX_ASSERT(logic->last_alive, u"nox::EntityCommandsが引数として届いていません");
+		//	nox::legacy::EntityCommands&を引数に並べたメソッドへ、Worldへのビューが束縛されている。
+		NOX_ASSERT(logic->last_alive, u"nox::legacy::EntityCommandsが引数として届いていません");
 		//	Process0でHealthの3、Process2でVelocityの2が足される。
 		NOX_ASSERT(world.TryGetComponent<TestPosition>(entity)->x == 10.0f,
 			u"EntityLogicの書き込み結果が不正です");
@@ -564,59 +564,59 @@ namespace
 	void TestUpdaterGraphLayering()
 	{
 		//	Serviceは型情報のアドレスで同一性を見る。ここでは1種類だけ使う。
-		static constexpr nox::ServiceAccess k_service_write[]{
-			nox::ServiceAccess{ .type = &nox::reflection::Typeof<TestCounterService>(), .write = true },
+		static constexpr nox::legacy::ServiceAccess k_service_write[]{
+			nox::legacy::ServiceAccess{ .type = &nox::reflection::Typeof<TestCounterService>(), .write = true },
 		};
-		static constexpr nox::ServiceAccess k_service_read[]{
-			nox::ServiceAccess{ .type = &nox::reflection::Typeof<TestCounterService>(), .write = false },
+		static constexpr nox::legacy::ServiceAccess k_service_read[]{
+			nox::legacy::ServiceAccess{ .type = &nox::reflection::Typeof<TestCounterService>(), .write = false },
 		};
 
 		constexpr nox::uint32 k_logic_group = 0u;
 
 		//	登録順に並べる。衝突辺は必ず登録順の小さい方から大きい方へ張られる。
-		const std::array<nox::UpdaterNodeAccess, 8> accesses{
+		const std::array<nox::legacy::UpdaterNodeAccess, 8> accesses{
 			//	n0: S1 Positionを書く。先行ノードがないのでlayer 0。
-			nox::UpdaterNodeAccess{
+			nox::legacy::UpdaterNodeAccess{
 				.read_write_mask = nox::MakeComponentMask<TestPosition>(),
 				.write_mask = nox::MakeComponentMask<TestPosition>(),
 			},
 			//	n1: S2 Positionを読む。S1と衝突してlayer 1。
-			nox::UpdaterNodeAccess{
+			nox::legacy::UpdaterNodeAccess{
 				.read_write_mask = nox::MakeComponentMask<TestPosition>(),
 			},
 			//	n2: S3 Healthを書く。誰とも衝突しないのでlayer 0。
-			nox::UpdaterNodeAccess{
+			nox::legacy::UpdaterNodeAccess{
 				.read_write_mask = nox::MakeComponentMask<TestHealth>(),
 				.write_mask = nox::MakeComponentMask<TestHealth>(),
 			},
 			//	n3: S4 PositionとHealthを読む。S1(layer0)とS3(layer0)に衝突。S2とは読み同士なので衝突しない → layer 1。
-			nox::UpdaterNodeAccess{
+			nox::legacy::UpdaterNodeAccess{
 				.read_write_mask = nox::MakeComponentMask<TestPosition, TestHealth>(),
 			},
 			//	n4: L1.Process0 Positionを書く。S2(layer1)・S4(layer1)の読みと衝突 → layer 2。
-			nox::UpdaterNodeAccess{
+			nox::legacy::UpdaterNodeAccess{
 				.read_write_mask = nox::MakeComponentMask<TestPosition>(),
 				.write_mask = nox::MakeComponentMask<TestPosition>(),
 				.group_index = k_logic_group,
 			},
 			//	n5: L1.Process1 Healthを読む。宣言はProcess0と重ならないが、同一EntityLogic型なので必ず後続 → layer 3。
-			nox::UpdaterNodeAccess{
+			nox::legacy::UpdaterNodeAccess{
 				.read_write_mask = nox::MakeComponentMask<TestHealth>(),
 				.group_index = k_logic_group,
 			},
 			//	n6: S5 Serviceを書く。ComponentDataに触れないのでlayer 0。
-			nox::UpdaterNodeAccess{
-				.service_accesses = std::span<const nox::ServiceAccess>(k_service_write),
+			nox::legacy::UpdaterNodeAccess{
+				.service_accesses = std::span<const nox::legacy::ServiceAccess>(k_service_write),
 			},
 			//	n7: S6 Serviceを読む。S5と衝突 → layer 1。
-			nox::UpdaterNodeAccess{
-				.service_accesses = std::span<const nox::ServiceAccess>(k_service_read),
+			nox::legacy::UpdaterNodeAccess{
+				.service_accesses = std::span<const nox::legacy::ServiceAccess>(k_service_read),
 			},
 		};
 
 		std::array<nox::uint32, 8> layer_indices{};
-		const nox::uint32 layer_count = nox::BuildUpdaterLayerIndices(
-			std::span<const nox::UpdaterNodeAccess>(accesses),
+		const nox::uint32 layer_count = nox::legacy::BuildUpdaterLayerIndices(
+			std::span<const nox::legacy::UpdaterNodeAccess>(accesses),
 			std::span<nox::uint32>(layer_indices));
 
 		NOX_ASSERT(layer_indices[0] == 0u, u"書き込みだけのノードは先頭レイヤーに置かれるはずです");
@@ -630,34 +630,34 @@ namespace
 		NOX_ASSERT(layer_count == 4u, u"レイヤー数が不正です");
 
 		//	衝突判定そのものの規則。読み同士は並列、書きが絡めば直列。
-		NOX_ASSERT(nox::ConflictsUpdaterNodeAccess(accesses[1], accesses[3]) == false,
+		NOX_ASSERT(nox::legacy::ConflictsUpdaterNodeAccess(accesses[1], accesses[3]) == false,
 			u"読み同士が衝突しています");
-		NOX_ASSERT(nox::ConflictsUpdaterNodeAccess(accesses[0], accesses[1]),
+		NOX_ASSERT(nox::legacy::ConflictsUpdaterNodeAccess(accesses[0], accesses[1]),
 			u"同一ComponentDataのRWが衝突していません");
-		NOX_ASSERT(nox::ConflictsUpdaterNodeAccess(accesses[4], accesses[5]),
+		NOX_ASSERT(nox::legacy::ConflictsUpdaterNodeAccess(accesses[4], accesses[5]),
 			u"同一EntityLogic型のメソッドが衝突していません");
-		NOX_ASSERT(nox::ConflictsUpdaterNodeAccess(accesses[6], accesses[7]),
+		NOX_ASSERT(nox::legacy::ConflictsUpdaterNodeAccess(accesses[6], accesses[7]),
 			u"同一Serviceのwrite/readが衝突していません");
 	}
 
 	/// @brief 引数リストからServiceのアクセス宣言が導出される。
 	void TestServiceAccessDeclaration()
 	{
-		using WriteSignature = nox::EntitySignature<TestPosition&, TestCounterService*>;
-		using ReadSignature = nox::EntitySignature<const TestCounterService&>;
+		using WriteSignature = nox::legacy::EntitySignature<TestPosition&, TestCounterService*>;
+		using ReadSignature = nox::legacy::EntitySignature<const TestCounterService&>;
 
-		const std::span<const nox::ServiceAccess> write_accesses = WriteSignature::GetServiceAccesses();
+		const std::span<const nox::legacy::ServiceAccess> write_accesses = WriteSignature::GetServiceAccesses();
 		NOX_ASSERT(write_accesses.size() == 1u, u"Serviceのアクセス宣言が導出されていません");
 		NOX_ASSERT(write_accesses[0].type == &nox::reflection::Typeof<TestCounterService>(),
 			u"Serviceの型情報が一致しません");
 		NOX_ASSERT(write_accesses[0].write, u"非constのServiceが書き込み扱いになっていません");
 
-		const std::span<const nox::ServiceAccess> read_accesses = ReadSignature::GetServiceAccesses();
+		const std::span<const nox::legacy::ServiceAccess> read_accesses = ReadSignature::GetServiceAccesses();
 		NOX_ASSERT(read_accesses.size() == 1u, u"const参照のServiceが宣言に載っていません");
 		NOX_ASSERT(read_accesses[0].write == false, u"const参照のServiceが書き込み扱いになっています");
 
 		//	ComponentDataとEntityCommandsはServiceの宣言に算入されない。
-		NOX_ASSERT((nox::EntitySignature<TestPosition&, nox::EntityCommands&>::GetServiceAccesses().empty()),
+		NOX_ASSERT((nox::legacy::EntitySignature<TestPosition&, nox::legacy::EntityCommands&>::GetServiceAccesses().empty()),
 			u"Service以外の引数がServiceの宣言に混ざっています");
 
 		//	記述子経由でも同じ宣言が読める。
@@ -670,12 +670,12 @@ namespace
 
 	/// @brief 生成器が名前を書けない型でも、手書きの特殊化で同じ経路に載る。
 	/// @details Worldの表は経由せず、記述子を直接組み立てて呼び出す。
-	void TestManualEntityLogicMethodTable(nox::World& world)
+	void TestManualEntityLogicMethodTable(nox::legacy::World& world)
 	{
 		using ManualLogic = nox::test::ecs::manual::ManualHealthLogic;
 
-		static constexpr nox::EntityLogicTypeDescriptor k_descriptor =
-			nox::MakeEntityLogicTypeDescriptor<ManualLogic>();
+		static constexpr nox::legacy::EntityLogicTypeDescriptor k_descriptor =
+			nox::legacy::MakeEntityLogicTypeDescriptor<ManualLogic>();
 
 		NOX_ASSERT(k_descriptor.get_methods().size() == 1u, u"手書きのメソッド表が読めていません");
 		NOX_ASSERT(k_descriptor.make_required_mask() == nox::MakeComponentMask<TestHealth>(),
@@ -684,14 +684,14 @@ namespace
 		NOX_ASSERT(FindEntityLogicType("ManualHealthLogic") == nullptr,
 			u"生成コードから見えないはずの型が表に載っています");
 
-		nox::EntityLogicStorage storage(k_descriptor);
-		const nox::EntityId entity = world.CreateEntity();
+		nox::legacy::EntityLogicStorage storage(k_descriptor);
+		const nox::Entity entity = world.CreateEntity();
 		world.AddComponent<TestHealth>(entity)->value = 7;
 
 		storage.CreateInstance(world, entity);
 		NOX_ASSERT(storage.GetEntries().size() == 1u, u"手書き経路でインスタンスが生成されていません");
 
-		const nox::EntityLogicStorage::Entry& entry = storage.GetEntries()[0];
+		const nox::legacy::EntityLogicStorage::Entry& entry = storage.GetEntries()[0];
 		k_descriptor.get_methods()[0].invoke(
 			entry.instance,
 			world,
@@ -717,7 +717,7 @@ void nox::test::TestEntityEcs()
 	TestServiceAccessDeclaration();
 	TestUpdaterGraphLayering();
 
-	nox::World world;
+	nox::legacy::World world;
 	TestWorldStructuralChange(world);
 	TestEntitySystemExecution(world);
 	TestParallelForEachEntitySystem(world);

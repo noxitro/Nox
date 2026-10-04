@@ -100,7 +100,7 @@ namespace nox
 	/// @tparam ...ExtraRequiredComponents 追加で依存するComponentData型リスト（これらが揃ったentityのみを対象にする）
 	/// @tparam ...AfterSystems 依存するシステムリスト（これらを待つ)
 	/// @tparam ...BeforeSystems 依存させるシステムリスト（これらを待たせる)
-	template<class T, nox::concepts::Component... ExtraRequiredComponents, nox::concepts::EntitySystem... AfterSystems, nox::concepts::EntitySystem... BeforeSystems>
+	template<class T, class... ExtraRequiredComponents, nox::concepts::EntitySystem... AfterSystems, nox::concepts::EntitySystem... BeforeSystems>
 	struct EntitySystem<T, nox::type_identities_t<ExtraRequiredComponents...>, nox::type_identities_t<AfterSystems...>, nox::type_identities_t<BeforeSystems...>> : public nox::EntitySystemBase
 	{
 		static constexpr bool HasOnUpdate = requires{ &T::OnUpdate; };

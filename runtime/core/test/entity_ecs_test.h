@@ -4,7 +4,7 @@
 /// @file	entity_ecs_test.h
 /// @brief	ECSセルフテスト用の型。
 /// @details ここに定義した型は、マクロも登録呼び出しも書かずにWorldへ購読される。
-///          リフレクション生成コードが nox::GetEntitySystemTypes() / nox::GetEntityLogicTypes()
+///          リフレクション生成コードが nox::legacy::GetEntitySystemTypes() / nox::legacy::GetEntityLogicTypes()
 ///          の表を書き出すため、「ヘッダに定義するだけ」が成立していることの実証を兼ねる。
 #pragma once
 
@@ -38,7 +38,7 @@ namespace nox::test::ecs
 	class TestMoveSystem final : public nox::legacy::EntitySystem<nox::test::ecs::TestMoveSystem>
 	{
 	public:
-		void OnUpdate(nox::EntityId entity, nox::test::ecs::TestPosition& position, const nox::test::ecs::TestVelocity& velocity)
+		void OnUpdate(nox::Entity entity, nox::test::ecs::TestPosition& position, const nox::test::ecs::TestVelocity& velocity)
 		{
 			position.x += velocity.x;
 			position.y += velocity.y;
@@ -47,7 +47,7 @@ namespace nox::test::ecs
 		}
 
 		nox::int32 processed_count = 0;
-		nox::EntityId last_entity{ 0u };
+		nox::Entity last_entity{ 0u };
 	};
 
 	/// @brief Chunk単位の並列列挙を宣言したSystem(stage 2c)。
@@ -74,7 +74,7 @@ namespace nox::test::ecs
 	///          「ComponentDataのみ」「Serviceをポインタで」「Serviceを参照で」「EntityCommands」の4形を並べている。
 	///          更新メソッドはprivateのままでよい(friend宣言も不要)。
 	///          コンストラクタは書かない(エンジンがデフォルト構築してentityを束縛する)。
-	class TestPlayerLogic final : public nox::EntityLogic<nox::test::ecs::TestPlayerLogic>
+	class TestPlayerLogic final : public nox::legacy::EntityLogic<nox::test::ecs::TestPlayerLogic>
 	{
 	public:
 		nox::int32 process0_count = 0;
@@ -83,7 +83,7 @@ namespace nox::test::ecs
 		bool last_alive = false;
 
 	private:
-		NOX_ATTR(nox::attr::EntityLogicMethod(nox::SystemPhaseType::Update))
+		NOX_ATTR(nox::legacy::attr::EntityLogicMethod(nox::SystemPhaseType::Update))
 		void Process0(nox::test::ecs::TestPosition& position, const nox::test::ecs::TestHealth& health)
 		{
 			//	個別の状態は普通のメンバとして持てる(ComponentData化しなくてよい)。
@@ -91,7 +91,7 @@ namespace nox::test::ecs
 			position.x += static_cast<nox::float32>(health.value);
 		}
 
-		NOX_ATTR(nox::attr::EntityLogicMethod(nox::SystemPhaseType::Update))
+		NOX_ATTR(nox::legacy::attr::EntityLogicMethod(nox::SystemPhaseType::Update))
 		void Process1(nox::test::ecs::TestPosition& position, nox::test::ecs::TestCounterService* service)
 		{
 			//	Serviceをポインタで受けた場合、未登録ならnullptrが渡る。
@@ -103,7 +103,7 @@ namespace nox::test::ecs
 			}
 		}
 
-		NOX_ATTR(nox::attr::EntityLogicMethod(nox::SystemPhaseType::Update))
+		NOX_ATTR(nox::legacy::attr::EntityLogicMethod(nox::SystemPhaseType::Update))
 		void Process2(
 			nox::test::ecs::TestPosition& position,
 			const nox::test::ecs::TestVelocity& velocity,
@@ -116,8 +116,8 @@ namespace nox::test::ecs
 			++service.call_count;
 		}
 
-		NOX_ATTR(nox::attr::EntityLogicMethod(nox::SystemPhaseType::Update))
-		void Process3(nox::EntityId entity, nox::EntityCommands& commands)
+		NOX_ATTR(nox::legacy::attr::EntityLogicMethod(nox::SystemPhaseType::Update))
+		void Process3(nox::Entity entity, nox::legacy::EntityCommands& commands)
 		{
 			//	WorldはEntityLogicに保持されない。フェーズ中に許される操作は引数で受け取る。
 			//	ComponentDataを1つも宣言していないため、必須ComponentDataは広がらない。

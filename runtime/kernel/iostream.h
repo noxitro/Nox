@@ -4,7 +4,7 @@
 ///	@file	iostream.h
 ///	@brief	iostream
 #pragma once
-#include	<istream>
+#include	<fstream>
 #include	"basic_type.h"
 
 namespace nox::io

@@ -9,15 +9,15 @@
 #if NOX_DEVELOP
 #include	"renderer.h"
 
-void nox::render::debug::DebugDraw::Init(nox::World& world)
+void nox::render::debug::DebugDraw::Init(nox::legacy::World& world)
 {
 }
 
-void nox::render::debug::DebugDraw::UpdateDraw(nox::World& world)
+void nox::render::debug::DebugDraw::UpdateDraw(nox::legacy::World& world)
 {
 }
 
-void nox::render::debug::DebugDraw::Terminate(nox::World& world)
+void nox::render::debug::DebugDraw::Terminate(nox::legacy::World& world)
 {
 }
 

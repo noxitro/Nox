@@ -16,5 +16,5 @@ namespace nox::entities
 		};
 	}
 
-	constexpr nox::EntityId kInvalidEntityId{ 0u };
+	constexpr nox::Entity kInvalidEntityId{ 0u };
 }

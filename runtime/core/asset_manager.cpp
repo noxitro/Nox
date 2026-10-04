@@ -7,7 +7,7 @@
 #include "asset_manager.h"
 
 #include	"asset.h"
-#include	"world.h"
+#include	"world_legacy.h"
 #include	"core_utility.h"
 #include	"asset_attribute.h"
 #include	"log_id.h"
@@ -159,7 +159,7 @@ nox::Asset& nox::AssetManager::CreateAssetImpl(std::u8string_view uri)
 	return *new_asset;
 }
 
-void nox::AssetManager::Init(nox::World& world)
+void nox::AssetManager::Init(nox::legacy::World& world)
 {
 #if NOX_DEVELOP
 	editor_remote_server_system_ = world.GetSystem<nox::dev::editor_remote::EditorRemoteServer>();
@@ -191,7 +191,7 @@ void nox::AssetManager::Init(nox::World& world)
 		});
 }
 
-void nox::AssetManager::Terminate([[maybe_unused]] nox::World& world)
+void nox::AssetManager::Terminate([[maybe_unused]] nox::legacy::World& world)
 {
 	//	ロードスレッドを停止させる（停止フラグを立ててから起こし、終了を待つ）
 	is_kill_.store(true);
@@ -217,7 +217,7 @@ std::span<const nox::SystemBase::PhaseRegister> nox::AssetManager::GetPhaseRegis
 	return table;
 }
 
-void nox::AssetManager::LoadThread([[maybe_unused]] nox::World& world)
+void nox::AssetManager::LoadThread([[maybe_unused]] nox::legacy::World& world)
 {
 	while (is_kill_.load() == false)
 	{

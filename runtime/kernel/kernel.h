@@ -27,6 +27,7 @@
 #include	<limits>
 #include	<optional>
 #include	<ranges>
+#include	<semaphore>
 #include	<span>
 #include	<string_view>
 #include	<thread>
