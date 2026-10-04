@@ -665,7 +665,9 @@ nox::StlU16String	nox::unicode::ConvertU16String(std::u32string_view str_view)
     const size_t length = GetUTF16Length(str_view);
     nox::StlU16String result(length, '0');
 
-    NOX_ASSERT(ConvertStringImpl(EncodeUTF16<char16>, str_view, length, std::span<char16>(result)) == true, u"");
+    //  Master では NOX_ASSERT が空に展開されるので、変換はアサートの外で行う
+    [[maybe_unused]] const bool converted = ConvertStringImpl(EncodeUTF16<char16>, str_view, length, std::span<char16>(result));
+    NOX_ASSERT(converted == true, u"");
 
     return result;
 }

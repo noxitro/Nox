@@ -31,7 +31,9 @@ void nox::io::SpanStreamReader::Read(std::span<std::byte> dest)
 
 nox::io::FileSpanStreamReader::FileSpanStreamReader(const std::u8string_view path)
 {
-	NOX_ASSERT(file_.Open(path, u8"rb"), u"failed to open file: {0}", path);
+	//	Master では NOX_ASSERT が空に展開されるので、Open はアサートの外で呼ぶ
+	[[maybe_unused]] const bool opened = file_.Open(path, u8"rb");
+	NOX_ASSERT(opened, u"failed to open file: {0}", path);
 }
 
 void nox::io::FileSpanStreamReader::Read(std::span<std::byte> dest)
