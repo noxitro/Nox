@@ -13,7 +13,8 @@
 #         このワークフローか設定を変えた push でも走る (設定の確認用。投稿しない)。
 # 通知  : 前回の結果と比べ、新しく出た指摘を Discord に投稿する
 #         (DISCORD_DEV_REPORT_WEBHOOK_URL、無ければ DISCORD_WEBHOOK_URL)。
-#         解析自体が失敗したときは DISCORD_WEBHOOK_URL に流す。
+#         解析自体が失敗したときは DISCORD_WEBHOOK_URL に流す。落ちた段階 (ビルド / 集計)、
+#         コミット、ビルドのエラー行を添える (clang-tidy-failure.py)。
 # 費用  : 公開リポジトリなので windows ランナーも無料。
 # ============================================================
 
@@ -29,6 +30,8 @@ on:
       - 'runtime/.clang-tidy'
       - '.github/workflows/clang-tidy.yml'
       - '.github/scripts/clang-tidy-report.py'
+      - '.github/scripts/clang-tidy-failure.py'
+      - '.github/scripts/discord_webhook.py'
 
 # 設定を試す push が続いたら古いものは打ち切る。定期実行と手動実行は打ち切らない。
 concurrency:
@@ -72,6 +75,7 @@ jobs:
       # MSVC のコード分析 (/analyze) は別途検討するので、ここでは切っておく。
       # clang-tidy の指摘は MSBuild の警告として build ログに出る。
       - name: Build with clang-tidy
+        id: build
         run: |
           msbuild runtime\runtime.slnx `
             /p:Configuration=Debug `
@@ -141,14 +145,17 @@ jobs:
             --color $color --url "$env:RUN_URL" `
             --footer "$env:GITHUB_WORKFLOW #$env:GITHUB_RUN_NUMBER"
 
+      # どの段階で落ちたかで文面を変え、ビルドならログのエラー行を載せる
+      # (Discord だけで原因の見当が付くようにする)。
       - name: Notify failure
         if: failure() && github.event_name != 'push'
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          STAGE: ${{ steps.build.outcome == 'failure' && 'build' || (steps.report.outcome == 'failure' && 'report' || 'other') }}
         run: |
-          python .github/scripts/discord_webhook.py `
-            --title ":x: clang-tidy の解析に失敗した — $env:GITHUB_REPOSITORY" `
-            --description "ビルドか集計が失敗した。ログを確認すること。" `
-            --color red --url "$env:RUN_URL" `
-            --footer "$env:GITHUB_WORKFLOW #$env:GITHUB_RUN_NUMBER"
+          python .github/scripts/clang-tidy-failure.py `
+            --stage $env:STAGE `
+            --log clang-tidy-build.log `
+            --root "$env:GITHUB_WORKSPACE" `
+            --run-url "$env:RUN_URL"
