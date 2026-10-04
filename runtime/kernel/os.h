@@ -4,7 +4,7 @@
 ///	@file	os.h
 ///	@brief	os
 #pragma once
-#include	"advanced_type.h"
+#include	"basic_type.h"
 
 #include	"nox_string.h"
 #include	"nox_string_view.h"

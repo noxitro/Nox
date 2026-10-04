@@ -7,6 +7,7 @@
 #include	<span>
 #include	<string_view>
 #include	"../basic_definition.h"
+#include	"../basic_type.h"
 #if NOX_WIN64
 #include	"file_base.h"
 

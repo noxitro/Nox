@@ -5,6 +5,9 @@
 ///	@brief	log_trace
 #include	"pch.h"
 #include	"log_trace.h"
+
+#include	<iostream>
+
 #include	"algorithm.h"
 #include	"memory/stl_allocate_adapter.h"
 #include	"unicode_converter.h"

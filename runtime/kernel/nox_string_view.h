@@ -8,7 +8,7 @@
 #include	<concepts>
 #include	<ranges>
 #include	<utility>
-#include	"advanced_type.h"
+#include	"basic_type.h"
 #include	"ascii.h"
 
 namespace nox

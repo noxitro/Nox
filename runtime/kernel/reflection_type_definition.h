@@ -5,7 +5,7 @@
 ///	@brief	type_definition
 #pragma once
 
-#include	"advanced_type.h"
+#include	"basic_type.h"
 #include	"reflection_attribute.h"
 
 namespace nox::reflection

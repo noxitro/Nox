@@ -7,7 +7,7 @@
 #include	<ranges>
 #include	<span>
 #include	<string_view>
-#include	"advanced_type.h"
+#include	"basic_type.h"
 #include	"type_traits/type_traits.h"
 
 namespace nox::util

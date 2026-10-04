@@ -6,7 +6,7 @@
 #include	"pch.h"
 #include	"scope_profile.h"
 
-#include	"advanced_type.h"
+#include	"basic_type.h"
 #include	"string_util.h"
 #include	"log_trace.h"
 #include	"log_id.h"

@@ -8,7 +8,7 @@
 #include	<ranges>
 #include	<span>
 #include	<utility>
-#include	"advanced_type.h"
+#include	"basic_type.h"
 #include	"assertion_kernel.h"
 
 namespace nox

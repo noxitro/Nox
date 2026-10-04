@@ -12,7 +12,6 @@
 #include    <utility>
 #include    <vector>
 
-#include	"../advanced_type.h"
 #include	"../basic_type.h"
 #include    "../basic_definition.h"
 
