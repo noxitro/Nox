@@ -124,7 +124,7 @@ def commit_line():
     try:
         subject = subprocess.run(
             ["git", "log", "-1", "--format=%s", sha or "HEAD"],
-            capture_output=True, text=True, encoding="utf-8", check=True,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", check=True,
         ).stdout.strip()
     except (OSError, subprocess.CalledProcessError):
         subject = ""
@@ -183,7 +183,13 @@ def main():
     ap.add_argument("--dry-run", action="store_true", help="投稿せずに payload を表示する")
     args = ap.parse_args()
 
-    errors = collect_errors(args.log, args.root) if args.stage == "build" else []
+    # 失敗を知らせるのが役目なので、ログの読み取りで落ちても通知は出す (エラー行は「拾えなかった」になる)
+    errors = []
+    if args.stage == "build":
+        try:
+            errors = collect_errors(args.log, args.root)
+        except Exception as e:  # noqa: BLE001
+            print(f"::warning::ログからエラー行を拾えなかった ({type(e).__name__}: {e})")
     repo = os.environ.get("GITHUB_REPOSITORY", "")
     title = f":x: clang-tidy: {STAGES[args.stage]}" + (f" — {repo}" if repo else "")
     description = build_description(args.stage, errors, args.max_errors, args.run_url)
