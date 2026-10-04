@@ -4,6 +4,11 @@
 ///	@file	pmr_buffer.h
 ///	@brief	PMR アリーナアロケータ
 #pragma once
+#include	<array>
+#include	<span>
+#include	<deque>
+#include	<list>
+#include	<vector>
 #include	"pmr.h"
 #include	"../advanced_type.h"
 #include	"../assertion_kernel.h"

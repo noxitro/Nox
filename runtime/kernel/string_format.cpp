@@ -5,6 +5,7 @@
 ///	@brief	string_format
 #include	"pch.h"
 #include	"string_format.h"
+#include	<string>
 
 namespace nox
 {

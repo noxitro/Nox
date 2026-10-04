@@ -5,6 +5,7 @@
 ///	@brief	stack_trace
 #pragma once
 
+#include	<array>
 #include	"stack_trace_definition.h"
 #include	"nox_string.h"
 #include	"nox_string_view.h"

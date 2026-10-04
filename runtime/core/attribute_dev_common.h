@@ -4,7 +4,9 @@
 ///	@file	attribute_dev_common.h
 ///	@brief	開発用の属性定義
 #pragma once
+#include	<string_view>
 #include	"attribute.h"
+#include	"../kernel/reflection_attribute.h"
 
 namespace nox::attr::dev
 {

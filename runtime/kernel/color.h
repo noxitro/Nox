@@ -5,6 +5,7 @@
 ///	@brief	color
 #pragma once
 #include	<array>
+#include	<concepts>
 #include	"basic_type.h"
 
 namespace nox

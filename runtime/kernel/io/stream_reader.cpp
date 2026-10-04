@@ -8,6 +8,7 @@
 
 #include	"../io/file.h"
 #include	"../assertion.h"
+#include	<span>
 
 nox::io::FileStreamReader::FileStreamReader(std::u8string_view path) :
 	ifs_(reinterpret_cast<const char*>(path.data()), std::ios::binary)

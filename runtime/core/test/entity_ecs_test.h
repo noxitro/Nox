@@ -13,6 +13,7 @@
 #include	"../entity_system_legacy.h"
 #include	"../entity_logic.h"
 #include	"../entity_logic_attribute.h"
+#include	"../../kernel/reflection_attribute.h"
 
 namespace nox::test::ecs
 {

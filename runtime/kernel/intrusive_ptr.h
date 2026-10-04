@@ -4,6 +4,8 @@
 ///	@file	intrusive_ptr.h
 ///	@brief	intrusive_ptr
 #pragma once
+#include	<concepts>
+#include	<utility>
 #include	"type_traits/type_name.h"
 #include	"utility.h"
 

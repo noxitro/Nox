@@ -4,6 +4,8 @@
 ///	@file	dev_net_definition.h
 ///	@brief	dev_net_definition
 #pragma once
+#include	<array>
+#include	<span>
 #include	"../../../kernel/basic_definition.h"
 #if NOX_WINDOWS
 #include	"../../../kernel/win64_socket.h"

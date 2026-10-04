@@ -6,6 +6,9 @@
 #pragma once
 #include	<type_traits>
 #include	<memory>
+#include	<functional>
+#include	<span>
+#include	<utility>
 
 #include	"../basic_definition.h"
 #include	"../basic_type.h"

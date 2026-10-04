@@ -4,6 +4,7 @@
 ///	@file	guid.h
 ///	@brief	guid
 #pragma once
+#include <array>
 #include "basic_type.h"
 #include "nox_string.h"
 #include "type_traits/concepts.h"

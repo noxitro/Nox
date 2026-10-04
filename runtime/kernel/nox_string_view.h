@@ -4,6 +4,10 @@
 ///	@file	nox_string_view.h
 ///	@brief	nox_string_view
 #pragma once
+#include	<array>
+#include	<concepts>
+#include	<ranges>
+#include	<utility>
 #include	"advanced_type.h"
 #include	"ascii.h"
 

@@ -6,6 +6,9 @@
 #pragma once
 #include	<type_traits>
 #include	<memory>
+#include	<concepts>
+#include	<span>
+#include	<utility>
 #include	"assertion_kernel.h"
 #include	"basic_type.h"
 

@@ -7,6 +7,9 @@
 
 #include	<xutility>
 #include	<functional>
+#include	<ranges>
+#include	<span>
+#include	<utility>
 #include	"type_traits/type_traits.h"
 #include	"type_traits/concepts.h"
 #include	"type_traits/function_signature.h"

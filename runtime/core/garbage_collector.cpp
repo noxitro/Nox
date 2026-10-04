@@ -7,6 +7,8 @@
 #include	"garbage_collector.h"
 
 #include	"object.h"
+#include	<ranges>
+#include	"../kernel/vector.h"
 
 namespace nox
 {

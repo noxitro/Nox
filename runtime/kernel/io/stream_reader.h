@@ -4,6 +4,8 @@
 ///	@file	stream_reader.h
 ///	@brief	stream_reader
 #pragma once
+#include	<span>
+#include	<string_view>
 #include	"stream.h"
 #include	"../io/file.h"
 

@@ -4,6 +4,7 @@
 ///	@file	point3x3.h
 ///	@brief	point3x3
 #pragma once
+#include	<array>
 #include	"point3d.h"
 #pragma warning(push)
 #pragma warning(disable:4201)

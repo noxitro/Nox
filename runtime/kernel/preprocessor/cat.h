@@ -16,5 +16,3 @@
 
 ///	u8文字列に置き換え
 #define	NOX_DETAIL_TO_U8STRING(x) NOX_PP_CAT(u8, x)
-#endif // 0
-

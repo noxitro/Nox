@@ -5,6 +5,7 @@
 ///	@brief	path
 #include	"pch.h"
 #include	"path.h"
+#include	<array>
 
 std::span<nox::U8StringView> nox::io::Path::GetExtensions()const noexcept
 {

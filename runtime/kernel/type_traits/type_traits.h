@@ -5,9 +5,16 @@
 ///	@brief		type_traits
 #pragma once
 #include    <type_traits>
+#include    <array>
+#include    <concepts>
+#include    <string>
+#include    <string_view>
+#include    <utility>
+#include    <vector>
 
 #include	"../advanced_type.h"
 #include	"../basic_type.h"
+#include    "../basic_definition.h"
 
 namespace nox
 {

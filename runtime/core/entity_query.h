@@ -6,8 +6,13 @@
 /// @details ForEachの1行あたりのコストは「列先頭 + 行インデックス」の加算のみ。
 ///          仮想関数もstd::functionも介さないため、呼び出し全体がインライン展開される。
 #pragma once
+#include	<array>
+#include	<span>
+#include	<utility>
 #include	"archetype.h"
 #include	"entity_access.h"
+#include	"../kernel/vector.h"
+#include	"../kernel/assertion.h"
 
 namespace nox
 {

@@ -8,6 +8,8 @@
 
 #include	"os.h"
 #include	"assertion.h"
+#include	<functional>
+#include	<ranges>
 namespace nox
 {
 	namespace

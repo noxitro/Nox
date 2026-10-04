@@ -14,6 +14,7 @@
 
 #if NOX_WINDOWS
 #include	"win64_api.h"
+#include	<source_location>
 #endif // NOX_WIN64
 
 namespace nox

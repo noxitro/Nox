@@ -5,6 +5,7 @@
 ///	@brief	virtual_memory_allocator
 #include	"pch.h"
 #include	"virtual_memory_allocator.h"
+#include	<concepts>
 
 namespace nox::memory::virtual_memory_allocator 
 {

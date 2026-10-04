@@ -16,6 +16,7 @@
 #include "../advanced_type.h"
 #include "../memory/nox_memory.h"
 #include "../memory/allocation_counter.h"
+#include "../vector.h"
 
 ///	@brief	Allocate / Deallocate 1 回ずつが、要求サイズとともにそのまま数えられる。
 TEST(AllocationCounter, CountsAllocateAndDeallocate)

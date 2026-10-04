@@ -4,6 +4,12 @@
 ///	@file	enum_info.h
 ///	@brief	enum_info
 #pragma once
+#include	<concepts>
+#include	<functional>
+#include	<optional>
+#include	<span>
+#include	<string_view>
+#include	"../kernel/vector.h"
 
 namespace nox::reflection
 {

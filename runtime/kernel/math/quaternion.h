@@ -5,6 +5,7 @@
 ///	@brief	quaternion
 #pragma once
 
+#include	<array>
 #include	"vector4d.h"
 
 namespace nox

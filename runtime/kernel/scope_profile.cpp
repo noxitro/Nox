@@ -10,6 +10,7 @@
 #include	"string_util.h"
 #include	"log_trace.h"
 #include	"log_id.h"
+#include	<span>
 
 nox::util::ScopeProfile::ScopeProfile(const std::u16string_view label)
 {

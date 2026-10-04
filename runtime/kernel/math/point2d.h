@@ -5,6 +5,7 @@
 ///	@brief	point2d
 #pragma once
 
+#include	<array>
 #include	"../basic_type.h"
 #include	"../type_traits/concepts.h"
 

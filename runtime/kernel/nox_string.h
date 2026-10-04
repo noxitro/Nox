@@ -4,7 +4,9 @@
 ///	@file	string.h
 ///	@brief	string
 #pragma once
-#include	"advanced_type.h"
+#include	<concepts>
+#include	<utility>
+#include	"stl_string.h"
 #include	"basic_definition.h"
 #include	"ascii.h"
 

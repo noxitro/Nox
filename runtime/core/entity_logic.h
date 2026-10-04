@@ -22,9 +22,13 @@
 ///          使い分け: 大量に湧くもの(弾・パーティクル・群れ)はEntitySystem、
 ///          少数の主要個体(プレイヤー・ボス・UI)はEntityLogic。
 #pragma once
+#include	<span>
+#include	<string_view>
 #include	"entity_query.h"
 #include	"system_phase_type.h"
 #include	"entity_logic_attribute.h"
+#include	"../kernel/vector.h"
+#include	"../kernel/reflection_attribute.h"
 
 namespace nox
 {

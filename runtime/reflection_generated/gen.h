@@ -4,6 +4,7 @@
 ///	@file	gen.h
 ///	@brief	gen
 #pragma once
+#include	"../kernel/basic_definition.h"
 
 namespace nox::reflection::gen
 {

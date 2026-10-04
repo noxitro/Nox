@@ -4,6 +4,7 @@
 ///	@file	dev_net_log_id.h
 ///	@brief	dev_net_log_id
 #pragma once
+#include	<string_view>
 
 namespace nox::dev::net::log_id
 {

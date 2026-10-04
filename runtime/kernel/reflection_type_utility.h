@@ -4,6 +4,8 @@
 ///	@file	type_utility.h
 ///	@brief	type_utility
 #pragma once
+#include	<optional>
+#include	<utility>
 #include	"reflection_type_definition.h"
 #include	"type_traits/type_traits.h"
 #include	"type_traits/type_name.h"

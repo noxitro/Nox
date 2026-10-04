@@ -4,8 +4,11 @@
 ///	@file	test.h
 ///	@brief	test
 #pragma once
+#include	<span>
+#include	<string_view>
 #include	"../editor_remote_query.h"
 #include	"../editor_remote_response.h"
+#include	"../../../kernel/basic_definition.h"
 
 #if NOX_DEVELOP
 

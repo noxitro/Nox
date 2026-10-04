@@ -5,6 +5,7 @@
 ///	@brief	matrix4d
 #pragma once
 
+#include	<array>
 #include	"vector4d.h"
 
 namespace nox

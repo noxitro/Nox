@@ -4,6 +4,7 @@
 ///	@file	entity.h
 ///	@brief	entity
 #pragma once
+#include <expected>
 #include "dev_net_definition.h"
 #include "../../object.h"
 

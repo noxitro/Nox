@@ -9,6 +9,8 @@
 #include	"socket_scheduler.h"
 #include	"dev_net_api.h"
 #include	"dev_net_log_id.h"
+#include	<expected>
+#include	"../../../kernel/vector.h"
 
 namespace nox::dev::net
 {

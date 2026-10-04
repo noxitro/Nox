@@ -4,6 +4,7 @@
 ///	@file	renderer.h
 ///	@brief	renderer
 #pragma once
+#include	<span>
 
 namespace nox::render
 {

@@ -4,6 +4,7 @@
 /// @file	asset.h
 /// @brief	asset
 #pragma once
+#include	<string_view>
 #include	"object.h"
 
 namespace nox

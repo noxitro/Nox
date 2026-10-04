@@ -7,6 +7,7 @@
 #include	"advanced_type.h"
 //#include	"os/mutex.h"
 #include	"read_write_lock.h"
+#include	"vector.h"
 
 namespace nox
 {

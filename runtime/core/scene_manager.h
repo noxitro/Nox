@@ -4,7 +4,10 @@
 ///	@file	scene_manager.h
 ///	@brief	scene_manager
 #pragma once
+#include	<functional>
+#include	<span>
 #include	"system.h"
+#include	"../kernel/vector.h"
 
 namespace nox
 {

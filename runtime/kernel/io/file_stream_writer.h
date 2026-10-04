@@ -4,6 +4,7 @@
 ///	@file	file_stream_writer.h
 ///	@brief	file_stream_writer
 #pragma once
+#include	<string_view>
 #include	"stream_writer.h"
 
 namespace nox::io

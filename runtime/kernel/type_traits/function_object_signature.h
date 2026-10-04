@@ -4,6 +4,7 @@
 ///	@file	function_object_signature.h
 ///	@brief	関数オブジェクトのシグネチャ解析
 #pragma once
+#include	<utility>
 #include	"type_traits.h"
 
 namespace nox

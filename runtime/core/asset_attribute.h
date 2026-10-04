@@ -4,6 +4,7 @@
 /// @file	asset_attribute.h
 /// @brief	asset_attribute
 #pragma once
+#include	<string_view>
 #include	"attribute.h"
 
 namespace nox::attr

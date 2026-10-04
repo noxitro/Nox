@@ -10,6 +10,7 @@
 #include	"assertion.h"
 #include	"os_definition.h"
 #include	"../win64_api.h"
+#include	<array>
 
 #if NOX_WIN64
 namespace nox::detail

@@ -5,6 +5,7 @@
 /// @brief	random
 #pragma once
 #include	<random>
+#include	<concepts>
 #include	"basic_type.h"
 
 namespace nox::random

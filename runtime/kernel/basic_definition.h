@@ -60,13 +60,15 @@ namespace nox
 #define	NOX_DEVELOP 0
 #endif // NOX_DEBUG || NOX_RELEASE
 
-#if defined(_MSC_VER)
-#define NOX_COMPILER_MSVC 1
-#define NOX_COMPILER_CLANG 0
-#define NOX_COMPILER_GCC 0
-#elif defined(__clang__)
+//	clang-cl (と ReflectionGenerator が使う libclang) は _MSC_VER も定義するので、__clang__ を先に見る。
+//	_MSC_VER を先に見ると clang-cl が MSVC 扱いになり、__FUNCSIG__ の綴りなどの分岐を誤る。
+#if defined(__clang__)
 #define NOX_COMPILER_MSVC 0
 #define NOX_COMPILER_CLANG 1
+#define NOX_COMPILER_GCC 0
+#elif defined(_MSC_VER)
+#define NOX_COMPILER_MSVC 1
+#define NOX_COMPILER_CLANG 0
 #define NOX_COMPILER_GCC 0
 #elif defined(__GNUC__)
 #define NOX_COMPILER_MSVC 0
@@ -74,7 +76,7 @@ namespace nox
 #define NOX_COMPILER_GCC 1
 #else
 static_assert(false, "not support compiler");
-#endif // defined(_MSC_VER)
+#endif // defined(__clang__)
 
 #if NOX_DEBUG || NOX_RELEASE
 #define	NOX_CONDITINAL_DEVELOP(x) x

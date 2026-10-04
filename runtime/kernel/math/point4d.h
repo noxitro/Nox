@@ -4,6 +4,7 @@
 ///	@file	point4d.h
 ///	@brief	point4d
 #pragma once
+#include	<array>
 #include	"point3d.h"
 
 namespace nox

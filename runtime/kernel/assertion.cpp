@@ -18,6 +18,8 @@
 #include	"string_format.h"
 #include	"mutex.h"
 #include	"scoped_lock.h"
+#include	<array>
+#include	<source_location>
 
 namespace nox
 {

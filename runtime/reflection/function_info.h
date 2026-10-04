@@ -5,6 +5,14 @@
 ///	@brief	function
 #pragma once
 #include	<tuple>
+#include	<array>
+#include	<functional>
+#include	<optional>
+#include	<span>
+#include	<string_view>
+#include	<utility>
+#include	"../kernel/assertion.h"
+#include	"../kernel/reflection_attribute.h"
 
 namespace nox::reflection
 {

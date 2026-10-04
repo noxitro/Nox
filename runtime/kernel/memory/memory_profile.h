@@ -4,6 +4,7 @@
 ///	@file	memory_profile.h
 ///	@brief	メモリプロファイラ
 #pragma once
+#include	<array>
 #include	"memory_definition.h"
 #include	"../stack_trace_definition.h"
 #include	"basic_definition.h"
