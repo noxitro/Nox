@@ -7,7 +7,7 @@
 #include	<functional>
 #include	<span>
 #include	"system.h"
-#include	"../kernel/vector.h"
+#include	"../kernel/kernel.h"
 
 namespace nox
 {

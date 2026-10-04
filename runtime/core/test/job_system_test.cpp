@@ -9,9 +9,6 @@
 #include "../../reflection/reflection.h"
 #include "test.h"
 
-#include "../../kernel/job_system.h"
-#include "../../kernel/assertion.h"
-#include "../../kernel/stop_watch.h"
 #include "../log_id.h"
 
 namespace

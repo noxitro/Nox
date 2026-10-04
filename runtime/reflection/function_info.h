@@ -11,8 +11,6 @@
 #include	<span>
 #include	<string_view>
 #include	<utility>
-#include	"../kernel/assertion.h"
-#include	"../kernel/reflection_attribute.h"
 
 namespace nox::reflection
 {

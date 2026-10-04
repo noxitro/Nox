@@ -12,7 +12,7 @@
 ///          網羅するためだけのもので、エンジンの機能には一切使わない。
 #pragma once
 
-#include	"../../kernel/basic_type.h"
+#include	"../../kernel/kernel.h"
 
 #include	<atomic>
 

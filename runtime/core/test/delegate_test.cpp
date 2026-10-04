@@ -9,8 +9,6 @@
 #include	"../../reflection/reflection.h"
 #include	"test.h"
 
-#include	"../../kernel/assertion.h"
-#include	"../../kernel/delegate.h"
 
 static_assert(sizeof(nox::MoveOnlyDelegate<void()>) == 40);
 static_assert(sizeof(nox::CopyableDelegate<void()>) == 40);

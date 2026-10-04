@@ -5,7 +5,7 @@
 /// @brief	debug_draw
 #pragma once
 #include	<span>
-#include	"../../kernel/basic_definition.h"
+#include	"../../kernel/kernel.h"
 
 #if NOX_DEVELOP
 

@@ -5,6 +5,16 @@
 ///	@brief	別プロジェクトがincludeする用のヘッダ
 #pragma once
 
+#include	"basic_type.h"
+#include	"basic_definition.h"
+#include	"advanced_type.h"
+
+#include	"vector.h"
+#include	"unordered_map.h"
+#include	"unordered_set.h"
+#include	"stl_string.h"
+#include	"queue.h"
+
 #include	"algorithm.h"
 
 #include	"type_traits/object_pointer_signature.h"
@@ -13,6 +23,7 @@
 #include	"type_traits/type_name.h"
 
 #include	"string_format.h"
+#include	"unicode_converter.h"
 
 #include	"assertion.h"
 #include	"singleton.h"
@@ -48,7 +59,7 @@
 #include	"intrusive_ptr.h"
 
 #include	"preprocessor/repeat.h"
-//#include	"delegate.h"
+#include	"delegate.h"
 
 #include	"file_system.h"
 
@@ -59,6 +70,7 @@
 
 #include	"iterator.h"
 #include	"reflection_type.h"
+#include	"reflection_attribute.h"
 #include	"stack.h"
 #include	"memory/memory_profile.h"
 #include	"stop_watch.h"
@@ -73,6 +85,7 @@
 #include	"path.h"
 #include	"fixed_vector.h"
 #include	"nameof.h"
+#include	"crc32.h"
 
 //	STL コンテナ (nox のアロケータを使う別名)
 #include	"vector.h"
@@ -94,6 +107,10 @@
 
 //	diagnostics
 #include	"parallel_execute_checker.h"
+//	ReflectionGenerator の解析対象に入れないため、生成器の解析時は外す
+#if !NOX_REFLECTION_GENERATOR
+#include	"memory/allocation_counter.h"
+#endif // !NOX_REFLECTION_GENERATOR
 //	end diagnostics
 
 #include	"utility.h"

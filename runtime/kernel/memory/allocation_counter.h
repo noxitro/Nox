@@ -14,7 +14,7 @@
 ///				新しい同期を足さないのでコストは加算 2 回ぶんだけで、全スレッドの合計が正確に取れる。
 ///				そのため Master を含む全構成で有効にしてある。
 ///
-///				kernel.h からは include しない (ReflectionGenerator の解析対象に入れないため)。
+///				ReflectionGenerator の解析対象に入れないため、kernel.h は NOX_REFLECTION_GENERATOR の間だけ include を外す。
 #pragma once
 #include	"../basic_type.h"
 

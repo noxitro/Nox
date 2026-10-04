@@ -9,7 +9,7 @@
 #include	<span>
 #include	<string_view>
 #include	<utility>
-#include	"../kernel/assertion.h"
+#include	"../kernel/kernel.h"
 
 namespace nox::reflection
 {

@@ -6,7 +6,7 @@
 #pragma once
 #include	<expected>
 #include	"net_entity.h"
-#include	"../../../kernel/vector.h"
+#include	"../../../kernel/kernel.h"
 
 namespace nox
 {

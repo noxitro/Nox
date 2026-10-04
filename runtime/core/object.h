@@ -6,7 +6,7 @@
 #pragma once
 #include	<span>
 #include	"object_definition.h"
-#include	"../kernel/reflection_attribute.h"
+#include	"../kernel/kernel.h"
 
 namespace nox
 {

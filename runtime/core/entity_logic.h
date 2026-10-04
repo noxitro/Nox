@@ -27,8 +27,7 @@
 #include	"entity_query.h"
 #include	"system_phase_type.h"
 #include	"entity_logic_attribute.h"
-#include	"../kernel/vector.h"
-#include	"../kernel/reflection_attribute.h"
+#include	"../kernel/kernel.h"
 
 namespace nox
 {

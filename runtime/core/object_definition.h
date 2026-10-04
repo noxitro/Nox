@@ -5,7 +5,7 @@
 ///	@brief	object_definition
 #pragma once
 #include	<utility>
-#include	"../kernel/assertion.h"
+#include	"../kernel/kernel.h"
 
 namespace nox
 {

@@ -9,9 +9,6 @@
 #include "engine_module.h"
 #include "entity_type_registry.h"
 #include "log_id.h"
-#include <ranges>
-#include "../kernel/unordered_map.h"
-#include "../kernel/vector.h"
 
 namespace nox
 {

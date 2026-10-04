@@ -7,7 +7,6 @@
 
 #if NOX_DEVELOP
 #include	"../object.h"
-#include	"../../kernel/basic_definition.h"
 
 namespace nox::dev::editor_remote
 {

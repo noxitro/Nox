@@ -6,7 +6,6 @@
 #pragma once
 #if NOX_DEVELOP
 #include	"editor_remote_entity.h"
-#include	"../../kernel/basic_definition.h"
 
 namespace nox::dev::editor_remote
 {

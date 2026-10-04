@@ -8,7 +8,7 @@
 
 #include	"object.h"
 #include	<ranges>
-#include	"../kernel/vector.h"
+#include	"../kernel/kernel.h"
 
 namespace nox
 {

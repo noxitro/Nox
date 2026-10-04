@@ -11,6 +11,33 @@ namespace nox
 {
 	class World;
 
+	struct IComponentData;
+
+	namespace detail
+	{
+		struct IECSBase
+		{
+		};
+
+		struct ISystemBase : public nox::detail::IECSBase
+		{
+			template<class... Types>
+			struct EntityAccess final
+			{
+				inline constexpr explicit EntityAccess(nox::World& world)noexcept : world_(world) {}
+
+				template<class T> requires ((std::is_same_v<T, Types> || ...))
+					[[nodiscard]] inline T& Get()const noexcept
+				{
+					T* dummy = nullptr;
+					return *dummy;
+				}
+			private:
+				nox::World& world_;
+			};
+		};
+	}
+
 	/// @brief		ECSのSystem
 	///				OnUpdate,OnAdd,OnRemoveを提供する
 	/// @details	インスタンス化は不可。

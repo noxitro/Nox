@@ -7,7 +7,7 @@
 #include	"socket_stream_utility.h"
 #include	"../attribute_common.h"
 #include	"../attribute_dev_common.h"
-#include	"../../kernel/fixed_vector.h"
+#include	"../../kernel/kernel.h"
 #include	<cstdio>
 #include	<malloc.h>
 

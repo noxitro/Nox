@@ -7,7 +7,7 @@
 #if NOX_DEVELOP
 #include	<span>
 #include	"editor_remote_entity.h"
-#include	"../../kernel/basic_definition.h"
+#include	"../../kernel/kernel.h"
 
 namespace nox
 {

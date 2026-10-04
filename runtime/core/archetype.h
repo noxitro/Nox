@@ -11,7 +11,6 @@
 #include	<span>
 #include	"component_type.h"
 #include	"entity.h"
-#include	"../kernel/vector.h"
 
 namespace nox
 {

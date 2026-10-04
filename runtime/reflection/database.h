@@ -8,7 +8,7 @@
 #include	<span>
 #include	<string_view>
 #include	<utility>
-#include	"../kernel/reflection_attribute.h"
+#include	"../kernel/kernel.h"
 
 namespace nox::reflection
 {

@@ -13,7 +13,7 @@
 
 #include	"pch.h"
 
-#include	"../../kernel/job_system.h"
+#include	"../../kernel/kernel.h"
 
 #include	<atomic>
 

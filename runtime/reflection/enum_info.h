@@ -9,7 +9,6 @@
 #include	<optional>
 #include	<span>
 #include	<string_view>
-#include	"../kernel/vector.h"
 
 namespace nox::reflection
 {

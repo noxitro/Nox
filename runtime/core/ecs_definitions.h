@@ -5,7 +5,6 @@
 ///	@brief	ecs_definitions
 #pragma once
 #include	<concepts>
-#include	"component.h"
 
 /// @brief	ECS関係の型宣言に問題がないかコンパイル時チェックを行うマクロ（定義しなくても良い）
 ///			型定義の中で書くこと。
@@ -26,25 +25,5 @@ namespace nox
 
 namespace nox::detail
 {
-	struct IECSBase
-	{
-	};
 
-	struct ISystemBase : public nox::detail::IECSBase
-	{
-		template<std::derived_from<nox::IComponentData>... Types>
-		struct EntityAccess final
-		{
-			inline constexpr explicit EntityAccess(nox::World& world)noexcept : world_(world) {}
-
-			template<std::derived_from<nox::IComponentData> T> requires ((std::is_same_v<T, Types> || ...))
-			[[nodiscard]] inline T& Get()const noexcept
-			{
-				T* dummy = nullptr;
-				return *dummy;
-			}
-		private:
-			nox::World& world_;
-		};
-	};
 }

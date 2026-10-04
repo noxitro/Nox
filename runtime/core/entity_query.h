@@ -11,8 +11,7 @@
 #include	<utility>
 #include	"archetype.h"
 #include	"entity_access.h"
-#include	"../kernel/vector.h"
-#include	"../kernel/assertion.h"
+#include	"../kernel/kernel.h"
 
 namespace nox
 {

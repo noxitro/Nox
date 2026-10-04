@@ -4,7 +4,6 @@
 /// @file	asset_format.h
 /// @brief	ネイティブアセットファイルのオンディスクフォーマット定義
 #pragma once
-#include	"../kernel/basic_type.h"
 
 //	オンディスクレイアウト（リトルエンディアン）:
 //	[AssetFileHeader]

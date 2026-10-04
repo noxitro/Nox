@@ -9,22 +9,13 @@
 #include	"pch.h"
 #include	"bench.h"
 
-#include	"kernel/advanced_type.h"
-#include	"kernel/crc32.h"
-#include	"kernel/delegate.h"
-#include	"kernel/fixed_vector.h"
-#include	"kernel/memory/pmr_buffer.h"
-#include	"kernel/string_format.h"
-#include	"kernel/unicode_converter.h"
-#include	"kernel/mutex.h"
-#include	"kernel/scoped_lock.h"
+#include	"kernel/kernel.h"
 
 #include	<array>
 #include	<functional>
 #include	<span>
 #include	<string_view>
 #include	<utility>
-#include	"kernel/vector.h"
 
 namespace
 {

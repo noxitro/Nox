@@ -14,9 +14,6 @@
 
 #include	"reflection_generated_register.h"
 #include	"log_id.h"
-#include	"../kernel/unordered_map.h"
-#include	"../kernel/unordered_set.h"
-#include	"../kernel/vector.h"
 
 namespace nox::util
 {

@@ -6,7 +6,7 @@
 #pragma once
 #include	<array>
 #include	<span>
-#include	"../../../kernel/basic_definition.h"
+#include	"../../../kernel/kernel.h"
 #if NOX_WINDOWS
 #include	"../../../kernel/win64_socket.h"
 #endif // NOX_WINDOWS

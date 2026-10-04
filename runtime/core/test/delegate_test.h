@@ -10,8 +10,7 @@
 #include	<ranges>
 #include	<span>
 #include	<utility>
-#include	"../../kernel/vector.h"
-#include	"../../kernel/assertion.h"
+#include	"../../kernel/kernel.h"
 
 namespace nox
 {

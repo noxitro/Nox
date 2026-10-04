@@ -10,7 +10,7 @@
 #include	<string_view>
 #include	"../editor_remote_query.h"
 #include	"../editor_remote_response.h"
-#include	"../../../kernel/basic_definition.h"
+#include	"../../../kernel/kernel.h"
 
 namespace nox::dev::editor_remote
 {

@@ -16,9 +16,6 @@
 #include "../entity_type_registry.h"
 #include "../updater_graph.h"
 #include "../log_id.h"
-#include "../../kernel/assertion.h"
-#include "../../kernel/job_system.h"
-#include "../../kernel/vector.h"
 
 namespace nox::test::ecs::manual
 {

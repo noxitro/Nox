@@ -25,7 +25,7 @@
 #include	<type_traits>
 #include	<vector>
 
-#include	"kernel/memory/allocation_counter.h"
+#include	"kernel/kernel.h"
 
 namespace nox::bench
 {

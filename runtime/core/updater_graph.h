@@ -18,8 +18,6 @@
 #include	<span>
 #include	"entity_system_legacy.h"
 #include	"entity_logic.h"
-#include	"../kernel/vector.h"
-#include	"../kernel/basic_definition.h"
 
 namespace nox
 {

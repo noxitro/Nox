@@ -4,8 +4,6 @@
 /// @file	world.h
 /// @brief	world
 #pragma once
-#include	<concepts>
-#include	<functional>
 #include	"system.h"
 #include	"entity.h"
 #include	"entity_command_buffer.h"
@@ -14,15 +12,10 @@
 #include	"entity_logic.h"
 #include	"updater_graph.h"
 #include	"service_legacy.h"
-#include	"../kernel/job_system.h"
-#include	"../kernel/unordered_map.h"
-#include	"../kernel/vector.h"
-#include	"../kernel/reflection_attribute.h"
 
 namespace nox
 {
 	struct IComponentData;
-	class Component;
 	class SystemBase;
 	class EngineModule;
 	class World;

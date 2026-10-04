@@ -40,8 +40,6 @@
 #include	"pch.h"
 
 #include	"../../kernel/kernel.h"
-#include	"../../kernel/job_system.h"
-#include	"../../kernel/stop_watch.h"
 #include	"../../reflection/reflection.h"
 
 #include	"../world.h"

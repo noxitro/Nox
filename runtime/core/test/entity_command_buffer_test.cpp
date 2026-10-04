@@ -10,7 +10,6 @@
 #include "test.h"
 
 #include "../entity_command_buffer.h"
-#include "../../kernel/assertion.h"
 
 void nox::test::TestEntityCommandBuffer()
 {

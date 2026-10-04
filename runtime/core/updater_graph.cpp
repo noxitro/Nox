@@ -6,9 +6,8 @@
 #include "pch.h"
 #include "updater_graph.h"
 
-#include "log_id.h"
 #include <ranges>
-#include "../kernel/vector.h"
+#include "log_id.h"
 
 namespace nox
 {

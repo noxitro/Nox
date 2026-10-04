@@ -5,7 +5,7 @@
 /// @brief	local_transform
 #pragma once
 #include	"component.h"
-#include	"../kernel/reflection_attribute.h"
+#include	"../kernel/kernel.h"
 
 namespace nox
 {
