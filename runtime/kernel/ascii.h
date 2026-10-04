@@ -4,7 +4,10 @@
 ///	@file	ascii.h
 ///	@brief	ascii
 #pragma once
-#include	"advanced_type.h"
+#include	<span>
+#include	<string_view>
+#include	<optional>
+#include	"stl_string.h"
 
 namespace nox::encoding::ascii
 {

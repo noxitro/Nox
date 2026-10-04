@@ -4,11 +4,12 @@
 ///	@file	convert_string.h
 ///	@brief	convert_string
 #pragma once
+#include	<string_view>
 #include	"basic_definition.h"
 #include	"basic_type.h"
 
 #include	"type_traits/type_traits.h"
-#include	"advanced_type.h"
+//#include	"stl_string.h"
 
 namespace nox::util
 {

@@ -4,8 +4,8 @@
 ///	@file	inplace_array.h
 ///	@brief	inplace_array
 #pragma once
-#include	"advanced_type.h"
-
+#include	<array>
+#include	<span>
 namespace nox
 {
 	template<class T, size_t _Size>

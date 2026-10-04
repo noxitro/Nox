@@ -4,7 +4,9 @@
 ///	@file	binary_writer.h
 ///	@brief	binary_writer
 #pragma once
-#include	"../advanced_type.h"
+#include	<span>
+#include	<string_view>
+#include	"../basic_type.h"
 
 namespace nox::io
 {
