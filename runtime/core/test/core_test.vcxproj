@@ -19,7 +19,6 @@
     <ClInclude Include="test.h" />
     <ClInclude Include="test_reflection.h" />
     <ClInclude Include="test_types.h" />
-    <ClInclude Include="delegate_test.h" />
     <ClInclude Include="entity_ecs_test.h" />
     <ClInclude Include="reflection_variable_test_types.h" />
   </ItemGroup>
