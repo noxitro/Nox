@@ -1,29 +1,29 @@
 // Copyright (c) 2023-2026 noxitro
 // SPDX-License-Identifier: MIT
 
-/// @file	world.cpp
+/// @file	world_legacy.cpp
 /// @brief	world
 #include "pch.h"
-#include "world.h"
+#include "world_legacy.h"
 
 #include "engine_module.h"
-#include "entity_type_registry.h"
+#include "entity_type_registry_legacy.h"
 #include "log_id.h"
 
-namespace nox
+namespace nox::legacy
 {
 	namespace
 	{
 		/// @brief 遅延構造変更の記録先を表すスレッドローカルな束縛。
 		/// @details 「今このスレッドが実行しているノード」を指す。worldが一致しない、
 		///          あるいはノード番号が確保済み本数を超えている場合はノード外バッファへ落とす。
-		///          スレッドローカルにしてあるのは、記録側(nox::EntityCommands)が
+		///          スレッドローカルにしてあるのは、記録側(nox::legacy::EntityCommands)が
 		///          Worldへのポインタ1つしか持たない薄いビューだからである。
 		///          ここに置かなければ、System / EntityLogic の引数リストか
 		///          コンストラクタに「自分がどのノードか」を書かせることになる。
 		struct NodeCommandBinding
 		{
-			const nox::World* world = nullptr;
+			const nox::legacy::World* world = nullptr;
 			nox::uint32 node_index = 0u;
 		};
 
@@ -54,9 +54,9 @@ namespace nox
 		}
 
 		[[nodiscard]]
-		constexpr nox::EntityId make_entity_id(nox::uint32 generation, nox::uint32 index) noexcept
+		constexpr nox::Entity make_entity_id(nox::uint32 generation, nox::uint32 index) noexcept
 		{
-			return nox::EntityId{
+			return nox::Entity{
 				(static_cast<nox::uint64>(index) << 32u) | static_cast<nox::uint64>(generation)
 			};
 		}
@@ -91,7 +91,7 @@ namespace nox
 		/// @details RWParallelExecuteCheckerは同一スレッドからの再入も並列とみなすため、
 		///          1ノード内での重複Enterを避ける必要がある。
 		[[nodiscard]] bool is_duplicated_service_access(
-			const std::span<const nox::ServiceAccess> accesses,
+			const std::span<const nox::legacy::ServiceAccess> accesses,
 			const nox::uint32 index)noexcept
 		{
 			for (nox::uint32 earlier_index = 0u; earlier_index < index; ++earlier_index)
@@ -107,7 +107,7 @@ namespace nox
 		/// @brief 同じServiceを複数回宣言している場合の、実効的な書き込み権限。
 		/// @details 1つでも非constで受けていればそのノードはWriterとして扱う。
 		[[nodiscard]] bool is_service_write_access(
-			const std::span<const nox::ServiceAccess> accesses,
+			const std::span<const nox::legacy::ServiceAccess> accesses,
 			const nox::uint32 index)noexcept
 		{
 			bool write = false;
@@ -159,23 +159,23 @@ namespace nox
 	}
 }
 
-nox::WorldNodeCommandScope::WorldNodeCommandScope(const nox::World& world, const nox::uint32 node_index)noexcept :
-	previous_world_(nox::t_node_command_binding.world),
-	previous_node_index_(nox::t_node_command_binding.node_index)
+nox::legacy::WorldNodeCommandScope::WorldNodeCommandScope(const nox::legacy::World& world, const nox::uint32 node_index)noexcept :
+	previous_world_(nox::legacy::t_node_command_binding.world),
+	previous_node_index_(nox::legacy::t_node_command_binding.node_index)
 {
 	//	必ず保存・復元する。ジョブを配った側のスレッドは Wait の内側で別ノードのジョブを引くため、
 	//	set/clear だと戻ってきたときに束縛が失われる。
-	nox::t_node_command_binding.world = &world;
-	nox::t_node_command_binding.node_index = node_index;
+	nox::legacy::t_node_command_binding.world = &world;
+	nox::legacy::t_node_command_binding.node_index = node_index;
 }
 
-nox::WorldNodeCommandScope::~WorldNodeCommandScope()noexcept
+nox::legacy::WorldNodeCommandScope::~WorldNodeCommandScope()noexcept
 {
-	nox::t_node_command_binding.world = previous_world_;
-	nox::t_node_command_binding.node_index = previous_node_index_;
+	nox::legacy::t_node_command_binding.world = previous_world_;
+	nox::legacy::t_node_command_binding.node_index = previous_node_index_;
 }
 
-nox::uint32 nox::ResolveUpdaterWorkerCount(
+nox::uint32 nox::legacy::ResolveUpdaterWorkerCount(
 	const std::span<const nox::char16* const> command_line_args,
 	const nox::uint32 default_worker_count)noexcept
 {
@@ -224,7 +224,7 @@ nox::uint32 nox::ResolveUpdaterWorkerCount(
 	return parsed;
 }
 
-nox::uint32 nox::ResolveExitAfterFrames(const std::span<const nox::char16* const> command_line_args)noexcept
+nox::uint32 nox::legacy::ResolveExitAfterFrames(const std::span<const nox::char16* const> command_line_args)noexcept
 {
 	static constexpr std::u16string_view kExitAfterFramesKey = u"--exit-after-frames";
 
@@ -248,16 +248,16 @@ nox::uint32 nox::ResolveExitAfterFrames(const std::span<const nox::char16* const
 			return 0u;
 		}
 		parsed = (parsed * 10u) + static_cast<nox::uint32>(character - u'0');
-		if (parsed > nox::kMaxExitAfterFrames)
+		if (parsed > nox::legacy::kMaxExitAfterFrames)
 		{
 			//	方針ではなく桁あふれ対策。ここで打ち切らないとuint32を回り込む。
-			return nox::kMaxExitAfterFrames;
+			return nox::legacy::kMaxExitAfterFrames;
 		}
 	}
 	return parsed;
 }
 
-nox::World::World() :
+nox::legacy::World::World() :
 	free_entity_head_(make_free_entity_head(k_invalid_entity_index, 0u)),
 	next_entity_index_(0u),
 	first_entity_record_page_(),
@@ -279,10 +279,10 @@ nox::World::World() :
 	entity_logic_storages_(),
 	updater_graph_(),
 	job_system_(),
-	updater_worker_count_(nox::ResolveUpdaterWorkerCount(
+	updater_worker_count_(nox::legacy::ResolveUpdaterWorkerCount(
 		nox::os::GetCommandLineArgList(),
 		nox::JobSystem::GetDefaultWorkerCount())),
-	exit_after_frames_(nox::ResolveExitAfterFrames(nox::os::GetCommandLineArgList())),
+	exit_after_frames_(nox::legacy::ResolveExitAfterFrames(nox::os::GetCommandLineArgList())),
 	services_(),
 	modules_(),
 	systems_(),
@@ -300,7 +300,7 @@ nox::World::World() :
 	archetypes_.reserve(k_initial_archetype_capacity);
 }
 
-nox::World::~World()
+nox::legacy::World::~World()
 {
 	//	ノードを触るものを片付ける前に、必ずワーカーを止めて回収する。
 	job_system_.Finalize();
@@ -310,7 +310,7 @@ nox::World::~World()
 	node_command_buffers_ = nullptr;
 	node_command_buffer_count_ = 0u;
 
-	for (nox::EntityLogicStorage* const storage : entity_logic_storages_)
+	for (nox::legacy::EntityLogicStorage* const storage : entity_logic_storages_)
 	{
 		delete storage;
 	}
@@ -342,14 +342,14 @@ nox::World::~World()
 
 	for (nox::uint32 page_index = 1u; page_index < k_max_entity_page_count; ++page_index)
 	{
-		nox::World::EntityRecordPage* const page = entity_record_pages_[page_index].load(std::memory_order_relaxed);
+		nox::legacy::World::EntityRecordPage* const page = entity_record_pages_[page_index].load(std::memory_order_relaxed);
 		if (page != nullptr)
 		{
 			delete page;
 		}
 	}
 }
-void nox::World::Run()
+void nox::legacy::World::Run()
 {
 	Init();
 	stop_watch_.Start();
@@ -378,12 +378,12 @@ void nox::World::Run()
 	Exit();
 }
 
-void nox::World::SetVSync(bool flag)noexcept
+void nox::legacy::World::SetVSync(bool flag)noexcept
 {
 	enabled_vsync_ = flag;
 }
 
-nox::SystemBase* nox::World::FindSystem(const nox::reflection::Type& type)const noexcept
+nox::SystemBase* nox::legacy::World::FindSystem(const nox::reflection::Type& type)const noexcept
 {
 	const auto it = system_map_.find(&type);
 	if (it == system_map_.end())
@@ -393,7 +393,7 @@ nox::SystemBase* nox::World::FindSystem(const nox::reflection::Type& type)const 
 	return it->second;
 }
 
-nox::SystemBase& nox::World::GetSystem(const nox::reflection::Type& type)const
+nox::SystemBase& nox::legacy::World::GetSystem(const nox::reflection::Type& type)const
 {
 	nox::SystemBase* const system = FindSystem(type);
 	if (system != nullptr)
@@ -404,7 +404,7 @@ nox::SystemBase& nox::World::GetSystem(const nox::reflection::Type& type)const
 	std::abort();
 }
 
-void nox::World::Init()
+void nox::legacy::World::Init()
 {
 	nox::reflection::ForeachDerivedClassInfoList(
 		nox::reflection::Typeof<nox::EngineModule>(),
@@ -461,11 +461,11 @@ void nox::World::Init()
 	//	以降この集合が変わったら Rebuild を呼び直すこと。
 	updater_graph_.Rebuild(
 		std::span<nox::legacy::EntitySystemBase* const>(entity_systems_.data(), entity_systems_.size()),
-		std::span<nox::EntityLogicStorage* const>(entity_logic_storages_.data(), entity_logic_storages_.size()));
+		std::span<nox::legacy::EntityLogicStorage* const>(entity_logic_storages_.data(), entity_logic_storages_.size()));
 
 	//	遅延構造変更の記録先をノード単位に分ける。
 	//
-	//	確保するのは「nox::EntityCommands& を宣言したノード」のぶんだけでよい。
+	//	確保するのは「nox::legacy::EntityCommands& を宣言したノード」のぶんだけでよい。
 	//	宣言していないノードは1コマンドも積めないことが引数リストから分かるので、
 	//	そこへ空バッファを割り当てるのは丸ごと無駄になる。
 	//	依存解析を駆動しているのと同じシグネチャ解析を、確保にもそのまま使っている。
@@ -484,12 +484,12 @@ void nox::World::Init()
 
 		//	引数の数は既存のログ行と揃えてある。新しい引数個数で NOX_INFO_LINE を実体化すると、
 		//	kernel/string_format.h 側の既存警告(-Wmissing-braces)がその実体化ぶんだけ増えるため。
-		//	フェーズごとのノード数との対比は nox::UpdaterGraph::Trace() が出す。
+		//	フェーズごとのノード数との対比は nox::legacy::UpdaterGraph::Trace() が出す。
 		NOX_INFO_LINE(nox::log_id::CoreCommon,
 			u8"EntityCommandBuffer: {0}本 x コマンド{1}件 = 合計{2}B",
 			node_command_buffer_count_,
 			k_entity_command_capacity,
-			static_cast<nox::uint32>(node_command_buffer_count_ * sizeof(nox::World::EntityCommandBufferType)));
+			static_cast<nox::uint32>(node_command_buffer_count_ * sizeof(nox::legacy::World::EntityCommandBufferType)));
 	}
 
 #if !NOX_MASTER
@@ -509,7 +509,7 @@ void nox::World::Init()
 		nox::os::GetLogicalProcessorCount());
 }
 
-void nox::World::Update()
+void nox::legacy::World::Update()
 {
 	elapsed_milli_seconds_ = stop_watch_.ElapsedMilliseconds();
 	if (enabled_vsync_)
@@ -528,7 +528,7 @@ void nox::World::Update()
 	stop_watch_.Restart();
 }
 
-void nox::World::Exit()
+void nox::legacy::World::Exit()
 {
 	kill_.store(true, std::memory_order_release);
 	system_map_.clear();
@@ -540,7 +540,7 @@ void nox::World::Exit()
 	}
 }
 
-void nox::World::BuildExecuteNodeList(std::span<nox::SystemBase*> system_list)
+void nox::legacy::World::BuildExecuteNodeList(std::span<nox::SystemBase*> system_list)
 {
 	struct Node
 	{
@@ -661,7 +661,7 @@ void nox::World::BuildExecuteNodeList(std::span<nox::SystemBase*> system_list)
 	}
 }
 
-void nox::World::ExecutePhase(const nox::SystemPhaseType phase_type)
+void nox::legacy::World::ExecutePhase(const nox::SystemPhaseType phase_type)
 {
 	const nox::Vector<SystemExecuteNode>& layers = system_phase_table_[nox::util::ToUnderlying(phase_type)];
 	//	フェーズ実行中は即時系の構造変更を禁じる。列挙深度(下位ビット)には触れない。
@@ -679,9 +679,9 @@ void nox::World::ExecutePhase(const nox::SystemPhaseType phase_type)
 	structural_change_state_.fetch_and(~k_structural_change_phase_bit, std::memory_order_seq_cst);
 }
 
-void nox::World::CreateEntitySystems()
+void nox::legacy::World::CreateEntitySystems()
 {
-	for (const nox::legacy::EntitySystemTypeDescriptor* const descriptor : nox::GetEntitySystemTypes())
+	for (const nox::legacy::EntitySystemTypeDescriptor* const descriptor : nox::legacy::GetEntitySystemTypes())
 	{
 		nox::legacy::EntitySystemBase* const entity_system = descriptor->create();
 		if (entity_system == nullptr)
@@ -705,35 +705,35 @@ void nox::World::CreateEntitySystems()
 	}
 }
 
-void nox::World::ExecuteLayerNodesSerial(const std::span<const nox::UpdaterNode> nodes)
+void nox::legacy::World::ExecuteLayerNodesSerial(const std::span<const nox::legacy::UpdaterNode> nodes)
 {
-	for (const nox::UpdaterNode& node : nodes)
+	for (const nox::legacy::UpdaterNode& node : nodes)
 	{
 		ExecuteNode(node);
 	}
 }
 
-void nox::World::ExecuteNodeJob(void* const context)
+void nox::legacy::World::ExecuteNodeJob(void* const context)
 {
-	auto* const job_context = static_cast<nox::World::NodeJobContext*>(context);
+	auto* const job_context = static_cast<nox::legacy::World::NodeJobContext*>(context);
 	job_context->world->ExecuteNode(*job_context->node);
 }
 
-void nox::World::ExecuteEntitySystemChunkJob(void* const context)
+void nox::legacy::World::ExecuteEntitySystemChunkJob(void* const context)
 {
-	auto* const job_context = static_cast<nox::World::ChunkJobContext*>(context);
+	auto* const job_context = static_cast<nox::legacy::World::ChunkJobContext*>(context);
 	//	ジョブを引いたのが配り元とは別のワーカーでも、記録先は配り元のノードのままでなければならない。
-	const nox::WorldNodeCommandScope command_scope(*job_context->world, job_context->node_index);
+	const nox::legacy::WorldNodeCommandScope command_scope(*job_context->world, job_context->node_index);
 	job_context->system->ExecuteChunk(*job_context->world, *job_context->archetype, job_context->chunk_index);
 }
 
-void nox::World::ExecuteEntitySystemParallel(nox::legacy::EntitySystemBase& system, const nox::uint32 node_index)
+void nox::legacy::World::ExecuteEntitySystemParallel(nox::legacy::EntitySystemBase& system, const nox::uint32 node_index)
 {
 	//	Chunkは互いに素なメモリブロックなので、2つのワーカーが同じバイトへ触ることはない。
 	//	ノード同士の排他は呼び出し元(ExecuteNode)が既に取っている。
 	//	確保は一切走らない。ジョブ配列もChunk参照配列もスタック上の固定長で、
 	//	上限を超えるChunk数は同じ配列を使い回すバッチへ分けて配る。
-	const nox::EntityQuery& query = system.GetQuery();
+	const nox::legacy::EntityQuery& query = system.GetQuery();
 	const nox::uint32 total_chunk_count = query.GetTotalChunkCount();
 
 	//	1つ以下なら配っても往復コストが乗るだけなので、その場で回す。
@@ -743,14 +743,14 @@ void nox::World::ExecuteEntitySystemParallel(nox::legacy::EntitySystemBase& syst
 		return;
 	}
 
-	std::array<nox::EntityChunkRef, k_max_chunk_jobs_per_dispatch> chunk_refs{};
-	std::array<nox::World::ChunkJobContext, k_max_chunk_jobs_per_dispatch> job_contexts{};
+	std::array<nox::legacy::EntityChunkRef, k_max_chunk_jobs_per_dispatch> chunk_refs{};
+	std::array<nox::legacy::World::ChunkJobContext, k_max_chunk_jobs_per_dispatch> job_contexts{};
 	std::array<nox::Job, k_max_chunk_jobs_per_dispatch> jobs{};
 
 	for (nox::uint32 start = 0u; start < total_chunk_count; start += k_max_chunk_jobs_per_dispatch)
 	{
 		const nox::uint32 job_count = query.FillChunkRefs(
-			start, std::span<nox::EntityChunkRef>(chunk_refs));
+			start, std::span<nox::legacy::EntityChunkRef>(chunk_refs));
 		if (job_count == 0u)
 		{
 			break;
@@ -758,7 +758,7 @@ void nox::World::ExecuteEntitySystemParallel(nox::legacy::EntitySystemBase& syst
 
 		for (nox::uint32 index = 0u; index < job_count; ++index)
 		{
-			job_contexts[index] = nox::World::ChunkJobContext{
+			job_contexts[index] = nox::legacy::World::ChunkJobContext{
 				.world = this,
 				.system = &system,
 				.archetype = chunk_refs[index].archetype,
@@ -766,7 +766,7 @@ void nox::World::ExecuteEntitySystemParallel(nox::legacy::EntitySystemBase& syst
 				.node_index = node_index,
 			};
 			jobs[index] = nox::Job{
-				.func = &nox::World::ExecuteEntitySystemChunkJob,
+				.func = &nox::legacy::World::ExecuteEntitySystemChunkJob,
 				.context = &job_contexts[index],
 			};
 		}
@@ -778,7 +778,7 @@ void nox::World::ExecuteEntitySystemParallel(nox::legacy::EntitySystemBase& syst
 	}
 }
 
-void nox::World::ExecuteUpdaterGraphPhase(const nox::SystemPhaseType phase_type)
+void nox::legacy::World::ExecuteUpdaterGraphPhase(const nox::SystemPhaseType phase_type)
 {
 	//	レイヤーは「小さいほど先」。同一レイヤー内のノードは依存解析上互いに衝突しないので、
 	//	そのままワーカーへ配ってよい。レイヤー間は直列のまま(次のレイヤーは前のレイヤーの完了が前提)。
@@ -788,7 +788,7 @@ void nox::World::ExecuteUpdaterGraphPhase(const nox::SystemPhaseType phase_type)
 
 	for (nox::uint32 layer_index = 0u; layer_index < layer_count; ++layer_index)
 	{
-		const std::span<const nox::UpdaterNode> nodes = updater_graph_.GetLayerNodes(phase_type, layer_index);
+		const std::span<const nox::legacy::UpdaterNode> nodes = updater_graph_.GetLayerNodes(phase_type, layer_index);
 
 		//	1つしか無いレイヤーを配っても往復コストが乗るだけなので、その場で回す。
 		if (parallel_enabled == false || nodes.size() <= 1u)
@@ -803,12 +803,12 @@ void nox::World::ExecuteUpdaterGraphPhase(const nox::SystemPhaseType phase_type)
 
 		const nox::uint32 job_count = std::min(static_cast<nox::uint32>(nodes.size()), k_max_nodes_per_layer);
 
-		std::array<nox::World::NodeJobContext, k_max_nodes_per_layer> job_contexts{};
+		std::array<nox::legacy::World::NodeJobContext, k_max_nodes_per_layer> job_contexts{};
 		std::array<nox::Job, k_max_nodes_per_layer> jobs{};
 		for (nox::uint32 index = 0u; index < job_count; ++index)
 		{
-			job_contexts[index] = nox::World::NodeJobContext{ .world = this, .node = &nodes[index] };
-			jobs[index] = nox::Job{ .func = &nox::World::ExecuteNodeJob, .context = &job_contexts[index] };
+			job_contexts[index] = nox::legacy::World::NodeJobContext{ .world = this, .node = &nodes[index] };
+			jobs[index] = nox::Job{ .func = &nox::legacy::World::ExecuteNodeJob, .context = &job_contexts[index] };
 		}
 
 		nox::JobCounter counter{ 0u };
@@ -824,13 +824,13 @@ void nox::World::ExecuteUpdaterGraphPhase(const nox::SystemPhaseType phase_type)
 	}
 }
 
-void nox::World::ExecuteNode(const nox::UpdaterNode& node)
+void nox::legacy::World::ExecuteNode(const nox::legacy::UpdaterNode& node)
 {
 	//	このノードが出す遅延構造変更の記録先を束ねる。Playbackはバッファ番号順に回るので、
 	//	どのワーカーが先に走ったかはPlaybackの順序に影響しない。
 	//	System / EntityLogic の書き手には何の記述も増えない(束縛はここで完結する)。
 	//	構造変更を出さないノードには記録先が無く、番号は無効値のまま渡る。
-	const nox::WorldNodeCommandScope command_scope(*this, node.command_buffer_index);
+	const nox::legacy::WorldNodeCommandScope command_scope(*this, node.command_buffer_index);
 
 #if !NOX_MASTER
 	//	宣言したComponentData / Serviceを実行中だけ占有する。直列実行では決して発火しない。
@@ -852,7 +852,7 @@ void nox::World::ExecuteNode(const nox::UpdaterNode& node)
 
 	switch (node.kind)
 	{
-	case nox::UpdaterNodeKind::EntitySystem:
+	case nox::legacy::UpdaterNodeKind::EntitySystem:
 		//	Chunk並列を宣言したSystemだけ、自分の列挙をさらにワーカーへ配る。
 		//	--serial-updater はワーカー数0なので、この判定で自動的に直列へ落ちる。
 		if (node.system->GetDescriptor().parallel_for_each && job_system_.GetWorkerCount() != 0u)
@@ -865,8 +865,8 @@ void nox::World::ExecuteNode(const nox::UpdaterNode& node)
 		}
 		break;
 
-	case nox::UpdaterNodeKind::EntityLogicMethod:
-		for (const nox::EntityLogicStorage::Entry& entry : node.storage->GetEntries())
+	case nox::legacy::UpdaterNodeKind::EntityLogicMethod:
+		for (const nox::legacy::EntityLogicStorage::Entry& entry : node.storage->GetEntries())
 		{
 			const auto* const entity_record = TryGetEntityRecord(entry.entity.index);
 			if (entity_record == nullptr || entity_record->archetype == nullptr)
@@ -887,9 +887,9 @@ void nox::World::ExecuteNode(const nox::UpdaterNode& node)
 #endif // !NOX_MASTER
 }
 
-void nox::World::CreateEntityLogicStorages()
+void nox::legacy::World::CreateEntityLogicStorages()
 {
-	for (const nox::EntityLogicTypeDescriptor* const descriptor : nox::GetEntityLogicTypes())
+	for (const nox::legacy::EntityLogicTypeDescriptor* const descriptor : nox::legacy::GetEntityLogicTypes())
 	{
 #if !NOX_MASTER
 		//	必須ComponentDataはメソッド群から導出されるので包含関係は自動的に成り立つ。
@@ -898,7 +898,7 @@ void nox::World::CreateEntityLogicStorages()
 			u8"EntityLogicがComponentDataを1つも宣言していません: {0}", descriptor->name);
 #endif // !NOX_MASTER
 
-		entity_logic_storages_.push_back(new nox::EntityLogicStorage(*descriptor));
+		entity_logic_storages_.push_back(new nox::legacy::EntityLogicStorage(*descriptor));
 
 #if !NOX_MASTER
 		NOX_INFO_LINE(nox::log_id::CoreCommon, u8"EntityLogic購読: {0}", descriptor->name);
@@ -906,9 +906,9 @@ void nox::World::CreateEntityLogicStorages()
 	}
 }
 
-void nox::World::RefreshEntityLogics(const nox::EntityId entity, const nox::Archetype* const archetype)
+void nox::legacy::World::RefreshEntityLogics(const nox::Entity entity, const nox::Archetype* const archetype)
 {
-	for (nox::EntityLogicStorage* const storage : entity_logic_storages_)
+	for (nox::legacy::EntityLogicStorage* const storage : entity_logic_storages_)
 	{
 		const bool satisfied =
 			(archetype != nullptr) && archetype->GetMask().Contains(storage->GetDescriptor().make_required_mask());
@@ -923,7 +923,7 @@ void nox::World::RefreshEntityLogics(const nox::EntityId entity, const nox::Arch
 	}
 }
 
-void nox::World::RegisterSystem(nox::SystemBase& system)
+void nox::legacy::World::RegisterSystem(nox::SystemBase& system)
 {
 	const nox::reflection::Type& type = system.GetType();
 	if (system_map_.contains(&type))
@@ -936,7 +936,7 @@ void nox::World::RegisterSystem(nox::SystemBase& system)
 }
 
 #if !NOX_MASTER
-nox::U8FixedString<3072> nox::World::BuildRuntimeDependencyGraphText()const
+nox::U8FixedString<3072> nox::legacy::World::BuildRuntimeDependencyGraphText()const
 {
 	struct PhaseNode
 	{
@@ -1037,7 +1037,7 @@ nox::U8FixedString<3072> nox::World::BuildRuntimeDependencyGraphText()const
 	return graph_text;
 }
 
-nox::util::RWParallelExecuteChecker* nox::World::TryGetServiceExecuteChecker(const nox::reflection::Type* const type)noexcept
+nox::util::RWParallelExecuteChecker* nox::legacy::World::TryGetServiceExecuteChecker(const nox::reflection::Type* const type)noexcept
 {
 	if (type == nullptr)
 	{
@@ -1057,7 +1057,7 @@ nox::util::RWParallelExecuteChecker* nox::World::TryGetServiceExecuteChecker(con
 	return nullptr;
 }
 
-void nox::World::SetupExecuteCheckerNames()noexcept
+void nox::legacy::World::SetupExecuteCheckerNames()noexcept
 {
 	//	ComponentDataは登録順の密なインデックスなので、未登録に当たった時点で以降も未登録。
 	for (nox::uint32 index = 0u; index < nox::k_max_component_type_count; ++index)
@@ -1077,7 +1077,7 @@ void nox::World::SetupExecuteCheckerNames()noexcept
 	}
 }
 
-void nox::World::EnterNodeAccessScope(const nox::UpdaterNodeAccess& access)noexcept
+void nox::legacy::World::EnterNodeAccessScope(const nox::legacy::UpdaterNodeAccess& access)noexcept
 {
 	//	宣言のうち「書き込みが含まれるもの」だけWriteで入る。読み取りだけならReadなので、
 	//	同じComponentDataを読むノード同士は並列に走ってもチェッカーは沈黙する。
@@ -1121,7 +1121,7 @@ void nox::World::EnterNodeAccessScope(const nox::UpdaterNodeAccess& access)noexc
 	}
 }
 
-void nox::World::LeaveNodeAccessScope(const nox::UpdaterNodeAccess& access)noexcept
+void nox::legacy::World::LeaveNodeAccessScope(const nox::legacy::UpdaterNodeAccess& access)noexcept
 {
 	//	Enterと完全に対でなければならない。判定条件はEnterと同じものを使う。
 	access.read_write_mask.ForEachIndex([this, &access](const nox::ComponentTypeIndex type_index)noexcept
@@ -1161,7 +1161,7 @@ void nox::World::LeaveNodeAccessScope(const nox::UpdaterNodeAccess& access)noexc
 	}
 }
 
-void nox::World::TraceExecuteNodeList()const
+void nox::legacy::World::TraceExecuteNodeList()const
 {
 	for (nox::uint8 phase_index = 0; phase_index < nox::util::ToUnderlying(nox::SystemPhaseType::_Max); ++phase_index)
 	{
@@ -1181,7 +1181,7 @@ void nox::World::TraceExecuteNodeList()const
 }
 #endif // !NOX_MASTER
 
-nox::World::EntityRecord* nox::World::TryGetEntityRecord(nox::uint32 index) noexcept
+nox::legacy::World::EntityRecord* nox::legacy::World::TryGetEntityRecord(nox::uint32 index) noexcept
 {
 	const nox::uint32 page_index = get_entity_record_page_index(index, k_entity_record_page_shift);
 	if (page_index >= k_max_entity_page_count)
@@ -1198,12 +1198,12 @@ nox::World::EntityRecord* nox::World::TryGetEntityRecord(nox::uint32 index) noex
 	return &entity_record_page->records[get_entity_record_offset(index, k_entity_record_page_mask)];
 }
 
-const nox::World::EntityRecord* nox::World::TryGetEntityRecord(nox::uint32 index) const noexcept
+const nox::legacy::World::EntityRecord* nox::legacy::World::TryGetEntityRecord(nox::uint32 index) const noexcept
 {
-	return const_cast<nox::World*>(this)->TryGetEntityRecord(index);
+	return const_cast<nox::legacy::World*>(this)->TryGetEntityRecord(index);
 }
 
-nox::World::EntityRecord* nox::World::EnsureEntityRecord(nox::uint32 index)
+nox::legacy::World::EntityRecord* nox::legacy::World::EnsureEntityRecord(nox::uint32 index)
 {
 	const nox::uint32 page_index = get_entity_record_page_index(index, k_entity_record_page_shift);
 	if (page_index >= k_max_entity_page_count)
@@ -1226,7 +1226,7 @@ nox::World::EntityRecord* nox::World::EnsureEntityRecord(nox::uint32 index)
 		//	OSロックを持たずに公開する。CASに負けた側は自分のページを捨てて勝者のものを使う。
 		//	std::mutexを使うと、ジョブから呼ばれたときにワーカースレッドがOS待ちに入る。
 		auto* const created_page = new EntityRecordPage();
-		nox::World::EntityRecordPage* expected = nullptr;
+		nox::legacy::World::EntityRecordPage* expected = nullptr;
 		if (entity_record_pages_[page_index].compare_exchange_strong(
 			expected, created_page, std::memory_order_acq_rel, std::memory_order_acquire) == true)
 		{
@@ -1242,7 +1242,7 @@ nox::World::EntityRecord* nox::World::EnsureEntityRecord(nox::uint32 index)
 	return &entity_record_page->records[get_entity_record_offset(index, k_entity_record_page_mask)];
 }
 
-nox::uint32 nox::World::TryPopFreeEntityIndex() noexcept
+nox::uint32 nox::legacy::World::TryPopFreeEntityIndex() noexcept
 {
 	nox::uint64 head = free_entity_head_.load(std::memory_order_acquire);
 	while (true)
@@ -1269,7 +1269,7 @@ nox::uint32 nox::World::TryPopFreeEntityIndex() noexcept
 	}
 }
 
-void nox::World::PushFreeEntityIndex(nox::uint32 index) noexcept
+void nox::legacy::World::PushFreeEntityIndex(nox::uint32 index) noexcept
 {
 	auto* entity_record = TryGetEntityRecord(index);
 	NOX_ASSERT(entity_record != nullptr, u8"Invalid free entity slot push: index={0}", index);
@@ -1290,33 +1290,33 @@ void nox::World::PushFreeEntityIndex(nox::uint32 index) noexcept
 	}
 }
 
-nox::StructuralChangePermission nox::World::GetStructuralChangePermission()const noexcept
+nox::legacy::StructuralChangePermission nox::legacy::World::GetStructuralChangePermission()const noexcept
 {
 	const nox::uint32 state = structural_change_state_.load(std::memory_order_seq_cst);
 	if (state == 0u)
 	{
-		return nox::StructuralChangePermission::Allowed;
+		return nox::legacy::StructuralChangePermission::Allowed;
 	}
 
 	//	列挙のほうが具体的な理由なので優先して返す。
 	if ((state & k_structural_change_iteration_mask) != 0u)
 	{
-		return nox::StructuralChangePermission::DeniedDuringIteration;
+		return nox::legacy::StructuralChangePermission::DeniedDuringIteration;
 	}
-	return nox::StructuralChangePermission::DeniedDuringPhase;
+	return nox::legacy::StructuralChangePermission::DeniedDuringPhase;
 }
 
-bool nox::World::EnsureImmediateStructuralChangeAllowed()const noexcept
+bool nox::legacy::World::EnsureImmediateStructuralChangeAllowed()const noexcept
 {
-	const nox::StructuralChangePermission permission = GetStructuralChangePermission();
-	NOX_ASSERT(permission != nox::StructuralChangePermission::DeniedDuringPhase,
-		u8"フェーズ実行中に即時系の構造変更は呼べません。nox::EntityCommands(遅延系)を使用してください");
-	NOX_ASSERT(permission != nox::StructuralChangePermission::DeniedDuringIteration,
-		u8"entityの列挙中に即時系の構造変更は呼べません。nox::EntityCommands(遅延系)を使用してください");
-	return permission == nox::StructuralChangePermission::Allowed;
+	const nox::legacy::StructuralChangePermission permission = GetStructuralChangePermission();
+	NOX_ASSERT(permission != nox::legacy::StructuralChangePermission::DeniedDuringPhase,
+		u8"フェーズ実行中に即時系の構造変更は呼べません。nox::legacy::EntityCommands(遅延系)を使用してください");
+	NOX_ASSERT(permission != nox::legacy::StructuralChangePermission::DeniedDuringIteration,
+		u8"entityの列挙中に即時系の構造変更は呼べません。nox::legacy::EntityCommands(遅延系)を使用してください");
+	return permission == nox::legacy::StructuralChangePermission::Allowed;
 }
 
-bool nox::World::EnsureDeferredStructuralChangeAllowed()const noexcept
+bool nox::legacy::World::EnsureDeferredStructuralChangeAllowed()const noexcept
 {
 	//	遅延系は即時系のちょうど裏返し。反映点(Playback)が来ることが前提なので、
 	//	フェーズ実行中でも列挙中でもないときに積むのは記録漏れの兆候として弾く。
@@ -1325,45 +1325,45 @@ bool nox::World::EnsureDeferredStructuralChangeAllowed()const noexcept
 	return allowed;
 }
 
-void nox::World::EnterEntityIteration()noexcept
+void nox::legacy::World::EnterEntityIteration()noexcept
 {
 	//	acq_rel。入場を他スレッドのacquireロードへ見せるにはreleaseが要り(acquireのRMWでは
 	//	カウンタ増加がhappens-beforeしない)、退場との対でacquireも要る。
-	//	なおseq_cstにはしていない。理由は world.h の structural_change_state_ の注記を参照。
+	//	なおseq_cstにはしていない。理由は world_legacy.h の structural_change_state_ の注記を参照。
 	structural_change_state_.fetch_add(1u, std::memory_order_seq_cst);
 }
 
-void nox::World::LeaveEntityIteration()noexcept
+void nox::legacy::World::LeaveEntityIteration()noexcept
 {
 	NOX_ASSERT(IsIteratingEntities(), u8"対応するEnterEntityIterationがありません");
 	structural_change_state_.fetch_sub(1u, std::memory_order_seq_cst);
 }
 
-void nox::detail::EnterEntityIterationOfWorld(nox::World& world)noexcept
+void nox::legacy::detail::EnterEntityIterationOfWorld(nox::legacy::World& world)noexcept
 {
 	world.EnterEntityIteration();
 }
 
-void nox::detail::LeaveEntityIterationOfWorld(nox::World& world)noexcept
+void nox::legacy::detail::LeaveEntityIterationOfWorld(nox::legacy::World& world)noexcept
 {
 	world.LeaveEntityIteration();
 }
 
-nox::EntityId nox::World::CreateEntity()
+nox::Entity nox::legacy::World::CreateEntity()
 {
 	if (EnsureImmediateStructuralChangeAllowed() == false)
 	{
-		return nox::EntityId{ 0u };
+		return nox::Entity{ 0u };
 	}
 
 	return CreateEntityImmediate();
 }
 
-nox::EntityId nox::World::CreateEntityDuringPhase()noexcept
+nox::Entity nox::legacy::World::CreateEntityDuringPhase()noexcept
 {
 	if (EnsureDeferredStructuralChangeAllowed() == false)
 	{
-		return nox::EntityId{ 0u };
+		return nox::Entity{ 0u };
 	}
 
 	//	Idの払い出しはEntityRecord 1件で完結し、Archetypeにも他entityの行にも触れない。
@@ -1380,7 +1380,7 @@ nox::EntityId nox::World::CreateEntityDuringPhase()noexcept
 	return CreateEntityImmediate();
 }
 
-nox::EntityId nox::World::CreateEntityImmediate()
+nox::Entity nox::legacy::World::CreateEntityImmediate()
 {
 	nox::uint32 index = TryPopFreeEntityIndex();
 	if (index != k_invalid_entity_index)
@@ -1421,7 +1421,7 @@ nox::EntityId nox::World::CreateEntityImmediate()
 	return make_entity_id(k_initial_live_generation, index);
 }
 
-void nox::World::DestroyEntity(nox::EntityId entity)
+void nox::legacy::World::DestroyEntity(nox::Entity entity)
 {
 	if (EnsureImmediateStructuralChangeAllowed() == false)
 	{
@@ -1431,7 +1431,7 @@ void nox::World::DestroyEntity(nox::EntityId entity)
 	DestroyEntityImmediate(entity);
 }
 
-void nox::World::DestroyEntityImmediate(const nox::EntityId entity)noexcept
+void nox::legacy::World::DestroyEntityImmediate(const nox::Entity entity)noexcept
 {
 	auto* entity_record = TryGetEntityRecord(entity.index);
 	if (entity_record == nullptr)
@@ -1458,16 +1458,16 @@ void nox::World::DestroyEntityImmediate(const nox::EntityId entity)noexcept
 	PushFreeEntityIndex(entity.index);
 }
 
-bool nox::World::IsEntityGenerationLive(const nox::EntityId entity)const noexcept
+bool nox::legacy::World::IsEntityGenerationLive(const nox::Entity entity)const noexcept
 {
 	const auto* const entity_record = TryGetEntityRecord(entity.index);
 	return entity_record != nullptr &&
 		entity_record->generation.load(std::memory_order_acquire) == entity.generation;
 }
 
-void nox::World::ReserveNodeEntityCommandBuffers(const nox::uint32 node_count)
+void nox::legacy::World::ReserveNodeEntityCommandBuffers(const nox::uint32 node_count)
 {
-	NOX_ASSERT(GetStructuralChangePermission() == nox::StructuralChangePermission::Allowed,
+	NOX_ASSERT(GetStructuralChangePermission() == nox::legacy::StructuralChangePermission::Allowed,
 		u8"フェーズ実行中・列挙中にコマンドバッファを確保し直すことはできません");
 	if (node_count <= node_command_buffer_count_)
 	{
@@ -1478,13 +1478,13 @@ void nox::World::ReserveNodeEntityCommandBuffers(const nox::uint32 node_count)
 	//	ノード集合はInitで確定して以降動かないので、ここは実質1回きり。
 	//	既存分を作り直すことになるが、Playback前の状態でしか呼べないため取りこぼしは起きない。
 	delete[] node_command_buffers_;
-	node_command_buffers_ = new nox::World::EntityCommandBufferType[node_count];
+	node_command_buffers_ = new nox::legacy::World::EntityCommandBufferType[node_count];
 	node_command_buffer_count_ = node_count;
 }
 
-nox::World::EntityCommandBufferType& nox::World::GetCurrentEntityCommandBuffer()noexcept
+nox::legacy::World::EntityCommandBufferType& nox::legacy::World::GetCurrentEntityCommandBuffer()noexcept
 {
-	const nox::NodeCommandBinding binding = nox::t_node_command_binding;
+	const nox::legacy::NodeCommandBinding binding = nox::legacy::t_node_command_binding;
 	if (binding.world != this)
 	{
 		//	ノードに束縛されていない経路(旧SystemPhase / リフレクション経由 / ツール・テストの自前列挙)。
@@ -1494,20 +1494,20 @@ nox::World::EntityCommandBufferType& nox::World::GetCurrentEntityCommandBuffer()
 
 	if (binding.node_index >= node_command_buffer_count_)
 	{
-		//	nox::EntityCommands& を宣言していないノードが、宣言の外側から遅延構造変更を出している。
+		//	nox::legacy::EntityCommands& を宣言していないノードが、宣言の外側から遅延構造変更を出している。
 		//	(例: World参照を握ったServiceがQueue系を直接呼ぶ)
 		//	このノードには記録先が無いのでノード外バッファへ落ちるが、そこは並列実行の
 		//	前提が置けないため、2つのノードが同時にやると順序が決まらない。
 		//	宣言と実装の食い違いなので、開発中に気づけるようにしておく。
 		NOX_ASSERT(false,
-			u8"nox::EntityCommands& を宣言していないノードが遅延構造変更を記録しました。"
-			u8"引数リストに nox::EntityCommands& を宣言してください");
+			u8"nox::legacy::EntityCommands& を宣言していないノードが遅延構造変更を記録しました。"
+			u8"引数リストに nox::legacy::EntityCommands& を宣言してください");
 		return out_of_node_command_buffer_;
 	}
 	return node_command_buffers_[binding.node_index];
 }
 
-nox::uint32 nox::World::GetEntityCommandPeakLength()const noexcept
+nox::uint32 nox::legacy::World::GetEntityCommandPeakLength()const noexcept
 {
 	nox::uint32 peak = out_of_node_command_buffer_.GetPeakLength();
 	for (nox::uint32 index = 0u; index < node_command_buffer_count_; ++index)
@@ -1517,7 +1517,7 @@ nox::uint32 nox::World::GetEntityCommandPeakLength()const noexcept
 	return peak;
 }
 
-nox::uint32 nox::World::GetEntityCommandPeakPayloadLength()const noexcept
+nox::uint32 nox::legacy::World::GetEntityCommandPeakPayloadLength()const noexcept
 {
 	nox::uint32 peak = out_of_node_command_buffer_.GetPeakPayloadLength();
 	for (nox::uint32 index = 0u; index < node_command_buffer_count_; ++index)
@@ -1527,7 +1527,7 @@ nox::uint32 nox::World::GetEntityCommandPeakPayloadLength()const noexcept
 	return peak;
 }
 
-nox::uint32 nox::World::GetNodeEntityCommandPeakLength(const nox::uint32 node_index)const noexcept
+nox::uint32 nox::legacy::World::GetNodeEntityCommandPeakLength(const nox::uint32 node_index)const noexcept
 {
 	if (node_index >= node_command_buffer_count_)
 	{
@@ -1536,7 +1536,7 @@ nox::uint32 nox::World::GetNodeEntityCommandPeakLength(const nox::uint32 node_in
 	return node_command_buffers_[node_index].GetPeakLength();
 }
 
-nox::uint32 nox::World::GetNodeEntityCommandPeakPayloadLength(const nox::uint32 node_index)const noexcept
+nox::uint32 nox::legacy::World::GetNodeEntityCommandPeakPayloadLength(const nox::uint32 node_index)const noexcept
 {
 	if (node_index >= node_command_buffer_count_)
 	{
@@ -1545,12 +1545,12 @@ nox::uint32 nox::World::GetNodeEntityCommandPeakPayloadLength(const nox::uint32 
 	return node_command_buffers_[node_index].GetPeakPayloadLength();
 }
 
-nox::uint32 nox::World::GetOutOfNodeEntityCommandPeakLength()const noexcept
+nox::uint32 nox::legacy::World::GetOutOfNodeEntityCommandPeakLength()const noexcept
 {
 	return out_of_node_command_buffer_.GetPeakLength();
 }
 
-void nox::World::AbortOnEntityCommandOverflow(const nox::World::EntityCommandBufferType& buffer)noexcept
+void nox::legacy::World::AbortOnEntityCommandOverflow(const nox::legacy::World::EntityCommandBufferType& buffer)noexcept
 {
 	NOX_ASSERT(false,
 		u8"EntityCommandBuffer capacity exceeded: commands={0}/{1}, payload={2}/{3}",
@@ -1567,7 +1567,7 @@ void nox::World::AbortOnEntityCommandOverflow(const nox::World::EntityCommandBuf
 	volatile const nox::uint32 overflow_payload_length = buffer.GetPayloadLength();
 	volatile const nox::uint32 overflow_payload_capacity = k_entity_command_payload_bytes;
 	//	どのノードのバッファで溢れたのかもダンプから読めるようにする。
-	//	ノード番号は nox::UpdaterNode::order_index で、起動ログのUpdaterGraphの n<番号> と一致する。
+	//	ノード番号は nox::legacy::UpdaterNode::order_index で、起動ログのUpdaterGraphの n<番号> と一致する。
 	volatile const nox::uint32 overflow_node_index =
 		(&buffer == &out_of_node_command_buffer_)
 		? std::numeric_limits<nox::uint32>::max()
@@ -1581,14 +1581,14 @@ void nox::World::AbortOnEntityCommandOverflow(const nox::World::EntityCommandBuf
 	std::abort();
 }
 
-bool nox::World::QueueDestroyEntity(const nox::EntityId entity)noexcept
+bool nox::legacy::World::QueueDestroyEntity(const nox::Entity entity)noexcept
 {
 	if (EnsureDeferredStructuralChangeAllowed() == false)
 	{
 		return false;
 	}
 
-	nox::World::EntityCommandBufferType& buffer = GetCurrentEntityCommandBuffer();
+	nox::legacy::World::EntityCommandBufferType& buffer = GetCurrentEntityCommandBuffer();
 	const bool queued = buffer.TryDestroy(entity);
 	if (queued == false)
 	{
@@ -1597,8 +1597,8 @@ bool nox::World::QueueDestroyEntity(const nox::EntityId entity)noexcept
 	return queued;
 }
 
-bool nox::World::QueueAddComponent(
-	const nox::EntityId entity,
+bool nox::legacy::World::QueueAddComponent(
+	const nox::Entity entity,
 	const nox::ComponentTypeInfo& type_info,
 	const void* const source)noexcept
 {
@@ -1607,7 +1607,7 @@ bool nox::World::QueueAddComponent(
 		return false;
 	}
 
-	nox::World::EntityCommandBufferType& buffer = GetCurrentEntityCommandBuffer();
+	nox::legacy::World::EntityCommandBufferType& buffer = GetCurrentEntityCommandBuffer();
 	const bool queued = buffer.TryAddComponent(entity, type_info, source);
 	//	コマンド枠かペイロード枠のどちらかが尽きている。構造変更を黙って落とすほうが後で困るので、即座に落とす。
 	if (queued == false)
@@ -1617,8 +1617,8 @@ bool nox::World::QueueAddComponent(
 	return queued;
 }
 
-bool nox::World::QueueRemoveComponent(
-	const nox::EntityId entity,
+bool nox::legacy::World::QueueRemoveComponent(
+	const nox::Entity entity,
 	const nox::ComponentTypeInfo& type_info)noexcept
 {
 	if (EnsureDeferredStructuralChangeAllowed() == false)
@@ -1626,7 +1626,7 @@ bool nox::World::QueueRemoveComponent(
 		return false;
 	}
 
-	nox::World::EntityCommandBufferType& buffer = GetCurrentEntityCommandBuffer();
+	nox::legacy::World::EntityCommandBufferType& buffer = GetCurrentEntityCommandBuffer();
 	const bool queued = buffer.TryRemoveComponent(entity, type_info);
 	if (queued == false)
 	{
@@ -1635,7 +1635,7 @@ bool nox::World::QueueRemoveComponent(
 	return queued;
 }
 
-void nox::World::FlushEntityCommands()noexcept
+void nox::legacy::World::FlushEntityCommands()noexcept
 {
 	//	Playbackは実データを動かすので、列挙が1つでも開いていたら踏んではならない。
 	//	ここでreturnして見送ると、積まれたコマンドが次フェーズ終端まで持ち越される。
@@ -1657,13 +1657,13 @@ void nox::World::FlushEntityCommands()noexcept
 	}
 }
 
-void nox::World::PlaybackEntityCommandBuffer(nox::World::EntityCommandBufferType& buffer)noexcept
+void nox::legacy::World::PlaybackEntityCommandBuffer(nox::legacy::World::EntityCommandBufferType& buffer)noexcept
 {
 	buffer.BeginPlayback();
 	nox::uint32 command_index = 0u;
 	while (command_index < buffer.GetLength())
 	{
-		nox::EntityCommand command{};
+		nox::legacy::EntityCommand command{};
 		const bool ready = buffer.TryGet(command_index++, command);
 		NOX_ASSERT(ready, u8"EntityCommandBuffer command was not published");
 		if (ready == false)
@@ -1673,11 +1673,11 @@ void nox::World::PlaybackEntityCommandBuffer(nox::World::EntityCommandBufferType
 
 		switch (command.type)
 		{
-		case nox::EntityCommandType::Destroy:
-			DestroyEntityImmediate(nox::EntityId{ command.entity_raw });
+		case nox::legacy::EntityCommandType::Destroy:
+			DestroyEntityImmediate(nox::Entity{ command.entity_raw });
 			break;
 
-		case nox::EntityCommandType::AddComponent:
+		case nox::legacy::EntityCommandType::AddComponent:
 		{
 			NOX_ASSERT(command.type_info != nullptr, u8"AddComponentコマンドに型情報がありません");
 			if (command.type_info == nullptr)
@@ -1685,7 +1685,7 @@ void nox::World::PlaybackEntityCommandBuffer(nox::World::EntityCommandBufferType
 				break;
 			}
 
-			void* const destination = AddComponentImmediate(nox::EntityId{ command.entity_raw }, *command.type_info);
+			void* const destination = AddComponentImmediate(nox::Entity{ command.entity_raw }, *command.type_info);
 			const void* const payload = buffer.TryGetPayload(command);
 			if (destination != nullptr && payload != nullptr)
 			{
@@ -1695,11 +1695,11 @@ void nox::World::PlaybackEntityCommandBuffer(nox::World::EntityCommandBufferType
 			break;
 		}
 
-		case nox::EntityCommandType::RemoveComponent:
+		case nox::legacy::EntityCommandType::RemoveComponent:
 			NOX_ASSERT(command.type_info != nullptr, u8"RemoveComponentコマンドに型情報がありません");
 			if (command.type_info != nullptr)
 			{
-				RemoveComponentImmediate(nox::EntityId{ command.entity_raw }, *command.type_info);
+				RemoveComponentImmediate(nox::Entity{ command.entity_raw }, *command.type_info);
 			}
 			break;
 
@@ -1711,7 +1711,7 @@ void nox::World::PlaybackEntityCommandBuffer(nox::World::EntityCommandBufferType
 	buffer.Clear();
 }
 
-bool nox::World::IsAlive(nox::EntityId entity)const noexcept
+bool nox::legacy::World::IsAlive(nox::Entity entity)const noexcept
 {
 	const auto* entity_record = TryGetEntityRecord(entity.index);
 	if (entity_record == nullptr)
@@ -1725,7 +1725,7 @@ bool nox::World::IsAlive(nox::EntityId entity)const noexcept
 
 #pragma region ComponentData
 
-void* nox::World::AddComponent(const nox::EntityId entity, const nox::ComponentTypeInfo& type_info)
+void* nox::legacy::World::AddComponent(const nox::Entity entity, const nox::ComponentTypeInfo& type_info)
 {
 	if (EnsureImmediateStructuralChangeAllowed() == false)
 	{
@@ -1745,7 +1745,7 @@ void* nox::World::AddComponent(const nox::EntityId entity, const nox::ComponentT
 	return AddComponentImmediate(entity, type_info);
 }
 
-void* nox::World::AddComponentImmediate(const nox::EntityId entity, const nox::ComponentTypeInfo& type_info)
+void* nox::legacy::World::AddComponentImmediate(const nox::Entity entity, const nox::ComponentTypeInfo& type_info)
 {
 	auto* const entity_record = TryGetEntityRecord(entity.index);
 	if (entity_record == nullptr || entity_record->generation.load(std::memory_order_acquire) != entity.generation)
@@ -1770,7 +1770,7 @@ void* nox::World::AddComponentImmediate(const nox::EntityId entity, const nox::C
 	return static_cast<nox::uint8*>(column) + static_cast<size_t>(entity_record->location.row) * type_info.size;
 }
 
-void nox::World::RemoveComponent(const nox::EntityId entity, const nox::ComponentTypeInfo& type_info)
+void nox::legacy::World::RemoveComponent(const nox::Entity entity, const nox::ComponentTypeInfo& type_info)
 {
 	if (EnsureImmediateStructuralChangeAllowed() == false)
 	{
@@ -1780,7 +1780,7 @@ void nox::World::RemoveComponent(const nox::EntityId entity, const nox::Componen
 	RemoveComponentImmediate(entity, type_info);
 }
 
-void nox::World::RemoveComponentImmediate(const nox::EntityId entity, const nox::ComponentTypeInfo& type_info)
+void nox::legacy::World::RemoveComponentImmediate(const nox::Entity entity, const nox::ComponentTypeInfo& type_info)
 {
 	auto* const entity_record = TryGetEntityRecord(entity.index);
 	if (entity_record == nullptr ||
@@ -1800,7 +1800,7 @@ void nox::World::RemoveComponentImmediate(const nox::EntityId entity, const nox:
 	MoveEntityToArchetype(*entity_record, entity, mask.IsEmpty() ? nullptr : &GetOrCreateArchetype(mask));
 }
 
-void* nox::World::TryGetComponent(const nox::EntityId entity, const nox::ComponentTypeIndex type_index)noexcept
+void* nox::legacy::World::TryGetComponent(const nox::Entity entity, const nox::ComponentTypeIndex type_index)noexcept
 {
 	const auto* const entity_record = TryGetEntityRecord(entity.index);
 	if (entity_record == nullptr ||
@@ -1825,7 +1825,7 @@ void* nox::World::TryGetComponent(const nox::EntityId entity, const nox::Compone
 	return static_cast<nox::uint8*>(column) + static_cast<size_t>(entity_record->location.row) * type_info->size;
 }
 
-bool nox::World::HasComponent(const nox::EntityId entity, const nox::ComponentTypeIndex type_index)const noexcept
+bool nox::legacy::World::HasComponent(const nox::Entity entity, const nox::ComponentTypeIndex type_index)const noexcept
 {
 	const auto* const entity_record = TryGetEntityRecord(entity.index);
 	if (entity_record == nullptr ||
@@ -1841,7 +1841,7 @@ bool nox::World::HasComponent(const nox::EntityId entity, const nox::ComponentTy
 
 #pragma region Archetype
 
-nox::Archetype* nox::World::TryFindArchetype(const nox::ComponentMask& mask)const noexcept
+nox::Archetype* nox::legacy::World::TryFindArchetype(const nox::ComponentMask& mask)const noexcept
 {
 	for (nox::Archetype* const archetype : archetypes_)
 	{
@@ -1853,7 +1853,7 @@ nox::Archetype* nox::World::TryFindArchetype(const nox::ComponentMask& mask)cons
 	return nullptr;
 }
 
-nox::Archetype& nox::World::GetOrCreateArchetype(const nox::ComponentMask& mask)
+nox::Archetype& nox::legacy::World::GetOrCreateArchetype(const nox::ComponentMask& mask)
 {
 	if (nox::Archetype* const found = TryFindArchetype(mask); found != nullptr)
 	{
@@ -1890,7 +1890,7 @@ nox::Archetype& nox::World::GetOrCreateArchetype(const nox::ComponentMask& mask)
 	return *archetype;
 }
 
-void nox::World::MoveEntityToArchetype(nox::World::EntityRecord& entity_record, const nox::EntityId entity, nox::Archetype* const destination)
+void nox::legacy::World::MoveEntityToArchetype(nox::legacy::World::EntityRecord& entity_record, const nox::Entity entity, nox::Archetype* const destination)
 {
 	nox::Archetype* const source = entity_record.archetype;
 	if (source == destination)
@@ -1910,7 +1910,7 @@ void nox::World::MoveEntityToArchetype(nox::World::EntityRecord& entity_record, 
 
 	if (source != nullptr)
 	{
-		const nox::EntityId moved_entity = source->RemoveEntity(entity_record.location);
+		const nox::Entity moved_entity = source->RemoveEntity(entity_record.location);
 		if (moved_entity.raw != 0ull)
 		{
 			PatchMovedEntityLocation(moved_entity, entity_record.location);
@@ -1924,7 +1924,7 @@ void nox::World::MoveEntityToArchetype(nox::World::EntityRecord& entity_record, 
 	RefreshEntityLogics(entity, destination);
 }
 
-void nox::World::PatchMovedEntityLocation(const nox::EntityId moved_entity, const nox::ArchetypeLocation location)noexcept
+void nox::legacy::World::PatchMovedEntityLocation(const nox::Entity moved_entity, const nox::ArchetypeLocation location)noexcept
 {
 	auto* const moved_record = TryGetEntityRecord(moved_entity.index);
 	NOX_ASSERT(moved_record != nullptr, u8"swap-removeで移動したentityのレコードが見つかりません");
@@ -1934,7 +1934,7 @@ void nox::World::PatchMovedEntityLocation(const nox::EntityId moved_entity, cons
 	}
 }
 
-nox::Archetype* nox::World::TryGetArchetype(const nox::EntityId entity)const noexcept
+nox::Archetype* nox::legacy::World::TryGetArchetype(const nox::Entity entity)const noexcept
 {
 	const auto* const entity_record = TryGetEntityRecord(entity.index);
 	if (entity_record == nullptr || entity_record->generation.load(std::memory_order_acquire) != entity.generation)
@@ -1944,7 +1944,7 @@ nox::Archetype* nox::World::TryGetArchetype(const nox::EntityId entity)const noe
 	return entity_record->archetype;
 }
 
-nox::ArchetypeLocation nox::World::GetArchetypeLocation(const nox::EntityId entity)const noexcept
+nox::ArchetypeLocation nox::legacy::World::GetArchetypeLocation(const nox::Entity entity)const noexcept
 {
 	const auto* const entity_record = TryGetEntityRecord(entity.index);
 	if (entity_record == nullptr || entity_record->generation.load(std::memory_order_acquire) != entity.generation)
@@ -1954,7 +1954,7 @@ nox::ArchetypeLocation nox::World::GetArchetypeLocation(const nox::EntityId enti
 	return entity_record->location;
 }
 
-void nox::World::BuildQuery(nox::EntityQuery& query, const nox::ComponentMask& required_mask)
+void nox::legacy::World::BuildQuery(nox::legacy::EntityQuery& query, const nox::ComponentMask& required_mask)
 {
 	query.Reset(required_mask);
 	for (nox::Archetype* const archetype : archetypes_)
@@ -1967,17 +1967,17 @@ void nox::World::BuildQuery(nox::EntityQuery& query, const nox::ComponentMask& r
 
 #pragma region Service
 
-void nox::World::RegisterService(const nox::reflection::Type& type, nox::legacy::Service& service)
+void nox::legacy::World::RegisterService(const nox::reflection::Type& type, nox::legacy::Service& service)
 {
 	NOX_ASSERT(TryGetService(type) == nullptr, u8"Serviceが二重に登録されました: {0}", type.GetTypeName());
-	services_.PushBack(nox::World::ServiceEntry{ .type = &type, .service = &service });
+	services_.PushBack(nox::legacy::World::ServiceEntry{ .type = &type, .service = &service });
 }
 
-nox::legacy::Service* nox::World::TryGetService(const nox::reflection::Type& type)const noexcept
+nox::legacy::Service* nox::legacy::World::TryGetService(const nox::reflection::Type& type)const noexcept
 {
 	for (nox::uint32 service_index = 0u; service_index < services_.GetLength(); ++service_index)
 	{
-		const nox::World::ServiceEntry& entry = services_.GetStorage()[service_index];
+		const nox::legacy::World::ServiceEntry& entry = services_.GetStorage()[service_index];
 		if (entry.type == &type)
 		{
 			return entry.service;
@@ -1986,7 +1986,7 @@ nox::legacy::Service* nox::World::TryGetService(const nox::reflection::Type& typ
 	return nullptr;
 }
 
-nox::legacy::Service* nox::detail::TryGetServiceOfWorld(nox::World& world, const nox::reflection::Type& type)noexcept
+nox::legacy::Service* nox::detail::TryGetServiceOfWorld(nox::legacy::World& world, const nox::reflection::Type& type)noexcept
 {
 	return world.TryGetService(type);
 }

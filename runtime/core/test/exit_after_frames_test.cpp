@@ -3,7 +3,7 @@
 
 ///	@file	exit_after_frames_test.cpp
 ///	@brief	--exit-after-frames (指定したフレーム数で自動終了する) の引数の読み方の検証。
-///	@details	nox::ResolveExitAfterFrames は引数列だけを見る純粋関数として core 側に切り出してある。
+///	@details	nox::legacy::ResolveExitAfterFrames は引数列だけを見る純粋関数として core 側に切り出してある。
 ///				nox::os のコマンドライン取得に触れないので、World を組み立てず、
 ///				プロセスの実引数にも依存せずに全分岐を踏める。
 ///
@@ -16,7 +16,7 @@ namespace
 {
 	[[nodiscard]] nox::uint32 Resolve(const std::initializer_list<const nox::char16*> args)noexcept
 	{
-		return nox::ResolveExitAfterFrames(std::span<const nox::char16* const>(args.begin(), args.size()));
+		return nox::legacy::ResolveExitAfterFrames(std::span<const nox::char16* const>(args.begin(), args.size()));
 	}
 }
 
@@ -60,8 +60,8 @@ TEST(ExitAfterFrames, SimilarLookingArgumentIsNotMatched)
 	EXPECT_EQ(Resolve({ u"--exit-after=5" }), 0u);
 }
 
-///	@brief	大きすぎる値は nox::kMaxExitAfterFrames で頭打ちにする (uint32 の桁あふれ対策)。
+///	@brief	大きすぎる値は nox::legacy::kMaxExitAfterFrames で頭打ちにする (uint32 の桁あふれ対策)。
 TEST(ExitAfterFrames, TooLargeValueIsClampedToMax)
 {
-	EXPECT_EQ(Resolve({ u"--exit-after-frames=99999999999999999999" }), nox::kMaxExitAfterFrames);
+	EXPECT_EQ(Resolve({ u"--exit-after-frames=99999999999999999999" }), nox::legacy::kMaxExitAfterFrames);
 }

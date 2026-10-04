@@ -1,8 +1,9 @@
 // Copyright (c) 2023-2026 noxitro
 // SPDX-License-Identifier: MIT
 
-/// @file	entity_command_buffer.h
+/// @file	entity_command_buffer_legacy.h
 /// @brief	Deferred, fixed-capacity entity structural changes.
+/// @note	旧実装 (nox::legacy)。新しい ECS への書き直しが終わるまでの退避先で、移行後にこのファイルごと消す。
 /// @details 構造変更2系統のうちの「遅延系」。記録側はジョブセーフ(ロックフリー)で、
 ///          反映はフェーズ終端の排他的なPlaybackポイントでまとめて行われる。
 ///
@@ -12,7 +13,7 @@
 #include "entity.h"
 #include "component_type.h"
 
-namespace nox
+namespace nox::legacy
 {
 	enum class EntityCommandType : nox::uint8
 	{
@@ -23,7 +24,7 @@ namespace nox
 
 	struct EntityCommand
 	{
-		nox::EntityCommandType type;
+		nox::legacy::EntityCommandType type;
 		nox::uint64 entity_raw;
 		/// @brief AddComponent / RemoveComponent の対象型。Destroyではnullptr。
 		const nox::ComponentTypeInfo* type_info;
@@ -45,10 +46,10 @@ namespace nox
 		static constexpr nox::uint32 PayloadCapacity = _PayloadBytes;
 
 		[[nodiscard]]
-		inline bool TryDestroy(const nox::EntityId entity) noexcept
+		inline bool TryDestroy(const nox::Entity entity) noexcept
 		{
-			return TryRecord(nox::EntityCommand{
-				.type = nox::EntityCommandType::Destroy,
+			return TryRecord(nox::legacy::EntityCommand{
+				.type = nox::legacy::EntityCommandType::Destroy,
 				.entity_raw = entity.raw,
 				.type_info = nullptr,
 				.payload_offset = 0u,
@@ -61,7 +62,7 @@ namespace nox
 		///          単純なmemcpyで運べる。コマンド枠かペイロード枠のどちらかが尽きたらfalse。
 		[[nodiscard]]
 		inline bool TryAddComponent(
-			const nox::EntityId entity,
+			const nox::Entity entity,
 			const nox::ComponentTypeInfo& type_info,
 			const void* const source) noexcept
 		{
@@ -86,8 +87,8 @@ namespace nox
 				payload_size = type_info.size;
 			}
 
-			const bool recorded = TryRecordLocked(nox::EntityCommand{
-				.type = nox::EntityCommandType::AddComponent,
+			const bool recorded = TryRecordLocked(nox::legacy::EntityCommand{
+				.type = nox::legacy::EntityCommandType::AddComponent,
 				.entity_raw = entity.raw,
 				.type_info = &type_info,
 				.payload_offset = payload_offset,
@@ -99,11 +100,11 @@ namespace nox
 
 		[[nodiscard]]
 		inline bool TryRemoveComponent(
-			const nox::EntityId entity,
+			const nox::Entity entity,
 			const nox::ComponentTypeInfo& type_info) noexcept
 		{
-			return TryRecord(nox::EntityCommand{
-				.type = nox::EntityCommandType::RemoveComponent,
+			return TryRecord(nox::legacy::EntityCommand{
+				.type = nox::legacy::EntityCommandType::RemoveComponent,
 				.entity_raw = entity.raw,
 				.type_info = &type_info,
 				.payload_offset = 0u,
@@ -113,7 +114,7 @@ namespace nox
 
 		/// @brief コマンドが運ぶ初期値の先頭。運んでいない場合はnullptr。
 		[[nodiscard]]
-		inline const void* TryGetPayload(const nox::EntityCommand& command)const noexcept
+		inline const void* TryGetPayload(const nox::legacy::EntityCommand& command)const noexcept
 		{
 			if (command.payload_size == 0u)
 			{
@@ -145,7 +146,7 @@ namespace nox
 		}
 
 		[[nodiscard]]
-		inline bool TryGet(const nox::uint32 index, nox::EntityCommand& out)const noexcept
+		inline bool TryGet(const nox::uint32 index, nox::legacy::EntityCommand& out)const noexcept
 		{
 			if (index >= GetLength() || ready_[index].load(std::memory_order_acquire) == false)
 			{
@@ -220,7 +221,7 @@ namespace nox
 
 		/// @brief コマンド1件を記録する。枠が尽きているかPlayback中ならfalse。
 		[[nodiscard]]
-		inline bool TryRecord(const nox::EntityCommand& command)noexcept
+		inline bool TryRecord(const nox::legacy::EntityCommand& command)noexcept
 		{
 			if (TryEnterProducer() == false)
 			{
@@ -234,7 +235,7 @@ namespace nox
 
 		/// @brief producerスコープに入っている前提で、コマンド1件を記録する。
 		[[nodiscard]]
-		inline bool TryRecordLocked(const nox::EntityCommand& command)noexcept
+		inline bool TryRecordLocked(const nox::legacy::EntityCommand& command)noexcept
 		{
 			nox::uint32 index = length_.load(std::memory_order_relaxed);
 			while (index < Capacity)
@@ -322,7 +323,7 @@ namespace nox
 		}
 
 	private:
-		std::array<nox::EntityCommand, Capacity> commands_{};
+		std::array<nox::legacy::EntityCommand, Capacity> commands_{};
 		std::array<std::atomic_bool, Capacity> ready_{};
 		/// @brief ComponentDataの初期値を運ぶ固定長領域。
 		/// @details std::max_align_t の配列として持つことで、alignas を書かずに

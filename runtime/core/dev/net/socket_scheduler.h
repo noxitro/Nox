@@ -12,7 +12,7 @@
 #include	"server.h"
 #include	"client.h"
 
-namespace nox
+namespace nox::legacy
 {
 	class World;
 }
@@ -36,10 +36,10 @@ namespace nox::dev::net
 		void	UnregisterEntity(nox::dev::net::Client& entity);
 
 	private:
-		void	Initialize(nox::World& world);
-		void	Finalize(nox::World& world);
+		void	Initialize(nox::legacy::World& world);
+		void	Finalize(nox::legacy::World& world);
 
-		void	UpdateTask(nox::World& world);
+		void	UpdateTask(nox::legacy::World& world);
 		void	DoConnectionServerClient();
 
 		std::span<const nox::SystemBase::PhaseRegister>	GetPhaseRegisterList()const noexcept override;

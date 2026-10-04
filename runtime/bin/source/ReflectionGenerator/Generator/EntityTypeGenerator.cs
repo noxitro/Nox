@@ -9,7 +9,7 @@ using System.Text;
 namespace ReflectionGenerator.Generator;
 
 /// <summary>
-/// nox::legacy::EntitySystem / nox::EntityLogic を継承した型の購読テーブルを出力する
+/// nox::legacy::EntitySystem / nox::legacy::EntityLogic を継承した型の購読テーブルを出力する
 /// </summary>
 /// <remarks>
 /// ヘッダにクラスを定義するだけで購読されるようにするため、型ごとの .g.cpp と
@@ -27,8 +27,8 @@ public sealed class EntityTypeGenerator
 {
     #region 定義
     private const string ENTITY_SYSTEM_BASE_PREFIX = "nox::legacy::EntitySystem<";
-    private const string ENTITY_LOGIC_BASE_PREFIX = "nox::EntityLogic<";
-    private const string ENTITY_LOGIC_METHOD_ATTRIBUTE = "nox::attr::EntityLogicMethod";
+    private const string ENTITY_LOGIC_BASE_PREFIX = "nox::legacy::EntityLogic<";
+    private const string ENTITY_LOGIC_METHOD_ATTRIBUTE = "nox::legacy::attr::EntityLogicMethod";
 
     /// <summary>
     /// 生成コードが宣言する、更新メソッド1つ分のタグ型の接頭辞
@@ -183,7 +183,7 @@ public sealed class EntityTypeGenerator
 
             if (kind != EntityTypeKind.Logic)
             {
-                Error(functionDecl, $"nox::attr::EntityLogicMethodはEntityLogicのメソッドにのみ付けられます: {functionDecl.FullName}");
+                Error(functionDecl, $"nox::legacy::attr::EntityLogicMethodはEntityLogicのメソッドにのみ付けられます: {functionDecl.FullName}");
                 valid = false;
                 continue;
             }
@@ -206,20 +206,20 @@ public sealed class EntityTypeGenerator
         //  生成器が名前を書けない型は購読できない
         if (IsInAnonymousNamespace(recordDecl))
         {
-            Error(recordDecl, $"無名名前空間の型は購読できません。名前付き名前空間へ移すか、nox::EntityLogicMethodTableの特殊化を手書きしてください: {recordDecl.FullName}");
+            Error(recordDecl, $"無名名前空間の型は購読できません。名前付き名前空間へ移すか、nox::legacy::EntityLogicMethodTableの特殊化を手書きしてください: {recordDecl.FullName}");
             return;
         }
 
         if (recordDecl.Name.Contains('<') || recordDecl.FullName.Contains('<'))
         {
-            Error(recordDecl, $"クラステンプレートは購読できません。nox::EntityLogicMethodTableの特殊化を手書きしてください: {recordDecl.FullName}");
+            Error(recordDecl, $"クラステンプレートは購読できません。nox::legacy::EntityLogicMethodTableの特殊化を手書きしてください: {recordDecl.FullName}");
             return;
         }
 
         if (kind.Value == EntityTypeKind.Logic && methodList.Count <= 0)
         {
             //  購読対象が無いだけなので、失敗はさせずに知らせる
-            Warning(recordDecl, $"nox::EntityLogicを継承していますが、nox::attr::EntityLogicMethodを付けたメソッドが1つもないため購読されません: {recordDecl.FullName}");
+            Warning(recordDecl, $"nox::legacy::EntityLogicを継承していますが、nox::legacy::attr::EntityLogicMethodを付けたメソッドが1つもないため購読されません: {recordDecl.FullName}");
             return;
         }
 
@@ -273,7 +273,7 @@ public sealed class EntityTypeGenerator
             return;
         }
 
-        Error(templateClassDecl, $"クラステンプレートは購読できません。nox::EntityLogicMethodTableの特殊化を手書きしてください: {templateClassDecl.FullName}");
+        Error(templateClassDecl, $"クラステンプレートは購読できません。nox::legacy::EntityLogicMethodTableの特殊化を手書きしてください: {templateClassDecl.FullName}");
     }
 
     private static EntityTypeKind? GetEntityTypeKind(ReadOnlySpan<Parser2.BaseSpecifierDecl> baseSpan)
@@ -357,7 +357,7 @@ public sealed class EntityTypeGenerator
         codeWriter.WriteLine("{");
         using (codeWriter.Indent())
         {
-            codeWriter.WriteLine($"extern const nox::EntityLogicTypeDescriptor {GetLogicDescriptorName(entityType)};");
+            codeWriter.WriteLine($"extern const nox::legacy::EntityLogicTypeDescriptor {GetLogicDescriptorName(entityType)};");
         }
         codeWriter.WriteLine("}");
     }
@@ -393,8 +393,8 @@ public sealed class EntityTypeGenerator
                     codeWriter.WriteLine($"using OwnerType = {entityType.FullName};");
                     //  オーバーロードで曖昧にならないよう、必ず正確なメンバ関数ポインタ型へキャストする
                     codeWriter.WriteLine($"using MethodPointerType = nox::to_member_function_pointer_t<{method.FunctionTypeFullName}, {entityType.FullName}>;");
-                    codeWriter.WriteLine("using Signature = typename nox::EntityMethodTraits<MethodPointerType>::Signature;");
-                    codeWriter.WriteLine($"friend void InvokeEntityLogicMethod({tagName}, void*, nox::World&, nox::Archetype&, nox::ArchetypeLocation, nox::EntityId);");
+                    codeWriter.WriteLine("using Signature = typename nox::legacy::EntityMethodTraits<MethodPointerType>::Signature;");
+                    codeWriter.WriteLine($"friend void InvokeEntityLogicMethod({tagName}, void*, nox::legacy::World&, nox::Archetype&, nox::ArchetypeLocation, nox::EntityId);");
                 }
                 codeWriter.WriteLine("};");
             }
@@ -495,11 +495,11 @@ public sealed class EntityTypeGenerator
             codeWriter.WriteNewLine();
 
             codeWriter.WriteLine("template<>");
-            codeWriter.WriteLine($"struct nox::EntityLogicMethodTable<{entityType.FullName}>");
+            codeWriter.WriteLine($"struct nox::legacy::EntityLogicMethodTable<{entityType.FullName}>");
             codeWriter.WriteLine("{");
             using (codeWriter.Indent())
             {
-                codeWriter.WriteLine("static constexpr nox::EntityLogicMethodDescriptor k_methods[]{");
+                codeWriter.WriteLine("static constexpr nox::legacy::EntityLogicMethodDescriptor k_methods[]{");
                 using (codeWriter.Indent())
                 {
                     for (int i = 0; i < entityType.MethodList.Count; ++i)
@@ -509,17 +509,17 @@ public sealed class EntityTypeGenerator
                         string phase = $"k_entity_logic_method_attribute_{entityType.SafeName}_{i.ToString()}.GetPhase()";
 
                         //  記述子はメソッド名を綴らず、タグ型が持つ型情報だけを読む
-                        codeWriter.WriteLine($"nox::detail::MakeEntityLogicMethodDescriptorViaTag<nox::gen::{tagName}, {phase}>(\"{method.Name}\"),");
+                        codeWriter.WriteLine($"nox::legacy::detail::MakeEntityLogicMethodDescriptorViaTag<nox::gen::{tagName}, {phase}>(\"{method.Name}\"),");
                     }
                 }
                 codeWriter.WriteLine("};");
                 codeWriter.WriteNewLine();
 
-                codeWriter.WriteLine("[[nodiscard]] static constexpr std::span<const nox::EntityLogicMethodDescriptor> GetMethods()noexcept");
+                codeWriter.WriteLine("[[nodiscard]] static constexpr std::span<const nox::legacy::EntityLogicMethodDescriptor> GetMethods()noexcept");
                 codeWriter.WriteLine("{");
                 using (codeWriter.Indent())
                 {
-                    codeWriter.WriteLine("return std::span<const nox::EntityLogicMethodDescriptor>(k_methods);");
+                    codeWriter.WriteLine("return std::span<const nox::legacy::EntityLogicMethodDescriptor>(k_methods);");
                 }
                 codeWriter.WriteLine("}");
             }
@@ -528,7 +528,7 @@ public sealed class EntityTypeGenerator
 
             //  記述子の実体をこの翻訳単位の.rdataへ置く。
             //  テーブル側は宣言だけを見てアドレスを取るため、メソッド表を知らなくてよい。
-            codeWriter.WriteLine($"constexpr nox::EntityLogicTypeDescriptor nox::gen::{GetLogicDescriptorName(entityType)} = nox::MakeEntityLogicTypeDescriptor<{entityType.FullName}>();");
+            codeWriter.WriteLine($"constexpr nox::legacy::EntityLogicTypeDescriptor nox::gen::{GetLogicDescriptorName(entityType)} = nox::legacy::MakeEntityLogicTypeDescriptor<{entityType.FullName}>();");
         }
         else
         {
@@ -562,7 +562,7 @@ public sealed class EntityTypeGenerator
         {
             WriteTableArray(codeWriter, "nox::legacy::EntitySystemTypeDescriptor", "k_entity_system_type_table", systemList);
             codeWriter.WriteNewLine();
-            WriteTableArray(codeWriter, "nox::EntityLogicTypeDescriptor", "k_entity_logic_type_table", logicList);
+            WriteTableArray(codeWriter, "nox::legacy::EntityLogicTypeDescriptor", "k_entity_logic_type_table", logicList);
             codeWriter.WriteNewLine();
 
             //  定数初期化されていることの証明。動的初期化が要るならconstinitがコンパイルエラーにする
@@ -572,7 +572,7 @@ public sealed class EntityTypeGenerator
             }
             if (logicList.Count > 0)
             {
-                codeWriter.WriteLine("constinit const nox::EntityLogicTypeDescriptor* const* const k_entity_logic_type_table_head = k_entity_logic_type_table;");
+                codeWriter.WriteLine("constinit const nox::legacy::EntityLogicTypeDescriptor* const* const k_entity_logic_type_table_head = k_entity_logic_type_table;");
             }
         }
         codeWriter.WriteLine("}");
@@ -580,7 +580,7 @@ public sealed class EntityTypeGenerator
 
         WriteTableAccessor(codeWriter, "nox::legacy::EntitySystemTypeDescriptor", "GetEntitySystemTypes", "k_entity_system_type_table", systemList.Count);
         codeWriter.WriteNewLine();
-        WriteTableAccessor(codeWriter, "nox::EntityLogicTypeDescriptor", "GetEntityLogicTypes", "k_entity_logic_type_table", logicList.Count);
+        WriteTableAccessor(codeWriter, "nox::legacy::EntityLogicTypeDescriptor", "GetEntityLogicTypes", "k_entity_logic_type_table", logicList.Count);
 
         WriteFileFooter(codeWriter);
     }
@@ -618,7 +618,7 @@ public sealed class EntityTypeGenerator
         string tableName,
         int count)
     {
-        codeWriter.WriteLine($"std::span<const {descriptorTypeName}* const> nox::{functionName}()noexcept");
+        codeWriter.WriteLine($"std::span<const {descriptorTypeName}* const> nox::legacy::{functionName}()noexcept");
         codeWriter.WriteLine("{");
         using (codeWriter.Indent())
         {

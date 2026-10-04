@@ -6,6 +6,7 @@
 #pragma once
 #include	<span>
 #include	<string_view>
+#include	"../basic_type.h"
 #include	"../basic_definition.h"
 #if NOX_WIN64
 #include	"file_base.h"

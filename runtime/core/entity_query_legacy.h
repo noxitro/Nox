@@ -1,15 +1,16 @@
 // Copyright (c) 2023-2026 noxitro
 // SPDX-License-Identifier: MIT
 
-/// @file	entity_query.h
+/// @file	entity_query_legacy.h
 /// @brief	宣言したComponentDataを持つentityの列挙と、引数リストへのバインド。
+/// @note	旧実装 (nox::legacy)。新しい ECS への書き直しが終わるまでの退避先で、移行後にこのファイルごと消す。
 /// @details ForEachの1行あたりのコストは「列先頭 + 行インデックス」の加算のみ。
 ///          仮想関数もstd::functionも介さないため、呼び出し全体がインライン展開される。
 #pragma once
 #include	"archetype.h"
-#include	"entity_access.h"
+#include	"entity_access_legacy.h"
 
-namespace nox
+namespace nox::legacy
 {
 	class World;
 
@@ -77,7 +78,7 @@ namespace nox
 		/// @return 実際に書き出した数。
 		[[nodiscard]] inline nox::uint32 FillChunkRefs(
 			const nox::uint32 start,
-			const std::span<nox::EntityChunkRef> out)const noexcept
+			const std::span<nox::legacy::EntityChunkRef> out)const noexcept
 		{
 			nox::uint32 scanned = 0u;
 			nox::uint32 written = 0u;
@@ -98,7 +99,7 @@ namespace nox
 					{
 						return written;
 					}
-					out[written++] = nox::EntityChunkRef{ .archetype = archetype, .chunk_index = chunk_index };
+					out[written++] = nox::legacy::EntityChunkRef{ .archetype = archetype, .chunk_index = chunk_index };
 				}
 			}
 			return written;
@@ -111,58 +112,58 @@ namespace nox
 
 	namespace detail
 	{
-		//	entity_query.h が world.h に依存しないための橋渡し(TryGetServiceOfWorldと同じ理由)。
-		void EnterEntityIterationOfWorld(nox::World& world)noexcept;
-		void LeaveEntityIterationOfWorld(nox::World& world)noexcept;
+		//	entity_query_legacy.h が world_legacy.h に依存しないための橋渡し(TryGetServiceOfWorldと同じ理由)。
+		void EnterEntityIterationOfWorld(nox::legacy::World& world)noexcept;
+		void LeaveEntityIterationOfWorld(nox::legacy::World& world)noexcept;
 
 		/// @brief 列挙している間だけ、即時系の構造変更をブロックするスコープ。
 		/// @details Archetypeの再配置(swap-remove / Archetype間移動)は、列挙側が握っている
 		///          列ポインタと行番号を壊す。列挙の開始と終了をWorldへ伝えることで、
-		///          その間の即時系呼び出しを nox::World::GetStructuralChangePermission() が弾ける。
+		///          その間の即時系呼び出しを nox::legacy::World::GetStructuralChangePermission() が弾ける。
 		///
 		///          入れ子でも並列でも成立する。Worldの状態はatomicなカウンタなので、
 		///          Chunk並列で複数ワーカーが同時に出入りしても破綻しない。
 		class EntityIterationScope final
 		{
 		public:
-			inline explicit EntityIterationScope(nox::World& world)noexcept :
+			inline explicit EntityIterationScope(nox::legacy::World& world)noexcept :
 				world_(world)
 			{
-				nox::detail::EnterEntityIterationOfWorld(world_);
+				nox::legacy::detail::EnterEntityIterationOfWorld(world_);
 			}
 
 			inline ~EntityIterationScope()noexcept
 			{
-				nox::detail::LeaveEntityIterationOfWorld(world_);
+				nox::legacy::detail::LeaveEntityIterationOfWorld(world_);
 			}
 
 			EntityIterationScope(const EntityIterationScope&) = delete;
 			EntityIterationScope& operator=(const EntityIterationScope&) = delete;
 
 		private:
-			nox::World& world_;
+			nox::legacy::World& world_;
 		};
 
 		/// @brief 列の先頭アドレスと行から実引数を作る。
 		template<class Parameter>
 		[[nodiscard]] inline Parameter BindEntityArgument(
 			void* const base,
-			const nox::EntityId entity,
+			const nox::Entity entity,
 			const nox::uint32 row)noexcept
 		{
-			using Traits = nox::EntityParameterTraits<Parameter>;
-			if constexpr (Traits::k_kind == nox::EntityParameterKind::Entity)
+			using Traits = nox::legacy::EntityParameterTraits<Parameter>;
+			if constexpr (Traits::k_kind == nox::legacy::EntityParameterKind::Entity)
 			{
 				return entity;
 			}
-			else if constexpr (nox::detail::IsComponentParameterKind(Traits::k_kind))
+			else if constexpr (nox::legacy::detail::IsComponentParameterKind(Traits::k_kind))
 			{
 				return *(static_cast<typename Traits::RawType*>(base) + row);
 			}
-			else if constexpr (Traits::k_kind == nox::EntityParameterKind::Commands)
+			else if constexpr (Traits::k_kind == nox::legacy::EntityParameterKind::Commands)
 			{
 				//	呼び出し1回につき1つ、スタック上に作った実体を全行で共有する。
-				return *static_cast<nox::EntityCommands*>(base);
+				return *static_cast<nox::legacy::EntityCommands*>(base);
 			}
 			else if constexpr (std::is_reference_v<Parameter>)
 			{
@@ -179,10 +180,10 @@ namespace nox
 		/// @brief Service引数を解決する。Chunkに依存しないのでForEachごとに1回だけ呼ぶ。
 		/// @return 実行を続行してよいか。参照で受けるServiceが未登録の場合のみfalse。
 		template<class Parameter>
-		[[nodiscard]] inline bool ResolveEntityServiceBase(nox::World& world, void*& out_base)noexcept
+		[[nodiscard]] inline bool ResolveEntityServiceBase(nox::legacy::World& world, void*& out_base)noexcept
 		{
-			using Traits = nox::EntityParameterTraits<Parameter>;
-			if constexpr (nox::detail::IsServiceParameterKind(Traits::k_kind))
+			using Traits = nox::legacy::EntityParameterTraits<Parameter>;
+			if constexpr (nox::legacy::detail::IsServiceParameterKind(Traits::k_kind))
 			{
 				out_base = nox::detail::TryGetServiceOfWorld(world, nox::reflection::Typeof<typename Traits::RawType>());
 				if constexpr (std::is_reference_v<Parameter>)
@@ -203,12 +204,12 @@ namespace nox
 			}
 		}
 
-		/// @brief nox::EntityCommands引数へ、呼び出し単位の実体を束縛する。
+		/// @brief nox::legacy::EntityCommands引数へ、呼び出し単位の実体を束縛する。
 		/// @details Chunkにも行にも依存しないため、Serviceと同じく列挙ごとに1回だけ書き込む。
 		template<class Parameter>
-		inline void BindEntityCommandsBase(nox::EntityCommands& commands, void*& out_base)noexcept
+		inline void BindEntityCommandsBase(nox::legacy::EntityCommands& commands, void*& out_base)noexcept
 		{
-			if constexpr (nox::EntityParameterTraits<Parameter>::k_kind == nox::EntityParameterKind::Commands)
+			if constexpr (nox::legacy::EntityParameterTraits<Parameter>::k_kind == nox::legacy::EntityParameterKind::Commands)
 			{
 				out_base = &commands;
 			}
@@ -221,8 +222,8 @@ namespace nox
 			const nox::uint32 chunk_index,
 			void*& out_base)noexcept
 		{
-			using Traits = nox::EntityParameterTraits<Parameter>;
-			if constexpr (nox::detail::IsComponentParameterKind(Traits::k_kind))
+			using Traits = nox::legacy::EntityParameterTraits<Parameter>;
+			if constexpr (nox::legacy::detail::IsComponentParameterKind(Traits::k_kind))
 			{
 				out_base = archetype.TryGetComponentArray(chunk_index, nox::ComponentTypeIndexOf<typename Traits::RawType>());
 				return out_base != nullptr;
@@ -245,15 +246,15 @@ namespace nox
 			using ParameterAt = std::tuple_element_t<Index, ParameterTuple>;
 
 			template<size_t... Indices>
-			[[nodiscard]] static bool ResolveServices(nox::World& world, BaseArray& bases, std::index_sequence<Indices...>)noexcept
+			[[nodiscard]] static bool ResolveServices(nox::legacy::World& world, BaseArray& bases, std::index_sequence<Indices...>)noexcept
 			{
-				return (nox::detail::ResolveEntityServiceBase<ParameterAt<Indices>>(world, bases[Indices]) && ... && true);
+				return (nox::legacy::detail::ResolveEntityServiceBase<ParameterAt<Indices>>(world, bases[Indices]) && ... && true);
 			}
 
 			template<size_t... Indices>
-			static void BindCommands(nox::EntityCommands& commands, BaseArray& bases, std::index_sequence<Indices...>)noexcept
+			static void BindCommands(nox::legacy::EntityCommands& commands, BaseArray& bases, std::index_sequence<Indices...>)noexcept
 			{
-				(nox::detail::BindEntityCommandsBase<ParameterAt<Indices>>(commands, bases[Indices]), ...);
+				(nox::legacy::detail::BindEntityCommandsBase<ParameterAt<Indices>>(commands, bases[Indices]), ...);
 			}
 
 			template<size_t... Indices>
@@ -263,7 +264,7 @@ namespace nox
 				BaseArray& bases,
 				std::index_sequence<Indices...>)noexcept
 			{
-				return (nox::detail::ResolveEntityColumnBase<ParameterAt<Indices>>(archetype, chunk_index, bases[Indices]) && ... && true);
+				return (nox::legacy::detail::ResolveEntityColumnBase<ParameterAt<Indices>>(archetype, chunk_index, bases[Indices]) && ... && true);
 			}
 
 			template<class Owner, class MethodPointerType, size_t... Indices>
@@ -271,11 +272,11 @@ namespace nox
 				Owner& owner,
 				MethodPointerType method,
 				const BaseArray& bases,
-				const nox::EntityId entity,
+				const nox::Entity entity,
 				const nox::uint32 row,
 				std::index_sequence<Indices...>)
 			{
-				(owner.*method)(nox::detail::BindEntityArgument<ParameterAt<Indices>>(bases[Indices], entity, row)...);
+				(owner.*method)(nox::legacy::detail::BindEntityArgument<ParameterAt<Indices>>(bases[Indices], entity, row)...);
 			}
 
 			/// @brief Chunk1つ分の行ループ。Service/EntityCommandsは解決済みでbasesに載っている前提。
@@ -300,7 +301,7 @@ namespace nox
 					return;
 				}
 
-				const nox::EntityId* const entities = archetype.GetEntityArray(chunk_index);
+				const nox::Entity* const entities = archetype.GetEntityArray(chunk_index);
 				for (nox::uint32 row = 0u; row < entity_count; ++row)
 				{
 					InvokeRow(owner, method, bases, entities[row], row, k_indices);
@@ -313,7 +314,7 @@ namespace nox
 			///          コマンドバッファへ積まれるため、複数スレッドから同時に使っても安全。
 			template<class Owner, class MethodPointerType>
 			static void ForEachEntityInChunk(
-				nox::World& world,
+				nox::legacy::World& world,
 				nox::Archetype& archetype,
 				const nox::uint32 chunk_index,
 				Owner& owner,
@@ -321,9 +322,9 @@ namespace nox
 			{
 				constexpr auto k_indices = std::make_index_sequence<k_parameter_count>{};
 				//	このChunkを列挙している間、即時系の構造変更を弾く。
-				const nox::detail::EntityIterationScope iteration_scope(world);
+				const nox::legacy::detail::EntityIterationScope iteration_scope(world);
 				BaseArray bases{};
-				nox::EntityCommands commands(world);
+				nox::legacy::EntityCommands commands(world);
 				if (ResolveServices(world, bases, k_indices) == false)
 				{
 					return;
@@ -335,18 +336,18 @@ namespace nox
 			/// @brief Queryにマッチした全entityに対してmethodを呼ぶ。
 			template<class Owner, class MethodPointerType>
 			static void ForEachEntity(
-				nox::World& world,
-				const nox::EntityQuery& query,
+				nox::legacy::World& world,
+				const nox::legacy::EntityQuery& query,
 				Owner& owner,
 				MethodPointerType method)
 			{
 				constexpr auto k_indices = std::make_index_sequence<k_parameter_count>{};
 				//	列挙している間、即時系の構造変更を弾く。Archetypeの再配置が起きると
 				//	この下のループが握る列ポインタと行番号が壊れるため。
-				const nox::detail::EntityIterationScope iteration_scope(world);
+				const nox::legacy::detail::EntityIterationScope iteration_scope(world);
 				BaseArray bases{};
 				//	Worldへの薄いビュー。ポインタ1つ分なので確保も解放も走らない。
-				nox::EntityCommands commands(world);
+				nox::legacy::EntityCommands commands(world);
 				if (ResolveServices(world, bases, k_indices) == false)
 				{
 					return;
@@ -366,18 +367,18 @@ namespace nox
 			/// @brief 1つのentityに対してのみmethodを呼ぶ(EntityLogic用)。
 			template<class Owner, class MethodPointerType>
 			static void InvokeSingle(
-				nox::World& world,
+				nox::legacy::World& world,
 				nox::Archetype& archetype,
 				const nox::ArchetypeLocation location,
-				const nox::EntityId entity,
+				const nox::Entity entity,
 				Owner& owner,
 				MethodPointerType method)
 			{
 				constexpr auto k_indices = std::make_index_sequence<k_parameter_count>{};
 				//	1entityでも、解決した列ポインタと行番号を握ったままユーザーコードを呼ぶ点は同じ。
-				const nox::detail::EntityIterationScope iteration_scope(world);
+				const nox::legacy::detail::EntityIterationScope iteration_scope(world);
 				BaseArray bases{};
-				nox::EntityCommands commands(world);
+				nox::legacy::EntityCommands commands(world);
 				if (ResolveServices(world, bases, k_indices) == false)
 				{
 					return;
@@ -397,12 +398,12 @@ namespace nox
 		struct EntityInvokerOfSignature;
 
 		template<class... Parameters>
-		struct EntityInvokerOfSignature<nox::EntitySignature<Parameters...>>
+		struct EntityInvokerOfSignature<nox::legacy::EntitySignature<Parameters...>>
 		{
-			using Type = nox::detail::EntityInvoker<Parameters...>;
+			using Type = nox::legacy::detail::EntityInvoker<Parameters...>;
 		};
 
 		template<class Signature>
-		using EntityInvokerOf = typename nox::detail::EntityInvokerOfSignature<Signature>::Type;
+		using EntityInvokerOf = typename nox::legacy::detail::EntityInvokerOfSignature<Signature>::Type;
 	}
 }

@@ -9,7 +9,7 @@
 ///				(core/test/updater_graph_benchmark.cpp と同じ作り)。
 ///				そのかわり World::Init が System を自動生成することはないので、System は手で作って
 ///				BuildQuery を呼ぶ。World::Init / ExecuteUpdaterGraphPhase は private なので、
-///				並列列挙は world.cpp の配り方を写した関数で回す。
+///				並列列挙は world_legacy.cpp の配り方を写した関数で回す。
 ///
 ///				本番の World::ExecuteNode が非 Master で通す宣言違反チェッカーと
 ///				コマンドバッファの束縛はノードあたり定数コストなので、ここの数字には含まれない。
@@ -117,10 +117,10 @@ namespace
 	/// @details tag_bit_count 本のタグで 2^tag_bit_count 個の Archetype へ割る。
 	///          Query は作成済みの Archetype しか拾わないので、BuildQuery はこの後に呼ぶこと。
 	void PopulateMovers(
-		nox::World& world,
+		nox::legacy::World& world,
 		const nox::uint32 entity_count,
 		const nox::uint32 tag_bit_count,
-		nox::EntityId* const out_entities)
+		nox::Entity* const out_entities)
 	{
 		const std::array<const nox::ComponentTypeInfo*, 4> tag_types{
 			&nox::ComponentTypeOf<nox::bench::ecs::BTag0>(),
@@ -130,7 +130,7 @@ namespace
 		};
 		for (nox::uint32 index = 0u; index < entity_count; ++index)
 		{
-			const nox::EntityId entity = world.CreateEntity();
+			const nox::Entity entity = world.CreateEntity();
 			world.AddComponent<BPosition>(entity)->x = static_cast<nox::float32>(index % 97u) * 0.01f;
 			world.AddComponent<BVelocity>(entity)->x = 0.001f;
 			for (nox::uint32 bit = 0u; bit < tag_bit_count && bit < tag_types.size(); ++bit)
@@ -155,7 +155,7 @@ namespace
 	{
 		static constexpr nox::uint32 kEntityCount = 10000u;
 
-		nox::World world;
+		nox::legacy::World world;
 		PopulateMovers(world, kEntityCount, tag_bit_count, nullptr);
 
 		nox::bench::ecs::BMoveSystem system;
@@ -181,10 +181,10 @@ namespace
 		RunQueryIterate(state, 4u);
 	}
 
-	//	world.cpp (nox::World::ExecuteEntitySystemParallel) の配り方の写し
+	//	world_legacy.cpp (nox::legacy::World::ExecuteEntitySystemParallel) の配り方の写し
 	struct ChunkJobContext final
 	{
-		nox::World* world;
+		nox::legacy::World* world;
 		nox::legacy::EntitySystemBase* system;
 		nox::Archetype* archetype;
 		nox::uint32 chunk_index;
@@ -196,11 +196,11 @@ namespace
 		job_context->system->ExecuteChunk(*job_context->world, *job_context->archetype, job_context->chunk_index);
 	}
 
-	void RunEntitySystemParallel(nox::World& world, nox::JobSystem& job_system, nox::legacy::EntitySystemBase& system)
+	void RunEntitySystemParallel(nox::legacy::World& world, nox::JobSystem& job_system, nox::legacy::EntitySystemBase& system)
 	{
 		static constexpr nox::uint32 kMaxChunkJobsPerDispatch = 256u;
 
-		const nox::EntityQuery& query = system.GetQuery();
+		const nox::legacy::EntityQuery& query = system.GetQuery();
 		const nox::uint32 total_chunk_count = query.GetTotalChunkCount();
 		if (total_chunk_count <= 1u || job_system.GetWorkerCount() == 0u)
 		{
@@ -208,12 +208,12 @@ namespace
 			return;
 		}
 
-		std::array<nox::EntityChunkRef, kMaxChunkJobsPerDispatch> chunk_refs{};
+		std::array<nox::legacy::EntityChunkRef, kMaxChunkJobsPerDispatch> chunk_refs{};
 		std::array<ChunkJobContext, kMaxChunkJobsPerDispatch> job_contexts{};
 		std::array<nox::Job, kMaxChunkJobsPerDispatch> jobs{};
 		for (nox::uint32 start = 0u; start < total_chunk_count; start += kMaxChunkJobsPerDispatch)
 		{
-			const nox::uint32 job_count = query.FillChunkRefs(start, std::span<nox::EntityChunkRef>(chunk_refs));
+			const nox::uint32 job_count = query.FillChunkRefs(start, std::span<nox::legacy::EntityChunkRef>(chunk_refs));
 			if (job_count == 0u)
 			{
 				break;
@@ -240,7 +240,7 @@ namespace
 	{
 		static constexpr nox::uint32 kEntityCount = 100000u;
 
-		nox::World world;
+		nox::legacy::World world;
 		PopulateMovers(world, kEntityCount, 0u, nullptr);
 
 		nox::bench::ecs::BMoveParallelSystem system;
@@ -271,8 +271,8 @@ namespace
 	{
 		static constexpr nox::uint32 kEntityCount = 10000u;
 
-		nox::World world;
-		std::vector<nox::EntityId> order(kEntityCount);
+		nox::legacy::World world;
+		std::vector<nox::Entity> order(kEntityCount);
 		PopulateMovers(world, kEntityCount, 2u, order.data());
 
 		//	xorshift64 で決定的に並べ替える (実行ごと・A/B で同じ順になる)
@@ -291,7 +291,7 @@ namespace
 				nox::float32 sum = 0.0f;
 				for (nox::uint64 op = 0u; op < op_count; ++op)
 				{
-					for (const nox::EntityId entity : order)
+					for (const nox::Entity entity : order)
 					{
 						const BPosition* const position = world.TryGetComponent<BPosition>(entity);
 						sum += (position != nullptr) ? position->x : 0.0f;
@@ -310,8 +310,8 @@ namespace
 	/// @brief 1024 体にタグを Add → Remove (Archetype 間の移動 2 回ずつ)
 	void BenchTagToggle1k(nox::bench::State& state)
 	{
-		nox::World world;
-		std::vector<nox::EntityId> entities(kStructuralEntityCount);
+		nox::legacy::World world;
+		std::vector<nox::Entity> entities(kStructuralEntityCount);
 		PopulateMovers(world, kStructuralEntityCount, 0u, entities.data());
 
 		//	移動先の Archetype を先に作っておく (初回の Archetype 生成を計測から外す)
@@ -323,11 +323,11 @@ namespace
 			{
 				for (nox::uint64 op = 0u; op < op_count; ++op)
 				{
-					for (const nox::EntityId entity : entities)
+					for (const nox::Entity entity : entities)
 					{
 						world.AddComponent<nox::bench::ecs::BTag0>(entity);
 					}
-					for (const nox::EntityId entity : entities)
+					for (const nox::Entity entity : entities)
 					{
 						world.RemoveComponent<nox::bench::ecs::BTag0>(entity);
 					}
@@ -338,8 +338,8 @@ namespace
 	/// @brief 即時 API で 1024 体を生成 + 2 コンポーネント追加し、全部破棄する
 	void BenchSpawnDespawn1k(nox::bench::State& state)
 	{
-		nox::World world;
-		std::vector<nox::EntityId> entities(kStructuralEntityCount);
+		nox::legacy::World world;
+		std::vector<nox::Entity> entities(kStructuralEntityCount);
 
 		state.SetItemsPerOp(kStructuralEntityCount);
 		state.Run([&world, &entities](const nox::uint64 op_count)
@@ -348,12 +348,12 @@ namespace
 				{
 					for (nox::uint32 index = 0u; index < kStructuralEntityCount; ++index)
 					{
-						const nox::EntityId entity = world.CreateEntity();
+						const nox::Entity entity = world.CreateEntity();
 						world.AddComponent<BPosition>(entity)->x = 1.0f;
 						world.AddComponent<BVelocity>(entity)->x = 0.1f;
 						entities[index] = entity;
 					}
-					for (const nox::EntityId entity : entities)
+					for (const nox::Entity entity : entities)
 					{
 						world.DestroyEntity(entity);
 					}
@@ -369,11 +369,11 @@ namespace
 		static constexpr nox::uint32 kNodeCount = 4u;
 		static constexpr nox::uint32 kSpawnsPerNode = kStructuralEntityCount / kNodeCount;
 		//	1 体あたり Add 2 件。1 ノードのバッファ容量を超えると std::abort になる
-		static_assert(kSpawnsPerNode * 2u <= nox::World::GetEntityCommandCapacity());
+		static_assert(kSpawnsPerNode * 2u <= nox::legacy::World::GetEntityCommandCapacity());
 
-		nox::World world;
+		nox::legacy::World world;
 		world.ReserveNodeEntityCommandBuffers(kNodeCount);
-		std::vector<nox::EntityId> spawned(kStructuralEntityCount);
+		std::vector<nox::Entity> spawned(kStructuralEntityCount);
 
 		state.SetItemsPerOp(kStructuralEntityCount);
 		state.Run([&world, &spawned](const nox::uint64 op_count)
@@ -383,11 +383,11 @@ namespace
 					world.EnterEntityIteration();
 					for (nox::uint32 node = 0u; node < kNodeCount; ++node)
 					{
-						const nox::WorldNodeCommandScope command_scope(world, node);
-						nox::EntityCommands commands(world);
+						const nox::legacy::WorldNodeCommandScope command_scope(world, node);
+						nox::legacy::EntityCommands commands(world);
 						for (nox::uint32 index = 0u; index < kSpawnsPerNode; ++index)
 						{
-							const nox::EntityId entity = commands.Create();
+							const nox::Entity entity = commands.Create();
 							commands.Add<BPosition>(entity, BPosition{ .x = 1.0f, .y = 0.0f, .z = 0.0f });
 							commands.Add<BVelocity>(entity, BVelocity{ .x = 0.1f, .y = 0.0f, .z = 0.0f });
 							spawned[(node * kSpawnsPerNode) + index] = entity;
@@ -400,8 +400,8 @@ namespace
 					world.EnterEntityIteration();
 					for (nox::uint32 node = 0u; node < kNodeCount; ++node)
 					{
-						const nox::WorldNodeCommandScope command_scope(world, node);
-						nox::EntityCommands commands(world);
+						const nox::legacy::WorldNodeCommandScope command_scope(world, node);
+						nox::legacy::EntityCommands commands(world);
 						for (nox::uint32 index = 0u; index < kSpawnsPerNode; ++index)
 						{
 							commands.Destroy(spawned[(node * kSpawnsPerNode) + index]);
@@ -417,7 +417,7 @@ namespace
 	//	UpdaterGraph
 	//	---------------------------------------------------------------------------------
 
-	/// @brief 64 ノードのレイヤー分割 (nox::BuildUpdaterLayerIndices。ヒープを使わない純粋関数)
+	/// @brief 64 ノードのレイヤー分割 (nox::legacy::BuildUpdaterLayerIndices。ヒープを使わない純粋関数)
 	void BenchLayerIndices64(nox::bench::State& state)
 	{
 		static constexpr nox::uint32 kNodeCount = 64u;
@@ -434,9 +434,9 @@ namespace
 		};
 
 		//	2 種類を読み書きし、4 つに 1 つは片方へ書き込む宣言を決定的に作る
-		std::array<nox::UpdaterNodeAccess, kNodeCount> accesses{};
+		std::array<nox::legacy::UpdaterNodeAccess, kNodeCount> accesses{};
 		nox::uint64 random_state = 0x9E3779B97F4A7C15ull;
-		for (nox::UpdaterNodeAccess& access : accesses)
+		for (nox::legacy::UpdaterNodeAccess& access : accesses)
 		{
 			random_state ^= random_state << 13u;
 			random_state ^= random_state >> 7u;
@@ -454,8 +454,8 @@ namespace
 				for (nox::uint64 op = 0u; op < op_count; ++op)
 				{
 					nox::bench::DoNotOptimize(accesses);
-					const nox::uint32 layer_count = nox::BuildUpdaterLayerIndices(
-						std::span<const nox::UpdaterNodeAccess>(accesses.data(), accesses.size()),
+					const nox::uint32 layer_count = nox::legacy::BuildUpdaterLayerIndices(
+						std::span<const nox::legacy::UpdaterNodeAccess>(accesses.data(), accesses.size()),
 						std::span<nox::uint32>(layers.data(), layers.size()));
 					nox::bench::DoNotOptimize(layer_count);
 				}
@@ -477,14 +477,14 @@ namespace
 			&write0, &write1, &write2, &write3, &merge01, &merge23, &merge45, &final_system,
 		};
 
-		nox::UpdaterGraph graph;
+		nox::legacy::UpdaterGraph graph;
 		state.Run([&graph, &systems](const nox::uint64 op_count)
 			{
 				for (nox::uint64 op = 0u; op < op_count; ++op)
 				{
 					graph.Rebuild(
 						std::span<nox::legacy::EntitySystemBase* const>(systems.data(), systems.size()),
-						std::span<nox::EntityLogicStorage* const>());
+						std::span<nox::legacy::EntityLogicStorage* const>());
 				}
 				nox::bench::DoNotOptimize(graph);
 			});

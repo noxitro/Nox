@@ -13,7 +13,7 @@ namespace nox
 	class SystemBase;
 
 	/// @brief		モジュールエントリ基底クラス
-	///	@details	nox::Worldで収集され、各フェーズで呼び出される関数を登録するための基底クラス
+	///	@details	nox::legacy::Worldで収集され、各フェーズで呼び出される関数を登録するための基底クラス
 	class EngineModule : public nox::Object
 	{
 		NOX_DECLARE_OBJECT(nox::EngineModule, nox::Object);

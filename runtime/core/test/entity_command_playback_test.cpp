@@ -4,7 +4,7 @@
 ///	@file	entity_command_playback_test.cpp
 ///	@brief	遅延構造変更のPlaback順が、記録順に依存せず決定的であることの検証。
 ///	@details	遅延系のコマンドバッファはUpdaterGraphのノード1つにつき1本あり、
-///				Playbackは「ノード外 → ノード番号(nox::UpdaterNode::order_index)順」で回る。
+///				Playbackは「ノード外 → ノード番号(nox::legacy::UpdaterNode::order_index)順」で回る。
 ///				よって「どのワーカーがどのノードを先に走らせたか」は結果に影響しない。
 ///
 ///				ここで落とせるようにしてあるのは次の3点。
@@ -69,8 +69,8 @@ namespace
 	///          e2: node1 Destroy → node3 Add(99)                 ⇒ 破棄済みへのAddは捨てられる
 	void RecordNodeCommands(
 		const nox::uint32 node_index,
-		nox::EntityCommands& commands,
-		const std::span<const nox::EntityId> entities)
+		nox::legacy::EntityCommands& commands,
+		const std::span<const nox::Entity> entities)
 	{
 		switch (node_index)
 		{
@@ -100,8 +100,8 @@ namespace
 	}
 
 	[[nodiscard]] WorldSnapshot CaptureSnapshot(
-		nox::World& world,
-		const std::span<const nox::EntityId> entities)
+		nox::legacy::World& world,
+		const std::span<const nox::Entity> entities)
 	{
 		WorldSnapshot snapshot{};
 		for (nox::uint32 index = 0u; index < k_entity_count; ++index)
@@ -122,7 +122,7 @@ namespace
 	}
 
 	/// @brief 検体のentityを用意する。全てPlaybackPositionを持つ状態から始める。
-	void SetupEntities(nox::World& world, const std::span<nox::EntityId> dest)
+	void SetupEntities(nox::legacy::World& world, const std::span<nox::Entity> dest)
 	{
 		for (nox::uint32 index = 0u; index < dest.size(); ++index)
 		{
@@ -137,10 +137,10 @@ namespace
 	/// @details 記録順だけを入れ替えるための経路。スレッドを使わないので、順序は完全に制御できる。
 	[[nodiscard]] WorldSnapshot RunWithNodeOrder(const std::span<const nox::uint32> node_order)
 	{
-		nox::World world;
+		nox::legacy::World world;
 		world.ReserveNodeEntityCommandBuffers(k_node_count);
 
-		std::array<nox::EntityId, k_entity_count> entities{};
+		std::array<nox::Entity, k_entity_count> entities{};
 		SetupEntities(world, entities);
 
 		//	遅延系は「フェーズ実行中または列挙中」でなければ記録できない。
@@ -148,8 +148,8 @@ namespace
 		world.EnterEntityIteration();
 		for (const nox::uint32 node_index : node_order)
 		{
-			const nox::WorldNodeCommandScope command_scope(world, node_index);
-			nox::EntityCommands commands(world);
+			const nox::legacy::WorldNodeCommandScope command_scope(world, node_index);
+			nox::legacy::EntityCommands commands(world);
 			RecordNodeCommands(node_index, commands, entities);
 		}
 		world.LeaveEntityIteration();
@@ -163,10 +163,10 @@ namespace
 	///          一斉に記録するので、コマンドバッファへの到着順はスケジューラ任せになる。
 	[[nodiscard]] WorldSnapshot RunWithConcurrentNodes()
 	{
-		nox::World world;
+		nox::legacy::World world;
 		world.ReserveNodeEntityCommandBuffers(k_node_count);
 
-		std::array<nox::EntityId, k_entity_count> entities{};
+		std::array<nox::Entity, k_entity_count> entities{};
 		SetupEntities(world, entities);
 
 		world.EnterEntityIteration();
@@ -184,8 +184,8 @@ namespace
 							std::this_thread::yield();
 						}
 
-						const nox::WorldNodeCommandScope command_scope(world, node_index);
-						nox::EntityCommands commands(world);
+						const nox::legacy::WorldNodeCommandScope command_scope(world, node_index);
+						nox::legacy::EntityCommands commands(world);
 						RecordNodeCommands(node_index, commands, entities);
 					});
 			}
@@ -283,11 +283,11 @@ TEST(EntityCommandPlayback, ConcurrentRecordingMatchesSerialRecording)
 TEST(EntityCommandPlayback, NodeBuffersAreIndependent)
 {
 	//	ペイロードは使わないので0でよい(TryDestroyはコマンド枠だけを消費する)。
-	nox::EntityCommandBuffer<2u, 64u> node0;
-	nox::EntityCommandBuffer<2u, 64u> node1;
+	nox::legacy::EntityCommandBuffer<2u, 64u> node0;
+	nox::legacy::EntityCommandBuffer<2u, 64u> node1;
 
-	const nox::EntityId entity_a{ .generation = 1u, .index = 1u };
-	const nox::EntityId entity_b{ .generation = 1u, .index = 2u };
+	const nox::Entity entity_a{ .generation = 1u, .index = 1u };
+	const nox::Entity entity_b{ .generation = 1u, .index = 2u };
 
 	EXPECT_TRUE(node0.TryDestroy(entity_a));
 	EXPECT_TRUE(node0.TryDestroy(entity_a));
@@ -300,7 +300,7 @@ TEST(EntityCommandPlayback, NodeBuffersAreIndependent)
 	EXPECT_TRUE(node1.TryDestroy(entity_b));
 	EXPECT_EQ(node1.GetLength(), 1u);
 
-	nox::EntityCommand recorded{};
+	nox::legacy::EntityCommand recorded{};
 	ASSERT_TRUE(node1.TryGet(0u, recorded));
 	EXPECT_EQ(recorded.entity_raw, entity_b.raw);
 
@@ -319,30 +319,30 @@ TEST(EntityCommandPlayback, NodeBuffersAreIndependent)
 ///	@details	容量は1本ごとに効くので、合計ではなく「1本あたりの最大値」が容量判断の指標になる。
 TEST(EntityCommandPlayback, HighWaterMarkIsPerNode)
 {
-	nox::World world;
+	nox::legacy::World world;
 	world.ReserveNodeEntityCommandBuffers(k_node_count);
 	ASSERT_EQ(world.GetNodeEntityCommandBufferCount(), k_node_count);
 
-	std::array<nox::EntityId, k_entity_count> entities{};
+	std::array<nox::Entity, k_entity_count> entities{};
 	SetupEntities(world, entities);
 
 	//	ノード0に3件、ノード2に1件、ノード外に2件を積み分ける。
 	world.EnterEntityIteration();
 	{
-		const nox::WorldNodeCommandScope command_scope(world, 0u);
-		nox::EntityCommands commands(world);
+		const nox::legacy::WorldNodeCommandScope command_scope(world, 0u);
+		nox::legacy::EntityCommands commands(world);
 		commands.Add<PlaybackHealth>(entities[0], PlaybackHealth{ .value = 1 });
 		commands.Add<PlaybackHealth>(entities[1], PlaybackHealth{ .value = 2 });
 		commands.Remove<PlaybackHealth>(entities[1]);
 	}
 	{
-		const nox::WorldNodeCommandScope command_scope(world, 2u);
-		nox::EntityCommands commands(world);
+		const nox::legacy::WorldNodeCommandScope command_scope(world, 2u);
+		nox::legacy::EntityCommands commands(world);
 		commands.Remove<PlaybackPosition>(entities[0]);
 	}
 	{
 		//	スコープを張らずに積んだぶんは、ノード外バッファへ落ちる。
-		nox::EntityCommands commands(world);
+		nox::legacy::EntityCommands commands(world);
 		commands.Add<PlaybackHealth>(entities[2], PlaybackHealth{ .value = 3 });
 		commands.Remove<PlaybackPosition>(entities[2]);
 	}
@@ -379,9 +379,9 @@ TEST(EntityCommandPlayback, HighWaterMarkIsPerNode)
 TEST(EntityCommandPlayback, EmitsFlagComesFromTheArgumentList)
 {
 	//	テスト用System(TestMoveSystem / TestParallelAddSystem)はどちらも
-	//	nox::EntityCommands& を宣言していないので、バッファは1本も要らない。
+	//	nox::legacy::EntityCommands& を宣言していないので、バッファは1本も要らない。
 	nox::uint32 system_emitter_count = 0u;
-	for (const nox::legacy::EntitySystemTypeDescriptor* const descriptor : nox::GetEntitySystemTypes())
+	for (const nox::legacy::EntitySystemTypeDescriptor* const descriptor : nox::legacy::GetEntitySystemTypes())
 	{
 		ASSERT_NE(descriptor, nullptr);
 		if (descriptor->emits_structural_change)
@@ -395,13 +395,13 @@ TEST(EntityCommandPlayback, EmitsFlagComesFromTheArgumentList)
 	}
 	EXPECT_EQ(system_emitter_count, 0u);
 
-	//	TestPlayerLogic は4メソッドのうち Process3 だけが nox::EntityCommands& を取る。
+	//	TestPlayerLogic は4メソッドのうち Process3 だけが nox::legacy::EntityCommands& を取る。
 	nox::uint32 method_count = 0u;
 	nox::uint32 method_emitter_count = 0u;
-	for (const nox::EntityLogicTypeDescriptor* const descriptor : nox::GetEntityLogicTypes())
+	for (const nox::legacy::EntityLogicTypeDescriptor* const descriptor : nox::legacy::GetEntityLogicTypes())
 	{
 		ASSERT_NE(descriptor, nullptr);
-		for (const nox::EntityLogicMethodDescriptor& method : descriptor->get_methods())
+		for (const nox::legacy::EntityLogicMethodDescriptor& method : descriptor->get_methods())
 		{
 			++method_count;
 			if (method.emits_structural_change)
@@ -415,7 +415,7 @@ TEST(EntityCommandPlayback, EmitsFlagComesFromTheArgumentList)
 	EXPECT_GT(method_count, method_emitter_count);
 	EXPECT_EQ(method_emitter_count, 1u);
 	std::printf("nodes: systems=%u (emitters=%u), logic methods=%u (emitters=%u)\n",
-		static_cast<nox::uint32>(nox::GetEntitySystemTypes().size()),
+		static_cast<nox::uint32>(nox::legacy::GetEntitySystemTypes().size()),
 		system_emitter_count,
 		method_count,
 		method_emitter_count);
@@ -427,32 +427,32 @@ TEST(EntityCommandPlayback, GraphAssignsBufferIndicesOnlyToEmitters)
 {
 	//	購読済みの実型から、Worldと同じ手順でグラフを組む。
 	nox::Vector<nox::legacy::EntitySystemBase*> systems;
-	for (const nox::legacy::EntitySystemTypeDescriptor* const descriptor : nox::GetEntitySystemTypes())
+	for (const nox::legacy::EntitySystemTypeDescriptor* const descriptor : nox::legacy::GetEntitySystemTypes())
 	{
 		systems.push_back(descriptor->create());
 	}
-	nox::Vector<nox::EntityLogicStorage*> storages;
-	for (const nox::EntityLogicTypeDescriptor* const descriptor : nox::GetEntityLogicTypes())
+	nox::Vector<nox::legacy::EntityLogicStorage*> storages;
+	for (const nox::legacy::EntityLogicTypeDescriptor* const descriptor : nox::legacy::GetEntityLogicTypes())
 	{
-		storages.push_back(new nox::EntityLogicStorage(*descriptor));
+		storages.push_back(new nox::legacy::EntityLogicStorage(*descriptor));
 	}
 
 	{
-		nox::UpdaterGraph graph;
+		nox::legacy::UpdaterGraph graph;
 		graph.Rebuild(
 			std::span<nox::legacy::EntitySystemBase* const>(systems.data(), systems.size()),
-			std::span<nox::EntityLogicStorage* const>(storages.data(), storages.size()));
+			std::span<nox::legacy::EntityLogicStorage* const>(storages.data(), storages.size()));
 
-		const std::span<const nox::UpdaterNode> nodes = graph.GetNodes(nox::SystemPhaseType::Update);
+		const std::span<const nox::legacy::UpdaterNode> nodes = graph.GetNodes(nox::SystemPhaseType::Update);
 		const nox::uint32 buffer_count = graph.GetCommandBufferCount(nox::SystemPhaseType::Update);
 
 		//	番号が振られたノードの数と、バッファ本数が一致すること。
 		nox::uint32 indexed_count = 0u;
 		nox::uint32 previous_index = 0u;
 		bool ascending = true;
-		for (const nox::UpdaterNode& node : nodes)
+		for (const nox::legacy::UpdaterNode& node : nodes)
 		{
-			if (node.command_buffer_index == nox::k_invalid_updater_command_buffer_index)
+			if (node.command_buffer_index == nox::legacy::k_invalid_updater_command_buffer_index)
 			{
 				continue;
 			}
@@ -474,7 +474,7 @@ TEST(EntityCommandPlayback, GraphAssignsBufferIndicesOnlyToEmitters)
 		std::printf("Update phase: nodes=%zu, command buffers=%u\n", nodes.size(), buffer_count);
 	}
 
-	for (nox::EntityLogicStorage* const storage : storages)
+	for (nox::legacy::EntityLogicStorage* const storage : storages)
 	{
 		delete storage;
 	}
@@ -487,20 +487,20 @@ TEST(EntityCommandPlayback, GraphAssignsBufferIndicesOnlyToEmitters)
 ///	@brief	World全体のメモリ量を記録に残す。
 ///	@details	ノード単位に分けたぶんの増減を、後から数字で追えるようにしておく。
 ///				コマンドバッファの実体はノード数ぶんヒープに載るので、
-///				sizeof(nox::World) だけでは全体像にならない。両方を書き出す。
+///				sizeof(nox::legacy::World) だけでは全体像にならない。両方を書き出す。
 TEST(EntityCommandPlayback, ReportsMemoryFootprint)
 {
-	const size_t world_size = sizeof(nox::World);
-	const nox::uint32 capacity = nox::World::GetEntityCommandCapacity();
-	const nox::uint32 payload_capacity = nox::World::GetEntityCommandPayloadCapacity();
+	const size_t world_size = sizeof(nox::legacy::World);
+	const nox::uint32 capacity = nox::legacy::World::GetEntityCommandCapacity();
+	const nox::uint32 payload_capacity = nox::legacy::World::GetEntityCommandPayloadCapacity();
 
-	std::printf("sizeof(nox::World) = %zu bytes\n", world_size);
+	std::printf("sizeof(nox::legacy::World) = %zu bytes\n", world_size);
 	std::printf("EntityCommandBuffer capacity = %u commands / %u payload bytes\n", capacity, payload_capacity);
 
 	//	バッファ1本の実バイト数。確保本数 x この値がヒープ側の総量になる。
-	using BufferType = nox::EntityCommandBuffer<
-		nox::World::GetEntityCommandCapacity(),
-		nox::World::GetEntityCommandPayloadCapacity()>;
+	using BufferType = nox::legacy::EntityCommandBuffer<
+		nox::legacy::World::GetEntityCommandCapacity(),
+		nox::legacy::World::GetEntityCommandPayloadCapacity()>;
 	std::printf("EntityCommandBuffer size = %zu bytes/buffer\n", sizeof(BufferType));
 
 	EXPECT_GT(world_size, 0u);

@@ -3,7 +3,7 @@
 
 ///	@file	updater_worker_count_test.cpp
 ///	@brief	UpdaterGraph のワーカー数をコマンドラインから決める規則の検証。
-///	@details	nox::ResolveUpdaterWorkerCount は
+///	@details	nox::legacy::ResolveUpdaterWorkerCount は
 ///				「引数列 + 既定値」だけを見る純粋関数として core 側に切り出してある。
 ///				nox::os のコマンドライン取得にも nox::JobSystem の既定値にも触れないので、
 ///				World を組み立てず、プロセスの実引数にも依存せずに全分岐を踏める。
@@ -11,9 +11,9 @@
 ///				既定値を引数で受けるため、テストは論理プロセッサ数に依存しない。
 ///				既定へ落ちたことを見たい箇所では、ありえない番兵値を渡して同一性で確かめる。
 ///
-///	@note		この関数は nox::World の外にある自由関数で、World の公開範囲は広げていない。
-///				World 側は nox::World::World() のメンバ初期化子から
-///				  nox::ResolveUpdaterWorkerCount(nox::os::GetCommandLineArgList(),
+///	@note		この関数は nox::legacy::World の外にある自由関数で、World の公開範囲は広げていない。
+///				World 側は nox::legacy::World::World() のメンバ初期化子から
+///				  nox::legacy::ResolveUpdaterWorkerCount(nox::os::GetCommandLineArgList(),
 ///				                                 nox::JobSystem::GetDefaultWorkerCount())
 ///				の形で1回だけ呼ぶ。
 
@@ -28,7 +28,7 @@ namespace
 
 	[[nodiscard]] nox::uint32 Resolve(const std::initializer_list<const nox::char16*> args)noexcept
 	{
-		return nox::ResolveUpdaterWorkerCount(
+		return nox::legacy::ResolveUpdaterWorkerCount(
 			std::span<const nox::char16* const>(args.begin(), args.size()),
 			k_default_sentinel);
 	}

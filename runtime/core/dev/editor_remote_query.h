@@ -7,7 +7,7 @@
 #if NOX_DEVELOP
 #include	"editor_remote_entity.h"
 
-namespace nox
+namespace nox::legacy
 {
 	class World;
 }
@@ -30,7 +30,7 @@ namespace nox::dev::editor_remote
 		/// @param world ワールドインスタンス
 		/// @param buffer Responseを作成するためのバッファ　配置newを使用してResponseを作成すること
 		/// @return 
-		inline constexpr virtual nox::PlacementObject<Response> Execute(nox::World&, [[maybe_unused]] std::span<nox::uint8> buffer)const { return nullptr; }
+		inline constexpr virtual nox::PlacementObject<Response> Execute(nox::legacy::World&, [[maybe_unused]] std::span<nox::uint8> buffer)const { return nullptr; }
 	};
 }
 #endif // NOX_DEVELOP

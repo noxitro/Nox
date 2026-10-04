@@ -13,12 +13,12 @@
 ///          ForEachのループ内に間接呼び出しが1つも残らない。
 ///
 ///          購読はリフレクション生成コードが行う。ヘッダにクラスを定義するだけで
-///          nox::GetEntitySystemTypes() の表に載り、Worldが自動生成・自動実行する。
+///          nox::legacy::GetEntitySystemTypes() の表に載り、Worldが自動生成・自動実行する。
 #pragma once
-#include	"entity_query.h"
+#include	"entity_query_legacy.h"
 #include	"system_phase_type.h"
 
-namespace nox
+namespace nox::legacy
 {
 	class World;
 }
@@ -40,17 +40,17 @@ namespace nox::legacy
 		/// @brief 書き込みするComponentDataのマスク。依存解析に使う。
 		nox::ComponentMask(*make_write_mask)()noexcept;
 		/// @brief 読み書きするServiceの一覧。依存解析に使う。確保は走らない。
-		std::span<const nox::ServiceAccess>(*get_service_accesses)()noexcept;
+		std::span<const nox::legacy::ServiceAccess>(*get_service_accesses)()noexcept;
 		/// @brief 実行本体。TDerived::OnUpdateへ静的に束縛されている。
-		void (*execute)(nox::legacy::EntitySystemBase&, nox::World&);
+		void (*execute)(nox::legacy::EntitySystemBase&, nox::legacy::World&);
 		/// @brief Chunk1つ分だけの実行本体。executeと同じくTDerived::OnUpdateへ静的に束縛されている。
 		/// @details parallel_for_eachがtrueのとき、Worldがこれをジョブとしてワーカーへ配る。
-		void (*execute_chunk)(nox::legacy::EntitySystemBase&, nox::World&, nox::Archetype&, nox::uint32 chunk_index);
+		void (*execute_chunk)(nox::legacy::EntitySystemBase&, nox::legacy::World&, nox::Archetype&, nox::uint32 chunk_index);
 		std::string_view name;
 		nox::SystemPhaseType phase;
 		/// @brief OnUpdateをChunk単位で並列実行してよいか。 nox::legacy::IsParallelForEachEntitySystem を参照。
 		bool parallel_for_each;
-		/// @brief このSystemが遅延構造変更を出しうるか(= nox::EntityCommands& を宣言しているか)。
+		/// @brief このSystemが遅延構造変更を出しうるか(= nox::legacy::EntityCommands& を宣言しているか)。
 		/// @details 引数リストから導出される。宣言していないSystemは1コマンドも積めないので、
 		///          Worldはこのノードのぶんのコマンドバッファを確保しない。
 		bool emits_structural_change;
@@ -64,10 +64,10 @@ namespace nox::legacy
 		EntitySystemBase(const EntitySystemBase&) = delete;
 		EntitySystemBase& operator=(const EntitySystemBase&) = delete;
 
-		inline void Execute(nox::World& world) { descriptor_.execute(*this, world); }
+		inline void Execute(nox::legacy::World& world) { descriptor_.execute(*this, world); }
 
 		/// @brief Chunk1つ分だけ実行する。Chunk並列実行の1ジョブ分。
-		inline void ExecuteChunk(nox::World& world, nox::Archetype& archetype, const nox::uint32 chunk_index)
+		inline void ExecuteChunk(nox::legacy::World& world, nox::Archetype& archetype, const nox::uint32 chunk_index)
 		{
 			descriptor_.execute_chunk(*this, world, archetype, chunk_index);
 		}
@@ -76,8 +76,8 @@ namespace nox::legacy
 		inline void Destroy()noexcept { descriptor_.destroy(this); }
 
 		[[nodiscard]] inline const nox::legacy::EntitySystemTypeDescriptor& GetDescriptor()const noexcept { return descriptor_; }
-		[[nodiscard]] inline nox::EntityQuery& GetQuery()noexcept { return query_; }
-		[[nodiscard]] inline const nox::EntityQuery& GetQuery()const noexcept { return query_; }
+		[[nodiscard]] inline nox::legacy::EntityQuery& GetQuery()noexcept { return query_; }
+		[[nodiscard]] inline const nox::legacy::EntityQuery& GetQuery()const noexcept { return query_; }
 
 	protected:
 		inline explicit EntitySystemBase(const nox::legacy::EntitySystemTypeDescriptor& descriptor)noexcept :
@@ -92,31 +92,31 @@ namespace nox::legacy
 
 	private:
 		const nox::legacy::EntitySystemTypeDescriptor& descriptor_;
-		nox::EntityQuery query_;
+		nox::legacy::EntityQuery query_;
 	};
 
 	namespace detail
 	{
 		/// @brief TSystem::OnUpdateへ静的に束縛された実行本体。仮想関数もstd::functionも介さない。
 		template<class TSystem>
-		void ExecuteEntitySystem(nox::legacy::EntitySystemBase& self, nox::World& world)
+		void ExecuteEntitySystem(nox::legacy::EntitySystemBase& self, nox::legacy::World& world)
 		{
 			using Signature = typename TSystem::template SignatureOf<>;
 			auto& derived = static_cast<TSystem&>(self);
-			nox::detail::EntityInvokerOf<Signature>::ForEachEntity(world, self.GetQuery(), derived, &TSystem::OnUpdate);
+			nox::legacy::detail::EntityInvokerOf<Signature>::ForEachEntity(world, self.GetQuery(), derived, &TSystem::OnUpdate);
 		}
 
 		/// @brief TSystem::OnUpdateへ静的に束縛された、Chunk1つ分の実行本体。
 		template<class TSystem>
 		void ExecuteEntitySystemChunk(
 			nox::legacy::EntitySystemBase& self,
-			nox::World& world,
+			nox::legacy::World& world,
 			nox::Archetype& archetype,
 			const nox::uint32 chunk_index)
 		{
 			using Signature = typename TSystem::template SignatureOf<>;
 			auto& derived = static_cast<TSystem&>(self);
-			nox::detail::EntityInvokerOf<Signature>::ForEachEntityInChunk(
+			nox::legacy::detail::EntityInvokerOf<Signature>::ForEachEntityInChunk(
 				world, archetype, chunk_index, derived, &TSystem::OnUpdate);
 		}
 	}
@@ -136,7 +136,7 @@ namespace nox::legacy
 	///          逆に安全なのは「宣言したComponentDataの、自分の行だけを読み書きする」形。
 	///          Chunkは互いに素なメモリなので、この形なら2つのワーカーが同じバイトに触ることはない。
 	///
-	///          【nox::EntityCommands& と併記できない理由】
+	///          【nox::legacy::EntityCommands& と併記できない理由】
 	///          遅延構造変更のコマンドバッファは「ノード1つにつき1本」であり、
 	///          同一ノードのChunkジョブ全員がそこへ積む。つまりコマンドバッファは
 	///          上記の「entity間で共有される状態」そのもので、積まれる順序は
@@ -166,13 +166,13 @@ namespace nox::legacy
 	[[nodiscard]] constexpr nox::legacy::EntitySystemTypeDescriptor MakeEntitySystemTypeDescriptor()noexcept
 	{
 		using Signature = typename TSystem::template SignatureOf<>;
-		static_assert(nox::detail::ValidateEntityMethod<decltype(&TSystem::OnUpdate)>());
-		//	Chunk並列の宣言と、遅延構造変更を出す宣言(nox::EntityCommands&)は両立しない。
+		static_assert(nox::legacy::detail::ValidateEntityMethod<decltype(&TSystem::OnUpdate)>());
+		//	Chunk並列の宣言と、遅延構造変更を出す宣言(nox::legacy::EntityCommands&)は両立しない。
 		//	理由は nox::legacy::IsParallelForEachEntitySystem のコメントを参照。
 		static_assert(
 			nox::legacy::IsParallelForEachEntitySystem<TSystem>() == false ||
 			Signature::k_commands_parameter_count == 0u,
-			"k_parallel_for_each を宣言したSystemは nox::EntityCommands& を受け取れません"
+			"k_parallel_for_each を宣言したSystemは nox::legacy::EntityCommands& を受け取れません"
 			"(Chunkジョブ間でコマンドの順序が決まらないため)。"
 			"構造変更を出すなら k_parallel_for_each を外してください");
 
@@ -211,7 +211,7 @@ namespace nox::legacy
 		/// @brief OnUpdateの引数から導出したアクセス宣言。
 		/// @details CRTP基底の実体化時点ではTDerivedが未完成なため、使用時まで実体化を遅らせる。
 		template<class TSystem = TDerived>
-		using SignatureOf = typename nox::EntityMethodTraits<decltype(&TSystem::OnUpdate)>::Signature;
+		using SignatureOf = typename nox::legacy::EntityMethodTraits<decltype(&TSystem::OnUpdate)>::Signature;
 
 	protected:
 		inline EntitySystem()noexcept :

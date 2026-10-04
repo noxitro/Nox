@@ -25,18 +25,18 @@ void	nox::GarbageCollector::Register(nox::Object& managed_object)
 	impl_->managed_objects_.emplace_back(managed_object);
 }
 
-void	nox::GarbageCollector::Initialize([[maybe_unused]] nox::World&)
+void	nox::GarbageCollector::Initialize([[maybe_unused]] nox::legacy::World&)
 {
 	impl_ = new Impl();
 }
 
-void	nox::GarbageCollector::Finalize([[maybe_unused]] nox::World&)
+void	nox::GarbageCollector::Finalize([[maybe_unused]] nox::legacy::World&)
 {
 	delete impl_;
 	impl_ = nullptr;
 }
 
-void	nox::GarbageCollector::FrameGC([[maybe_unused]] nox::World&)
+void	nox::GarbageCollector::FrameGC([[maybe_unused]] nox::legacy::World&)
 {
 	if (impl_->destroy_objects_.size() > 0)
 	{

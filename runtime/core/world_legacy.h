@@ -1,16 +1,17 @@
 // Copyright (c) 2023-2026 noxitro
 // SPDX-License-Identifier: MIT
 
-/// @file	world.h
-/// @brief	world
+/// @file	world_legacy.h
+/// @brief	world (旧実装)
+/// @note	新しい ECS への書き直しが終わるまでの退避先。移行後にこのファイルと nox::legacy::World ごと消す。
 #pragma once
 #include	"system.h"
 #include	"entity.h"
-#include	"entity_command_buffer.h"
+#include	"entity_command_buffer_legacy.h"
 #include	"archetype.h"
 #include	"entity_system_legacy.h"
-#include	"entity_logic.h"
-#include	"updater_graph.h"
+#include	"entity_logic_legacy.h"
+#include	"updater_graph_legacy.h"
 #include	"service_legacy.h"
 
 namespace nox
@@ -18,6 +19,10 @@ namespace nox
 	struct IComponentData;
 	class SystemBase;
 	class EngineModule;
+}
+
+namespace nox::legacy
+{
 	class World;
 
 	/// @brief 即時系の構造変更API(CreateEntity / DestroyEntity / AddComponent / RemoveComponent)を
@@ -25,7 +30,7 @@ namespace nox
 	/// @details 即時系はArchetype間の物理移動とswap-removeを伴うため、列挙中に呼ぶと
 	///          列挙側が握っている列ポインタと行番号が壊れる。
 	///
-	///          このenumを返す nox::World::GetStructuralChangePermission() が、
+	///          このenumを返す nox::legacy::World::GetStructuralChangePermission() が、
 	///          即時系4本すべてが実際に分岐している唯一の判定点である。
 	///          アサートは「なぜ弾かれたか」を開発者へ伝えるだけで、弾く判断自体はこの値が行う。
 	///          そのためテストからはこの値を直接見れば、アサートを発火させずに
@@ -34,7 +39,7 @@ namespace nox
 	{
 		/// @brief 即時系を呼んでよい。
 		Allowed,
-		/// @brief フェーズ(System / EntityLogic)実行中。遅延系(nox::EntityCommands)を使うこと。
+		/// @brief フェーズ(System / EntityLogic)実行中。遅延系(nox::legacy::EntityCommands)を使うこと。
 		DeniedDuringPhase,
 		/// @brief entityの列挙中。列挙が終わるまで構造を変えられない。
 		DeniedDuringIteration,
@@ -43,29 +48,29 @@ namespace nox
 	/// @brief 遅延構造変更の記録先を「今このスレッドが実行しているノード」へ束ねるスコープ。
 	/// @details 遅延系のコマンドバッファは「構造変更を出しうるノード」1本ずつあり、
 	///          Playbackはその登録順に回る。
-	///          記録側(nox::EntityCommands)は引数リストにWorldしか持たないので、
+	///          記録側(nox::legacy::EntityCommands)は引数リストにWorldしか持たないので、
 	///          「どのノードのバッファへ積むか」はスレッドローカルな束縛で伝える。
 	///          こうしておくと、EntityLogic / EntitySystem の書き手には何の記述も増えない。
 	///
 	///          入れ子を必ず保存・復元する。ジョブを配った側のスレッドは Wait の内側でも
 	///          別ノードのジョブを引いて働くため、単純な set/clear では束縛が壊れる。
 	///
-	///          エンジン(nox::World::ExecuteNode とChunkジョブのthunk)が使う。
+	///          エンジン(nox::legacy::World::ExecuteNode とChunkジョブのthunk)が使う。
 	///          テストからノード実行を模すためにも使えるよう公開してある。
 	class WorldNodeCommandScope final
 	{
 	public:
-		/// @brief node_indexは nox::UpdaterNode::command_buffer_index (フェーズ内で一意)。
-		/// @details 構造変更を出さないノードは nox::k_invalid_updater_command_buffer_index を渡す。
+		/// @brief node_indexは nox::legacy::UpdaterNode::command_buffer_index (フェーズ内で一意)。
+		/// @details 構造変更を出さないノードは nox::legacy::k_invalid_updater_command_buffer_index を渡す。
 		///          その状態で記録しようとした場合はアサートで弾かれる(宣言と実装の食い違い)。
-		WorldNodeCommandScope(const nox::World& world, nox::uint32 node_index)noexcept;
+		WorldNodeCommandScope(const nox::legacy::World& world, nox::uint32 node_index)noexcept;
 		~WorldNodeCommandScope()noexcept;
 
 		WorldNodeCommandScope(const WorldNodeCommandScope&) = delete;
 		WorldNodeCommandScope& operator=(const WorldNodeCommandScope&) = delete;
 
 	private:
-		const nox::World* previous_world_;
+		const nox::legacy::World* previous_world_;
 		nox::uint32 previous_node_index_;
 	};
 
@@ -103,8 +108,8 @@ namespace nox
 	///          数字以外を含むときも 0 を返す。打ち間違いで即座に終了するより、終了しない方が
 	///          CI の制限時間で気付ける。
 	///
-	///          N を nox::kMaxExitAfterFrames で頭打ちにするのは方針ではなく桁あふれ対策。
-	///          nox::ResolveUpdaterWorkerCount と同じく、コマンドラインの取得(nox::os)に触れない純粋関数。
+	///          N を nox::legacy::kMaxExitAfterFrames で頭打ちにするのは方針ではなく桁あふれ対策。
+	///          nox::legacy::ResolveUpdaterWorkerCount と同じく、コマンドラインの取得(nox::os)に触れない純粋関数。
 	/// @param command_line_args nox::os::GetCommandLineArgList() が返す並び。
 	[[nodiscard]] nox::uint32 ResolveExitAfterFrames(
 		std::span<const nox::char16* const> command_line_args)noexcept;
@@ -143,7 +148,7 @@ namespace nox
 		static constexpr nox::uint32 k_entity_command_payload_bytes = k_entity_command_capacity * 64u;
 		/// @brief コマンドバッファ1本の型。ノードごとに1本ずつ持つ。
 		using EntityCommandBufferType =
-			nox::EntityCommandBuffer<k_entity_command_capacity, k_entity_command_payload_bytes>;
+			nox::legacy::EntityCommandBuffer<k_entity_command_capacity, k_entity_command_payload_bytes>;
 		/// @brief structural_change_state_のビット割り当て。
 		/// @details 「フェーズ実行中」と「列挙の入れ子深度」を1ワードに詰めるので、
 		///          即時系の判定はatomicロード1回で済む。
@@ -191,21 +196,21 @@ namespace nox
 
 		struct EntityRecordPage
 		{
-			std::array<nox::World::EntityRecord, k_entity_record_page_size> records;
+			std::array<nox::legacy::World::EntityRecord, k_entity_record_page_size> records;
 		};
 
 		/// @brief ノード1つ分のジョブコンテキスト。ディスパッチ毎にスタック上へ作る。
 		/// @details 関数ポインタ + void* しか渡せないので、Worldとノードをここで束ねる。
 		struct NodeJobContext
 		{
-			nox::World* world;
-			const nox::UpdaterNode* node;
+			nox::legacy::World* world;
+			const nox::legacy::UpdaterNode* node;
 		};
 
 		/// @brief Chunk1つ分のジョブコンテキスト。ディスパッチ毎にスタック上へ作る。
 		struct ChunkJobContext
 		{
-			nox::World* world;
+			nox::legacy::World* world;
 			nox::legacy::EntitySystemBase* system;
 			nox::Archetype* archetype;
 			nox::uint32 chunk_index;
@@ -224,7 +229,7 @@ namespace nox
 
 		inline bool IsKill()const noexcept { return kill_.load(std::memory_order_acquire); }
 		inline bool IsStudioMode()const noexcept { return studio_mode_; }
-		/// @brief この数のフレームを回したら自動で終了する。0 なら終了しない。nox::ResolveExitAfterFrames を参照。
+		/// @brief この数のフレームを回したら自動で終了する。0 なら終了しない。nox::legacy::ResolveExitAfterFrames を参照。
 		inline nox::uint32 GetExitAfterFrames()const noexcept { return exit_after_frames_; }
 
 		nox::SystemBase* FindSystem(const nox::reflection::Type& type)const noexcept;
@@ -250,10 +255,10 @@ namespace nox
 
 #pragma region 構造変更(即時系)
 		/// @brief entityを生成する。列挙中・フェーズ実行中は呼べない。
-		nox::EntityId CreateEntity();
+		nox::Entity CreateEntity();
 		/// @brief entityを即座に破棄する。列挙中・フェーズ実行中は呼べない。
-		void DestroyEntity(nox::EntityId entity);
-		bool IsAlive(nox::EntityId entity)const noexcept;
+		void DestroyEntity(nox::Entity entity);
+		bool IsAlive(nox::Entity entity)const noexcept;
 
 		/// @brief 即時系の構造変更を今呼んでよいか。
 		/// @details 即時系4本(CreateEntity / DestroyEntity / AddComponent / RemoveComponent)が
@@ -264,7 +269,7 @@ namespace nox
 		///          早期returnまで消すと「Debugでは安全にno-opになる操作がMasterではArchetypeを
 		///          壊す」という構成間の挙動差になるため。コストはatomicロード1回で、
 		///          Archetype間の実データ移動に比べれば無視できる。
-		[[nodiscard]] nox::StructuralChangePermission GetStructuralChangePermission()const noexcept;
+		[[nodiscard]] nox::legacy::StructuralChangePermission GetStructuralChangePermission()const noexcept;
 
 		[[nodiscard]] inline bool IsExecutingSystemPhase()const noexcept
 		{
@@ -290,25 +295,25 @@ namespace nox
 #pragma region 構造変更(遅延系)
 		//	いずれもフェーズ実行中または列挙中にのみ記録できる。
 		//	即時系が呼べないときのための系統なので、両者の可否はちょうど相補になっている。
-		//	通常は nox::EntityCommands 経由で呼ばれる。
+		//	通常は nox::legacy::EntityCommands 経由で呼ばれる。
 
 		/// @brief フェーズ実行中・列挙中にentityのIdだけを即座に払い出す。
 		/// @details EntityRecordを1件触るだけでArchetypeにも他entityの行にも触れないため、
 		///          列挙中のポインタと行番号を壊さない。ComponentDataはQueueAddComponentで積む。
-		nox::EntityId CreateEntityDuringPhase()noexcept;
-		[[nodiscard]] bool QueueDestroyEntity(nox::EntityId entity)noexcept;
+		nox::Entity CreateEntityDuringPhase()noexcept;
+		[[nodiscard]] bool QueueDestroyEntity(nox::Entity entity)noexcept;
 		/// @brief ComponentDataの追加を予約する。sourceが非nullならその初期値を複製して運ぶ。
 		[[nodiscard]] bool QueueAddComponent(
-			nox::EntityId entity,
+			nox::Entity entity,
 			const nox::ComponentTypeInfo& type_info,
 			const void* source)noexcept;
-		[[nodiscard]] bool QueueRemoveComponent(nox::EntityId entity, const nox::ComponentTypeInfo& type_info)noexcept;
+		[[nodiscard]] bool QueueRemoveComponent(nox::Entity entity, const nox::ComponentTypeInfo& type_info)noexcept;
 
 		/// @brief ノード用コマンドバッファを確保する。Initがグラフを組んでから1回だけ呼ぶ。
 		/// @details 確保はここだけ。フレーム中には一切走らない。
 		///          既に同数以上を確保済みなら何もしない。
 		///
-		///          必要な本数は「ノード数」ではなく「nox::EntityCommands& を宣言したノードの数」。
+		///          必要な本数は「ノード数」ではなく「nox::legacy::EntityCommands& を宣言したノードの数」。
 		///          宣言していないノードは1コマンドも積めないことが引数リストから分かるので、
 		///          そこへ空バッファを割り当てない。ノード数が増えるほど効く。
 		void ReserveNodeEntityCommandBuffers(nox::uint32 node_count);
@@ -328,7 +333,7 @@ namespace nox
 		[[nodiscard]] nox::uint32 GetEntityCommandPeakLength()const noexcept;
 		[[nodiscard]] nox::uint32 GetEntityCommandPeakPayloadLength()const noexcept;
 
-		/// @brief ノード1本ぶんのhigh-water mark。node_indexは nox::UpdaterNode::command_buffer_index。
+		/// @brief ノード1本ぶんのhigh-water mark。node_indexは nox::legacy::UpdaterNode::command_buffer_index。
 		/// @details 未確保の番号を渡した場合は0を返す。
 		[[nodiscard]] nox::uint32 GetNodeEntityCommandPeakLength(nox::uint32 node_index)const noexcept;
 		[[nodiscard]] nox::uint32 GetNodeEntityCommandPeakPayloadLength(nox::uint32 node_index)const noexcept;
@@ -352,7 +357,7 @@ namespace nox
 		///          【Playback順が決定的である根拠】
 		///          コマンドバッファは「遅延構造変更を出しうるノード」1つにつき1本あり、再生は
 		///          「ノード外バッファ → バッファ0 → バッファ1 → …」の固定順で回す。
-		///          バッファ番号は nox::UpdaterNode::command_buffer_index で、
+		///          バッファ番号は nox::legacy::UpdaterNode::command_buffer_index で、
 		///          UpdaterGraphの登録順に昇順で詰めて振られる。
 		///          これは構築時に決まりフレーム間で動かない(かつ衝突辺が必ず
 		///          小さい番号から大きい番号へ張られるためトポロジカル順でもある)。
@@ -366,33 +371,33 @@ namespace nox
 		/// @brief ComponentDataを追加する。Archetype間の移動を伴うため列挙中・System実行中は呼べない。
 		/// @return 追加された(既に持っていた場合は既存の)ComponentDataへのポインタ。
 		template<class T>
-		T* AddComponent(const nox::EntityId entity)
+		T* AddComponent(const nox::Entity entity)
 		{
 			return static_cast<T*>(AddComponent(entity, nox::ComponentTypeOf<T>()));
 		}
 
 		template<class T>
-		void RemoveComponent(const nox::EntityId entity)
+		void RemoveComponent(const nox::Entity entity)
 		{
 			RemoveComponent(entity, nox::ComponentTypeOf<T>());
 		}
 
 		template<class T>
-		[[nodiscard]] T* TryGetComponent(const nox::EntityId entity)noexcept
+		[[nodiscard]] T* TryGetComponent(const nox::Entity entity)noexcept
 		{
 			return static_cast<T*>(TryGetComponent(entity, nox::ComponentTypeIndexOf<T>()));
 		}
 
 		template<class T>
-		[[nodiscard]] bool HasComponent(const nox::EntityId entity)const noexcept
+		[[nodiscard]] bool HasComponent(const nox::Entity entity)const noexcept
 		{
 			return HasComponent(entity, nox::ComponentTypeIndexOf<T>());
 		}
 
-		void* AddComponent(nox::EntityId entity, const nox::ComponentTypeInfo& type_info);
-		void RemoveComponent(nox::EntityId entity, const nox::ComponentTypeInfo& type_info);
-		[[nodiscard]] void* TryGetComponent(nox::EntityId entity, nox::ComponentTypeIndex type_index)noexcept;
-		[[nodiscard]] bool HasComponent(nox::EntityId entity, nox::ComponentTypeIndex type_index)const noexcept;
+		void* AddComponent(nox::Entity entity, const nox::ComponentTypeInfo& type_info);
+		void RemoveComponent(nox::Entity entity, const nox::ComponentTypeInfo& type_info);
+		[[nodiscard]] void* TryGetComponent(nox::Entity entity, nox::ComponentTypeIndex type_index)noexcept;
+		[[nodiscard]] bool HasComponent(nox::Entity entity, nox::ComponentTypeIndex type_index)const noexcept;
 #pragma endregion
 
 #pragma region Service
@@ -412,13 +417,13 @@ namespace nox
 #pragma endregion
 
 		/// @brief 指定したComponentDataを全て持つArchetypeにマッチするQueryを構築する。
-		void BuildQuery(nox::EntityQuery& query, const nox::ComponentMask& required_mask);
+		void BuildQuery(nox::legacy::EntityQuery& query, const nox::ComponentMask& required_mask);
 
 		/// @brief entityが所属するArchetype。ComponentDataを1つも持たない場合はnullptr。
-		[[nodiscard]] nox::Archetype* TryGetArchetype(nox::EntityId entity)const noexcept;
+		[[nodiscard]] nox::Archetype* TryGetArchetype(nox::Entity entity)const noexcept;
 
 		/// @brief entityのArchetype内での位置。所属していない場合はInvalid。
-		[[nodiscard]] nox::ArchetypeLocation GetArchetypeLocation(nox::EntityId entity)const noexcept;
+		[[nodiscard]] nox::ArchetypeLocation GetArchetypeLocation(nox::Entity entity)const noexcept;
 
 	private:
 		void Init();
@@ -429,26 +434,26 @@ namespace nox
 		void RegisterSystem(nox::SystemBase& system);
 
 		/// @brief 制約を検査せずに構造を変える本体。Playbackと即時系の共通の実装。
-		[[nodiscard]] nox::EntityId CreateEntityImmediate();
-		void DestroyEntityImmediate(nox::EntityId entity)noexcept;
-		[[nodiscard]] void* AddComponentImmediate(nox::EntityId entity, const nox::ComponentTypeInfo& type_info);
-		void RemoveComponentImmediate(nox::EntityId entity, const nox::ComponentTypeInfo& type_info);
+		[[nodiscard]] nox::Entity CreateEntityImmediate();
+		void DestroyEntityImmediate(nox::Entity entity)noexcept;
+		[[nodiscard]] void* AddComponentImmediate(nox::Entity entity, const nox::ComponentTypeInfo& type_info);
+		void RemoveComponentImmediate(nox::Entity entity, const nox::ComponentTypeInfo& type_info);
 
 		/// @brief entityのハンドルが今も生きているか(stale handleの検出用)。
-		[[nodiscard]] bool IsEntityGenerationLive(nox::EntityId entity)const noexcept;
+		[[nodiscard]] bool IsEntityGenerationLive(nox::Entity entity)const noexcept;
 
 		/// @brief 今このスレッドが積むべきコマンドバッファ。
-		/// @details nox::WorldNodeCommandScope で束縛されていればそのノードのもの、
+		/// @details nox::legacy::WorldNodeCommandScope で束縛されていればそのノードのもの、
 		///          束縛が無い(またはこのWorldのものでない)ならノード外バッファ。
-		[[nodiscard]] nox::World::EntityCommandBufferType& GetCurrentEntityCommandBuffer()noexcept;
+		[[nodiscard]] nox::legacy::World::EntityCommandBufferType& GetCurrentEntityCommandBuffer()noexcept;
 
 		/// @brief コマンドバッファ1本を再生して空にする。
-		void PlaybackEntityCommandBuffer(nox::World::EntityCommandBufferType& buffer)noexcept;
+		void PlaybackEntityCommandBuffer(nox::legacy::World::EntityCommandBufferType& buffer)noexcept;
 
 		/// @brief コマンドバッファが溢れたときに、理由を残して落とす。
 		/// @details 構造変更を黙って捨てるのも次フレームへ繰り越すのも、後から原因を追えなくなる。
 		[[noreturn]] void AbortOnEntityCommandOverflow(
-			const nox::World::EntityCommandBufferType& buffer)noexcept;
+			const nox::legacy::World::EntityCommandBufferType& buffer)noexcept;
 
 		/// @brief 即時系を呼んでよいか検査し、駄目なら理由をアサートで伝える。
 		[[nodiscard]] bool EnsureImmediateStructuralChangeAllowed()const noexcept;
@@ -462,11 +467,11 @@ namespace nox
 		///          同一レイヤーのノードは互いに衝突しないため、stage 2bではこのループが配分点になる。
 		void ExecuteUpdaterGraphPhase(nox::SystemPhaseType phase_type);
 		/// @brief ノード1つを実行する。stage 2bではこの関数をそのままワーカーへ渡す。
-		void ExecuteNode(const nox::UpdaterNode& node);
+		void ExecuteNode(const nox::legacy::UpdaterNode& node);
 		/// @brief ExecuteNodeをジョブとして呼ぶためのthunk。contextはNodeJobContext*。
 		static void ExecuteNodeJob(void* context);
 		/// @brief レイヤーのノードを直列に実行する。
-		void ExecuteLayerNodesSerial(std::span<const nox::UpdaterNode> nodes);
+		void ExecuteLayerNodesSerial(std::span<const nox::legacy::UpdaterNode> nodes);
 		/// @brief EntitySystemの列挙をChunk単位でワーカーへ配る(stage 2c)。
 		/// @details ノードの排他はExecuteNodeが既に取っている前提。Chunk同士は互いに素なメモリなので、
 		///          この内側では追加の排他は要らない。
@@ -474,22 +479,22 @@ namespace nox
 		/// @brief ExecuteChunkをジョブとして呼ぶためのthunk。contextはChunkJobContext*。
 		static void ExecuteEntitySystemChunkJob(void* context);
 		/// @brief entityのComponentData構成が変わったので、EntityLogicの生成/破棄を追従させる。
-		void RefreshEntityLogics(nox::EntityId entity, const nox::Archetype* archetype);
+		void RefreshEntityLogics(nox::Entity entity, const nox::Archetype* archetype);
 
 		[[nodiscard]] nox::Archetype& GetOrCreateArchetype(const nox::ComponentMask& mask);
 		[[nodiscard]] nox::Archetype* TryFindArchetype(const nox::ComponentMask& mask)const noexcept;
 		/// @brief entityを別のArchetypeへ移す。共通のComponentDataだけが引き継がれる。
-		void MoveEntityToArchetype(nox::World::EntityRecord& entity_record, nox::EntityId entity, nox::Archetype* destination);
+		void MoveEntityToArchetype(nox::legacy::World::EntityRecord& entity_record, nox::Entity entity, nox::Archetype* destination);
 		/// @brief swap-removeで移動してきたentityの位置情報を更新する。
-		void PatchMovedEntityLocation(nox::EntityId moved_entity, nox::ArchetypeLocation location)noexcept;
+		void PatchMovedEntityLocation(nox::Entity moved_entity, nox::ArchetypeLocation location)noexcept;
 
 #if !NOX_MASTER
 		void TraceExecuteNodeList()const;
 
 		/// @brief ノードが宣言したComponentData / Serviceの並列実行チェックに入る。
-		void EnterNodeAccessScope(const nox::UpdaterNodeAccess& access)noexcept;
+		void EnterNodeAccessScope(const nox::legacy::UpdaterNodeAccess& access)noexcept;
 		/// @brief EnterNodeAccessScopeで入ったチェックから抜ける。
-		void LeaveNodeAccessScope(const nox::UpdaterNodeAccess& access)noexcept;
+		void LeaveNodeAccessScope(const nox::legacy::UpdaterNodeAccess& access)noexcept;
 		/// @brief Serviceの型に対応するチェッカー。未登録のServiceならnullptr。
 		[[nodiscard]] nox::util::RWParallelExecuteChecker* TryGetServiceExecuteChecker(const nox::reflection::Type* type)noexcept;
 		/// @brief 検出時のメッセージに載せる名前を、全チェッカーへ割り当てる。
@@ -497,13 +502,13 @@ namespace nox
 #endif // !NOX_MASTER
 
 		[[nodiscard]]
-		nox::World::EntityRecord* TryGetEntityRecord(nox::uint32 index) noexcept;
+		nox::legacy::World::EntityRecord* TryGetEntityRecord(nox::uint32 index) noexcept;
 
 		[[nodiscard]]
-		const nox::World::EntityRecord* TryGetEntityRecord(nox::uint32 index) const noexcept;
+		const nox::legacy::World::EntityRecord* TryGetEntityRecord(nox::uint32 index) const noexcept;
 
 		[[nodiscard]]
-		nox::World::EntityRecord* EnsureEntityRecord(nox::uint32 index);
+		nox::legacy::World::EntityRecord* EnsureEntityRecord(nox::uint32 index);
 
 		[[nodiscard]]
 		nox::uint32 TryPopFreeEntityIndex() noexcept;
@@ -518,10 +523,10 @@ namespace nox
 		nox::Atomic<nox::uint32> next_entity_index_;
 
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
-		nox::World::EntityRecordPage first_entity_record_page_;
+		nox::legacy::World::EntityRecordPage first_entity_record_page_;
 
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
-		std::array<nox::Atomic<nox::World::EntityRecordPage*>, k_max_entity_page_count> entity_record_pages_;
+		std::array<nox::Atomic<nox::legacy::World::EntityRecordPage*>, k_max_entity_page_count> entity_record_pages_;
 
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
 
@@ -565,15 +570,15 @@ namespace nox
 		///          自前で列挙している間に積まれたぶんがここへ入る。いずれもUpdaterGraphの
 		///          並列ディスパッチの外なので、この1本の中の順序も決定的になる。
 		///          Worldに埋め込む固定長。Initを呼ばないWorld(テスト等)でも必ず存在する。
-		nox::World::EntityCommandBufferType out_of_node_command_buffer_;
-		/// @brief ノードごとのコマンドバッファ。要素番号は nox::UpdaterNode::command_buffer_index。
+		nox::legacy::World::EntityCommandBufferType out_of_node_command_buffer_;
+		/// @brief ノードごとのコマンドバッファ。要素番号は nox::legacy::UpdaterNode::command_buffer_index。
 		/// @details Initで一度だけ確保する。フレーム中の確保・解放は無い。
 		///          Worldへ固定長配列で埋め込まないのは、ノード数がプロジェクト次第で
 		///          「上限ぶんを常に抱える」形になるため。実際に要る本数だけ持つほうが素直に軽い。
-		///          本数は「nox::EntityCommands& を宣言したノードの数」で、
+		///          本数は「nox::legacy::EntityCommands& を宣言したノードの数」で、
 		///          ノード総数より通常かなり少ない。
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
-		nox::World::EntityCommandBufferType* node_command_buffers_;
+		nox::legacy::World::EntityCommandBufferType* node_command_buffers_;
 
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
 		nox::uint32 node_command_buffer_count_;
@@ -585,20 +590,20 @@ namespace nox
 		nox::Vector<nox::legacy::EntitySystemBase*> entity_systems_;
 
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
-		nox::Vector<nox::EntityLogicStorage*> entity_logic_storages_;
+		nox::Vector<nox::legacy::EntityLogicStorage*> entity_logic_storages_;
 
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
-		nox::UpdaterGraph updater_graph_;
+		nox::legacy::UpdaterGraph updater_graph_;
 
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
 		nox::JobSystem job_system_;
 
 		/// @brief UpdaterGraphを回すワーカー数。0ならスレッドを1本も作らず直列実行になる。
-		/// @details コマンドラインで決まる。決め方は nox::ResolveUpdaterWorkerCount を参照。
+		/// @details コマンドラインで決まる。決め方は nox::legacy::ResolveUpdaterWorkerCount を参照。
 		const nox::uint32 updater_worker_count_;
 
 		/// @brief この数のフレームを回したら自動で終了する。0 なら終了しない (既定)。
-		/// @details コマンドラインで決まる。決め方は nox::ResolveExitAfterFrames を参照。
+		/// @details コマンドラインで決まる。決め方は nox::legacy::ResolveExitAfterFrames を参照。
 		const nox::uint32 exit_after_frames_;
 
 #if !NOX_MASTER
@@ -613,7 +618,7 @@ namespace nox
 #endif // !NOX_MASTER
 
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
-		nox::FixedVector<nox::World::ServiceEntry, k_max_service_count> services_;
+		nox::FixedVector<nox::legacy::World::ServiceEntry, k_max_service_count> services_;
 
 		nox::Vector<nox::EngineModule*> modules_;
 		nox::Vector<nox::SystemBase*> systems_;

@@ -6,7 +6,7 @@
 #pragma once
 #include	"net_entity.h"
 
-namespace nox
+namespace nox::legacy
 {
 	class World;
 }
@@ -18,7 +18,7 @@ namespace nox::dev::net
 	public:
 		virtual void OnServerConnected(const nox::dev::net::ConnectionContext& context) = 0;
 		virtual void OnServerDisconnected(const nox::dev::net::ConnectionContext& context) = 0;
-		virtual void OnServerReceive(nox::World& world) = 0;
+		virtual void OnServerReceive(nox::legacy::World& world) = 0;
 	protected:
 		virtual ~IServerEventHandler() = default;
 	};
@@ -69,7 +69,7 @@ namespace nox::dev::net
 		void	Connection(::fd_set& fds);
 
 		/// @brief SocketSchedulerから呼び出される更新処理
-		void Update(nox::World& world);
+		void Update(nox::legacy::World& world);
 
 		/// @brief clientを切断
 		/// @param socket 切断するclientのソケット

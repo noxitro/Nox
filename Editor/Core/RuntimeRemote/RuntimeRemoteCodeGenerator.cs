@@ -384,11 +384,11 @@ public class RuntimeRemoteCodeGenerator
 							{
 								if (param.Attr.EnabledExecute)
 								{
-									codeWriter.WriteLine("nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::World&, std::span<nox::uint8> storage)const override;");
+									codeWriter.WriteLine("nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::legacy::World&, std::span<nox::uint8> storage)const override;");
 								}
 								else
 								{
-									codeWriter.WriteLine("inline constexpr nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::World&, std::span<nox::uint8>)const override { return nullptr; }");
+									codeWriter.WriteLine("inline constexpr nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::legacy::World&, std::span<nox::uint8>)const override { return nullptr; }");
 								}
 							}
 
@@ -560,7 +560,7 @@ public class RuntimeRemoteCodeGenerator
 
 						if (param.IsQuery)
 						{
-							codeWriter.WriteLine($"nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::{runtimeTypeFQN}::Execute(nox::World&, std::span<nox::uint8> storage)const");
+							codeWriter.WriteLine($"nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::{runtimeTypeFQN}::Execute(nox::legacy::World&, std::span<nox::uint8> storage)const");
 							using (codeWriter.Indent("{", "}"))
 							{
 								codeWriter.WriteLine("return nullptr;");

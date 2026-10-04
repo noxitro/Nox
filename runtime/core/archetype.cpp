@@ -45,8 +45,8 @@ nox::Archetype::Archetype(const nox::ComponentMask& mask, std::span<const nox::C
 		});
 
 	//	1行あたりのバイト数。EntityId列も同じ行数ぶん確保する。
-	nox::uint32 row_stride = static_cast<nox::uint32>(sizeof(nox::EntityId));
-	nox::uint32 max_alignment = static_cast<nox::uint32>(alignof(nox::EntityId));
+	nox::uint32 row_stride = static_cast<nox::uint32>(sizeof(nox::Entity));
+	nox::uint32 max_alignment = static_cast<nox::uint32>(alignof(nox::Entity));
 	for (nox::uint32 type_slot = 0u; type_slot < type_count_; ++type_slot)
 	{
 		row_stride += sorted_types[type_slot]->size;
@@ -63,7 +63,7 @@ nox::Archetype::Archetype(const nox::ComponentMask& mask, std::span<const nox::C
 		std::abort();
 	}
 
-	nox::uint32 offset = align_up(chunk_capacity_ * static_cast<nox::uint32>(sizeof(nox::EntityId)), max_alignment);
+	nox::uint32 offset = align_up(chunk_capacity_ * static_cast<nox::uint32>(sizeof(nox::Entity)), max_alignment);
 	for (nox::uint32 type_slot = 0u; type_slot < type_count_; ++type_slot)
 	{
 		const nox::ComponentTypeInfo& type_info = *sorted_types[type_slot];
@@ -98,7 +98,7 @@ void nox::Archetype::PushChunk()
 	chunks_.push_back(nox::Archetype::Chunk{ .block = block, .count = 0u });
 }
 
-nox::ArchetypeLocation nox::Archetype::AddEntity(const nox::EntityId entity)
+nox::ArchetypeLocation nox::Archetype::AddEntity(const nox::Entity entity)
 {
 	//	末尾から空きのあるChunkを探す。削除はswap-removeなので末尾以外が空くことはない。
 	if (chunks_.empty() || chunks_.back().count >= chunk_capacity_)
@@ -110,7 +110,7 @@ nox::ArchetypeLocation nox::Archetype::AddEntity(const nox::EntityId entity)
 	nox::Archetype::Chunk& chunk = chunks_[chunk_index];
 	const nox::uint32 row = chunk.count;
 
-	reinterpret_cast<nox::EntityId*>(chunk.block)[row] = entity;
+	reinterpret_cast<nox::Entity*>(chunk.block)[row] = entity;
 	for (nox::uint32 type_slot = 0u; type_slot < type_count_; ++type_slot)
 	{
 		std::memset(
@@ -124,19 +124,19 @@ nox::ArchetypeLocation nox::Archetype::AddEntity(const nox::EntityId entity)
 	return nox::ArchetypeLocation{ .chunk_index = chunk_index, .row = row };
 }
 
-nox::EntityId nox::Archetype::RemoveEntity(const nox::ArchetypeLocation location)noexcept
+nox::Entity nox::Archetype::RemoveEntity(const nox::ArchetypeLocation location)noexcept
 {
 	NOX_ASSERT(location.chunk_index < chunks_.size(), u8"Archetypeのchunk_indexが範囲外です");
 	if (location.chunk_index >= chunks_.size())
 	{
-		return nox::EntityId{ 0u };
+		return nox::Entity{ 0u };
 	}
 
 	nox::Archetype::Chunk& target_chunk = chunks_[location.chunk_index];
 	NOX_ASSERT(location.row < target_chunk.count, u8"Archetypeのrowが範囲外です");
 	if (location.row >= target_chunk.count)
 	{
-		return nox::EntityId{ 0u };
+		return nox::Entity{ 0u };
 	}
 
 	//	常に「全体の末尾」を穴に移す。これで空きは末尾Chunkにしか生まれない。
@@ -144,11 +144,11 @@ nox::EntityId nox::Archetype::RemoveEntity(const nox::ArchetypeLocation location
 	const nox::uint32 last_row = last_chunk.count - 1u;
 	const bool is_self = (&target_chunk == &last_chunk) && (location.row == last_row);
 
-	nox::EntityId moved_entity{ 0u };
+	nox::Entity moved_entity{ 0u };
 	if (is_self == false)
 	{
-		moved_entity = reinterpret_cast<nox::EntityId*>(last_chunk.block)[last_row];
-		reinterpret_cast<nox::EntityId*>(target_chunk.block)[location.row] = moved_entity;
+		moved_entity = reinterpret_cast<nox::Entity*>(last_chunk.block)[last_row];
+		reinterpret_cast<nox::Entity*>(target_chunk.block)[location.row] = moved_entity;
 		for (nox::uint32 type_slot = 0u; type_slot < type_count_; ++type_slot)
 		{
 			const nox::uint32 component_size = component_sizes_[type_slot];
@@ -179,14 +179,14 @@ void* nox::Archetype::TryGetComponentArray(const nox::uint32 chunk_index, const 
 	return chunks_[chunk_index].block + column_offsets_[static_cast<nox::uint32>(type_slot)];
 }
 
-nox::EntityId* nox::Archetype::GetEntityArray(const nox::uint32 chunk_index)noexcept
+nox::Entity* nox::Archetype::GetEntityArray(const nox::uint32 chunk_index)noexcept
 {
 	NOX_ASSERT(chunk_index < chunks_.size(), u8"Archetypeのchunk_indexが範囲外です");
 	if (chunk_index >= chunks_.size())
 	{
 		return nullptr;
 	}
-	return reinterpret_cast<nox::EntityId*>(chunks_[chunk_index].block);
+	return reinterpret_cast<nox::Entity*>(chunks_[chunk_index].block);
 }
 
 nox::uint32 nox::Archetype::GetChunkEntityCount(const nox::uint32 chunk_index)const noexcept

@@ -6,9 +6,9 @@
 ///	@details	UpdaterGraph の並列化は独立した2つの機構で成り立っている。
 ///
 ///				  (a) ノードレベル並列 … 同一レイヤーの複数ノードをワーカーへ配る
-///				                        (nox::World::ExecuteUpdaterGraphPhase)
+///				                        (nox::legacy::World::ExecuteUpdaterGraphPhase)
 ///				  (b) チャンクレベル並列 … 1ノードの列挙を Chunk 単位でワーカーへ配る
-///				                        (nox::World::ExecuteEntitySystemParallel、
+///				                        (nox::legacy::World::ExecuteEntitySystemParallel、
 ///				                         System 側の k_parallel_for_each 宣言で有効化)
 ///
 ///				片方だけ効いていても全体の数字からは分からないので、両方を別々に測る。
@@ -22,17 +22,17 @@
 ///
 ///	@note		【本番経路との差】
 ///				本番(runtime.exe)側のワーカー数はコマンドラインで振れる
-///				(--serial-updater / --updater-workers=N。nox::ResolveUpdaterWorkerCount)。
-///				ただし nox::World::Init / ExecuteUpdaterGraphPhase / ExecuteEntitySystemParallel は
+///				(--serial-updater / --updater-workers=N。nox::legacy::ResolveUpdaterWorkerCount)。
+///				ただし nox::legacy::World::Init / ExecuteUpdaterGraphPhase / ExecuteEntitySystemParallel は
 ///				いずれも private で、core_test からフェーズ実行そのものを駆動できない。
-///				そこでここでは自前の nox::JobSystem を持ち、world.cpp の2つの配り方を
+///				そこでここでは自前の nox::JobSystem を持ち、world_legacy.cpp の2つの配り方を
 ///				同じ形で書き写している。測っているのは
 ///				  ・実物の nox::legacy::EntitySystem (nox::legacy::EntitySystemBase::Execute / ExecuteChunk)
-///				  ・実物の nox::UpdaterGraph が算出したレイヤー分割
+///				  ・実物の nox::legacy::UpdaterGraph が算出したレイヤー分割
 ///				  ・実物の nox::JobSystem の配り・待ち
 ///				であり、写しているのは「レイヤーを回してジョブを積むループ」だけ。
 ///
-///				本番の nox::World::ExecuteNode は非 Master でこれに加えて
+///				本番の nox::legacy::World::ExecuteNode は非 Master でこれに加えて
 ///				宣言違反チェッカー (EnterNodeAccessScope / LeaveNodeAccessScope) と
 ///				コマンドバッファの束縛 (WorldNodeCommandScope) を通る。
 ///				どちらもノードあたり定数コストなので、ここの数字には含まれない。
@@ -120,13 +120,13 @@ namespace
 	};
 
 	//	---------------------------------------------------------------------------------
-	//	world.cpp の配り方の写し
+	//	world_legacy.cpp の配り方の写し
 	//	---------------------------------------------------------------------------------
 
 	struct NodeJobContext final
 	{
-		nox::World* world;
-		const nox::UpdaterNode* node;
+		nox::legacy::World* world;
+		const nox::legacy::UpdaterNode* node;
 	};
 
 	void ExecuteNodeJob(void* context)
@@ -137,7 +137,7 @@ namespace
 
 	struct ChunkJobContext final
 	{
-		nox::World* world;
+		nox::legacy::World* world;
 		nox::legacy::EntitySystemBase* system;
 		nox::Archetype* archetype;
 		nox::uint32 chunk_index;
@@ -149,11 +149,11 @@ namespace
 		job_context->system->ExecuteChunk(*job_context->world, *job_context->archetype, job_context->chunk_index);
 	}
 
-	/// @brief nox::World::ExecuteUpdaterGraphPhase と同じ形でレイヤーを回す。
+	/// @brief nox::legacy::World::ExecuteUpdaterGraphPhase と同じ形でレイヤーを回す。
 	void RunUpdaterGraphPhase(
-		nox::World& world,
+		nox::legacy::World& world,
 		nox::JobSystem& job_system,
-		const nox::UpdaterGraph& graph,
+		const nox::legacy::UpdaterGraph& graph,
 		const nox::SystemPhaseType phase_type)
 	{
 		static constexpr nox::uint32 k_max_nodes_per_layer = 256u;
@@ -163,12 +163,12 @@ namespace
 
 		for (nox::uint32 layer_index = 0u; layer_index < layer_count; ++layer_index)
 		{
-			const std::span<const nox::UpdaterNode> nodes = graph.GetLayerNodes(phase_type, layer_index);
+			const std::span<const nox::legacy::UpdaterNode> nodes = graph.GetLayerNodes(phase_type, layer_index);
 
 			//	1つしか無いレイヤーを配っても往復コストが乗るだけなので、その場で回す。
 			if (parallel_enabled == false || nodes.size() <= 1u)
 			{
-				for (const nox::UpdaterNode& node : nodes)
+				for (const nox::legacy::UpdaterNode& node : nodes)
 				{
 					node.system->Execute(world);
 				}
@@ -190,15 +190,15 @@ namespace
 		}
 	}
 
-	/// @brief nox::World::ExecuteEntitySystemParallel と同じ形で Chunk を配る。
+	/// @brief nox::legacy::World::ExecuteEntitySystemParallel と同じ形で Chunk を配る。
 	void RunEntitySystemParallel(
-		nox::World& world,
+		nox::legacy::World& world,
 		nox::JobSystem& job_system,
 		nox::legacy::EntitySystemBase& system)
 	{
 		static constexpr nox::uint32 k_max_chunk_jobs_per_dispatch = 256u;
 
-		const nox::EntityQuery& query = system.GetQuery();
+		const nox::legacy::EntityQuery& query = system.GetQuery();
 		const nox::uint32 total_chunk_count = query.GetTotalChunkCount();
 
 		if (total_chunk_count <= 1u || job_system.GetWorkerCount() == 0u)
@@ -207,13 +207,13 @@ namespace
 			return;
 		}
 
-		std::array<nox::EntityChunkRef, k_max_chunk_jobs_per_dispatch> chunk_refs{};
+		std::array<nox::legacy::EntityChunkRef, k_max_chunk_jobs_per_dispatch> chunk_refs{};
 		std::array<ChunkJobContext, k_max_chunk_jobs_per_dispatch> job_contexts{};
 		std::array<nox::Job, k_max_chunk_jobs_per_dispatch> jobs{};
 
 		for (nox::uint32 start = 0u; start < total_chunk_count; start += k_max_chunk_jobs_per_dispatch)
 		{
-			const nox::uint32 job_count = query.FillChunkRefs(start, std::span<nox::EntityChunkRef>(chunk_refs));
+			const nox::uint32 job_count = query.FillChunkRefs(start, std::span<nox::legacy::EntityChunkRef>(chunk_refs));
 			if (job_count == 0u) { break; }
 
 			for (nox::uint32 index = 0u; index < job_count; ++index)
@@ -281,11 +281,11 @@ namespace
 
 	/// @brief ベンチ用の World をエンティティで埋める。
 	/// @details 構造変更はフェーズ外なので即時系でよい。ここは測定対象ではない。
-	void PopulateWorld(nox::World& world, const nox::uint32 entity_count)
+	void PopulateWorld(nox::legacy::World& world, const nox::uint32 entity_count)
 	{
 		for (nox::uint32 index = 0u; index < entity_count; ++index)
 		{
-			const nox::EntityId entity = world.CreateEntity();
+			const nox::Entity entity = world.CreateEntity();
 			const nox::float32 seed = static_cast<nox::float32>(index % 97u) * 0.01f;
 
 			world.AddComponent<BenchPosition>(entity)->x = seed;
@@ -309,7 +309,7 @@ TEST(UpdaterGraphBenchmark, DISABLED_NodeLevelParallel)
 	static constexpr nox::uint32 k_warmup_frames = 3u;
 	static constexpr nox::uint32 k_measure_frames = 15u;
 
-	nox::World world;
+	nox::legacy::World world;
 	PopulateWorld(world, k_entity_count);
 
 	BenchScalarASystem system_a;
@@ -323,10 +323,10 @@ TEST(UpdaterGraphBenchmark, DISABLED_NodeLevelParallel)
 		world.BuildQuery(system->GetQuery(), system->GetDescriptor().make_read_write_mask());
 	}
 
-	nox::UpdaterGraph graph;
+	nox::legacy::UpdaterGraph graph;
 	graph.Rebuild(
 		std::span<nox::legacy::EntitySystemBase* const>(systems.data(), systems.size()),
-		std::span<nox::EntityLogicStorage* const>());
+		std::span<nox::legacy::EntityLogicStorage* const>());
 
 	//	前提の確認。1レイヤーに4ノードが載っていなければ、並列ディスパッチは踏まれない。
 	const nox::uint32 layer_count = graph.GetLayerCount(nox::SystemPhaseType::Update);
@@ -379,7 +379,7 @@ TEST(UpdaterGraphBenchmark, DISABLED_ChunkLevelParallel)
 	static constexpr nox::uint32 k_warmup_frames = 3u;
 	static constexpr nox::uint32 k_measure_frames = 15u;
 
-	nox::World world;
+	nox::legacy::World world;
 	PopulateWorld(world, k_entity_count);
 
 	BenchMoveSystem system;

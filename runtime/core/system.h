@@ -8,14 +8,17 @@
 #include	"object.h"
 #include	"entity.h"
 
-namespace nox
+namespace nox::legacy
 {
 	class World;
+}
 
+namespace nox
+{
 	/// @brief managed systemの基底クラス
 	class SystemBase : public nox::Object
 	{
-		friend class World;
+		friend class nox::legacy::World;
 
 		//	派生システムの生成コードから protected な入れ子型 (SystemPhase / PhaseRegister) を
 		//	綴れるようにする。
@@ -33,7 +36,7 @@ namespace nox
 	protected:
 		struct SystemPhase
 		{
-			void(nox::SystemBase::* func)(nox::World&);
+			void(nox::SystemBase::* func)(nox::legacy::World&);
 			std::u8string_view name;
 			nox::SystemPhaseType type;
 		};
@@ -43,11 +46,11 @@ namespace nox
 		{
 			template<class T>
 			inline constexpr explicit SystemPhaseImpl(
-				void(T::* func)(nox::World&),
+				void(T::* func)(nox::legacy::World&),
 				std::u8string_view name
 			)noexcept :
 				nox::SystemBase::SystemPhase{
-					static_cast<void(nox::SystemBase::*)(nox::World&)>(func),
+					static_cast<void(nox::SystemBase::*)(nox::legacy::World&)>(func),
 					name,
 					_PhaseType
 			}

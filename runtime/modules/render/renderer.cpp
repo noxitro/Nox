@@ -42,15 +42,15 @@ inline constexpr auto& nox::render::Renderer::GetDevice()const noexcept
 
 }
 
-void nox::render::Renderer::Init(nox::World& world)
+void nox::render::Renderer::Init(nox::legacy::World& world)
 {
 }
 
-void nox::render::Renderer::Update(nox::World& world)
+void nox::render::Renderer::Update(nox::legacy::World& world)
 {
 }
 
-void nox::render::Renderer::Terminate(nox::World& world)
+void nox::render::Renderer::Terminate(nox::legacy::World& world)
 {
 
 }

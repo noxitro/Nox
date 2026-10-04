@@ -1,17 +1,18 @@
 // Copyright (c) 2023-2026 noxitro
 // SPDX-License-Identifier: MIT
 
-/// @file	entity_logic.h
+/// @file	entity_logic_legacy.h
 /// @brief	ECSの上にOOPの書き味を載せるための基底。
+/// @note	旧実装 (nox::legacy)。新しい ECS への書き直しが終わるまでの退避先で、移行後にこのファイルごと消す。
 /// @details 宣言したComponentDataが揃ったentityごとに1インスタンスが自動生成され、欠けたら自動破棄される。
 ///          個別の状態は普通のメンバとして持てるため、全てをComponentDataにしなくてよい。
 ///
 ///          更新メソッドは引数リストがそのままアクセス宣言になる(EntitySystemと同じ規則)ため、
 ///          OOP的に書いてもSystemと同じ依存解析に載る。
 ///
-///          更新メソッドの購読は NOX_ATTR(nox::attr::EntityLogicMethod(フェーズ)) を付けるだけでよい。
-///          リフレクション生成コードが nox::EntityLogicMethodTable の明示的特殊化を書き出し、
-///          nox::GetEntityLogicTypes() の表に載せる。
+///          更新メソッドの購読は NOX_ATTR(nox::legacy::attr::EntityLogicMethod(フェーズ)) を付けるだけでよい。
+///          リフレクション生成コードが nox::legacy::EntityLogicMethodTable の明示的特殊化を書き出し、
+///          nox::legacy::GetEntityLogicTypes() の表に載せる。
 ///
 ///          [生成器との境界]
 ///          生成器は「人間が公開APIだけを使って手で書けるコード」しか書かない。判断は一切しない。
@@ -22,11 +23,11 @@
 ///          使い分け: 大量に湧くもの(弾・パーティクル・群れ)はEntitySystem、
 ///          少数の主要個体(プレイヤー・ボス・UI)はEntityLogic。
 #pragma once
-#include	"entity_query.h"
+#include	"entity_query_legacy.h"
 #include	"system_phase_type.h"
-#include	"entity_logic_attribute.h"
+#include	"entity_logic_attribute_legacy.h"
 
-namespace nox
+namespace nox::legacy
 {
 	class World;
 
@@ -36,19 +37,19 @@ namespace nox
 		/// @brief TDerivedのメソッドへ静的に束縛された呼び出し。仮想関数を介さない。
 		void (*invoke)(
 			void* instance,
-			nox::World& world,
+			nox::legacy::World& world,
 			nox::Archetype& archetype,
 			nox::ArchetypeLocation location,
-			nox::EntityId entity);
+			nox::Entity entity);
 		/// @brief 読み書きするComponentDataのマスク。依存解析の入力。
 		nox::ComponentMask(*make_read_write_mask)()noexcept;
 		/// @brief 書き込みするComponentDataのマスク。
 		nox::ComponentMask(*make_write_mask)()noexcept;
 		/// @brief 読み書きするServiceの一覧。依存解析に使う。確保は走らない。
-		std::span<const nox::ServiceAccess>(*get_service_accesses)()noexcept;
+		std::span<const nox::legacy::ServiceAccess>(*get_service_accesses)()noexcept;
 		std::string_view name;
 		nox::SystemPhaseType phase;
-		/// @brief このメソッドが遅延構造変更を出しうるか(= nox::EntityCommands& を宣言しているか)。
+		/// @brief このメソッドが遅延構造変更を出しうるか(= nox::legacy::EntityCommands& を宣言しているか)。
 		/// @details 引数リストから導出される。宣言していないメソッドは1コマンドも積めないので、
 		///          Worldはこのメソッドのぶんのコマンドバッファを確保しない。
 		bool emits_structural_change;
@@ -61,18 +62,18 @@ namespace nox
 		/// @brief インスタンス生成に必要なComponentDataのマスク。
 		nox::ComponentMask(*make_required_mask)()noexcept;
 		/// @brief 確保済みメモリ上へのインスタンス構築。デフォルト構築してentityを束縛するところまで行う。
-		void* (*construct)(void* memory, nox::World& world, nox::EntityId entity);
+		void* (*construct)(void* memory, nox::legacy::World& world, nox::Entity entity);
 		/// @brief インスタンス破棄。仮想デストラクタの代わり。
 		void (*destruct)(void* instance)noexcept;
 		/// @brief 更新メソッド一覧。
-		std::span<const nox::EntityLogicMethodDescriptor>(*get_methods)()noexcept;
+		std::span<const nox::legacy::EntityLogicMethodDescriptor>(*get_methods)()noexcept;
 		nox::uint32 instance_size;
 		nox::uint32 instance_alignment;
 		std::string_view name;
 	};
 
 	template<class TLogic>
-	[[nodiscard]] constexpr nox::EntityLogicTypeDescriptor MakeEntityLogicTypeDescriptor()noexcept;
+	[[nodiscard]] constexpr nox::legacy::EntityLogicTypeDescriptor MakeEntityLogicTypeDescriptor()noexcept;
 
 	namespace detail
 	{
@@ -97,7 +98,7 @@ namespace nox
 	public:
 		struct Entry
 		{
-			nox::EntityId entity;
+			nox::Entity entity;
 			void* instance;
 		};
 
@@ -105,37 +106,37 @@ namespace nox
 		static constexpr nox::uint32 k_instances_per_block = 64u;
 
 	public:
-		explicit EntityLogicStorage(const nox::EntityLogicTypeDescriptor& descriptor);
+		explicit EntityLogicStorage(const nox::legacy::EntityLogicTypeDescriptor& descriptor);
 		~EntityLogicStorage();
 
 		EntityLogicStorage(const EntityLogicStorage&) = delete;
 		EntityLogicStorage& operator=(const EntityLogicStorage&) = delete;
 
 		/// @brief entityがマスクを満たすようになったので生成する。既に存在する場合は何もしない。
-		void CreateInstance(nox::World& world, nox::EntityId entity);
+		void CreateInstance(nox::legacy::World& world, nox::Entity entity);
 
 		/// @brief entityがマスクを満たさなくなった/破棄されたので解体する。
-		void DestroyInstance(nox::EntityId entity)noexcept;
+		void DestroyInstance(nox::Entity entity)noexcept;
 
-		[[nodiscard]] bool Contains(nox::EntityId entity)const noexcept;
+		[[nodiscard]] bool Contains(nox::Entity entity)const noexcept;
 
-		[[nodiscard]] inline const nox::EntityLogicTypeDescriptor& GetDescriptor()const noexcept { return descriptor_; }
+		[[nodiscard]] inline const nox::legacy::EntityLogicTypeDescriptor& GetDescriptor()const noexcept { return descriptor_; }
 
-		[[nodiscard]] inline std::span<const nox::EntityLogicStorage::Entry> GetEntries()const noexcept
+		[[nodiscard]] inline std::span<const nox::legacy::EntityLogicStorage::Entry> GetEntries()const noexcept
 		{
 			return std::span(entries_.data(), entries_.size());
 		}
 
 	private:
 		[[nodiscard]] void* AcquireInstanceMemory();
-		[[nodiscard]] nox::int32 FindEntrySlot(nox::EntityId entity)const noexcept;
+		[[nodiscard]] nox::int32 FindEntrySlot(nox::Entity entity)const noexcept;
 
 	private:
-		const nox::EntityLogicTypeDescriptor& descriptor_;
+		const nox::legacy::EntityLogicTypeDescriptor& descriptor_;
 		nox::uint32 instance_stride_;
 		nox::Vector<nox::uint8*> blocks_;
 		nox::Vector<void*> free_instances_;
-		nox::Vector<nox::EntityLogicStorage::Entry> entries_;
+		nox::Vector<nox::legacy::EntityLogicStorage::Entry> entries_;
 	};
 
 	/// @brief ECSの上にOOPを載せるための基底。
@@ -149,7 +150,7 @@ namespace nox
 	///          GetEntity() はまだ有効ではない。状態の初期化はメンバ初期化子で完結させること。
 	///
 	///          Worldへの参照は保持しない。フェーズ実行中にWorldへ出せる操作は
-	///          更新メソッドの引数に nox::EntityCommands& を並べて受け取る。
+	///          更新メソッドの引数に nox::legacy::EntityCommands& を並べて受け取る。
 	/// @tparam TDerived CRTPの派生型。
 	/// @tparam ExtraRequiredComponents どのメソッドも引数に取らないが、存在を必須にしたいComponentData
 	///         (タグ用)。通常は指定しない。
@@ -158,7 +159,7 @@ namespace nox
 	{
 	public:
 		/// @brief 束縛されたentity。派生型のコンストラクタの中ではまだ有効ではない。
-		[[nodiscard]] inline nox::EntityId GetEntity()const noexcept { return entity_; }
+		[[nodiscard]] inline nox::Entity GetEntity()const noexcept { return entity_; }
 
 		/// @brief どのメソッドも宣言しないが必須にしたいComponentDataのマスク。
 		/// @details ComponentTypeIndexは実行時に採番されるため定数式にはならない。
@@ -178,9 +179,9 @@ namespace nox
 		EntityLogic& operator=(const EntityLogic&) = delete;
 
 	private:
-		friend struct nox::detail::EntityLogicBinder;
+		friend struct nox::legacy::detail::EntityLogicBinder;
 
-		nox::EntityId entity_{};
+		nox::Entity entity_{};
 	};
 
 	namespace detail
@@ -191,7 +192,7 @@ namespace nox
 			/// @details 基底のprivateメンバへ触れるのはこの型だけ。呼ぶのは記述子のconstructのみで、
 			///          いかなる更新メソッドよりも先に必ず実行される。
 			template<class TLogic>
-			static inline void Bind(TLogic& logic, const nox::EntityId entity)noexcept
+			static inline void Bind(TLogic& logic, const nox::Entity entity)noexcept
 			{
 				logic.entity_ = entity;
 			}
@@ -199,36 +200,36 @@ namespace nox
 
 		/// @brief 生成直後のEntityLogicへentityを束縛する。エンジン専用。
 		template<class TLogic>
-		inline void BindEntityLogic(TLogic& logic, const nox::EntityId entity)noexcept
+		inline void BindEntityLogic(TLogic& logic, const nox::Entity entity)noexcept
 		{
-			nox::detail::EntityLogicBinder::Bind(logic, entity);
+			nox::legacy::detail::EntityLogicBinder::Bind(logic, entity);
 		}
 	}
 
 	/// @brief 更新メソッド1つ分の記述子を作る。手書きの特殊化(エスケープハッチ)用。
 	/// @details メソッドのアドレスを通常の文脈で取るため、publicなメソッドにしか使えない。
-	///          生成コードは nox::detail::MakeEntityLogicMethodDescriptorViaTag を使う。
+	///          生成コードは nox::legacy::detail::MakeEntityLogicMethodDescriptorViaTag を使う。
 	///
 	///          引数リストは任意。EntityId / ComponentDataの参照 / Serviceの参照・ポインタ /
-	///          nox::EntityCommands& を自由に並べられる。
+	///          nox::legacy::EntityCommands& を自由に並べられる。
 	///          ここで宣言したComponentDataがEntityLogicの必須ComponentDataに算入される。
 	template<auto MethodPointer, nox::SystemPhaseType _Phase>
-	[[nodiscard]] constexpr nox::EntityLogicMethodDescriptor MakeEntityLogicMethodDescriptor(const std::string_view name)noexcept
+	[[nodiscard]] constexpr nox::legacy::EntityLogicMethodDescriptor MakeEntityLogicMethodDescriptor(const std::string_view name)noexcept
 	{
-		using Traits = nox::EntityMethodTraits<decltype(MethodPointer)>;
+		using Traits = nox::legacy::EntityMethodTraits<decltype(MethodPointer)>;
 		using OwnerType = typename Traits::OwnerType;
 		using Signature = typename Traits::Signature;
-		using Invoker = nox::detail::EntityInvokerOf<Signature>;
+		using Invoker = nox::legacy::detail::EntityInvokerOf<Signature>;
 
-		static_assert(nox::detail::ValidateEntityMethod<decltype(MethodPointer)>());
+		static_assert(nox::legacy::detail::ValidateEntityMethod<decltype(MethodPointer)>());
 
-		return nox::EntityLogicMethodDescriptor{
+		return nox::legacy::EntityLogicMethodDescriptor{
 			.invoke = [](
 				void* instance,
-				nox::World& world,
+				nox::legacy::World& world,
 				nox::Archetype& archetype,
 				const nox::ArchetypeLocation location,
-				const nox::EntityId entity)
+				const nox::Entity entity)
 				{
 					Invoker::InvokeSingle(world, archetype, location, entity, *static_cast<OwnerType*>(instance), MethodPointer);
 				},
@@ -242,37 +243,37 @@ namespace nox
 	}
 
 	/// @brief EntityLogic型の記述子を作る。
-	/// @details nox::EntityLogicMethodTable<TLogic> だけを読む。CRTP基底には何も持たせない。
+	/// @details nox::legacy::EntityLogicMethodTable<TLogic> だけを読む。CRTP基底には何も持たせない。
 	template<class TLogic>
-	[[nodiscard]] constexpr nox::EntityLogicTypeDescriptor MakeEntityLogicTypeDescriptor()noexcept
+	[[nodiscard]] constexpr nox::legacy::EntityLogicTypeDescriptor MakeEntityLogicTypeDescriptor()noexcept
 	{
-		using MethodTable = nox::EntityLogicMethodTable<TLogic>;
+		using MethodTable = nox::legacy::EntityLogicMethodTable<TLogic>;
 
 		//	必須マスクが空だと全entityに付いてしまうため、メソッド0個は誤りとみなす。
 		static_assert(MethodTable::GetMethods().empty() == false,
-			"EntityLogicには nox::attr::EntityLogicMethod を付けた更新メソッドが1つ以上必要です");
+			"EntityLogicには nox::legacy::attr::EntityLogicMethod を付けた更新メソッドが1つ以上必要です");
 
 		//	二段階構築の前提。生成器では検査しない(C++で検査できることはC++で検査する)。
 		static_assert(std::is_default_constructible_v<TLogic>,
 			"EntityLogicの派生型はデフォルト構築可能である必要があります(コンストラクタは書かなくてよい)");
 
-		return nox::EntityLogicTypeDescriptor{
+		return nox::legacy::EntityLogicTypeDescriptor{
 			.make_required_mask = []()noexcept
 				{
 					//	必須ComponentData = 購読された全メソッドが宣言したComponentDataの和集合。
 					//	メソッドを足せば必要な条件も自動で広がるので、宣言が二重管理にならない。
 					nox::ComponentMask mask = TLogic::MakeExtraRequiredMask();
-					for (const nox::EntityLogicMethodDescriptor& method : MethodTable::GetMethods())
+					for (const nox::legacy::EntityLogicMethodDescriptor& method : MethodTable::GetMethods())
 					{
 						mask.Merge(method.make_read_write_mask());
 					}
 					return mask;
 				},
-			.construct = [](void* memory, nox::World&, const nox::EntityId entity) -> void*
+			.construct = [](void* memory, nox::legacy::World&, const nox::Entity entity) -> void*
 				{
 					//	二段階構築。デフォルト構築してから、どの更新メソッドより先にentityを束縛する。
 					auto* const logic = new(memory) TLogic();
-					nox::detail::BindEntityLogic(*logic, entity);
+					nox::legacy::detail::BindEntityLogic(*logic, entity);
 					return logic;
 				},
 			.destruct = [](void* instance)noexcept { static_cast<TLogic*>(instance)->~TLogic(); },
@@ -302,46 +303,46 @@ namespace nox::gen
 	template<class Tag, auto MethodPointer>
 	struct PrivateEntityLogicMethodInvoker final
 	{
-		using OwnerType = typename nox::EntityMethodTraits<decltype(MethodPointer)>::OwnerType;
-		using Signature = typename nox::EntityMethodTraits<decltype(MethodPointer)>::Signature;
+		using OwnerType = typename nox::legacy::EntityMethodTraits<decltype(MethodPointer)>::OwnerType;
+		using Signature = typename nox::legacy::EntityMethodTraits<decltype(MethodPointer)>::Signature;
 
 		//	依存型を引数に取る friend のため、汎用リフレクションの対象からは外す。
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
 		friend void InvokeEntityLogicMethod(
 			Tag,
 			void* instance,
-			nox::World& world,
+			nox::legacy::World& world,
 			nox::Archetype& archetype,
 			const nox::ArchetypeLocation location,
-			const nox::EntityId entity)
+			const nox::Entity entity)
 		{
-			nox::detail::EntityInvokerOf<Signature>::InvokeSingle(
+			nox::legacy::detail::EntityInvokerOf<Signature>::InvokeSingle(
 				world, archetype, location, entity, *static_cast<OwnerType*>(instance), MethodPointer);
 		}
 	};
 }
 
-namespace nox::detail
+namespace nox::legacy::detail
 {
 	/// @brief 更新メソッド1つ分の記述子を、生成コードのタグ経由で作る。
 	/// @details メソッドが public でも private でも同じ経路に載る。記述子はメソッド名を一切綴らず、
 	///          Tag が持つ型情報(所有型・メンバ関数ポインタ型)だけを読む。
 	/// @tparam Tag 生成コードが宣言したタグ型。OwnerType / MethodPointerType / Signature を持つ。
 	template<class Tag, nox::SystemPhaseType _Phase>
-	[[nodiscard]] constexpr nox::EntityLogicMethodDescriptor MakeEntityLogicMethodDescriptorViaTag(const std::string_view name)noexcept
+	[[nodiscard]] constexpr nox::legacy::EntityLogicMethodDescriptor MakeEntityLogicMethodDescriptorViaTag(const std::string_view name)noexcept
 	{
 		using Signature = typename Tag::Signature;
 
 		//	引数リストの妥当性検査は手書き経路と同一。
-		static_assert(nox::detail::ValidateEntityMethod<typename Tag::MethodPointerType>());
+		static_assert(nox::legacy::detail::ValidateEntityMethod<typename Tag::MethodPointerType>());
 
-		return nox::EntityLogicMethodDescriptor{
+		return nox::legacy::EntityLogicMethodDescriptor{
 			.invoke = [](
 				void* instance,
-				nox::World& world,
+				nox::legacy::World& world,
 				nox::Archetype& archetype,
 				const nox::ArchetypeLocation location,
-				const nox::EntityId entity)
+				const nox::Entity entity)
 				{
 					//	定数評価されるのはラムダ→関数ポインタ変換だけ。friendの呼び出しは実行時。
 					InvokeEntityLogicMethod(Tag{}, instance, world, archetype, location, entity);

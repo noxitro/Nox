@@ -8,6 +8,7 @@
 #include	<ranges>
 #include	<span>
 #include	<utility>
+#include	"basic_type.h"
 #include	"advanced_type.h"
 #include	"assertion_kernel.h"
 

@@ -19,7 +19,7 @@ namespace nox::dev::editor_remote
 		AssetConvertQuery(){}
 		void OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)override;
 		void OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)override;
-		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::World&, std::span<nox::uint8> storage)const override;
+		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::legacy::World&, std::span<nox::uint8> storage)const override;
 
 		inline std::u8string_view GetUri()const noexcept
 		{
@@ -43,7 +43,7 @@ namespace nox::dev::editor_remote
 		GetMainSceneView()noexcept{}
 		inline constexpr void OnSerialize(nox::dev::editor_remote::SocketStreamWriter&)override {}
 		inline constexpr void OnDeserialize(nox::dev::editor_remote::SocketStreamReader&)override {}
-		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::World&, std::span<nox::uint8> storage)const override;
+		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::legacy::World&, std::span<nox::uint8> storage)const override;
 	};
 
 	/// @brief SceneView情報
@@ -77,7 +77,7 @@ namespace nox::dev::editor_remote
 		SyncQuery(){}
 		void OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)override;
 		void OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)override;
-		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::World&, std::span<nox::uint8> storage)const override;
+		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::legacy::World&, std::span<nox::uint8> storage)const override;
 
 		inline nox::int64 GetRemoteInstanceId()const noexcept
 		{
@@ -157,7 +157,7 @@ namespace nox::dev::editor_remote
 		AddEntityNodeQuery(){}
 		void OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)override;
 		void OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)override;
-		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::World&, std::span<nox::uint8> storage)const override;
+		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::legacy::World&, std::span<nox::uint8> storage)const override;
 
 		inline nox::int64 GetRemoteInstanceId()const noexcept
 		{
@@ -248,7 +248,7 @@ namespace nox::dev::editor_remote
 		AddComponentQuery(){}
 		void OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)override;
 		void OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)override;
-		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::World&, std::span<nox::uint8> storage)const override;
+		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::legacy::World&, std::span<nox::uint8> storage)const override;
 
 		inline nox::int64 GetRemoteInstanceId()const noexcept
 		{
@@ -350,7 +350,7 @@ namespace nox::dev::editor_remote
 		DestroyEntityNodeQuery(){}
 		void OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)override;
 		void OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)override;
-		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::World&, std::span<nox::uint8> storage)const override;
+		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::legacy::World&, std::span<nox::uint8> storage)const override;
 
 		inline nox::int64 GetRemoteInstanceId()const noexcept
 		{
@@ -374,7 +374,7 @@ namespace nox::dev::editor_remote
 		AutoSyncQuery(){}
 		void OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)override;
 		void OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)override;
-		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::World&, std::span<nox::uint8> storage)const override;
+		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::legacy::World&, std::span<nox::uint8> storage)const override;
 
 		inline nox::int64 GetRemoteInstanceId()const noexcept
 		{
@@ -443,7 +443,7 @@ namespace nox::dev::editor_remote
 		InvokeRuntimeActionQuery(){}
 		void OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)override;
 		void OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)override;
-		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::World&, std::span<nox::uint8> storage)const override;
+		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::legacy::World&, std::span<nox::uint8> storage)const override;
 
 		inline nox::int64 GetRemoteInstanceId()const noexcept
 		{
@@ -512,7 +512,7 @@ namespace nox::dev::editor_remote
 		GetRuntimeDependencyGraphQuery()noexcept{}
 		inline constexpr void OnSerialize(nox::dev::editor_remote::SocketStreamWriter&)override {}
 		inline constexpr void OnDeserialize(nox::dev::editor_remote::SocketStreamReader&)override {}
-		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::World&, std::span<nox::uint8> storage)const override;
+		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::legacy::World&, std::span<nox::uint8> storage)const override;
 	};
 
 	/// @brief Runtime依存グラフ取得Response
@@ -546,7 +546,7 @@ namespace nox::dev::editor_remote
 		GetRemoteInstanceSnapshotQuery()noexcept{}
 		inline constexpr void OnSerialize(nox::dev::editor_remote::SocketStreamWriter&)override {}
 		inline constexpr void OnDeserialize(nox::dev::editor_remote::SocketStreamReader&)override {}
-		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::World&, std::span<nox::uint8> storage)const override;
+		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::legacy::World&, std::span<nox::uint8> storage)const override;
 	};
 
 	/// @brief RemoteInstance管理状態取得Response
@@ -580,7 +580,7 @@ namespace nox::dev::editor_remote
 		GetMemoryProfilerSnapshotQuery()noexcept{}
 		inline constexpr void OnSerialize(nox::dev::editor_remote::SocketStreamWriter&)override {}
 		inline constexpr void OnDeserialize(nox::dev::editor_remote::SocketStreamReader&)override {}
-		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::World&, std::span<nox::uint8> storage)const override;
+		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::legacy::World&, std::span<nox::uint8> storage)const override;
 	};
 
 	/// @brief MemoryProfilerスナップショット取得Response
@@ -614,7 +614,7 @@ namespace nox::dev::editor_remote
 		RuntimeObjectDestroyedQuery(){}
 		void OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)override;
 		void OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)override;
-		inline constexpr nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::World&, std::span<nox::uint8>)const override { return nullptr; }
+		inline constexpr nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::legacy::World&, std::span<nox::uint8>)const override { return nullptr; }
 
 		inline nox::int64 GetRemoteInstanceId()const noexcept
 		{
@@ -638,7 +638,7 @@ namespace nox::dev::editor_remote
 		EndSyncQuery(){}
 		void OnSerialize(nox::dev::editor_remote::SocketStreamWriter& writer)override;
 		void OnDeserialize(nox::dev::editor_remote::SocketStreamReader& reader)override;
-		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::World&, std::span<nox::uint8> storage)const override;
+		nox::PlacementObject<nox::dev::editor_remote::Response> Execute(nox::legacy::World&, std::span<nox::uint8> storage)const override;
 
 		inline nox::int64 GetRemoteInstanceId()const noexcept
 		{
