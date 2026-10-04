@@ -92,20 +92,20 @@ namespace nox
 		concept EntitySystem = std::is_same_v<T, nox::EntitySystemBase> == false && std::is_base_of_v<nox::EntitySystemBase, T>;
 	}
 
-	template<class T,class ExtraRequiredComponents = nox::type_identities_t<>, class AfterSystems = nox::type_identities_t<>, class BeforeSystems = nox::type_identities_t<>>
-	struct EntitySystem;
-
 	/// @brief 
 	/// @tparam T 
 	/// @tparam ...ExtraRequiredComponents 追加で依存するComponentData型リスト（これらが揃ったentityのみを対象にする）
 	/// @tparam ...AfterSystems 依存するシステムリスト（これらを待つ)
 	/// @tparam ...BeforeSystems 依存させるシステムリスト（これらを待たせる)
-	template<class T, class... ExtraRequiredComponents, nox::concepts::EntitySystem... AfterSystems, nox::concepts::EntitySystem... BeforeSystems>
-	struct EntitySystem<T, nox::type_identities_t<ExtraRequiredComponents...>, nox::type_identities_t<AfterSystems...>, nox::type_identities_t<BeforeSystems...>> : public nox::EntitySystemBase
+	template<class T, class... Options>
+	struct EntitySystem : public nox::EntitySystemBase
 	{
-		static constexpr bool HasOnUpdate = requires{ &T::OnUpdate; };
-		static constexpr bool HasOnAdd = requires{ &T::OnAdd; };
-		static constexpr bool HasOnRemove = requires{ &T::OnRemove; };
+		template<class U = T>
+		static constexpr bool HasOnUpdate = requires{ &U::OnUpdate; };
+		template<class U = T>
+		static constexpr bool HasOnAdd = requires{ &U::OnAdd; };
+		template<class U = T>
+		static constexpr bool HasOnRemove = requires{ &U::OnRemove; };
 
 	private:
 		template<class U>
@@ -119,15 +119,15 @@ namespace nox
 	protected:
 		static consteval bool StaticDeclareVerify()noexcept
 		{
-			if constexpr (HasOnUpdate)
+			if constexpr (HasOnUpdate<T>)
 			{
 				static_assert(CheckFunction<decltype(&T::OnUpdate)>());
 			}
-			if constexpr (HasOnAdd)
+			if constexpr (HasOnAdd<T>)
 			{
 				static_assert(CheckFunction<decltype(&T::OnAdd)>());
 			}
-			if constexpr (HasOnRemove)
+			if constexpr (HasOnRemove<T>)
 			{
 				static_assert(CheckFunction<decltype(&T::OnRemove)>());
 			}

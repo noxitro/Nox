@@ -19,10 +19,5 @@
 
 namespace nox
 {
-	class World;
-}
-
-namespace nox::detail
-{
 
 }
