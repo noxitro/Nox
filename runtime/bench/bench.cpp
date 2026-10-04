@@ -14,11 +14,6 @@
 #include	"kernel/win64_api.h"
 #include	<realtimeapiset.h>
 
-#include	<array>
-#include	<cstdio>
-#include	<cstring>
-#include	<thread>
-
 namespace
 {
 	/// @brief DoNotOptimize の受け口。volatile へ書くのでこの関数自体も消えない

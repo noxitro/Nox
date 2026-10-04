@@ -18,15 +18,6 @@
 ///				確保回数は揺れないので、予算 (alloc_budget) を超えたら終了コード 3 で CI を落とす。
 #pragma once
 
-#include	<atomic>
-#include	<chrono>
-#include	<cmath>
-#include	<span>
-#include	<type_traits>
-#include	<vector>
-
-#include	"kernel/kernel.h"
-
 namespace nox::bench
 {
 	class State;

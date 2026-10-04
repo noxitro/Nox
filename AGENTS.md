@@ -122,6 +122,20 @@ dotnet build Editor/Studio.slnx
 - 行長の上限は設けない (目安 120 桁)。
 - コメントは日本語の Doxygen 形式 (`/// @brief` など) でよい。
 
+### 他プロジェクトのヘッダのインクルード
+
+依存先のプロジェクト (kernel / reflection / core / render / sound など) は、C# のプロジェクト参照のように「参照したら全部見える」ものとして扱う。依存はファイル単位ではなくプロジェクト単位で管理する。各 module の作業者が、依存先のどのヘッダが要るかを都度意識しなくて済むようにするためと、依存先のプロジェクトが増えたときに、それを使う全ファイルへ include を書き足さずに済むようにするため。Google の「使うものを直接 include する」方針より優先する。
+
+- 依存先は、その代表ヘッダ (`kernel/kernel.h`、`reflection/reflection.h`、`core/core.h` など) だけを、各プロジェクトの `pch.h` から include する。個別のヘッダ (`kernel/vector.h` など) やサブフォルダ (`kernel/memory/` など) は直接 include しない。代表ヘッダも `pch.h` 以外 (ヘッダや `.cpp`) からは include しない。
+- 依存先に、外から使いたいのに代表ヘッダに載っていないものがあれば、個別に include せず代表ヘッダへ足す。
+- テストプロジェクト (`core_test` など) も同じ。テスト対象の内部ヘッダが要るときも、個別に include せず対象の代表ヘッダへ足す。
+- 標準ライブラリも kernel の一部として扱い、kernel 以外のプロジェクトは標準ヘッダ (`<span>` など) を直接 include しない。要るものが足りなければ `kernel.h` の「標準ライブラリ」の一覧へ足す。MSVC の標準ライブラリが連鎖して読み込むものに頼らず、使うものは一覧に明示する (libstdc++ / libc++ では連鎖の範囲が違い、移植時にコンパイルエラーになる)。
+- kernel の中は、従来どおり使う標準ヘッダと kernel のヘッダを直接 include する。
+- 例外は OS の API を包むヘッダ (`kernel/win64_api.h` / `kernel/win64_socket.h`) と、OS・外部ライブラリのヘッダ (`<d3d12.h>`、`<gtest/gtest.h>` など)。
+- 例外は PCH を使わない翻訳単位 (`test_support/test_new_delete.cpp`)。必要な標準ヘッダを直接 include する。
+- 例外は ReflectionGenerator の解析の起点 `reflection_generated/reflect.cpp`。PCH なしで単独で解析されるので、代表ヘッダを直接 include する。
+- プロジェクト内のヘッダ同士 (core の中で `world.h` を読むなど) は、従来どおり必要なものを直接 include する。
+
 ### Reflection / 属性マクロ
 
 `NOX_ATTR_DECLARATION` / `NOX_ATTR_DECLARE` は型専用ではない。メンバ変数・メンバ関数に加え、グローバル変数・グローバル関数など型以外の宣言にも付く。ReflectionGenerator を直すときも型専用として扱わない。

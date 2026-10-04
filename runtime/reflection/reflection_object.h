@@ -6,7 +6,6 @@
 #pragma once
 #include	"attribute.h"
 #include	"type.h"
-#include	"../kernel/kernel.h"
 
 namespace nox::reflection
 {

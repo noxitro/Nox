@@ -4,10 +4,6 @@
 ///	@file	socket_stream_writer.h
 ///	@brief	socket_stream_writer
 #pragma once
-#include	<array>
-#include	<span>
-#include	<string_view>
-#include	"../../kernel/kernel.h"
 
 //	Editor との通信 (editor_remote) 用。実装 (.cpp) と同じく開発ビルドだけに置く。
 //	宣言だけ Master に残っていると、リフレクション生成器がメンバ関数を登録しようとして、

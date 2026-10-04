@@ -25,6 +25,10 @@
 #include	"updater_graph.h"
 #include	"entity_type_registry.h"
 #include	"local_transform.h"
+#include	"entity_command_buffer.h"
+#include	"entity_system_legacy.h"
+#include	"service_legacy.h"
+#include	"log_id.h"
 
 //	editor_remote
 #include	"dev/remote/remote_system.g.h"

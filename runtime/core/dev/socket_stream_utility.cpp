@@ -7,8 +7,6 @@
 #include	"socket_stream_utility.h"
 #include	"../attribute_common.h"
 #include	"../attribute_dev_common.h"
-#include	"../../kernel/kernel.h"
-#include	<cstdio>
 #include	<malloc.h>
 
 #if NOX_DEVELOP

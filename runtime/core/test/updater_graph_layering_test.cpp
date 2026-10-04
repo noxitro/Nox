@@ -35,17 +35,6 @@
 ///				レイヤリングを検証できる」と明記されている。World の公開範囲は広げていない。
 
 #include	"pch.h"
-#include	<vector>
-
-//	core_test の pch.h は gtest しか載せていない (test_new_delete.cpp の都合)。
-//	core のヘッダは kernel / reflection の基盤型に依存するので、main.cpp と同じ順で先に入れる。
-#include	"../../kernel/kernel.h"
-#include	"../../reflection/reflection.h"
-
-#include	"../updater_graph.h"
-#include	"../entity_system_legacy.h"
-#include	"../entity_logic.h"
-#include	"../service_legacy.h"
 
 namespace nox::test::updater_graph
 {

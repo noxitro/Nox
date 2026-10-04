@@ -10,8 +10,6 @@
 
 #include	"pch.h"
 
-#include	"../../kernel/kernel.h"
-#include	"../../reflection/reflection.h"
 #include	"reflection_variable_test_types.h"
 
 namespace

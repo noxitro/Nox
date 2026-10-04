@@ -3,7 +3,38 @@
 
 ///	@file	kernel.h
 ///	@brief	別プロジェクトがincludeする用のヘッダ
+///	@details	他プロジェクトは kernel と標準ライブラリを、各プロジェクトの pch.h からこのヘッダ経由でだけ使う。
+///				他プロジェクトで要る標準ヘッダが足りなければ、下の一覧へ足す。
+///				MSVC の標準ライブラリが連鎖して読み込むものに頼らず、使うものはここに明示する
+///				(libstdc++ / libc++ では連鎖の範囲が違い、移植時にコンパイルエラーになる)。
 #pragma once
+
+//	標準ライブラリ (他プロジェクト向け)
+#include	<algorithm>
+#include	<array>
+#include	<atomic>
+#include	<bit>
+#include	<chrono>
+#include	<cmath>
+#include	<concepts>
+#include	<cstddef>
+#include	<cstdio>
+#include	<cstdlib>
+#include	<cstring>
+#include	<expected>
+#include	<format>
+#include	<functional>
+#include	<limits>
+#include	<optional>
+#include	<ranges>
+#include	<span>
+#include	<string_view>
+#include	<thread>
+#include	<tuple>
+#include	<type_traits>
+#include	<utility>
+#include	<vector>
+//	end 標準ライブラリ
 
 #include	"basic_type.h"
 #include	"basic_definition.h"

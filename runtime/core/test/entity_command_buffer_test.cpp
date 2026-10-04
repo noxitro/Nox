@@ -5,11 +5,7 @@
 /// @brief	entity_command_buffer_test
 #include "pch.h"
 
-#include "../../kernel/kernel.h"
-#include "../../reflection/reflection.h"
 #include "test.h"
-
-#include "../entity_command_buffer.h"
 
 void nox::test::TestEntityCommandBuffer()
 {

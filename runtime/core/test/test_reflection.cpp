@@ -5,10 +5,7 @@
 ///	@brief	test_reflection
 #include	"pch.h"
 
-#include	"../../kernel/kernel.h"
-#include	"../../reflection/reflection.h"
 #include	"test_reflection.h"
-#include	"../reflection_generated/support_functions.h"
 
 
 template<class R>

@@ -6,11 +6,8 @@
 //	written from RuntimeRemoteCodeGenerator
 
 #if	NOX_DEVELOP
-#include	<span>
-#include	<string_view>
 #include	"../editor_remote_query.h"
 #include	"../editor_remote_response.h"
-#include	"../../../kernel/kernel.h"
 
 namespace nox::dev::editor_remote
 {

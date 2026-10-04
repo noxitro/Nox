@@ -19,13 +19,6 @@
 
 #include	"pch.h"
 
-//	core_test の pch.h は gtest しか載せていない (test_new_delete.cpp の都合)。
-//	core のヘッダは kernel / reflection の基盤型に依存するので、main.cpp と同じ順で先に入れる。
-#include	"../../kernel/kernel.h"
-#include	"../../reflection/reflection.h"
-
-#include	"../world.h"
-
 namespace
 {
 	/// @brief 既定へ落ちたことを検出するための番兵。

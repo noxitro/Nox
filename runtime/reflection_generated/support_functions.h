@@ -5,7 +5,6 @@
 ///	@brief		リフレクションジェネレータ用サポート関数群
 /// @details	外部には公開せず、generator内でのみ使用する
 #pragma once
-#include	<concepts>
 
 #pragma region マクロ関連
 #pragma region メンバ関数

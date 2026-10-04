@@ -5,17 +5,9 @@
 /// @brief	Archetypeストレージ / シグネチャ解析 / EntitySystem / EntityLogic のテスト。
 #include "pch.h"
 
-#include "../../kernel/kernel.h"
-#include "../../reflection/reflection.h"
 #include "test.h"
 
 #include "entity_ecs_test.h"
-#include "../world.h"
-#include "../entity_system_legacy.h"
-#include "../entity_logic.h"
-#include "../entity_type_registry.h"
-#include "../updater_graph.h"
-#include "../log_id.h"
 
 namespace nox::test::ecs::manual
 {

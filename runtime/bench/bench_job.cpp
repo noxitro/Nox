@@ -14,9 +14,6 @@
 #include	"pch.h"
 #include	"bench.h"
 
-#include	<array>
-#include	<atomic>
-
 namespace
 {
 	void EmptyJob(void*)noexcept

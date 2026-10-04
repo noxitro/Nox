@@ -7,8 +7,6 @@
 ///          EntityIdの列と各ComponentDataの列が同じ並び順で置かれる。列の先頭さえ取れれば
 ///          あとは行インデックスだけで全ての列にアクセスできる。
 #pragma once
-#include	<array>
-#include	<span>
 #include	"component_type.h"
 #include	"entity.h"
 

@@ -9,3 +9,4 @@
 
 #include	"kernel/kernel.h"
 #include	"reflection/reflection.h"
+#include	"core/core.h"

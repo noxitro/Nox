@@ -6,7 +6,6 @@
 #include "pch.h"
 #include "updater_graph.h"
 
-#include <ranges>
 #include "log_id.h"
 
 namespace nox

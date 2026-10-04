@@ -14,14 +14,6 @@
 #include	"pch.h"
 #include	"bench.h"
 
-#include	<algorithm>
-#include	<array>
-#include	<cstdio>
-#include	<cstdlib>
-#include	<cstring>
-#include	<limits>
-#include	<string_view>
-
 namespace
 {
 	/// @brief 登録できるベンチの上限 (一覧はヒープを使わず固定長で持つ)

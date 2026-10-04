@@ -12,10 +12,6 @@
 ///          網羅するためだけのもので、エンジンの機能には一切使わない。
 #pragma once
 
-#include	"../../kernel/kernel.h"
-
-#include	<atomic>
-
 namespace nox::test::reflection
 {
 	/// @brief 代入演算子を持たない型。setter が黙って無視されることの確認用。

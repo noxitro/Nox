@@ -5,3 +5,8 @@
 ///	@brief		stdafx
 #pragma once
 
+#include	"kernel/kernel.h"
+#include	"reflection/reflection.h"
+#include	"core/core.h"
+#include	"app/app.h"
+

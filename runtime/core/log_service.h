@@ -4,8 +4,6 @@
 /// @file	log_service.h
 /// @brief	log_service
 #pragma once
-#include	<array>
-#include	<string_view>
 
 namespace nox
 {

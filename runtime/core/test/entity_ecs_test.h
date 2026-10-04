@@ -7,12 +7,6 @@
 ///          リフレクション生成コードが nox::GetEntitySystemTypes() / nox::GetEntityLogicTypes()
 ///          の表を書き出すため、「ヘッダに定義するだけ」が成立していることの実証を兼ねる。
 #pragma once
-#include	"../component_type.h"
-#include	"../entity_commands.h"
-#include	"../service_legacy.h"
-#include	"../entity_system_legacy.h"
-#include	"../entity_logic.h"
-#include	"../entity_logic_attribute.h"
 
 namespace nox::test::ecs
 {

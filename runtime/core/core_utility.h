@@ -4,8 +4,6 @@
 /// @file	core_utility.h
 /// @brief	core_utility
 #pragma once
-#include	<array>
-#include	<string_view>
 
 namespace nox::util
 {

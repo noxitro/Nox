@@ -4,7 +4,6 @@
 ///	@file	log_id.h
 ///	@brief	log_id
 #pragma once
-#include	<string_view>
 
 namespace nox::log_id
 {

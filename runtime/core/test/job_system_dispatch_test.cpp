@@ -13,10 +13,6 @@
 
 #include	"pch.h"
 
-#include	"../../kernel/kernel.h"
-
-#include	<atomic>
-
 namespace
 {
 	std::atomic<nox::uint32> g_executed_count{ 0u };

@@ -4,9 +4,7 @@
 ///	@file	object.h
 ///	@brief	object
 #pragma once
-#include	<span>
 #include	"object_definition.h"
-#include	"../kernel/kernel.h"
 
 namespace nox
 {

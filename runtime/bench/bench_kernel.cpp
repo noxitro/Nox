@@ -9,14 +9,6 @@
 #include	"pch.h"
 #include	"bench.h"
 
-#include	"kernel/kernel.h"
-
-#include	<array>
-#include	<functional>
-#include	<span>
-#include	<string_view>
-#include	<utility>
-
 namespace
 {
 	//	---------------------------------------------------------------------------------

@@ -39,18 +39,6 @@
 
 #include	"pch.h"
 
-#include	"../../kernel/kernel.h"
-#include	"../../reflection/reflection.h"
-
-#include	"../world.h"
-#include	"../updater_graph.h"
-#include	"../entity_system_legacy.h"
-
-#include	<cmath>
-#include	<cstdio>
-#include	<thread>
-#include	<vector>
-
 namespace nox::test::bench
 {
 	//	=================================================================================

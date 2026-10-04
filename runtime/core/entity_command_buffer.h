@@ -9,12 +9,6 @@
 ///          確保は一切走らない。コマンド列も、ComponentDataの初期値を運ぶペイロード領域も
 ///          テンプレート引数で決まる固定長の配列で、溢れたら記録が false を返すだけ。
 #pragma once
-#include <array>
-#include <atomic>
-#include <bit>
-#include <cstddef>
-#include <cstring>
-#include <thread>
 #include "entity.h"
 #include "component_type.h"
 

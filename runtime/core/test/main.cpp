@@ -11,9 +11,6 @@
 
 #include	"pch.h"
 
-#include	"../../kernel/kernel.h"
-#include	"../../reflection/reflection.h"
-
 int main(int argc, char** argv)
 {
 	::testing::InitGoogleTest(&argc, argv);

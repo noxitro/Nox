@@ -17,17 +17,6 @@
 #include	"pch.h"
 #include	"bench.h"
 
-#include	"core/world.h"
-#include	"core/entity_system_legacy.h"
-#include	"core/entity_query.h"
-#include	"core/entity_commands.h"
-#include	"core/updater_graph.h"
-
-#include	<array>
-#include	<span>
-#include	<utility>
-#include	<vector>
-
 namespace nox::bench::ecs
 {
 	struct BPosition : nox::IComponentData { nox::float32 x; nox::float32 y; nox::float32 z; };

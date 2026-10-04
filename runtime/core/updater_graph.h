@@ -14,8 +14,6 @@
 ///          レイヤー分けは構築時に一度だけ行い、実行時はノード配列を順に舐めるだけ。
 ///          stage 2b では「同一レイヤーのノード群」をそのままワーカーへ配ればよい。
 #pragma once
-#include	<array>
-#include	<span>
 #include	"entity_system_legacy.h"
 #include	"entity_logic.h"
 

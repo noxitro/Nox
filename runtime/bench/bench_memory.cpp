@@ -10,10 +10,6 @@
 #include	"pch.h"
 #include	"bench.h"
 
-#include	<array>
-#include	<cstddef>
-#include	<cstdlib>
-
 namespace
 {
 	/// @brief nox::memory::Allocate + Deallocate を size バイトで繰り返す

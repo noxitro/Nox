@@ -15,9 +15,6 @@
 ///          購読はリフレクション生成コードが行う。ヘッダにクラスを定義するだけで
 ///          nox::GetEntitySystemTypes() の表に載り、Worldが自動生成・自動実行する。
 #pragma once
-#include	<concepts>
-#include	<span>
-#include	<string_view>
 #include	"entity_query.h"
 #include	"system_phase_type.h"
 

@@ -4,7 +4,6 @@
 ///	@file	entry_point.h
 ///	@brief	entry_point
 #pragma once
-#include	<span>
 
 namespace nox
 {

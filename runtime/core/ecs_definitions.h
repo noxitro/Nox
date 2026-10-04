@@ -4,7 +4,6 @@
 ///	@file	ecs_definitions.h
 ///	@brief	ecs_definitions
 #pragma once
-#include	<concepts>
 
 /// @brief	ECS関係の型宣言に問題がないかコンパイル時チェックを行うマクロ（定義しなくても良い）
 ///			型定義の中で書くこと。

@@ -4,8 +4,6 @@
 /// @file	component_type.h
 /// @brief	ComponentDataの型情報とdense indexの割り当て。
 #pragma once
-#include	<array>
-#include	<string_view>
 #include	"component.h"
 
 namespace nox

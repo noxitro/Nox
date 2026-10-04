@@ -3,16 +3,6 @@
 
 #include	"pch.h"
 
-//	必須
-#include	"kernel/kernel.h"
-#include	"reflection/reflection.h"
-
-#include	"core/core.h"
-//	module
-
-//	app
-#include	"app/app.h"
-
 //	third party
 
 //  fmt ライブラリ (vcpkg)。探索パスは nox_common.props の NoxVcpkgLibDir
