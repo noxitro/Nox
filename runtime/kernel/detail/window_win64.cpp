@@ -26,7 +26,7 @@ namespace nox::detail
 	}
 }
 
-struct nox::detail::WindowDetail
+struct nox::Window::Detail
 {
 	static inline ::LRESULT CALLBACK CallbackWindow(const ::HWND hWnd, const ::UINT message, const ::WPARAM wParam, ::LPARAM lParam)
 	{
@@ -129,7 +129,7 @@ void	nox::Window::CreateNative(const void* args_ptr)
 	{
 		.cbSize = sizeof(::WNDCLASSEX),
 		.style = (CS_HREDRAW | CS_VREDRAW),
-		.lpfnWndProc = nox::detail::WindowDetail::CallbackWindow,
+		.lpfnWndProc = nox::Window::Detail::CallbackWindow,
 		.hInstance = self.instance_handle_,
 		.hIcon = ::LoadIconW(self.instance_handle_, MAKEINTRESOURCEW(100)),
 		.hCursor = nullptr,

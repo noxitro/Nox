@@ -27,11 +27,6 @@ namespace nox
 	using InstanceHandle = void*;
 #endif // NOX_WINDOWS
 
-	namespace detail
-	{
-		struct WindowDetail;
-	}
-
 	enum class WindowStyle : nox::uint8
 	{
 		/// @brief 通常ウィンドウ
@@ -87,7 +82,7 @@ namespace nox
 	/// @brief ウィンドウ
 	class Window
 	{
-		friend struct nox::detail::WindowDetail;
+		struct Detail;
 	public:
 		static constexpr nox::uint16 k_max_title_length = 256;
 

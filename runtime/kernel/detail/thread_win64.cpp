@@ -30,7 +30,7 @@ namespace nox::detail
 	}
 }
 
-struct nox::detail::ThreadDetail
+struct nox::Thread::Detail
 {
 	/// @brief スレッドに登録するコールバック関数
 	/// @param argPtr ThreadHandleWin64のアドレス 
@@ -51,7 +51,7 @@ void	nox::Thread::Dispatch( std::move_only_function<void()> func)
 	native_thread_handle_ = reinterpret_cast<::HANDLE>(::_beginthreadex(
 		nullptr,	//	
 		stack_size_,	//	0の場合、標準のスタックサイズを使用する
-		&nox::detail::ThreadDetail::ThreadProc,	//	thread関数
+		&nox::Thread::Detail::ThreadProc,	//	thread関数
 		this,		//	thread関数への引数
 		0,			//	作成オプション
 		&native_thread_id_

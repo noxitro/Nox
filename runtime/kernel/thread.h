@@ -72,16 +72,11 @@ namespace nox
 		_Max
 	};
 
-	namespace detail
-	{
-		/// @brief 内部実装へのfriend宣言
-		struct ThreadDetail;
-	}
-
 	/// @brief スレッド
 	class Thread
 	{
-		friend nox::detail::ThreadDetail;
+		/// @brief 内部実装
+		struct Detail;
 	public:
 		inline Thread()noexcept :
 			thread_id_(-1),
