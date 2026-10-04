@@ -86,5 +86,19 @@
       <AdditionalOptions>-Werror=return-type -Werror=uninitialized -Werror=null-dereference -Werror=reorder-ctor -Werror=switch -Werror=unused-result -Werror=void-pointer-to-int-cast %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
   </ItemDefinitionGroup>
+  <!--
+    ClangCL の Release / Master でリンク時最適化 (ThinLTO) を効かせる。
+    MSVC は nox_release.props / nox_master.props の WholeProgramOptimization (/GL + /LTCG) で
+    別の .cpp にある関数もリンク時にインライン展開する。clang-cl にはこれが効かず、
+    nox::Mutex::Lock のように .cpp に置いた小さな関数が ClangCL だけ毎回の関数呼び出しになっていた
+    (lock/srw_uncontended が ClangCL だけ約 0.5ns 遅い)。
+    -flto=thin で LLVM ビットコードを出し、lld-link がリンク時に最適化する。
+    静的ライブラリは llvm-lib で固めるので、ビットコードのままリンクまで運ばれる。
+  -->
+  <ItemDefinitionGroup Condition="'$(PlatformToolset)'=='ClangCL' and '$(Configuration)' != 'Debug'">
+    <ClCompile>
+      <AdditionalOptions>-flto=thin %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup />
 </Project>
