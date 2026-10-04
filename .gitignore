@@ -155,6 +155,8 @@
 # ReflectionGenerator の実行時生成物
 /runtime/bin/ReflectionGenerator.deps.json
 /runtime/bin/ReflectionGenerator.runtimeconfig.json
+# startup.ps1 が生成器を配置し終えた印 (reflection_generated のビルドが鮮度検査に使う)
+/runtime/bin/startup.stamp
 # モジュール配下のテストプロジェクトを単体ビルドしたときの出力
 /runtime/*/test/build/
 # ベンチマーク (runtime/bench) を単体ビルドしたときの出力

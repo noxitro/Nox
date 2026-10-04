@@ -6,7 +6,7 @@
 
 - `OutDir` は `$(SolutionDir)build\` なのでワークツリーごとに独立する。
 - vcpkg は環境変数 `NOX_VCPKG_INSTALLED_DIR` でメインのチェックアウトのものを共有できる。
-- 生成器のバイナリ (`runtime/bin/`) は `.gitignore` 済みなのでコピーが要る。同ディレクトリには追跡ファイルも混ざっているので、コピー後に `git status` で巻き添えがないか確かめる。
+- 生成器のバイナリ (`runtime/bin/`) は `.gitignore` 済みでワークツリーには無いので、ワークツリーで `startup.ps1` を実行して建てる。メインのチェックアウトからコピーすると、ワークツリー側のソースのほうが新しい扱いになり、ビルド時の鮮度検査 (`NoxCheckCodeGenerator`) で止まる。
 
 ## マシン固有の設定
 

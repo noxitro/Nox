@@ -101,34 +101,14 @@ runs:
     #     GetEntityLogicTypes() が未定義のままリンクエラーになる
     #     (Exec は Exists 条件付きなので警告止まりで、原因が見えにくい)
     #
-    # 順序が重要: ReflectionGenerator.csproj は ..\..\CustomTask.dll を
-    # HintPath で参照しているので、CustomTask を先に建てて配置する。
-    #
-    # 配置は「出力ディレクトリを丸ごとコピー」する。README には exe/dll/pdb
-    # だけと書いてあるが、dotnet build の出力は単一ファイルではなく、
-    # ClangSharp / MessagePack / Microsoft.Build と runtimes\win-x64 の
-    # libclang ネイティブが揃って初めて動く。
+    # 手順は手元と同じ startup.ps1 (リポジトリ直下) に一本化してある。
+    # ビルドの順序・配置するファイル・配置後の確認はそちらのコメントを参照。
+    # startup.ps1 は配置を終えた印 (runtime/bin/startup.stamp) も書き、
+    # reflection_generated のビルドはそれを生成器の鮮度検査に使う。
     # -------------------------------------------------------
     - name: Build and deploy the C# reflection code generator
       shell: pwsh
       run: |
-        $ErrorActionPreference = 'Stop'
-        $src = 'runtime/bin/source'
-
-        # 1. CustomTask (MSBuild カスタムタスク兼、前処理データの読み書き)
-        dotnet build "$src/CustomTask/CustomTask.csproj" -c Debug -v minimal
-        if ($LASTEXITCODE -ne 0) { throw "CustomTask のビルドに失敗 (exit $LASTEXITCODE)" }
-        Copy-Item -Force "$src/CustomTask/bin/Debug/netstandard2.0/CustomTask.dll" 'runtime/bin/'
-
-        # 2. ReflectionGenerator (+ ProjectReference の RuntimeTypeDB)
-        dotnet build "$src/ReflectionGenerator/ReflectionGenerator.csproj" -c Debug -v minimal
-        if ($LASTEXITCODE -ne 0) { throw "ReflectionGenerator のビルドに失敗 (exit $LASTEXITCODE)" }
-        Copy-Item -Force -Recurse "$src/ReflectionGenerator/bin/Debug/net10.0/*" 'runtime/bin/'
-
-        # 期待どおり置けたか確認する。ここで落としておかないと、
-        # 後段で「よく分からないリンクエラー」に化けて原因が追いにくい
-        foreach ($f in 'CustomTask.dll', 'ReflectionGenerator.exe', 'ReflectionGenerator.dll') {
-          if (-not (Test-Path "runtime/bin/$f")) { throw "runtime/bin/$f が配置されていない" }
-        }
+        ./startup.ps1
         Write-Host '--- runtime/bin ---'
         Get-ChildItem 'runtime/bin' -Name
