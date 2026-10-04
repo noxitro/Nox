@@ -4,6 +4,7 @@
 /// @file	entity_system.h
 /// @brief	System
 #pragma once
+#include	"component.h"
 #include	"ecs_definitions.h"
 #include	"entity.h"
 
