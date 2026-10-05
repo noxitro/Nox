@@ -38,7 +38,8 @@ void nox::test::TestEntityCommandBuffer()
 				for (nox::uint32 command_index = 0u; command_index < commands_per_producer; ++command_index)
 				{
 					const nox::Entity concurrent_entity{
-						(static_cast<nox::uint64>(producer_index) << 32u) | command_index
+						.generation = command_index,
+						.index = producer_index,
 					};
 					if (concurrent_commands.TryDestroy(concurrent_entity))
 					{

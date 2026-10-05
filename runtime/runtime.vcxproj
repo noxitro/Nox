@@ -97,6 +97,15 @@
     </PreBuildEvent>
     <ClCompile />
   </ItemDefinitionGroup>
+  <!-- kernel.lib の memory/new_delete.obj (グローバル operator new / delete の差し替え) を、
+       CRT (MSVCRT.lib) より先に必ず引き込む。静的ライブラリの obj は未解決の参照があるときだけ
+       取り込まれるので、LTCG で参照の現れる順が変わると CRT の operator delete が先に採用され、
+       後から new_delete.obj が引かれて LNK2005 になる。 -->
+  <ItemDefinitionGroup>
+    <Link>
+      <ForceSymbolReferences>??3@YAXPEAX@Z;%(ForceSymbolReferences)</ForceSymbolReferences>
+    </Link>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
       <SubType>
