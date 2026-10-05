@@ -2,7 +2,7 @@
 
 runtime の C++ ビルドで、どのヘッダ・テンプレート・関数に時間がかかっているかを計測してレポートにする。
 
-- CI では push ごとに、MSVC の Debug / Release / Master のビルドを計測している。テンプレートの展開は負荷が大きいので Debug でだけ記録する (`.github/workflows/ci.yml` の `Start Build Insights` から `Upload Build Insights data` まで、と `build-insights` ジョブ)。計測のためにビルドを増やしてはいない。
+- CI では push ごとに、MSVC の Debug / Release / Master のビルドを計測している。テンプレートの展開は負荷が大きいので master (と手動実行) の Debug でだけ記録し、作業ブランチではヘッダと関数の集計だけにする (`.github/workflows/ci.yml` の `Start Build Insights` から `Upload Build Insights data` まで、と `build-insights` ジョブ)。計測のためにビルドを増やしてはいない。
 - レポートは 1 ファイルの HTML。CI の実行ページの Artifacts にある `build-insights-report.html` を落として開く。master の最新は GitHub Pages の `/build-insights/` でも見られる。
 - 実行ページの Summary には、構成ごとの重いヘッダ・テンプレート・関数の上位と、前回の master との比較が出る。
 

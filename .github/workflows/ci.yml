@@ -298,6 +298,7 @@ jobs:
 
       # path は下の「Save runtime cache」と文字列として一致させること (cache の version に入る)
       - name: Restore runtime cache (reuse)
+        id: restore
         if: env.NOX_REUSE == 'true' && matrix.configuration != 'Master'
         uses: actions/cache/restore@v6
         with:
@@ -319,8 +320,13 @@ jobs:
       # ETW を使うので管理者権限が要る。GitHub ホストのランナーは管理者で動くが、
       # 管理者でないセルフホストでは開始に失敗し、計測なしでビルドだけが走る。
       #
-      # テンプレートの展開は Debug だけで記録する。イベントの大半を占め (Debug の ETL は
-      # 600 MB 前後)、どのテンプレートを展開するかは構成でほぼ変わらないので 1 構成で足りる。
+      # テンプレートの展開は master (と手動実行) の Debug だけで記録する。イベントの大半を
+      # 占め (Debug の ETL は 600 MB 前後)、どのテンプレートを展開するかは構成でほぼ変わらないので
+      # 1 構成で足りる。作業ブランチでは記録しない。比較元は master の計測しか使わないうえ、
+      # 記録と集計の分だけ MSVC/Debug のジョブが延びて run 全体の律速になっていたため
+      # (緑だった run で runtime.slnx のビルドが MSVC/Debug 6.4 分、ClangCL/Debug 3.3 分。
+      # Release / Master では MSVC と ClangCL の差が 1 分未満)。
+      # テンプレート以外の計測 (ヘッダ・関数) は作業ブランチでも続け、レポートは出す。
       # 計測によるビルドの延びは、共有ランナーの揺れに埋もれて測れていない。導入時の
       # 2 回の実行では MSVC のビルドが master より 30〜45% 長かったが、計測していない
       # ClangCL も同じ実行で 0〜70% 長かった。延びが続くようなら計測の有無で比べ直す。
@@ -339,13 +345,15 @@ jobs:
         if: env.NOX_REUSE != 'true' && matrix.compiler == 'MSVC'
         env:
           CONFIG: ${{ matrix.configuration }}
+          # テンプレートの展開を記録するか (上のコメントを参照)
+          TEMPLATES: ${{ matrix.configuration == 'Debug' && (github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch') }}
         run: |
           $ok = $false
           try {
             $exe = 'tools\build-insights\out\nox_build_insights.exe'
             if (-not (Test-Path $exe)) { & tools\build-insights\build.ps1 }
             $biArgs = @('start', 'NoxCI')
-            if ($env:CONFIG -ne 'Debug') { $biArgs += '--no-templates' }
+            if ($env:TEMPLATES -ne 'true') { $biArgs += '--no-templates' }
             & $exe @biArgs
             if ($LASTEXITCODE -eq 0) { $ok = $true }
             else { Write-Host "::warning::Build Insights の計測を開始できなかった (exit $LASTEXITCODE)。計測なしでビルドする" }
@@ -353,6 +361,7 @@ jobs:
             Write-Host "::warning::Build Insights の準備に失敗した: $_ 。計測なしでビルドする"
           }
           "ok=$($ok.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "templates=$env:TEMPLATES" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           "started=$([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           # 計測の失敗でステップを落とさない (pwsh は最後の $LASTEXITCODE をステップの結果にする)
           exit 0
@@ -383,6 +392,7 @@ jobs:
         env:
           CONFIG: ${{ matrix.configuration }}
           STARTED: ${{ steps.bi-start.outputs.started }}
+          TEMPLATES: ${{ steps.bi-start.outputs.templates }}
           KEEP_RAW: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           $exe = 'tools\build-insights\out\nox_build_insights.exe'
@@ -412,7 +422,7 @@ jobs:
                 ref             = $env:GITHUB_REF_NAME
                 subject         = (git log -1 --format=%s)
                 workspace       = $env:GITHUB_WORKSPACE
-                templates       = ($env:CONFIG -eq 'Debug')
+                templates       = ($env:TEMPLATES -eq 'true')
                 build_seconds   = $buildSeconds
                 etl_mb          = $etlMb
                 analyze_seconds = $analyzeSeconds
@@ -620,8 +630,10 @@ jobs:
       # フィルタの書き間違いでスイートが丸ごと消えても緑になり、
       # 「通った」と誤読される。件数を数えるのが唯一の証明。
       # 実測は kernel_test 21 + core_test 81 = 102 件。その 9 割を下限に置く。
+      # テストが走った (成功でも失敗でも) ときだけ数える。走っていないとき (再利用した run、
+      # Master、ビルドが落ちた後) に走らせても「XML が無い」で落ちるだけで、失敗ステップが増える。
       - name: 実行件数を確かめる
-        if: always() && env.NOX_REUSE != 'true' && matrix.configuration != 'Master'
+        if: always() && steps.gtest.outcome != 'skipped'
         shell: pwsh
         run: |
           python .github/scripts/check-test-results.py test-results --min 91 --label GoogleTest
@@ -790,8 +802,14 @@ jobs:
       # GitHub ホストの windows ランナーは対話デスクトップを持つので FlaUI が動く。
       # セルフホストへ回す場合はサービスではなく対話セッションで動かすこと。
       # ---------------------------------------------------------
+      # ここから下 (TypeDB の確認・Editor のビルド・FlaUI) は runtime.exe と TypeDB が要るので、
+      # runtime のビルド (再利用した run ではキャッシュの復元) が通ったときだけ走らせる。
+      # GoogleTest が落ちていても runtime はあるので走らせる (従来どおり)。
+      # ビルドが落ちた後に走らせると、Editor が TypeDB を読めずに起動直後に終了し、FlaUI が
+      # 1 テストにつき 60 秒待ってから全部落ちる (8 テストで 8 分)。失敗ステップが 4 つ並んで
+      # 原因も読みにくくなる。C# のビルド自体は editor ジョブが別に確かめている。
       - name: Verify RuntimeTypeDB exists
-        if: always() && matrix.configuration != 'Master'
+        if: always() && matrix.configuration != 'Master' && (steps.build.outcome == 'success' || steps.restore.outcome == 'success')
         run: |
           $bin = 'runtime/reflection_generated/gen/RuntimeTypeDB.x64.${{ matrix.configuration }}.bin'
           if (-not (Test-Path $bin)) { throw "TypeDB が無い: $bin (runtime.slnx の ${{ matrix.configuration }} ビルドで生成されるはず)" }
@@ -801,13 +819,13 @@ jobs:
       # リポジトリルートからの相対で探す (EditorApp.ResolveBuildConfiguration が
       # テスト自身の出力ディレクトリから構成名を導く) ので、同じ構成で建てる。
       - name: Build Editor/Studio.slnx
-        if: always() && matrix.configuration != 'Master'
+        if: always() && matrix.configuration != 'Master' && (steps.build.outcome == 'success' || steps.restore.outcome == 'success')
         run: |
           dotnet build Editor/Studio.slnx -c ${{ matrix.configuration }} --no-incremental -v minimal
           if ($LASTEXITCODE -ne 0) { throw "Editor のビルドに失敗 (exit $LASTEXITCODE)" }
 
       - name: Run FlaUI tests
-        if: always() && matrix.configuration != 'Master'
+        if: always() && matrix.configuration != 'Master' && (steps.build.outcome == 'success' || steps.restore.outcome == 'success')
         id: flaui
         env:
           NOX_RUNTIME_TYPEDB_DIR: ${{ github.workspace }}/runtime/reflection_generated/gen
@@ -876,7 +894,7 @@ jobs:
           }
 
       - name: Write test summary
-        if: always() && env.NOX_REUSE != 'true' && matrix.configuration != 'Master'
+        if: always() && steps.gtest.outcome != 'skipped'
         run: |
           $ok = '${{ steps.gtest.outcome }}' -eq 'success'
           $icon = if ($ok) { ':white_check_mark:' } else { ':x:' }
@@ -921,9 +939,10 @@ jobs:
 
           $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
 
-      # trx を読んで件数を要約する。0 件の緑は緑ではないので、実行数も見る
+      # trx を読んで件数を要約する。0 件の緑は緑ではないので、実行数も見る。
+      # FlaUI を走らせなかったとき (Master、runtime のビルドが落ちた後) は何も書かない
       - name: Write FlaUI summary
-        if: always() && matrix.configuration != 'Master'
+        if: always() && steps.flaui.outcome != 'skipped'
         run: |
           $ok = '${{ steps.flaui.outcome }}' -eq 'success'
           $icon = if ($ok) { ':white_check_mark:' } else { ':x:' }
@@ -948,7 +967,7 @@ jobs:
       # としか残らない。理由は Windows のイベントログ (.NET Runtime の未処理例外、
       # Application Error) にあるので、直近分を拾って summary とアーティファクトに残す。
       - name: Collect Editor crash diagnostics
-        if: always() && matrix.configuration != 'Master'
+        if: always() && steps.flaui.outcome != 'skipped'
         run: |
           $since = (Get-Date).AddMinutes(-30)
           $events = Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $since } -ErrorAction SilentlyContinue |
@@ -976,7 +995,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload test results
-        if: always() && env.NOX_REUSE != 'true' && matrix.configuration != 'Master'
+        if: always() && steps.gtest.outcome != 'skipped'
         uses: actions/upload-artifact@v7
         with:
           name: gtest-results-${{ matrix.compiler }}-${{ matrix.configuration }}
@@ -986,7 +1005,7 @@ jobs:
       # trx は実行ユーザー名と絶対パスを含むので、リポジトリには入れず
       # アーティファクトにだけ残す (.gitignore でも除外している)
       - name: Upload FlaUI results
-        if: always() && matrix.configuration != 'Master'
+        if: always() && steps.flaui.outcome != 'skipped'
         uses: actions/upload-artifact@v7
         with:
           name: flaui-results-${{ matrix.compiler }}-${{ matrix.configuration }}
