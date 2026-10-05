@@ -35,19 +35,22 @@ namespace nox
 
 			}
 
-			bool Insert(const nox::uint16 component_id)noexcept
+			bool Insert([[maybe_unused]] const nox::uint16 component_id)noexcept
 			{
-
+				//	TODO: 未実装
+				return false;
 			}
 
-			bool Insert(const std::span<const nox::uint16> component_id_list)noexcept
+			bool Insert([[maybe_unused]] const std::span<const nox::uint16> component_id_list)noexcept
 			{
-
+				//	TODO: 未実装
+				return false;
 			}
 
-			bool Contains(const nox::uint16 component_id)const noexcept
+			bool Contains([[maybe_unused]] const nox::uint16 component_id)const noexcept
 			{
-
+				//	TODO: 未実装
+				return false;
 			}
 
 		private:
@@ -99,9 +102,10 @@ struct nox::World::Detail
 {
 	Detail()noexcept = delete;
 
-	static inline nox::World::Archetype* AllocArchetype(std::size_t size)
+	static inline nox::World::Archetype* AllocArchetype([[maybe_unused]] std::size_t size)
 	{
-
+		//	TODO: 未実装
+		return nullptr;
 	}
 };
 

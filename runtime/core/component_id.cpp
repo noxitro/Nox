@@ -26,7 +26,7 @@ namespace nox::detail
 
 void nox::World::GlobalInitialize()
 {
-	std::construct_at(reinterpret_cast<std::remove_pointer_t<decltype(nox::detail::cache_)>*>(nox::detail::cache_storage.data()));
+	nox::detail::cache_ = std::construct_at(reinterpret_cast<std::remove_pointer_t<decltype(nox::detail::cache_)>*>(nox::detail::cache_storage.data()));
 }
 
 void nox::World::GlobalTerminate()
