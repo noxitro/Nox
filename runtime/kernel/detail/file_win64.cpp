@@ -280,4 +280,88 @@ std::size_t nox::io::File::GetSize()const
 	return static_cast<std::size_t>(file_size.QuadPart);
 }
 
+nox::io::ReadOnlyMappedFile::~ReadOnlyMappedFile() noexcept
+{
+	Close();
+}
+
+bool nox::io::ReadOnlyMappedFile::Open(std::u8string_view path)
+{
+	Close();
+
+	std::array<wchar_t, nox::k_max_path_length> native_path_buffer{};
+	std::wstring_view native_path;
+	if (nox::io::TryConvertPath(path, native_path_buffer, native_path) == false)
+	{
+		return false;
+	}
+
+	::HANDLE const file_handle = ::CreateFileW(
+		native_path_buffer.data(),
+		GENERIC_READ,
+		FILE_SHARE_READ,
+		nullptr,
+		OPEN_EXISTING,
+		FILE_ATTRIBUTE_NORMAL,
+		nullptr);
+	if (file_handle == INVALID_HANDLE_VALUE)
+	{
+		return false;
+	}
+
+	::LARGE_INTEGER file_size{};
+	if (::GetFileSizeEx(file_handle, &file_size) == FALSE || file_size.QuadPart <= 0)
+	{
+		//	サイズ0（破損扱い）や取得失敗はマップできない
+		::CloseHandle(file_handle);
+		return false;
+	}
+
+	::HANDLE const mapping_handle = ::CreateFileMappingW(
+		file_handle,
+		nullptr,
+		PAGE_READONLY,
+		0,
+		0,
+		nullptr);
+	if (mapping_handle == nullptr)
+	{
+		::CloseHandle(file_handle);
+		return false;
+	}
+
+	void* const view = ::MapViewOfFile(mapping_handle, FILE_MAP_READ, 0, 0, 0);
+	if (view == nullptr)
+	{
+		::CloseHandle(mapping_handle);
+		::CloseHandle(file_handle);
+		return false;
+	}
+
+	file_handle_ = file_handle;
+	mapping_handle_ = mapping_handle;
+	data_ = static_cast<const std::byte*>(view);
+	size_ = static_cast<std::size_t>(file_size.QuadPart);
+	return true;
+}
+
+void nox::io::ReadOnlyMappedFile::Close() noexcept
+{
+	if (data_ != nullptr)
+	{
+		::UnmapViewOfFile(data_);
+		data_ = nullptr;
+	}
+	if (mapping_handle_ != nullptr)
+	{
+		::CloseHandle(static_cast<::HANDLE>(mapping_handle_));
+		mapping_handle_ = nullptr;
+	}
+	if (file_handle_ != nullptr)
+	{
+		::CloseHandle(static_cast<::HANDLE>(file_handle_));
+		file_handle_ = nullptr;
+	}
+	size_ = 0;
+}
 #endif
