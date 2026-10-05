@@ -4,6 +4,7 @@
 /// @file	delegate_handler.h
 /// @brief	delegate_handler
 #pragma once
+#include	<functional>
 #include	"advanced_type.h"
 //#include	"os/mutex.h"
 #include	"read_write_lock.h"

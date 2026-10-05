@@ -15,7 +15,7 @@ namespace nox::memory
 	/// @brief  STLアロケータアダプタ
 	/// @tparam T 確保する型
 	template<class T>
-	class StlAllocateAdapter
+	class StlAllocateAdapter final
 	{
 	public:
 		/// @brief 確保する型
@@ -25,7 +25,7 @@ namespace nox::memory
 		// デフォルトコンストラクタ、コピーコンストラクタ、ムーブコンストラクタ
 		inline	constexpr StlAllocateAdapter()noexcept {}
 		inline	constexpr StlAllocateAdapter(const StlAllocateAdapter&)noexcept {}
-		inline	constexpr StlAllocateAdapter(const StlAllocateAdapter&& )noexcept {}
+		inline	constexpr StlAllocateAdapter(StlAllocateAdapter&&)noexcept {}
 		inline ~StlAllocateAdapter()noexcept = default;
 
 		// 別のテンプレート実引数から生成するためのコンストラクタ
@@ -33,7 +33,7 @@ namespace nox::memory
 		inline	constexpr explicit StlAllocateAdapter(const StlAllocateAdapter<U>&)noexcept {}
 		
 		template <typename U>
-		inline	constexpr explicit StlAllocateAdapter(const StlAllocateAdapter<U>&&)noexcept {}
+		inline	constexpr explicit StlAllocateAdapter(StlAllocateAdapter<U>&&)noexcept {}
 
 		/**
 		 * @brief メモリ領域を確保

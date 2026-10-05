@@ -26,7 +26,7 @@ namespace nox::detail
 	}
 }
 
-struct nox::Window::Detail
+struct nox::Window::Detail final
 {
 	Detail()noexcept = delete;
 	static inline ::LRESULT CALLBACK CallbackWindow(const ::HWND hWnd, const ::UINT message, const ::WPARAM wParam, ::LPARAM lParam)

@@ -7,26 +7,7 @@
 #include	"../mutex.h"
 #include	"../win64_api.h"
 
-namespace nox
+struct nox::Mutex::Detail final
 {
-//	class Mutex;
-}
-
-struct nox::detail::MutexDetail final
-{
-	static inline ::PSRWLOCK GetNativeLock(const nox::Mutex& mutex) noexcept
-	{
-		static_assert(sizeof(mutex.lock_) == sizeof(::SRWLOCK), "Mutex size mismatch.");
-		//	lock_ 自体が ::SRWLOCK の実体 (ポインタ 1 個分) なので、そのアドレスを渡す
-		return reinterpret_cast<::PSRWLOCK>(const_cast<void**>(&mutex.lock_));
-	}
+	static ::PSRWLOCK GetNativeLock(nox::Mutex& mutex) noexcept;
 };
-
-namespace nox::detail
-{
-	inline ::PSRWLOCK GetNativeLock(const nox::Mutex& mutex) noexcept
-	{
-		return nox::detail::MutexDetail::GetNativeLock(mutex);
-	}
-}
-	

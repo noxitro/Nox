@@ -66,6 +66,10 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="io\readonly_mapped_file.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="list.h">
       <SubType>
       </SubType>
@@ -297,10 +301,6 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="detail\file_win64.h" />
-    <ClInclude Include="detail\read_write_lock_interface.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
     <ClInclude Include="detail\read_write_lock_win64.h">
       <SubType>
       </SubType>
@@ -475,6 +475,10 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="iostream.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="io\readonly_mapped_file.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -703,10 +707,6 @@
     </ClCompile>
     <ClCompile Include="detail\file_win64.cpp" />
     <ClCompile Include="detail\mutex_win64.cpp" />
-    <ClCompile Include="detail\read_write_lock_interface.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
     <ClCompile Include="detail\read_write_lock_win64.cpp">
       <SubType>
       </SubType>

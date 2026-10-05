@@ -13,6 +13,7 @@ namespace nox
 	{
 		/// @brief 空のArchetypeのID。Componentが1つもないEntityが所属する。
 		inline constexpr nox::uint32 kEmptyArchetypeId = 0;
+		inline constexpr nox::uint16 kArchetypeComponentMaxCount = 255;
 
 		class ComponentTypeSet final
 		{
@@ -60,39 +61,38 @@ namespace nox
 
 class nox::World::Archetype final
 {
-	static constexpr nox::uint16 kInvalidArchetypeId = std::numeric_limits<nox::uint16>::max();
 	struct Chunk final
 	{
 
 	};
 
+	struct Edge final
+	{
+		nox::uint32 archetype_id : kArchetypeIdBitWidth;
+		bool is_add_edge : 1u;
+	};
+
 public:
-	Archetype()noexcept:
-		component_id_list_(nullptr),
-		component_count_(0u),
+	explicit Archetype(const std::span<const nox::uint16> component_id_list)noexcept:
 		archetype_id_(kInvalidArchetypeId),
-		edge_archetype_id_list_(nullptr),
-		edge_archetype_count_(0u)
+		component_id_list_(component_id_list.begin(), component_id_list.end())
 	{
 
 	}
 
 	inline constexpr std::span<const nox::uint16> GetComponentIdList()const noexcept
 	{
-		return std::span<const nox::uint16>(component_id_list_, component_count_);
+		return component_id_list_;
 	}
 
 private:
-	const nox::uint16* component_id_list_;
-	nox::uint8 component_count_;
-
-	nox::uint32 archetype_id_;
+	nox::uint32 archetype_id_ : kArchetypeIdBitWidth;
+	const nox::Vector<nox::uint16> component_id_list_;
 
 	/// @brief このArchetypeに接続しているArchetypeのIDリスト
-	const nox::uint32* edge_archetype_id_list_;
-	/// @brief edge_archetype_id_list_の要素数
-	nox::uint8 edge_archetype_count_;
+	nox::Vector<typename nox::World::Archetype::Edge> edges_;
 
+	nox::Vector<nox::Entity> entities_;
 };
 
 struct nox::World::Detail
@@ -105,16 +105,18 @@ struct nox::World::Detail
 	}
 };
 
-nox::World::World()
+nox::World::World():
+	empty_archetype_buffer_{ std::byte{} }
 {
 	static_assert(sizeof(nox::World::Archetype) <= sizeof(decltype(empty_archetype_buffer_)), "空のArchetypeのバッファが小さすぎます");
 
-
+	nox::World::Archetype*const empty_archetype = std::construct_at(reinterpret_cast<nox::World::Archetype*>(empty_archetype_buffer_.data()), std::span<const nox::uint16>{});
+	archetypes_.emplace_back(empty_archetype);
 }
 
 nox::World::~World()
 {
-
+	std::destroy_at(reinterpret_cast<nox::World::Archetype*>(empty_archetype_buffer_.data()));
 }
 
 nox::Entity nox::World::CreateEntity()
@@ -161,6 +163,6 @@ void* nox::World::AddComponent(const nox::Entity entity, const nox::reflection::
 	}
 
 	nox::World::EntityRecord& record = entity_records_.at(entity.index);
-
+	
 	return nullptr;
 }

@@ -171,12 +171,6 @@
     <ClInclude Include="dev\debug_draw.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="builtin_entities.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="entities.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="entity_command_buffer_legacy.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -396,12 +390,6 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="dev\debug_draw.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="builtin_entities.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="entities.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="service.cpp">

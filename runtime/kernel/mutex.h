@@ -7,14 +7,10 @@
 
 namespace nox
 {
-	namespace detail
-	{
-		struct MutexDetail;
-	}
-
 	class Mutex final 
 	{
-		friend struct nox::detail::MutexDetail;
+	public:
+		struct Detail;
 	public:
 		inline constexpr Mutex()noexcept :
 			lock_(nullptr) {

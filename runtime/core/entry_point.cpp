@@ -7,6 +7,7 @@
 #include	"entry_point.h"
 
 //#include	"application.h"
+#include	"world.h"
 #include	"world_legacy.h"
 #include	"log_id.h"
 #include	"log_service.h"
@@ -30,8 +31,16 @@ nox::int32 nox::EntryPoint(const std::span<const nox::char16* const> args)
 	nox::os::Initialize(args);
 
 	{
-		nox::legacy::World world;
-		world.Run();
+		nox::World::GlobalInitialize();
+
+		nox::World world;
+
+		nox::World::GlobalTerminate();
+	}
+
+	{
+	//	nox::legacy::World world;
+	//	world.Run();
 	}
 
 	nox::os::Finalize();

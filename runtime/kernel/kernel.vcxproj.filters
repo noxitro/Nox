@@ -315,9 +315,6 @@
     <ClInclude Include="read_write_lock.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="detail\read_write_lock_interface.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="ring_buffer.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -460,6 +457,9 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="iostream.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="io\readonly_mapped_file.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
@@ -758,9 +758,6 @@
     <ClCompile Include="read_write_lock.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="detail\read_write_lock_interface.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="ring_buffer.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -903,6 +900,9 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="iostream.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="io\readonly_mapped_file.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

@@ -47,10 +47,6 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="builtin_entities.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
     <ClInclude Include="common_components.h">
       <SubType>
       </SubType>
@@ -151,10 +147,6 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="ecs_definitions.h">
-      <SubType>
-      </SubType>
-    </ClInclude>
-    <ClInclude Include="entities.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -324,10 +316,6 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="builtin_entities.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
     <ClCompile Include="common_components.cpp">
       <SubType>
       </SubType>
@@ -422,10 +410,6 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="ecs_definitions.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
-    <ClCompile Include="entities.cpp">
       <SubType>
       </SubType>
     </ClCompile>

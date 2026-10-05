@@ -7,15 +7,14 @@
 #include	"../condition_variable.h"
 
 #include	"mutex_win64.h"
-//#include	"../win64_api.h"
 
-void nox::ConditionVariable::Wait(const nox::Mutex& mutex) noexcept
+void nox::ConditionVariable::Wait(nox::Mutex& mutex) noexcept
 {
 	static_assert(sizeof(nox::ConditionVariable::native_) == sizeof(::CONDITION_VARIABLE), "ConditionVariable size mismatch.");
 
 	::SleepConditionVariableSRW(
 		reinterpret_cast<::PCONDITION_VARIABLE>(&native_), 
-		nox::detail::GetNativeLock(mutex),
+		nox::Mutex::Detail::GetNativeLock(mutex),
 		INFINITE,
 		0
 	);

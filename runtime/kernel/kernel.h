@@ -129,6 +129,8 @@
 //	end STL コンテナ
 
 //	io
+#include	"io/file.h"
+#include	"io/readonly_mapped_file.h"
 #include	"io/binary_reader.h"
 #include	"io/stream_reader.h"
 //	end io
