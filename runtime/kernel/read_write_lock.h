@@ -4,65 +4,42 @@
 ///	@file	read_write_lock.h
 ///	@brief	read_write_lock
 #pragma once
-#include	<type_traits>
-#include	<concepts>
 #include	"basic_type.h"
-#include	"utility.h"
-#include	"atomic.h"
-
-#if NOX_WIN64
-#include	"detail/read_write_lock_win64.h"
-#else
-static_assert(false);
-#endif // NOX_WIN64
 
 namespace nox
 { 
-	namespace detail
+	class ReadWriteLock final
 	{
-		template<class T>
-		class ReadWriteLockImpl
+	public:
+		inline constexpr ReadWriteLock()noexcept:
+			lock_(nullptr),
+			read_count_(0)
 		{
-		public:
-			inline constexpr ReadWriteLockImpl()noexcept:
-				read_count_(0)
-			{
 
-			}
+		}
 
-			inline void EnterReadLock()noexcept(noexcept(lock_.LockShared()))
-			{
-				nox::atomic::Increment(read_count_);
-				lock_.LockShared();
-			}
-
-			inline void ExitReadLock()noexcept(noexcept(lock_.UnlockShared()))
-			{
-				nox::atomic::Decrement(read_count_);
-				lock_.UnlockShared();
-			}
-
-			inline void EnterWriteLock()noexcept(noexcept(lock_.LockExclusive()))
-			{
-				lock_.LockExclusive();
-			}
-
-			inline void ExitWriteLock()noexcept(noexcept(lock_.UnlockExclusive()))
-			{
-				lock_.UnlockExclusive();
-			}
-		private:
-			T lock_;
-			nox::uint32 read_count_;
-		};
-	}
-
-	using ReadWriteLock = nox::detail::ReadWriteLockImpl<nox::detail::ReadWriteLockWin64>;
+		void EnterReadLock()noexcept;
+		void ExitReadLock()noexcept;
+		void EnterWriteLock()noexcept;
+		void ExitWriteLock()noexcept;
+	private:
+		//	各APIで実装する
+		void LockExclusive()noexcept;
+		void UnlockExclusive() noexcept;
+		bool TryLockExclusive() noexcept;
+		// 共有ロック（読み込み）
+		void LockShared() noexcept;
+		void UnlockShared() noexcept;
+		bool TryLockShared() noexcept;
+	private:
+		void* lock_;
+		nox::uint32 read_count_;
+	};
 
 	template<class _LockType>
-		struct ScopedReadLock
+		struct ScopedReadLock final
 	{
-		inline ScopedReadLock(_LockType& lock) noexcept(noexcept(lock.EnterReadLock())) :
+		inline explicit ScopedReadLock(_LockType& lock) noexcept(noexcept(lock.EnterReadLock())) :
 			lock_(lock)
 		{
 			lock_.EnterReadLock();
@@ -78,9 +55,9 @@ namespace nox
 	};
 
 	template<class _LockType>
-	struct ScopedWriteLock
+	struct ScopedWriteLock final
 	{
-		inline ScopedWriteLock(_LockType& lock) noexcept(noexcept(lock.EnterWriteLock())) :
+		inline explicit ScopedWriteLock(_LockType& lock) noexcept(noexcept(lock.EnterWriteLock())) :
 			lock_(lock)
 		{
 			lock_.EnterWriteLock();

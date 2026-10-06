@@ -10,7 +10,7 @@ namespace nox
 {
 	class Mutex;
 
-	class ConditionVariable
+	class ConditionVariable final
 	{
 	public:
 		constexpr ConditionVariable() noexcept :
@@ -18,12 +18,12 @@ namespace nox
 		{
 		}
 
-		ConditionVariable(const ConditionVariable&) = delete;
-		ConditionVariable(ConditionVariable&&) = delete;
+		ConditionVariable(const ConditionVariable&)noexcept = delete;
+		ConditionVariable(ConditionVariable&&)noexcept = delete;
 		
-		~ConditionVariable() noexcept;
+		constexpr ~ConditionVariable() noexcept = default;
 
-		void Wait(const nox::Mutex& mutex)noexcept;
+		void Wait(nox::Mutex& mutex)noexcept;
 		void NotifyOne()noexcept;
 		void NotifyAll()noexcept;
 

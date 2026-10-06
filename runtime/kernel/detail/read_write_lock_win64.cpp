@@ -4,39 +4,39 @@
 ///	@file	read_write_lock_win64.cpp
 ///	@brief	read_write_lock_win64
 #include	"pch.h"
-#include	"read_write_lock_win64.h"
+#include    "../read_write_lock.h"
 
 #include	"../win64_api.h"
 
 static_assert(sizeof(void*) == sizeof(::SRWLOCK), "ReadWriteLock size mismatch.");
 
-void nox::detail::ReadWriteLockWin64::LockExclusive()noexcept
+void nox::ReadWriteLock::LockExclusive()noexcept
 {
     ::AcquireSRWLockExclusive(reinterpret_cast<::PSRWLOCK>(&lock_));
 }
 
-void nox::detail::ReadWriteLockWin64::UnlockExclusive() noexcept
+void nox::ReadWriteLock::UnlockExclusive() noexcept
 {
     ::ReleaseSRWLockExclusive(reinterpret_cast<::PSRWLOCK>(&lock_));
 }
 
-bool nox::detail::ReadWriteLockWin64::TryLockExclusive() noexcept
+bool nox::ReadWriteLock::TryLockExclusive() noexcept
 {
     return ::TryAcquireSRWLockExclusive(reinterpret_cast<::PSRWLOCK>(&lock_)) != FALSE;
 }
 
 // 共有ロック（読み込み）
-void nox::detail::ReadWriteLockWin64::LockShared() noexcept
+void nox::ReadWriteLock::LockShared() noexcept
 {
     ::AcquireSRWLockShared(reinterpret_cast<::PSRWLOCK>(&lock_));
 }
 
-void nox::detail::ReadWriteLockWin64::UnlockShared() noexcept
+void nox::ReadWriteLock::UnlockShared() noexcept
 {
     ::ReleaseSRWLockShared(reinterpret_cast<::PSRWLOCK>(&lock_));
 }
 
-bool nox::detail::ReadWriteLockWin64::TryLockShared() noexcept
+bool nox::ReadWriteLock::TryLockShared() noexcept
 {
     return ::TryAcquireSRWLockShared(reinterpret_cast<::PSRWLOCK>(&lock_)) != FALSE;
 }

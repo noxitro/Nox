@@ -7,6 +7,9 @@
 #include	"file_win64.h"
 
 #include	<array>
+#include	"../io/file.h"
+#include	"../io/readonly_mapped_file.h"
+
 #include	"../file_system.h"
 #include	"assertion.h"
 #include	"os_definition.h"
@@ -14,7 +17,7 @@
 
 
 #if NOX_WIN64
-namespace nox::detail
+namespace nox::io
 {
 	namespace
 	{
@@ -131,7 +134,7 @@ bool nox::os::Exists(std::u8string_view path)
 {
 	std::array<wchar_t, nox::k_max_path_length> native_path_buffer{};
 	std::wstring_view native_path;
-	if (nox::detail::TryConvertPath(path, native_path_buffer, native_path) == false)
+	if (nox::io::TryConvertPath(path, native_path_buffer, native_path) == false)
 	{
 		return false;
 	}
@@ -140,12 +143,12 @@ bool nox::os::Exists(std::u8string_view path)
 	return result != FALSE;
 }
 
-nox::detail::FileWin64::~FileWin64() noexcept
+nox::io::File::~File() noexcept
 {
 	Close();
 }
 
-bool nox::detail::FileWin64::Open(std::u8string_view path, std::u8string_view mode)
+bool nox::io::File::Open(std::u8string_view path, std::u8string_view mode)
 {
 	Close();
 
@@ -179,7 +182,7 @@ bool nox::detail::FileWin64::Open(std::u8string_view path, std::u8string_view mo
 	return true;
 }
 
-void nox::detail::FileWin64::Close() noexcept
+void nox::io::File::Close() noexcept
 {
 	if (native_file_handle_ != nullptr)
 	{
@@ -188,7 +191,7 @@ void nox::detail::FileWin64::Close() noexcept
 	}
 }
 
-void nox::detail::FileWin64::Write(std::span<const std::byte> src)const
+void nox::io::File::Write(std::span<const std::byte> src)const
 {
 	NOX_ASSERT(IsOpen() == true, u"file is not open");
 	if (IsOpen() == false)
@@ -219,7 +222,7 @@ void nox::detail::FileWin64::Write(std::span<const std::byte> src)const
 	}
 }
 
-std::span<std::byte> nox::detail::FileWin64::Read(std::span<std::byte> dest)const
+std::span<std::byte> nox::io::File::Read(std::span<std::byte> dest)const
 {
 	NOX_ASSERT(IsOpen() == true, u"file is not open");
 	if (IsOpen() == false)
@@ -258,7 +261,7 @@ std::span<std::byte> nox::detail::FileWin64::Read(std::span<std::byte> dest)cons
 	return dest.subspan(0, total_read_size);
 }
 
-nox::uint64 nox::detail::FileWin64::GetSize()const
+std::size_t nox::io::File::GetSize()const
 {
 	NOX_ASSERT(IsOpen() == true, u"file is not open");
 	if (IsOpen() == false)
@@ -274,21 +277,21 @@ nox::uint64 nox::detail::FileWin64::GetSize()const
 		return 0;
 	}
 
-	return static_cast<nox::uint64>(file_size.QuadPart);
+	return static_cast<std::size_t>(file_size.QuadPart);
 }
 
-nox::detail::ReadOnlyMappedFileWin64::~ReadOnlyMappedFileWin64() noexcept
+nox::io::ReadOnlyMappedFile::~ReadOnlyMappedFile() noexcept
 {
 	Close();
 }
 
-bool nox::detail::ReadOnlyMappedFileWin64::Open(std::u8string_view path)
+bool nox::io::ReadOnlyMappedFile::Open(std::u8string_view path)
 {
 	Close();
 
 	std::array<wchar_t, nox::k_max_path_length> native_path_buffer{};
 	std::wstring_view native_path;
-	if (TryConvertPath(path, native_path_buffer, native_path) == false)
+	if (nox::io::TryConvertPath(path, native_path_buffer, native_path) == false)
 	{
 		return false;
 	}
@@ -342,7 +345,7 @@ bool nox::detail::ReadOnlyMappedFileWin64::Open(std::u8string_view path)
 	return true;
 }
 
-void nox::detail::ReadOnlyMappedFileWin64::Close() noexcept
+void nox::io::ReadOnlyMappedFile::Close() noexcept
 {
 	if (data_ != nullptr)
 	{

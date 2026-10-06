@@ -5,23 +5,64 @@
 ///	@brief	component_id
 #include	"pch.h"
 #include	"component_id.h"
+#include	"world.h"
 
 namespace nox::detail
 {
 	namespace
 	{
-		/// @brief Type&のハッシュから ComponentTypeIndex を引くテーブル
-		constinit std::array<nox::uint16, nox::detail::kMaxComponentTypeCount> component_type_indices_{};
+		struct
+		{
+			nox::UnorderedMap<const nox::reflection::Type*, nox::uint16> type_to_id_map_;
+		}* cache_ = nullptr;
 
+		constinit std::array<std::byte, sizeof(std::remove_pointer_t<decltype(cache_)>)> cache_storage{ std::byte{} };
 		constinit nox::Atomic<nox::uint16> g_component_count{ 0u };
+		constinit nox::ReadWriteLock g_component_type_indices_lock{};
 
+		constinit std::array<const nox::reflection::Type*, nox::detail::kMaxComponentTypeCount> component_type_indices_{ nullptr };
 	}
+}
+
+void nox::World::GlobalInitialize()
+{
+	nox::detail::cache_ = std::construct_at(reinterpret_cast<std::remove_pointer_t<decltype(nox::detail::cache_)>*>(nox::detail::cache_storage.data()));
+}
+
+void nox::World::GlobalTerminate()
+{
+	std::destroy_at(reinterpret_cast<std::remove_pointer_t<decltype(nox::detail::cache_)>*>(nox::detail::cache_storage.data()));
+	nox::detail::cache_ = nullptr;
+}
+
+const nox::reflection::Type& nox::detail::GetComponentType(const nox::uint16 id)noexcept
+{
+	//	idでアクセスする辞典でキャッシュには登録済みのはずなので、ロックなしでアクセスする
+	return *nox::detail::component_type_indices_[id];
 }
 
 nox::uint16 nox::detail::GetComponentId(const nox::reflection::Type& type)noexcept
 {
-	static constinit nox::Atomic<nox::uint16> next_id{ 0u };
-	const nox::uint16 id = next_id.fetch_add(1u, std::memory_order_relaxed);
-	NOX_ASSERT(id < nox::detail::kMaxComponentTypeCount, u8"ComponentData型の登録数が上限({0})を超えました", nox::detail::kMaxComponentTypeCount);
+	{
+		NOX_LOCAL_SCOPE(nox::ScopedReadLock(g_component_type_indices_lock));
+		if (const auto it = nox::detail::cache_->type_to_id_map_.find(&type); it != nox::detail::cache_->type_to_id_map_.end())
+		{
+			return it->second;
+		}
+	}
+
+	return nox::detail::AssignComponentId(type);
+}
+
+nox::uint16 nox::detail::AssignComponentId(const nox::reflection::Type& type)noexcept
+{
+	const nox::uint16 id = g_component_count.fetch_add(1u, std::memory_order_relaxed);
+
+	{
+		NOX_LOCAL_SCOPE(nox::ScopedWriteLock(g_component_type_indices_lock));
+		nox::detail::cache_->type_to_id_map_.emplace(&type, id);
+		nox::detail::component_type_indices_[id] = &type;
+	}
+
 	return id;
 }

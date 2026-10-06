@@ -11,6 +11,8 @@ namespace nox
 {
 	class World final
 	{
+		static constexpr nox::uint8 kArchetypeIdBitWidth = 31u;
+		static constexpr nox::uint32 kInvalidArchetypeId = std::numeric_limits<nox::uint32>::max();
 	private:
 		struct Detail;
 		/// @brief Componentの物理配置を表すArchetype
@@ -20,12 +22,13 @@ namespace nox
 		{
 			constexpr EntityRecord()noexcept : 
 				generation(0u), 
-				archetype_id(std::numeric_limits<nox::uint32>::max()) 
+				archetype_id(kInvalidArchetypeId),
+				row(0u)
 			{}
 
 			nox::uint32 generation;
 			nox::uint32 archetype_id;
-			
+			nox::uint32 row;
 		};
 	public:
 		World();
@@ -41,6 +44,9 @@ namespace nox
 		{
 			return static_cast<T*>(AddComponent(entity, nox::reflection::Typeof<T>()));
 		}
+
+		static void GlobalInitialize();
+		static void GlobalTerminate();
 	private:
 
 	private:

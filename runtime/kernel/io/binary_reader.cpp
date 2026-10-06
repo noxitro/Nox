@@ -5,9 +5,9 @@
 ///	@brief	binary_reader
 #include	"pch.h"
 #include	"binary_reader.h"
+#include	<span>
 
 #include	"stream_reader.h"
-#include	<span>
 
 void nox::io::BinaryReader::ReadBytes(std::span<std::byte> dest)const
 {
