@@ -39,8 +39,10 @@ nox::int32 nox::EntryPoint(const std::span<const nox::char16* const> args)
 	}
 
 	{
-	//	nox::legacy::World world;
-	//	world.Run();
+		//	TODO: 新しい World へ移行するまでの暫定。Editor (--studio) からの接続待ち受けと
+		//	メインループは legacy::World が担っているので、FlaUI の接続テストのために回しておく。
+		nox::legacy::World world;
+		world.Run();
 	}
 
 	nox::os::Finalize();
