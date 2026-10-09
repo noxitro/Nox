@@ -11,15 +11,10 @@
              d:DataContext="{d:DesignInstance vm:MemoryProfilerViewModel, IsDesignTimeCreatable=False}"
              noxui:ViewModelLocator.AutoWireViewModel="True"
              AutomationProperties.AutomationId="NoxStudio.MemoryProfilerView">
-    <Border Background="{DynamicResource Nox.Brush.SurfaceBackground}"
-            BorderBrush="{DynamicResource Nox.Brush.GridLine}"
-            BorderThickness="1">
+    <Border Style="{StaticResource Nox.PaneRootBorderStyle}">
         <DockPanel>
             <Border DockPanel.Dock="Top"
-                    Padding="8"
-                    Background="{DynamicResource Nox.Brush.HeaderBackground}"
-                    BorderBrush="{DynamicResource Nox.Brush.GridLine}"
-                    BorderThickness="0,0,0,1">
+                    Style="{StaticResource Nox.PaneHeaderBorderStyle}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -28,11 +23,9 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel>
                         <TextBlock Text="Memory Profiler"
-                                   Foreground="{DynamicResource Nox.Brush.TextHeading}"
-                                   FontWeight="SemiBold" />
+                                   Style="{StaticResource Nox.PaneTitleTextStyle}" />
                         <TextBlock Text="{Binding StatusText}"
-                                   Foreground="{DynamicResource Nox.Brush.TextMuted}"
-                                   FontSize="11" />
+                                   Style="{StaticResource Nox.PaneContextTextStyle}" />
                     </StackPanel>
                     <CheckBox Grid.Column="1"
                               Content="Auto"
@@ -42,8 +35,8 @@
                               Margin="0,0,8,0" />
                     <Button Grid.Column="2"
                             Content="Refresh"
+                            Style="{StaticResource Nox.CommandButtonStyle}"
                             MinWidth="84"
-                            Padding="8,3"
                             Command="{Binding RefreshCommand}" />
                 </Grid>
             </Border>

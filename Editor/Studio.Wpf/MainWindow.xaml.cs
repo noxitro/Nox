@@ -19,16 +19,33 @@ public partial class MainWindow : Window
     private LayoutDocument? _RemoteInstanceManagerDocument;
     private LayoutDocument? _MemoryProfilerDocument;
     private bool _ShutdownPrepared;
+    private readonly MainWindowViewModel _ViewModel;
 
     public MainWindow()
     {
         InitializeComponent();
-        DataContext = new MainWindowViewModel();
+        _ViewModel = new MainWindowViewModel();
+        DataContext = _ViewModel;
+        _ViewModel.Theme.PropertyChanged += OnThemePropertyChanged;
         Core.UI.ProjectSettingsViewService.Register(ShowProjectSettings);
         ThemeSettingsViewService.Register(ShowThemeSettings);
         Core.UI.CoreDiagnosticsViewService.Register(ShowCoreDiagnosticsView);
         Closing += OnWindowClosing;
         Closed += OnClosed;
+    }
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        WindowCaptionTheme.Apply(this);
+    }
+
+    private void OnThemePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(Studio.Wpf.Themes.IThemeService.CurrentThemeKey))
+        {
+            WindowCaptionTheme.Apply(this);
+        }
     }
 
     private void ShowProjectSettings()
@@ -190,6 +207,7 @@ public partial class MainWindow : Window
         {
             PrepareForShutdown();
         }
+        _ViewModel.Theme.PropertyChanged -= OnThemePropertyChanged;
         Core.UI.ProjectSettingsViewService.Unregister(ShowProjectSettings);
         ThemeSettingsViewService.Unregister(ShowThemeSettings);
         Core.UI.CoreDiagnosticsViewService.Unregister(ShowCoreDiagnosticsView);

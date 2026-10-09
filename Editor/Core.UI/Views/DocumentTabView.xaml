@@ -58,7 +58,7 @@
                                     <Setter Property="Icon">
                                         <Setter.Value>
                                             <TextBlock Text="{Binding Glyph}"
-                                                       FontFamily="Segoe MDL2 Assets"
+                                                       FontFamily="{StaticResource Nox.Font.Icon}"
                                                        FontSize="14"
                                                        Width="18"
                                                        TextAlignment="Center"
@@ -78,7 +78,7 @@
                                     Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="8"
+                                    CornerRadius="4"
                                     Padding="{TemplateBinding Padding}">
                                 <ContentPresenter ContentSource="Header"
                                                   HorizontalAlignment="Center"
@@ -124,7 +124,7 @@
                                    FontSize="13"
                                    FontWeight="SemiBold"
                                    Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}" />
-                        <TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="10" Margin="4,0,0,0">
+                        <TextBlock Text="" FontFamily="{StaticResource Nox.Font.Icon}" FontSize="10" Margin="4,0,0,0">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Visibility" Value="Collapsed" />

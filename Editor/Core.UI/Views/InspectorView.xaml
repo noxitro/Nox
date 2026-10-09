@@ -134,7 +134,7 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="{Binding Icon}"
-                                       FontFamily="Segoe MDL2 Assets"
+                                       FontFamily="{StaticResource Nox.Font.Icon}"
                                        Foreground="{DynamicResource Nox.Brush.Accent}"
                                        VerticalAlignment="Center" />
                             <StackPanel Grid.Column="1" Margin="4,0,8,0">
@@ -175,7 +175,7 @@
         </HierarchicalDataTemplate>
     </UserControl.Resources>
 
-    <Border Background="{DynamicResource Nox.Brush.Inspector.Background}" BorderBrush="{DynamicResource Nox.Brush.Inspector.Border}" BorderThickness="1">
+    <Border Background="{DynamicResource Nox.Brush.Inspector.Background}" BorderThickness="0">
         <DockPanel>
             <Border DockPanel.Dock="Top"
                     Style="{StaticResource Nox.PaneHeaderBorderStyle}"
@@ -187,7 +187,7 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <Border Width="32" Height="32" CornerRadius="3" Background="{DynamicResource Nox.Brush.SurfaceBackground}" BorderBrush="{DynamicResource Nox.Brush.Inspector.Border}" BorderThickness="1" Margin="0,0,10,0">
-                        <TextBlock Text="{Binding Icon}" FontFamily="Segoe MDL2 Assets" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource Nox.Brush.Accent}" />
+                        <TextBlock Text="{Binding Icon}" FontFamily="{StaticResource Nox.Font.Icon}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource Nox.Brush.Accent}" />
                     </Border>
                     <StackPanel Grid.Column="1">
                         <TextBlock AutomationProperties.AutomationId="NoxStudio.Inspector.TitleText" Text="{Binding Title}" Style="{StaticResource Nox.PaneTitleTextStyle}" TextTrimming="CharacterEllipsis" />

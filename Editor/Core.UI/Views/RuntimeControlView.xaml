@@ -8,7 +8,7 @@
              xmlns:noxui="clr-namespace:NoxUI;assembly=NoxUI"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:RuntimeControlViewModel, IsDesignTimeCreatable=False}"
-             d:DesignHeight="64" d:DesignWidth="1200"
+             d:DesignHeight="60" d:DesignWidth="1200"
              noxui:ViewModelLocator.AutoWireViewModel="True"
              AutomationProperties.AutomationId="NoxStudio.RuntimeControlView">
 
@@ -18,157 +18,164 @@
                BasedOn="{StaticResource Nox.CommandButtonStyle}">
             <Setter Property="MinWidth" Value="88" />
             <Setter Property="Height" Value="32" />
-            <Setter Property="Margin" Value="3,0" />
+            <Setter Property="Margin" Value="2,0" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
 
         <Style x:Key="RuntimePrimaryCommandButtonStyle"
                TargetType="Button"
-                BasedOn="{StaticResource Nox.PrimaryCommandButtonStyle}">
+               BasedOn="{StaticResource Nox.PrimaryCommandButtonStyle}">
             <Setter Property="MinWidth" Value="88" />
             <Setter Property="Height" Value="32" />
-            <Setter Property="Margin" Value="3,0" />
+            <Setter Property="Margin" Value="2,0" />
         </Style>
 
         <Style x:Key="RuntimeDangerCommandButtonStyle"
                TargetType="Button"
-                BasedOn="{StaticResource Nox.DangerCommandButtonStyle}">
+               BasedOn="{StaticResource Nox.DangerCommandButtonStyle}">
             <Setter Property="MinWidth" Value="88" />
             <Setter Property="Height" Value="32" />
-            <Setter Property="Margin" Value="3,0" />
+            <Setter Property="Margin" Value="2,0" />
+        </Style>
+
+        <!-- ボタン内のアイコン。文字色はボタンの前景に追従する -->
+        <Style x:Key="RuntimeCommandIconStyle" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource Nox.Font.Icon}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+        </Style>
+
+        <Style x:Key="RuntimeCommandTextStyle" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+        </Style>
+
+        <!-- 状態マーカー。プロセスは角、接続は丸で、色が同じでも形で区別できるようにする -->
+        <Style x:Key="ProcessMarkerStyle" TargetType="Rectangle">
+            <Setter Property="Width" Value="8" />
+            <Setter Property="Height" Value="8" />
+            <Setter Property="RadiusX" Value="1" />
+            <Setter Property="RadiusY" Value="1" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Fill" Value="{DynamicResource Nox.Brush.TextMuted}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsProcessRunning}" Value="True">
+                    <Setter Property="Fill" Value="{DynamicResource Nox.Brush.Success}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="LinkMarkerStyle" TargetType="Ellipse">
+            <Setter Property="Width" Value="8" />
+            <Setter Property="Height" Value="8" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Fill" Value="{DynamicResource Nox.Brush.TextMuted}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding LinkState}" Value="Connecting">
+                    <Setter Property="Fill" Value="{DynamicResource Nox.Brush.Warning}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding LinkState}" Value="Connected">
+                    <Setter Property="Fill" Value="{DynamicResource Nox.Brush.Success}" />
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
     </UserControl.Resources>
 
-    <Border Background="{DynamicResource Nox.Brush.CommandBarBackground}"
-            BorderBrush="{DynamicResource Nox.Brush.GridLine}"
-            BorderThickness="0">
-        <Grid Margin="12,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+    <Grid Margin="12,0">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
 
-            <StackPanel Grid.Column="0"
-                        Orientation="Horizontal"
-                        VerticalAlignment="Center">
-                <Border Width="30"
-                        Height="30"
-                        CornerRadius="4"
-                        Background="{DynamicResource Nox.Brush.IconBackground}"
-                        BorderBrush="{DynamicResource Nox.Brush.IconBorder}"
-                        BorderThickness="1">
-                    <TextBlock Text=""
-                               FontFamily="Segoe MDL2 Assets"
-                               FontSize="15"
-                                Foreground="{DynamicResource Nox.Brush.Accent}"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center" />
-                </Border>
-                <StackPanel Margin="8,0,0,0"
-                            VerticalAlignment="Center">
-                    <TextBlock Text="Nox Studio"
-                               Foreground="{DynamicResource Nox.Brush.TextStrong}"
-                               FontSize="13"
-                               FontWeight="SemiBold" />
-                    <TextBlock Text="Editor  /  Runtime"
-                               Style="{StaticResource Nox.DataTextStyle}" />
-                </StackPanel>
-            </StackPanel>
+        <!-- 左: 製品名 -->
+        <TextBlock Grid.Column="0"
+                   Text="Nox Studio"
+                   Foreground="{DynamicResource Nox.Brush.TextStrong}"
+                   FontSize="13"
+                   FontWeight="SemiBold"
+                   VerticalAlignment="Center" />
 
-            <Border Grid.Column="1"
-                    Padding="5"
-                    VerticalAlignment="Center"
-                    Background="{DynamicResource Nox.Brush.CommandBarBadgeBackground}"
-                    BorderBrush="{DynamicResource Nox.Brush.GridLine}"
-                    BorderThickness="1"
-                    CornerRadius="6">
+        <!-- 中央: Runtime の状態遷移を起こす操作。接続 → 実行 → 停止 の順に並べ、再起動は区切って置く -->
+        <StackPanel Grid.Column="1"
+                    Orientation="Horizontal"
+                    VerticalAlignment="Center">
+            <Button Style="{StaticResource RuntimeCommandButtonStyle}"
+                    AutomationProperties.AutomationId="NoxStudio.RuntimeControl.ConnectButton"
+                    MinWidth="104"
+                    Command="{Binding StartConnectionCommand}"
+                    ToolTip="Runtime との TCP/IP 接続を開始します">
                 <StackPanel Orientation="Horizontal">
-                    <Button Style="{StaticResource RuntimeCommandButtonStyle}"
-                            AutomationProperties.AutomationId="NoxStudio.RuntimeControl.ConnectButton"
-                            MinWidth="104"
-                            Command="{Binding StartConnectionCommand}"
-                            ToolTip="Runtime との TCP/IP 接続を開始します">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text=""
-                                       FontFamily="Segoe MDL2 Assets"
-                                       FontSize="13"
-                                       Margin="0,0,7,0"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
-                            <TextBlock Text="Connect"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
-                        </StackPanel>
-                    </Button>
+                    <TextBlock Text="&#xE703;" Style="{StaticResource RuntimeCommandIconStyle}" />
+                    <TextBlock Text="Connect" Style="{StaticResource RuntimeCommandTextStyle}" />
+                </StackPanel>
+            </Button>
 
-                    <Button Style="{StaticResource RuntimePrimaryCommandButtonStyle}"
-                            AutomationProperties.AutomationId="NoxStudio.RuntimeControl.PlayButton"
-                            Command="{Binding PlayCommand}"
-                            ToolTip="Runtime を再生します">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text=""
-                                       FontFamily="Segoe MDL2 Assets"
-                                       FontSize="13"
-                                       Margin="0,0,7,0"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
-                            <TextBlock Text="Play"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
-                        </StackPanel>
-                    </Button>
+            <Button Style="{StaticResource RuntimePrimaryCommandButtonStyle}"
+                    AutomationProperties.AutomationId="NoxStudio.RuntimeControl.PlayButton"
+                    Command="{Binding PlayCommand}"
+                    ToolTip="Runtime を再生します">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE768;" Style="{StaticResource RuntimeCommandIconStyle}" />
+                    <TextBlock Text="Play" Style="{StaticResource RuntimeCommandTextStyle}" />
+                </StackPanel>
+            </Button>
 
-                    <Button Style="{StaticResource RuntimeDangerCommandButtonStyle}"
-                            AutomationProperties.AutomationId="NoxStudio.RuntimeControl.StopButton"
-                            Command="{Binding StopCommand}"
-                            ToolTip="Runtime を停止します">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,7,0" Foreground="{DynamicResource Nox.Brush.Danger}" />
-                            <TextBlock Text="Stop"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
-                        </StackPanel>
-                    </Button>
+            <Button Style="{StaticResource RuntimeDangerCommandButtonStyle}"
+                    AutomationProperties.AutomationId="NoxStudio.RuntimeControl.StopButton"
+                    Command="{Binding StopCommand}"
+                    ToolTip="Runtime を停止します">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE71A;" Style="{StaticResource RuntimeCommandIconStyle}" />
+                    <TextBlock Text="Stop" Style="{StaticResource RuntimeCommandTextStyle}" />
+                </StackPanel>
+            </Button>
 
-                    <Border Width="1" Margin="5,3" Background="{DynamicResource Nox.Brush.GridLine}" />
+            <Border Width="1" Margin="8,6" Background="{DynamicResource Nox.Brush.GridLine}" />
 
-                    <Button Style="{StaticResource RuntimeCommandButtonStyle}"
-                             AutomationProperties.AutomationId="NoxStudio.RuntimeControl.RebootButton"
-                             Command="{Binding RebootCommand}"
-                            ToolTip="Runtime を再起動します">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text=""
-                                       FontFamily="Segoe MDL2 Assets"
-                                       FontSize="13"
-                                       Margin="0,0,7,0"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
-                            <TextBlock Text="Reboot"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
-                        </StackPanel>
-                    </Button>
+            <Button Style="{StaticResource RuntimeCommandButtonStyle}"
+                    AutomationProperties.AutomationId="NoxStudio.RuntimeControl.RebootButton"
+                    Command="{Binding RebootCommand}"
+                    ToolTip="Runtime を再起動します">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE72C;" Style="{StaticResource RuntimeCommandIconStyle}" />
+                    <TextBlock Text="Reboot" Style="{StaticResource RuntimeCommandTextStyle}" />
+                </StackPanel>
+            </Button>
+        </StackPanel>
+
+        <!-- 右: 現在状態。プロセスと接続は別の概念なので別ブロックにする -->
+        <StackPanel Grid.Column="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center">
+            <Border Style="{StaticResource Nox.StatusBlockStyle}"
+                    Margin="0,0,8,0"
+                    AutomationProperties.AutomationId="NoxStudio.RuntimeControl.ProcessState"
+                    AutomationProperties.Name="{Binding ProcessStateText}"
+                    ToolTip="Runtime プロセスの状態">
+                <StackPanel Orientation="Horizontal">
+                    <Rectangle Style="{StaticResource ProcessMarkerStyle}" />
+                    <TextBlock Text="RUNTIME" Style="{StaticResource Nox.StatusLabelTextStyle}" />
+                    <TextBlock Text="{Binding ProcessStateText}" Style="{StaticResource Nox.StatusValueTextStyle}" />
                 </StackPanel>
             </Border>
 
-            <StackPanel Grid.Column="2"
-                        Orientation="Horizontal"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center">
-                <Border Height="28"
-                        Padding="10,0"
-                        CornerRadius="4"
-                        Background="{DynamicResource Nox.Brush.CommandBadgeBackground}"
-                        BorderBrush="{DynamicResource Nox.Brush.BadgeBorder}"
-                        BorderThickness="1">
-                    <StackPanel Orientation="Horizontal"
-                                VerticalAlignment="Center">
-                        <Rectangle Width="8"
-                                  Height="8"
-                                  RadiusX="1"
-                                  RadiusY="1"
-                                  Fill="{DynamicResource Nox.Brush.TextMuted}"
-                                 Margin="0,0,8,0" />
-                        <TextBlock Text="PROCESS ISOLATED"
-                                   Style="{StaticResource Nox.DataTextStyle}" />
-                    </StackPanel>
-                </Border>
-            </StackPanel>
-        </Grid>
-    </Border>
+            <Border Style="{StaticResource Nox.StatusBlockStyle}"
+                    AutomationProperties.AutomationId="NoxStudio.RuntimeControl.LinkState"
+                    AutomationProperties.Name="{Binding LinkStateText}"
+                    ToolTip="Runtime との TCP/IP 接続の状態">
+                <StackPanel Orientation="Horizontal">
+                    <Ellipse Style="{StaticResource LinkMarkerStyle}" />
+                    <TextBlock Text="LINK" Style="{StaticResource Nox.StatusLabelTextStyle}" />
+                    <TextBlock Text="{Binding LinkStateText}" Style="{StaticResource Nox.StatusValueTextStyle}" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </Grid>
 </UserControl>

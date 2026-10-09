@@ -18,7 +18,7 @@
             <Setter Property="Background" Value="{DynamicResource Nox.Brush.MenuBackground}" />
             <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextHeading}" />
             <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorder}" />
-            <Setter Property="Height" Value="24" />
+            <Setter Property="Height" Value="28" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
         <Style x:Key="TraceFilterComboBoxItemStyle"
@@ -42,7 +42,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="8"
+                                CornerRadius="4"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center"
                                               VerticalAlignment="Center" />
@@ -64,9 +64,9 @@
             </Setter>
         </Style>
     </UserControl.Resources>
-    <Border Background="{DynamicResource Nox.Brush.SurfaceBackground}" BorderBrush="{DynamicResource Nox.Brush.GridLine}" BorderThickness="1">
+    <Border Style="{StaticResource Nox.PaneRootBorderStyle}">
         <DockPanel>
-            <Border DockPanel.Dock="Top" Padding="8" Background="{DynamicResource Nox.Brush.HeaderBackground}" BorderBrush="{DynamicResource Nox.Brush.GridLine}" BorderThickness="0,0,0,1">
+            <Border DockPanel.Dock="Top" Style="{StaticResource Nox.PaneHeaderBorderStyle}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -78,8 +78,8 @@
                         <ColumnDefinition Width="220" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="Trace" Foreground="{DynamicResource Nox.Brush.TextHeading}" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource Nox.Brush.TextMuted}" Margin="8,0,0,0" />
+                        <TextBlock Text="Trace" Style="{StaticResource Nox.PaneTitleTextStyle}" />
+                        <TextBlock Text="{Binding StatusText}" Style="{StaticResource Nox.PaneContextTextStyle}" Margin="8,0,0,0" />
                     </StackPanel>
                     <StackPanel Grid.Column="1"
                                 Orientation="Horizontal"
@@ -107,8 +107,7 @@
                     <TextBox Grid.Column="2"
                              AutomationProperties.AutomationId="NoxStudio.Trace.SearchBox"
                              AutomationProperties.Name="Search trace"
-                             Height="24"
-                             VerticalContentAlignment="Center"
+                             Style="{StaticResource Nox.SearchTextBoxStyle}"
                              Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                              ToolTip="Search trace" />
                     <ListBox Grid.Row="1"
