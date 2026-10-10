@@ -216,6 +216,10 @@ jobs:
   #
   # Master でもテストを走らせる。テスト用の型のリフレクションは
   # reflection_generated_test が全構成で生成する (runtime/reflection_generated_test/README.md)。
+  # ただし Master では NOX_ASSERT が式ごと消える (kernel/assertion.h)。NOX_ASSERT で
+  # 判定する CoreSelfTest (core_self_test.cpp の 5 件) は、Master では何も検証せず、
+  # アサートの中に書いた処理も走らない。Master で意味があるのは gtest のマクロで
+  # 判定するテストと、CoreSelfTest がクラッシュせずに通ることだけ。
   # =========================================================
   build:
     name: Build & test (${{ matrix.compiler }} / ${{ matrix.configuration }})
@@ -635,14 +639,14 @@ jobs:
       # gtest は「1 件も走らなくても」 exit 0 を返す。テスト登録の漏れや
       # フィルタの書き間違いでスイートが丸ごと消えても緑になり、
       # 「通った」と誤読される。件数を数えるのが唯一の証明。
-      # 実測は kernel_test 21 + core_test 81 = 102 件。その 9 割を下限に置く。
+      # 実測は kernel_test 24 + core_test 87 = 111 件 (DISABLED_ の 3 件は数えない)。その 9 割を下限に置く。
       # テストが走った (成功でも失敗でも) ときだけ数える。走っていないとき (再利用した run、
       # ビルドが落ちた後) に走らせても「XML が無い」で落ちるだけで、失敗ステップが増える。
       - name: 実行件数を確かめる
         if: always() && steps.gtest.outcome != 'skipped'
         shell: pwsh
         run: |
-          python .github/scripts/check-test-results.py test-results --min 91 --label GoogleTest
+          python .github/scripts/check-test-results.py test-results --min 100 --label GoogleTest
 
       # ---------------------------------------------------------
       # Benchmark (runtime/bench/bench_test.exe)

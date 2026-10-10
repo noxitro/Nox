@@ -87,6 +87,7 @@ build\runtime\x64\Release\core_test.exe --gtest_also_run_disabled_tests --gtest_
 (`<Build Project="false" />`)。ソリューションを建てた後、`reflection_generated_test` → `core_test` の順に建てる
 (CI の Build test projects と同じ手順。プロパティの渡し方は `.github/workflows/ci.yml` を参照)。
 Master を含む全構成で建てられる。
+Visual Studio では `reflection_generated_test` を先に右クリックでビルドする (依存先としては建たないことがある。`runtime/reflection_generated_test/README.md`)。
 
 ```cmd
 build\runtime\x64\Debug\core_test.exe
