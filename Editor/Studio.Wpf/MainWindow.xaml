@@ -103,7 +103,7 @@
                 Background="{DynamicResource Nox.Brush.CommandBarBackground}"
                 BorderBrush="{DynamicResource Nox.Brush.GridLine}"
                 BorderThickness="0,0,0,1">
-            <views:RuntimeControlView />
+            <views:RuntimeControlView x:Name="RuntimeControl" />
         </Border>
 
         <!-- ====== ドッキング領域（AvalonDock） ====== -->

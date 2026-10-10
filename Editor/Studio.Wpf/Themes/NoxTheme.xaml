@@ -395,7 +395,7 @@
                     <RepeatButton Style="{StaticResource Nox.ScrollBarPageButtonStyle}" Command="{x:Static ScrollBar.PageDownCommand}" />
                 </Track.IncreaseRepeatButton>
                 <Track.Thumb>
-                    <Thumb Style="{StaticResource Nox.ScrollBarThumbStyle}" />
+                    <Thumb Style="{StaticResource Nox.ScrollBarThumbStyle}" MinHeight="24" />
                 </Track.Thumb>
             </Track>
         </Grid>
@@ -411,7 +411,7 @@
                     <RepeatButton Style="{StaticResource Nox.ScrollBarPageButtonStyle}" Command="{x:Static ScrollBar.PageRightCommand}" />
                 </Track.IncreaseRepeatButton>
                 <Track.Thumb>
-                    <Thumb Style="{StaticResource Nox.ScrollBarThumbStyle}" />
+                    <Thumb Style="{StaticResource Nox.ScrollBarThumbStyle}" MinWidth="24" />
                 </Track.Thumb>
             </Track>
         </Grid>

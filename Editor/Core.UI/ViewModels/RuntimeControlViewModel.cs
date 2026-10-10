@@ -100,7 +100,15 @@ namespace Core.UI.ViewModels;
 
 		private void UpdateState()
 		{
-			Core.RuntimeSession session = Core.StudioManager.Instance.Workspace.RuntimeSessions.GetActiveOrMainSession();
+			// 読むだけなのでセッションは生成しない (GetActiveOrMainSession は無ければ作る)
+			Core.RuntimeSessionManager sessions = Core.StudioManager.Instance.Workspace.RuntimeSessions;
+			Core.RuntimeSession? session = sessions.ActiveSession ?? sessions.FindMainSession();
+			if (session == null)
+			{
+				IsProcessRunning = false;
+				LinkState = RuntimeLinkState.Disconnected;
+				return;
+			}
 
 			System.Diagnostics.Process? process = session.Process;
 			bool running;

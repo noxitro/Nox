@@ -229,6 +229,8 @@ public partial class MainWindow : Window
     {
         HashSet<object> disposed = new(ReferenceEqualityComparer.Instance);
         TryDisposeDataContext(this, disposed);
+        // 操作レールはドッキング領域の外にあるので、LayoutContent の走査では拾えない。状態読み取りのタイマーを止める
+        TryDisposeDataContext(RuntimeControl, disposed);
         foreach (LayoutContent content in DockManager.Layout.Descendents().OfType<LayoutContent>())
         {
             TryDisposeDataContext(content.Content, disposed);
