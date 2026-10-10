@@ -48,12 +48,12 @@ namespace nox::test::bench
 	//	「並列化が効いた」と誤って読める。
 	//	=================================================================================
 
-	struct BenchPosition : nox::IComponentData { nox::float32 x; nox::float32 y; nox::float32 z; };
-	struct BenchVelocity : nox::IComponentData { nox::float32 x; nox::float32 y; nox::float32 z; };
-	struct BenchScalarA : nox::IComponentData { nox::float32 value; };
-	struct BenchScalarB : nox::IComponentData { nox::float32 value; };
-	struct BenchScalarC : nox::IComponentData { nox::float32 value; };
-	struct BenchScalarD : nox::IComponentData { nox::float32 value; };
+	struct BenchPosition final : public nox::Component<BenchPosition> { nox::float32 x; nox::float32 y; nox::float32 z; };
+	struct BenchVelocity final : public nox::Component<BenchVelocity> { nox::float32 x; nox::float32 y; nox::float32 z; };
+	struct BenchScalarA final : public nox::Component<BenchScalarA> { nox::float32 value; };
+	struct BenchScalarB final : public nox::Component<BenchScalarB> { nox::float32 value; };
+	struct BenchScalarC final : public nox::Component<BenchScalarC> { nox::float32 value; };
+	struct BenchScalarD final : public nox::Component<BenchScalarD> { nox::float32 value; };
 
 	/// @brief 1エンティティ分の計算。inline 展開されても消えない形にしてある。
 	[[nodiscard]] inline nox::float32 BenchKernel(const nox::float32 seed, const nox::uint32 iteration_count)noexcept

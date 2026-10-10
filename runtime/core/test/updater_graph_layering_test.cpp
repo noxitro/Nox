@@ -42,16 +42,16 @@ namespace nox::test::updater_graph
 	//	テスト用の ComponentData / Service
 	//	=================================================================================
 
-	struct LayerA : nox::IComponentData { nox::float32 value; };
-	struct LayerB : nox::IComponentData { nox::float32 value; };
-	struct LayerC : nox::IComponentData { nox::float32 value; };
-	struct LayerD : nox::IComponentData { nox::float32 value; };
+	struct LayerA final : public nox::Component<LayerA> { nox::float32 value; };
+	struct LayerB final : public nox::Component<LayerB> { nox::float32 value; };
+	struct LayerC final : public nox::Component<LayerC> { nox::float32 value; };
+	struct LayerD final : public nox::Component<LayerD> { nox::float32 value; };
 	//	Service の規則だけを見るための、他のどのノードとも重ならない ComponentData。
 	//	ComponentData を共有させてしまうと「Service で分かれた」のか
 	//	「ComponentData で分かれた」のかが区別できない。
-	struct LayerE : nox::IComponentData { nox::float32 value; };
-	struct LayerF : nox::IComponentData { nox::float32 value; };
-	struct LayerG : nox::IComponentData { nox::float32 value; };
+	struct LayerE final : public nox::Component<LayerE> { nox::float32 value; };
+	struct LayerF final : public nox::Component<LayerF> { nox::float32 value; };
+	struct LayerG final : public nox::Component<LayerG> { nox::float32 value; };
 
 	/// @brief Service の同一性は型情報のアドレスで見るので、中身は要らない。
 	class LayerServiceX final : public nox::legacy::Service {};

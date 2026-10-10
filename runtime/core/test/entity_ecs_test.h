@@ -10,19 +10,19 @@
 
 namespace nox::test::ecs
 {
-	struct TestPosition : nox::IComponentData
+	struct TestPosition final : public nox::Component<TestPosition>
 	{
 		nox::float32 x;
 		nox::float32 y;
 	};
 
-	struct TestVelocity : nox::IComponentData
+	struct TestVelocity final : public nox::Component<TestVelocity>
 	{
 		nox::float32 x;
 		nox::float32 y;
 	};
 
-	struct TestHealth : nox::IComponentData
+	struct TestHealth final : public nox::Component<TestHealth>
 	{
 		nox::int32 value;
 	};

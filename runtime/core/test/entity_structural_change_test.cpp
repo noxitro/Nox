@@ -30,13 +30,13 @@
 
 namespace
 {
-	struct StructuralPosition : nox::IComponentData
+	struct StructuralPosition final : public nox::Component<StructuralPosition>
 	{
 		nox::float32 x;
 		nox::float32 y;
 	};
 
-	struct StructuralHealth : nox::IComponentData
+	struct StructuralHealth final : public nox::Component<StructuralHealth>
 	{
 		nox::int32 value;
 	};
