@@ -19,24 +19,24 @@
 
 namespace nox::bench::ecs
 {
-	struct BPosition : nox::IComponentData { nox::float32 x; nox::float32 y; nox::float32 z; };
-	struct BVelocity : nox::IComponentData { nox::float32 x; nox::float32 y; nox::float32 z; };
+	struct BPosition final : public nox::Component<BPosition> { nox::float32 x; nox::float32 y; nox::float32 z; };
+	struct BVelocity final : public nox::Component<BVelocity> { nox::float32 x; nox::float32 y; nox::float32 z; };
 
 	//	Archetype を割るためだけの 1 バイトのタグ
-	struct BTag0 : nox::IComponentData { nox::uint8 value; };
-	struct BTag1 : nox::IComponentData { nox::uint8 value; };
-	struct BTag2 : nox::IComponentData { nox::uint8 value; };
-	struct BTag3 : nox::IComponentData { nox::uint8 value; };
+	struct BTag0 final : public nox::Component<BTag0> { nox::uint8 value; };
+	struct BTag1 final : public nox::Component<BTag1> { nox::uint8 value; };
+	struct BTag2 final : public nox::Component<BTag2> { nox::uint8 value; };
+	struct BTag3 final : public nox::Component<BTag3> { nox::uint8 value; };
 
 	//	UpdaterGraph のレイヤー分割用
-	struct BL0 : nox::IComponentData { nox::float32 value; };
-	struct BL1 : nox::IComponentData { nox::float32 value; };
-	struct BL2 : nox::IComponentData { nox::float32 value; };
-	struct BL3 : nox::IComponentData { nox::float32 value; };
-	struct BL4 : nox::IComponentData { nox::float32 value; };
-	struct BL5 : nox::IComponentData { nox::float32 value; };
-	struct BL6 : nox::IComponentData { nox::float32 value; };
-	struct BL7 : nox::IComponentData { nox::float32 value; };
+	struct BL0 final : public nox::Component<BL0> { nox::float32 value; };
+	struct BL1 final : public nox::Component<BL1> { nox::float32 value; };
+	struct BL2 final : public nox::Component<BL2> { nox::float32 value; };
+	struct BL3 final : public nox::Component<BL3> { nox::float32 value; };
+	struct BL4 final : public nox::Component<BL4> { nox::float32 value; };
+	struct BL5 final : public nox::Component<BL5> { nox::float32 value; };
+	struct BL6 final : public nox::Component<BL6> { nox::float32 value; };
+	struct BL7 final : public nox::Component<BL7> { nox::float32 value; };
 
 	/// @brief 位置 += 速度 (直列)
 	class BMoveSystem final : public nox::legacy::EntitySystem<nox::bench::ecs::BMoveSystem>

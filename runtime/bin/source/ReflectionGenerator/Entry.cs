@@ -99,7 +99,19 @@ namespace ReflectionGenerator;
 				return 1;
 			}
 
-			return MainProcess2(outputGenerateDir, platform, configuration);
+			//	-typedb false で RuntimeTypeDB (と %TEMP% のポインタファイル) を書かない。
+			//	テスト用の型を含む reflection_generated_test が書くと、Editor がそちらを読んでしまうため。
+			bool writeTypeDB = true;
+			if (optionDict.TryGetValue("typedb", out string? typeDBValue))
+			{
+				if (bool.TryParse(typeDBValue, out writeTypeDB) == false)
+				{
+					Trace.ErrorLine(null, $"-typedb には true か false を渡してください: {typeDBValue}");
+					return 1;
+				}
+			}
+
+			return MainProcess2(outputGenerateDir, platform, configuration, writeTypeDB);
 		}
 
 		/// <summary>
@@ -128,7 +140,7 @@ namespace ReflectionGenerator;
 			return optionDict;
 		}
 
-		private static int MainProcess2(string outputGenerateDir, string platform, string configuration)
+		private static int MainProcess2(string outputGenerateDir, string platform, string configuration, bool writeTypeDB)
 		{
 			Nox.CustomTask.Data data;
 			try
@@ -284,9 +296,12 @@ namespace ReflectionGenerator;
 			}
 
 			//	ツールで参照するためのバイナリファイルを出力
-			using (new ScopeProfiler() { Tag = "Serialize" })
+			if (writeTypeDB)
 			{
-				RuntimeTypeDBHelper.Serialize(data, parser.NamespaceDeclList);
+				using (new ScopeProfiler() { Tag = "Serialize" })
+				{
+					RuntimeTypeDBHelper.Serialize(data, parser.NamespaceDeclList);
+				}
 			}
 
 			return 0;

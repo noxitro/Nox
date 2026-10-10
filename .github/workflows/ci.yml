@@ -6,14 +6,13 @@
 # 構成  : Build & test (MSVC / ClangCL x Debug / Release / Master の 6 並列) と
 #         Editor ジョブを並列実行。GoogleTest と FlaUI は独立したジョブではなく、
 #         マトリクスジョブの中で走る。同じ構成を 2 回建てないため。
-#         GoogleTest は Master 以外の 4 ジョブ、FlaUI は MSVC の Debug / Release
+#         GoogleTest は 6 ジョブすべて、FlaUI は MSVC の Debug / Release
 #         (ClangCL の Debug / Release では接続テストだけ)。
 #         FlaUI には Editor と runtime.exe の接続テスト (Reboot → attach) も含む。
 #         runtime.exe の起動・終了 (スモーク) は 6 ジョブすべてで走る。
-#         Master だけテストを飛ばしているのは、reflection_generated の pch.h /
-#         reflect.cpp が runtime/core/test/test_types.h のテスト型を
-#         #if !NOX_MASTER で囲っており、Master ではテスト型のリフレクションが
-#         生成されず core_test が成立しないため。
+#         core_test はテスト用の型を含むリフレクション (reflection_generated_test)
+#         をリンクする。runtime.exe がリンクする reflection_generated には
+#         テスト用の型が入らないので、構成によらずテストと本体が分かれている。
 #         前準備は .github/actions/setup-nox-build に切り出してある。
 #         MSVC の 3 ジョブは Build runtime.slnx を C++ Build Insights で計測し、
 #         build-insights ジョブが重いヘッダ・テンプレート・関数のレポートにする
@@ -215,10 +214,12 @@ jobs:
   # Debug では原理的に拾えない)。FlaUI も MSVC の Debug / Release で走り、
   # ClangCL の Debug / Release では Editor との接続テストだけを走らせる。
   #
-  # Master でテストを走らせないのは、reflection_generated の pch.h /
-  # reflect.cpp が test_support のテスト型を #if !NOX_MASTER で囲っており、
-  # テスト型のリフレクションが生成されないため。ビルド自体は通るが
-  # 成立しない。
+  # Master でもテストを走らせる。テスト用の型のリフレクションは
+  # reflection_generated_test が全構成で生成する (runtime/reflection_generated_test/README.md)。
+  # ただし Master では NOX_ASSERT が式ごと消える (kernel/assertion.h)。NOX_ASSERT で
+  # 判定する CoreSelfTest (core_self_test.cpp の 5 件) は、Master では何も検証せず、
+  # アサートの中に書いた処理も走らない。Master で意味があるのは gtest のマクロで
+  # 判定するテストと、CoreSelfTest がクラッシュせずに通ることだけ。
   # =========================================================
   build:
     name: Build & test (${{ matrix.compiler }} / ${{ matrix.configuration }})
@@ -481,7 +482,9 @@ jobs:
       # (Application Error / WER) に残った記録を拾って出す。
       # 作業ディレクトリは Editor (Core.RuntimeSession) と同じく exe の置き場所。
       #
-      # テストのビルドより前に置いているのは、テストを建てない Master でも走らせるため。
+      # テストのビルドより前に置いているのは、テストのビルドが落ちても runtime.exe の起動は確かめるため。
+      # runtime.exe はテスト用の型を含まない reflection_generated をリンクするので、
+      # ここで起動するのは出荷と同じ中身 (テスト用の System / Logic は購読されない)。
       # ---------------------------------------------------------
       - name: Run runtime.exe (start / exit)
         if: env.NOX_REUSE != 'true'
@@ -547,22 +550,26 @@ jobs:
       # GoogleTest
       #
       #   - kernel_test : kernel だけに依存する下層のテスト
-      #   - core_test   : core / reflection / reflection_generated に依存する
+      #   - core_test   : core / reflection / reflection_generated_test に依存する
       #                   テスト (リフレクションの getter/setter は生成コードを
       #                   実際に走らせないと検証できないので、生成器も動く)
+      #   - reflection_generated_test : core_test がリンクする、テスト用の型を
+      #                   含むリフレクションの生成物。ソリューションビルドでは建たず、
+      #                   下で BuildProjectReferences=false にしているので core_test の
+      #                   参照からも建たない。core_test より先に明示して建てる
       #
-      # 両者は runtime.slnx で <Build Project="false" /> が付いていて、
+      # 3 つとも runtime.slnx で <Build Project="false" /> が付いていて、
       # 上のソリューションビルドでは建たない。Release では
       # nox_release.props の WholeProgramOptimization で全プロジェクトに /GL が
       # 付き、コード生成がリンク時まで遅れる。このとき link.exe は一時ファイル
       # (*.g.asm) を「.obj の出身プロジェクト」の中間ディレクトリへ書くので、
-      # reflection_generated.lib を共有する runtime.exe と core_test.exe を /m で
+      # core.lib などを共有する runtime.exe と core_test.exe を /m で
       # 同時にリンクすると同じパスを取り合って落ちる
       # (C1083 Permission denied -> LNK1257)。msbuild の呼び出しを分ければ
       # 時間的に重ならないので、構成によらずこの衝突は起きない。
       # ---------------------------------------------------------
       - name: Build test projects
-        if: env.NOX_REUSE != 'true' && matrix.configuration != 'Master'
+        if: env.NOX_REUSE != 'true'
         run: |
           # vcxproj を直接建てると MSBuild はソリューション由来のプロパティを
           # 設定しない ($(SolutionPath) は *Undefined* という文字列になる)。
@@ -575,7 +582,7 @@ jobs:
           #                  ReflectionGenerator へ -solution として渡す。
           #                  *Undefined* のままだと IOException で落ちる
           #
-          # 参照先 (core / kernel / reflection / reflection_generated) は直前の
+          # 参照先 (app / core / kernel / reflection) は直前の
           # ソリューションビルドで出来ているので建て直さない。プロパティの値が
           # ソリューションビルドと文字列として一致しないと最新判定が外れて
           # 全部作り直しになり、このステップだけで 4 分以上かかっていた。
@@ -589,6 +596,7 @@ jobs:
 
           $projects = @(
             'runtime\kernel\test\kernel_test.vcxproj',
+            'runtime\reflection_generated_test\reflection_generated_test.vcxproj',
             'runtime\core\test\core_test.vcxproj'
           )
           foreach ($proj in $projects) {
@@ -611,7 +619,7 @@ jobs:
       # gtest.dll は各テスト vcxproj の PostBuildEvent が隣へ置く。
       - name: Run GoogleTest suites
         id: gtest
-        if: env.NOX_REUSE != 'true' && matrix.configuration != 'Master'
+        if: env.NOX_REUSE != 'true'
         run: |
           $outDir = 'runtime\build\runtime\x64\${{ matrix.configuration }}'
           New-Item -ItemType Directory -Force test-results | Out-Null
@@ -631,22 +639,22 @@ jobs:
       # gtest は「1 件も走らなくても」 exit 0 を返す。テスト登録の漏れや
       # フィルタの書き間違いでスイートが丸ごと消えても緑になり、
       # 「通った」と誤読される。件数を数えるのが唯一の証明。
-      # 実測は kernel_test 21 + core_test 81 = 102 件。その 9 割を下限に置く。
+      # 実測は kernel_test 24 + core_test 87 = 111 件 (DISABLED_ の 3 件は数えない)。その 9 割を下限に置く。
       # テストが走った (成功でも失敗でも) ときだけ数える。走っていないとき (再利用した run、
-      # Master、ビルドが落ちた後) に走らせても「XML が無い」で落ちるだけで、失敗ステップが増える。
+      # ビルドが落ちた後) に走らせても「XML が無い」で落ちるだけで、失敗ステップが増える。
       - name: 実行件数を確かめる
         if: always() && steps.gtest.outcome != 'skipped'
         shell: pwsh
         run: |
-          python .github/scripts/check-test-results.py test-results --min 91 --label GoogleTest
+          python .github/scripts/check-test-results.py test-results --min 100 --label GoogleTest
 
       # ---------------------------------------------------------
       # Benchmark (runtime/bench/bench_test.exe)
       #
-      # 6 構成すべてで建てる。Master も建てるのは、出荷構成でコンパイルが通ることの
-      # 確認を兼ねるため (テストは Master で建たないので、ここが唯一の確認になる)。
+      # 6 構成すべてで建てる。bench_test は runtime.exe と同じ reflection_generated
+      # (テスト用の型を含まない) をリンクする。
       # テストと同じく runtime.slnx の外で、msbuild の呼び出しも分けて建てる。
-      # Release / Master の /GL で reflection_generated.lib を共有する exe を
+      # Release / Master の /GL で reflection_generated.lib などを共有する exe を
       # 同時にリンクすると衝突するため (上の「Build test projects」の説明を参照)。
       #
       # 計測は Release / Master だけ。Debug は --smoke で各ベンチを 1 回ずつ通し、

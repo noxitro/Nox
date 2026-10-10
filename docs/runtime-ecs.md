@@ -13,7 +13,7 @@
   - 基底は `nox::EntitySystemBase` (`nox` 直下) のままで、`nox::concepts::EntitySystem` もそれを参照している。`nox::detail` へは未移動。
   - オプションの解析、private への格納、private メソッドの検出は未実装。`nox::ExcludeComponents` も未実装。
   - 実際に使われている System は `nox::legacy::EntitySystem`。EntityLogic の新しい形は master にまだ無い。
-  - Component の基底は `nox::IComponentData` (`nox` 直下) のままで、テスト・ベンチマークの Component と、core の `nox::LocalTransform` (`runtime/core/local_transform.h`) が直接継承している。旧版は `runtime/core/entity_access_legacy.h` と `runtime/core/component_id.h` で名前を参照している。`runtime/core/entity_system.h` と `runtime/core/world_legacy.h` には `nox` 直下の前方宣言 `struct IComponentData;` がある。`RunAfter` / `RunBefore` の相手を表す共通の印の基底とコンセプト (§1) も無い。
+  - Component の基底は `nox::detail::IComponentData` へ移してあり (§1)、core・テスト・ベンチマークの Component は `final` で `nox::Component<T>` を継承している。`nox` 直下の前方宣言は残っていない。`RunAfter` / `RunBefore` の相手を表す共通の印の基底 `nox::detail::UpdaterNodeOwnerBase` はあるが、コンセプト `nox::concepts::OrderTarget` (§1) は無く、`RunAfter` / `RunBefore` は相手を検査していない。
 - 決まっていない点は §10 にまとめる。
 
 ## 1. 名前空間と型の名前

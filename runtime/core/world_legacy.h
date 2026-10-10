@@ -16,7 +16,6 @@
 
 namespace nox
 {
-	struct IComponentData;
 	class SystemBase;
 	class EngineModule;
 }

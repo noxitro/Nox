@@ -31,7 +31,14 @@
       <BuildDependency Project="core/core.vcxproj" />
       <BuildDependency Project="kernel/kernel.vcxproj" />
       <BuildDependency Project="reflection/reflection.vcxproj" />
-      <BuildDependency Project="reflection_generated/reflection_generated.vcxproj" />
+      <BuildDependency Project="reflection_generated_test/reflection_generated_test.vcxproj" />
+      <Build Project="false" />
+    </Project>
+    <Project Path="reflection_generated_test/reflection_generated_test.vcxproj" Id="f3b78c00-1e3d-4244-9ec3-abbb3a0a4186">
+      <BuildDependency Project="app/app.vcxproj" />
+      <BuildDependency Project="core/core.vcxproj" />
+      <BuildDependency Project="kernel/kernel.vcxproj" />
+      <BuildDependency Project="reflection/reflection.vcxproj" />
       <Build Project="false" />
     </Project>
     <Project Path="kernel/test/kernel_test.vcxproj" Id="b7f3c1a6-8e2d-4f5a-9c3b-1d4e5f6a7b8c">

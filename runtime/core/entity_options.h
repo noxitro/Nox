@@ -12,8 +12,6 @@ namespace nox
 		struct UpdaterNodeOwnerBase {};
 	}
 
-	struct IComponentData;
-	
 
 	/// @brief 必要なコンポーネントを指定
 	/// @tparam ...Types 

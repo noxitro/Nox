@@ -28,13 +28,13 @@
 
 namespace
 {
-	struct PlaybackPosition : nox::IComponentData
+	struct PlaybackPosition final : public nox::Component<PlaybackPosition>
 	{
 		nox::float32 x;
 		nox::float32 y;
 	};
 
-	struct PlaybackHealth : nox::IComponentData
+	struct PlaybackHealth final : public nox::Component<PlaybackHealth>
 	{
 		nox::int32 value;
 	};

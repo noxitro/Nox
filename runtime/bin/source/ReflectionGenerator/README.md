@@ -38,6 +38,10 @@ runtime/reflection_generated/gen/NoxReflectionPreData.<Platform>.<Configuration>
   -out "<repo>\runtime\reflection_generated\gen"
 ```
 
+`-typedb false` を渡すと、後述の TypeDB と `%TEMP%` のポインタファイルを書かない (省略時は `true`)。
+テスト用の型を含む `reflection_generated_test` はこれを渡す (`NoxReflectionWriteTypeDB=false`)。
+書くと、Editor が最後に建てたテスト版の TypeDB を読んでしまうため。
+
 ## 解析に使うインクルードパス (ツールセット非依存)
 
 リフレクション情報は「どの型・メンバが存在するか」を表すものであり、ビルドに使う C++ コンパイラによって変わってはならない。そのため解析用のシステムインクルードパスは `$(PlatformToolset)` に依存させず、`Directory.Build.targets` の `ReflectionParseIncludePath` (= `$(VC_IncludePath);$(WindowsSDK_IncludePath)`) に固定している。`$(IncludePath)` は選択中のツールセットが決める値なので使わない。

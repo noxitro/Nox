@@ -25,7 +25,7 @@
 | プロジェクト | 場所 | 依存 |
 |---|---|---|
 | `kernel_test` | `runtime/kernel/test/` | `kernel` のみ |
-| `core_test` | `runtime/core/test/` | `kernel` / `reflection` / `core` / `reflection_generated` |
+| `core_test` | `runtime/core/test/` | `kernel` / `reflection` / `core` / `reflection_generated_test` |
 
 ユニットテストを対象コードと同居させるのは Chromium のスタイルガイドおよび
 Pitchfork Layout の Merged Test Placement に沿った形。かつて core 内部に
@@ -70,9 +70,9 @@ include 生成から除外している（`bin/source/ReflectionGenerator/Entry.c
    - 独立したジョブではなく、各マトリクスジョブの中で実行する
      （同じ構成を 2 回建てないため。かつては Build ジョブと Test ジョブに
      分かれており、Debug のフルビルドが 1 push につき 2 回走っていた）
-   - MSVC / ClangCL の両方、Debug / Release の両方で実行
-   - Master では実行しない（`test_types.h` が `#if !NOX_MASTER` で外れ、
-     テスト型のリフレクションが生成されないため core_test が成立しない）
+   - MSVC / ClangCL の両方、Debug / Release / Master のすべてで実行
+     （テスト用の型のリフレクションは `reflection_generated_test` が全構成で生成する。
+     `runtime.exe` がリンクする `reflection_generated` には入らない）
 4. テスト結果のアップロード（XML 形式。アーティファクト名は
    `gtest-results-<コンパイラ>-<構成>`）
 
