@@ -248,39 +248,66 @@
                                           RecognizesAccessKey="True" />
                     </Border>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Nox.Brush.ControlBackgroundHover}" />
-                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorderHover}" />
-                        </Trigger>
-                        <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Nox.Brush.ControlBackgroundPressed}" />
-                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorderPressed}" />
-                        </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Nox.Brush.Accent}" />
                             <Setter TargetName="Chrome" Property="BorderThickness" Value="2" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextMuted}" />
                             <Setter TargetName="Chrome" Property="Opacity" Value="0.55" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+        <!-- ホバーと押下はスタイルのトリガーで切り替える。テンプレートで面の色を直接書き換えると、
+             Primary / Danger の色まで普通のボタンの色で上書きされる。スタイルのトリガーなら
+             BasedOn した側のトリガーが後に評価されて勝つ -->
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Nox.Brush.ControlBackgroundHover}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorderHover}" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Nox.Brush.ControlBackgroundPressed}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorderPressed}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextMuted}" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
+    <!-- 主要操作。ホバーで明るく、押下で元の明度へ戻す。アクセントの面は失わない -->
     <Style x:Key="Nox.PrimaryCommandButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource Nox.CommandButtonStyle}">
         <Setter Property="Background" Value="{DynamicResource Nox.Brush.Accent}" />
         <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.AccentForeground}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.AccentBorder}" />
         <Setter Property="FontWeight" Value="SemiBold" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Nox.Brush.AccentHover}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.AccentBorderHover}" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Nox.Brush.Accent}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.AccentBorder}" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
+    <!-- 破壊的な操作。ホバーでも危険色の文字と枠を保ち、通常のボタンに見せない -->
     <Style x:Key="Nox.DangerCommandButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource Nox.CommandButtonStyle}">
         <Setter Property="Background" Value="{DynamicResource Nox.Brush.ControlBackground}" />
         <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.Danger}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.DangerBorder}" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.Danger}" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.Danger}" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <Style x:Key="Nox.SearchTextBoxStyle" TargetType="{x:Type TextBox}" BasedOn="{StaticResource {x:Type TextBox}}">
@@ -678,6 +705,55 @@
         <Setter Property="Padding" Value="12,7" />
     </Style>
 
+    <!-- メニューバーの最上段の項目。既定のテンプレートは枠付きの箱になるので、
+         枠を持たない平らな項目にし、ホバーと展開中だけ面を 1 段明るくする -->
+    <ControlTemplate x:Key="Nox.TopLevelMenuItemTemplate" TargetType="{x:Type MenuItem}">
+        <Border x:Name="Chrome"
+                Background="Transparent"
+                CornerRadius="{StaticResource Nox.Radius.Control}"
+                Padding="{TemplateBinding Padding}"
+                SnapsToDevicePixels="True">
+            <Grid>
+                <ContentPresenter ContentSource="Header"
+                                  RecognizesAccessKey="True"
+                                  VerticalAlignment="Center" />
+                <Popup x:Name="PART_Popup"
+                       Placement="Bottom"
+                       VerticalOffset="4"
+                       AllowsTransparency="True"
+                       Focusable="False"
+                       PopupAnimation="None"
+                       IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}">
+                    <Border Background="{DynamicResource Nox.Brush.MenuBackground}"
+                            BorderBrush="{DynamicResource Nox.Brush.ControlBorder}"
+                            BorderThickness="1"
+                            CornerRadius="{StaticResource Nox.Radius.Control}"
+                            Padding="4"
+                            SnapsToDevicePixels="True">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"
+                                            KeyboardNavigation.TabNavigation="Cycle"
+                                            Grid.IsSharedSizeScope="True" />
+                        </ScrollViewer>
+                    </Border>
+                </Popup>
+            </Grid>
+        </Border>
+        <ControlTemplate.Triggers>
+            <Trigger Property="IsHighlighted" Value="True">
+                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Nox.Brush.TabHoverBackground}" />
+                <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextStrong}" />
+            </Trigger>
+            <Trigger Property="IsSubmenuOpen" Value="True">
+                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Nox.Brush.TabSelectedBackground}" />
+                <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextStrong}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextMuted}" />
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
     <Style TargetType="{x:Type TreeView}">
         <Setter Property="Background" Value="{DynamicResource Nox.Brush.PanelBackground}" />
         <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
@@ -785,7 +861,13 @@
         <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.GridLine}" />
     </Style>
 
+    <!-- ドッキングのペインは TabControl の派生で、指定しないと既定の白い背景と灰色の枠が出る。
+         ペインの区切りとして GridLine の 1px だけを描き、背景はパネルの色にする -->
     <Style x:Key="Nox.DocumentPaneControlStyle" TargetType="{x:Type adControls:LayoutDocumentPaneControl}">
+        <Setter Property="Background" Value="{DynamicResource Nox.Brush.PanelBackground}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.GridLine}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="0" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type adControls:LayoutDocumentPaneControl}">
@@ -936,6 +1018,9 @@
     <Style x:Key="Nox.AnchorablePaneControlStyle" TargetType="{x:Type adControls:LayoutAnchorablePaneControl}">
         <Setter Property="Foreground" Value="{Binding Model.Root.Manager.Foreground, RelativeSource={RelativeSource Self}}" />
         <Setter Property="Background" Value="{Binding Model.Root.Manager.Background, RelativeSource={RelativeSource Self}}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.GridLine}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="0" />
         <Setter Property="TabStripPlacement" Value="Top" />
         <Setter Property="Template">
             <Setter.Value>

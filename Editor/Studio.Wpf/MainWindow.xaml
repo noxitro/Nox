@@ -32,7 +32,7 @@
               Foreground="{DynamicResource Nox.Brush.TextHeading}"
               BorderBrush="{DynamicResource Nox.Brush.GridLine}"
               BorderThickness="0,0,0,1"
-              Padding="8,0"
+              Padding="6,0"
               FontSize="12"
               AutomationProperties.AutomationId="NoxStudio.MenuBar">
             <Menu.Resources>
@@ -49,6 +49,15 @@
                     <Setter Property="Padding" Value="12,7" />
                     <Setter Property="FontSize" Value="13" />
                     <Setter Property="MinHeight" Value="26" />
+                    <Style.Triggers>
+                        <!-- 最上段は枠の無い平らな項目にし、メニューバーの高さ (30px) に収める -->
+                        <Trigger Property="Role" Value="TopLevelHeader">
+                            <Setter Property="Template" Value="{StaticResource Nox.TopLevelMenuItemTemplate}" />
+                            <Setter Property="Padding" Value="10,0" />
+                            <Setter Property="Margin" Value="0,3" />
+                            <Setter Property="MinHeight" Value="0" />
+                        </Trigger>
+                    </Style.Triggers>
                 </Style>
                 <Style TargetType="MenuItem" BasedOn="{StaticResource NoxMenuItemStyle}" />
                 <Style TargetType="Separator">
