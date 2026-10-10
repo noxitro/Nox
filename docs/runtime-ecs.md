@@ -13,6 +13,7 @@
   - 基底は `nox::EntitySystemBase` (`nox` 直下) のままで、`nox::concepts::EntitySystem` もそれを参照している。`nox::detail` へは未移動。
   - オプションの解析、private への格納、private メソッドの検出は未実装。`nox::ExcludeComponents` も未実装。
   - 実際に使われている System は `nox::legacy::EntitySystem`。EntityLogic の新しい形は master にまだ無い。
+  - Component の基底は `nox::IComponentData` (`nox` 直下) のままで、テスト・ベンチマークの Component と、core の `nox::LocalTransform` (`runtime/core/local_transform.h`) が直接継承している。旧版は `runtime/core/entity_access_legacy.h` と `runtime/core/component_id.h` で名前を参照している。`runtime/core/entity_system.h` と `runtime/core/world_legacy.h` には `nox` 直下の前方宣言 `struct IComponentData;` がある。`RunAfter` / `RunBefore` の相手を表す共通の印の基底とコンセプト (§1) も無い。
 - 決まっていない点は §10 にまとめる。
 
 ## 1. 名前空間と型の名前
@@ -21,19 +22,31 @@
 
 | 種類 | 名前空間 | 型の名前 | 例 |
 |---|---|---|---|
-| Component | `<モジュール>::components` | 名詞のまま | `nox::components::LocalPosition` |
-| Service | `<モジュール>::services` | 末尾に `Service` | `nox::services::TimeService` |
-| EntitySystem | `<モジュール>::systems` | 末尾に `System` | `nox::systems::MoveSystem` |
-| EntityLogic | `<モジュール>::entity_logics` | 末尾に `Logic` | `nox::entity_logics::EnemyLogic` |
+| Component | `<モジュール>::components` | 役割を表す名詞 | `nox::components::LocalPosition` |
+| Service | `<モジュール>::services` | 役割を表す名前 (種類の語は付けない) | `nox::services::Time` |
+| EntitySystem | `<モジュール>::systems` | 役割を表す名前 (種類の語は付けない) | `nox::systems::Movement` |
+| EntityLogic | `<モジュール>::entity_logics` | 役割を表す名前 (種類の語は付けない) | `nox::entity_logics::EnemyAI` |
 
 ほかのモジュールは `nox::render::components::MeshRenderer`、開発用は `nox::dev::components::Name`、ゲーム側は `game::components::Health` のように置く。
+
+- 型名に `Service` / `System` / `Logic` のような種類を表す語を付けない。種類は名前空間で表す。
+- 種類やモジュールをまたいだ同じ名前は許す (`nox::components::Camera` と `nox::systems::Camera`、`nox::dev::components::Name` と `game::components::Name`)。
+- 同じ名前の型の中では、修飾なしの名前は自分自身を指す (`nox::systems::Camera` の中の `Camera` は System 自身)。同じ名前の Component は `nox::components::Camera` と完全修飾で書く。
 
 ### 理由
 
 - **Component の名前はぶつかりやすい。** `Position` / `Rotation` / `Name` / `Transform` のような一般的な名詞になりやすい。実際に `nox::Position` は算術の型として既にある。
 - **`nox::` の補完を汚さない。** System と Logic はエンジンが大きくなると数百になる。種類ごとに分ければ、`nox::components::` と打ったときの候補が Component の一覧になる。
-- **型の名前に種類を残す。** 型名は名前空間なしで表示される場面が多い (起動ログの実行グラフ、プロファイラ、Editor の依存グラフ、エラーメッセージ、`using namespace` した後のコード)。`Move` だけでは System か Logic か分からない。`nox::systems::MoveSystem` の重複は許容する。
+- **種類は名前空間で表し、型名には付けない。** 名前空間で種類が分かるので、型名に重ねると `nox::systems::MoveSystem` のような重複になる。名前空間なしで型名が表示されると種類が分からなくなる点は、型名を文字列で出す所を全て完全修飾名にすることで補う (下の「型名の表示と `using namespace`」)。
 - **順番を「モジュール → 種類」にする。** 名前空間の持ち主がそのままモジュールを表し、既存の `nox::render` / `nox::dev` と揃う。
+
+### 型名の表示と `using namespace`
+
+- 型名を文字列で出す所は、全て完全修飾名にする。
+  - Editor: `nox::reflection::ClassInfo::GetFullName()`。
+  - 起動ログ (実行グラフのノードの一覧など)、アサートとエラーのログ、プロファイラの区間の名前: `nox::reflection::Type::GetTypeName()`。中身は `nox::util::GetTypeName<T>()` の値で、正規化された名前空間付きの名前になる (`runtime/kernel/test/basic_test.cpp` の `TypeNameIsNormalizedAcrossToolsets` が `type_name_probe::Nested::Value` のような名前を確かめている)。
+  - コンパイラのエラーメッセージは、もともと名前空間付きで出るので対応は要らない。
+- 種類の名前空間を 2 つ以上同時に `using namespace` しない (`components` と `systems` を両方取り込むと、`Camera` のような名前が曖昧になる)。ヘッダでは `using namespace` を使わない。短く書きたいときは名前空間の別名 (`namespace components = nox::components;`) を使う。
 
 ### 名前空間は保存データの一部になる
 
@@ -45,10 +58,14 @@
 ### 継承する型と、基底の置き場所
 
 - Component / EntitySystem / EntityLogic は、テンプレートの `nox::Component<T>` / `nox::EntitySystem<T, Options...>` / `nox::EntityLogic<T, Options...>` を継承する。
-- テンプレートでない基底 (`EntitySystemBase` / `EntityLogicBase`) は `nox::detail` に置く。利用者が名前を書くことはない。基底の入れ子の名前 (`Register` / `Trigger`) は、基底の名前空間に関係なく派生クラスの中からそのまま使える。ただし派生クラス自身がクラステンプレートのとき (基底がテンプレート引数に依存するとき) は、修飾なしでは見つからないので、基底の名前で修飾する。
-- Service の基底 (`nox::ServiceBase`) と、利用者が継承する `nox::Service<T>` は、Service の書き方を決めるまで今のまま (§10)。
+- テンプレートでない基底 (`IComponentData` / `EntitySystemBase` / `EntityLogicBase`) は `nox::detail` に置く。利用者が名前を書くことはない。基底の入れ子の名前 (`Register` / `Trigger`) は、基底の名前空間に関係なく派生クラスの中からそのまま使える。ただし派生クラス自身がクラステンプレートのとき (基底がテンプレート引数に依存するとき) は、修飾なしでは見つからないので、基底の名前で修飾する。
+- Service の基底 (`nox::ServiceBase`) と、利用者が継承する `nox::Service<T>` は、Service の書き方を決めるまで今の場所のまま (§10)。ただし下の共通の印の基底は継承する。
 - 基底を置く `detail` の名前空間のブロックには、反射の対象外の印 (`IgnoreReflection`) を付けない。Editor のロジックの一覧などで、反射の派生クラスの列挙の起点にするため。
-- `IComponentData` は旧版とテストが直接継承しているので、旧版を消すまで今の場所に残す。新しい Component は必ず `nox::Component<T>` を継承する。
+- Component の基底は `nox::detail::IComponentData`。Component は必ず `nox::Component<T>` を継承し、`IComponentData` を直接継承しない。テスト・ベンチマークと `nox::LocalTransform` で `nox::IComponentData` を直接継承している Component は、`IComponentData` を移すのと同じ変更で `nox::Component<T>` へ直す。名前で参照している所 (`entity_access_legacy.h`、`component_id.h`) も同じ変更で直す。`nox` 直下に `IComponentData` の前方宣言を残さない (`entity_system.h` と `world_legacy.h` にあるものも消す) (残すと `nox::IComponentData` が中身の無い別の型を指し、継承した所はコンパイルエラーに、`std::derived_from<nox::IComponentData>` のような検査は黙って常に偽になる)。
+- EntitySystem / EntityLogic / Service の基底は、共通の印 `nox::detail::UpdaterNodeOwnerBase` を public に継承する。`RunAfter` / `RunBefore` の相手になれる型 (UpdaterGraph のノードを持つ型) を、コンセプト `nox::concepts::OrderTarget` (`std::derived_from<T, nox::detail::UpdaterNodeOwnerBase>`) で判定するためで、中身も仮想関数も持たない。Component は継承しない (ノードを持たないので相手にならない)。
+  - 基底の型そのもの (`nox::EntitySystem<X>` など) もコンセプトを満たしてしまうが、ノードを持たないので §7 の起動の失敗の判定で検出される。
+  - 空の基底は 1 本の継承の鎖にする。空の基底を複数並べると、MSVC の ABI (MSVC と ClangCL の両方) では空の基底の最適化が効かず、型が大きくなる。今の `nox::detail::IECSBase` / `nox::detail::ISystemBase` はこの印の基底に置き換えるか、印の基底から派生させる。
+  - 1 本の鎖なら、EntityLogic の状態の大きさは増えず、「状態を持たない」の判定 (`std::is_empty_v`) も変わらない。実装ではテストで確かめる (状態を持たないロジックが `std::is_empty_v` を満たすこと、状態を持つロジックの `sizeof` が、同じメンバだけを持つ構造体の `sizeof` と一致すること)。
 
 ### 置かない場所
 
@@ -103,11 +120,11 @@
 ```cpp
 namespace nox::systems
 {
-	class MoveSystem final : public nox::EntitySystem<MoveSystem,
-		nox::RunAfter<InputSystem>,
+	class Movement final : public nox::EntitySystem<Movement,
+		nox::RunAfter<Input>,
 		nox::RequireComponents<nox::components::Movable>>
 	{
-		NOX_ECS_DECLARE_VERIFY(MoveSystem);
+		NOX_ECS_DECLARE_VERIFY(Movement);
 	private:
 		static void OnUpdate(nox::components::LocalPosition& position, const nox::components::Velocity& velocity);
 	};
@@ -154,17 +171,17 @@ entity ごとに状態を持つ振る舞い。少数の主要な個体 (プレ�
 ```cpp
 namespace nox::entity_logics
 {
-	class EnemyLogic final : public nox::EntityLogic<EnemyLogic,
+	class EnemyAI final : public nox::EntityLogic<EnemyAI,
 		nox::RequireComponents<nox::components::Enemy, nox::components::Spawn>>
 	{
-		NOX_ECS_DECLARE_VERIFY(EnemyLogic);
+		NOX_ECS_DECLARE_VERIFY(EnemyAI);
 	private:
 		void Initialize(nox::Entity self, const nox::components::Spawn& spawn);
-		void UpdateAI(nox::Entity self, nox::components::LocalPosition& position, const nox::services::TimeService& time);
+		void UpdateAI(nox::Entity self, nox::components::LocalPosition& position, const nox::services::Time& time);
 	public:
 		using RegisterList = std::tuple<
-			Register<&EnemyLogic::Initialize, Trigger::Add>,
-			Register<&EnemyLogic::UpdateAI, Trigger::Update, nox::RunAfter<nox::systems::NavigationSystem>>
+			Register<&EnemyAI::Initialize, Trigger::Add>,
+			Register<&EnemyAI::UpdateAI, Trigger::Update, nox::RunAfter<nox::systems::Navigation>>
 		>;
 	private:
 		enum class State : nox::uint8 { Idle, Chase, Attack };
@@ -188,7 +205,7 @@ namespace nox::entity_logics
 
 ### 1 つの処理は 1 つのメソッドにまとめる
 
-- 別々に登録したメソッドは、UpdaterGraph の別々のノードになる。衝突しなければ並列に動き、衝突すれば全体の実行順 (明示した辺のトポロジカル順。決まらない所は型名 + メソッド名の順) で直列になる。
+- 別々に登録したメソッドは、UpdaterGraph の別々のノードになる。衝突しなければ並列に動き、衝突すれば全体の実行順 (明示した辺のトポロジカル順。決まらない所は完全修飾の型名 (`Type::GetTypeName()`) + メソッド名の順。種類をまたいで短い名前が同じ型があるので、短い名前では順番が決まらない) で直列になる。
 - **同じロジックの、別々に登録したメソッドの間に順番の保証はない。** `RegisterList` に書いた順番にも意味は無い。
 - 手順を踏む処理 (知覚 → 判断 → 行動など) は、1 つのメソッド (`UpdateAI`) の中で、状態 (`State` など) を持って進める。
 - 別々に登録するのは、並列にしたいとき、きっかけが違うとき、必要な Component が違うとき (メソッドごとのオプション) に限る。
@@ -259,7 +276,7 @@ namespace nox::entity_logics
 
 - オプションの型は、名前を並べるだけの印にする。中身を確かめる制約 (相手が System か、Component か、など) は付けない。
 - 特に、`std::is_base_of_v` などで相手が完全型であることを要求しない。相手は前方宣言でよい。互いに `RunAfter` / `RunBefore` で参照し合う 2 つの型も書ける。
-- 相手の種類の検査は、登録する翻訳単位で、完全型が揃ってから行う。
+- 相手の種類の検査は、登録する翻訳単位で、完全型が揃ってから行う。`RunAfter` / `RunBefore` の相手は `nox::concepts::OrderTarget` (§1)、`RequireComponents` / `ExcludeComponents` の型は `nox::concepts::Component` を満たすことを `static_assert` で確かめる。
 
 ### `RunAfter` / `RunBefore` の相手と範囲
 
@@ -304,7 +321,8 @@ entity の生成・破棄、Component の追加・削除は、`nox::EntityComman
 |---|---|
 | 種類ごとの名前空間を使わず `nox` 直下に置く | Component の名前が他の型とぶつかる。`nox::` の補完が System / Logic で埋まる |
 | 名前空間を「種類 → モジュール」の順にする (`nox::components::render::...`) | 名前空間の持ち主がモジュールを表さなくなり、既存の `nox::render` と揃わない |
-| 型名から種類の語を外す (`nox::systems::Move`) | 名前空間なしで表示される場面で種類が分からない |
+| 型名の末尾に種類の語を付ける (`nox::systems::MoveSystem`) | 名前空間で種類が分かるので重複になる。名前空間なしで表示される場面は、表示を完全修飾名にすることで補う |
+| `IComponentData` を旧版を消すまで `nox` 直下に残す | Component の基底の置き場所が、新旧で割れたままになる。直接継承している所 (テスト・ベンチマーク・`nox::LocalTransform`) と名前で参照している所 (旧版) は機械的に直せるので、今移す |
 | 利用者も FrameIngress / Update / Presentation などの区間を選べるようにする | 区間を必要としているのはエンジンの都合 (入力の取り込み、描画への受け渡し) で、利用者のロジックにはまだ要らない。選ばせると判断が増え、区間の境目で並列性も切れる |
 | EntitySystem も `RegisterList` でメソッドを登録する | よくある形 (`OnUpdate` 1 つ) の記述が増え、メソッド名ときっかけを二重に書く。メソッドごとのオプションと複数メソッドは、関心事が 1 つの System では使わない |
 | EntitySystem にインスタンス (メンバ) を持たせる | Chunk を並列に回したときにメンバへの書き込みが競合する。状態は Component か Service に置けば足りる |
@@ -318,7 +336,7 @@ entity の生成・破棄、Component の追加・削除は、`nox::EntityComman
 | オプションを位置で決まるテンプレート引数にする (旧い設計。今は Doxygen の説明にだけ残る) | 使わない位置にも空の型を並べる必要があり、オプションを足すたびに全ての書き方が変わる |
 | オプションをクラスの中の `using Options` に書く | 機能は同じだが、派生クラスの補完に名前が 1 つ増える。基底の並びの方がクラスの先頭で何者か分かる |
 | オプションの種類ごとにクラスの中で public の `using RunAfter = nox::TypeList<...>;` などを書く (`work/updater-graph-unification` の形) | オプションの種類ごとに名前が補完に増える。private に書くと見えず宣言が無いのと同じになる、という落とし穴がある (同ブランチの設計書にも記録がある) |
-| オプションの型に、相手の種類を確かめる制約を付ける | 相手が完全型である必要が生じ、前方宣言で書けなくなる。System 以外 (Logic / Service) を相手にできなくなる |
+| オプションの型に、相手の種類を確かめる制約を付ける | 制約を検査するには相手が完全型である必要があり、前方宣言で書けなくなる (互いに参照し合う 2 つの型も書けない) |
 | 他の entity へのアクセサや構造変更のバッファをオプションで宣言する | 使うものなので引数にする (§5) |
 | `ExtraResource` のオプション | World に 1 つの共有状態は Service にまとめる (実行モデルの設計書でも Resource を別の概念にしない)。Service を引数で受け取れば足りる |
 | 構造変更のバッファを Service にする | 構造変更をするノードが全て直列になる (§8) |
@@ -330,6 +348,5 @@ entity の生成・破棄、Component の追加・削除は、`nox::EntityComman
 - Remove のメソッドが `EntityCommands&` に積んだ構造変更をいつ反映するか (同じ反映に含めるか、次の区間の末尾に回すか、Remove のメソッドでは受け取れないようにするか)。
 - EntityLogic を、その World で登録していないときの扱い (データとして付けられるが動かない、にするか)。
 - 旧名を残す属性の形 (名前空間や型名を変えたときの読み替え)。
-- 既存の型の改名。`nox::GarbageCollector` / `nox::dev::net::SocketScheduler` / render モジュールの `Renderer` などは §1 の規則 (`services` の名前空間、`Service` の末尾) に沿っていない。Service へ移すときに改名するか。保存データに載る前に決める。
-- `IComponentData` を `nox::detail` へ移す時期 (旧版を消すとき)。
+- 既存の型の置き場所。`nox::GarbageCollector` / `nox::dev::net::SocketScheduler` / render モジュールの `Renderer` などは §1 の規則 (`services` の名前空間に置く) に沿っていない。Service へ移すときに名前空間を移すか。core の Component `nox::LocalTransform` も `nox::components` に置いていない (Editor が `Editor/Core/SceneHierarchyManager.cs` で完全修飾名 `"nox::LocalTransform"` を定数で持っているので、移すなら一緒に直す)。保存データに載る前に決める。
 - Chunk 並列の構造変更 (§8) を実装する時期。
