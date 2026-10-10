@@ -255,6 +255,8 @@ public sealed class EditorSmokeTests
 		{
 			["NOX_STUDIO_SCREENSHOT_DIR"] = screenshotDirectory,
 		});
+		// 起動の待ち時間は録らず、メインウィンドウが出てから録り始める。editor より後に宣言して先に止める
+		using ScreenRecorder recorder = ScreenRecorder.StartIfRequested();
 
 		foreach ((string themeKey, string themeName) in new[] { ("Gunmetal", "Gunmetal"), ("BrushedSteel", "Brushed Steel"), ("Bronze", "Bronze"), ("Monochrome", "Monochrome"), ("Nox", "Nox") })
 		{
@@ -269,6 +271,113 @@ public sealed class EditorSmokeTests
 			string screenshotPath = Path.Combine(screenshotDirectory, themeKey + ".png");
 			WaitUntil(() => File.Exists(screenshotPath) && new FileInfo(screenshotPath).Length > 0,
 				$"Screenshot for theme '{themeName}' was not written to {screenshotPath}.");
+
+			// 録画を見る人が切り替わった結果を目で追えるよう、テーマごとに少し止める
+			if (recorder.IsRecording)
+			{
+				Thread.Sleep(800);
+			}
+		}
+	}
+
+	/// <summary>
+	/// デスクトップを ffmpeg で MP4 に録画する。PR の見た目確認用で、テストの合否には使わない。
+	/// </summary>
+	/// <remarks>
+	/// 環境変数 NOX_UI_VIDEO_PATH に出力先があり、ffmpeg が PATH にあるときだけ録る。どちらかが欠けたら何もしない。
+	/// 止めるときは標準入力へ q を送り、ffmpeg 自身に MP4 を閉じさせる (強制終了すると moov が書かれず再生できない)。
+	/// 出力は読まない。標準出力・標準エラーをリダイレクトして読まないと、バッファが詰まって ffmpeg が止まるため。
+	/// </remarks>
+	private sealed class ScreenRecorder : IDisposable
+	{
+		/// <summary>録画の上限。テストが止まっても動画が際限なく伸びないようにする。</summary>
+		private const int MaxSeconds = 120;
+
+		private readonly Process? _Process;
+
+		private ScreenRecorder(Process? process)
+		{
+			_Process = process;
+		}
+
+		public bool IsRecording => _Process != null;
+
+		public static ScreenRecorder StartIfRequested()
+		{
+			string? outputPath = Environment.GetEnvironmentVariable("NOX_UI_VIDEO_PATH");
+			if (string.IsNullOrWhiteSpace(outputPath))
+			{
+				return new ScreenRecorder(null);
+			}
+
+			Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+			ProcessStartInfo startInfo = new()
+			{
+				FileName = "ffmpeg",
+				UseShellExecute = false,
+				RedirectStandardInput = true,
+				CreateNoWindow = true,
+			};
+			foreach (string argument in new[]
+			{
+				"-hide_banner", "-loglevel", "error", "-y",
+				"-f", "gdigrab", "-framerate", "12", "-draw_mouse", "1", "-i", "desktop",
+				"-t", MaxSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture),
+				// libx264 の yuv420p は幅と高さが偶数でないと通らない
+				"-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+				"-c:v", "libx264", "-preset", "veryfast", "-crf", "30", "-pix_fmt", "yuv420p",
+				"-movflags", "+faststart",
+				outputPath,
+			})
+			{
+				startInfo.ArgumentList.Add(argument);
+			}
+
+			try
+			{
+				Process? process = Process.Start(startInfo);
+				// gdigrab が最初のフレームを取り始めるまで待つ
+				Thread.Sleep(1000);
+				return new ScreenRecorder(process);
+			}
+			catch (System.ComponentModel.Win32Exception)
+			{
+				// ffmpeg が無い。録画は補助なので、テストは続ける
+				return new ScreenRecorder(null);
+			}
+		}
+
+		public void Dispose()
+		{
+			if (_Process == null)
+			{
+				return;
+			}
+
+			try
+			{
+				if (_Process.HasExited == false)
+				{
+					_Process.StandardInput.Write('q');
+					_Process.StandardInput.Flush();
+					if (_Process.WaitForExit(15000) == false)
+					{
+						_Process.Kill();
+					}
+				}
+			}
+			catch (InvalidOperationException)
+			{
+				// 既に終了している
+			}
+			catch (IOException)
+			{
+				// 標準入力が閉じている (ffmpeg が先に終了した)
+			}
+			finally
+			{
+				_Process.Dispose();
+			}
 		}
 	}
 
