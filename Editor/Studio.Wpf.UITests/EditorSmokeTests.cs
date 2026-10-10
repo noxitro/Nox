@@ -234,11 +234,27 @@ public sealed class EditorSmokeTests
 			$"Active pane colors are not similar. InspectorActive={inspectorActiveColor}, HierarchyActive={hierarchyActiveColor}");
 	}
 
+	/// <summary>
+	/// テーマを順に切り替えても主要パネルが残ることと、テーマごとのスクリーンショットが保存されることを確かめる。
+	/// </summary>
+	/// <remarks>
+	/// スクリーンショットは Editor 側 (NOX_STUDIO_SCREENSHOT_DIR) がビジュアルツリーから描いて保存する。
+	/// CI は NOX_UI_SCREENSHOT_DIR で置き場を指定し、アーティファクトに上げて PR の見た目確認に使う。
+	/// 指定が無い手元の実行では作業用フォルダーに出し、保存の経路自体は常に確かめる。
+	/// </remarks>
 	[Fact]
 	public void ThemeMenuSwitchesAllThemesWithoutBreakingMainPanels()
 	{
 		using TestWorkspace workspace = TestWorkspace.Create();
-		using EditorApp editor = EditorApp.Launch(workspace.RootPath);
+		string screenshotDirectory = Environment.GetEnvironmentVariable("NOX_UI_SCREENSHOT_DIR") is { Length: > 0 } configured
+			? configured
+			: Path.Combine(workspace.RootPath, "screenshots");
+		DeleteScreenshots(screenshotDirectory);
+
+		using EditorApp editor = EditorApp.Launch(workspace.RootPath, new Dictionary<string, string>
+		{
+			["NOX_STUDIO_SCREENSHOT_DIR"] = screenshotDirectory,
+		});
 
 		foreach ((string themeKey, string themeName) in new[] { ("Gunmetal", "Gunmetal"), ("BrushedSteel", "Brushed Steel"), ("Bronze", "Bronze"), ("Monochrome", "Monochrome"), ("Nox", "Nox") })
 		{
@@ -248,6 +264,37 @@ public sealed class EditorSmokeTests
 			Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.Hierarchy.Tree"));
 			Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.Inspector.ComponentTree"));
 			Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.Trace.List"));
+
+			// 起動時のテーマへ戻す最後の 1 回は変更通知が出ないが、起動直後の保存で同じ名前のファイルが出来ている
+			string screenshotPath = Path.Combine(screenshotDirectory, themeKey + ".png");
+			WaitUntil(() => File.Exists(screenshotPath) && new FileInfo(screenshotPath).Length > 0,
+				$"Screenshot for theme '{themeName}' was not written to {screenshotPath}.");
+		}
+	}
+
+	private static void DeleteScreenshots(string directory)
+	{
+		if (Directory.Exists(directory) == false)
+		{
+			return;
+		}
+
+		foreach (string file in Directory.EnumerateFiles(directory, "*.png"))
+		{
+			File.Delete(file);
+		}
+	}
+
+	private static void WaitUntil(Func<bool> condition, string failureMessage)
+	{
+		Stopwatch stopwatch = Stopwatch.StartNew();
+		while (condition() == false)
+		{
+			if (stopwatch.Elapsed > UiTimeout)
+			{
+				Assert.Fail(failureMessage);
+			}
+			Thread.Sleep(100);
 		}
 	}
 
@@ -660,7 +707,7 @@ public sealed class EditorSmokeTests
 			MainWindow = mainWindow;
 		}
 
-		public static EditorApp Launch(string workspacePath)
+		public static EditorApp Launch(string workspacePath, IReadOnlyDictionary<string, string>? environment = null)
 		{
 			string editorExecutablePath = ResolveEditorExecutablePath();
 			ProcessStartInfo startInfo = new()
@@ -670,6 +717,13 @@ public sealed class EditorSmokeTests
 				WorkingDirectory = Path.GetDirectoryName(editorExecutablePath)!,
 				UseShellExecute = false,
 			};
+			if (environment != null)
+			{
+				foreach ((string key, string value) in environment)
+				{
+					startInfo.Environment[key] = value;
+				}
+			}
 
 			Application application = Application.Launch(startInfo);
 			UIA3Automation automation = new();

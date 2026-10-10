@@ -812,6 +812,8 @@ jobs:
         env:
           NOX_RUNTIME_TYPEDB_DIR: ${{ github.workspace }}/runtime/reflection_generated/gen
           NOX_RUNTIME_CONFIGURATION: ${{ matrix.configuration }}
+          # テーマ切替のテストが Editor にスクリーンショットを書かせる置き場 (下の Upload Editor screenshots が拾う)
+          NOX_UI_SCREENSHOT_DIR: ${{ github.workspace }}/flaui-screenshots
         run: |
           $testArgs = @(
             'test', 'Editor/Studio.Wpf.UITests/Studio.Wpf.UITests.csproj', '-c', '${{ matrix.configuration }}', '--no-build', '-v', 'minimal',
@@ -830,6 +832,37 @@ jobs:
             $executed = [int]([xml](Get-Content $trx.FullName)).TestRun.ResultSummary.Counters.executed
             if ($executed -ne 1) { throw "接続テストの実行数が 1 でない ($executed 件)。フィルタかテスト名を確かめること" }
           }
+
+      # ---------------------------------------------------------
+      # Editor のスクリーンショット (PR の見た目確認用)
+      #
+      # ThemeMenuSwitchesAllThemesWithoutBreakingMainPanels が Editor に
+      # NOX_STUDIO_SCREENSHOT_DIR を渡し、組み込みの 5 テーマを 1 枚ずつ PNG にする。
+      # Editor 側は環境変数があるときだけ保存し、描画はビジュアルツリーから行うので
+      # ランナーの画面解像度に左右されない。ClangCL は接続テストしか走らせないので出ない。
+      #
+      # 画像は GitHub の API では PR 本文に貼れない。アーティファクトを落として手で貼る:
+      #   gh run download <run-id> -n editor-screenshots-MSVC-Release
+      # GitHub ホストの標準ランナーは public リポジトリでは無料なので、追加の費用は無い。
+      # ---------------------------------------------------------
+      - name: Note Editor screenshots in summary
+        if: always() && matrix.configuration != 'Master' && matrix.compiler == 'MSVC'
+        run: |
+          $files = @(Get-ChildItem flaui-screenshots -Filter *.png -ErrorAction SilentlyContinue)
+          if ($files.Count -eq 0) { Write-Host 'スクリーンショットは無い'; exit 0 }
+          $names = ($files | Sort-Object Name | ForEach-Object { $_.BaseName }) -join ', '
+          @('', "## :camera: Editor screenshots (${{ matrix.compiler }} / ${{ matrix.configuration }})", '',
+            "アーティファクト ``editor-screenshots-${{ matrix.compiler }}-${{ matrix.configuration }}`` に $($files.Count) 枚: $names") |
+            Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+      - name: Upload Editor screenshots
+        if: always() && matrix.configuration != 'Master' && matrix.compiler == 'MSVC'
+        uses: actions/upload-artifact@v7
+        with:
+          name: editor-screenshots-${{ matrix.compiler }}-${{ matrix.configuration }}
+          path: flaui-screenshots/
+          retention-days: 14
+          if-no-files-found: ignore
 
       # ---------------------------------------------------------
       # 要約とアーティファクト

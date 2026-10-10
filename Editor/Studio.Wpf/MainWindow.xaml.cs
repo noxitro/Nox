@@ -20,6 +20,7 @@ public partial class MainWindow : Window
     private LayoutDocument? _MemoryProfilerDocument;
     private bool _ShutdownPrepared;
     private readonly MainWindowViewModel _ViewModel;
+    private readonly string? _ScreenshotDirectory = WindowScreenshot.ResolveDirectory();
 
     public MainWindow()
     {
@@ -27,6 +28,7 @@ public partial class MainWindow : Window
         _ViewModel = new MainWindowViewModel();
         DataContext = _ViewModel;
         _ViewModel.Theme.PropertyChanged += OnThemePropertyChanged;
+        ContentRendered += OnContentRendered;
         Core.UI.ProjectSettingsViewService.Register(ShowProjectSettings);
         ThemeSettingsViewService.Register(ShowThemeSettings);
         Core.UI.CoreDiagnosticsViewService.Register(ShowCoreDiagnosticsView);
@@ -45,7 +47,30 @@ public partial class MainWindow : Window
         if (e.PropertyName == nameof(Studio.Wpf.Themes.IThemeService.CurrentThemeKey))
         {
             WindowCaptionTheme.Apply(this);
+            CaptureScreenshotWhenIdle();
         }
+    }
+
+    private void OnContentRendered(object? sender, EventArgs e)
+    {
+        CaptureScreenshotWhenIdle();
+    }
+
+    /// <summary>
+    /// 描画が落ち着いた後 (アイドル時) に、現在のテーマ名でスクリーンショットを保存する。
+    /// CI の UI テスト用の口で、環境変数が無ければ何もしない。
+    /// </summary>
+    private void CaptureScreenshotWhenIdle()
+    {
+        if (_ScreenshotDirectory is not string directory)
+        {
+            return;
+        }
+
+        string themeKey = _ViewModel.Theme.CurrentThemeKey;
+        Dispatcher.BeginInvoke(
+            System.Windows.Threading.DispatcherPriority.ApplicationIdle,
+            new Action(() => WindowScreenshot.Save(this, directory, themeKey)));
     }
 
     private void ShowProjectSettings()
