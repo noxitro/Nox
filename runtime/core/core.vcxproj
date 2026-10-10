@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -44,6 +44,10 @@
       </SubType>
     </ClInclude>
     <ClInclude Include="attribute_dev_common.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="camera_system.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -146,6 +150,18 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="dev_components.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="dev_entity_logics.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="dev_services.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="ecs_definitions.h">
       <SubType>
       </SubType>
@@ -170,6 +186,19 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="entity_logic.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="entity_options.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="updater_node.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="world_registery.h" />
     <ClInclude Include="entity_query_legacy.h">
       <SubType>
       </SubType>
@@ -316,6 +345,10 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="camera_system.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="common_components.cpp">
       <SubType>
       </SubType>
@@ -409,6 +442,18 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="dev_components.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="dev_entity_logics.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="dev_services.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
     <ClCompile Include="ecs_definitions.cpp">
       <SubType>
       </SubType>
@@ -425,6 +470,19 @@
       <SubType>
       </SubType>
     </ClCompile>
+    <ClCompile Include="entity_logic.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="entity_options.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="updater_node.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="world_registery.cpp" />
     <ClCompile Include="entity_system.cpp">
       <SubType>
       </SubType>

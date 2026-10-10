@@ -9,6 +9,8 @@
 
 namespace nox
 {
+	/// @brief	Worldはプロセスに複数存在可能
+	///			GameWorld, EditorWorld, MeshPreviewWorldなど。各worldは任意のmoduleを持つことができる。
 	class World final
 	{
 		static constexpr nox::uint8 kArchetypeIdBitWidth = 31u;
@@ -34,6 +36,12 @@ namespace nox
 		World();
 		~World();
 
+		template<class... Modules>
+		inline void Init()
+		{
+		}
+		void Update();
+
 		nox::Entity CreateEntity();
 		void Delete(nox::Entity entity);
 		bool IsAlive(nox::Entity entity)const noexcept;
@@ -45,7 +53,9 @@ namespace nox
 			return static_cast<T*>(AddComponent(entity, nox::reflection::Typeof<T>()));
 		}
 
+		/// @brief runtimeで一度だけ呼ぶ初期化
 		static void GlobalInitialize();
+		/// @brief runtimeで一度だけ呼ぶ終了処理
 		static void GlobalTerminate();
 	private:
 

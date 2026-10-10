@@ -48,7 +48,7 @@ namespace nox::legacy
 
 	/// @brief ComponentDataとして引数に取れる型。
 	template<class T>
-	concept ComponentDataParameter = std::is_base_of_v<nox::IComponentData, std::remove_cv_t<T>>;
+	concept ComponentDataParameter = std::is_base_of_v<nox::detail::IComponentData, std::remove_cv_t<T>>;
 
 	/// @brief Serviceとして引数に取れる型。
 	template<class T>

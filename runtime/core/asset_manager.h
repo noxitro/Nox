@@ -4,7 +4,7 @@
 /// @file	asset_manager.h
 /// @brief	asset_manager
 #pragma once
-#include	"system.h"
+#include	"service.h"
 
 #if NOX_DEVELOP
 namespace nox::dev::editor_remote
@@ -15,6 +15,11 @@ namespace nox::dev::editor_remote
 
 namespace nox
 {
+	namespace legacy
+	{
+		class World;
+	}
+
 	namespace util
 	{
 		/// @brief uriをnative pathに変換する
@@ -25,12 +30,11 @@ namespace nox
 
 	class Asset;
 
-	class AssetManager : public nox::SystemBase
+	class AssetManager final: public nox::Service<AssetManager>
 	{
-		NOX_DECLARE_OBJECT(AssetManager, nox::SystemBase);
 	public:
 		AssetManager();
-		~AssetManager()override;
+		~AssetManager();
 
 		template<std::derived_from<nox::Asset> T>
 		inline nox::IntrusivePtr<T> CreateAsset(std::u8string_view file_path)
@@ -48,11 +52,11 @@ namespace nox
 		}
 
 	private:
-		void Init(nox::legacy::World& world);
+		void Init();
+
+		void InitOld(nox::legacy::World& world);
 		void Terminate(nox::legacy::World& world);
 		nox::Asset& CreateAssetImpl(std::u8string_view uri);
-
-		std::span<const nox::SystemBase::PhaseRegister> GetPhaseRegisterList()const noexcept override;
 
 		/// @brief ロードスレッドでのアセット処理結果
 		enum class LoadStatus : nox::uint8
@@ -72,16 +76,6 @@ namespace nox
 		/// @return 処理結果
 		LoadStatus ProcessLoad(nox::Asset& asset);
 	public:
-		static constexpr SystemPhaseInit kPhaseInit{
-			&AssetManager::Init,
-			u8"AssetManager::Init"
-		};
-
-		static constexpr SystemPhaseTerminate kPhaseTerminate{
-			&AssetManager::Terminate,
-			u8"AssetManager::Terminate"
-		};
-
 	private:
 #if NOX_DEVELOP
 		nox::util::InitOnceRef<nox::dev::editor_remote::EditorRemoteServer> editor_remote_server_system_;

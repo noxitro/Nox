@@ -159,7 +159,7 @@ nox::Asset& nox::AssetManager::CreateAssetImpl(std::u8string_view uri)
 	return *new_asset;
 }
 
-void nox::AssetManager::Init(nox::legacy::World& world)
+void nox::AssetManager::InitOld(nox::legacy::World& world)
 {
 #if NOX_DEVELOP
 	editor_remote_server_system_ = world.GetSystem<nox::dev::editor_remote::EditorRemoteServer>();
@@ -206,15 +206,6 @@ void nox::AssetManager::Terminate([[maybe_unused]] nox::legacy::World& world)
 
 	resource_cache_.clear();
 	is_resource_class_cache_built_ = false;
-}
-
-std::span<const nox::SystemBase::PhaseRegister> nox::AssetManager::GetPhaseRegisterList()const noexcept
-{
-	static constexpr auto table = std::array{
-		PhaseRegister(kPhaseInit),
-		PhaseRegister(kPhaseTerminate)
-	};
-	return table;
 }
 
 void nox::AssetManager::LoadThread([[maybe_unused]] nox::legacy::World& world)

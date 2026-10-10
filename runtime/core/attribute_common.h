@@ -22,6 +22,41 @@ namespace nox::attr
 	{
 		NOX_DECLARE_OBJECT(IgnoreDataMember, nox::attr::Attribute);
 	};
+
+	class RequireComponentsBase : public nox::attr::Attribute
+	{
+	protected:
+		constexpr explicit RequireComponentsBase(
+			const nox::reflection::Type* const* components,
+			const nox::uint8 component_count)noexcept:
+			components_(components),
+			component_count_(component_count)
+		{}
+	public:
+		inline constexpr const std::span<const nox::reflection::Type* const> GetComponents() const noexcept
+		{
+			return std::span<const nox::reflection::Type* const>(components_, component_count_);
+		}
+
+	private:
+		const nox::reflection::Type* const* components_;
+		const nox::uint8 component_count_;
+	};
+
+	/// @brief RequireComponentsの属性
+	template<class... Components>
+	class RequireComponents final: public nox::attr::RequireComponentsBase
+	{
+	public:
+		constexpr RequireComponents()noexcept :
+			nox::attr::RequireComponentsBase(components_.data(), static_cast<nox::uint8>(components_.size()))	
+		{
+
+		}
+
+	private:
+		static constexpr std::array<const nox::reflection::Type*, sizeof...(Components)> components_ = { &nox::reflection::Typeof<Components>()... };
+	};
 }
 
 namespace nox

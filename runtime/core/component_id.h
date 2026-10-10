@@ -14,7 +14,7 @@ namespace nox::detail
 	nox::uint16 GetComponentId(const nox::reflection::Type& type)noexcept;
 	nox::uint16 AssignComponentId(const nox::reflection::Type& type)noexcept;
 
-	template<std::derived_from<nox::IComponentData> T>
+	template<std::derived_from<nox::detail::IComponentData> T>
 	inline nox::uint16 GetComponentId()noexcept
 	{
 		static const nox::uint16 id = nox::detail::GetComponentId(nox::reflection::Typeof<T>());

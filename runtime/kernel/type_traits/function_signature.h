@@ -23,6 +23,8 @@ namespace nox
 
 			using RawFunctionPointerType = ResultType(*)(Args...);
 
+			static constexpr std::uint8_t kArgsCount = sizeof...(Args);
+
 			template<class T>
 			using RawMemberFunctionPointerType = ResultType(*)(T, Args...);
 
@@ -64,7 +66,8 @@ namespace nox
 		struct FunctionSignature;
 
 		template<class T>
-		using FunctionSignatureAdapter = FunctionSignature<std::remove_cvref_t<T>>;
+		using FunctionSignatureAdapter = nox::detail::FunctionSignature<std::remove_cvref_t<T>>;
+
 #pragma region 関数型
 		template<class Result, class... Args>
 		struct FunctionSignature<Result(Args...)> : nox::detail::FunctionSignatureFunction<Result, Args...>
@@ -675,7 +678,7 @@ namespace nox
 	using function_args_tuple_t = typename nox::detail::FunctionSignatureAdapter<T>::ArgsTupleType;
 
 	template<concepts::FunctionSignatureType T>
-	constexpr size_t function_args_length_v = std::tuple_size_v<function_args_tuple_t<T>>;
+	constexpr size_t function_args_length_v = nox::detail::FunctionSignatureAdapter<T>::kArgsCount;
 
 	template<concepts::FunctionSignatureType T>
 	constexpr bool is_function_noexcept_v = nox::detail::FunctionSignatureAdapter<T>::is_noexcept;

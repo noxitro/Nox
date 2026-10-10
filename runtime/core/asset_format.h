@@ -19,6 +19,7 @@ namespace nox
 	{
 		Main,
 		Extra,
+		Develop,
 	};
 
 	/// @brief ネイティブアセットのマジック（'N''O''X''A' をリトルエンディアン u32 で表現）

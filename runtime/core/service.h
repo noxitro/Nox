@@ -7,56 +7,61 @@
 ///          シングルトンのような特別な終了処理・再初期化を持たない。
 ///          System / EntityLogic は引数に Service* を書くだけで受け取れる。
 #pragma once
-#include	"ecs_definitions.h"
+#include	"entity_options.h"
 
 namespace nox
 {
-	class World;
-
-
-	/// @brief	System,EntityLogic,Service間で参照可能な機能
-	///			Systemなどと同じ実行ノードを持ち、Init,Update,Terminateの各フェーズを定義可能
-	///			Phase関数の引数は、ServiceとExtraResrouceのみ定義可能
-	class ServiceBase
+	template<class T>
+	struct NodeDescriptor
 	{
-	public:
-		enum class ServicePhaseType : nox::uint8
-		{
-			Init,
-			Update,
-			Terminate,
-		};
 
-	protected:
-		struct Phase
-		{
-			void operator()()const
-			{
-
-			}
-
-			ServicePhaseType type;
-		};
-
-		template<ServicePhaseType phase_type, auto Func>
-		struct PhaseImpl : public Phase
-		{
-
-		};
-
-		template<auto Func>
-		using PhaseInit = PhaseImpl<ServicePhaseType::Init, Func>;
-		template<auto Func>
-		using PhaseUpdate = PhaseImpl<ServicePhaseType::Update, Func>;
-		template<auto Func>
-		using PhaseTerminate = PhaseImpl<ServicePhaseType::Terminate, Func>;
-
-		template<class... Phases>
-		struct PhaseRegister;
 	};
 
 	template<class T>
-	class Service : public nox::ServiceBase
+	const nox::NodeDescriptor<T>& GetNodeDescriptor()noexcept;
+
+	class World;
+
+	namespace detail
+	{
+		/// @brief	System,EntityLogic,Service間で参照可能な機能
+		///			Systemなどと同じ実行ノードを持ち、Init,Update,Terminateの各フェーズを定義可能
+		///			Phase関数の引数は、ServiceとExtraResrouceのみ定義可能
+		class ServiceBase : public nox::detail::UpdaterNodeOwnerBase
+		{
+		public:
+			enum class PhaseType : nox::uint8
+			{
+				Init,
+				Update,
+				Terminate,
+			};
+
+		protected:
+			struct Phase
+			{
+			};
+
+			template<PhaseType phase_type, auto Func>
+			struct PhaseImpl : public Phase
+			{
+
+			};
+
+			template<auto Func>
+			using PhaseInit = PhaseImpl<PhaseType::Init, Func>;
+			template<auto Func>
+			using PhaseUpdate = PhaseImpl<PhaseType::Update, Func>;
+			template<auto Func>
+			using PhaseTerminate = PhaseImpl<PhaseType::Terminate, Func>;
+
+			template<class... Phases>
+			struct PhaseRegister;
+		};
+	}
+
+	template<class T>
+	class Service : public nox::detail::ServiceBase
 	{
 	public:
 		//	static constexpr auto GetPhaseList()noexcept {}
@@ -68,23 +73,6 @@ namespace nox
 			// GetPhaseList()を実装しているかチェック
 			static_assert(requires { T::GetPhaseList(); }, "Service must implement GetPhaseList()");
 			return true;
-		}
-	};
-
-	namespace detail
-	{
-		template<class T>
-		struct Phase;
-	}
-
-	class SampleService final : public nox::Service<SampleService>
-	{
-		NOX_ECS_DECLARE_VERIFY(SampleService);
-
-	public:
-		static constexpr void GetPhaseList()noexcept
-		{
-
 		}
 	};
 }

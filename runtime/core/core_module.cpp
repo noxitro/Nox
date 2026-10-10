@@ -23,10 +23,15 @@ nox::CoreModule::~CoreModule()
 {
 }
 
+void CreateEntityLogics()
+{
+
+}
+
 void nox::CoreModule::CreateEngineSystems(nox::PmrVector<nox::SystemBase*>& out)const
 {
 	out.emplace_back(new nox::SceneManager());
-	out.emplace_back(new nox::AssetManager());
+	//out.emplace_back(new nox::AssetManager());
 	out.emplace_back(new nox::GarbageCollector());
 #if NOX_DEVELOP
 	out.emplace_back(new nox::dev::net::SocketScheduler());
