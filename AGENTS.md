@@ -140,6 +140,14 @@ dotnet build Editor/Studio.slnx
 
 `NOX_ATTR_DECLARATION` / `NOX_ATTR_DECLARE` は型専用ではない。メンバ変数・メンバ関数に加え、グローバル変数・グローバル関数など型以外の宣言にも付く。ReflectionGenerator を直すときも型専用として扱わない。
 
+### ECS の型の置き場所と書き方
+
+- 名前空間は「モジュール → 種類」の順にする。core は `nox` 直下 (`nox::components` / `nox::services` / `nox::systems` / `nox::entity_logics`)、ほかのモジュールは `nox::render::components` のように置く。
+- Component の型名は名詞のまま。Service / EntitySystem / EntityLogic の型名は末尾に `Service` / `System` / `Logic` を付ける。
+- 型の完全修飾名は保存データと Editor の通信に使うので、原則として変えない (旧名を読み替える仕組みができるまでは、保存データに載った後には変えられない)。
+- EntitySystem のメソッドは `OnUpdate` / `OnAdd` / `OnRemove` だけ。オプション (`RunAfter` / `RunBefore` / `RequireComponents`) は基底のテンプレート引数に順番自由で並べる。メソッドの中で使うもの (Component、Service、`EntityCommands&` など) は引数で受け取り、オプションにしない。
+- 詳細と決めた理由は `docs/runtime-ecs.md`。
+
 ## Editor / Runtime の構成
 
 - Editor と Runtime は別プロセスで、TCP/IP で同期する。Runtime がクラッシュしても Editor の編集状態を壊さない設計を優先する。
