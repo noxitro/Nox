@@ -10,6 +10,10 @@
 # 段階  : 今は報告だけで CI は落とさない。既存の指摘を片付けてから、
 #         .clang-tidy の WarningsAsErrors に種類ごとに足して関門にしていく。
 # 日程  : 毎日 JST 02:37 (master)。6 構成のビルドとは別枠で 1 回だけ走らせる。
+#         解析するのは master の HEAD ではなく、CI (ci.yml) が最後に緑だった master の
+#         コミット (下の Pick commit to analyze)。master はユーザーが直接 push するので
+#         壊れたまま数日続くことがあり、HEAD で建てるとビルドの段階で落ちて解析結果が
+#         出ず、失敗通知だけが毎晩届いていた。
 #         このワークフローか設定を変えた push でも走る (設定の確認用。投稿しない)。
 # 通知  : 前回の結果と比べ、新しく出た指摘を Discord に投稿する
 #         (DISCORD_DEV_REPORT_WEBHOOK_URL、無ければ DISCORD_WEBHOOK_URL)。
@@ -55,9 +59,49 @@ jobs:
     runs-on: ${{ vars.NOX_RUNNER || 'windows-latest' }}
     # 通常のビルドに解析が上乗せされるので、6 構成の 1 ジョブ (約 10 分) より長くかかる
     timeout-minutes: 120
+    permissions:
+      contents: read
+      actions: read   # CI の実行一覧 (最後に緑だった master) を読むため
 
     steps:
+      # 定期実行では、CI (ci.yml) が最後に緑だった master のコミットを解析する (冒頭の「日程」)。
+      # 解析の目的は指摘の推移を追うことなので、建つことが分かっているコミットで足りる。
+      # ci.yml の run の成否は FlaUI や結果ページの公開まで含むので、runtime が建っていても
+      # 緑でない run は飛ばされるが、次に緑になれば追い付く。
+      # 一覧を取れない・緑の run が無いときは HEAD (従来どおり)。push と手動実行は
+      # 指定された ref の HEAD のまま (設定を試す push は、その push の内容を見たい)。
+      - name: Pick commit to analyze
+        id: pick
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          sha=''
+          if [ "$GITHUB_EVENT_NAME" = 'schedule' ]; then
+            if sha=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?branch=master&status=success&per_page=1" \
+                --jq '.workflow_runs[0].head_sha // empty'); then
+              if [ -z "$sha" ]; then
+                echo "::warning::CI が緑だった master の run が無いので HEAD を解析する"
+              elif [ "$sha" = "$GITHUB_SHA" ]; then
+                sha=''
+              fi
+            else
+              sha=''
+              echo "::warning::CI の実行一覧を取得できなかったので HEAD を解析する"
+            fi
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          if [ -n "$sha" ]; then
+            echo "解析するコミット: $sha (CI が最後に緑だった master。HEAD は $GITHUB_SHA)"
+            echo "解析したコミット: \`${sha:0:7}\` (CI が最後に緑だった master。HEAD は \`${GITHUB_SHA:0:7}\`)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "解析するコミット: HEAD ($GITHUB_SHA)"
+          fi
+
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.pick.outputs.sha }}   # 空なら HEAD
 
       - name: Setup build prerequisites
         uses: ./.github/actions/setup-nox-build
@@ -137,7 +181,13 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           TOTAL: ${{ steps.report.outputs.total }}
           NEW: ${{ steps.report.outputs.new }}
+          ANALYZED: ${{ steps.pick.outputs.sha }}
         run: |
+          # HEAD ではなく最後に緑だった master を解析したときは、どのコミットかを本文の先頭に書く
+          if ($env:ANALYZED) {
+            $note = "解析したコミット: ``$($env:ANALYZED.Substring(0, 7))`` (CI が最後に緑だった master。HEAD は ``$($env:GITHUB_SHA.Substring(0, 7))``)`n`n"
+            Set-Content -Path clang-tidy-discord.md -Value ($note + (Get-Content clang-tidy-discord.md -Raw)) -Encoding utf8NoBOM -NoNewline
+          }
           $color = if ([int]$env:NEW -gt 0) { 'yellow' } else { 'gray' }
           python .github/scripts/discord_webhook.py `
             --title "🔍 clang-tidy — $env:TOTAL 件 ($env:GITHUB_REF_NAME)" `
@@ -153,6 +203,7 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           STAGE: ${{ steps.build.outcome == 'failure' && 'build' || (steps.report.outcome == 'failure' && 'report' || 'other') }}
+          NOX_ANALYZED_SHA: ${{ steps.pick.outputs.sha }}   # 空なら GITHUB_SHA (clang-tidy-failure.py)
         run: |
           python .github/scripts/clang-tidy-failure.py `
             --stage $env:STAGE `
