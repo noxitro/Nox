@@ -49,6 +49,15 @@
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
       <BuildStlModules>false</BuildStlModules>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <!--
+        CI (GitHub Actions は環境変数 CI=true を設定する) の MSVC では /Z7 (デバッグ情報を .obj に埋め込む) にする。
+        /ZI は全翻訳単位が 1 つの PDB へ書き込むので /MP の並列が PDB の取り合いで詰まり、
+        CI の MSVC / Debug のジョブが 13 分前後かかって run 全体の律速になっていた (/Z7 で 8〜11 分)。
+        ClangCL は /Z7 にすると逆に遅くなった (同じ比較で Debug のジョブが 5〜7 分から 9 分前後) ので含めない。
+        CI はエディット・コンティニュを使わない。手元のビルドは /ZI のまま。
+        Release / Master は nox_release.props / nox_master.props が ProgramDatabase で上書きする。
+      -->
+      <DebugInformationFormat Condition="'$(CI)' == 'true' and '$(PlatformToolset)' != 'ClangCL'">OldStyle</DebugInformationFormat>
       <TreatSpecificWarningsAsErrors>5030;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
