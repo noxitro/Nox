@@ -143,9 +143,13 @@ dotnet build Editor/Studio.slnx
 ### ECS の型の置き場所と書き方
 
 - 名前空間は「モジュール → 種類」の順にする。core は `nox` 直下 (`nox::components` / `nox::services` / `nox::systems` / `nox::entity_logics`)、ほかのモジュールは `nox::render::components` のように置く。
-- Component の型名は名詞のまま。Service / EntitySystem / EntityLogic の型名は末尾に `Service` / `System` / `Logic` を付ける。
+- 型名に種類を表す語 (`Service` / `System` / `Logic`) は付けず、種類は名前空間だけで表す (`nox::systems::Camera`)。型名を文字列で出す所 (Editor・ログ・プロファイラ) は完全修飾名を使う。種類の名前空間を 2 つ以上同時に `using namespace` しない。ヘッダでは `using namespace` しない (名前空間の別名は可)。
 - 型の完全修飾名は保存データと Editor の通信に使うので、原則として変えない (旧名を読み替える仕組みができるまでは、保存データに載った後には変えられない)。
-- EntitySystem のメソッドは `OnUpdate` / `OnAdd` / `OnRemove` だけ。オプション (`RunAfter` / `RunBefore` / `RequireComponents`) は基底のテンプレート引数に順番自由で並べる。メソッドの中で使うもの (Component、Service、`EntityCommands&` など) は引数で受け取り、オプションにしない。
+- Component / EntitySystem / EntityLogic は、テンプレートの `nox::Component<T>` / `nox::EntitySystem<T, Options...>` / `nox::EntityLogic<T, Options...>` を継承する。テンプレートでない基底 (`IComponentData` / `EntitySystemBase` / `EntityLogicBase`) は `nox::detail` に置き、Component の基底を直接継承しない (Service の基底は当面今の場所のまま。理由は `docs/runtime-ecs.md` §1、§10)。EntitySystem / EntityLogic / Service の基底は共通の印 `nox::detail::UpdaterNodeOwnerBase` を継承し、`RunAfter` / `RunBefore` の相手は登録する翻訳単位で `nox::concepts::OrderTarget` を確かめる。
+- EntitySystem のメソッドは static の `OnUpdate` / `OnAdd` / `OnRemove` だけで、インスタンスは作れない。オプション (`RequireComponents` / `ExcludeComponents` / `RunAfter` / `RunBefore`) は基底のテンプレート引数に順番自由で並べる。
+- EntityLogic のメソッドは、自由な名前のメンバ関数を `RegisterList` に `Register<&T::Method, Trigger, Options...>` で登録する。オプションは基底と `Register` の両方に書ける (Add / Remove の `Register` には Query を変えるオプションを書けない)。別々に登録したメソッドの間に順番の保証はない。
+- メソッドの中で使うもの (Component、Service、`EntityCommands&` など) は引数で受け取り、オプションにしない。
+- 利用者の System / Logic は全て Update の区間で動く (区間を選ぶ書き方は無い)。
 - 詳細と決めた理由は `docs/runtime-ecs.md`。
 
 ## Editor / Runtime の構成
