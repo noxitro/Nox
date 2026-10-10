@@ -12,8 +12,6 @@
 #include	"../core/core.h"
 #include	"../app/app.h"
 
-#if !NOX_MASTER
-//	ECSセルフテスト用の型。ヘッダに定義するだけで購読されることの実証を兼ねる。
-//	エンジンの公開ヘッダには載せたくないので、解析の起点であるここから直接見せる。
-#include	"../core/test/test_types.h"
-#endif // !NOX_MASTER
+//	テスト用の型 (core/test/test_types.h) はここに足さない。
+//	ここから見えた型は runtime.exe に購読され、毎フレームの更新に乗る。
+//	テスト用の型は reflection_generated_test (core_test だけがリンクする) で生成する。

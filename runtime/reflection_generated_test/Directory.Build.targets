@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Project>
+	<!--
+		生成の手順は本体 (reflection_generated) と同じものを使う。
+		解析の起点 ($(ProjectDir)reflect.cpp) と出力先 ($(ProjectDir)gen) は、このプロジェクトのものになる。
+
+		RuntimeTypeDB は書かない。書くと %TEMP% のポインタファイルがこちらを指し、
+		Editor がテスト用の型を含む型 DB を読んでしまう。
+	-->
+	<PropertyGroup>
+		<NoxReflectionWriteTypeDB>false</NoxReflectionWriteTypeDB>
+	</PropertyGroup>
+
+	<Import Project="..\reflection_generated\Directory.Build.targets" />
+</Project>

@@ -3,10 +3,10 @@
 
 /// @file	reflection_variable_test_types.h
 /// @brief	nox::reflection::VariableInfo の getter / setter を検証するためのテスト用型。
-/// @details リフレクション生成器は解析の起点 (reflection_generated/reflect.cpp) から
-///          辿れる型しか見ない。テスト専用の型を生成対象に載せるための既存の作法に従い、
+/// @details リフレクション生成器は解析の起点 (reflect.cpp) から辿れる型しか見ない。
+///          テスト専用の型を生成対象に載せるための既存の作法に従い、
 ///          このヘッダは core/test/test_types.h からだけインクルードする
-///          (test_types.h 自体が reflect.cpp と reflection_generated/pch.h から見えている)。
+///          (test_types.h 自体が reflection_generated_test の reflect.cpp と pch.h から見えている)。
 ///
 ///          ここに置く型は「リフレクションの getter / setter が何を返すべきか」を
 ///          網羅するためだけのもので、エンジンの機能には一切使わない。

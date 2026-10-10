@@ -133,7 +133,7 @@ dotnet build Editor/Studio.slnx
 - kernel の中は、従来どおり使う標準ヘッダと kernel のヘッダを直接 include する。
 - 例外は OS の API を包むヘッダ (`kernel/win64_api.h` / `kernel/win64_socket.h`) と、OS・外部ライブラリのヘッダ (`<d3d12.h>`、`<gtest/gtest.h>` など)。
 - 例外は PCH を使わない翻訳単位 (`test_support/test_new_delete.cpp`)。必要な標準ヘッダを直接 include する。
-- 例外は ReflectionGenerator の解析の起点 `reflection_generated/reflect.cpp`。PCH なしで単独で解析されるので、代表ヘッダを直接 include する。
+- 例外は ReflectionGenerator の解析の起点 `reflection_generated/reflect.cpp` と `reflection_generated_test/reflect.cpp`。PCH なしで単独で解析されるので、代表ヘッダを直接 include する。
 - プロジェクト内のヘッダ同士 (core の中で `archetype.h` を読むなど) は、従来どおり必要なものを直接 include する。
 
 ### Reflection / 属性マクロ

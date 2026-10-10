@@ -132,7 +132,7 @@ namespace nox::test::updater_graph
 	//	nox::legacy::EntityLogicMethodTable の手書き特殊化 (entity_logic_legacy.h が明記している
 	//	エスケープハッチ) を使えば生成器を通さずに同じ経路へ載せられる。
 	//	core_test 専用の型を core/test/test_types.h へ足さずに済み、
-	//	Master でテスト型のリフレクションが生成されない問題とも無関係でいられる。
+	//	テストが生成器の出力に依存しない。
 	//	=================================================================================
 
 	/// @brief 宣言が全く重ならない2メソッドを持つ EntityLogic。

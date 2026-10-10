@@ -55,8 +55,8 @@
     <ProjectReference Include="..\..\reflection\reflection.vcxproj">
       <Project>{45ab985e-3772-4261-95ec-c6de7d26edbb}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\..\reflection_generated\reflection_generated.vcxproj">
-      <Project>{3fa8ce37-1f60-456c-996c-140c5f8a65ed}</Project>
+    <ProjectReference Include="..\..\reflection_generated_test\reflection_generated_test.vcxproj">
+      <Project>{f3b78c00-1e3d-4244-9ec3-abbb3a0a4186}</Project>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">

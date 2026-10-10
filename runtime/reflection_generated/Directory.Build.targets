@@ -48,6 +48,16 @@
 		<ReflectionParseIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath)</ReflectionParseIncludePath>
 	</PropertyGroup>
 
+	<!--
+		RuntimeTypeDB (Editor が読む型 DB) を書き出すか。
+		書き出すと %TEMP% のポインタファイルも置き直すので、Editor は最後に建てた方を読む。
+		テスト用の型を含む reflection_generated_test が書くと Editor がそれを読んでしまうので、
+		そちらでは false にする (reflection_generated_test/Directory.Build.targets)。
+	-->
+	<PropertyGroup>
+		<NoxReflectionWriteTypeDB Condition="'$(NoxReflectionWriteTypeDB)' == ''">true</NoxReflectionWriteTypeDB>
+	</PropertyGroup>
+
 	<!--変数定義end-->
 
 	<!--
@@ -127,7 +137,7 @@
 	  <Exec
 		Condition="Exists('$(SolutionDir)bin\ReflectionGenerator.exe')"
 		EnvironmentVariables="INCLUDE=$([MSBuild]::Escape('$(ReflectionParseIncludePath)'))"
-		Command="&quot;$(SolutionDir)bin\ReflectionGenerator.exe&quot; -project &quot;$(ProjectPath)&quot; -solution &quot;$(SolutionPath)&quot; -config &quot;$(Configuration)&quot; -platform &quot;$(Platform)&quot; -out &quot;$(ProjectDir)gen&quot;" />
+		Command="&quot;$(SolutionDir)bin\ReflectionGenerator.exe&quot; -project &quot;$(ProjectPath)&quot; -solution &quot;$(SolutionPath)&quot; -config &quot;$(Configuration)&quot; -platform &quot;$(Platform)&quot; -out &quot;$(ProjectDir)gen&quot; -typedb $(NoxReflectionWriteTypeDB)" />
 
 	  <!-- 生成された per-type ファイルを取り込む -->
 	  <ItemGroup>
