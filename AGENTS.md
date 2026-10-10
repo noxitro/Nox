@@ -145,7 +145,11 @@ dotnet build Editor/Studio.slnx
 - 名前空間は「モジュール → 種類」の順にする。core は `nox` 直下 (`nox::components` / `nox::services` / `nox::systems` / `nox::entity_logics`)、ほかのモジュールは `nox::render::components` のように置く。
 - Component の型名は名詞のまま。Service / EntitySystem / EntityLogic の型名は末尾に `Service` / `System` / `Logic` を付ける。
 - 型の完全修飾名は保存データと Editor の通信に使うので、原則として変えない (旧名を読み替える仕組みができるまでは、保存データに載った後には変えられない)。
-- EntitySystem のメソッドは `OnUpdate` / `OnAdd` / `OnRemove` だけ。オプション (`RunAfter` / `RunBefore` / `RequireComponents`) は基底のテンプレート引数に順番自由で並べる。メソッドの中で使うもの (Component、Service、`EntityCommands&` など) は引数で受け取り、オプションにしない。
+- Component / EntitySystem / EntityLogic は、テンプレートの `nox::Component<T>` / `nox::EntitySystem<T, Options...>` / `nox::EntityLogic<T, Options...>` を継承する。EntitySystem と EntityLogic のテンプレートでない基底は `nox::detail` に置く (`IComponentData` と Service の基底は当面今のまま。理由は `docs/runtime-ecs.md` §1、§10)。
+- EntitySystem のメソッドは static の `OnUpdate` / `OnAdd` / `OnRemove` だけで、インスタンスは作れない。オプション (`RequireComponents` / `ExcludeComponents` / `RunAfter` / `RunBefore`) は基底のテンプレート引数に順番自由で並べる。
+- EntityLogic のメソッドは、自由な名前のメンバ関数を `RegisterList` に `Register<&T::Method, Trigger, Options...>` で登録する。オプションは基底と `Register` の両方に書ける (Add / Remove の `Register` には Query を変えるオプションを書けない)。別々に登録したメソッドの間に順番の保証はない。
+- メソッドの中で使うもの (Component、Service、`EntityCommands&` など) は引数で受け取り、オプションにしない。
+- 利用者の System / Logic は全て Update の区間で動く (区間を選ぶ書き方は無い)。
 - 詳細と決めた理由は `docs/runtime-ecs.md`。
 
 ## Editor / Runtime の構成
