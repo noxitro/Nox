@@ -34,15 +34,10 @@
         </Style>
     </UserControl.Resources>
 
-    <Border Background="{DynamicResource Nox.Brush.SurfaceBackground}"
-            BorderBrush="{DynamicResource Nox.Brush.GridLine}"
-            BorderThickness="1">
+    <Border Style="{StaticResource Nox.PaneRootBorderStyle}">
         <DockPanel>
             <Border DockPanel.Dock="Top"
-                    Padding="10"
-                    Background="{DynamicResource Nox.Brush.HeaderBackground}"
-                    BorderBrush="{DynamicResource Nox.Brush.GridLine}"
-                    BorderThickness="0,0,0,1">
+                    Style="{StaticResource Nox.PaneHeaderBorderStyle}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -50,21 +45,21 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel>
                         <TextBlock Text="Theme Settings"
-                                   Foreground="{DynamicResource Nox.Brush.TextHeading}"
-                                   FontWeight="SemiBold" />
+                                   Style="{StaticResource Nox.PaneTitleTextStyle}" />
                         <TextBlock Text="{Binding StatusText}"
-                                   Foreground="{DynamicResource Nox.Brush.TextMuted}"
-                                   FontSize="11" />
+                                   Style="{StaticResource Nox.PaneContextTextStyle}" />
                     </StackPanel>
                     <StackPanel Grid.Column="1"
                                 Orientation="Horizontal"
                                 VerticalAlignment="Center">
                         <Button Content="Save Custom"
+                                Style="{StaticResource Nox.CommandButtonStyle}"
                                 MinWidth="104"
                                 Height="28"
                                 Margin="0,0,6,0"
                                 Command="{Binding SaveCustomThemeCommand}" />
                         <Button Content="Apply Custom"
+                                Style="{StaticResource Nox.PrimaryCommandButtonStyle}"
                                 MinWidth="104"
                                 Height="28"
                                 Command="{Binding ApplyCustomThemeCommand}" />

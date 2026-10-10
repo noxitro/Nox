@@ -173,6 +173,7 @@
 
     <FontFamily x:Key="Nox.Font.UI">Segoe UI Variable Text, Segoe UI</FontFamily>
     <FontFamily x:Key="Nox.Font.Data">Cascadia Mono, Consolas</FontFamily>
+    <FontFamily x:Key="Nox.Font.Icon">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
     <Thickness x:Key="Nox.Space.Compact">4</Thickness>
     <Thickness x:Key="Nox.Space.Control">8,4</Thickness>
     <Thickness x:Key="Nox.Space.Pane">12,8</Thickness>
@@ -208,10 +209,11 @@
         <Setter Property="Control.Template">
             <Setter.Value>
                 <ControlTemplate>
-                    <Rectangle Margin="2"
+                    <Rectangle Margin="1"
+                               RadiusX="3"
+                               RadiusY="3"
                                Stroke="{DynamicResource Nox.Brush.Accent}"
                                StrokeThickness="2"
-                               StrokeDashArray="1,1"
                                SnapsToDevicePixels="True" />
                 </ControlTemplate>
             </Setter.Value>
@@ -246,39 +248,66 @@
                                           RecognizesAccessKey="True" />
                     </Border>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Nox.Brush.ControlBackgroundHover}" />
-                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorderHover}" />
-                        </Trigger>
-                        <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Nox.Brush.ControlBackgroundPressed}" />
-                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorderPressed}" />
-                        </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Nox.Brush.Accent}" />
                             <Setter TargetName="Chrome" Property="BorderThickness" Value="2" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextMuted}" />
                             <Setter TargetName="Chrome" Property="Opacity" Value="0.55" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+        <!-- ホバーと押下はスタイルのトリガーで切り替える。テンプレートで面の色を直接書き換えると、
+             Primary / Danger の色まで普通のボタンの色で上書きされる。スタイルのトリガーなら
+             BasedOn した側のトリガーが後に評価されて勝つ -->
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Nox.Brush.ControlBackgroundHover}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorderHover}" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Nox.Brush.ControlBackgroundPressed}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.ControlBorderPressed}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextMuted}" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
+    <!-- 主要操作。ホバーで明るく、押下で元の明度へ戻す。アクセントの面は失わない -->
     <Style x:Key="Nox.PrimaryCommandButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource Nox.CommandButtonStyle}">
         <Setter Property="Background" Value="{DynamicResource Nox.Brush.Accent}" />
         <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.AccentForeground}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.AccentBorder}" />
         <Setter Property="FontWeight" Value="SemiBold" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Nox.Brush.AccentHover}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.AccentBorderHover}" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Nox.Brush.Accent}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.AccentBorder}" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
+    <!-- 破壊的な操作。ホバーでも危険色の文字と枠を保ち、通常のボタンに見せない -->
     <Style x:Key="Nox.DangerCommandButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource Nox.CommandButtonStyle}">
         <Setter Property="Background" Value="{DynamicResource Nox.Brush.ControlBackground}" />
         <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.Danger}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.DangerBorder}" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.Danger}" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.Danger}" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <Style x:Key="Nox.SearchTextBoxStyle" TargetType="{x:Type TextBox}" BasedOn="{StaticResource {x:Type TextBox}}">
@@ -307,6 +336,129 @@
         <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextSecondary}" />
         <Setter Property="FontSize" Value="11" />
         <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- ペインの外枠。区切りは枠線ではなく背景の明度差で付けるので、境界線は描かない -->
+    <Style x:Key="Nox.PaneRootBorderStyle" TargetType="{x:Type Border}">
+        <Setter Property="Background" Value="{DynamicResource Nox.Brush.SurfaceBackground}" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+
+    <!-- ペイン見出しの補助文 (件数・状態など) -->
+    <Style x:Key="Nox.PaneContextTextStyle" TargetType="{x:Type TextBlock}">
+        <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextMuted}" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+
+    <!-- 状態ブロック: マーカー + 短い状態名 + 値 を横並びにする器 -->
+    <Style x:Key="Nox.StatusBlockStyle" TargetType="{x:Type Border}">
+        <Setter Property="Height" Value="28" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="CornerRadius" Value="{StaticResource Nox.Radius.Control}" />
+        <Setter Property="Background" Value="{DynamicResource Nox.Brush.CommandBadgeBackground}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.BadgeBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+    </Style>
+
+    <Style x:Key="Nox.StatusLabelTextStyle" TargetType="{x:Type TextBlock}" BasedOn="{StaticResource Nox.DataTextStyle}">
+        <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextMuted}" />
+        <Setter Property="Margin" Value="0,0,8,0" />
+    </Style>
+
+    <Style x:Key="Nox.StatusValueTextStyle" TargetType="{x:Type TextBlock}" BasedOn="{StaticResource Nox.DataTextStyle}">
+        <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
+    </Style>
+
+    <!-- スクロールバー: 矢印なし、細いつまみだけ。暗い面に WPF 既定の明るいバーを出さない -->
+    <Style x:Key="Nox.ScrollBarThumbStyle" TargetType="{x:Type Thumb}">
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="OverridesDefaultStyle" Value="True" />
+        <Setter Property="Background" Value="{DynamicResource Nox.Brush.ControlBorder}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Thumb}">
+                    <Border x:Name="Chrome"
+                            Margin="2"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="3"
+                            SnapsToDevicePixels="True" />
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Nox.Brush.ControlBorderHover}" />
+                        </Trigger>
+                        <Trigger Property="IsDragging" Value="True">
+                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Nox.Brush.ControlBorderPressed}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Nox.ScrollBarPageButtonStyle" TargetType="{x:Type RepeatButton}">
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="OverridesDefaultStyle" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type RepeatButton}">
+                    <Rectangle Fill="Transparent" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <ControlTemplate x:Key="Nox.VerticalScrollBarTemplate" TargetType="{x:Type ScrollBar}">
+        <Grid Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+            <Track x:Name="PART_Track" IsDirectionReversed="True">
+                <Track.DecreaseRepeatButton>
+                    <RepeatButton Style="{StaticResource Nox.ScrollBarPageButtonStyle}" Command="{x:Static ScrollBar.PageUpCommand}" />
+                </Track.DecreaseRepeatButton>
+                <Track.IncreaseRepeatButton>
+                    <RepeatButton Style="{StaticResource Nox.ScrollBarPageButtonStyle}" Command="{x:Static ScrollBar.PageDownCommand}" />
+                </Track.IncreaseRepeatButton>
+                <Track.Thumb>
+                    <Thumb Style="{StaticResource Nox.ScrollBarThumbStyle}" MinHeight="24" />
+                </Track.Thumb>
+            </Track>
+        </Grid>
+    </ControlTemplate>
+
+    <ControlTemplate x:Key="Nox.HorizontalScrollBarTemplate" TargetType="{x:Type ScrollBar}">
+        <Grid Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+            <Track x:Name="PART_Track" IsDirectionReversed="False">
+                <Track.DecreaseRepeatButton>
+                    <RepeatButton Style="{StaticResource Nox.ScrollBarPageButtonStyle}" Command="{x:Static ScrollBar.PageLeftCommand}" />
+                </Track.DecreaseRepeatButton>
+                <Track.IncreaseRepeatButton>
+                    <RepeatButton Style="{StaticResource Nox.ScrollBarPageButtonStyle}" Command="{x:Static ScrollBar.PageRightCommand}" />
+                </Track.IncreaseRepeatButton>
+                <Track.Thumb>
+                    <Thumb Style="{StaticResource Nox.ScrollBarThumbStyle}" MinWidth="24" />
+                </Track.Thumb>
+            </Track>
+        </Grid>
+    </ControlTemplate>
+
+    <Style TargetType="{x:Type ScrollBar}">
+        <Setter Property="OverridesDefaultStyle" Value="True" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Width" Value="10" />
+        <Setter Property="MinWidth" Value="10" />
+        <Setter Property="Template" Value="{StaticResource Nox.VerticalScrollBarTemplate}" />
+        <Style.Triggers>
+            <Trigger Property="Orientation" Value="Horizontal">
+                <Setter Property="Width" Value="Auto" />
+                <Setter Property="MinWidth" Value="0" />
+                <Setter Property="Height" Value="10" />
+                <Setter Property="MinHeight" Value="10" />
+                <Setter Property="Template" Value="{StaticResource Nox.HorizontalScrollBarTemplate}" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <Style TargetType="{x:Type CheckBox}">
@@ -553,6 +705,55 @@
         <Setter Property="Padding" Value="12,7" />
     </Style>
 
+    <!-- メニューバーの最上段の項目。既定のテンプレートは枠付きの箱になるので、
+         枠を持たない平らな項目にし、ホバーと展開中だけ面を 1 段明るくする -->
+    <ControlTemplate x:Key="Nox.TopLevelMenuItemTemplate" TargetType="{x:Type MenuItem}">
+        <Border x:Name="Chrome"
+                Background="Transparent"
+                CornerRadius="{StaticResource Nox.Radius.Control}"
+                Padding="{TemplateBinding Padding}"
+                SnapsToDevicePixels="True">
+            <Grid>
+                <ContentPresenter ContentSource="Header"
+                                  RecognizesAccessKey="True"
+                                  VerticalAlignment="Center" />
+                <Popup x:Name="PART_Popup"
+                       Placement="Bottom"
+                       VerticalOffset="4"
+                       AllowsTransparency="True"
+                       Focusable="False"
+                       PopupAnimation="None"
+                       IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}">
+                    <Border Background="{DynamicResource Nox.Brush.MenuBackground}"
+                            BorderBrush="{DynamicResource Nox.Brush.ControlBorder}"
+                            BorderThickness="1"
+                            CornerRadius="{StaticResource Nox.Radius.Control}"
+                            Padding="4"
+                            SnapsToDevicePixels="True">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"
+                                            KeyboardNavigation.TabNavigation="Cycle"
+                                            Grid.IsSharedSizeScope="True" />
+                        </ScrollViewer>
+                    </Border>
+                </Popup>
+            </Grid>
+        </Border>
+        <ControlTemplate.Triggers>
+            <Trigger Property="IsHighlighted" Value="True">
+                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Nox.Brush.TabHoverBackground}" />
+                <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextStrong}" />
+            </Trigger>
+            <Trigger Property="IsSubmenuOpen" Value="True">
+                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Nox.Brush.TabSelectedBackground}" />
+                <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextStrong}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextMuted}" />
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
     <Style TargetType="{x:Type TreeView}">
         <Setter Property="Background" Value="{DynamicResource Nox.Brush.PanelBackground}" />
         <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
@@ -660,7 +861,13 @@
         <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.GridLine}" />
     </Style>
 
+    <!-- ドッキングのペインは TabControl の派生で、指定しないと既定の白い背景と灰色の枠が出る。
+         ペインの区切りとして GridLine の 1px だけを描き、背景はパネルの色にする -->
     <Style x:Key="Nox.DocumentPaneControlStyle" TargetType="{x:Type adControls:LayoutDocumentPaneControl}">
+        <Setter Property="Background" Value="{DynamicResource Nox.Brush.PanelBackground}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.GridLine}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="0" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type adControls:LayoutDocumentPaneControl}">
@@ -741,7 +948,7 @@
                     <Setter Property="Visibility" Value="{Binding IsVisible, Converter={adConverters:BoolToVisibilityConverter}}" />
                     <Setter Property="Background" Value="{DynamicResource Nox.Brush.HeaderBackground}" />
                     <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextSecondary}" />
-                    <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.GridLine}" />
+                    <Setter Property="BorderBrush" Value="Transparent" />
                     <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
                     <Setter Property="IsEnabled" Value="{Binding IsEnabled}" />
                     <Setter Property="ToolTip" Value="{Binding ToolTip}" />
@@ -755,7 +962,7 @@
                                             Padding="{TemplateBinding Padding}"
                                             Background="{TemplateBinding Background}"
                                             BorderBrush="{TemplateBinding BorderBrush}"
-                                            BorderThickness="1,1,1,0">
+                                            BorderThickness="0,2,0,0">
                                         <ContentPresenter x:Name="Content"
                                                           HorizontalAlignment="{Binding HorizontalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
                                                           VerticalAlignment="{Binding VerticalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
@@ -771,7 +978,6 @@
                                         <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.Accent}" />
                                         <Setter Property="Panel.ZIndex" Value="1" />
                                         <Setter Property="Margin" Value="0,0,0,-2" />
-                                        <Setter TargetName="Content" Property="Margin" Value="0,0,0,3" />
                                     </Trigger>
                                     <MultiTrigger>
                                         <MultiTrigger.Conditions>
@@ -812,6 +1018,9 @@
     <Style x:Key="Nox.AnchorablePaneControlStyle" TargetType="{x:Type adControls:LayoutAnchorablePaneControl}">
         <Setter Property="Foreground" Value="{Binding Model.Root.Manager.Foreground, RelativeSource={RelativeSource Self}}" />
         <Setter Property="Background" Value="{Binding Model.Root.Manager.Background, RelativeSource={RelativeSource Self}}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.GridLine}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="0" />
         <Setter Property="TabStripPlacement" Value="Top" />
         <Setter Property="Template">
             <Setter.Value>
@@ -858,7 +1067,7 @@
                 <Style TargetType="{x:Type TabItem}">
                     <Setter Property="Background" Value="{DynamicResource Nox.Brush.HeaderBackground}" />
                     <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextSecondary}" />
-                    <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.GridLine}" />
+                    <Setter Property="BorderBrush" Value="Transparent" />
                     <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
                     <Setter Property="IsEnabled" Value="{Binding IsEnabled}" />
                     <Setter Property="ToolTip" Value="{Binding ToolTip}" />
@@ -872,7 +1081,7 @@
                                             Padding="{TemplateBinding Padding}"
                                             Background="{TemplateBinding Background}"
                                             BorderBrush="{TemplateBinding BorderBrush}"
-                                            BorderThickness="1,1,1,0">
+                                            BorderThickness="0,2,0,0">
                                         <ContentPresenter x:Name="Content"
                                                           HorizontalAlignment="{Binding HorizontalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
                                                           VerticalAlignment="{Binding VerticalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
@@ -935,68 +1144,54 @@
     <Style TargetType="{x:Type adControls:AnchorablePaneTitle}">
         <Setter Property="Background" Value="{DynamicResource Nox.Brush.HeaderBackgroundInactive}" />
         <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextSecondary}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.GridLine}" />
-        <Setter Property="BorderThickness" Value="1,1,1,0" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0,0,0,2" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding Model.IsSelected, RelativeSource={RelativeSource Self}}" Value="True">
                 <Setter Property="Background" Value="{DynamicResource Nox.Brush.HeaderBackgroundInactive}" />
                 <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.TabSelectedBorder}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding Model.IsActive, RelativeSource={RelativeSource Self}}" Value="True">
                 <Setter Property="Background" Value="{DynamicResource Nox.Brush.HeaderBackgroundActive}" />
                 <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
                 <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.Accent}" />
-                <Setter Property="BorderThickness" Value="1,1,1,3" />
                 <Setter Property="FontWeight" Value="SemiBold" />
             </DataTrigger>
         </Style.Triggers>
     </Style>
 
     <Style TargetType="{x:Type adControls:LayoutAnchorableTabItem}">
-        <Setter Property="Background" Value="{DynamicResource Nox.Brush.HeaderBackground}" />
+        <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextSecondary}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.GridLine}" />
-        <Setter Property="BorderThickness" Value="1,1,1,0" />
+        <Setter Property="BorderThickness" Value="0" />
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="{DynamicResource Nox.Brush.TabHoverBackground}" />
-                <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextSecondary}" />
-                <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.TabHoverBorder}" />
+                <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
             </Trigger>
             <DataTrigger Binding="{Binding Model.IsSelected, RelativeSource={RelativeSource Self}}" Value="True">
-                <Setter Property="Background" Value="{DynamicResource Nox.Brush.HeaderBackgroundInactive}" />
                 <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding Model.IsActive, RelativeSource={RelativeSource Self}}" Value="True">
-                <Setter Property="Background" Value="{DynamicResource Nox.Brush.HeaderBackgroundActive}" />
                 <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
-                <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.Accent}" />
-                <Setter Property="BorderThickness" Value="1,1,1,3" />
                 <Setter Property="FontWeight" Value="SemiBold" />
             </DataTrigger>
         </Style.Triggers>
     </Style>
 
     <Style TargetType="{x:Type adControls:LayoutDocumentTabItem}">
-        <Setter Property="Background" Value="{DynamicResource Nox.Brush.HeaderBackground}" />
+        <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextSecondary}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.GridLine}" />
-        <Setter Property="BorderThickness" Value="1,1,1,0" />
+        <Setter Property="BorderThickness" Value="0" />
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="{DynamicResource Nox.Brush.TabHoverBackground}" />
-                <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextSecondary}" />
-                <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.TabHoverBorder}" />
+                <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
             </Trigger>
             <DataTrigger Binding="{Binding Model.IsSelected, RelativeSource={RelativeSource Self}}" Value="True">
-                <Setter Property="Background" Value="{DynamicResource Nox.Brush.HeaderBackgroundInactive}" />
                 <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding Model.IsActive, RelativeSource={RelativeSource Self}}" Value="True">
-                <Setter Property="Background" Value="{DynamicResource Nox.Brush.HeaderBackgroundActive}" />
                 <Setter Property="Foreground" Value="{DynamicResource Nox.Brush.TextPrimary}" />
-                <Setter Property="BorderBrush" Value="{DynamicResource Nox.Brush.Accent}" />
-                <Setter Property="BorderThickness" Value="1,1,1,3" />
                 <Setter Property="FontWeight" Value="SemiBold" />
             </DataTrigger>
         </Style.Triggers>

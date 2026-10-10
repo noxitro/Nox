@@ -59,7 +59,7 @@
         </Style>
     </UserControl.Resources>
 
-    <Border Background="{DynamicResource Nox.Brush.SurfaceBackground}" BorderBrush="{DynamicResource Nox.Brush.GridLine}" BorderThickness="1"
+    <Border Style="{StaticResource Nox.PaneRootBorderStyle}"
             PreviewMouseLeftButtonDown="OnHierarchyPreviewMouseDown"
             PreviewMouseRightButtonDown="OnHierarchyPreviewMouseDown">
         <DockPanel>
@@ -85,7 +85,7 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="&#xE721;"
-                                       FontFamily="Segoe MDL2 Assets"
+                                       FontFamily="{StaticResource Nox.Font.Icon}"
                                        Foreground="{DynamicResource Nox.Brush.TextMuted}"
                                        VerticalAlignment="Center"
                                        Margin="0,0,8,0" />
@@ -166,7 +166,7 @@
                                 <ColumnDefinition Width="18" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{Binding Icon}" FontFamily="Segoe MDL2 Assets" Width="18" Foreground="{DynamicResource Nox.Brush.Accent}" />
+                            <TextBlock Text="{Binding Icon}" FontFamily="{StaticResource Nox.Font.Icon}" Width="18" Foreground="{DynamicResource Nox.Brush.Accent}" />
                             <Grid Grid.Column="1" Margin="6,0,0,0">
                                 <TextBlock Text="{Binding Name}"
                                            Style="{StaticResource HierarchyInlineRenameTextStyle}" />

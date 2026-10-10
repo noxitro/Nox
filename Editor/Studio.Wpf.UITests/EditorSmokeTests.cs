@@ -234,11 +234,29 @@ public sealed class EditorSmokeTests
 			$"Active pane colors are not similar. InspectorActive={inspectorActiveColor}, HierarchyActive={hierarchyActiveColor}");
 	}
 
+	/// <summary>
+	/// テーマを順に切り替えても主要パネルが残ることと、テーマごとのスクリーンショットが保存されることを確かめる。
+	/// </summary>
+	/// <remarks>
+	/// スクリーンショットは Editor 側 (NOX_STUDIO_SCREENSHOT_DIR) がビジュアルツリーから描いて保存する。
+	/// CI は NOX_UI_SCREENSHOT_DIR で置き場を指定し、アーティファクトに上げて PR の見た目確認に使う。
+	/// 指定が無い手元の実行では作業用フォルダーに出し、保存の経路自体は常に確かめる。
+	/// </remarks>
 	[Fact]
 	public void ThemeMenuSwitchesAllThemesWithoutBreakingMainPanels()
 	{
 		using TestWorkspace workspace = TestWorkspace.Create();
-		using EditorApp editor = EditorApp.Launch(workspace.RootPath);
+		string screenshotDirectory = Environment.GetEnvironmentVariable("NOX_UI_SCREENSHOT_DIR") is { Length: > 0 } configured
+			? configured
+			: Path.Combine(workspace.RootPath, "screenshots");
+		DeleteScreenshots(screenshotDirectory);
+
+		using EditorApp editor = EditorApp.Launch(workspace.RootPath, new Dictionary<string, string>
+		{
+			["NOX_STUDIO_SCREENSHOT_DIR"] = screenshotDirectory,
+		});
+		// 起動の待ち時間は録らず、メインウィンドウが出てから録り始める。editor より後に宣言して先に止める
+		using ScreenRecorder recorder = ScreenRecorder.StartIfRequested();
 
 		foreach ((string themeKey, string themeName) in new[] { ("Gunmetal", "Gunmetal"), ("BrushedSteel", "Brushed Steel"), ("Bronze", "Bronze"), ("Monochrome", "Monochrome"), ("Nox", "Nox") })
 		{
@@ -248,6 +266,144 @@ public sealed class EditorSmokeTests
 			Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.Hierarchy.Tree"));
 			Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.Inspector.ComponentTree"));
 			Assert.NotNull(FindByAutomationId(editor.MainWindow, "NoxStudio.Trace.List"));
+
+			// 起動時のテーマへ戻す最後の 1 回は変更通知が出ないが、起動直後の保存で同じ名前のファイルが出来ている
+			string screenshotPath = Path.Combine(screenshotDirectory, themeKey + ".png");
+			WaitUntil(() => File.Exists(screenshotPath) && new FileInfo(screenshotPath).Length > 0,
+				$"Screenshot for theme '{themeName}' was not written to {screenshotPath}.");
+
+			// 録画を見る人が切り替わった結果を目で追えるよう、テーマごとに少し止める
+			if (recorder.IsRecording)
+			{
+				Thread.Sleep(800);
+			}
+		}
+	}
+
+	/// <summary>
+	/// デスクトップを ffmpeg で MP4 に録画する。PR の見た目確認用で、テストの合否には使わない。
+	/// </summary>
+	/// <remarks>
+	/// 環境変数 NOX_UI_VIDEO_PATH に出力先があり、ffmpeg が PATH にあるときだけ録る。どちらかが欠けたら何もしない。
+	/// 止めるときは標準入力へ q を送り、ffmpeg 自身に MP4 を閉じさせる (強制終了すると moov が書かれず再生できない)。
+	/// 出力は読まない。標準出力・標準エラーをリダイレクトして読まないと、バッファが詰まって ffmpeg が止まるため。
+	/// </remarks>
+	private sealed class ScreenRecorder : IDisposable
+	{
+		/// <summary>録画の上限。テストが止まっても動画が際限なく伸びないようにする。</summary>
+		private const int MaxSeconds = 120;
+
+		private readonly Process? _Process;
+
+		private ScreenRecorder(Process? process)
+		{
+			_Process = process;
+		}
+
+		public bool IsRecording => _Process != null;
+
+		public static ScreenRecorder StartIfRequested()
+		{
+			string? outputPath = Environment.GetEnvironmentVariable("NOX_UI_VIDEO_PATH");
+			if (string.IsNullOrWhiteSpace(outputPath))
+			{
+				return new ScreenRecorder(null);
+			}
+
+			Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+			ProcessStartInfo startInfo = new()
+			{
+				FileName = "ffmpeg",
+				UseShellExecute = false,
+				RedirectStandardInput = true,
+				CreateNoWindow = true,
+			};
+			foreach (string argument in new[]
+			{
+				"-hide_banner", "-loglevel", "error", "-y",
+				"-f", "gdigrab", "-framerate", "12", "-draw_mouse", "1", "-i", "desktop",
+				"-t", MaxSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture),
+				// libx264 の yuv420p は幅と高さが偶数でないと通らない
+				"-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+				"-c:v", "libx264", "-preset", "veryfast", "-crf", "30", "-pix_fmt", "yuv420p",
+				"-movflags", "+faststart",
+				outputPath,
+			})
+			{
+				startInfo.ArgumentList.Add(argument);
+			}
+
+			try
+			{
+				Process? process = Process.Start(startInfo);
+				// gdigrab が最初のフレームを取り始めるまで待つ
+				Thread.Sleep(1000);
+				return new ScreenRecorder(process);
+			}
+			catch (System.ComponentModel.Win32Exception)
+			{
+				// ffmpeg が無い。録画は補助なので、テストは続ける
+				return new ScreenRecorder(null);
+			}
+		}
+
+		public void Dispose()
+		{
+			if (_Process == null)
+			{
+				return;
+			}
+
+			try
+			{
+				if (_Process.HasExited == false)
+				{
+					_Process.StandardInput.Write('q');
+					_Process.StandardInput.Flush();
+					if (_Process.WaitForExit(15000) == false)
+					{
+						_Process.Kill();
+					}
+				}
+			}
+			catch (InvalidOperationException)
+			{
+				// 既に終了している
+			}
+			catch (IOException)
+			{
+				// 標準入力が閉じている (ffmpeg が先に終了した)
+			}
+			finally
+			{
+				_Process.Dispose();
+			}
+		}
+	}
+
+	private static void DeleteScreenshots(string directory)
+	{
+		if (Directory.Exists(directory) == false)
+		{
+			return;
+		}
+
+		foreach (string file in Directory.EnumerateFiles(directory, "*.png"))
+		{
+			File.Delete(file);
+		}
+	}
+
+	private static void WaitUntil(Func<bool> condition, string failureMessage)
+	{
+		Stopwatch stopwatch = Stopwatch.StartNew();
+		while (condition() == false)
+		{
+			if (stopwatch.Elapsed > UiTimeout)
+			{
+				Assert.Fail(failureMessage);
+			}
+			Thread.Sleep(100);
 		}
 	}
 
@@ -660,7 +816,7 @@ public sealed class EditorSmokeTests
 			MainWindow = mainWindow;
 		}
 
-		public static EditorApp Launch(string workspacePath)
+		public static EditorApp Launch(string workspacePath, IReadOnlyDictionary<string, string>? environment = null)
 		{
 			string editorExecutablePath = ResolveEditorExecutablePath();
 			ProcessStartInfo startInfo = new()
@@ -670,6 +826,13 @@ public sealed class EditorSmokeTests
 				WorkingDirectory = Path.GetDirectoryName(editorExecutablePath)!,
 				UseShellExecute = false,
 			};
+			if (environment != null)
+			{
+				foreach ((string key, string value) in environment)
+				{
+					startInfo.Environment[key] = value;
+				}
+			}
 
 			Application application = Application.Launch(startInfo);
 			UIA3Automation automation = new();

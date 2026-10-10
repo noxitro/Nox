@@ -12,20 +12,21 @@
              d:DataContext="{d:DesignInstance vm:ProjectSettingsViewModel, IsDesignTimeCreatable=False}"
              noxui:ViewModelLocator.AutoWireViewModel="True"
              AutomationProperties.AutomationId="NoxStudio.ProjectSettingsView">
-    <Border Background="{DynamicResource Nox.Brush.SurfaceBackground}" BorderBrush="{DynamicResource Nox.Brush.GridLine}" BorderThickness="1">
+    <Border Style="{StaticResource Nox.PaneRootBorderStyle}">
         <DockPanel>
-            <Border DockPanel.Dock="Top" Padding="10" Background="{DynamicResource Nox.Brush.HeaderBackground}" BorderBrush="{DynamicResource Nox.Brush.GridLine}" BorderThickness="0,0,0,1">
+            <Border DockPanel.Dock="Top" Style="{StaticResource Nox.PaneHeaderBorderStyle}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="Project Settings" Foreground="{DynamicResource Nox.Brush.TextHeading}" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource Nox.Brush.TextTertiary}" Margin="10,0,0,0" />
+                        <TextBlock Text="Project Settings" Style="{StaticResource Nox.PaneTitleTextStyle}" />
+                        <TextBlock Text="{Binding StatusText}" Style="{StaticResource Nox.PaneContextTextStyle}" Margin="8,0,0,0" />
                     </StackPanel>
                     <Button Grid.Column="1"
                             Content="Save"
+                            Style="{StaticResource Nox.CommandButtonStyle}"
                             AutomationProperties.AutomationId="NoxStudio.ProjectSettings.SaveButton"
                             Height="28"
                             MinWidth="80"

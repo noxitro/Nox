@@ -1,0 +1,34 @@
+# PR を閉じたら、ci.yml の editor-media ジョブが置いた一時ブランチ ci-media/pr-<番号> を消す。
+# マージでも閉じただけでも消す。ブランチが無ければ何もしない。
+name: CI media cleanup
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write   # ブランチの削除
+
+jobs:
+  cleanup:
+    name: Delete ci-media branch
+    # フォークからの PR ではトークンが読み取り専用になり、ブランチもこのリポジトリに作られていない
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Delete branch
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          ref="heads/ci-media/pr-$PR"
+          if gh api "repos/$REPO/git/ref/$ref" >/dev/null 2>&1; then
+            gh api -X DELETE "repos/$REPO/git/refs/$ref"
+            echo "ci-media/pr-$PR を消した"
+          else
+            echo "ci-media/pr-$PR は無い"
+          fi

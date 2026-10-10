@@ -40,7 +40,9 @@ on:
   # 作業ブランチへ直接 push する運用なので、ブランチは絞らず全部を対象にする。
   # タグ push での二重起動だけは避けたいので branches で限定してある。
   push:
-    branches: ['**']
+    # ci-media/** は下の editor-media ジョブがスクリーンショットと動画を置くための一時ブランチ。
+    # GITHUB_TOKEN の push はそもそもワークフローを起こさないが、明示的にも外しておく。
+    branches: ['**', '!ci-media/**']
     # 文書だけの変更で windows ランナーを起こさない
     paths-ignore:
       - '**.md'
@@ -806,12 +808,27 @@ jobs:
           dotnet build Editor/Studio.slnx -c ${{ matrix.configuration }} --no-incremental -v minimal
           if ($LASTEXITCODE -ne 0) { throw "Editor のビルドに失敗 (exit $LASTEXITCODE)" }
 
+      # テーマ切替の操作を録画するための ffmpeg。Windows ランナーには入っていない。
+      # 録画は PR の見た目確認の補助で品質ゲートではないので、入らなくても FlaUI は続ける
+      # (ffmpeg が無ければテスト側が録画を飛ばす)。MSVC / Release の 1 構成だけで撮る。
+      - name: Install ffmpeg (for Editor video)
+        if: always() && matrix.compiler == 'MSVC' && matrix.configuration == 'Release'
+        continue-on-error: true
+        run: |
+          choco install ffmpeg -y --no-progress
+          if ($LASTEXITCODE -ne 0) { throw "ffmpeg のインストールに失敗 (exit $LASTEXITCODE)" }
+          ffmpeg -hide_banner -version | Select-Object -First 1
+
       - name: Run FlaUI tests
         if: always() && matrix.configuration != 'Master'
         id: flaui
         env:
           NOX_RUNTIME_TYPEDB_DIR: ${{ github.workspace }}/runtime/reflection_generated/gen
           NOX_RUNTIME_CONFIGURATION: ${{ matrix.configuration }}
+          # テーマ切替のテストが Editor にスクリーンショットを書かせる置き場 (下の Upload Editor screenshots が拾う)
+          NOX_UI_SCREENSHOT_DIR: ${{ github.workspace }}/flaui-screenshots
+          # 同じテストがデスクトップを録画する出力先。MSVC / Release 以外は空にして録らない
+          NOX_UI_VIDEO_PATH: ${{ (matrix.compiler == 'MSVC' && matrix.configuration == 'Release') && format('{0}/flaui-video/editor-themes.mp4', github.workspace) || '' }}
         run: |
           $testArgs = @(
             'test', 'Editor/Studio.Wpf.UITests/Studio.Wpf.UITests.csproj', '-c', '${{ matrix.configuration }}', '--no-build', '-v', 'minimal',
@@ -830,6 +847,60 @@ jobs:
             $executed = [int]([xml](Get-Content $trx.FullName)).TestRun.ResultSummary.Counters.executed
             if ($executed -ne 1) { throw "接続テストの実行数が 1 でない ($executed 件)。フィルタかテスト名を確かめること" }
           }
+
+      # ---------------------------------------------------------
+      # Editor のスクリーンショット (PR の見た目確認用)
+      #
+      # ThemeMenuSwitchesAllThemesWithoutBreakingMainPanels が Editor に
+      # NOX_STUDIO_SCREENSHOT_DIR を渡し、組み込みの 5 テーマを 1 枚ずつ PNG にする。
+      # Editor 側は環境変数があるときだけ保存し、描画はビジュアルツリーから行うので
+      # ランナーの画面解像度に左右されない。ClangCL は接続テストしか走らせないので出ない。
+      #
+      # 画像は GitHub の API では PR 本文に貼れない。アーティファクトを落として手で貼る:
+      #   gh run download <run-id> -n editor-screenshots-MSVC-Release
+      # GitHub ホストの標準ランナーは public リポジトリでは無料なので、追加の費用は無い。
+      # ---------------------------------------------------------
+      - name: Note Editor screenshots in summary
+        if: always() && matrix.configuration != 'Master' && matrix.compiler == 'MSVC'
+        run: |
+          $files = @(Get-ChildItem flaui-screenshots -Filter *.png -ErrorAction SilentlyContinue)
+          if ($files.Count -eq 0) { Write-Host 'スクリーンショットは無い'; exit 0 }
+          $names = ($files | Sort-Object Name | ForEach-Object { $_.BaseName }) -join ', '
+          @('', "## :camera: Editor screenshots (${{ matrix.compiler }} / ${{ matrix.configuration }})", '',
+            "アーティファクト ``editor-screenshots-${{ matrix.compiler }}-${{ matrix.configuration }}`` に $($files.Count) 枚: $names") |
+            Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+      - name: Upload Editor screenshots
+        if: always() && matrix.configuration != 'Master' && matrix.compiler == 'MSVC'
+        uses: actions/upload-artifact@v7
+        with:
+          name: editor-screenshots-${{ matrix.compiler }}-${{ matrix.configuration }}
+          path: flaui-screenshots/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      # PR のコメントでその場で再生されるよう、MP4 から GIF も作る。
+      # 上限 (GitHub がコメントの画像を中継できる大きさ) に収まるよう、幅と fps と色数を落とす。
+      - name: Make Editor video GIF
+        if: always() && matrix.compiler == 'MSVC' && matrix.configuration == 'Release'
+        continue-on-error: true
+        run: |
+          $mp4 = 'flaui-video/editor-themes.mp4'
+          if (-not (Test-Path $mp4)) { Write-Host '動画は無い (ffmpeg が無いか、録画が始まらなかった)'; exit 0 }
+          ffmpeg -hide_banner -loglevel error -y -i $mp4 `
+            -vf 'fps=6,scale=960:-2:flags=lanczos,split[a][b];[a]palettegen=max_colors=96[p];[b][p]paletteuse=dither=none' `
+            flaui-video/editor-themes.gif
+          if ($LASTEXITCODE -ne 0) { throw "GIF の生成に失敗 (exit $LASTEXITCODE)" }
+          Get-ChildItem flaui-video | ForEach-Object { Write-Host ("{0}: {1:N0} bytes" -f $_.Name, $_.Length) }
+
+      - name: Upload Editor video
+        if: always() && matrix.compiler == 'MSVC' && matrix.configuration == 'Release'
+        uses: actions/upload-artifact@v7
+        with:
+          name: editor-video-${{ matrix.compiler }}-${{ matrix.configuration }}
+          path: flaui-video/
+          retention-days: 14
+          if-no-files-found: ignore
 
       # ---------------------------------------------------------
       # 要約とアーティファクト
@@ -1232,6 +1303,138 @@ jobs:
     with:
       # 再利用した run ではベンチを走らせていない
       measured: ${{ needs.plan.outputs.reuse != 'true' }}
+
+  # =========================================================
+  # Editor media: PR にスクリーンショットと動画を貼る
+  #
+  # MSVC / Release の FlaUI が撮った 5 テーマの PNG と操作の録画 (GIF / MP4) を、
+  # PR ごとの一時ブランチ ci-media/pr-<番号> に 1 コミットで置き (毎回 force-push で
+  # 置き換え、履歴を溜めない)、PR に 1 つのコメントとして貼る (2 回目以降は同じコメントを更新)。
+  # ブランチは PR を閉じると ci-media-cleanup.yml が消す。
+  #
+  # 画像を API で PR に直接添付する手段は GITHUB_TOKEN では使えない (gh の --attach は
+  # OAuth か classic PAT のみ)。秘密情報を増やさずに済むよう、標準のトークンでできる
+  # 「ブランチに置いて raw の URL で参照する」形にしている。公開リポジトリなので raw の URL は誰でも見られる。
+  #
+  # push のときだけ動く。push は同じリポジトリのブランチからしか来ないので、
+  # 外部のコードに書き込み権限付きのトークンを渡すことはない。PR がまだ無ければ何もしない。
+  # 補助なので、失敗しても notify の対象にはしない。
+  # =========================================================
+  editor-media:
+    name: Editor screenshots to PR
+    needs: [build]
+    if: always() && !cancelled() && github.event_name == 'push' && github.ref != 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write        # ci-media/pr-<番号> への push
+      pull-requests: write   # コメントの作成・更新
+      actions: read          # この run のアーティファクトの取得
+
+    steps:
+      - name: Download screenshots
+        uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: editor-screenshots-MSVC-Release
+          path: media
+
+      - name: Download video
+        uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: editor-video-MSVC-Release
+          path: media
+
+      - name: Publish to PR
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          HEAD_SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          if ! ls media/*.png >/dev/null 2>&1; then
+            echo "スクリーンショットが無いので何もしない (FlaUI が走らなかったか、撮れなかった)"
+            exit 0
+          fi
+
+          pr=$(gh pr list --repo "$REPO" --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
+          if [ -z "$pr" ]; then
+            echo "このブランチの PR がまだ無いので貼らない"
+            exit 0
+          fi
+
+          media_branch="ci-media/pr-$pr"
+          {
+            echo "# $media_branch"
+            echo
+            echo "CI (editor-media ジョブ) が PR #$pr のために自動で置いたスクリーンショットと動画。"
+            echo "push のたびに置き換わり、PR を閉じると消える。元の run: $RUN_URL"
+          } > media/README.md
+
+          # 履歴を持たない 1 コミットだけのブランチにして、force-push で置き換える
+          cd media
+          git init -q -b media
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -q -m "PR #$pr の Editor スクリーンショット (${HEAD_SHA:0:8})"
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          git -c http.extraheader="AUTHORIZATION: basic $auth" \
+            push -q --force "https://github.com/$REPO.git" "HEAD:refs/heads/$media_branch"
+          media_sha=$(git rev-parse HEAD)
+          cd ..
+
+          # コミットの SHA で参照し、force-push 後もブラウザのキャッシュで古い画像が出ないようにする
+          raw="https://raw.githubusercontent.com/$REPO/$media_sha"
+          marker='<!-- nox-editor-media -->'
+          {
+            echo "$marker"
+            echo "## Editor のスクリーンショット (${HEAD_SHA:0:8})"
+            echo
+            echo "FlaUI (MSVC / Release) がテーマを順に切り替えたときの画面。push のたびにこのコメントを更新する。"
+            echo
+            if [ -f media/editor-themes.gif ]; then
+              echo "### 操作の録画"
+              echo
+              echo "![テーマ切替の録画]($raw/editor-themes.gif)"
+              echo
+              if [ -f media/editor-themes.mp4 ]; then
+                echo "[MP4 で見る]($raw/editor-themes.mp4)"
+                echo
+              fi
+            fi
+            echo "### テーマごとの画面"
+            echo
+            for theme in Nox Gunmetal BrushedSteel Bronze Monochrome; do
+              if [ -f "media/$theme.png" ]; then
+                echo "<details$( [ "$theme" = Nox ] && echo ' open' )><summary>$theme</summary>"
+                echo
+                echo "![$theme]($raw/$theme.png)"
+                echo
+                echo "</details>"
+                echo
+              fi
+            done
+            echo "<sub>[CI の run]($RUN_URL) / 置き場: \`$media_branch\` (PR を閉じると消える)</sub>"
+          } > body.md
+
+          comment_id=$(gh api "repos/$REPO/issues/$pr/comments" --paginate \
+            --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | contains(\"$marker\"))) | .id" | sed -n 1p)
+          if [ -n "$comment_id" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$comment_id" -F body=@body.md >/dev/null
+            echo "PR #$pr のコメントを更新した"
+          else
+            gh api -X POST "repos/$REPO/issues/$pr/comments" -F body=@body.md >/dev/null
+            echo "PR #$pr にコメントした"
+          fi
+          {
+            echo "## :camera: Editor のスクリーンショットを PR #$pr に貼った"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # =========================================================
   # Notify: 転んだとき / 転んだ状態から戻ったときだけ Discord に流す
