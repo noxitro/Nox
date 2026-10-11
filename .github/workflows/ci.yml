@@ -1352,6 +1352,7 @@ jobs:
   # 判定は PR 全体の差分 (base との比較) で行うので、途中の push で Editor に触れなくても結果は変わらない。
   # Editor を変えていない PR でも見たいときは、PR にラベル editor-media を付けて push し直す。
   # 対象外になった PR (Editor の変更を取り消した PR など) に前のコメントが残っていれば消す。
+  # 録画と画像はすべて <details> で折りたたんだ状態で貼る。
   # =========================================================
   editor-media:
     name: Editor screenshots to PR
@@ -1456,8 +1457,9 @@ jobs:
             echo
             echo "FlaUI (MSVC / Release) がテーマを順に切り替えたときの画面。push のたびにこのコメントを更新する。"
             echo
+            # 画像はすべて折りたたんだ状態で貼る (開くのは見たい人だけ。PR の会話が長くならないように)
             if [ -f media/editor-themes.gif ]; then
-              echo "### 操作の録画"
+              echo "<details><summary>操作の録画</summary>"
               echo
               echo "![テーマ切替の録画]($raw/editor-themes.gif)"
               echo
@@ -1465,12 +1467,12 @@ jobs:
                 echo "[MP4 で見る]($raw/editor-themes.mp4)"
                 echo
               fi
+              echo "</details>"
+              echo
             fi
-            echo "### テーマごとの画面"
-            echo
             for theme in Nox Gunmetal BrushedSteel Bronze Monochrome; do
               if [ -f "media/$theme.png" ]; then
-                echo "<details$( [ "$theme" = Nox ] && echo ' open' )><summary>$theme</summary>"
+                echo "<details><summary>テーマ: $theme</summary>"
                 echo
                 echo "![$theme]($raw/$theme.png)"
                 echo
