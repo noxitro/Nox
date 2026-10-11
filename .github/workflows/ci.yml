@@ -1346,6 +1346,13 @@ jobs:
   # push のときだけ動く。push は同じリポジトリのブランチからしか来ないので、
   # 外部のコードに書き込み権限付きのトークンを渡すことはない。PR がまだ無ければ何もしない。
   # 補助なので、失敗しても notify の対象にはしない。
+  #
+  # 貼るのは、PR が Editor の見た目に効くファイル (Editor/ の下の .md 以外) を変えているときだけ。
+  # runtime や CI だけの PR に毎回大きな画像のコメントが付くと、レビューの邪魔になるため。
+  # 判定は PR 全体の差分 (base との比較) で行うので、途中の push で Editor に触れなくても結果は変わらない。
+  # Editor を変えていない PR でも見たいときは、PR にラベル editor-media を付けて push し直す。
+  # 対象外になった PR (Editor の変更を取り消した PR など) に前のコメントが残っていれば消す。
+  # 録画と画像はすべて <details> で折りたたんだ状態で貼る。
   # =========================================================
   editor-media:
     name: Editor screenshots to PR
@@ -1395,6 +1402,32 @@ jobs:
             exit 0
           fi
 
+          marker='<!-- nox-editor-media -->'
+          find_comment() {
+            gh api "repos/$REPO/issues/$pr/comments" --paginate \
+              --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | contains(\"$marker\"))) | .id" | sed -n 1p
+          }
+
+          # Editor の見た目に効くファイルを変えているか (PR 全体の差分。文書 .md は除く)
+          editor_files=$(gh api "repos/$REPO/pulls/$pr/files" --paginate --jq '.[].filename' |
+            grep -E '^Editor/' | grep -vE '\.md$' || true)
+          has_label=$(gh pr view "$pr" --repo "$REPO" --json labels --jq '[.labels[].name] | index("editor-media") != null')
+          if [ -z "$editor_files" ] && [ "$has_label" != "true" ]; then
+            echo "PR #$pr は Editor を変えていない (ラベル editor-media も無い) ので貼らない"
+            comment_id=$(find_comment)
+            if [ -n "$comment_id" ]; then
+              gh api -X DELETE "repos/$REPO/issues/comments/$comment_id" >/dev/null
+              echo "対象外になったので、前に貼ったコメントを消した"
+            fi
+            {
+              echo "## :camera: Editor のスクリーンショットは PR #$pr に貼っていない"
+              echo
+              echo "PR が Editor/ の下を変えていないため。見たいときは PR にラベル \`editor-media\` を付けて push し直す。"
+              echo "画像はアーティファクト \`editor-screenshots-MSVC-Release\` にある。"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
           media_branch="ci-media/pr-$pr"
           {
             echo "# $media_branch"
@@ -1418,15 +1451,15 @@ jobs:
 
           # コミットの SHA で参照し、force-push 後もブラウザのキャッシュで古い画像が出ないようにする
           raw="https://raw.githubusercontent.com/$REPO/$media_sha"
-          marker='<!-- nox-editor-media -->'
           {
             echo "$marker"
             echo "## Editor のスクリーンショット (${HEAD_SHA:0:8})"
             echo
             echo "FlaUI (MSVC / Release) がテーマを順に切り替えたときの画面。push のたびにこのコメントを更新する。"
             echo
+            # 画像はすべて折りたたんだ状態で貼る (開くのは見たい人だけ。PR の会話が長くならないように)
             if [ -f media/editor-themes.gif ]; then
-              echo "### 操作の録画"
+              echo "<details><summary>操作の録画</summary>"
               echo
               echo "![テーマ切替の録画]($raw/editor-themes.gif)"
               echo
@@ -1434,12 +1467,12 @@ jobs:
                 echo "[MP4 で見る]($raw/editor-themes.mp4)"
                 echo
               fi
+              echo "</details>"
+              echo
             fi
-            echo "### テーマごとの画面"
-            echo
             for theme in Nox Gunmetal BrushedSteel Bronze Monochrome; do
               if [ -f "media/$theme.png" ]; then
-                echo "<details$( [ "$theme" = Nox ] && echo ' open' )><summary>$theme</summary>"
+                echo "<details><summary>テーマ: $theme</summary>"
                 echo
                 echo "![$theme]($raw/$theme.png)"
                 echo
@@ -1450,8 +1483,7 @@ jobs:
             echo "<sub>[CI の run]($RUN_URL) / 置き場: \`$media_branch\` (PR を閉じると消える)</sub>"
           } > body.md
 
-          comment_id=$(gh api "repos/$REPO/issues/$pr/comments" --paginate \
-            --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | contains(\"$marker\"))) | .id" | sed -n 1p)
+          comment_id=$(find_comment)
           if [ -n "$comment_id" ]; then
             gh api -X PATCH "repos/$REPO/issues/comments/$comment_id" -F body=@body.md >/dev/null
             echo "PR #$pr のコメントを更新した"
