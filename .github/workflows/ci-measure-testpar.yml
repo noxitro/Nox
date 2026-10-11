@@ -39,6 +39,8 @@ jobs:
           $both = Join-Path $env:RUNNER_TEMP 'nox-test-libs.proj'
           "<Project><Target Name=`"Build`"><MSBuild Projects=`"$kt;$rg`" BuildInParallel=`"true`" /></Target></Project>" | Set-Content $both
           $order = if ([int]$env:VM % 2 -eq 1) { @('serial', 'overlap', 'serial') } else { @('overlap', 'serial', 'overlap') }
+          # 1 回目だけ NuGet の取得が乗らないよう、先に restore しておく (控えめな比較にする)
+          dotnet restore Editor/Studio.slnx -v minimal
           $i = 0
           foreach ($mode in $order) {
             $i++
