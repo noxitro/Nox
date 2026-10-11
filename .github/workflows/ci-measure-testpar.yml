@@ -43,9 +43,11 @@ jobs:
           foreach ($mode in $order) {
             $i++
             foreach ($d in 'kernel_test', 'reflection_generated_test', 'core_test') {
-              Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "runtimeuild\intermediateuntimed\Release\$d"
+              Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "runtime\build\intermediate\runtime\x64\Release\$d"
+untimed\Release\$d"
             }
-            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue 'runtimeeflection_generated_test\gen'
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue 'runtime
+eflection_generated_test\gen'
             $sw = [Diagnostics.Stopwatch]::StartNew()
             $editor = $null
             if ($mode -eq 'overlap') {
