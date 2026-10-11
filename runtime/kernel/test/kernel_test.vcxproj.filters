@@ -31,6 +31,9 @@
     <ClCompile Include="file_win64_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="guid_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="math_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
