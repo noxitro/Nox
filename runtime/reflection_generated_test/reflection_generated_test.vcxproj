@@ -88,6 +88,10 @@
         ローカルでは通るのにCIで C1128 になった。/bigobj で上限を引き上げる。
       -->
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <!-- 1 つの unity ファイルに束ねる生成ファイルの上限 (Release / Master だけ)。reflection_generated と同じ。
+           既定では少数の unity ファイルに偏って束ねられ、重い 1 本の終わりをほかのコアが待つ。細かく束ねて並列に流す。
+           Debug には入れない: 増分リンク (/ZI) でリンクが大きく延びた (reflection_generated で 1.5 秒から 87 秒) -->
+      <MaxFilesInUnityFile>6</MaxFilesInUnityFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -107,6 +111,10 @@
         ローカルでは通るのにCIで C1128 になった。/bigobj で上限を引き上げる。
       -->
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <!-- 1 つの unity ファイルに束ねる生成ファイルの上限 (Release / Master だけ)。reflection_generated と同じ。
+           既定では少数の unity ファイルに偏って束ねられ、重い 1 本の終わりをほかのコアが待つ。細かく束ねて並列に流す。
+           Debug には入れない: 増分リンク (/ZI) でリンクが大きく延びた (reflection_generated で 1.5 秒から 87 秒) -->
+      <MaxFilesInUnityFile>6</MaxFilesInUnityFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
