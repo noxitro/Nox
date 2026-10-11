@@ -20,8 +20,8 @@
 #         走らせると重複が多く、利用枠も減る。
 # Secret: CLAUDE_CODE_OAUTH_TOKEN (必須)。AGENT_APP_ID / AGENT_APP_PRIVATE_KEY を
 #         足すと、自前の GitHub App の名義で動く (無ければ Claude GitHub App)。
-# 注意  : issue_comment で起動するワークフローは既定ブランチ (master) の版が使われる。
-#         ここを変えても、master に入るまでは前の版のまま動く。
+# 注意  : issue_comment で起動するワークフローは既定ブランチ (main) の版が使われる。
+#         ここを変えても、main に入るまでは前の版のまま動く。
 # ============================================================
 
 name: Claude

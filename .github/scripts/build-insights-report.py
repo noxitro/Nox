@@ -9,7 +9,7 @@ ci.yml の build-insights ジョブ (ubuntu) から呼ばれる。入力は各�
 
 やること:
   1. パスを読みやすくする (リポジトリ相対、<MSVC>/、<WinSDK>/、<vcpkg>/)
-  2. 比較元 (--base-dir。前回の master の同じファイル) があれば差分を計算する。
+  2. 比較元 (--base-dir。前回の main の同じファイル) があれば差分を計算する。
      実行時間は共有ランナーで揺れるので、差分は「フロントエンド全体に占める割合」でも見る
   3. tools/build-insights/site のページにデータを埋め込み、1 ファイルで開ける HTML を書く
   4. ジョブのサマリー (構成ごとの上位) を書く
@@ -329,7 +329,7 @@ def md_code(text, limit=90):
 def summary_markdown(configs, diffs, report_url, missing):
     lines = ["## 🔎 Build Insights (C++ のビルド時間の内訳)", ""]
     if report_url:
-        lines += [f"**[詳しいレポートを開く]({report_url})** — ヘッダ・インクルードツリー・テンプレート・関数・翻訳単位・前回 master との差分", ""]
+        lines += [f"**[詳しいレポートを開く]({report_url})** — ヘッダ・インクルードツリー・テンプレート・関数・翻訳単位・前回 main との差分", ""]
     if not configs:
         lines += ["計測結果が 1 つも無い (計測に失敗したか、MSVC のビルドが走っていない)。", ""]
         return "\n".join(lines) + "\n"
@@ -343,7 +343,7 @@ def summary_markdown(configs, diffs, report_url, missing):
         lines.append("")
 
     # 構成ごとの概要
-    lines += ["| 構成 | ビルド (実時間) | フロントエンド合計 | バックエンド合計 | 翻訳単位 | テンプレート展開 | 前回 master 比 |",
+    lines += ["| 構成 | ビルド (実時間) | フロントエンド合計 | バックエンド合計 | 翻訳単位 | テンプレート展開 | 前回 main 比 |",
               "|---|---:|---:|---:|---:|---:|---|"]
     for cfg in configs:
         t = cfg["totals"]
@@ -387,7 +387,7 @@ def summary_markdown(configs, diffs, report_url, missing):
             lines.append("")
         d = diffs.get(cfg["name"])
         if d and d["reliable"] and d["headers"]:
-            lines += ["**前回 master から大きく変わったヘッダ**", "", "| ヘッダ | 前回 | 今回 | FE 比 |", "|---|---:|---:|---:|"]
+            lines += ["**前回 main から大きく変わったヘッダ**", "", "| ヘッダ | 前回 | 今回 | FE 比 |", "|---|---:|---:|---:|"]
             for r in d["headers"][:SUMMARY_TOP]:
                 lines.append(f"| {md_code(r[0])} | {fmt_ms(r[1])} | {fmt_ms(r[2])} | {r[3]:.1f}% → {r[4]:.1f}% |")
             lines.append("")
@@ -428,7 +428,7 @@ def main():
 
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data-dir", required=True, help="今回の計測 (bi-<構成>.json と .meta.json) があるディレクトリ")
-    ap.add_argument("--base-dir", help="比較元 (前回の master) の同じファイルがあるディレクトリ。無くてもよい")
+    ap.add_argument("--base-dir", help="比較元 (前回の main) の同じファイルがあるディレクトリ。無くてもよい")
     ap.add_argument("--base-sha", help="比較元のコミット")
     ap.add_argument("--base-run-url", help="比較元の実行の URL")
     ap.add_argument("--site-src", default="tools/build-insights/site", help="ページのソース")

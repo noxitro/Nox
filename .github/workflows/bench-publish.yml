@@ -1,15 +1,15 @@
 # ============================================================
 # Benchmark publish (ベンチマーク結果ページの生成と公開)
 #
-# 目的  : ci.yml の各構成で計測したベンチマーク結果を master の履歴へ積み、
+# 目的  : ci.yml の各構成で計測したベンチマーク結果を main の履歴へ積み、
 #         GitHub Pages の結果ページ (tools/bench-site) を作り直して公開する。
 # 仕組み: ci.yml の最後から workflow_call で呼ばれる。履歴の正本は公開中のページの
-#         data/history.js。これに前回の master の bench-history アーティファクト
-#         (Pages が読めないときの控え) と、直近の master の結果アーティファクト
+#         data/history.js。これに前回の main の bench-history アーティファクト
+#         (Pages が読めないときの控え) と、直近の main の結果アーティファクト
 #         (公開の取りこぼしを直す) を取り込み直してから、今回の結果を足す。
 #         取り込みはコミットごとに冪等なので、何度走っても二重にはならない。
-#         長命なデータ用ブランチは作らない (AGENTS.md: 長命なブランチは master だけ)。
-#         master 以外では履歴に足さず、「このブランチの結果」を重ねたプレビューを
+#         長命なデータ用ブランチは作らない (AGENTS.md: 長命なブランチは main だけ)。
+#         main 以外では履歴に足さず、「このブランチの結果」を重ねたプレビューを
 #         アーティファクト bench-site に置くだけにする (展開して index.html を開けば見られる)。
 #         ページだけを直した push (tools/bench-site/**) では ci.yml が走らないので、
 #         このワークフローが単独で起動し、計測せずにページだけ作り直す。
@@ -18,7 +18,7 @@
 #         CI は落とさない (結果は bench-site / bench-history アーティファクトに残る)。
 # 同居  : ci.yml の build-insights ジョブが作るビルド計測のレポートを /build-insights/ に置く
 #         (Pages は 1 サイトしか持てないので、別のワークフローから公開すると互いに上書きする)。
-# 通知  : master で悪化または確保回数の予算超過があれば Discord へ投稿する
+# 通知  : main で悪化または確保回数の予算超過があれば Discord へ投稿する
 #         (DISCORD_DEV_REPORT_WEBHOOK_URL、無ければ DISCORD_WEBHOOK_URL)。
 # 費用  : ubuntu ランナーだけ。
 # ============================================================
@@ -53,7 +53,7 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
-      actions: read   # 過去の master の結果・履歴アーティファクトを取り込み直すため
+      actions: read   # 過去の main の結果・履歴アーティファクトを取り込み直すため
       pages: read     # Pages が有効かどうかと、公開 URL を調べるため
     outputs:
       publish: ${{ steps.mode.outputs.publish == 'true' && steps.restore.outputs.ok == 'true' }}
@@ -67,12 +67,12 @@ jobs:
             .github/scripts
             tools/bench-site
 
-      # 履歴へ足してよいのは master の結果だけ
+      # 履歴へ足してよいのは main の結果だけ
       - name: Decide mode
         id: mode
         shell: bash
         run: |
-          if [ "$GITHUB_REF" = "refs/heads/master" ]; then
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
             echo "publish=true" >> "$GITHUB_OUTPUT"
             echo "mode=publish" >> "$GITHUB_OUTPUT"
           else
@@ -117,7 +117,7 @@ jobs:
           path: bench-results
 
       # Pages の履歴が読めない (未設定・一時障害) ときの控え。読めるときも和集合を取るだけ。
-      # 一覧や取得に失敗したときは ok=false にし、master でも控えと公開を上書きしない
+      # 一覧や取得に失敗したときは ok=false にし、main でも控えと公開を上書きしない
       # (欠けた履歴を「最新の控え」として上げると、Pages 未設定のあいだは点が戻らないため)。
       - name: Restore previous history
         id: restore
@@ -127,7 +127,7 @@ jobs:
         run: |
           ok=true
           if json=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=bench-history&per_page=30"); then
-            run_id=$(jq -r '[.artifacts[] | select(.expired == false and .workflow_run.head_branch == "master")][0].workflow_run.id // empty' <<<"$json")
+            run_id=$(jq -r '[.artifacts[] | select(.expired == false and .workflow_run.head_branch == "main")][0].workflow_run.id // empty' <<<"$json")
             if [ -n "$run_id" ]; then
               if ! gh run download "$run_id" -n bench-history -D prev-history; then
                 ok=false
@@ -167,8 +167,8 @@ jobs:
       # ビルド計測のレポート (ci.yml の build-insights ジョブ) を /build-insights/ に同居させる。
       # Pages は丸ごと差し替わるので、ここで置かないと公開中のレポートが消える。
       # ci.yml から呼ばれたときは今回の実行のもの、単独で走ったとき (ページだけの変更・
-      # 手動実行) や今回の計測が無いときは、期限の切れていない master の最新を使う。
-      # どちらも無ければレポート抜きで公開する (次に master の CI が通れば戻る)。
+      # 手動実行) や今回の計測が無いときは、期限の切れていない main の最新を使う。
+      # どちらも無ければレポート抜きで公開する (次に main の CI が通れば戻る)。
       - name: Download Build Insights report of this run
         if: inputs.measured
         uses: actions/download-artifact@v8
@@ -185,15 +185,15 @@ jobs:
           src=""
           if [ -f bi-site-current/index.html ]; then
             src=bi-site-current/index.html
-          # build-insights-site は全ブランチで上がるので、全ページを見てから最新の master を選ぶ
-          # (先頭の 1 ページだけだと、作業ブランチのもので埋まって master のものを見失う)。
+          # build-insights-site は全ブランチで上がるので、全ページを見てから最新の main を選ぶ
+          # (先頭の 1 ページだけだと、作業ブランチのもので埋まって main のものを見失う)。
           # 一覧は新しい順に返る
           elif ids=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/artifacts?name=build-insights-site&per_page=100" \
-                --jq '.artifacts[] | select(.expired == false and .workflow_run.head_branch == "master") | .workflow_run.id'); then
+                --jq '.artifacts[] | select(.expired == false and .workflow_run.head_branch == "main") | .workflow_run.id'); then
             run_id=${ids%%$'\n'*}
             if [ -n "$run_id" ] && gh run download "$run_id" -n build-insights-site -D bi-site-prev; then
               src=bi-site-prev/index.html
-              echo "master の最新 (run $run_id) のビルド計測レポートを使う"
+              echo "main の最新 (run $run_id) のビルド計測レポートを使う"
             fi
           fi
           if [ -n "$src" ] && [ -f "$src" ]; then
@@ -243,7 +243,7 @@ jobs:
             --footer "$GITHUB_WORKFLOW #$GITHUB_RUN_NUMBER"
 
   # =========================================================
-  # Deploy: GitHub Pages へ公開する (master で、Pages が有効なときだけ)
+  # Deploy: GitHub Pages へ公開する (main で、Pages が有効なときだけ)
   #
   # 公開は同時に 1 本しか走らせられないので pages グループで直列にする。
   # 後から来た実行が待機中の古い実行を置き換えても、履歴は結果アーティファクトから

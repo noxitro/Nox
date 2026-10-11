@@ -2,11 +2,11 @@
 """bench_test.exe を回し、今のコミット (head) と比較対象 (base) の速さを比べる。
 
 .github/workflows/ci.yml の build ジョブ (Windows ランナー) から呼ばれる。やること:
-  1. base (比較対象の exe) を用意する。--base auto なら、master の CI が上げた
+  1. base (比較対象の exe) を用意する。--base auto なら、main の CI が上げた
      アーティファクト bench-exe-<構成> を gh で探して落とす。
-       master       : この実行より前の master の実行のうち、直前のもの (previous-master)。
-                      古い実行を再実行しても、それより新しい master とは比べない
-       ほかのブランチ: 分岐元 (merge-base)。無ければ最新の master (latest-master)
+       main       : この実行より前の main の実行のうち、直前のもの (previous-main)。
+                      古い実行を再実行しても、それより新しい main とは比べない
+       ほかのブランチ: 分岐元 (merge-base)。無ければ最新の main (latest-main)
      見つからない・落とせないときは警告だけ出して base なしで続ける。base が無い
      ことはジョブを落とす理由にならない (初回やアーティファクトの期限切れで普通に起きる)。
      分岐元や実行番号が取れないだけで base は使えるときは、notice を出して続ける
@@ -200,11 +200,11 @@ def resolve_base(names, out_dir):
         wr = a.get("workflow_run") or {}
         if (a.get("name") or "").lower() not in wanted or a.get("expired"):
             continue
-        if wr.get("head_branch") != "master" or to_int(wr.get("id")) is None or not wr.get("head_sha"):
+        if wr.get("head_branch") != "main" or to_int(wr.get("id")) is None or not wr.get("head_sha"):
             continue
         if run_id is not None and to_int(wr["id"]) == run_id:
             continue
-        # フォークからの実行はブランチ名が master でも別のコード。比較の基準にしない
+        # フォークからの実行はブランチ名が main でも別のコード。比較の基準にしない
         if wr.get("head_repository_id") and wr.get("repository_id") \
                 and wr["head_repository_id"] != wr["repository_id"]:
             continue
@@ -213,40 +213,40 @@ def resolve_base(names, out_dir):
     # アーティファクトの created_at は再実行で新しくなるので、同じ実行の中の並びにだけ使う
     candidates.sort(key=lambda a: (to_int(a["workflow_run"]["id"]), a.get("created_at") or ""), reverse=True)
     if not candidates:
-        warning(f"base にする {name} が無い (master の CI がまだ上げていないか、期限切れ)。比較せずに計測する")
+        warning(f"base にする {name} が無い (main の CI がまだ上げていないか、期限切れ)。比較せずに計測する")
         return None, None
 
     pick = None
-    if ref == "master":
-        kind = "previous-master"
-        # 今回より前に作られた master の実行だけを候補にする。古い master の実行を再実行した
-        # とき、それより新しい master を「直前」に選ぶと比較が逆向きになる (新しいコミットでの
+    if ref == "main":
+        kind = "previous-main"
+        # 今回より前に作られた main の実行だけを候補にする。古い main の実行を再実行した
+        # とき、それより新しい main を「直前」に選ぶと比較が逆向きになる (新しいコミットでの
         # 高速化が今回の悪化に見え、履歴の点と Discord の通知が誤る)
         pick = next((a for a in candidates
                      if a["workflow_run"]["head_sha"] != sha
                      and (run_id is None or to_int(a["workflow_run"]["id"]) < run_id)), None)
         if pick is None:
-            warning(f"base にする {name} が無い (この実行より前の、別のコミットの master の結果が無い)。"
+            warning(f"base にする {name} が無い (この実行より前の、別のコミットの main の結果が無い)。"
                     "比較せずに計測する")
             return None, None
     else:
-        # ブランチは分岐元と比べる。特定できなくても最新の master と比べられるので notice にとどめる
-        text = gh(["api", f"repos/{repo}/compare/master...{sha}", "--jq", ".merge_base_commit.sha"],
-                  "分岐元を特定できない ({detail})。最新の master と比べる", soft=True)
+        # ブランチは分岐元と比べる。特定できなくても最新の main と比べられるので notice にとどめる
+        text = gh(["api", f"repos/{repo}/compare/main...{sha}", "--jq", ".merge_base_commit.sha"],
+                  "分岐元を特定できない ({detail})。最新の main と比べる", soft=True)
         merge_base = text.strip().lower() if text else ""
         if text is not None and not re.fullmatch(r"[0-9a-f]{40}", merge_base):
-            notice(f"分岐元を特定できない (応答が SHA でない: {merge_base[:60]!r})。最新の master と比べる")
+            notice(f"分岐元を特定できない (応答が SHA でない: {merge_base[:60]!r})。最新の main と比べる")
             merge_base = ""
         if merge_base:
             pick = next((a for a in candidates if a["workflow_run"]["head_sha"] == merge_base), None)
         kind = "merge-base"
         if pick is None:
-            # 分岐元の exe が期限切れなど。最新の master と比べる (差にはブランチ外の変更も混ざる)
+            # 分岐元の exe が期限切れなど。最新の main と比べる (差にはブランチ外の変更も混ざる)
             if merge_base:
                 print(f"分岐元 {bc.short_sha(merge_base)} の {name} が無い (期限切れか、計測を始める前の"
-                      "コミット)。最新の master と比べる")
+                      "コミット)。最新の main と比べる")
             pick = candidates[0]
-            kind = "latest-master"
+            kind = "latest-main"
 
     wr = pick["workflow_run"]
     dest = os.path.join(out_dir, "_base", str(wr["id"]))
@@ -526,7 +526,7 @@ def main():
     group = ap.add_mutually_exclusive_group()
     group.add_argument("--base-exe", help="比較対象の exe を直接指定する")
     group.add_argument("--base", choices=("auto", "none"), default="auto",
-                       help="auto: master のアーティファクトから探す (既定)、none: 比べない")
+                       help="auto: main のアーティファクトから探す (既定)、none: 比べない")
     ap.add_argument("--threshold", type=float, default=bc.DEFAULT_THRESHOLD,
                     help="悪化・改善と判定する変化の大きさ (既定: 0.05 = 5 %%。複数スレッドは 2 倍)")
     ap.add_argument("--filter", help="名前にこの文字列を含むベンチマークだけ回す (exe へそのまま渡す)")

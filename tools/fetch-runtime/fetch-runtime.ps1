@@ -1,9 +1,9 @@
 ﻿<#
 .SYNOPSIS
-	CI が master で建てた runtime.exe と TypeDB を取ってきて、手元でビルドせずに Editor から使えるようにする。
+	CI が main で建てた runtime.exe と TypeDB を取ってきて、手元でビルドせずに Editor から使えるようにする。
 
 .DESCRIPTION
-	ci.yml の build ジョブ (MSVC / Debug・Release) が master で上げるアーティファクト
+	ci.yml の build ジョブ (MSVC / Debug・Release) が main で上げるアーティファクト
 	runtime-MSVC-<構成> の最新を取り、次の場所へ置く。
 	- runtime/build/runtime/x64/<構成>/runtime.exe (と runtime.pdb)
 	  Editor (Core.RuntimeSession.RuntimeExecutablePath) と FlaUI が見る場所
@@ -12,7 +12,7 @@
 
 	Editor だけを触るときの手元確認用。runtime 本体を変えたときは手元でビルドすること。
 	アーティファクトには CI の runtime_key (ci.yml の plan ジョブ) が入っている。
-	手元の HEAD から求めたものと違えば、runtime 側の入力が master の成果物と食い違って
+	手元の HEAD から求めたものと違えば、runtime 側の入力が main の成果物と食い違って
 	いる (Editor と runtime のプロトコルがずれているかもしれない) ので警告する。
 
 	gh (GitHub CLI) にログインしている必要がある。
@@ -82,14 +82,14 @@ foreach ($cfg in $Configuration)
 	$name = "runtime-MSVC-$cfg"
 	Write-Host "--- $name ---"
 
-	# bench-publish.yml と同じく、master の期限切れでない最新を取る。
+	# bench-publish.yml と同じく、main の期限切れでない最新を取る。
 	# run の成否では絞らない (FlaUI や通知だけ落ちた run の成果物も runtime としては検証済み)。
 	$json = & gh api "repos/$repo/actions/artifacts?name=$name&per_page=30"
 	if ($LASTEXITCODE -ne 0) { Fail "アーティファクトの一覧を取れない: $name" }
 	$artifact = ($json | ConvertFrom-Json).artifacts |
-		Where-Object { -not $_.expired -and $_.workflow_run.head_branch -eq 'master' } |
+		Where-Object { -not $_.expired -and $_.workflow_run.head_branch -eq 'main' } |
 		Select-Object -First 1
-	if (-not $artifact) { Fail "master の $name が無い (期限切れか、まだ一度も上がっていない)" }
+	if (-not $artifact) { Fail "main の $name が無い (期限切れか、まだ一度も上がっていない)" }
 
 	$runId = $artifact.workflow_run.id
 	$tmp = Join-Path ([IO.Path]::GetTempPath()) "nox-fetch-runtime-$cfg-$([Guid]::NewGuid().ToString('N'))"
@@ -132,7 +132,7 @@ foreach ($cfg in $Configuration)
 		if ($remoteKey -and $remoteKey -ne $localKey)
 		{
 			Write-Host ("fetch-runtime: 手元の HEAD と runtime 側の入力が違う (手元 {0} / 成果物 {1})。" -f $localKey, $remoteKey) -ForegroundColor Yellow
-			Write-Host '  master を取り込むか、runtime を手元でビルドすること。Editor と噛み合わないことがある。' -ForegroundColor Yellow
+			Write-Host '  main を取り込むか、runtime を手元でビルドすること。Editor と噛み合わないことがある。' -ForegroundColor Yellow
 		}
 
 		# TypeDB のポインタファイル。名前と中身 (.bin のフルパス) は

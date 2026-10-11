@@ -1,7 +1,7 @@
 # ============================================================
 # Dev report
 #
-# 目的  : master に入ったコミットを毎日 AI にレビューさせ、週に一度は活動を
+# 目的  : main に入ったコミットを毎日 AI にレビューさせ、週に一度は活動を
 #         総括して、Discord に投稿する。中身は .github/scripts/dev-report.py。
 # 経緯  : 以前は別リポジトリ noxitro/discord-dev-report で動かしていたが、
 #         使っていた GitHub Models が 2026-07-30 に提供終了し、2026-09-06 以降は
@@ -11,7 +11,7 @@
 # 検証  : このワークフローかスクリプトを変えた push では dry-run で走らせる
 #         (投稿も状態の更新もしない。内容はジョブのサマリーで見られる)。
 #         有料の Claude は push の dry-run では呼ばない (無料の Gemini だけ)。
-# 状態  : 日次・週次それぞれ「前回レポートした master の地点」を actions/cache に
+# 状態  : 日次・週次それぞれ「前回レポートした main の地点」を actions/cache に
 #         保存し、次回はそこから今までを対象にする (dev-report.py の先頭を参照)。
 #
 # 必要な secret (リポジトリの Settings > Secrets and variables > Actions):
@@ -99,7 +99,7 @@ jobs:
           echo "mode=$mode dry_run=$dry"
 
       # 「前回レポートした地点」を取り出す。キーに run_id を含めて毎回新しく保存し、
-      # restore-keys の前方一致で最新のものを拾う。master で保存したキャッシュは
+      # restore-keys の前方一致で最新のものを拾う。main で保存したキャッシュは
       # 他のブランチからも読めるので、dry-run でも同じ範囲になる。
       - name: Restore state
         uses: actions/cache/restore@v6

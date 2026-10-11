@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """ベンチマーク結果ページ (tools/bench-site) を手元で確かめるためのデモデータを作る。
 
-本物のデータは CI (bench-report.py) が master の計測を積み上げて作るので、手元には無い。
+本物のデータは CI (bench-report.py) が main の計測を積み上げて作るので、手元には無い。
 ページの見た目や操作を直すたびに CI を回すのは遅すぎるため、同じ形式 (DESIGN §4.1 の
 nox-bench-history/1 と §4.2 の nox-bench-latest/1) のそれらしいデータをここで作る。
 
@@ -536,8 +536,8 @@ def build(n_commits, preview, seed):
         cols = {name: {k: [] for k in ("c", "e", "m", "q1", "q3", "r", "rl", "rh", "v", "bs", "a", "ab")}
                 for name in model.bench}
         # 最新のコミットは本物と同じくラウンド単位で計測した結果から作る
-        last_run = simulate_run(model, vid, compiler, config, last, commits[last], "master",
-                                last - 1, commits[last - 1], "previous-master")
+        last_run = simulate_run(model, vid, compiler, config, last, commits[last], "main",
+                                last - 1, commits[last - 1], "previous-main")
         latest_runs[vid] = last_run
         last_points = {bm["name"]: point_from_run(bm, last - 1) for bm in last_run["benchmarks"]}
         for k in range(n_commits):
@@ -578,13 +578,13 @@ def build(n_commits, preview, seed):
     if not preview:
         head = commits[last]
         latest = {
-            "schema": LATEST_SCHEMA, "candidate": False, "branch": "master",
+            "schema": LATEST_SCHEMA, "candidate": False, "branch": "main",
             "commit": {k: head[k] for k in ("sha", "subject", "date", "run_id", "run_number")},
             "run_url": "https://github.com/%s/actions/runs/%d" % (REPO, head["run_id"]),
             "variants": latest_runs,
         }
     else:
-        # 未マージのブランチ: 分岐元 (merge-base) は master の 2 つ前
+        # 未マージのブランチ: 分岐元 (merge-base) は main の 2 つ前
         mb = max(0, last - 2)
         cand = {
             "sha": fake_sha("branch"), "subject": PREVIEW_SUBJECT,
@@ -618,7 +618,7 @@ def main():
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--commits", type=int, default=120, help="master のコミット数 (既定 120)")
+    ap.add_argument("--commits", type=int, default=120, help="main のコミット数 (既定 120)")
     ap.add_argument("--preview", action="store_true", help="最新の結果を未マージのブランチ (candidate) にする")
     ap.add_argument("--seed", type=int, default=20260927, help="乱数の種 (既定は固定値)")
     ap.add_argument("--out-dir", default=None, help="出力先 (既定はこのスクリプトの隣の data/)")
@@ -643,7 +643,7 @@ def main():
     print("デモデータを書きました: %s" % os.path.relpath(out_dir))
     print("  history.js  %d コミット × %d バリアント × %d ベンチマーク (%.0f KB)"
           % (args.commits, len(VARIANTS), n_bench, n_hist / 1024))
-    print("  latest.js   %s (%.0f KB)" % ("プレビュー: " + PREVIEW_BRANCH if args.preview else "master の最新", n_latest / 1024))
+    print("  latest.js   %s (%.0f KB)" % ("プレビュー: " + PREVIEW_BRANCH if args.preview else "main の最新", n_latest / 1024))
     return 0
 
 

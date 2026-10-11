@@ -20,7 +20,7 @@
 # 再利用: runtime に効く入力が前に検証済みの run と同じなら (Editor だけの変更など)、
 #         6 構成のビルド・テストを飛ばし、キャッシュした runtime.exe と TypeDB で
 #         Editor のビルドと FlaUI だけを走らせる。判定は plan ジョブ、詳細はそこの
-#         コメント。master では常にフルで建てる。FlaUI だけ落ちて直したいときは
+#         コメント。main では常にフルで建てる。FlaUI だけ落ちて直したいときは
 #         「Re-run failed jobs」ではなく「Re-run all jobs」を使う (plan が再評価され、
 #         FlaUI の前に保存済みの runtime キャッシュが使われる)。
 # 環境  : windows。runtime は PlatformToolset=v145 (runtime/Directory.Build.props)
@@ -66,12 +66,12 @@ on:
         default: false
 
 # 同じ ref に新しい push が来たら、走っている古い実行を打ち切る。
-# ただし master は打ち切らない。master へ連続 push すると完了した結果が
+# ただし main は打ち切らない。main へ連続 push すると完了した結果が
 # 虫食いになり (実際に run #49〜#51 が cancelled で終わっている)、
-# 「master の最新は緑か」も notify の復旧判定も答えられなくなるため。
+# 「main の最新は緑か」も notify の復旧判定も答えられなくなるため。
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 # GITHUB_TOKEN は既定で読み取りに絞る。書き込みが要るジョブ (notify の
 # actions: read など) はジョブ側で個別に広げる。
@@ -97,7 +97,7 @@ jobs:
   # build の 6 ジョブは、runtime 側の検証 (ビルド・スモーク・GoogleTest・件数・
   # ベンチ) が全部通った時点で nox-runtime-v2-<key>-<Compiler>-<Config> を保存する。
   # Debug / Release の 4 つは FlaUI に要る runtime.exe と TypeDB を、Master の 2 つは
-  # 中身のないマーカーを入れる。6 つ全部が、今の ref か master から読める形で
+  # 中身のないマーカーを入れる。6 つ全部が、今の ref か main から読める形で
   # 残っているときだけ reuse=true にする (= 同じ入力で 6 構成とも runtime 側が緑だった)。
   # ここで言う「検証済み」は runtime 側 (ビルド・スモーク・GoogleTest・件数・ベンチ) だけを指す。
   # キャッシュは FlaUI より前に保存するので、FlaUI まで緑だったことは意味しない
@@ -158,16 +158,16 @@ jobs:
           set -uo pipefail
           reuse=false
           reason=''
-          if [ "$GITHUB_REF" = "refs/heads/master" ]; then
-            reason='master は常にフルで建てる (ベンチ履歴・通知・イメージ更新の検出のため)'
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            reason='main は常にフルで建てる (ベンチ履歴・通知・イメージ更新の検出のため)'
           elif [ "$FULL" = "true" ]; then
             reason='workflow_dispatch で full が指定された'
           else
             prefix="nox-runtime-v2-$KEY-"
             found=''
             ok=true
-            # 同じキーでも ref ごとに別エントリなので、読める ref (今の ref と master) ごとに引く
-            for ref in "$GITHUB_REF" refs/heads/master; do
+            # 同じキーでも ref ごとに別エントリなので、読める ref (今の ref と main) ごとに引く
+            for ref in "$GITHUB_REF" refs/heads/main; do
               if keys=$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/caches" \
                   -f key="$prefix" -f ref="$ref" -F per_page=100 --jq '.actions_caches[].key'); then
                 found+="$keys"$'\n'
@@ -232,7 +232,7 @@ jobs:
     # ビルド + テスト + Editor + FlaUI まで 1 ジョブで通すので、
     # 分かれていたころ (30) より余裕を持たせる。実測は MSVC/Debug で約 10 分。
     timeout-minutes: 40
-    # ベンチマークの比較元 (master で建てた bench_test.exe) をアーティファクトから
+    # ベンチマークの比較元 (main で建てた bench_test.exe) をアーティファクトから
     # 取るので actions: read を足す。書き込みは増やさない。
     permissions:
       contents: read
@@ -323,15 +323,15 @@ jobs:
       # ETW を使うので管理者権限が要る。GitHub ホストのランナーは管理者で動くが、
       # 管理者でないセルフホストでは開始に失敗し、計測なしでビルドだけが走る。
       #
-      # テンプレートの展開は master (と手動実行) の Debug だけで記録する。イベントの大半を
+      # テンプレートの展開は main (と手動実行) の Debug だけで記録する。イベントの大半を
       # 占め (Debug の ETL は 600 MB 前後)、どのテンプレートを展開するかは構成でほぼ変わらないので
-      # 1 構成で足りる。作業ブランチでは記録しない。比較元は master の計測しか使わないうえ、
+      # 1 構成で足りる。作業ブランチでは記録しない。比較元は main の計測しか使わないうえ、
       # 記録と集計の分だけ MSVC/Debug のジョブが延びて run 全体の律速になっていたため
       # (緑だった run で runtime.slnx のビルドが MSVC/Debug 6.4 分、ClangCL/Debug 3.3 分。
       # Release / Master では MSVC と ClangCL の差が 1 分未満)。
       # テンプレート以外の計測 (ヘッダ・関数) は作業ブランチでも続け、レポートは出す。
       # 計測によるビルドの延びは、共有ランナーの揺れに埋もれて測れていない。導入時の
-      # 2 回の実行では MSVC のビルドが master より 30〜45% 長かったが、計測していない
+      # 2 回の実行では MSVC のビルドが main より 30〜45% 長かったが、計測していない
       # ClangCL も同じ実行で 0〜70% 長かった。延びが続くようなら計測の有無で比べ直す。
       # 計測ツールは tools/build-insights (SDK の版は build.ps1 で固定)。
       # runtime の検証済みキャッシュを再利用する run (NOX_REUSE) ではビルドしないので計測もしない。
@@ -349,7 +349,7 @@ jobs:
         env:
           CONFIG: ${{ matrix.configuration }}
           # テンプレートの展開を記録するか (上のコメントを参照)
-          TEMPLATES: ${{ matrix.configuration == 'Debug' && (github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch') }}
+          TEMPLATES: ${{ matrix.configuration == 'Debug' && (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') }}
         run: |
           $ok = $false
           try {
@@ -462,7 +462,7 @@ jobs:
       # ---------------------------------------------------------
       # runtime.exe の起動・終了 (スモーク)
       #
-      # AGENTS.md の「master へ入れる条件」にある「runtime.exe がクラッシュせず
+      # AGENTS.md の「main へ入れる条件」にある「runtime.exe がクラッシュせず
       # 起動・終了する」を確かめる。FlaUI の Reboot テストも runtime.exe を起こすが、
       # 最後は強制終了するので、正常終了の経路 (Terminate フェーズ、World の後始末、
       # reflection / memory の終了処理) は通らない。しかも FlaUI は Master では
@@ -659,7 +659,7 @@ jobs:
       #
       # 計測は Release / Master だけ。Debug は --smoke で各ベンチを 1 回ずつ通し、
       # アサートに掛からないことだけを見る。
-      # 比較元は master で建てた bench_test.exe (アーティファクト bench-exe-<構成>)。
+      # 比較元は main で建てた bench_test.exe (アーティファクト bench-exe-<構成>)。
       # 同じ VM で交互に走らせるので、ランナーの CPU が毎回違っても差が取れる。
       # 仕組みと判定の詳細は .github/scripts/bench-run.py の先頭を参照。
       #
@@ -712,14 +712,14 @@ jobs:
           path: bench-out/result.json
           if-no-files-found: warn
 
-      # 後続の push が比較元として取りに来る。master のものだけ長く残す
+      # 後続の push が比較元として取りに来る。main のものだけ長く残す
       - name: Upload bench_test.exe
         if: always() && steps.bench-build.outcome == 'success' && matrix.configuration != 'Debug'
         uses: actions/upload-artifact@v7
         with:
           name: bench-exe-${{ matrix.compiler }}-${{ matrix.configuration }}
           path: runtime/build/runtime/x64/${{ matrix.configuration }}/bench_test.exe
-          retention-days: ${{ github.ref == 'refs/heads/master' && 90 || 7 }}
+          retention-days: ${{ github.ref == 'refs/heads/main' && 90 || 7 }}
           if-no-files-found: warn
 
       # ---------------------------------------------------------
@@ -753,17 +753,17 @@ jobs:
           path: ci-runtime-verified
           key: nox-runtime-v2-${{ env.NOX_RUNTIME_KEY }}-${{ matrix.compiler }}-${{ matrix.configuration }}
 
-      # master の成果物を手元へ取れるように残す (tools/fetch-runtime.ps1 が取りに来る)。
+      # main の成果物を手元へ取れるように残す (tools/fetch-runtime.ps1 が取りに来る)。
       # runtime_key を同梱し、手元のツリーと食い違えばスクリプトが警告する。
       # FlaUI の結果によらず runtime 側の検証が通った時点のものを上げる。
       - name: Write runtime key file
-        if: success() && github.ref == 'refs/heads/master' && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
+        if: success() && github.ref == 'refs/heads/main' && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
         run: |
           "$env:NOX_RUNTIME_KEY`n$env:GITHUB_SHA" |
             Out-File 'runtime/build/runtime/x64/${{ matrix.configuration }}/runtime_key.txt' -Encoding utf8
 
       - name: Upload runtime artifact
-        if: success() && github.ref == 'refs/heads/master' && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
+        if: success() && github.ref == 'refs/heads/main' && matrix.compiler == 'MSVC' && matrix.configuration != 'Master'
         uses: actions/upload-artifact@v7
         with:
           name: runtime-MSVC-${{ matrix.configuration }}
@@ -1176,13 +1176,13 @@ jobs:
   # .github/scripts/build-insights-report.py でレポートにする。
   #   - build-insights-report.html: 1 ファイルで開けるレポート (zip にせず上げる。
   #     upload-artifact は archive: false のときファイル名をアーティファクト名にする)
-  #   - build-insights-data: 次の実行の比較元 (master のものだけを比較に使う)
+  #   - build-insights-data: 次の実行の比較元 (main のものだけを比較に使う)
   #   - build-insights-site: bench-publish が GitHub Pages の /build-insights/ に置く
-  # 比較元は「今回以外で、期限の切れていない master の build-insights-data の最新」。
+  # 比較元は「今回以外で、期限の切れていない main の build-insights-data の最新」。
   # 計測が 1 つも無いとき (全構成で計測に失敗した等) は要約にそう書くだけで落とさない。
   # =========================================================
   # runtime の検証済みキャッシュを再利用した run (plan の reuse) ではビルドも計測もしていないので飛ばす。
-  # そのとき bench-publish は master の最新のレポートを Pages に置く (今回分が無いときと同じ扱い)。
+  # そのとき bench-publish は main の最新のレポートを Pages に置く (今回分が無いときと同じ扱い)。
   build-insights:
     name: Build Insights report
     needs: [plan, build]
@@ -1191,7 +1191,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
-      actions: read   # 比較元 (master の build-insights-data) を探して取るため
+      actions: read   # 比較元 (main の build-insights-data) を探して取るため
       pages: read     # 公開先の URL を要約に載せるため
 
     steps:
@@ -1210,16 +1210,16 @@ jobs:
           path: bi-data
           merge-multiple: true
 
-      - name: Restore baseline (latest master)
+      - name: Restore baseline (latest main)
         id: base
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # 全ページを見てから最新の master を選ぶ (一覧は新しい順)。今は master でしか上げていないが、
+          # 全ページを見てから最新の main を選ぶ (一覧は新しい順)。今は main でしか上げていないが、
           # 上げ方を変えても先頭ページが作業ブランチのもので埋まって見失わないようにしておく
           if picks=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/artifacts?name=build-insights-data&per_page=100" \
-                --jq ".artifacts[] | select(.expired == false and .workflow_run.head_branch == \"master\" and ((.workflow_run.id | tostring) != \"$GITHUB_RUN_ID\")) | \"\\(.workflow_run.id) \\(.workflow_run.head_sha)\""); then
+                --jq ".artifacts[] | select(.expired == false and .workflow_run.head_branch == \"main\" and ((.workflow_run.id | tostring) != \"$GITHUB_RUN_ID\")) | \"\\(.workflow_run.id) \\(.workflow_run.head_sha)\""); then
             pick=${picks%%$'\n'*}
             if [ -n "$pick" ]; then
               run_id=${pick%% *}
@@ -1232,7 +1232,7 @@ jobs:
                 echo "::warning::比較元の build-insights-data を取得できなかった (run $run_id)。差分なしで作る"
               fi
             else
-              echo "比較元 (master の build-insights-data) はまだ無い"
+              echo "比較元 (main の build-insights-data) はまだ無い"
             fi
           else
             echo "::warning::build-insights-data の一覧を取得できなかった。差分なしで作る"
@@ -1274,15 +1274,15 @@ jobs:
             --base-sha "$BASE_SHA" --base-run-url "$BASE_RUN_URL" \
             --report-url "$REPORT_URL" --expect "$EXPECT" \
             --skip-html --summary "$GITHUB_STEP_SUMMARY"
-          # master では bench-publish が GitHub Pages にも置く
-          if [ "$GITHUB_REF" = "refs/heads/master" ] && url=$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq 'select(.build_type == "workflow") | .html_url' 2>/dev/null) && [ -n "$url" ]; then
-            echo "公開後は ${url%/}/build-insights/ でも見られる (master の最新)。" >> "$GITHUB_STEP_SUMMARY"
+          # main では bench-publish が GitHub Pages にも置く
+          if [ "$GITHUB_REF" = "refs/heads/main" ] && url=$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq 'select(.build_type == "workflow") | .html_url' 2>/dev/null) && [ -n "$url" ]; then
+            echo "公開後は ${url%/}/build-insights/ でも見られる (main の最新)。" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      # 比較元として読むのは master のものだけなので、master でだけ上げる
-      # (全ブランチで上げると、一覧の上位が作業ブランチのもので埋まり master のものを探しにくくなる)
+      # 比較元として読むのは main のものだけなので、main でだけ上げる
+      # (全ブランチで上げると、一覧の上位が作業ブランチのもので埋まり main のものを探しにくくなる)
       - name: Upload data (baseline for later runs)
-        if: env.has_data == 'true' && github.ref == 'refs/heads/master'
+        if: env.has_data == 'true' && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v7
         with:
           name: build-insights-data
@@ -1310,9 +1310,9 @@ jobs:
   #
   # 中身は bench-publish.yml (ページだけの変更でも単独で走らせたいので分けてある)。
   # ビルドやテストが一部転んでも、計測できた構成の結果は載せたいので always() で呼ぶ。
-  # master では GitHub Pages へ公開し、それ以外のブランチでは master の履歴に
+  # main では GitHub Pages へ公開し、それ以外のブランチでは main の履歴に
   # 今回の結果を重ねたプレビューをアーティファクト bench-site に置く。
-  # pages / id-token は公開ジョブ (master のみ) が使う。
+  # pages / id-token は公開ジョブ (main のみ) が使う。
   # =========================================================
   # build-insights も待つのは、その結果 (build-insights-site) を Pages の /build-insights/ に
   # 一緒に置くため。build-insights が落ちてもベンチマークの公開は止めない。
@@ -1357,7 +1357,7 @@ jobs:
   editor-media:
     name: Editor screenshots to PR
     needs: [build]
-    if: always() && !cancelled() && github.event_name == 'push' && github.ref != 'refs/heads/master'
+    if: always() && !cancelled() && github.event_name == 'push' && github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

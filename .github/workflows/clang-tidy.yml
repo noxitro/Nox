@@ -9,9 +9,9 @@
 #         Debug を選んでいるのは NOX_ASSERT / NOX_DEVELOP の中まで見るため。
 # 段階  : 今は報告だけで CI は落とさない。既存の指摘を片付けてから、
 #         .clang-tidy の WarningsAsErrors に種類ごとに足して関門にしていく。
-# 日程  : 毎日 JST 02:37 (master)。6 構成のビルドとは別枠で 1 回だけ走らせる。
-#         解析するのは master の HEAD ではなく、CI (ci.yml) が最後に緑だった master の
-#         コミット (下の Pick commit to analyze)。master はユーザーが直接 push するので
+# 日程  : 毎日 JST 02:37 (main)。6 構成のビルドとは別枠で 1 回だけ走らせる。
+#         解析するのは main の HEAD ではなく、CI (ci.yml) が最後に緑だった main の
+#         コミット (下の Pick commit to analyze)。main はユーザーが直接 push するので
 #         壊れたまま数日続くことがあり、HEAD で建てるとビルドの段階で落ちて解析結果が
 #         出ず、失敗通知だけが毎晩届いていた。
 #         このワークフローか設定を変えた push でも走る (設定の確認用。投稿しない)。
@@ -61,10 +61,10 @@ jobs:
     timeout-minutes: 120
     permissions:
       contents: read
-      actions: read   # CI の実行一覧 (最後に緑だった master) を読むため
+      actions: read   # CI の実行一覧 (最後に緑だった main) を読むため
 
     steps:
-      # 定期実行では、CI (ci.yml) が最後に緑だった master のコミットを解析する (冒頭の「日程」)。
+      # 定期実行では、CI (ci.yml) が最後に緑だった main のコミットを解析する (冒頭の「日程」)。
       # 解析の目的は指摘の推移を追うことなので、建つことが分かっているコミットで足りる。
       # ci.yml の run の成否は FlaUI や結果ページの公開まで含むので、runtime が建っていても
       # 緑でない run は飛ばされるが、次に緑になれば追い付く。
@@ -79,10 +79,10 @@ jobs:
           set -uo pipefail
           sha=''
           if [ "$GITHUB_EVENT_NAME" = 'schedule' ]; then
-            if sha=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?branch=master&status=success&per_page=1" \
+            if sha=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?branch=main&status=success&per_page=1" \
                 --jq '.workflow_runs[0].head_sha // empty'); then
               if [ -z "$sha" ]; then
-                echo "::warning::CI が緑だった master の run が無いので HEAD を解析する"
+                echo "::warning::CI が緑だった main の run が無いので HEAD を解析する"
               elif [ "$sha" = "$GITHUB_SHA" ]; then
                 sha=''
               fi
@@ -93,8 +93,8 @@ jobs:
           fi
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
           if [ -n "$sha" ]; then
-            echo "解析するコミット: $sha (CI が最後に緑だった master。HEAD は $GITHUB_SHA)"
-            echo "解析したコミット: \`${sha:0:7}\` (CI が最後に緑だった master。HEAD は \`${GITHUB_SHA:0:7}\`)" >> "$GITHUB_STEP_SUMMARY"
+            echo "解析するコミット: $sha (CI が最後に緑だった main。HEAD は $GITHUB_SHA)"
+            echo "解析したコミット: \`${sha:0:7}\` (CI が最後に緑だった main。HEAD は \`${GITHUB_SHA:0:7}\`)" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "解析するコミット: HEAD ($GITHUB_SHA)"
           fi
@@ -106,7 +106,7 @@ jobs:
       - name: Setup build prerequisites
         uses: ./.github/actions/setup-nox-build
 
-      # 前回の結果。新しく出た指摘を見分けるのに使う。master で保存したものは
+      # 前回の結果。新しく出た指摘を見分けるのに使う。main で保存したものは
       # 他のブランチからも読めるので、設定を試す push でも比較できる。
       - name: Restore previous result
         uses: actions/cache/restore@v6
@@ -158,16 +158,16 @@ jobs:
             clang-tidy-build.log
           if-no-files-found: warn
 
-      # 比較の基準は master の定期実行・手動実行の結果だけにする
+      # 比較の基準は main の定期実行・手動実行の結果だけにする
       # (設定を試す push の結果を基準にすると、次回の「新規」がずれる)。
       - name: Save result for next comparison
-        if: github.ref == 'refs/heads/master' && github.event_name != 'push'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'push'
         run: |
           New-Item -ItemType Directory -Force .clang-tidy-state | Out-Null
           Copy-Item clang-tidy.json .clang-tidy-state/latest.json -Force
 
       - name: Save state
-        if: github.ref == 'refs/heads/master' && github.event_name != 'push'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'push'
         uses: actions/cache/save@v6
         with:
           path: .clang-tidy-state
@@ -183,9 +183,9 @@ jobs:
           NEW: ${{ steps.report.outputs.new }}
           ANALYZED: ${{ steps.pick.outputs.sha }}
         run: |
-          # HEAD ではなく最後に緑だった master を解析したときは、どのコミットかを本文の先頭に書く
+          # HEAD ではなく最後に緑だった main を解析したときは、どのコミットかを本文の先頭に書く
           if ($env:ANALYZED) {
-            $note = "解析したコミット: ``$($env:ANALYZED.Substring(0, 7))`` (CI が最後に緑だった master。HEAD は ``$($env:GITHUB_SHA.Substring(0, 7))``)`n`n"
+            $note = "解析したコミット: ``$($env:ANALYZED.Substring(0, 7))`` (CI が最後に緑だった main。HEAD は ``$($env:GITHUB_SHA.Substring(0, 7))``)`n`n"
             Set-Content -Path clang-tidy-discord.md -Value ($note + (Get-Content clang-tidy-discord.md -Raw)) -Encoding utf8NoBOM -NoNewline
           }
           $color = if ([int]$env:NEW -gt 0) { 'yellow' } else { 'gray' }

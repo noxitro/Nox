@@ -4,13 +4,13 @@
 
 .DESCRIPTION
 	未コミットの変更も含めた作業ツリーのスナップショットを 1 コミットにして、
-	試し用のブランチ (既定 user/ci-try) へ force-push する。master には触れない。
+	試し用のブランチ (既定 user/ci-try) へ force-push する。main には触れない。
 	手元の HEAD・index・作業ツリー・stash は一切変えない (一時 index で組み立てる)。
 	.gitignore で除外されたファイルは含まれない。
 
 	公開リポジトリへ上げるので、push の前に次を必ず通す。
 	- pre-push フック (共通の git-hooks。README の「開発フックの導入」) が有効であること
-	- origin/master からの差分全体を、そのフックの scan.sh と gitleaks で検査する
+	- origin/main からの差分全体を、そのフックの scan.sh と gitleaks で検査する
 	  (フックは前回の push との差分しか見ないので、それに頼らず全体を見る)
 	- 含まれる未追跡のファイルを一覧で見せ、y/n で確認する
 	- (選んだときだけ) 追加された行を Sonnet に読ませ、個人情報・所属先・秘密情報・
@@ -257,12 +257,12 @@ $stat = Invoke-Git -c core.quotePath=false diff --stat $head $commit
 if ($stat) { $stat | ForEach-Object { Write-Host "  $_" } } else { Write-Host '  (差分なし。HEAD のまま CI に投げる)' }
 
 # --- 公開前の検査 ----------------------------------------------------------
-# origin/master から今回のスナップショットまでに増えた・変わったファイルを全部見る。
+# origin/main から今回のスナップショットまでに増えた・変わったファイルを全部見る。
 # pre-push フックは「前回 push したもの」との差分しか見ないので、それに頼らない。
-Invoke-Git fetch --quiet origin master | Out-Null
-$base = (Invoke-Git merge-base origin/master $commit).Trim()
+Invoke-Git fetch --quiet origin main | Out-Null
+$base = (Invoke-Git merge-base origin/main $commit).Trim()
 $files = @(Invoke-Git -c core.quotePath=false diff --name-only --diff-filter=d $base $commit | Where-Object { $_ })
-Write-Host "ci-try: origin/master からの $($files.Count) ファイルを検査する" -ForegroundColor Cyan
+Write-Host "ci-try: origin/main からの $($files.Count) ファイルを検査する" -ForegroundColor Cyan
 $scanOk = $true
 if ($files.Count -gt 0)
 {

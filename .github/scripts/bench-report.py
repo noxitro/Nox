@@ -7,10 +7,10 @@
      合わせる。同じ構成・同じコミットは 1 点にまとめる (実行番号・再実行回数が大きい方が
      勝つ) ので、同じものを何度合わせても結果は変わらない。
        - 公開中のページの data/history.js (--pages-url)
-       - 前回の master の実行が残した履歴 (--history-file。アーティファクトから戻したもの)
-       - 直近の master の CI が上げた bench-result-* (--backfill。gh で取る)
-  3. publish (master) なら今回の結果を履歴に足す。preview (ほかのブランチ) なら履歴には
-     足さず、latest に「候補」として入れ、master の履歴と並べて見られるようにする
+       - 前回の main の実行が残した履歴 (--history-file。アーティファクトから戻したもの)
+       - 直近の main の CI が上げた bench-result-* (--backfill。gh で取る)
+  3. publish (main) なら今回の結果を履歴に足す。preview (ほかのブランチ) なら履歴には
+     足さず、latest に「候補」として入れ、main の履歴と並べて見られるようにする
   4. --site-src のページ一式と data/history.js・history.json・latest.js を --out-site に書く
   5. ジョブのサマリー・ステップの出力 (悪化の件数など)・Discord 用の本文を書く
 
@@ -20,7 +20,7 @@ preview はどこにも書き戻さないので止めない。::warning:: を出
 を作る (サマリーにも、公開中の履歴が入っていないと書く)。404 は「まだ一度も公開していない」と
 みなし、空の履歴から始める。
 
-publish で今回のコミットが履歴の最新のコミットより古い (古い master の実行を再実行した) ときは、
+publish で今回のコミットが履歴の最新のコミットより古い (古い main の実行を再実行した) ときは、
 latest を古いコミットへ戻さず、前に公開した latest をそのまま使う。
 
 使い方:
@@ -412,7 +412,7 @@ def read_history_file(path):
 
 
 # ---------------------------------------------------------------------------
-# backfill (直近の master の CI の結果を gh で集める)
+# backfill (直近の main の CI の結果を gh で集める)
 # ---------------------------------------------------------------------------
 
 def gh(args, what):
@@ -455,10 +455,10 @@ def list_master_runs(repo, workflow, count):
     page = 1
     per_page = min(count, 100)
     while len(runs) < count:
-        path = f"repos/{repo}/actions/workflows/{workflow}/runs?branch=master&status=completed&per_page={per_page}"
+        path = f"repos/{repo}/actions/workflows/{workflow}/runs?branch=main&status=completed&per_page={per_page}"
         if count > 100:
             path += f"&page={page}"
-        data = gh_json(["api", path], "master の実行の一覧")
+        data = gh_json(["api", path], "main の実行の一覧")
         if not isinstance(data, dict):
             break
         batch = data.get("workflow_runs") or []
@@ -470,7 +470,7 @@ def list_master_runs(repo, workflow, count):
 
 
 def backfill(store, repo, count, workflow, current_run_id):
-    """履歴に無い (構成, コミット) を、直近の master の CI のアーティファクトから埋める。
+    """履歴に無い (構成, コミット) を、直近の main の CI のアーティファクトから埋める。
 
     Pages への公開が失敗した・Pages を有効にする前だった、などで抜けた点を取り戻す。
     """
@@ -484,7 +484,7 @@ def backfill(store, repo, count, workflow, current_run_id):
         for run in runs:
             run_id = run.get("id")
             sha = run.get("head_sha")
-            if not run_id or not sha or str(run_id) == str(current_run_id) or run.get("head_branch") != "master":
+            if not run_id or not sha or str(run_id) == str(current_run_id) or run.get("head_branch") != "main":
                 continue
             missing = {f"bench-result-{v}" for v in bc.HISTORY_VARIANTS if not store.has(v, sha)}
             if not missing:
@@ -510,7 +510,7 @@ def backfill(store, repo, count, workflow, current_run_id):
                     added += 1
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
-    print(f"backfill: master の直近 {len(runs)} 実行を調べ、{added} 点を足した")
+    print(f"backfill: main の直近 {len(runs)} 実行を調べ、{added} 点を足した")
     return added
 
 
@@ -554,7 +554,7 @@ def behind_history(commit, history):
     """commit が履歴の最新のコミットより前か。
 
     履歴のコミットは実行番号の順に並ぶ (build_history)。再実行では実行番号が変わらないので、
-    古い master の実行を再実行すると、そのコミットはその後の master より前に来る。
+    古い main の実行を再実行すると、そのコミットはその後の main より前に来る。
     履歴に無いコミット (上限で外れた・点が無い) は実行番号で比べる。
     """
     commits = history.get("commits") or []
@@ -580,7 +580,7 @@ def build_latest(current, mode, server, repo, previous, history):
     head = max(current, key=lambda r: run_rank(r["commit"]))
     c = head["commit"]
     if mode == "publish" and behind_history(c, history):
-        # 古い master の実行の再実行など。latest を古いコミットへ戻さない (履歴の点は更新する)
+        # 古い main の実行の再実行など。latest を古いコミットへ戻さない (履歴の点は更新する)
         newest = history["commits"][-1]
         where = (f"今回のコミット {bc.short_sha(c.get('sha'))} (#{c.get('run_number')}) は履歴の最新 "
                  f"{bc.short_sha(newest.get('sha'))} (#{newest.get('run_number')}) より古い")
@@ -643,7 +643,7 @@ def summary_markdown(current, others, history, mode, pages_url, stats, missing=(
         out.append("## 📊 ベンチマーク\n\n")
     if mode == "preview" and current:
         out.append(f"> プレビュー: ブランチ `{current[0]['commit'].get('ref') or '?'}` の結果。"
-                   "master の履歴には入れず、並べて表示するだけ。\n\n")
+                   "main の履歴には入れず、並べて表示するだけ。\n\n")
     if missing:
         # preview で履歴の一部を取れなかった (publish ではここまで来ない)
         reasons = "、".join(f"{what}: {bc.md_cell(err)}" for what, err, _ in missing)
@@ -689,7 +689,7 @@ def summary_markdown(current, others, history, mode, pages_url, stats, missing=(
 
 
 def discord_markdown(current, pages_url):
-    """master で悪化・予算超過があったときの Discord 本文。"""
+    """main で悪化・予算超過があったときの Discord 本文。"""
     c = max(current, key=lambda r: run_rank(r["commit"]))["commit"]
     head = f"**`{bc.short_sha(c.get('sha'))}`** {(c.get('subject') or '').strip()}\n"
     footer = f"\n結果ページ: {pages_url}\n" if pages_url else ""
@@ -749,15 +749,15 @@ def main():
     ap.add_argument("--history-file", action="append", default=[],
                     help="合わせる履歴 (history.js か history.json)。無ければ飛ばす。複数指定できる")
     ap.add_argument("--backfill", type=int, default=0,
-                    help="直近 N 回の master の CI から bench-result-* を集めて埋める (gh と GH_TOKEN が要る)")
+                    help="直近 N 回の main の CI から bench-result-* を集めて埋める (gh と GH_TOKEN が要る)")
     ap.add_argument("--backfill-workflow", default="ci.yml", help="backfill で調べるワークフロー (既定: ci.yml)")
     ap.add_argument("--mode", choices=("publish", "preview"), default="preview",
-                    help="publish: 今回の結果を履歴に足す (master)。preview: 足さずに候補として見せる (既定)")
+                    help="publish: 今回の結果を履歴に足す (main)。preview: 足さずに候補として見せる (既定)")
     ap.add_argument("--repo", default=os.environ.get("GITHUB_REPOSITORY"), help="owner/name (既定: $GITHUB_REPOSITORY)")
     ap.add_argument("--max-commits", type=int, default=1500, help="履歴に残すコミット数の上限 (既定: 1500)")
     ap.add_argument("--summary", help="Markdown を追記するファイル ($GITHUB_STEP_SUMMARY)")
     ap.add_argument("--output", help="ステップの出力を追記するファイル ($GITHUB_OUTPUT)")
-    ap.add_argument("--discord-md", help="master で悪化・予算超過があったときに Discord の本文を書くファイル")
+    ap.add_argument("--discord-md", help="main で悪化・予算超過があったときに Discord の本文を書くファイル")
     args = ap.parse_args()
     if args.max_commits < 1:
         ap.error("--max-commits は 1 以上")
@@ -854,7 +854,7 @@ def main():
             f.write(markdown)
 
     if args.mode == "publish":
-        # master の悪化は失敗にしない (揺れで誤判定することもある) が、見落とさないよう注釈を出す
+        # main の悪化は失敗にしない (揺れで誤判定することもある) が、見落とさないよう注釈を出す
         notes = []
         for r in current:
             label = bc.variant_label(r["variant"])

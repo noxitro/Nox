@@ -96,7 +96,7 @@
 			<path d="M24 28h40M24 38h26" class="e-text"/>
 		</svg>
 		<h1 id="empty-title">まだ計測データがありません</h1>
-		<p id="empty-body">master に push すると CI がベンチマークを計測し、ここに結果と推移が表示されます。</p>
+		<p id="empty-body">main に push すると CI がベンチマークを計測し、ここに結果と推移が表示されます。</p>
 		<div class="empty-hint">
 			<p>見た目を手元で確かめるには、デモデータを作ってからこのページを開き直してください。</p>
 			<pre><code>python3 tools/bench-site/make-demo-data.py</code></pre>
@@ -248,7 +248,7 @@
 		<div class="guide-body">
 			<div class="guide-col">
 				<h3>どう測っているか</h3>
-				<p>push のたびに CI (GitHub-hosted の Windows ランナー) が <code>bench_test.exe</code> を実行します。比較対象 (base) は master の直前のコミット (ブランチでは分岐元) でビルド済みの実行ファイルで、<strong>同じ VM の上で head と base を交互に</strong> 既定 10 ラウンドずつ動かします。VM の当たり外れは両方に同じようにかかるので、比 (head / base) で見れば打ち消されます。</p>
+				<p>push のたびに CI (GitHub-hosted の Windows ランナー) が <code>bench_test.exe</code> を実行します。比較対象 (base) は main の直前のコミット (ブランチでは分岐元) でビルド済みの実行ファイルで、<strong>同じ VM の上で head と base を交互に</strong> 既定 10 ラウンドずつ動かします。VM の当たり外れは両方に同じようにかかるので、比 (head / base) で見れば打ち消されます。</p>
 				<p>判定はラウンドごとの比の中央値と、ブートストラップ (2000 回) による 95 % 信頼区間で決めます。しきい値は <strong>±<span class="js-thr">5</span> %</strong> (複数スレッドのものは 2 倍) です。</p>
 				<ul class="verdict-rules">
 					<li><strong><span class="c-regressed" aria-hidden="true">▲</span> 悪化 / <span class="c-improved" aria-hidden="true">▼</span> 改善</strong>: 区間が 0 をまたがず、変化がしきい値以上</li>

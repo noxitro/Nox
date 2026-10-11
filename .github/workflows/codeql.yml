@@ -10,15 +10,15 @@ name: CodeQL
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
-    branches: [master]
+    branches: [main]
   schedule:
     # 依存やルールの更新で新しく見つかるものがあるので週次でも回す
     - cron: '21 4 * * 1'
   workflow_dispatch:
 
-# master と schedule は打ち切らない (打ち切ると master の解析結果が抜ける)
+# main と schedule は打ち切らない (打ち切ると main の解析結果が抜ける)
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}

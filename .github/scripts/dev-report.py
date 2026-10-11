@@ -11,7 +11,7 @@
   - レビューの基準に AGENTS.md (このリポジトリの規約) をそのまま渡せる
 
 日次 (daily):
-  前回レポートした master の地点から、今の HEAD までを対象にする。前回の地点は
+  前回レポートした main の地点から、今の HEAD までを対象にする。前回の地点は
   ワークフローが actions/cache に保存した状態ファイル (--state) から読む。日付で
   区切らないのは、(1) 前日のコミットを翌日に push すると取りこぼす、(2) 投稿に
   失敗した日の分が抜ける、(3) pull のマージで first-parent がずれると同じコミットを
@@ -672,7 +672,7 @@ def daily(args, now):
           f"{stat_line(files)} / AI に渡す差分 {len(diff_text):,} 文字 / 省略 {len(omitted)} 件")
 
     user = "\n".join([
-        f"対象: master の {(base or '(root)')[:10]}..{head[:10]} ({date_span(commits)}, コミット {len(commits)} 件"
+        f"対象: main の {(base or '(root)')[:10]}..{head[:10]} ({date_span(commits)}, コミット {len(commits)} 件"
         + (f", マージ {merges} 件" if merges else "") + ")",
         "",
         "## コミット一覧 (新しい順)",

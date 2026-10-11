@@ -121,7 +121,7 @@ def collect_errors(log_path, root):
 def commit_line():
     """コミットの短い SHA (リンク付き) と件名。schedule でも checkout 済みの HEAD から引ける。
 
-    定期実行は HEAD ではなく CI が最後に緑だった master を解析することがあり、そのときは
+    定期実行は HEAD ではなく CI が最後に緑だった main を解析することがあり、そのときは
     ワークフローが NOX_ANALYZED_SHA にそのコミットを入れる (GITHUB_SHA は HEAD のまま)。
     """
     sha = os.environ.get("NOX_ANALYZED_SHA") or os.environ.get("GITHUB_SHA", "")

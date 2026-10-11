@@ -34,7 +34,7 @@ GitHub Pages の結果ページ (`tools/bench-site`) に積んでいく。
 ## CI での比較と判定
 
 GitHub のホストランナーは実行ごとに CPU の型番が変わることがあり、同じバイナリでも
-2 割ほど差が出る。そこで CI では、**比較元の `bench_test.exe` (master で建てたもの) と
+2 割ほど差が出る。そこで CI では、**比較元の `bench_test.exe` (main で建てたもの) と
 今回のものを同じ VM で交互に 10 回ずつ**走らせ、回ごとの比の中央値と
 ブートストラップの 95% 信頼区間で判定する (`.github/scripts/bench-run.py`)。
 
