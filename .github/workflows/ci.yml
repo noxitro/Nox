@@ -288,6 +288,21 @@ jobs:
         if: env.NOX_REUSE != 'true' || matrix.configuration != 'Master'
         uses: actions/checkout@v7
 
+      # 録画用の ffmpeg (下の「Wait for ffmpeg」を参照) は、ビルドと関係が無いので最初に裏で入れ始める。
+      # MSVC / Release は run 全体の律速になりやすく、FlaUI の直前に入れると 0.5 分前後そのまま延びていた。
+      # 裏で起こしたプロセスはステップをまたいで生き続ける (ランナーが片付けるのはジョブの終わり)。
+      - name: Start ffmpeg install in background (for Editor video)
+        id: ffmpeg-start
+        if: matrix.compiler == 'MSVC' && matrix.configuration == 'Release'
+        continue-on-error: true
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'ffmpeg-install'
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          $cmd = "choco install ffmpeg -y --no-progress *> '$dir\log.txt'; Set-Content -Path '$dir\exit.txt' -Value `$LASTEXITCODE"
+          $p = Start-Process pwsh -ArgumentList '-NoProfile', '-Command', $cmd -WindowStyle Hidden -PassThru
+          "pid=$($p.Id)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "dir=$dir" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
       - name: Setup build prerequisites
         if: env.NOX_REUSE != 'true'
         uses: ./.github/actions/setup-nox-build
@@ -546,6 +561,23 @@ jobs:
           }
           Write-Host $detail
 
+      # Editor (C#) のビルドは runtime を必要としないので、下のテストのビルドと並行して裏で走らせる
+      # (結果は「Build Editor/Studio.slnx」で受け取る)。直列に並べると MSVC / Release の律速を
+      # そのまま 0.5 分前後延ばしていた。ベンチマークの計測には重ならないよう、テストのビルドの頭で始める
+      # (テストのビルドは 2〜4 分あり、Editor は 1 分足らずで終わる)。
+      # runtime のビルドが通らなかったときは始めない (下の Build Editor の条件と同じ)。
+      - name: Start Editor build in background
+        id: editor-start
+        if: steps.build.outcome == 'success' && matrix.configuration != 'Master'
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'editor-build'
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          # C++ 側の msbuild とノードを取り合わないよう、ノードの再利用は切る
+          $cmd = "dotnet build Editor/Studio.slnx -c ${{ matrix.configuration }} --no-incremental -v minimal -nodeReuse:false *> '$dir\log.txt'; Set-Content -Path '$dir\exit.txt' -Value `$LASTEXITCODE"
+          $p = Start-Process pwsh -ArgumentList '-NoProfile', '-Command', $cmd -WindowStyle Hidden -PassThru
+          "pid=$($p.Id)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "dir=$dir" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
       # ---------------------------------------------------------
       # GoogleTest
       #
@@ -567,6 +599,7 @@ jobs:
       # 同時にリンクすると同じパスを取り合って落ちる
       # (C1083 Permission denied -> LNK1257)。msbuild の呼び出しを分ければ
       # 時間的に重ならないので、構成によらずこの衝突は起きない。
+      # 同時に建てるのは、リンクが重ならない kernel_test と reflection_generated_test だけにする。
       # ---------------------------------------------------------
       - name: Build test projects
         if: env.NOX_REUSE != 'true'
@@ -594,9 +627,21 @@ jobs:
           $solutionDir  = (Resolve-Path 'runtime').Path.Replace('\', '/') + '/'
           $solutionPath = $solutionDir + 'runtime.slnx'
 
+          # kernel_test と reflection_generated_test は互いに依存せず、同時に建てても /GL のリンクが
+          # 重ならない (reflection_generated_test は静的ライブラリでリンクしない) ので、1 回の msbuild で
+          # 並列に建てる。core_test は reflection_generated_test をリンクする (BuildProjectReferences=false
+          # なので参照からは待たない) ので、その後に建てる。
+          $both = Join-Path $env:RUNNER_TEMP 'nox-test-libs.proj'
+          @"
+          <Project>
+            <Target Name="Build">
+              <MSBuild Projects="$((Resolve-Path 'runtime\kernel\test\kernel_test.vcxproj').Path);$((Resolve-Path 'runtime\reflection_generated_test\reflection_generated_test.vcxproj').Path)" BuildInParallel="true" />
+            </Target>
+          </Project>
+          "@ | Set-Content -Path $both -Encoding utf8NoBOM
+
           $projects = @(
-            'runtime\kernel\test\kernel_test.vcxproj',
-            'runtime\reflection_generated_test\reflection_generated_test.vcxproj',
+            $both,
             'runtime\core\test\core_test.vcxproj'
           )
           foreach ($proj in $projects) {
@@ -828,21 +873,41 @@ jobs:
       # FlaUI は Editor/Studio.Wpf/bin/<構成>/net10.0-windows/Studio.Wpf.exe を
       # リポジトリルートからの相対で探す (EditorApp.ResolveBuildConfiguration が
       # テスト自身の出力ディレクトリから構成名を導く) ので、同じ構成で建てる。
+      # runtime を建てた run では、テストのビルドと並行して裏で建ててある (Start Editor build in background)。
+      # ここではその終わりを待って結果を出す。再利用した run (runtime を建てていない) では、ここで建てる。
       - name: Build Editor/Studio.slnx
         if: always() && matrix.configuration != 'Master' && (steps.build.outcome == 'success' || steps.restore.outcome == 'success')
+        env:
+          EDITOR_PID: ${{ steps.editor-start.outputs.pid }}
+          EDITOR_DIR: ${{ steps.editor-start.outputs.dir }}
         run: |
-          dotnet build Editor/Studio.slnx -c ${{ matrix.configuration }} --no-incremental -v minimal
-          if ($LASTEXITCODE -ne 0) { throw "Editor のビルドに失敗 (exit $LASTEXITCODE)" }
+          if ($env:EDITOR_PID) {
+            $p = Get-Process -Id ([int]$env:EDITOR_PID) -ErrorAction SilentlyContinue
+            if ($p) { $p | Wait-Process -Timeout 900 -ErrorAction SilentlyContinue }
+            Get-Content (Join-Path $env:EDITOR_DIR 'log.txt') -ErrorAction SilentlyContinue
+            $code = Get-Content (Join-Path $env:EDITOR_DIR 'exit.txt') -ErrorAction SilentlyContinue
+            if ("$code".Trim() -ne '0') { throw "Editor のビルドに失敗 (exit '$code')" }
+          } else {
+            dotnet build Editor/Studio.slnx -c ${{ matrix.configuration }} --no-incremental -v minimal
+            if ($LASTEXITCODE -ne 0) { throw "Editor のビルドに失敗 (exit $LASTEXITCODE)" }
+          }
 
       # テーマ切替の操作を録画するための ffmpeg。Windows ランナーには入っていない。
       # 録画は PR の見た目確認の補助で品質ゲートではないので、入らなくても FlaUI は続ける
       # (ffmpeg が無ければテスト側が録画を飛ばす)。MSVC / Release の 1 構成だけで撮る。
-      - name: Install ffmpeg (for Editor video)
-        if: always() && matrix.compiler == 'MSVC' && matrix.configuration == 'Release'
+      # インストールはジョブの最初に裏で始めてある (Start ffmpeg install in background)。ここでは終わりを待つだけ。
+      - name: Wait for ffmpeg (for Editor video)
+        if: always() && steps.ffmpeg-start.outputs.pid != ''
         continue-on-error: true
+        env:
+          FFMPEG_PID: ${{ steps.ffmpeg-start.outputs.pid }}
+          FFMPEG_DIR: ${{ steps.ffmpeg-start.outputs.dir }}
         run: |
-          choco install ffmpeg -y --no-progress
-          if ($LASTEXITCODE -ne 0) { throw "ffmpeg のインストールに失敗 (exit $LASTEXITCODE)" }
+          $p = Get-Process -Id ([int]$env:FFMPEG_PID) -ErrorAction SilentlyContinue
+          if ($p) { $p | Wait-Process -Timeout 600 -ErrorAction SilentlyContinue }
+          Get-Content (Join-Path $env:FFMPEG_DIR 'log.txt') -ErrorAction SilentlyContinue | Select-Object -Last 15
+          $code = Get-Content (Join-Path $env:FFMPEG_DIR 'exit.txt') -ErrorAction SilentlyContinue
+          if ("$code".Trim() -ne '0') { throw "ffmpeg のインストールに失敗 (exit '$code')" }
           ffmpeg -hide_banner -version | Select-Object -First 1
 
       - name: Run FlaUI tests
