@@ -88,6 +88,10 @@
         ローカルでは通るのにCIで C1128 になった。/bigobj で上限を引き上げる。
       -->
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <!-- 1 つの unity ファイルに束ねる生成ファイルの上限 (Release / Master だけ)。既定では 5 本に
+           偏って束ねられ、重い 1 本の終わりをほかのコアが待っていた。細かく束ねて並列に流す。
+           Debug には入れない: 増分リンク (/ZI) で runtime.exe のリンクが 1.5 秒から 87 秒に延びた -->
+      <MaxFilesInUnityFile>6</MaxFilesInUnityFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -107,6 +111,10 @@
         ローカルでは通るのにCIで C1128 になった。/bigobj で上限を引き上げる。
       -->
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <!-- 1 つの unity ファイルに束ねる生成ファイルの上限 (Release / Master だけ)。既定では 5 本に
+           偏って束ねられ、重い 1 本の終わりをほかのコアが待っていた。細かく束ねて並列に流す。
+           Debug には入れない: 増分リンク (/ZI) で runtime.exe のリンクが 1.5 秒から 87 秒に延びた -->
+      <MaxFilesInUnityFile>6</MaxFilesInUnityFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
