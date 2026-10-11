@@ -69,6 +69,10 @@ namespace Core.Net;
 		public int SentQueryCount { get; private set; }
 		public int ReceivedByteCount { get; private set; }
 		public int DeserializedEntityCount { get; private set; }
+		/// <summary>runtime から届いて実行した Query の数 (ログなど。<see cref="DeserializedEntityCount"/> は Response だけを数える)</summary>
+		public int ExecutedQueryCount { get; private set; }
+		/// <summary>受信したがまだデシリアライズしていないバイト数</summary>
+		public int BufferedByteCount => _ReaderStream.Available;
 		public string LastWorkerError { get; private set; } = string.Empty;
 		#endregion
 
@@ -417,7 +421,6 @@ namespace Core.Net;
 				}
 
 				// 到着データがある限り吸い出す
-				bool signaled = false;
 				while (true)
 				{
 					if (_Socket==null)
@@ -431,11 +434,15 @@ namespace Core.Net;
 						ReceivedByteCount += received;
 						_ReaderStream.AddBuffer(buffer.Slice(0, received));
 
-						// 1パケット分揃った時だけ通知
-						if (!signaled && _ReaderStream.CanReadBody())
+						// 1パケット分揃うたびに通知する。
+						// 同じバーストの中で 1 度しか通知しないと、Deserialize スレッドがその通知で揃っていた分を処理して
+						// 待ちに戻った後に揃ったパケットは、runtime から次のデータが届くまで処理されない。
+						// 接続直後の runtime は溜めていた起動ログを続けて送り、GetMainSceneView の応答がその後に続くので、
+						// 応答が受信バッファに残ると RuntimeView が runtime のウィンドウを取り込めない
+						// (CI run 38105934968 の Received=1536, Deserialized=0 はこの形と見ている)。
+						if (_ReaderStream.CanReadBody())
 						{
 							_DeserializeSignal.Set();
-							signaled = true;
 						}
 					}
 					else if (received < 0)
@@ -495,6 +502,7 @@ namespace Core.Net;
 							if (query == null) continue;
 							query.Deserialize(binaryReader);
 							query.Execute();
+							ExecutedQueryCount++;
 						}
 						else if (entity is Core.RuntimeRemote.Response response)
 						{

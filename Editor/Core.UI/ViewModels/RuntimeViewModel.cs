@@ -96,7 +96,7 @@ namespace Core.UI.ViewModels;
 			Core.Net.RuntimeRemoteClient remoteClient = _RuntimeSession.RemoteClient;
 			Core.Net.SocketScheduler socketScheduler = Core.StudioManager.Instance.GetEngineSystem<Core.Net.SocketScheduler>();
 			string handle = MainWindowHandle == IntPtr.Zero ? "null" : $"0x{MainWindowHandle.ToInt64():X}";
-			DebugStatus = $"State={remoteClient.State}; Attempts={remoteClient.ConnectionAttemptCount}; Sent={remoteClient.SentQueryCount}; Received={remoteClient.ReceivedByteCount}; Deserialized={remoteClient.DeserializedEntityCount}; Handle={handle}; Error={remoteClient.LastWorkerError}; ConnectError={remoteClient.LastConnectionError}; Scheduler={socketScheduler.UpdateCount}; Clients={socketScheduler.ClientCount}; PendingClients={socketScheduler.PendingClientRequestCount}; SchedulerError={socketScheduler.LastError}";
+			DebugStatus = $"State={remoteClient.State}; Attempts={remoteClient.ConnectionAttemptCount}; Sent={remoteClient.SentQueryCount}; Received={remoteClient.ReceivedByteCount}; Deserialized={remoteClient.DeserializedEntityCount}; ExecutedQueries={remoteClient.ExecutedQueryCount}; Buffered={remoteClient.BufferedByteCount}; Handle={handle}; Error={remoteClient.LastWorkerError}; ConnectError={remoteClient.LastConnectionError}; Scheduler={socketScheduler.UpdateCount}; Clients={socketScheduler.ClientCount}; PendingClients={socketScheduler.PendingClientRequestCount}; SchedulerError={socketScheduler.LastError}";
 		}
 
 		public override void Dispose()
