@@ -1,0 +1,56 @@
+# 一時的な計測用 (マージしない)。同じ VM の中で、テストプロジェクトの直列と並列 (kernel_test と
+# reflection_generated_test を 1 回の msbuild で) を交互に建てて比べる。runtime.slnx は最初に 1 回だけ建てる。
+name: CI measure (test build serial vs parallel)
+
+on:
+  push:
+    branches: ['work/ci-measure-testpar']
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    name: Measure (${{ matrix.compiler }} / Release / VM ${{ matrix.vm }})
+    runs-on: windows-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [MSVC]
+        vm: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-nox-build
+      - name: Build runtime.slnx
+        run: msbuild runtime\runtime.slnx /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v145 /m /v:minimal /nologo
+      - name: Build tests alternately
+        shell: pwsh
+        env:
+          VM: ${{ matrix.vm }}
+        run: |
+          $solutionDir  = (Resolve-Path 'runtime').Path.Replace('\', '/') + '/'
+          $solutionPath = $solutionDir + 'runtime.slnx'
+          $common = @('/p:Configuration=Release', '/p:Platform=x64', '/p:PlatformToolset=v145', "/p:SolutionDir=$solutionDir",
+                      '/p:SolutionName=runtime', "/p:SolutionPath=$solutionPath", '/p:BuildProjectReferences=false', '/m', '/v:minimal', '/nologo')
+          $kt = (Resolve-Path 'runtime\kernel\test\kernel_test.vcxproj').Path
+          $rg = (Resolve-Path 'runtime\reflection_generated_test\reflection_generated_test.vcxproj').Path
+          $ct = 'runtime\core\test\core_test.vcxproj'
+          $both = Join-Path $env:RUNNER_TEMP 'nox-test-libs.proj'
+          "<Project><Target Name=`"Build`"><MSBuild Projects=`"$kt;$rg`" BuildInParallel=`"true`" /></Target></Project>" | Set-Content $both
+          $order = if ([int]$env:VM % 2 -eq 1) { @('serial', 'parallel', 'serial') } else { @('parallel', 'serial', 'parallel') }
+          $i = 0
+          foreach ($mode in $order) {
+            $i++
+            foreach ($d in 'kernel_test', 'reflection_generated_test', 'core_test') {
+              Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "runtime\build\intermediate\runtime\x64\Release\$d"
+            }
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue 'runtime\reflection_generated_test\gen'
+            $projects = if ($mode -eq 'serial') { @($kt, $rg, $ct) } else { @($both, $ct) }
+            $sw = [Diagnostics.Stopwatch]::StartNew()
+            foreach ($p in $projects) {
+              msbuild $p @common
+              if ($LASTEXITCODE -ne 0) { throw "build failed: $p ($mode)" }
+            }
+            Write-Host "RESULT vm=$env:VM step=$i mode=$mode seconds=$([math]::Round($sw.Elapsed.TotalSeconds, 1))"
+          }
