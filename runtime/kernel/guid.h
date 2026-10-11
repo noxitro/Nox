@@ -9,7 +9,6 @@
 #include "nox_string.h"
 #include "type_traits/concepts.h"
 #include "type_traits/type_traits.h"
-#include "reflection_attribute.h"
 
 namespace nox
 {
@@ -37,7 +36,6 @@ namespace nox
 		/// @details	並びは Editor の System.Guid の ToByteArray() / Guid(byte[]) と同じにする。
 		///				data1 / data2 / data3 はリトルエンディアン、data4 は先頭から順に並べる。
 		///				一致は kernel_test の guid_test.cpp と Studio.Wpf.UITests の GuidFormatTests.cs で確かめている
-		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
 		static inline constexpr nox::Guid FromBytes(std::span<const nox::uint8, 16> bytes)noexcept
 		{
 			nox::Guid guid;
@@ -55,7 +53,6 @@ namespace nox
 		}
 
 		/// @brief 16 byte の並びに書き出す (並びは FromBytes と同じ)
-		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
 		inline constexpr void ToBytes(std::span<nox::uint8, 16> dest)const noexcept
 		{
 			dest[0] = static_cast<nox::uint8>(data1 & 0xFFu);
