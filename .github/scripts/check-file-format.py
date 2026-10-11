@@ -31,8 +31,8 @@ BOM: BOM なしの UTF-8 に統一してある。BOM が要るのは bom_policy.
 
 使い方:
     python3 .github/scripts/check-file-format.py --base <rev> --head <rev>
-    python3 .github/scripts/check-file-format.py --base origin/master   # 手元で push 前に確認
-                                                                        # (master との分岐点から比べる)
+    python3 .github/scripts/check-file-format.py --base origin/main   # 手元で push 前に確認
+                                                                        # (main との分岐点から比べる)
 
 終了コード: error があれば 1、なければ 0。
 """
@@ -203,7 +203,7 @@ def allowed_patterns(base, head):
 
 
 def earlier_formats(reader, base, path, limit=20):
-    """base 以前に master が持っていたこのパスの版を、新しい順に (形式, Format-Change の指定) で返す。
+    """base 以前に main が持っていたこのパスの版を、新しい順に (形式, Format-Change の指定) で返す。
     先頭は base 時点の版。--first-parent で、マージしたブランチは 1 版 (マージコミット) と数える。"""
     out = git("log", "--first-parent", f"-n{limit}", "--format=%H%x01%B%x00", base, "--", path, check=False)
     versions = []
@@ -221,7 +221,7 @@ def earlier_formats(reader, base, path, limit=20):
 
 def restored(history, attr, old_value, new_value):
     """事故で変わった形式を、その前の形式へ戻しただけか。history は earlier_formats の戻り値。
-    master で事故を直すコミットを咎めないために使う (作業ブランチは master との分岐点から
+    main で事故を直すコミットを咎めないために使う (作業ブランチは main との分岐点から
     累積で比べるので、事故と修正が相殺される)。
 
     履歴を同じ形式が続く区間に分け、今の区間 (old) を作った変更が「事故」で、今回その
@@ -413,9 +413,9 @@ def main():
 
     base = git("rev-parse", "--verify", args.base + "^{commit}").decode().strip()
     head = git("rev-parse", "--verify", args.head + "^{commit}").decode().strip()
-    # base が head の祖先でない (手元で --base origin/master を指定したが master が先へ
+    # base が head の祖先でない (手元で --base origin/main を指定したが main が先へ
     # 進んでいる、force-push された、など) ときは分岐点から比べる。そうしないと、
-    # こちらが触っていないファイルの master 側の変更を逆向きに検出してしまう。
+    # こちらが触っていないファイルの main 側の変更を逆向きに検出してしまう。
     if subprocess.run(["git", "merge-base", "--is-ancestor", base, head]).returncode != 0:
         mb = git("merge-base", base, head, check=False).decode().strip()
         if mb:

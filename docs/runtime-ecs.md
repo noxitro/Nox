@@ -2,17 +2,17 @@
 
 利用者が書く ECS の型 (Component / Service / EntitySystem / EntityLogic) の置き場所と名前、フレームの区間、EntitySystem と EntityLogic の書き方を決める文書。決めた理由と採らなかった案も残す。
 
-- フレームの中の実行順 (UpdaterGraph) の決め方は、`work/updater-graph-unification` の実行モデルの設計書 (`docs/runtime-execution-model.md`、master へは未取り込み) が扱う。この文書はその規則 (引数の並びがアクセスの宣言、など) を前提にする。
+- フレームの中の実行順 (UpdaterGraph) の決め方は、`work/updater-graph-unification` の実行モデルの設計書 (`docs/runtime-execution-model.md`、main へは未取り込み) が扱う。この文書はその規則 (引数の並びがアクセスの宣言、など) を前提にする。
 - ただし次の点は、この文書で置き換える。
   - オプションの書き方: そのブランチではクラスの中に public の `using RunAfter = nox::TypeList<...>;` / `using RunBefore` を書くが、この文書では基底のテンプレート引数に並べる (§3、§4)。
   - フレームの区間: そのブランチは FrameIngress / Update / Presentation を誰でも選べる区間にしているが、この文書では利用者が選べるのは Update だけにする (§2)。
   - 同じ EntityLogic の型のメソッドどうしの衝突: そのブランチは必ず衝突させるが、この文書では `this` を Component へのアクセスとして扱って判定する (§4)。
 - Service の書き方 (寿命、ノードになるメソッドの宣言) は、まだこの文書の対象外。`RunAfter` / `RunBefore` の相手に Service を書いたときの意味だけを §7 で決める。
-- master のコードは、まだこの文書の形に揃っていない。実装を合わせるときは、この文書を正とする。
+- main のコードは、まだこの文書の形に揃っていない。実装を合わせるときは、この文書を正とする。
   - `runtime/core/entity_system.h` には `nox::EntitySystem<T, Options...>` の宣言と印の型 (`nox::RequireComponents` / `nox::RunAfter` / `nox::RunBefore`) があるが、Doxygen の説明は位置で決まる旧い形 (ExtraRequiredComponents / AfterSystems / BeforeSystems) のまま。
   - 基底は `nox::EntitySystemBase` (`nox` 直下) のままで、`nox::concepts::EntitySystem` もそれを参照している。`nox::detail` へは未移動。
   - オプションの解析、private への格納、private メソッドの検出は未実装。`nox::ExcludeComponents` も未実装。
-  - 実際に使われている System は `nox::legacy::EntitySystem`。EntityLogic の新しい形は master にまだ無い。
+  - 実際に使われている System は `nox::legacy::EntitySystem`。EntityLogic の新しい形は main にまだ無い。
   - Component の基底は `nox::detail::IComponentData` へ移してあり (§1)、core・テスト・ベンチマークの Component は `final` で `nox::Component<T>` を継承している。`nox` 直下の前方宣言は残っていない。`RunAfter` / `RunBefore` の相手を表す共通の印の基底 `nox::detail::UpdaterNodeOwnerBase` はあるが、コンセプト `nox::concepts::OrderTarget` (§1) は無く、`RunAfter` / `RunBefore` は相手を検査していない。
 - 決まっていない点は §10 にまとめる。
 

@@ -93,10 +93,13 @@ NO_BASE_LABEL = "比較なし"
 
 # base の種類を言葉にしたもの。"explicit" は手元で --base-exe を渡したとき
 BASE_KIND_LABELS = {
-    "previous-master": "直前の master",
+    "previous-main": "直前の main",
     "merge-base": "分岐元",
-    "latest-master": "最新の master",
+    "latest-main": "最新の main",
     "explicit": "指定した exe",
+    # 既定ブランチを master から main へ改名する前の結果に残っている名前
+    "previous-master": "直前の main",
+    "latest-master": "最新の main",
 }
 
 

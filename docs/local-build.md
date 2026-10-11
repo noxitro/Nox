@@ -14,13 +14,13 @@
 
 ## ビルドせずに Editor を動かす
 
-Editor だけを触るときは、CI が master で建てた `runtime.exe` と TypeDB を取ってくれば runtime をビルドしなくてよい。
+Editor だけを触るときは、CI が main で建てた `runtime.exe` と TypeDB を取ってくれば runtime をビルドしなくてよい。
 
 ```powershell
 pwsh tools/fetch-runtime/fetch-runtime.ps1                          # Debug
 pwsh tools/fetch-runtime/fetch-runtime.ps1 -Configuration Debug,Release
 ```
 
-- `gh` にログインしている必要がある。取るのは master の最新のアーティファクト `runtime-MSVC-<構成>` (90 日で消える)。
+- `gh` にログインしている必要がある。取るのは main の最新のアーティファクト `runtime-MSVC-<構成>` (90 日で消える)。
 - `runtime/build/runtime/x64/<構成>/` と `runtime/reflection_generated/gen/` に置き、`%TEMP%` の TypeDB ポインタファイルを書き直す。
-- 手元の HEAD と runtime 側の入力が master と違えば警告する。そのときは master を取り込むか、runtime を手元でビルドする。
+- 手元の HEAD と runtime 側の入力が main と違えば警告する。そのときは main を取り込むか、runtime を手元でビルドする。

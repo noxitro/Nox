@@ -1,13 +1,13 @@
 # ベンチマーク結果ページ (tools/bench-site)
 
 CI が計測した Runtime のマイクロベンチマーク (`runtime/bench`) の結果と推移を見るための静的ページです。
-master の結果は GitHub Pages に公開され、ブランチの結果は CI のアーティファクト `bench-site` に同じページとして入ります (展開して `index.html` を開けば見られます)。
+main の結果は GitHub Pages に公開され、ブランチの結果は CI のアーティファクト `bench-site` に同じページとして入ります (展開して `index.html` を開けば見られます)。
 
 ビルド手順も外部ライブラリもありません。`index.html` / `app.js` / `style.css` / `favicon.svg` の 4 ファイルと、CI が作るデータ (`data/`) だけで動きます。
 
 ## 何が見られるか
 
-- **概要**: 最新の計測 (master の最新、またはプレビュー中のブランチ) の要約
+- **概要**: 最新の計測 (main の最新、またはプレビュー中のブランチ) の要約
   - 全体の変化 (全ベンチマークの比の幾何平均) と、悪化 / 改善 / ヒープ確保 / 計測環境のカード。
     全体の変化に色が付くのは、しきい値の半分以上動き、同じ向きに判定の付いたベンチマークがあるときだけ
   - カードを押すと、その判定の行だけに絞り込む (表の上の「悪化のみ ×」で解除)
@@ -58,7 +58,7 @@ python3 -m http.server -d tools/bench-site 8000
 | オプション | 内容 |
 |---|---|
 | `--preview` | 最新の結果を「未マージのブランチの計測」にする (プレビューの帯、分岐元との比較、予算違反と確保回数が「不安定」な例が出る) |
-| `--commits N` | master のコミット数 (既定 120)。大きな履歴での速さを見るときは 1500 など |
+| `--commits N` | main のコミット数 (既定 120)。大きな履歴での速さを見るときは 1500 など |
 | `--out-dir DIR` | 出力先 (既定はこのディレクトリの `data/`) |
 
 乱数の種は固定なので、同じ引数なら毎回同じデータになります。`data/` は `.gitignore` 済みです。
@@ -95,7 +95,7 @@ python3 .github/scripts/bench-report.py --results-dir <bench-result-* を展開�
 
 `data/history.js` は `window.NOX_BENCH_HISTORY = {...};`、`data/latest.js` は `window.NOX_BENCH_LATEST = {...};` の 1 行です。`fetch` は `file://` で動かないため、JSON ではなく `<script>` で読める形にしています (`data/history.json` は同じ内容の JSON で、ダウンロード用)。
 
-- `nox-bench-history/1`: master の履歴。ベンチマークごとの列指向の配列 (コミット番号、環境、中央値、四分位、対の比較の比と区間、判定、確保回数など)
+- `nox-bench-history/1`: main の履歴。ベンチマークごとの列指向の配列 (コミット番号、環境、中央値、四分位、対の比較の比と区間、判定、確保回数など)
 - `nox-bench-latest/1`: 直近の実行 1 回分。バリアントごとに `bench-run.py` の結果 (`nox-bench-run/1`) をそのまま持ち、ラウンドごとの値を含む
 
 作るのは `.github/scripts/bench-report.py` です。どちらのファイルも無い、または `null` のときは空の状態を表示します。

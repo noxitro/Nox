@@ -312,7 +312,7 @@
 		if (!d || !d.reliable || !d.totals[key]) return "";
 		const b = d.totals[key][0];
 		const c = d.totals[key][1];
-		return '前回 master 比 <span class="' + changeClass(b, c) + '">' + change(b, c) + "</span>";
+		return '前回 main 比 <span class="' + changeClass(b, c) + '">' + change(b, c) + "</span>";
 	}
 
 	function viewOverview(view, c) {
@@ -743,7 +743,7 @@
 	function viewDiff(view, c) {
 		const d = diff();
 		if (!d) {
-			view.innerHTML = '<div class="card"><div class="empty">比較元 (前回の master の計測) が無い。master に計測が溜まると、ここに前回との違いが出る。</div></div>';
+			view.innerHTML = '<div class="card"><div class="empty">比較元 (前回の main の計測) が無い。main に計測が溜まると、ここに前回との違いが出る。</div></div>';
 			return;
 		}
 		const base = DATA.base || {};
@@ -769,7 +769,7 @@
 			).join("");
 			return '<div class="card"><div class="card-head"><h3>' + esc(title) + '</h3></div><div class="table-wrap"><table class="data"><thead><tr><th>名前</th><th class="num">前回</th><th class="num">今回</th><th class="num">変化</th><th class="num">全体に占める割合</th><th class="num">割合の変化</th></tr></thead><tbody>' + body + "</tbody></table></div></div>";
 		};
-		const baseLink = base.sha ? (base.run_url ? '<a href="' + esc(base.run_url) + '">' + esc(base.sha.slice(0, 7)) + "</a>" : esc(base.sha.slice(0, 7))) : "前回の master";
+		const baseLink = base.sha ? (base.run_url ? '<a href="' + esc(base.run_url) + '">' + esc(base.sha.slice(0, 7)) + "</a>" : esc(base.sha.slice(0, 7))) : "前回の main";
 		// イベントが欠けた計測の集計は時間が崩れているので、比較そのものを出さない (概要と Job Summary も同じ)
 		if (!d.reliable) {
 			view.innerHTML = '<div class="notice">今回か比較元の計測でイベントが欠けているので、前回との比較は出さない。</div>';

@@ -37,10 +37,13 @@
 	// 履歴の v 列。回数不足 (対が 3 組未満) は null で、比 (r) だけが入る
 	const CODE_TO_VERDICT = { "1": "regressed", "-1": "improved", "0": "unchanged", "2": "noisy" };
 	const BASE_KIND = {
-		"previous-master": "直前の master",
+		"previous-main": "直前の main",
 		"merge-base": "分岐元",
-		"latest-master": "最新の master",
+		"latest-main": "最新の main",
 		explicit: "指定した exe",
+		// 既定ブランチを master から main へ改名する前の結果に残っている名前
+		"previous-master": "直前の main",
+		"latest-master": "最新の main",
 	};
 	const MIN_PAIRS = 3;
 	const PER_LABEL = {
@@ -785,7 +788,7 @@
 				sm.env = p.env;
 				if (p.bs >= 0 && model.commits[p.bs]) {
 					const bc = model.commits[p.bs];
-					sm.base = { sha: bc.sha, run_id: bc.run_id, run_number: bc.run_number, kind: p.bs === vm.lastIdx - 1 ? "previous-master" : null };
+					sm.base = { sha: bc.sha, run_id: bc.run_id, run_number: bc.run_number, kind: p.bs === vm.lastIdx - 1 ? "previous-main" : null };
 				}
 			}
 		}
@@ -1015,18 +1018,18 @@
 		el.innerHTML = '<div class="preview-banner-inner"><span class="pb-icon" aria-hidden="true">!</span><span>'
 			+ "<strong>プレビュー:</strong> ブランチ <code>" + esc(L.branch || "?") + "</code> の "
 			+ (url ? '<a class="sha" href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(sha7(c.sha)) + "</a>" : "")
-			+ " (未マージ)。master の履歴と比較しています。</span></div>";
+			+ " (未マージ)。main の履歴と比較しています。</span></div>";
 		el.hidden = false;
 	}
 
 	// ---------------------------------------------------------------- ヒーロー
 
-	/// 日本語の後に続けるときの区切り。英数字で終わるときだけ空白を挟む ("master と" / "分岐元と")
+	/// 日本語の後に続けるときの区切り。英数字で終わるときだけ空白を挟む ("main と" / "分岐元と")
 	function jaSep(s) {
 		return /[A-Za-z0-9)]$/.test(s) ? " " : "";
 	}
 
-	/// base の種類を言葉にする ("直前の master" など)。種類が分からないときは "base"
+	/// base の種類を言葉にする ("直前の main" など)。種類が分からないときは "base"
 	function baseText(base) {
 		if (!base) {
 			return null;
@@ -1090,8 +1093,8 @@
 		}
 		else if (!sm.hasPrior) {
 			sentence = candidate
-				? "比較対象 (base) も master の計測もまだ無いため、比較と推移はありません。今回の値だけを表示しています。"
-				: "初回の計測のため、比較と推移はまだありません。次に master へ push したときから出ます。";
+				? "比較対象 (base) も main の計測もまだ無いため、比較と推移はありません。今回の値だけを表示しています。"
+				: "初回の計測のため、比較と推移はまだありません。次に main へ push したときから出ます。";
 		}
 		else {
 			sentence = "今回は比較対象 (base) の実行ファイルが無く、同じ CPU の過去の点も無いため、変化は出していません。";
@@ -2142,11 +2145,11 @@
 			}
 
 			if (!hist.length) {
-				out.push('<text class="axis-title" x="' + (m.left + iw / 2).toFixed(1) + '" y="' + (m.top + ih - 14) + '" text-anchor="middle">まだ履歴がありません。master で計測が積み重なると推移が出ます</text>');
+				out.push('<text class="axis-title" x="' + (m.left + iw / 2).toFixed(1) + '" y="' + (m.top + ih - 14) + '" text-anchor="middle">まだ履歴がありません。main で計測が積み重なると推移が出ます</text>');
 			}
 			else if (pts.length === 1) {
 				// 判定の列は空なので、その高さに案内を置く (点と重ならない)
-				out.push('<text class="axis-title" x="' + (m.left + iw / 2).toFixed(1) + '" y="' + (m.top - 12) + '" text-anchor="middle">まだ 1 点だけです。master で計測が積み重なると推移が出ます</text>');
+				out.push('<text class="axis-title" x="' + (m.left + iw / 2).toFixed(1) + '" y="' + (m.top - 12) + '" text-anchor="middle">まだ 1 点だけです。main で計測が積み重なると推移が出ます</text>');
 			}
 
 			// ホバー用の層 (十字線と強調)
@@ -3037,7 +3040,7 @@
 		$("dl-history").hidden = !H;
 		$("dl-latest").hidden = !L;
 		$("footer-inner").innerHTML = bits.join("");
-		$("guide-links").innerHTML = '<a href="https://github.com/' + esc(repo) + '/tree/master/runtime/bench" target="_blank" rel="noopener">ベンチマークのソース</a>'
+		$("guide-links").innerHTML = '<a href="https://github.com/' + esc(repo) + '/tree/main/runtime/bench" target="_blank" rel="noopener">ベンチマークのソース</a>'
 			+ '<a href="https://github.com/' + esc(repo) + '/actions/workflows/ci.yml" target="_blank" rel="noopener">CI の実行一覧</a>';
 		const thr = vmNow() ? vmNow().summary.threshold : DEFAULT_THRESHOLD;
 		for (const el of document.querySelectorAll(".js-thr")) {

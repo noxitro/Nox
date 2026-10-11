@@ -12,13 +12,13 @@
 
 ### ブランチ
 
-長命なブランチは `master` 1 本だけにする (作業ブランチと併存させて、同じ内容が別 SHA で二重に積まれた事故があった)。
+長命なブランチは `main` 1 本だけにする (作業ブランチと併存させて、同じ内容が別 SHA で二重に積まれた事故があった)。
 
-- エージェントは `work/<タスク名>` を切り (セッション側で作業ブランチが指定されている場合はそれに従う)、検証が通ったら PR を作って止める。`master` への取り込み (PR のマージ) はユーザーが行う。「進めて」「再開して」などは取り込みの許可ではない。
-- ユーザーは `master` へ直接コミットし、実験だけ `user/<topic>` を切る。
-- **`master` への force-push は禁止。** ユーザーのコミットが失われる。
+- エージェントは `work/<タスク名>` を切り (セッション側で作業ブランチが指定されている場合はそれに従う)、検証が通ったら PR を作って止める。`main` への取り込み (PR のマージ) はユーザーが行う。「進めて」「再開して」などは取り込みの許可ではない。
+- ユーザーは `main` へ直接コミットし、実験だけ `user/<topic>` を切る。
+- **`main` への force-push は禁止。** ユーザーのコミットが失われる。
 
-`master` はルールセットで守っている。PR 必須 (承認 1。回避できるのはリポジトリ管理者 = ユーザーだけ) で、削除と force-push は誰もできない。手元のエージェントは GitHub App (`noxitro-claude[bot]`) の身元で push と PR 作成をするので、`master` へ直接 push できず、自分の PR もマージできない。ユーザーの身元で動くエージェント (クラウドのセッションなど) はルールセットでは止まらないので、上の規則を守る。
+`main` はルールセットで守っている。PR 必須 (承認 1。回避できるのはリポジトリ管理者 = ユーザーだけ) で、削除と force-push は誰もできない。手元のエージェントは GitHub App (`noxitro-claude[bot]`) の身元で push と PR 作成をするので、`main` へ直接 push できず、自分の PR もマージできない。ユーザーの身元で動くエージェント (クラウドのセッションなど) はルールセットでは止まらないので、上の規則を守る。
 
 ### ワークツリー
 
@@ -28,7 +28,7 @@
 
 **検証は CI に任せ、エージェントはローカルでビルド・テストしない** (ユーザーのマシンの負荷を抑えるため)。ユーザーが明示的に頼んだときだけ行い、手順は `docs/local-build.md` に従う。
 
-- 作業ブランチを push すると CI (`.github/workflows/ci.yml`) がビルド・テスト・`runtime.exe` の起動確認を走らせる。構成の詳細は `ci.yml` 冒頭のコメント。作業ブランチ (`work/*` またはセッションで指定されたブランチ。`master` は含まない) の push は確認なしでよい。`.github` 以下を変えると Workflow lint (actionlint / ruff) も走る。
+- 作業ブランチを push すると CI (`.github/workflows/ci.yml`) がビルド・テスト・`runtime.exe` の起動確認を走らせる。構成の詳細は `ci.yml` 冒頭のコメント。作業ブランチ (`work/*` またはセッションで指定されたブランチ。`main` は含まない) の push は確認なしでよい。`.github` 以下を変えると Workflow lint (actionlint / ruff) も走る。
 - 落ちたらログ (`gh run view <run-id> --log-failed` など) を読み、直して push し直す。
 - runtime に効く入力が検証済みの run と同じ push (Editor だけの変更など) では、runtime の 6 構成のビルドとテストを飛ばし、キャッシュした `runtime.exe` と TypeDB で Editor と FlaUI だけを走らせる。判定は `ci.yml` の plan ジョブ。FlaUI だけ落ちて直すときは「Re-run all jobs」を使う。
 - 文書だけの変更 (`paths-ignore` の対象) ではビルドの CI は走らない。File format の検査は走る。
@@ -36,7 +36,7 @@
 - ベンチマークは `runtime/bench/`。1 op あたりの確保回数が予算 (`alloc_budget`) を超えると CI が落ちる。詳細は `runtime/bench/README.md`。
 - Editor の見た目や操作は UI テストで拾いきれないので、Windows 上で手動確認する。
 
-### master へ入れる条件
+### main へ入れる条件
 
 - CIビルド成功 (エラー 0)
 - 全テストが PASS
@@ -62,7 +62,7 @@ ClangCL は必須ゲート。MSVC が見逃す非適合を実際に拾ってい�
 - 例外 (BOM 付き) は PowerShell スクリプトなど。一覧と理由は `.github/scripts/bom_policy.py` (`.editorconfig` と揃えてある)。
 - VS がプロジェクトファイルを保存し直したときなどに BOM が付いたら、`python3 .github/scripts/strip-bom.py <パス>` で外す。
 - 変更後は `git diff --stat` の行数が実際の編集量と釣り合うか確かめる。
-- 手元では `python3 .github/scripts/check-file-format.py --base origin/master` で確かめられる (CI の File format と同じ検査)。壊したら、直すコミットを足せば通る。
+- 手元では `python3 .github/scripts/check-file-format.py --base origin/main` で確かめられる (CI の File format と同じ検査)。壊したら、直すコミットを足せば通る。
 - 意図して形式を変えるときは、コミットメッセージに `Format-Change: <パス or glob>` の行を書く。
 
 ## 環境とビルド

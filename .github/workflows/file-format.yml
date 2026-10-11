@@ -6,11 +6,11 @@
 #         (BOM が要るファイルは .github/scripts/bom_policy.py)。改行コードは
 #         ファイルごとに混在していて統一ルールでは見られないので、「元の形式を
 #         保つ」という AGENTS.md の規約をそのまま、変更前後の比較で機械化している。
-#         作業ブランチは master との分岐点から、master は push の前後で比べる。
+#         作業ブランチは main との分岐点から、main は push の前後で比べる。
 #         検査の中身は .github/scripts/check-file-format.py を参照。
 # 背景  : 実際に「29 ファイルの BOM 剥がれ」「ヘッダ 1 本の CRLF 一括変換」
 #         「CRLF のファイルへの LF 行の混入」を起こしている。どれも差分が全行に
-#         なり、レビューも履歴も追えなくなる。導入前の master 97 コミットに
+#         なり、レビューも履歴も追えなくなる。導入前の main 97 コミットに
 #         当てると 14 コミットで検出した (2026-06〜09)。
 # 許可  : 意図して変換するときは、コミットメッセージに
 #         「Format-Change: <パス or glob>」の行を書く。
@@ -47,7 +47,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0   # push の直前の地点や master との分岐点まで遡るため
+          fetch-depth: 0   # push の直前の地点や main との分岐点まで遡るため
 
       - name: Check
         id: check
@@ -58,31 +58,31 @@ jobs:
         run: |
           set -uo pipefail
           # 比較元を決める。
-          #   作業ブランチ : master との分岐点から累積で比べる。事故と、それを直す
+          #   作業ブランチ : main との分岐点から累積で比べる。事故と、それを直す
           #                  コミットが相殺されるので、直した push が咎められない。
           #                  push ごとに全体を見直すので、実行が抜けても取りこぼさない。
-          #                  master の既存コミットを指すだけのブランチは検査しない。
-          #   master       : push 前の地点 (before)。取れなければ失敗にする。
+          #                  main の既存コミットを指すだけのブランチは検査しない。
+          #   main       : push 前の地点 (before)。取れなければ失敗にする。
           #   手動実行     : 入力の base、無ければ直前のコミット
           # base が head の祖先でなければ、スクリプト側で分岐点に置き換える。
           ZERO=0000000000000000000000000000000000000000
           base=''
           if [ -n "${INPUT_BASE}" ]; then
             base="${INPUT_BASE}"
-          elif [ "${GITHUB_EVENT_NAME}" = "push" ] && [ "${GITHUB_REF}" != "refs/heads/master" ]; then
-            mb=$(git merge-base origin/master HEAD 2>/dev/null || true)
+          elif [ "${GITHUB_EVENT_NAME}" = "push" ] && [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            mb=$(git merge-base origin/main HEAD 2>/dev/null || true)
             if [ -z "$mb" ]; then
-              echo "master と共通の祖先が無い。検査しない"
+              echo "main と共通の祖先が無い。検査しない"
               exit 0
             elif [ "$mb" = "$(git rev-parse HEAD)" ]; then
-              echo "master に既にあるコミットを指すだけの push なので、検査するものが無い"
+              echo "main に既にあるコミットを指すだけの push なので、検査するものが無い"
               exit 0
             fi
             base="$mb"
           elif [ "${GITHUB_EVENT_NAME}" = "push" ] && [ -n "${BEFORE}" ] && [ "${BEFORE}" != "$ZERO" ]; then
-            # master への push。before が手元に無ければ取りに行く。取れなければ、範囲を
+            # main への push。before が手元に無ければ取りに行く。取れなければ、範囲を
             # 黙って HEAD^ に狭めず失敗させる (途中のコミットの事故が素通りするため)。
-            # master への force-push は禁止なので、通常は起きない。
+            # main への force-push は禁止なので、通常は起きない。
             git cat-file -e "${BEFORE}^{commit}" 2>/dev/null || git fetch -q --no-tags origin "${BEFORE}" 2>/dev/null || true
             if ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
               echo "::error::push 前の地点 ${BEFORE} を取得できないので、この push の範囲を検査できない。手動実行で base を指定して検査すること"

@@ -2,9 +2,9 @@
 
 runtime の C++ ビルドで、どのヘッダ・テンプレート・関数に時間がかかっているかを計測してレポートにする。
 
-- CI では push ごとに、MSVC の Debug / Release / Master のビルドを計測している。テンプレートの展開は負荷が大きいので master (と手動実行) の Debug でだけ記録し、作業ブランチではヘッダと関数の集計だけにする (`.github/workflows/ci.yml` の `Start Build Insights` から `Upload Build Insights data` まで、と `build-insights` ジョブ)。計測のためにビルドを増やしてはいない。
-- レポートは 1 ファイルの HTML。CI の実行ページの Artifacts にある `build-insights-report.html` を落として開く。master の最新は GitHub Pages の `/build-insights/` でも見られる。
-- 実行ページの Summary には、構成ごとの重いヘッダ・テンプレート・関数の上位と、前回の master との比較が出る。
+- CI では push ごとに、MSVC の Debug / Release / Master のビルドを計測している。テンプレートの展開は負荷が大きいので main (と手動実行) の Debug でだけ記録し、作業ブランチではヘッダと関数の集計だけにする (`.github/workflows/ci.yml` の `Start Build Insights` から `Upload Build Insights data` まで、と `build-insights` ジョブ)。計測のためにビルドを増やしてはいない。
+- レポートは 1 ファイルの HTML。CI の実行ページの Artifacts にある `build-insights-report.html` を落として開く。main の最新は GitHub Pages の `/build-insights/` でも見られる。
+- 実行ページの Summary には、構成ごとの重いヘッダ・テンプレート・関数の上位と、前回の main との比較が出る。
 
 ## レポートの見方
 
@@ -17,7 +17,7 @@ runtime の C++ ビルドで、どのヘッダ・テンプレート・関数に�
 | 関数 | コード生成に時間がかかった関数。`/GL` の構成 (Release / Master) ではリンク時 (LTCG) に出る |
 | 翻訳単位 | .cpp ごとのフロントエンド・バックエンドの時間 |
 | タイムライン | 翻訳単位とリンクの並び (並列度の確認用) |
-| 差分 | 前回の master の計測との比較 |
+| 差分 | 前回の main の計測との比較 |
 
 時間の列:
 

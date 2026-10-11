@@ -1,5 +1,5 @@
 @echo off
-rem Double-click: download the runtime.exe / TypeDB built by CI on master (Debug).
+rem Double-click: download the runtime.exe / TypeDB built by CI on main (Debug).
 cd /d "%~dp0"
 where pwsh >nul 2>nul
 if %errorlevel%==0 (
