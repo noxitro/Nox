@@ -1,5 +1,5 @@
-# 一時的な計測用 (マージしない)。同じ VM の中で、テストプロジェクトの直列と並列 (kernel_test と
-# reflection_generated_test を 1 回の msbuild で) を交互に建てて比べる。runtime.slnx は最初に 1 回だけ建てる。
+# 一時的な計測用 (マージしない)。同じ VM の中で、テストのビルドの後に Editor を建てる場合と、
+# Editor を裏で建てながらテストを建てる場合を交互に比べる。runtime.slnx は最初に 1 回だけ建てる。
 name: CI measure (test build serial vs parallel)
 
 on:
@@ -38,19 +38,27 @@ jobs:
           $ct = 'runtime\core\test\core_test.vcxproj'
           $both = Join-Path $env:RUNNER_TEMP 'nox-test-libs.proj'
           "<Project><Target Name=`"Build`"><MSBuild Projects=`"$kt;$rg`" BuildInParallel=`"true`" /></Target></Project>" | Set-Content $both
-          $order = if ([int]$env:VM % 2 -eq 1) { @('serial', 'parallel', 'serial') } else { @('parallel', 'serial', 'parallel') }
+          $order = if ([int]$env:VM % 2 -eq 1) { @('serial', 'overlap', 'serial') } else { @('overlap', 'serial', 'overlap') }
           $i = 0
           foreach ($mode in $order) {
             $i++
             foreach ($d in 'kernel_test', 'reflection_generated_test', 'core_test') {
-              Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "runtime\build\intermediate\runtime\x64\Release\$d"
+              Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "runtimeuild\intermediateuntimed\Release\$d"
             }
-            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue 'runtime\reflection_generated_test\gen'
-            $projects = if ($mode -eq 'serial') { @($kt, $rg, $ct) } else { @($both, $ct) }
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue 'runtimeeflection_generated_test\gen'
             $sw = [Diagnostics.Stopwatch]::StartNew()
-            foreach ($p in $projects) {
+            $editor = $null
+            if ($mode -eq 'overlap') {
+              $editor = Start-Process dotnet -ArgumentList 'build', 'Editor/Studio.slnx', '-c', 'Release', '--no-incremental', '-v', 'minimal', '-nodeReuse:false' -NoNewWindow -PassThru
+            }
+            foreach ($p in @($kt, $rg, $ct)) {
               msbuild $p @common
               if ($LASTEXITCODE -ne 0) { throw "build failed: $p ($mode)" }
             }
-            Write-Host "RESULT vm=$env:VM step=$i mode=$mode seconds=$([math]::Round($sw.Elapsed.TotalSeconds, 1))"
+            $tests = $sw.Elapsed.TotalSeconds
+            if ($editor) { $editor.WaitForExit() } else {
+              dotnet build Editor/Studio.slnx -c Release --no-incremental -v minimal -nodeReuse:false
+              if ($LASTEXITCODE -ne 0) { throw "editor build failed" }
+            }
+            Write-Host "RESULT vm=$env:VM step=$i mode=$mode total=$([math]::Round($sw.Elapsed.TotalSeconds, 1)) tests=$([math]::Round($tests, 1))"
           }
