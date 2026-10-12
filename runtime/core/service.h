@@ -75,7 +75,7 @@ namespace nox
 	protected:
 		/// @brief	自分の型 T を埋めた記述子。GetNodeDescriptor() の本体で node_descriptor_v<Register<kInit>, ...> と書く
 		template<class... Registers>
-		static constexpr const auto& node_descriptor_v = nox::node_descriptor_v<T, Registers...>;
+		static constexpr const nox::NodeDescriptor& node_descriptor_v = nox::detail::NodeDescriptorBuilder<T, std::tuple<Registers...>>::value;
 
 		static consteval bool StaticDeclareVerify()noexcept
 		{
