@@ -131,13 +131,13 @@ nox::World::~World()
 void nox::World::Init()
 {
 	nox::StackAllocVector<const nox::NodeDescriptor*, 512> node_descriptors;
+	nox::WorldRegistery registery(node_descriptors.GetContainer());
 
 	//	TODO:全moduleを収集してるので、今後直す
 	nox::reflection::ForeachDerivedClassInfoList(
 		nox::reflection::Typeof<nox::EngineModule>(),
-		[this, &node_descriptors](const nox::reflection::ClassInfo& class_info)
+		[&node_descriptors ,&registery](const nox::reflection::ClassInfo& class_info)
 		{
-			nox::WorldRegistery registery(node_descriptors.GetContainer());
 			//alignas(nox::EngineModule) std::array<std::byte, 256> buffer{};
 
 			auto* const module = static_cast<nox::EngineModule*>(class_info.GetType().CreateObject());
@@ -147,6 +147,8 @@ void nox::World::Init()
 			//	updatergraphへ追加
 
 			delete module;
+
+			node_descriptors.GetContainer().clear();
 		});
 }
 

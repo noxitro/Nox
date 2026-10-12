@@ -5,23 +5,76 @@
 /// @brief	System
 #pragma once
 #include	"ecs_definitions.h"
-#include	"updater_node.h"
+#include	"node_descriptor.h"
 #include	"entity.h"
 
 namespace nox
 {
-	class World;
-
 	namespace detail
 	{
-		struct IComponentData;
-
 		/// @brief		ECSのSystem
 		///				OnUpdate,OnAdd,OnRemoveを提供する
 		/// @details	インスタンス化は不可。
 		struct EntitySystemBase : nox::detail::UpdaterNodeOwnerBase
 		{
 			constexpr EntitySystemBase()noexcept = delete;
+
+		protected:
+			template<class T, bool HasUpdate, bool HasAdd, bool HasRemove>
+			struct RegisterList;
+
+			template<class T>
+			struct RegisterList<T, true, true, true> final
+			{
+				static constexpr auto value = std::tuple{
+					Register<&T::OnUpdate, Trigger::Update>,
+					Register<&T::OnAdd, Trigger::Add>,
+					Register<&T::OnRemove, Trigger::Remove>
+				};
+			};
+
+			template<class T>
+			struct RegisterList<T, true, true, false> final
+			{
+				static constexpr auto value = std::tuple{
+					Register<&T::OnUpdate, Trigger::Update>,
+					Register<&T::OnAdd, Trigger::Add>
+				};
+			};
+
+			template<class T>
+			struct RegisterList<T, true, false, true> final
+			{
+				static constexpr auto value = std::tuple{
+					Register<&T::OnUpdate, Trigger::Update>,
+					Register<&T::OnRemove, Trigger::Remove>
+				};
+			};
+
+			template<class T>
+			struct RegisterList<T, true, false, false> final
+			{
+				static constexpr auto value = std::tuple{
+					Register<&T::OnUpdate, Trigger::Update>
+				};
+			};
+
+			template<class T>
+			struct RegisterList<T, false, true, true> final
+			{
+				static constexpr auto value = std::tuple{
+					Register<&T::OnAdd, Trigger::Add>,
+					Register<&T::OnRemove, Trigger::Remove>
+				};
+			};
+
+			template<class T>
+			struct RegisterList<T, false, true, false> final
+			{
+				static constexpr auto value = std::tuple{
+					Register<&T::OnAdd, Trigger::Add>
+				};
+			};
 		};
 	}
 
@@ -75,6 +128,11 @@ namespace nox
 			}
 
 			return true;
+		}
+	public:
+		static constexpr const nox::NodeDescriptor& GetNodeDescriptor()noexcept
+		{
+			return nox::detail::NodeDescriptorBuilder<T, RegisterList<T>::value>::value;
 		}
 	};
 }
