@@ -5,7 +5,7 @@
 ///	@brief	entity_logic
 #pragma once
 #include	"entity.h"
-#include	"updater_node.h"
+#include	"node_descriptor.h"
 
 namespace nox
 {
@@ -28,11 +28,7 @@ namespace nox
 
 		protected:
 			template<auto Method, nox::detail::EntityLogicBase::Trigger TriggerValue, class... Options>
-			struct Register final
-			{
-				constexpr Register()noexcept = delete;
-				static constexpr nox::detail::EntityLogicBase::Trigger trigger = TriggerValue;
-			};
+			using Register = nox::detail::updater_graph::Register<Method, static_cast<nox::detail::updater_graph::NodeTrigger>(TriggerValue), Options...>;
 
 			constexpr EntityLogicBase()noexcept = default;
 		};
@@ -45,10 +41,13 @@ namespace nox
 	class EntityLogic : public nox::detail::EntityLogicBase
 	{
 	protected:
+		template<class... Registers>
+		static constexpr const nox::NodeDescriptor& node_descriptor_v = nox::detail::NodeDescriptorBuilder<T, std::tuple<Registers...>>::value;
+
 		static consteval bool StaticDeclareVerify()noexcept
 		{
 			static_assert(std::is_polymorphic_v<T> == false, "EntityLogicは仮想関数を持てません");
-			static_assert(nox::is_tuple_like_v<typename T::RegisterList>, "RegisterListが定義されていません");
+			static_assert(requires { T::GetNodeDescriptor(); }, "EntityLogic must have a valid NodeDescriptor");
 			return true;
 		}
 	};

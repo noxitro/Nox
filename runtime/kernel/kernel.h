@@ -117,6 +117,7 @@
 #include	"path.h"
 #include	"fixed_vector.h"
 #include	"nameof.h"
+#include	"nameof_value.h"
 #include	"crc32.h"
 
 //	STL コンテナ (nox のアロケータを使う別名)
@@ -146,5 +147,3 @@
 #include	"memory/allocation_counter.h"
 #endif // !NOX_REFLECTION_GENERATOR
 //	end diagnostics
-
-#include	"utility.h"

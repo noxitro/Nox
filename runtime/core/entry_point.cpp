@@ -34,6 +34,7 @@ nox::int32 nox::EntryPoint(const std::span<const nox::char16* const> args)
 		nox::World::GlobalInitialize();
 
 		nox::World world;
+		world.Init();
 		world.Update();
 
 		nox::World::GlobalTerminate();

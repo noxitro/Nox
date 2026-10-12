@@ -462,6 +462,9 @@
     <ClInclude Include="io\readonly_mapped_file.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="nameof_value.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="basic_definition.cpp">
@@ -903,6 +906,9 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="io\readonly_mapped_file.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="nameof_value.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

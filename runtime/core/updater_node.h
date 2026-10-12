@@ -123,12 +123,9 @@ namespace nox::detail::updater_graph
 		std::string_view method_name;
 	};
 
-	template<auto Phase, class... Options>
+	/// @brief 
+	/// @tparam ...Options runafterなど
+	/// @tparam Phase 関数、フェーズ
+	template<auto Phase, nox::detail::updater_graph::NodeTrigger trigger, class... Options>
 	struct Register final {};
-
-	template<class T>
-	struct RegisterBuilder final
-	{
-
-	};
 }

@@ -10,6 +10,7 @@
 
 #include	"world_registery.h"
 #include	"node_descriptor.h"
+#include	"engine_module.h"
 
 namespace nox
 {
@@ -130,7 +131,23 @@ nox::World::~World()
 void nox::World::Init()
 {
 	nox::StackAllocVector<const nox::NodeDescriptor*, 512> node_descriptors;
-	nox::WorldRegistery registery(node_descriptors.GetContainer());
+
+	//	TODO:全moduleを収集してるので、今後直す
+	nox::reflection::ForeachDerivedClassInfoList(
+		nox::reflection::Typeof<nox::EngineModule>(),
+		[this, &node_descriptors](const nox::reflection::ClassInfo& class_info)
+		{
+			nox::WorldRegistery registery(node_descriptors.GetContainer());
+			//alignas(nox::EngineModule) std::array<std::byte, 256> buffer{};
+
+			auto* const module = static_cast<nox::EngineModule*>(class_info.GetType().CreateObject());
+			NOX_ASSERT(module != nullptr, u8"EngineModuleの生成に失敗しました: {0}", class_info.GetFullName());
+
+			module->Register(registery);
+			//	updatergraphへ追加
+
+			delete module;
+		});
 }
 
 void nox::World::Update()

@@ -22,33 +22,28 @@ namespace nox
 		class ServiceBase : public nox::detail::UpdaterNodeOwnerBase
 		{
 		public:
-			enum class PhaseType : nox::uint8
-			{
-				Init,
-				Update,
-				Terminate,
-			};
 
 		protected:
-			template<auto Phase, class... Options>
-			using Register = nox::detail::updater_graph::Register<Phase, Options...>;
-
-			template<class Func, PhaseType phaseType>
+			
+			template<class Func, nox::detail::updater_graph::NodeTrigger trigger>
 			struct PhaseImpl
 			{
-				static constexpr PhaseType phase_type = phaseType;
 				const Func function;
+				static constexpr nox::detail::updater_graph::NodeTrigger phase_type = trigger;
 			};
+
+			template<auto/*PhaseImpl*/ Phase, class... Options>
+			using Register = nox::detail::updater_graph::Register<Phase.function, Phase.phase_type, Options...>;
 
 		public:
 			template<class Function> requires (std::is_member_function_pointer_v<Function>)
-			struct PhaseInit final : PhaseImpl<Function, PhaseType::Init> {};
+			struct PhaseInit final : PhaseImpl<Function, nox::detail::updater_graph::NodeTrigger::Init> {};
 
 			template<class Function> requires (std::is_member_function_pointer_v<Function>)
-			struct PhaseUpdate final : PhaseImpl<Function, PhaseType::Update> {};
+			struct PhaseUpdate final : PhaseImpl<Function, nox::detail::updater_graph::NodeTrigger::Update> {};
 
 			template<class Function> requires (std::is_member_function_pointer_v<Function>)
-			struct PhaseTerminate final : PhaseImpl<Function, PhaseType::Terminate> {};
+			struct PhaseTerminate final : PhaseImpl<Function, nox::detail::updater_graph::NodeTrigger::Terminate> {};
 
 			template<class Func>
 			PhaseInit(Func) -> PhaseInit<Func>;

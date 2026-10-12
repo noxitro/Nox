@@ -24,11 +24,14 @@ namespace nox::dev::entity_logics
 		void OnUpdate(nox::Entity) {}
 		void OnRemove(nox::Entity) {}
 	public:
-		using RegisterList = std::tuple <
-			Register<&BeforeLogging::OnAdd, Trigger::Add>,
-			Register<&BeforeLogging::OnUpdate, Trigger::Update>,
-			Register<&BeforeLogging::OnRemove, Trigger::Remove>
-		>;
+		static constexpr const nox::NodeDescriptor& GetNodeDescriptor()noexcept
+		{
+			return node_descriptor_v<
+				Register<&BeforeLogging::OnAdd, Trigger::Add>,
+				Register<&BeforeLogging::OnUpdate, Trigger::Update>,
+				Register<&BeforeLogging::OnRemove, Trigger::Remove>
+			>;
+		}
 	};
 
 	class Logging final : public nox::EntityLogic<Logging, 
@@ -41,11 +44,14 @@ namespace nox::dev::entity_logics
 		void OnUpdate(nox::Entity) {}
 		void OnRemove(nox::Entity) {}
 	public:
-		using RegisterList = std::tuple <
-			Register<&Logging::OnAdd, Trigger::Add>,
-			Register<&Logging::OnUpdate, Trigger::Update>,
-			Register<&Logging::OnRemove, Trigger::Remove>
-		>;
+		static constexpr const nox::NodeDescriptor& GetNodeDescriptor()noexcept
+		{
+			return node_descriptor_v<
+				Register<&Logging::OnAdd, Trigger::Add>,
+				Register<&Logging::OnUpdate, Trigger::Update>,
+				Register<&Logging::OnRemove, Trigger::Remove>
+			>;
+		}
 	};
 }
 #endif // NOX_DEVELOP
