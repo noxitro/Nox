@@ -18,121 +18,101 @@ namespace nox
 		struct EntitySystemBase : nox::detail::UpdaterNodeOwnerBase
 		{
 			constexpr EntitySystemBase()noexcept = delete;
-
-		protected:
-			template<class T, bool HasUpdate, bool HasAdd, bool HasRemove>
-			struct RegisterList;
-
-			template<class T>
-			struct RegisterList<T, true, true, true> final
-			{
-				static constexpr auto value = std::tuple{
-					Register<&T::OnUpdate, Trigger::Update>,
-					Register<&T::OnAdd, Trigger::Add>,
-					Register<&T::OnRemove, Trigger::Remove>
-				};
-			};
-
-			template<class T>
-			struct RegisterList<T, true, true, false> final
-			{
-				static constexpr auto value = std::tuple{
-					Register<&T::OnUpdate, Trigger::Update>,
-					Register<&T::OnAdd, Trigger::Add>
-				};
-			};
-
-			template<class T>
-			struct RegisterList<T, true, false, true> final
-			{
-				static constexpr auto value = std::tuple{
-					Register<&T::OnUpdate, Trigger::Update>,
-					Register<&T::OnRemove, Trigger::Remove>
-				};
-			};
-
-			template<class T>
-			struct RegisterList<T, true, false, false> final
-			{
-				static constexpr auto value = std::tuple{
-					Register<&T::OnUpdate, Trigger::Update>
-				};
-			};
-
-			template<class T>
-			struct RegisterList<T, false, true, true> final
-			{
-				static constexpr auto value = std::tuple{
-					Register<&T::OnAdd, Trigger::Add>,
-					Register<&T::OnRemove, Trigger::Remove>
-				};
-			};
-
-			template<class T>
-			struct RegisterList<T, false, true, false> final
-			{
-				static constexpr auto value = std::tuple{
-					Register<&T::OnAdd, Trigger::Add>
-				};
-			};
 		};
+
+		/// @brief	trigger に対応するメソッド (OnUpdate / OnAdd / OnRemove) のポインタ。定義していなければ nullptr
+		/// @note	public でないメソッドは見えない (定義していない扱いになる)
+		template<class T, nox::detail::updater_graph::NodeTrigger trigger>
+		consteval auto GetEntitySystemMethod()noexcept
+		{
+			using enum nox::detail::updater_graph::NodeTrigger;
+			if constexpr (trigger == Update && requires { &T::OnUpdate; })
+			{
+				return &T::OnUpdate;
+			}
+			else if constexpr (trigger == Add && requires { &T::OnAdd; })
+			{
+				return &T::OnAdd;
+			}
+			else if constexpr (trigger == Remove && requires { &T::OnRemove; })
+			{
+				return &T::OnRemove;
+			}
+			else
+			{
+				return nullptr;
+			}
+		}
+
+		/// @brief	trigger のメソッドを定義していれば Register 1 つ、無ければ空の tuple
+		template<class T, nox::detail::updater_graph::NodeTrigger trigger>
+		using entity_system_register_t = std::conditional_t<
+			std::is_null_pointer_v<decltype(nox::detail::GetEntitySystemMethod<T, trigger>())>,
+			std::tuple<>,
+			std::tuple<nox::detail::updater_graph::Register<nox::detail::GetEntitySystemMethod<T, trigger>(), trigger>>
+		>;
+
+		template<class UpdateList, class AddList, class RemoveList>
+		struct entity_system_register_list;
+
+		template<class... Update, class... Add, class... Remove>
+		struct entity_system_register_list<std::tuple<Update...>, std::tuple<Add...>, std::tuple<Remove...>> final
+		{
+			using type = std::tuple<Update..., Add..., Remove...>;
+		};
+
+		/// @brief	T が定義した OnUpdate / OnAdd / OnRemove を、この順に並べた Register の tuple
+		template<class T>
+		using entity_system_register_list_t = typename nox::detail::entity_system_register_list<
+			nox::detail::entity_system_register_t<T, nox::detail::updater_graph::NodeTrigger::Update>,
+			nox::detail::entity_system_register_t<T, nox::detail::updater_graph::NodeTrigger::Add>,
+			nox::detail::entity_system_register_t<T, nox::detail::updater_graph::NodeTrigger::Remove>
+		>::type;
 	}
 
 	namespace concepts
 	{
 		/// @brief ECSのSystemか
 		template<class T>
-		concept EntitySystem = 
-			std::is_same_v<T, nox::detail::EntitySystemBase> == false && 
+		concept EntitySystem =
+			std::is_same_v<T, nox::detail::EntitySystemBase> == false &&
 			std::is_base_of_v<nox::detail::EntitySystemBase, T>;
 	}
 
-	/// @brief 
-	/// @tparam T 
-	/// @tparam ...ExtraRequiredComponents 追加で依存するComponentData型リスト（これらが揃ったentityのみを対象にする）
-	/// @tparam ...AfterSystems 依存するシステムリスト（これらを待つ)
-	/// @tparam ...BeforeSystems 依存させるシステムリスト（これらを待たせる)
+	/// @brief		ECSのSystemの基底
+	/// @details	static の OnUpdate / OnAdd / OnRemove を public に定義すると、定義したものだけが自動で登録される (RegisterList は書かない)
+	/// @tparam T
+	/// @tparam ...Options RequireComponents / ExcludeComponents / RunAfter / RunBefore (順番は自由)
 	template<class T, class... Options>
 	struct EntitySystem : public nox::detail::EntitySystemBase
 	{
-		template<class U = T>
-		static constexpr bool HasOnUpdate = requires{ &U::OnUpdate; };
-		template<class U = T>
-		static constexpr bool HasOnAdd = requires{ &U::OnAdd; };
-		template<class U = T>
-		static constexpr bool HasOnRemove = requires{ &U::OnRemove; };
-
 	private:
-		template<class U>
-		static consteval bool CheckFunction()noexcept
+		template<nox::detail::updater_graph::NodeTrigger trigger>
+		static consteval bool CheckMethod()noexcept
 		{
-			static_assert(std::is_void_v<nox::function_result_t<U>>, "OnUpdate/OnAdd/OnRemove must return void");
-			static_assert(std::is_function_v<std::remove_pointer_t<U>>, "OnUpdate/OnAdd/OnRemove must be function pointer");
+			using MethodType = decltype(nox::detail::GetEntitySystemMethod<T, trigger>());
+			if constexpr (std::is_null_pointer_v<MethodType> == false)
+			{
+				static_assert(std::is_function_v<std::remove_pointer_t<MethodType>>, "OnUpdate/OnAdd/OnRemove must be static");
+				static_assert(std::is_void_v<nox::function_result_t<MethodType>>, "OnUpdate/OnAdd/OnRemove must return void");
+			}
 			return true;
 		}
 
 	protected:
 		static consteval bool StaticDeclareVerify()noexcept
 		{
-			if constexpr (HasOnUpdate<T>)
-			{
-				static_assert(CheckFunction<decltype(&T::OnUpdate)>());
-			}
-			if constexpr (HasOnAdd<T>)
-			{
-				static_assert(CheckFunction<decltype(&T::OnAdd)>());
-			}
-			if constexpr (HasOnRemove<T>)
-			{
-				static_assert(CheckFunction<decltype(&T::OnRemove)>());
-			}
-
+			static_assert(CheckMethod<nox::detail::updater_graph::NodeTrigger::Update>());
+			static_assert(CheckMethod<nox::detail::updater_graph::NodeTrigger::Add>());
+			static_assert(CheckMethod<nox::detail::updater_graph::NodeTrigger::Remove>());
+			static_assert(std::tuple_size_v<nox::detail::entity_system_register_list_t<T>> > 0, "EntitySystem must define public static OnUpdate, OnAdd or OnRemove");
 			return true;
 		}
+
 	public:
 		static constexpr const nox::NodeDescriptor& GetNodeDescriptor()noexcept
 		{
-			return nox::detail::NodeDescriptorBuilder<T, RegisterList<T>::value>::value;
+			return nox::detail::NodeDescriptorBuilder<T, nox::detail::entity_system_register_list_t<T>>::value;
 		}
 	};
 }
