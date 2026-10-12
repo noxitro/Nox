@@ -247,8 +247,8 @@ namespace nox
 	template<class T> requires requires { typename nox::detail::string_char<T>::type; }
 	using string_char_t = typename nox::detail::string_char<T>::type;
 
-	template<class T, class U> requires(nox::is_tuple_like_v<T> || nox::is_tuple_like_v<U>)
-	using tuple_cat_t = typename nox::detail::tuple_cat<T, U>::type;
+	template<class... TupleTypes> requires ((nox::is_tuple_like_v<TupleTypes> && ...))
+	using tuple_cat_t = decltype(std::tuple_cat(std::declval<TupleTypes>()...));
 
 	/// @brief グローバル関数ポインタ型か
 	/// @tparam T 型
