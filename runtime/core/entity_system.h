@@ -5,7 +5,7 @@
 /// @brief	System
 #pragma once
 #include	"ecs_definitions.h"
-#include	"entity_options.h"
+#include	"updater_node.h"
 #include	"entity.h"
 
 namespace nox
@@ -16,33 +16,10 @@ namespace nox
 	{
 		struct IComponentData;
 
-		struct IECSBase
-		{
-		};
-
-		struct ISystemBase : public nox::detail::IECSBase
-		{
-			template<class... Types>
-			struct EntityAccess final
-			{
-				inline constexpr explicit EntityAccess(nox::World& world)noexcept : world_(world) {}
-
-				template<class T> requires ((std::is_same_v<T, Types> || ...))
-					[[nodiscard]] inline T& Get()const noexcept
-				{
-					T* dummy = nullptr;
-					return *dummy;
-				}
-			private:
-				nox::World& world_;
-			};
-		};
-
-
 		/// @brief		ECSのSystem
 		///				OnUpdate,OnAdd,OnRemoveを提供する
 		/// @details	インスタンス化は不可。
-		struct EntitySystemBase : public nox::detail::ISystemBase, nox::detail::UpdaterNodeOwnerBase
+		struct EntitySystemBase : nox::detail::UpdaterNodeOwnerBase
 		{
 			constexpr EntitySystemBase()noexcept = delete;
 		};

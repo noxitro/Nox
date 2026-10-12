@@ -7,7 +7,7 @@
 
 namespace nox::render
 {
-	class RenderModule : public nox::EngineModule
+	class RenderModule final: public nox::EngineModule
 	{
 		NOX_DECLARE_OBJECT(nox::render::RenderModule, nox::EngineModule);
 	public:
@@ -15,6 +15,6 @@ namespace nox::render
 		~RenderModule()noexcept = default;
 
 	private:
-		void CreateEngineSystems(nox::PmrVector<nox::SystemBase*>& out)const override;
+		void Register(nox::WorldRegistery& registry)const override;
 	};
 }

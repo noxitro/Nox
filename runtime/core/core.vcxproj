@@ -194,6 +194,18 @@
       <SubType>
       </SubType>
     </ClInclude>
+    <ClInclude Include="node_descriptor.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="prefab.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="updater_graph.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
     <ClInclude Include="updater_node.h">
       <SubType>
       </SubType>
@@ -475,6 +487,18 @@
       </SubType>
     </ClCompile>
     <ClCompile Include="entity_options.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="node_descriptor.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="prefab.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="updater_graph.cpp">
       <SubType>
       </SubType>
     </ClCompile>

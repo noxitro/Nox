@@ -9,14 +9,13 @@
 
 namespace nox
 {
-	class CoreModule : public nox::EngineModule
+	class CoreModule final: public nox::EngineModule
 	{
 		NOX_DECLARE_OBJECT(nox::CoreModule, nox::EngineModule);
 	public:
 		CoreModule();
 		~CoreModule()override;
 
-		void CreateEngineSystems(nox::PmrVector<nox::SystemBase*>& out)const override;
-	public:
+		void Register(nox::WorldRegistery&)const override;
 	};
 }

@@ -8,7 +8,8 @@
 
 namespace nox::attr
 {
-	class Asset : public nox::attr::Attribute
+	/// @brief アセットの拡張子とバージョンを指定する属性
+	class Asset final: public nox::attr::Attribute
 	{
 		NOX_DECLARE_OBJECT(Asset, nox::attr::Attribute);
 	public:

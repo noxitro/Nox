@@ -5,7 +5,7 @@
 ///	@brief	entity_logic
 #pragma once
 #include	"entity.h"
-#include	"entity_options.h"
+#include	"updater_node.h"
 
 namespace nox
 {

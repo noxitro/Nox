@@ -29,6 +29,7 @@
 #include	"entity_system_legacy.h"
 #include	"service_legacy.h"
 #include	"log_id.h"
+#include	"world_registery.h"
 
 //	editor_remote
 #include	"dev/remote/remote_system.g.h"

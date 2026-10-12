@@ -9,8 +9,7 @@
 
 namespace nox
 {
-	class EngineModule;
-	class SystemBase;
+	class WorldRegistery;
 
 	/// @brief		モジュールエントリ基底クラス
 	///	@details	nox::legacy::Worldで収集され、各フェーズで呼び出される関数を登録するための基底クラス
@@ -21,7 +20,6 @@ namespace nox
 		inline constexpr EngineModule()noexcept = default;
 		virtual ~EngineModule() = default;
 
-		virtual void CreateEngineSystems([[maybe_unused]] nox::PmrVector<nox::SystemBase*>& out)const {}
-		
+		virtual void Register([[maybe_unused]] nox::WorldRegistery&)const = 0;
 	};
 }

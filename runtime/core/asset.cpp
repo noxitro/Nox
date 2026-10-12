@@ -59,63 +59,57 @@ namespace nox
 	}
 }
 
-void nox::Asset::Bind(std::u8string_view path, nox::AssetManager& manager)
+bool nox::Asset::Initialize(const nox::AssetChunkLoader& loader)
 {
-	manager_ = manager;
-	path_ = nox::U8String(path);
-}
+	return is_initialized_ = OnInitialize(loader);
 
-bool nox::Asset::Initialize(std::u8string_view native_path)
-{
-	is_initialized_ = false;
+	////	ネイティブファイルをメモリマップする（ペイロードはゼロコピーで in-place 参照）
+	//nox::io::ReadOnlyMappedFile mapped;
+	//if (mapped.Open(native_path) == false)
+	//{
+	//	return false;
+	//}
 
-	//	ネイティブファイルをメモリマップする（ペイロードはゼロコピーで in-place 参照）
-	nox::io::ReadOnlyMappedFile mapped;
-	if (mapped.Open(native_path) == false)
-	{
-		return false;
-	}
+	//const std::span<const std::byte> bytes = mapped.GetView();
 
-	const std::span<const std::byte> bytes = mapped.GetView();
+	////	ファイルヘッダを読み出し、マジック/バージョンを検証する（ネイティブコンバート完了の確認）
+	//std::size_t cursor = 0;
+	//nox::uint32 magic = 0;
+	//nox::uint16 version = 0;
+	//nox::uint16 chunk_count = 0;
+	//if (ReadLe(bytes, cursor, magic) == false ||
+	//	ReadLe(bytes, cursor, version) == false ||
+	//	ReadLe(bytes, cursor, chunk_count) == false)
+	//{
+	//	return false;
+	//}
+	//if (magic != nox::kAssetMagic || version != nox::kAssetFormatVersion)
+	//{
+	//	return false;
+	//}
 
-	//	ファイルヘッダを読み出し、マジック/バージョンを検証する（ネイティブコンバート完了の確認）
-	std::size_t cursor = 0;
-	nox::uint32 magic = 0;
-	nox::uint16 version = 0;
-	nox::uint16 chunk_count = 0;
-	if (ReadLe(bytes, cursor, magic) == false ||
-		ReadLe(bytes, cursor, version) == false ||
-		ReadLe(bytes, cursor, chunk_count) == false)
-	{
-		return false;
-	}
-	if (magic != nox::kAssetMagic || version != nox::kAssetFormatVersion)
-	{
-		return false;
-	}
+	////	Main チャンクを特定する
+	//nox::uint32 main_offset = 0;
+	//nox::uint32 main_size = 0;
+	//if (FindMainChunk(bytes, chunk_count, main_offset, main_size) == false)
+	//{
+	//	return false;
+	//}
+	//if (static_cast<std::size_t>(main_offset) + static_cast<std::size_t>(main_size) > bytes.size())
+	//{
+	//	return false;
+	//}
 
-	//	Main チャンクを特定する
-	nox::uint32 main_offset = 0;
-	nox::uint32 main_size = 0;
-	if (FindMainChunk(bytes, chunk_count, main_offset, main_size) == false)
-	{
-		return false;
-	}
-	if (static_cast<std::size_t>(main_offset) + static_cast<std::size_t>(main_size) > bytes.size())
-	{
-		return false;
-	}
+	//// AssetChunkLoaderを作成
+	//nox::AssetChunkLoader loader;
 
-	// AssetChunkLoaderを作成
-	nox::AssetChunkLoader loader;
+	////	Main チャンクのビュー上に（ヒープを使わない）ストリームリーダーを構築して初期化する。
+	////	SpanStreamReader は読み取り専用（buffer_ から copy するのみ）のため、const を外しても安全。
+	//const std::span<const std::byte> main_view = bytes.subspan(main_offset, main_size);
+	//std::span<std::byte> main_mutable{ const_cast<std::byte*>(main_view.data()), main_view.size() };
+	//nox::io::SpanStreamReader span_reader(main_mutable);
+	//nox::io::BinaryReader binary_reader(span_reader);
 
-	//	Main チャンクのビュー上に（ヒープを使わない）ストリームリーダーを構築して初期化する。
-	//	SpanStreamReader は読み取り専用（buffer_ から copy するのみ）のため、const を外しても安全。
-	const std::span<const std::byte> main_view = bytes.subspan(main_offset, main_size);
-	std::span<std::byte> main_mutable{ const_cast<std::byte*>(main_view.data()), main_view.size() };
-	nox::io::SpanStreamReader span_reader(main_mutable);
-	nox::io::BinaryReader binary_reader(span_reader);
-
-	is_initialized_ = OnInitialize(binary_reader);
-	return is_initialized_;
+	//is_initialized_ = OnInitialize(binary_reader);
+	//return is_initialized_;
 }

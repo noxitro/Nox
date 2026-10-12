@@ -5,8 +5,8 @@
 /// @brief	scene_asset
 #include "pch.h"
 #include "scene_asset.h"
-
-bool nox::SceneAsset::OnInitialize(nox::io::BinaryReader& reader)
+#include "asset_format.h"
+bool nox::SceneAsset::OnInitialize(const nox::AssetChunkLoader& loader)
 {
 	return true;
 }

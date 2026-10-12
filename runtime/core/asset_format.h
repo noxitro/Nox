@@ -17,6 +17,7 @@ namespace nox
 	/// @brief チャンク種別
 	enum class AssetChunkType : nox::uint8
 	{
+		/// @brief アセットのメインデータ
 		Main,
 		Extra,
 		Develop,

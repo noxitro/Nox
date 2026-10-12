@@ -17,10 +17,10 @@ nox::render::RenderModule::RenderModule()
 	
 }
 
-void nox::render::RenderModule::CreateEngineSystems(nox::PmrVector<nox::SystemBase*>& out)const
+void nox::render::RenderModule::Register(nox::WorldRegistery& registry)const
 {
-	out.emplace_back(new nox::render::Renderer());
+	registry.Register<nox::render::Renderer>();
 #if NOX_DEVELOP
-	out.emplace_back(new nox::render::debug::DebugDraw());
+//	registry.Register<nox::render::debug::DebugDraw>();
 #endif // NOX_DEVELOP
 }

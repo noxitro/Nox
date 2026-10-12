@@ -5,6 +5,7 @@
 /// @brief	asset_manager
 #pragma once
 #include	"service.h"
+#include	"ecs_definitions.h"
 
 #if NOX_DEVELOP
 namespace nox::dev::editor_remote
@@ -29,34 +30,44 @@ namespace nox
 	}
 
 	class Asset;
+	template<class>
+	struct AssetHandle;
+	namespace detail
+	{
+		struct AssetHandleBase;
+	}
 
 	class AssetManager final: public nox::Service<AssetManager>
 	{
+		NOX_ECS_DECLARE_VERIFY(AssetManager);
 	public:
 		AssetManager();
 		~AssetManager();
 
 		template<std::derived_from<nox::Asset> T>
-		inline nox::IntrusivePtr<T> CreateAsset(std::u8string_view file_path)
+		inline nox::IntrusivePtr<T> CreateAsset(const nox::AssetHandle<T>& handle)const
 		{
 			nox::IntrusivePtr<T> resource;
-			resource.Reset(static_cast<T*>(&CreateAssetImpl(file_path)));
+			resource.Reset(static_cast<T*>(&CreateAssetImpl(handle, nox::reflection::Typeof<T>())));
 			return resource;
 		}
 
-		inline nox::IntrusivePtr<nox::Asset> CreateAsset(std::u8string_view file_path)
+	/*	inline nox::IntrusivePtr<nox::Asset> CreateAsset(nox::Guid guid)
 		{
 			nox::IntrusivePtr<nox::Asset> resource;
 			resource.Reset(&CreateAssetImpl(file_path));
 			return resource;
-		}
+		}*/
 
 	private:
 		void Init();
+#if NOX_DEVELOP
+		void UpdateSendConvertQuery(nox::dev::editor_remote::EditorRemoteServer& server);
+#endif // NOX_DEVELOP
 
-		void InitOld(nox::legacy::World& world);
-		void Terminate(nox::legacy::World& world);
-		nox::Asset& CreateAssetImpl(std::u8string_view uri);
+		void Terminate();
+		
+		nox::Asset& CreateAssetImpl(const nox::detail::AssetHandleBase& handle, const nox::reflection::Type& type)const;
 
 		/// @brief ロードスレッドでのアセット処理結果
 		enum class LoadStatus : nox::uint8
@@ -69,25 +80,34 @@ namespace nox
 			Corrupted,
 		};
 
-		void LoadThread(nox::legacy::World& world);
+		void LoadThread();
 
 		/// @brief 単一アセットのロード処理（存在チェック・初期化チェック・初期化）
 		/// @param asset 対象アセット
 		/// @return 処理結果
 		LoadStatus ProcessLoad(nox::Asset& asset);
 	public:
-	private:
+		static constexpr PhaseInit kInit{ &AssetManager::Init };
 #if NOX_DEVELOP
-		nox::util::InitOnceRef<nox::dev::editor_remote::EditorRemoteServer> editor_remote_server_system_;
+		static constexpr PhaseUpdate kUpdateSendConvertQuery{ &AssetManager::UpdateSendConvertQuery };
+#endif
+		static constexpr PhaseTerminate kTerminate{ &AssetManager::Terminate };
+
+		static const nox::NodeDescriptor& GetNodeDescriptor()noexcept;
+	private:
+		mutable nox::UnorderedMap<nox::Guid, nox::Asset*> resource_cache_;
+		nox::UnorderedMap<std::u8string_view, std::reference_wrapper<const nox::reflection::ClassInfo>> resource_typeinfo_map_with_extension_;
+		 mutable nox::Queue<nox::Asset*> load_queue_;
+
+#if NOX_DEVELOP
+		nox::Vector<nox::Guid> send_query_queue_;
 #endif // NOX_DEVELOP
 
-		nox::UnorderedMap<std::u8string_view, nox::Asset*> resource_cache_;
-		nox::UnorderedMap<std::u8string_view, std::reference_wrapper<const nox::reflection::ClassInfo>> resource_typeinfo_map_with_extension_;
-		nox::Queue<nox::Asset*> load_queue_;
+
 		bool is_resource_class_cache_built_ = false;
 		mutable nox::ReadWriteLock rw_lock_;
 		nox::ReadWriteLock load_queue_rw_lock_;
-		std::counting_semaphore<> load_queue_signal_;
+		mutable std::counting_semaphore<> load_queue_signal_;
 
 		nox::Thread load_thread_;
 		std::atomic_bool is_kill_;

@@ -5,9 +5,10 @@
 /// @brief	asset_manager
 #include "pch.h"
 #include "asset_manager.h"
+#include	"node_descriptor.h"
 
 #include	"asset.h"
-#include	"world_legacy.h"
+#include	"asset_ref.h"
 #include	"core_utility.h"
 #include	"asset_attribute.h"
 #include	"log_id.h"
@@ -27,7 +28,7 @@ namespace nox
 
 		inline nox::U8FixedString<nox::k_max_path_length> GetFullPath(std::u8string_view native_path)
 		{
-			//	���[�J����fullpath
+			//	
 			std::array<nox::char8, nox::k_max_path_length> project_dir_buffer{};
 			const std::u8string_view project_dir = nox::util::GetProjectDir(project_dir_buffer);
 
@@ -93,6 +94,20 @@ namespace nox::util
 	}
 }
 
+const nox::NodeDescriptor& nox::AssetManager::GetNodeDescriptor()noexcept
+{
+	return node_descriptor_v<
+		Register<kInit>,
+#if NOX_DEVELOP
+		Register<kUpdateSendConvertQuery,
+		//nox::RunAfter<nox::dev::editor_remote::EditorRemoteServer::kReceive>
+		>,
+#endif // NOX_DEVELOP
+
+		Register<kTerminate>
+	>;
+}
+
 nox::AssetManager::AssetManager() :
 	load_queue_signal_(0),
 	is_kill_(false)
@@ -105,76 +120,16 @@ nox::AssetManager::~AssetManager()
 
 }
 
-nox::Asset& nox::AssetManager::CreateAssetImpl(std::u8string_view uri)
+void nox::AssetManager::Init()
 {
-	{
-		//	���\�[�X�L���b�V���ɑ��݂��邩
-		NOX_LOCAL_SCOPE(nox::ScopedReadLock(rw_lock_));
-
-		const auto it = resource_cache_.find(uri);
-		if (it != resource_cache_.end())
-		{
-			return *it->second;
-		}
-	}
-
-	nox::Asset* new_asset = nullptr;
-	{
-		NOX_LOCAL_SCOPE(nox::ScopedWriteLock(rw_lock_));
-
-		const auto it = resource_cache_.find(uri);
-		if (it != resource_cache_.end())
-		{
-			
-			return *it->second;
-		}
-
-		//	�{���ɂȂ��̂ō쐬����
-		const std::u8string_view extension = nox::filesystem::GetExtensions(uri, 0);
-		const nox::reflection::ClassInfo& class_info = resource_typeinfo_map_with_extension_.at(extension);
-		new_asset = static_cast<nox::Asset*>(class_info.GetType().CreateObject());
-		new_asset->Bind(uri, *this);
-
-		resource_cache_.emplace(new_asset->GetPath(), new_asset);
-	}
-
-	//	���[�h�L���[�ɒǉ�
-	{
-		NOX_LOCAL_SCOPE(nox::ScopedWriteLock(load_queue_rw_lock_));
-		load_queue_.push(new_asset);
-
-		//	�R���o�[�g���N�G�X�g
-#if NOX_DEVELOP
-
-		nox::dev::editor_remote::EditorRemoteServer& server = editor_remote_server_system_;
-		nox::dev::editor_remote::AssetConvertQuery query;
-		query.SetUri(uri);
-		server.SendQuery(query);
-#endif // NOX_DEVELOP
-
-		//nox::dev::editor_remote::AssetConvertQuery
-		load_queue_signal_.release();
-	}
-
-	return *new_asset;
-}
-
-void nox::AssetManager::InitOld(nox::legacy::World& world)
-{
-#if NOX_DEVELOP
-	editor_remote_server_system_ = world.GetSystem<nox::dev::editor_remote::EditorRemoteServer>();
-#endif // NOX_DEVELOP
-
-
 	resource_cache_.clear();
 	resource_typeinfo_map_with_extension_.clear();
 	is_resource_class_cache_built_ = false;
 
-	//	nox::Asset�p���N���X�����W
 	nox::reflection::ForeachDerivedClassInfoList<nox::Asset>([this](const nox::reflection::ClassInfo& class_info)
 		{
 			const nox::attr::Asset* const resource_attr = class_info.GetAttribute<nox::attr::Asset>();
-			NOX_ASSERT(resource_attr != nullptr, u"Asset�N���X�ɂ�nox::attr::Asset�������K�v�ł�:{0}", class_info.GetFullName());
+			NOX_ASSERT(resource_attr != nullptr, u"Asset attribute not found:{0}", class_info.GetFullName());
 			if (resource_attr == nullptr)
 			{
 				return;
@@ -185,13 +140,39 @@ void nox::AssetManager::InitOld(nox::legacy::World& world)
 		});
 	is_resource_class_cache_built_ = true;
 
-	load_thread_.Dispatch([this, &world]()
+	load_thread_.Dispatch([this]()
 		{
-			this->LoadThread(world);
+			this->LoadThread();
 		});
 }
 
-void nox::AssetManager::Terminate([[maybe_unused]] nox::legacy::World& world)
+#if NOX_DEVELOP
+void nox::AssetManager::UpdateSendConvertQuery(nox::dev::editor_remote::EditorRemoteServer& server)
+{
+	if (send_query_queue_.empty() == true)
+	{
+		return;
+	}
+
+	for (const auto& guid : send_query_queue_)
+	{
+		nox::Asset* const asset = resource_cache_.at(guid);
+		if (asset == nullptr)
+		{
+			continue;
+		}
+
+		nox::dev::editor_remote::AssetConvertQuery query;
+		//query.SetUri(asset->GetPath());
+		//server.SendQuery(query);
+	}
+
+	send_query_queue_.clear();
+	load_queue_signal_.release();
+}
+#endif // NOX_DEVELOP
+
+void nox::AssetManager::Terminate()
 {
 	//	ロードスレッドを停止させる（停止フラグを立ててから起こし、終了を待つ）
 	is_kill_.store(true);
@@ -208,7 +189,52 @@ void nox::AssetManager::Terminate([[maybe_unused]] nox::legacy::World& world)
 	is_resource_class_cache_built_ = false;
 }
 
-void nox::AssetManager::LoadThread([[maybe_unused]] nox::legacy::World& world)
+nox::Asset& nox::AssetManager::CreateAssetImpl(const nox::detail::AssetHandleBase& handle, const nox::reflection::Type& type)const
+{
+	const nox::Guid guid = handle.GetGuid();
+	//	キャッシュに存在する場合はそれを返す
+	{
+		NOX_LOCAL_SCOPE(nox::ScopedReadLock(rw_lock_));
+
+		const auto it = resource_cache_.find(guid);
+		if (it != resource_cache_.end())
+		{
+			return *it->second;
+		}
+	}
+
+	nox::Asset* new_asset = nullptr;
+	{
+
+		NOX_LOCAL_SCOPE(nox::ScopedWriteLock(rw_lock_));
+
+		// 共有ロックを外してから排他ロックを取るまでの間に、他のスレッドが足していた場合
+		const auto it = resource_cache_.find(guid);
+		if (it != resource_cache_.end())
+		{
+			
+			return *it->second;
+		}
+
+		const nox::reflection::ClassInfo*const class_info = nox::reflection::FindClassInfo(type);
+		NOX_ASSERT(class_info != nullptr, u8"class info not found");
+		const nox::attr::Asset* const attr = class_info->GetAttribute<nox::attr::Asset>();
+		NOX_ASSERT(attr != nullptr, u8"asset attribute not found");
+
+		new_asset = static_cast<nox::Asset*>(type.CreateObject());
+		resource_cache_.emplace(guid, new_asset);
+	}
+
+	{
+		NOX_LOCAL_SCOPE(nox::ScopedWriteLock(load_queue_rw_lock_));
+		load_queue_.push(new_asset);
+		load_queue_signal_.release();
+	}
+
+	return *new_asset;
+}
+
+void nox::AssetManager::LoadThread()
 {
 	while (is_kill_.load() == false)
 	{
@@ -251,40 +277,40 @@ void nox::AssetManager::LoadThread([[maybe_unused]] nox::legacy::World& world)
 
 nox::AssetManager::LoadStatus nox::AssetManager::ProcessLoad(nox::Asset& asset)
 {
-	const auto native_path = nox::util::GetNativeResourcePath(asset.GetPath());
-	const auto full_native_path = nox::GetFullPath(native_path);
+	//const auto native_path = nox::util::GetNativeResourcePath(asset.GetPath());
+	//const auto full_native_path = nox::GetFullPath(native_path);
 
-	//	1. ファイルの存在チェック
-	if (nox::os::Exists(full_native_path) == false)
-	{
-		//	ネイティブファイルがまだ生成されていない(コンバート待ち)
-		return LoadStatus::Pending;
-	}
+	////	1. ファイルの存在チェック
+	//if (nox::os::Exists(full_native_path) == false)
+	//{
+	//	//	ネイティブファイルがまだ生成されていない(コンバート待ち)
+	//	return LoadStatus::Pending;
+	//}
 
-	//	2. 初期化チェック
-	{
-		nox::io::File file;
+	////	2. 初期化チェック
+	//{
+	//	nox::io::File file;
 
-		//	(a) ファイルを正常にオープンできるか(コンバート書き込み中はオープンに失敗し得る)
-		if (file.Open(full_native_path, u8"rb") == false)
-		{
-			return LoadStatus::Pending;
-		}
+	//	//	(a) ファイルを正常にオープンできるか(コンバート書き込み中はオープンに失敗し得る)
+	//	if (file.Open(full_native_path, u8"rb") == false)
+	//	{
+	//		return LoadStatus::Pending;
+	//	}
 
-		//	(b) ファイルサイズが0でないか(0は破損扱い)
-		if (file.GetSize() == 0)
-		{
-			NOX_ERROR_LINE(nox::log_id::Resource, u8"破損したアセットです(ファイルサイズ0):{0}", asset.GetPath());
-			return LoadStatus::Corrupted;
-		}
-	}
+	//	//	(b) ファイルサイズが0でないか(0は破損扱い)
+	//	if (file.GetSize() == 0)
+	//	{
+	//		NOX_ERROR_LINE(nox::log_id::Resource, u8"破損したアセットです(ファイルサイズ0):{0}", asset.GetPath());
+	//		return LoadStatus::Corrupted;
+	//	}
+	//}
 
-	//	3. 初期化処理(ネイティブコンバートが完了しているので初期化を呼び出す)
-	if (asset.Initialize(full_native_path) == false)
-	{
-		NOX_ERROR_LINE(nox::log_id::Resource, u8"アセットの初期化に失敗しました:{0}", asset.GetPath());
-		return LoadStatus::Corrupted;
-	}
+	////	3. 初期化処理(ネイティブコンバートが完了しているので初期化を呼び出す)
+	//if (asset.Initialize(full_native_path) == false)
+	//{
+	//	NOX_ERROR_LINE(nox::log_id::Resource, u8"アセットの初期化に失敗しました:{0}", asset.GetPath());
+	//	return LoadStatus::Corrupted;
+	//}
 
 	return LoadStatus::Completed;
 }

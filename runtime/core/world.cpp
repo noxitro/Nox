@@ -7,6 +7,10 @@
 #include	"world.h"
 #include	<bit>
 #include	<bitset>
+
+#include	"world_registery.h"
+#include	"node_descriptor.h"
+
 namespace nox
 {
 	namespace
@@ -122,6 +126,17 @@ nox::World::~World()
 {
 	std::destroy_at(reinterpret_cast<nox::World::Archetype*>(empty_archetype_buffer_.data()));
 }
+
+void nox::World::Init()
+{
+	nox::StackAllocVector<const nox::NodeDescriptor*, 512> node_descriptors;
+	nox::WorldRegistery registery(node_descriptors.GetContainer());
+}
+
+void nox::World::Update()
+{
+
+}	
 
 nox::Entity nox::World::CreateEntity()
 {

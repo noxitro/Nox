@@ -9,9 +9,9 @@ namespace nox::render
 {
 	class RenderDevice;
 
-	class Renderer : public nox::SystemBase
+	class Renderer final : public nox::Service<Renderer>
 	{
-		NOX_DECLARE_OBJECT(nox::render::Renderer, nox::Object);
+		NOX_ECS_DECLARE_VERIFY(Renderer);
 	public:
 		Renderer();
 		~Renderer()override;
@@ -21,12 +21,12 @@ namespace nox::render
 		void Terminate(nox::legacy::World& world);
 
 	public:
-		static constexpr nox::SystemBase::SystemPhaseInit kPhaseInit{ &Renderer::Init, u8"Renderer::Init" };
-		static constexpr nox::SystemBase::SystemPhaseUpdate kPhaseUpdate{ &Renderer::Update, u8"Renderer::Update" };
-		static constexpr nox::SystemBase::SystemPhaseTerminate kPhaseTerminate{ &Renderer::Terminate, u8"Renderer::Terminate" };
+		inline static constexpr const nox::NodeDescriptor& GetNodeDescriptor()noexcept
+		{
+			return node_descriptor_v<>;
+		}
 
 	private:
-		std::span<const nox::SystemBase::PhaseRegister> GetPhaseRegisterList()const noexcept override;
 
 		inline constexpr auto& GetDevice()const noexcept;
 

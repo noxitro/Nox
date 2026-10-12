@@ -32,14 +32,16 @@ namespace nox
 			nox::uint32 archetype_id;
 			nox::uint32 row;
 		};
+
+		struct Node
+		{
+
+		};
 	public:
 		World();
 		~World();
 
-		template<class... Modules>
-		inline void Init()
-		{
-		}
+		void Init();
 		void Update();
 
 		nox::Entity CreateEntity();

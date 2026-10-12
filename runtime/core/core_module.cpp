@@ -6,6 +6,7 @@
 #include	"pch.h"
 #include	"core_module.h"
 
+#include	"world_registery.h"
 #include	"garbage_collector.h"
 #include	"asset_manager.h"
 #include	"scene_manager.h"
@@ -28,13 +29,14 @@ void CreateEntityLogics()
 
 }
 
-void nox::CoreModule::CreateEngineSystems(nox::PmrVector<nox::SystemBase*>& out)const
+void nox::CoreModule::Register(nox::WorldRegistery& registry)const
 {
-	out.emplace_back(new nox::SceneManager());
-	//out.emplace_back(new nox::AssetManager());
-	out.emplace_back(new nox::GarbageCollector());
+	registry.Register<
+		nox::SceneManager,
+		nox::GarbageCollector,
 #if NOX_DEVELOP
-	out.emplace_back(new nox::dev::net::SocketScheduler());
-	out.emplace_back(new nox::dev::editor_remote::EditorRemoteServer());
-#endif // NOX_DEVELOP
+		nox::dev::net::SocketScheduler,
+		nox::dev::editor_remote::EditorRemoteServer
+#endif
+	>();
 }

@@ -54,13 +54,3 @@ void nox::render::Renderer::Terminate(nox::legacy::World& world)
 {
 
 }
-
-std::span<const nox::SystemBase::PhaseRegister> nox::render::Renderer::GetPhaseRegisterList()const noexcept
-{
-	static constexpr auto tbl = std::array{
-		PhaseRegister(kPhaseInit),
-		PhaseRegister(kPhaseUpdate),
-		PhaseRegister(kPhaseTerminate)
-	};
-	return tbl;
-}

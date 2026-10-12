@@ -7,15 +7,11 @@
 #if NOX_DEVELOP
 #include	"net/server.h"
 #include	"net/client.h"
-#include	"../system.h"
+#include	"../service.h"
+#include	"../ecs_definitions.h"
 
 #include	"socket_stream_writer.h"
 #include	"socket_stream_reader.h"
-
-namespace nox::legacy
-{
-	class World;
-}
 
 namespace nox
 {
@@ -43,9 +39,9 @@ namespace nox::dev::editor_remote
 		TwoWay
 	};
 
-	class EditorRemoteServer final:	public nox::SystemBase
+	class EditorRemoteServer final : public nox::Service<EditorRemoteServer>
 	{
-		NOX_DECLARE_OBJECT(nox::dev::editor_remote::EditorRemoteServer, nox::SystemBase);
+		NOX_ECS_DECLARE_VERIFY(EditorRemoteServer);
 	private:
 		class ServerEventHandler final : public nox::dev::net::IServerEventHandler
 		{
@@ -75,12 +71,7 @@ namespace nox::dev::editor_remote
 		struct Impl;
 	public:
 		EditorRemoteServer();
-		~EditorRemoteServer()override;
-
-		EditorRemoteServer(const EditorRemoteServer&) = delete;
-		EditorRemoteServer& operator=(const EditorRemoteServer&) = delete;
-		EditorRemoteServer(EditorRemoteServer&&) noexcept = delete;
-		EditorRemoteServer& operator=(EditorRemoteServer&&) noexcept = delete;
+		~EditorRemoteServer();
 
 		void	SendQuery(nox::dev::editor_remote::Query& query, std::function<void(const nox::dev::editor_remote::Response&)> callback = nullptr);
 		void	SendBuffer(std::span<const nox::uint8> buffer);
@@ -93,7 +84,6 @@ namespace nox::dev::editor_remote
 		nox::int64 FindRemoteInstanceId(const nox::Object& object)const noexcept;
 		nox::Object* FindRemoteInstance(nox::int64 instance_id)const noexcept;
 		void	CollectRemoteInstances(std::function<void(nox::int64, const nox::Object&)> evaluate)const;
-		std::span<const nox::SystemBase::PhaseRegister> GetPhaseRegisterList()const noexcept override;
 	private:
 		/// @brief main threadから呼び出される更新処理
 		void	Start(nox::legacy::World& world);
@@ -106,21 +96,11 @@ namespace nox::dev::editor_remote
 		void	OnServerReceive(nox::legacy::World& world);
 		void UpdateReceive(nox::legacy::World& world);
 	public:
-		static constexpr SystemPhaseInit k_phase_init{
-			&EditorRemoteServer::Start,
-			NOX_U8_NAMEOF_FUNCTION(&EditorRemoteServer::Start)
-		};
+		static constexpr PhaseInit kPhaseInit{ &EditorRemoteServer::Start };
+		static constexpr PhaseUpdate kPhaseUpdate{ &EditorRemoteServer::Update };
+		static constexpr PhaseTerminate kPhaseTerminate{ &EditorRemoteServer::Terminate };
 
-		static constexpr SystemPhaseUpdate k_phase_update{
-			&EditorRemoteServer::Update,
-			NOX_U8_NAMEOF_FUNCTION(&EditorRemoteServer::Update)
-		};
-
-		static constexpr SystemPhaseTerminate k_phase_terminate{
-			&EditorRemoteServer::Terminate,
-			NOX_U8_NAMEOF_FUNCTION(&EditorRemoteServer::Terminate)
-		};
-
+		static const NodeDescriptor& GetNodeDescriptor()noexcept;
 	private:
 		ServerEventHandler event_handler_;
 		nox::dev::net::Server server_;
