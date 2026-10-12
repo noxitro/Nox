@@ -25,6 +25,7 @@ namespace nox::attr
 
 	class RequireComponentsBase : public nox::attr::Attribute
 	{
+		NOX_DECLARE_OBJECT(RequireComponentsBase, nox::attr::Attribute);
 	protected:
 		constexpr explicit RequireComponentsBase(
 			const nox::reflection::Type* const* components,

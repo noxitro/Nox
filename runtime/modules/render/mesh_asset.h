@@ -13,6 +13,6 @@ namespace nox::render
 	public:
 
 	private:
-		bool OnInitialize(nox::io::BinaryReader& reader) override;
+		bool OnInitialize(const nox::AssetChunkLoader& loader) override;
 	};
 }

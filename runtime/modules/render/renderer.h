@@ -14,7 +14,7 @@ namespace nox::render
 		NOX_ECS_DECLARE_VERIFY(Renderer);
 	public:
 		Renderer();
-		~Renderer()override;
+		~Renderer();
 
 		void Init(nox::legacy::World& world);
 		void Update(nox::legacy::World& world);

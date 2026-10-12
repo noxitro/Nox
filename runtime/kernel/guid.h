@@ -5,6 +5,7 @@
 ///	@brief	guid
 #pragma once
 #include <array>
+#include <functional>
 #include "basic_type.h"
 #include "nox_string.h"
 #include "type_traits/concepts.h"
@@ -31,6 +32,23 @@ namespace nox
 		static inline constexpr  nox::Guid Empty() noexcept { return {}; }
 
 		static Guid NewGuid() noexcept;
+
+		/// @brief ハッシュ値。上位 64bit と下位 64bit を混ぜて返す
+		inline constexpr nox::uint64 GetHash()const noexcept
+		{
+			const nox::uint64 high = (static_cast<nox::uint64>(data1) << 32u) | (static_cast<nox::uint64>(data2) << 16u) | static_cast<nox::uint64>(data3);
+			nox::uint64 low = 0;
+			for (const nox::uint8 byte : data4)
+			{
+				low = (low << 8u) | byte;
+			}
+
+			nox::uint64 x = high ^ (low * 0x9e3779b97f4a7c15ull);
+			x ^= x >> 31u;
+			x *= 0xbf58476d1ce4e5b9ull;
+			x ^= x >> 29u;
+			return x;
+		}
 
 		inline constexpr std::u8string_view ToStringU8(std::span<nox::char8> dest)const noexcept
 		{
@@ -120,3 +138,12 @@ namespace nox
 		nox::uint8  data4[8];
 	};
 }
+
+template<>
+struct std::hash<nox::Guid>
+{
+	[[nodiscard]] constexpr std::size_t operator()(const nox::Guid& guid)const noexcept
+	{
+		return static_cast<std::size_t>(guid.GetHash());
+	}
+};

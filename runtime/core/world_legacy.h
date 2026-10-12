@@ -13,6 +13,8 @@
 #include	"entity_logic_legacy.h"
 #include	"updater_graph_legacy.h"
 #include	"service_legacy.h"
+#include	"service.h"
+#include	"world_registery.h"
 
 namespace nox
 {
@@ -23,6 +25,13 @@ namespace nox
 namespace nox::legacy
 {
 	class World;
+
+	namespace detail
+	{
+		/// @brief	橋渡しした Service を型ごとに見分けるための印。アドレスだけを使う
+		template<class T>
+		inline constexpr nox::uint8 bridged_service_key_v = 0u;
+	}
 
 	/// @brief 即時系の構造変更API(CreateEntity / DestroyEntity / AddComponent / RemoveComponent)を
 	///        「今」呼んでよいかどうか。
@@ -193,6 +202,18 @@ namespace nox::legacy
 			nox::legacy::Service* service;
 		};
 
+		/// @brief	legacy::World が実体を持つ Service。nox::legacy::World::AddRegisteredType を参照
+		struct BridgedService
+		{
+			const void* key;
+			void* instance;
+			void (*destroy)(void*);
+			void (*init)(void*, nox::legacy::World&);
+			void (*update)(void*, nox::legacy::World&);
+			void (*terminate)(void*, nox::legacy::World&);
+		};
+		static constexpr nox::uint32 k_max_bridged_service_count = 16u;
+
 		struct EntityRecordPage
 		{
 			std::array<nox::legacy::World::EntityRecord, k_entity_record_page_size> records;
@@ -245,6 +266,63 @@ namespace nox::legacy
 		inline T& GetSystem()const
 		{
 			return static_cast<T&>(GetSystem(nox::reflection::Typeof<T>()));
+		}
+
+		/// @brief	モジュールが WorldRegistery へ登録した Service の実体を返す
+		/// @note	TODO: 新しい World が Service を実行するまでの暫定。legacy::World と一緒に消す
+		template<std::derived_from<nox::detail::ServiceBase> T>
+		inline T& GetBridgedService()const
+		{
+			void* const instance = FindBridgedService(&nox::legacy::detail::bridged_service_key_v<T>);
+			if (instance == nullptr)
+			{
+				NOX_ASSERT(false, u8"Serviceが登録されていません: {0}", nox::util::GetTypeName<T>());
+				std::abort();
+			}
+			return *static_cast<T*>(instance);
+		}
+
+		/// @brief	WorldRegistery に登録された型を、legacy::World で動く形で生成する
+		/// @details	SystemBase の派生は従来どおり System として登録する。
+		///				Service は実体を持ち、kPhaseInit / kPhaseUpdate / kPhaseTerminate (legacy::World& を受け取るもの) を
+		///				System の後 (Terminate だけは前) に呼ぶ。
+		///				phase を 1 つも呼べない Service と、System でも Service でもない型は、黙って捨てずに警告を出す。
+		/// @note	TODO: 新しい World が Service を実行するまでの暫定。legacy::World と一緒に消す
+		template<class T>
+		void AddRegisteredType()
+		{
+			if constexpr (std::derived_from<T, nox::SystemBase>)
+			{
+				AddSystem(new T());
+			}
+			else if constexpr (std::derived_from<T, nox::detail::ServiceBase>)
+			{
+				BridgedService service{};
+				service.key = &nox::legacy::detail::bridged_service_key_v<T>;
+				service.instance = new T();
+				service.destroy = [](void* const instance) { delete static_cast<T*>(instance); };
+				if constexpr (requires(T* instance, nox::legacy::World& world) { std::invoke(T::kPhaseInit.function, instance, world); })
+				{
+					service.init = [](void* const instance, nox::legacy::World& world) { std::invoke(T::kPhaseInit.function, static_cast<T*>(instance), world); };
+				}
+				if constexpr (requires(T* instance, nox::legacy::World& world) { std::invoke(T::kPhaseUpdate.function, instance, world); })
+				{
+					service.update = [](void* const instance, nox::legacy::World& world) { std::invoke(T::kPhaseUpdate.function, static_cast<T*>(instance), world); };
+				}
+				if constexpr (requires(T* instance, nox::legacy::World& world) { std::invoke(T::kPhaseTerminate.function, instance, world); })
+				{
+					service.terminate = [](void* const instance, nox::legacy::World& world) { std::invoke(T::kPhaseTerminate.function, static_cast<T*>(instance), world); };
+				}
+				if ((service.init == nullptr) && (service.update == nullptr) && (service.terminate == nullptr))
+				{
+					WarnBridgeSkipped(nox::util::GetTypeName<T>(), true);
+				}
+				AddBridgedService(service);
+			}
+			else
+			{
+				WarnBridgeSkipped(nox::util::GetTypeName<T>(), false);
+			}
 		}
 
 #if !NOX_MASTER
@@ -431,6 +509,12 @@ namespace nox::legacy
 		void BuildExecuteNodeList(std::span<nox::SystemBase*> system_list);
 		void ExecutePhase(const nox::SystemPhaseType phase_type);
 		void RegisterSystem(nox::SystemBase& system);
+		void AddSystem(nox::SystemBase* system);
+		void AddBridgedService(const BridgedService& service);
+		[[nodiscard]] void* FindBridgedService(const void* key)const noexcept;
+		void ExecuteBridgedServicePhase(nox::SystemPhaseType phase_type);
+		/// @param is_service	true: phase を 1 つも呼べない Service / false: System でも Service でもない型
+		static void WarnBridgeSkipped(std::string_view type_name, bool is_service);
 
 		/// @brief 制約を検査せずに構造を変える本体。Playbackと即時系の共通の実装。
 		[[nodiscard]] nox::Entity CreateEntityImmediate();
@@ -619,9 +703,18 @@ namespace nox::legacy
 		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
 		nox::FixedVector<nox::legacy::World::ServiceEntry, k_max_service_count> services_;
 
+		NOX_ATTR(nox::reflection::attr::IgnoreReflection())
+		nox::FixedVector<nox::legacy::World::BridgedService, k_max_bridged_service_count> bridged_services_;
+
 		nox::Vector<nox::EngineModule*> modules_;
 		nox::Vector<nox::SystemBase*> systems_;
 		nox::UnorderedMap<const nox::reflection::Type*, nox::SystemBase*> system_map_;
 		std::array<nox::Vector<SystemExecuteNode>, nox::util::ToUnderlying(nox::SystemPhaseType::_Max)> system_phase_table_;
 	};
+}
+
+template<class T>
+void nox::legacy::AddRegisteredType(nox::legacy::World& world)
+{
+	world.AddRegisteredType<T>();
 }
