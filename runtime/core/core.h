@@ -12,6 +12,7 @@
 #include	"core_module.h"
 #include	"asset_manager.h"
 #include	"asset.h"
+#include	"asset_format.h"
 #include	"asset_ref.h"
 #include	"world_legacy.h"
 #include	"component_type.h"
