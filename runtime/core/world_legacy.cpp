@@ -752,6 +752,22 @@ void nox::legacy::World::ExecuteBridgedServicePhase(const nox::SystemPhaseType p
 	}
 }
 
+void nox::legacy::World::WarnBridgeSkipped([[maybe_unused]] const std::string_view type_name, const bool is_service)
+{
+	if (is_service)
+	{
+		NOX_WARNING_LINE(nox::log_id::CoreCommon,
+			u8"legacy::World では phase を呼べない Service です (kPhaseInit / kPhaseUpdate / kPhaseTerminate が legacy::World& を受け取らない): {0}",
+			type_name);
+	}
+	else
+	{
+		NOX_WARNING_LINE(nox::log_id::CoreCommon,
+			u8"legacy::World は System と Service しか生成しません。登録を無視しました: {0}",
+			type_name);
+	}
+}
+
 void nox::legacy::World::CreateEntitySystems()
 {
 	for (const nox::legacy::EntitySystemTypeDescriptor* const descriptor : nox::legacy::GetEntitySystemTypes())
