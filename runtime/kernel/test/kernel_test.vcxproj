@@ -15,12 +15,14 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="guid_vectors.inc" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="allocation_counter_test.cpp" />
     <ClCompile Include="basic_test.cpp" />
     <ClCompile Include="file_win64_test.cpp" />
+    <ClCompile Include="guid_test.cpp" />
     <ClCompile Include="math_test.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="pch.cpp">
