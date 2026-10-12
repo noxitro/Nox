@@ -26,5 +26,5 @@ namespace nox
 	}
 
 	template<class T, class... Registers>
-	constexpr const nox::NodeDescriptor& node_descriptor_v = nox::detail::NodeDescriptorBuilder<T, Registers...>::value;
+	constexpr const nox::NodeDescriptor& node_descriptor_v = nox::detail::NodeDescriptorBuilder<T, std::tuple<Registers...>>::value;
 }

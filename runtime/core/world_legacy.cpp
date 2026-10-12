@@ -282,6 +282,7 @@ nox::legacy::World::World() :
 		nox::JobSystem::GetDefaultWorkerCount())),
 	exit_after_frames_(nox::legacy::ResolveExitAfterFrames(nox::os::GetCommandLineArgList())),
 	services_(),
+	bridged_services_(),
 	modules_(),
 	systems_(),
 	system_map_(),
@@ -326,6 +327,13 @@ nox::legacy::World::~World()
 	for (nox::uint32 service_index = 0u; service_index < services_.GetLength(); ++service_index)
 	{
 		delete services_.GetStorage()[service_index].service;
+	}
+
+	//	System より先に、登録と逆順で消す (Service が System を参照していることがあるため)
+	for (nox::uint32 service_index = bridged_services_.GetLength(); service_index > 0u; --service_index)
+	{
+		const BridgedService& service = bridged_services_.GetStorage()[service_index - 1u];
+		service.destroy(service.instance);
 	}
 
 	for (nox::SystemBase* const system : systems_)
@@ -416,42 +424,18 @@ void nox::legacy::World::Init()
 			}
 		});
 
-	nox::FixedVector<nox::SystemBase*, 128> system_list;
+	//	TODO: 新しい World が Service を実行するまでの暫定。
+	//	モジュールが WorldRegistery へ登録した型を、legacy::World でも生成して動かす (nox::legacy::World::AddRegisteredType)。
 	{
-		nox::StackAllocVector<nox::SystemBase*, 512> system_dest_buffer_vector;
-		auto& dest_buffer = system_dest_buffer_vector.GetContainer();
-		dest_buffer.reserve(32);
-
+		nox::StackAllocVector<const nox::NodeDescriptor*, 512> node_descriptor_buffer;
+		nox::WorldRegistery registry(node_descriptor_buffer.GetContainer(), this);
 		for (const nox::EngineModule* const module : modules_)
 		{
-			module->CreateEngineSystems(dest_buffer);
-
-			for (nox::SystemBase* const system : dest_buffer)
-			{
-				if (system == nullptr)
-				{
-					NOX_ASSERT(false, u8"EngineSystemの生成結果にnullが含まれています");
-					continue;
-				}
-
-				const nox::reflection::Type& type = system->GetType();
-				if (system_map_.contains(&type))
-				{
-					NOX_ASSERT(false, u8"登録済み: {0}", type.GetTypeName());
-					delete system;
-					continue;
-				}
-
-				RegisterSystem(*system);
-				systems_.emplace_back(system);
-				system_list.PushBack(system);
-			}
-
-			dest_buffer.clear();
+			module->Register(registry);
 		}
 	}
 
-	BuildExecuteNodeList(system_list);
+	BuildExecuteNodeList(std::span<nox::SystemBase*>(systems_.data(), systems_.size()));
 	CreateEntitySystems();
 	CreateEntityLogicStorages();
 
@@ -664,9 +648,20 @@ void nox::legacy::World::ExecutePhase(const nox::SystemPhaseType phase_type)
 	const nox::Vector<SystemExecuteNode>& layers = system_phase_table_[nox::util::ToUnderlying(phase_type)];
 	//	フェーズ実行中は即時系の構造変更を禁じる。列挙深度(下位ビット)には触れない。
 	structural_change_state_.fetch_or(k_structural_change_phase_bit, std::memory_order_seq_cst);
+	//	橋渡しした Service は System の後に動かし、Terminate だけは System より先に片付ける
+	if (phase_type == nox::SystemPhaseType::Terminate)
+	{
+		ExecuteBridgedServicePhase(phase_type);
+	}
+
 	for (const SystemExecuteNode& layer : layers)
 	{
 		std::invoke(layer.phase.get().func, &layer.instance.get(), *this);
+	}
+
+	if (phase_type != nox::SystemPhaseType::Terminate)
+	{
+		ExecuteBridgedServicePhase(phase_type);
 	}
 
 	ExecuteUpdaterGraphPhase(phase_type);
@@ -675,6 +670,86 @@ void nox::legacy::World::ExecutePhase(const nox::SystemPhaseType phase_type)
 	//	ここに来た時点で列挙は全て閉じているので、構造を動かしてよい。
 	FlushEntityCommands();
 	structural_change_state_.fetch_and(~k_structural_change_phase_bit, std::memory_order_seq_cst);
+}
+
+void nox::legacy::World::AddSystem(nox::SystemBase* const system)
+{
+	if (system == nullptr)
+	{
+		NOX_ASSERT(false, u8"Systemの生成に失敗しました");
+		return;
+	}
+
+	const nox::reflection::Type& type = system->GetType();
+	if (system_map_.contains(&type))
+	{
+		NOX_ASSERT(false, u8"登録済み: {0}", type.GetTypeName());
+		delete system;
+		return;
+	}
+
+	RegisterSystem(*system);
+	systems_.emplace_back(system);
+}
+
+void nox::legacy::World::AddBridgedService(const BridgedService& service)
+{
+	if (FindBridgedService(service.key) != nullptr)
+	{
+		NOX_ASSERT(false, u8"Serviceが二重に登録されました");
+		service.destroy(service.instance);
+		return;
+	}
+
+	if (bridged_services_.GetLength() >= k_max_bridged_service_count)
+	{
+		NOX_ASSERT(false, u8"Serviceの登録数が上限を超えました");
+		service.destroy(service.instance);
+		return;
+	}
+
+	bridged_services_.PushBack(service);
+}
+
+void* nox::legacy::World::FindBridgedService(const void* const key)const noexcept
+{
+	for (nox::uint32 service_index = 0u; service_index < bridged_services_.GetLength(); ++service_index)
+	{
+		const BridgedService& service = bridged_services_.GetStorage()[service_index];
+		if (service.key == key)
+		{
+			return service.instance;
+		}
+	}
+	return nullptr;
+}
+
+void nox::legacy::World::ExecuteBridgedServicePhase(const nox::SystemPhaseType phase_type)
+{
+	for (nox::uint32 service_index = 0u; service_index < bridged_services_.GetLength(); ++service_index)
+	{
+		const BridgedService& service = bridged_services_.GetStorage()[service_index];
+		void (*phase)(void*, nox::legacy::World&) = nullptr;
+		switch (phase_type)
+		{
+		case nox::SystemPhaseType::Init:
+			phase = service.init;
+			break;
+		case nox::SystemPhaseType::Update:
+			phase = service.update;
+			break;
+		case nox::SystemPhaseType::Terminate:
+			phase = service.terminate;
+			break;
+		default:
+			break;
+		}
+
+		if (phase != nullptr)
+		{
+			phase(service.instance, *this);
+		}
+	}
 }
 
 void nox::legacy::World::CreateEntitySystems()

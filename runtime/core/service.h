@@ -8,11 +8,11 @@
 ///          System / EntityLogic は引数に Service* を書くだけで受け取れる。
 #pragma once
 #include	"updater_node.h"
+#include	"node_descriptor.h"
 
 namespace nox
 {
 	class World;
-	struct NodeDescriptor;
 
 	namespace detail
 	{

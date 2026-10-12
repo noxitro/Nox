@@ -7,6 +7,7 @@
 #include	"core_module.h"
 
 #include	"world_registery.h"
+#include	"world_legacy.h"
 #include	"garbage_collector.h"
 #include	"asset_manager.h"
 #include	"scene_manager.h"
@@ -33,10 +34,10 @@ void nox::CoreModule::Register(nox::WorldRegistery& registry)const
 {
 	registry.Register<
 		nox::SceneManager,
-		nox::GarbageCollector,
+		nox::GarbageCollector
 #if NOX_DEVELOP
-		nox::dev::net::SocketScheduler,
-		nox::dev::editor_remote::EditorRemoteServer
+		, nox::dev::net::SocketScheduler
+		, nox::dev::editor_remote::EditorRemoteServer
 #endif
 	>();
 }

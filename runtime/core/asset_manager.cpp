@@ -99,8 +99,8 @@ const nox::NodeDescriptor& nox::AssetManager::GetNodeDescriptor()noexcept
 	return node_descriptor_v<
 		Register<kInit>,
 #if NOX_DEVELOP
-		Register<kUpdateSendConvertQuery,
-		//nox::RunAfter<nox::dev::editor_remote::EditorRemoteServer::kReceive>
+		Register<kUpdateSendConvertQuery
+		//, nox::RunAfter<nox::dev::editor_remote::EditorRemoteServer::kReceive>
 		>,
 #endif // NOX_DEVELOP
 

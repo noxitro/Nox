@@ -374,28 +374,12 @@ void nox::dev::editor_remote::EditorRemoteServer::CollectRemoteInstances(std::fu
 	}
 }
 
-const nox::dev::editor_remote::EditorRemoteServer::NodeDescriptor& nox::dev::editor_remote::EditorRemoteServer::GetNodeDescriptor()noexcept
+const nox::NodeDescriptor& nox::dev::editor_remote::EditorRemoteServer::GetNodeDescriptor()noexcept
 {
 	return node_descriptor_v<
 		Register<EditorRemoteServer::kPhaseInit>,
 		Register<EditorRemoteServer::kPhaseUpdate>,
 		Register<EditorRemoteServer::kPhaseTerminate>
 		>;
-}
-
-std::span<const nox::SystemBase::PhaseRegister> nox::dev::editor_remote::EditorRemoteServer::GetPhaseRegisterList()const noexcept
-{
-	static constexpr auto table = std::to_array({
-		PhaseRegister(k_phase_init, nox::dev::net::SocketScheduler::k_phase_init),
-		PhaseRegister(k_phase_update, 
-			{nox::dev::net::SocketScheduler::k_phase_socket_update}
-			),
-		PhaseRegister(k_phase_terminate,
-			{},
-			{nox::dev::net::SocketScheduler::k_phase_terminate}
-			)
-	});
-
-	return table;
 }
 #endif // NOX_DEVELOP

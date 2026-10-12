@@ -30,7 +30,7 @@ namespace nox
 	}
 
 	class Asset;
-	template<class>
+	template<std::derived_from<nox::Asset> T>
 	struct AssetHandle;
 	namespace detail
 	{
@@ -106,7 +106,7 @@ namespace nox
 
 		bool is_resource_class_cache_built_ = false;
 		mutable nox::ReadWriteLock rw_lock_;
-		nox::ReadWriteLock load_queue_rw_lock_;
+		mutable nox::ReadWriteLock load_queue_rw_lock_;
 		mutable std::counting_semaphore<> load_queue_signal_;
 
 		nox::Thread load_thread_;

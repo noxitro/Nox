@@ -15,6 +15,6 @@ namespace nox::hid
 		~Module()noexcept = default;
 
 	private:
-		void CreateEngineSystems(nox::PmrVector<nox::SystemBase*>& out)const override;
+		void Register(nox::WorldRegistery& registry)const override;
 	};
 }

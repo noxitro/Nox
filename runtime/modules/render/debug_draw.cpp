@@ -23,17 +23,11 @@ void nox::render::debug::DebugDraw::Terminate(nox::legacy::World& world)
 
 std::span<const nox::SystemBase::PhaseRegister> nox::render::debug::DebugDraw::GetPhaseRegisterList()const noexcept
 {
+	//	TODO: Renderer が Service へ移ったので、Renderer との前後関係は新しい World の RunAfter / RunBefore で書き直す
 	static constexpr auto table = std::array{
-		PhaseRegister{
-			DebugDraw::kPhaseInit,
-		{	nox::render::Renderer::kPhaseInit } },
-
-		PhaseRegister{ DebugDraw::kPhaseUpdate,
-		{},
-		{nox::render::Renderer::kPhaseUpdate } },
-
-		PhaseRegister{ DebugDraw::kPhaseTerminate,
-		{nox::render::Renderer::kPhaseTerminate } }
+		PhaseRegister(DebugDraw::kPhaseInit),
+		PhaseRegister(DebugDraw::kPhaseUpdate),
+		PhaseRegister(DebugDraw::kPhaseTerminate)
 	};
 	return table;
 }

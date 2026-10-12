@@ -5,6 +5,15 @@
 ///	@brief	world_registery
 #pragma once
 
+namespace nox::legacy
+{
+	class World;
+
+	/// @brief	TODO: 新しい World が Service を実行するまでの暫定。定義は world_legacy.h
+	template<class T>
+	void AddRegisteredType(nox::legacy::World& world);
+}
+
 namespace nox
 {
 	struct NodeDescriptor;
@@ -13,8 +22,10 @@ namespace nox
 	class WorldRegistery final
 	{
 	public:
-		inline constexpr explicit WorldRegistery(nox::PmrVector<const nox::NodeDescriptor*>& node_descriptors)noexcept
+		/// @param legacy_world	登録した型を legacy::World でも生成するときに渡す。TODO: legacy::World と一緒に消す
+		inline constexpr explicit WorldRegistery(nox::PmrVector<const nox::NodeDescriptor*>& node_descriptors, nox::legacy::World* const legacy_world = nullptr)noexcept
 			: node_descriptors_(node_descriptors)
+			, legacy_world_(legacy_world)
 		{
 		}
 
@@ -25,6 +36,11 @@ namespace nox
 			if constexpr (requires { T::GetNodeDescriptor(); })
 			{
 				node_descriptors_.emplace_back(&T::GetNodeDescriptor());
+			}
+
+			if (legacy_world_ != nullptr)
+			{
+				nox::legacy::AddRegisteredType<T>(*legacy_world_);
 			}
 		}
 
@@ -38,5 +54,6 @@ namespace nox
 
 	private:
 		nox::PmrVector<const nox::NodeDescriptor*>& node_descriptors_;
+		nox::legacy::World* legacy_world_;
 	};
 }

@@ -67,7 +67,7 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::SyncQuery::Execute(nox::legacy::World& world, std::span<nox::uint8> storage)const
 {
-	nox::dev::editor_remote::EditorRemoteServer& server = world.GetSystem<nox::dev::editor_remote::EditorRemoteServer>();
+	nox::dev::editor_remote::EditorRemoteServer& server = world.GetBridgedService<nox::dev::editor_remote::EditorRemoteServer>();
 	const nox::int64 remote_instance_id = GetRemoteInstanceId();
 	NOX_ASSERT(remote_instance_id > 0, u"Editor owned remote instance id must be positive. id:{0}", remote_instance_id);
 	auto response = nox::PlacementObject<nox::dev::editor_remote::SyncResponse>::Construct(storage);
@@ -127,7 +127,7 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::AddEntityNodeQuery::Execute(nox::legacy::World& world, std::span<nox::uint8> storage)const
 {
-	//nox::dev::editor_remote::EditorRemoteServer& server = world.GetSystem<nox::dev::editor_remote::EditorRemoteServer>();
+	//nox::dev::editor_remote::EditorRemoteServer& server = world.GetBridgedService<nox::dev::editor_remote::EditorRemoteServer>();
 	//nox::SceneNode& main_scene = world.GetSystem<nox::SceneManager>().GetMainScene();
 	//const nox::int64 remote_instance_id = GetRemoteInstanceId();
 	//NOX_ASSERT(remote_instance_id > 0, u"Editor owned EntityNode id must be positive. id:{0}", remote_instance_id);
@@ -170,7 +170,7 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::AddComponentQuery::Execute(nox::legacy::World& world, std::span<nox::uint8> storage)const
 {
-	/*nox::dev::editor_remote::EditorRemoteServer& server = world.GetSystem<nox::dev::editor_remote::EditorRemoteServer>();
+	/*nox::dev::editor_remote::EditorRemoteServer& server = world.GetBridgedService<nox::dev::editor_remote::EditorRemoteServer>();
 	const nox::int64 remote_instance_id = GetRemoteInstanceId();
 	NOX_ASSERT(remote_instance_id > 0, u"Editor owned Component id must be positive. id:{0}", remote_instance_id);
 	auto response = nox::PlacementObject<nox::dev::editor_remote::AddComponentResponse>::Construct(storage);
@@ -224,7 +224,7 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::DestroyEntityNodeQuery::Execute(nox::legacy::World& world, std::span<nox::uint8>)const
 {
-	/*nox::dev::editor_remote::EditorRemoteServer& server = world.GetSystem<nox::dev::editor_remote::EditorRemoteServer>();
+	/*nox::dev::editor_remote::EditorRemoteServer& server = world.GetBridgedService<nox::dev::editor_remote::EditorRemoteServer>();
 	nox::Object* const object = server.FindRemoteInstance(GetRemoteInstanceId());
 	if (object == nullptr)
 	{
@@ -247,7 +247,7 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::AutoSyncQuery::Execute(nox::legacy::World& world, std::span<nox::uint8> storage)const
 {
-	nox::dev::editor_remote::EditorRemoteServer& server = world.GetSystem<nox::dev::editor_remote::EditorRemoteServer>();
+	nox::dev::editor_remote::EditorRemoteServer& server = world.GetBridgedService<nox::dev::editor_remote::EditorRemoteServer>();
 	auto response = nox::PlacementObject<nox::dev::editor_remote::AutoSyncResponse>::Construct(storage);
 	response->SetRemoteInstanceId(GetRemoteInstanceId());
 
@@ -268,7 +268,7 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::InvokeRuntimeActionQuery::Execute(nox::legacy::World& world, std::span<nox::uint8> storage)const
 {
-	nox::dev::editor_remote::EditorRemoteServer& server = world.GetSystem<nox::dev::editor_remote::EditorRemoteServer>();
+	nox::dev::editor_remote::EditorRemoteServer& server = world.GetBridgedService<nox::dev::editor_remote::EditorRemoteServer>();
 	auto response = nox::PlacementObject<nox::dev::editor_remote::InvokeRuntimeActionResponse>::Construct(storage);
 	response->SetRemoteInstanceId(GetRemoteInstanceId());
 
@@ -333,7 +333,7 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote::GetRemoteInstanceSnapshotQuery::Execute(nox::legacy::World& world, std::span<nox::uint8> storage)const
 {
 	auto response = nox::PlacementObject<nox::dev::editor_remote::RemoteInstanceSnapshotResponse>::Construct(storage);
-	nox::dev::editor_remote::EditorRemoteServer& server = world.GetSystem<nox::dev::editor_remote::EditorRemoteServer>();
+	nox::dev::editor_remote::EditorRemoteServer& server = world.GetBridgedService<nox::dev::editor_remote::EditorRemoteServer>();
 
 	std::u8string text;
 	text.reserve(3072);
