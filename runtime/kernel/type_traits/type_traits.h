@@ -21,13 +21,13 @@ namespace nox
 	/// @brief 非型テンプレートパラメータを推論するためのタグ
 	/// @tparam Value 非型テンプレートパラメータ
 	template<auto Value>
-	struct NontypeTag
+	struct nontype_tag
 	{
-		inline consteval explicit NontypeTag()noexcept = default;
+		inline consteval explicit nontype_tag()noexcept = default;
 	};
 
 	template<auto Value>
-	constexpr nox::NontypeTag<Value> Nontype{};
+	constexpr nox::nontype_tag<Value> nontype{};
 
 
 	/// @brief new可能か

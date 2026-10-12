@@ -692,7 +692,7 @@ namespace nox
 		}
 
 		template<auto _MemberPointerValue, class _InstanceType>
-		inline constexpr bool Equal(std::pair<nox::NontypeTag<_MemberPointerValue>, _InstanceType>&& args)const noexcept
+		inline constexpr bool Equal(std::pair<nox::nontype_tag<_MemberPointerValue>, _InstanceType>&& args)const noexcept
 		{
 			const nox::NontypeId& member_pointer_id = this->GetCallable().GetMemberPointerId();
 			const nox::reflection::Type& self_instance_type = this->GetCallable().GetInstanceTypeInfo();
@@ -840,7 +840,7 @@ namespace nox
 		template<auto _MemberPointerValue, class _Instance>	requires(
 			nox::DelegateBase<_FunctionType>::template kDelegateRequiresMemberFunctionPointerImpl<_MemberPointerValue, _Instance, _Size, _Alignment>
 			)
-		inline constexpr Delegate(nox::NontypeTag<_MemberPointerValue>, _Instance&& instance)noexcept
+		inline constexpr Delegate(nox::nontype_tag<_MemberPointerValue>, _Instance&& instance)noexcept
 		{
 			this->template BindImplFast<typename nox::DelegateBase<_FunctionType>::template CallableMember<_Instance, _MemberPointerValue>>(std::forward<_Instance>(instance));
 		}
@@ -861,17 +861,17 @@ namespace nox
 			//	is invocable
 			std::is_same_v<nox::function_result_t<_FunctionType>, nox::invoke_result_with_tuple_like_t<decltype(_MemberPointerValue), nox::tuple_cat_t<_Instance, nox::function_args_tuple_t<_FunctionType>>>>
 				)
-			inline constexpr Delegate(nox::NontypeTag<_MemberPointerValue>, _Instance&& instance)noexcept
+			inline constexpr Delegate(nox::nontype_tag<_MemberPointerValue>, _Instance&& instance)noexcept
 		{
 			this->template BindImplFast<typename nox::DelegateBase<_FunctionType>::template CallableMember<_Instance, _MemberPointerValue>>(std::forward<_Instance>(instance));
 		}
 
 		template<auto _MemberPointerValue, class _Instance>
 			requires(
-				std::is_constructible_v<Delegate<_FunctionType, _Size, _Alignment>, nox::NontypeTag<_MemberPointerValue>, _Instance>
+				std::is_constructible_v<Delegate<_FunctionType, _Size, _Alignment>, nox::nontype_tag<_MemberPointerValue>, _Instance>
 			)
-		inline constexpr Delegate(std::pair<nox::NontypeTag<_MemberPointerValue>, _Instance>&& args)noexcept:
-			Delegate(nox::Nontype<_MemberPointerValue>, std::forward<_Instance>(args.second))
+		inline constexpr Delegate(std::pair<nox::nontype_tag<_MemberPointerValue>, _Instance>&& args)noexcept:
+			Delegate(nox::nontype<_MemberPointerValue>, std::forward<_Instance>(args.second))
 		{
 			
 		}
@@ -951,9 +951,9 @@ namespace nox
 
 		template<auto _MemberPointerValue, class _Instance>
 		requires(
-			std::is_constructible_v<Delegate<_FunctionType, _Size, _Alignment>, nox::NontypeTag<_MemberPointerValue>, _Instance>
+			std::is_constructible_v<Delegate<_FunctionType, _Size, _Alignment>, nox::nontype_tag<_MemberPointerValue>, _Instance>
 			)
-		inline constexpr Delegate& operator=(std::pair<nox::NontypeTag<_MemberPointerValue>, _Instance>&& args)noexcept
+		inline constexpr Delegate& operator=(std::pair<nox::nontype_tag<_MemberPointerValue>, _Instance>&& args)noexcept
 		{
 			this->template BindImpl<typename nox::DelegateBase<_FunctionType>::template CallableMember<_Instance, _MemberPointerValue>>(std::forward<_Instance>(args.second));
 			return *this;
@@ -1094,7 +1094,7 @@ namespace nox
 			//	is invocable
 			std::is_same_v<nox::function_result_t<_FunctionType>, nox::invoke_result_with_tuple_like_t<decltype(_MemberPointerValue), nox::tuple_cat_t<_InstanceType, nox::function_args_tuple_t<_FunctionType>>>>
 			)
-		inline constexpr DelegateRef(nox::NontypeTag<_MemberPointerValue>, _InstanceType&& instance)noexcept:
+		inline constexpr DelegateRef(nox::nontype_tag<_MemberPointerValue>, _InstanceType&& instance)noexcept:
 			object_(const_cast<void*>(static_cast<const void*>(nox::util::AddressOfLvalueReference(instance)))),
 			call_(&MemberCall<_InstanceType, _MemberPointerValue>)
 		{
@@ -1113,7 +1113,7 @@ namespace nox
 					//	is invocable
 					std::is_same_v<nox::function_result_t<_FunctionType>, nox::invoke_result_with_tuple_like_t<decltype(_MemberPointerValue), nox::tuple_cat_t<_InstanceType, nox::function_args_tuple_t<_FunctionType>>>>
 			)
-			inline constexpr DelegateRef(nox::NontypeTag<_MemberPointerValue>, _InstanceType&& instance)noexcept :
+			inline constexpr DelegateRef(nox::nontype_tag<_MemberPointerValue>, _InstanceType&& instance)noexcept :
 			object_(const_cast<void*>(static_cast<const void*>(nox::util::AddressOfLvalueReference(instance)))),
 			call_(&MemberCall<_InstanceType, _MemberPointerValue>)
 		{
@@ -1123,10 +1123,10 @@ namespace nox
 		template<auto MemberPointerValue, class _InstanceType>
 			requires(
 				std::is_lvalue_reference_v<_InstanceType> || std::is_pointer_v<_InstanceType> &&
-				std::is_constructible_v<DelegateRef<_FunctionType>, nox::NontypeTag<MemberPointerValue>, _InstanceType>
+				std::is_constructible_v<DelegateRef<_FunctionType>, nox::nontype_tag<MemberPointerValue>, _InstanceType>
 			)
-			inline constexpr DelegateRef(std::pair<nox::NontypeTag<MemberPointerValue>, _InstanceType>&& args)noexcept :
-			DelegateRef(nox::Nontype<MemberPointerValue>, std::forward<_InstanceType>(args.second))
+			inline constexpr DelegateRef(std::pair<nox::nontype_tag<MemberPointerValue>, _InstanceType>&& args)noexcept :
+			DelegateRef(nox::nontype<MemberPointerValue>, std::forward<_InstanceType>(args.second))
 		{
 		}
 	
@@ -1175,9 +1175,9 @@ namespace nox
 		/// @brief メンバ関数ポインタ or メンバ関数オブジェクト
 		template<auto MemberPointerValue, class _InstanceType> 
 		requires(
-			std::is_constructible_v<DelegateRef<_FunctionType>, nox::NontypeTag<MemberPointerValue>, _InstanceType>
+			std::is_constructible_v<DelegateRef<_FunctionType>, nox::nontype_tag<MemberPointerValue>, _InstanceType>
 			)
-			inline constexpr DelegateRef& operator=(std::pair<nox::NontypeTag<MemberPointerValue>, _InstanceType>&& args)noexcept
+			inline constexpr DelegateRef& operator=(std::pair<nox::nontype_tag<MemberPointerValue>, _InstanceType>&& args)noexcept
 		{
 			object_ = const_cast<void*>(static_cast<const void*>(nox::util::AddressOfLvalueReference(args.second)));
 			call_ = &MemberCall<_InstanceType, MemberPointerValue>;
@@ -1336,7 +1336,7 @@ namespace nox
 		}
 
 	/*	template<auto _MemberPointerValue, class _F>
-		inline constexpr MulticastDelegate& operator+=(std::pair<nox::NontypeTag<_MemberPointerValue>, _F>&& args)noexcept
+		inline constexpr MulticastDelegate& operator+=(std::pair<nox::nontype_tag<_MemberPointerValue>, _F>&& args)noexcept
 		{
 			delegate_list_.emplace_back(args);
 			return *this;

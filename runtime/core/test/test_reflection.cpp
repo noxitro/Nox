@@ -150,7 +150,7 @@ void nox::test::TestReflection()
 		char buffer[sizeof(LC2)]{ 0 };
 		lc3 = std::construct_at(reinterpret_cast<LC2*>(buffer), lc2Ref.value_);
 
-		delegate = std::make_pair(nox::Nontype<&LC::Func>, LC(123));
+		delegate = std::make_pair(nox::nontype<&LC::Func>, LC(123));
 
 		constexpr bool eaa = std::is_same<void(LC2::*)()&, void(LC2::*)()>::value;
 
@@ -169,12 +169,12 @@ void nox::test::TestReflection()
 ////	using t = nox::util::ToAddressType<LocalClass>;
 ////	nox::invoke_result_with_tuple_like_t<decltype(&LocalClass::Func), nox::tuple_cat_t<t, std::tuple<>>>;
 //
-//	decltype(auto) p = std::make_pair(nox::Nontype<&LocalClass::Func>, local_class);
+//	decltype(auto) p = std::make_pair(nox::nontype<&LocalClass::Func>, local_class);
 //	using t2 = typename decltype(p)::second_type;
 //
 //	nox::Delegate<int(), 32> delegate2 = nullptr;
 //	nox::util::TryToAddress(local_class);
-//	delegate2 = std::make_pair(nox::Nontype<&LocalClass::Func>, std::ref(local_class));
+//	delegate2 = std::make_pair(nox::nontype<&LocalClass::Func>, std::ref(local_class));
 //	auto n3 = delegate2;
 //	auto n = delegate2();
 
