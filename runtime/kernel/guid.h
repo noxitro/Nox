@@ -12,7 +12,7 @@
 
 namespace nox
 {
-	struct Guid
+	struct Guid final
 	{
 	public:
 		// 生成・初期化
