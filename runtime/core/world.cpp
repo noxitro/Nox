@@ -136,7 +136,7 @@ void nox::World::Init()
 	//	TODO:全moduleを収集してるので、今後直す
 	nox::reflection::ForeachDerivedClassInfoList(
 		nox::reflection::Typeof<nox::EngineModule>(),
-		[&node_descriptors ,&registery](const nox::reflection::ClassInfo& class_info)
+		[&registery](const nox::reflection::ClassInfo& class_info)
 		{
 			//alignas(nox::EngineModule) std::array<std::byte, 256> buffer{};
 
@@ -147,8 +147,6 @@ void nox::World::Init()
 			//	updatergraphへ追加
 
 			delete module;
-
-			node_descriptors.GetContainer().clear();
 		});
 }
 

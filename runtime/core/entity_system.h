@@ -79,6 +79,26 @@ namespace nox
 			std::is_base_of_v<nox::detail::EntitySystemBase, T>;
 	}
 
+	namespace detail
+	{
+		/// @brief	EntitySystem の OnUpdate / OnAdd / OnRemove が、外 (登録する側) からも見えるか確かめる
+		template<nox::concepts::EntitySystem T>
+		struct EcsAccessVerifier<T> final
+		{
+			/// @param	Probe	クラスの中から見たメソッドの有無を返すラムダ (NOX_ECS_DECLARE_VERIFY が渡す)
+			template<class Probe>
+			static consteval bool Verify(Probe)noexcept
+			{
+				using enum nox::detail::updater_graph::NodeTrigger;
+				constexpr nox::detail::EcsDeclaredMethods declared = Probe{}(std::type_identity<T>{});
+				static_assert(declared.has_update == (std::is_null_pointer_v<decltype(nox::detail::GetEntitySystemMethod<T, Update>())> == false), "OnUpdate must be public");
+				static_assert(declared.has_add == (std::is_null_pointer_v<decltype(nox::detail::GetEntitySystemMethod<T, Add>())> == false), "OnAdd must be public");
+				static_assert(declared.has_remove == (std::is_null_pointer_v<decltype(nox::detail::GetEntitySystemMethod<T, Remove>())> == false), "OnRemove must be public");
+				return true;
+			}
+		};
+	}
+
 	/// @brief		ECSのSystemの基底
 	/// @details	static の OnUpdate / OnAdd / OnRemove を public に定義すると、定義したものだけが自動で登録される (RegisterList は書かない)
 	/// @tparam T
