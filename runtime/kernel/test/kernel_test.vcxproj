@@ -15,6 +15,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="guid_vectors.inc" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>

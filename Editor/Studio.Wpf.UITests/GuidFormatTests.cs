@@ -1,6 +1,7 @@
 // Copyright (c) 2023-2026 noxitro
 // SPDX-License-Identifier: MIT
 
+using System.Text.RegularExpressions;
 using Xunit;
 
 namespace Studio.Wpf.UITests;
@@ -9,40 +10,96 @@ namespace Studio.Wpf.UITests;
 /// System.Guid のバイト列と文字列の形が、Runtime の nox::Guid と一致することを確かめる。
 /// </summary>
 /// <remarks>
-/// 同じ値を runtime/kernel/test/guid_test.cpp でも確かめている。値を変えるときは両方を直す。
-/// メタファイルの GUID は ToString("N") で書いている (Core/AssetManager.cs)。
+/// 値は runtime/kernel/test/guid_vectors.inc にあり、Runtime の kernel_test (guid_test.cpp) も同じファイルを読む。
+/// 保存データと通信には "D" の形を書く。読むときは "D" と "N" を受け付け、大文字と小文字を区別しない。
 /// UI を動かさないテストだが、Editor の C# のテストのプロジェクトがここだけなので置いている。
 /// </remarks>
-public sealed class GuidFormatTests
+public sealed partial class GuidFormatTests
 {
-	public static TheoryData<byte[], string, string> Vectors => new()
+	private const string VectorsRelativePath = "runtime/kernel/test/guid_vectors.inc";
+
+	[GeneratedRegex("""^NOX_GUID_VECTOR\("([0-9a-f]{32})",\s*"([^"]*)",\s*"([^"]*)"\)""", RegexOptions.Multiline)]
+	private static partial Regex VectorPattern();
+
+	[GeneratedRegex("""^NOX_GUID_INVALID\("([^"]*)"\)""", RegexOptions.Multiline)]
+	private static partial Regex InvalidPattern();
+
+	public static TheoryData<string, string, string> Vectors()
 	{
-		// data1 / data2 / data3 のバイトの並び (リトルエンディアン) を取り違えると、文字列の前半が入れ替わる値
+		TheoryData<string, string, string> data = new();
+		foreach (Match match in VectorPattern().Matches(ReadVectorsFile()))
 		{
-			new byte[] { 0x33, 0x22, 0x11, 0x00, 0x55, 0x44, 0x77, 0x66, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff },
-			"00112233-4455-6677-8899-aabbccddeeff",
-			"00112233445566778899aabbccddeeff"
-		},
+			data.Add(match.Groups[1].Value, match.Groups[2].Value, match.Groups[3].Value);
+		}
+		return data;
+	}
+
+	public static TheoryData<string> InvalidTexts()
+	{
+		TheoryData<string> data = new();
+		foreach (Match match in InvalidPattern().Matches(ReadVectorsFile()))
 		{
-			new byte[] { 0x64, 0x5f, 0xa8, 0x3f, 0x17, 0x57, 0x62, 0x45, 0xb3, 0xfc, 0x2c, 0x96, 0x3f, 0x66, 0xaf, 0xa6 },
-			"3fa85f64-5717-4562-b3fc-2c963f66afa6",
-			"3fa85f6457174562b3fc2c963f66afa6"
-		},
-		{
-			new byte[16],
-			"00000000-0000-0000-0000-000000000000",
-			"00000000000000000000000000000000"
-		},
-	};
+			data.Add(match.Groups[1].Value);
+		}
+		return data;
+	}
+
+	[Fact]
+	public void VectorsAreLoaded()
+	{
+		// 正規表現の書き間違いで 0 件になっても Theory は素通りしてしまうので件数を確かめる
+		Assert.True(VectorPattern().Matches(ReadVectorsFile()).Count >= 3);
+		Assert.True(InvalidPattern().Matches(ReadVectorsFile()).Count >= 5);
+	}
 
 	[Theory]
 	[MemberData(nameof(Vectors))]
-	public void FormatsMatchRuntimeNoxGuid(byte[] bytes, string hyphenated, string compact)
+	public void FormatsMatchRuntimeNoxGuid(string bytesHex, string hyphenated, string compact)
 	{
+		byte[] bytes = Convert.FromHexString(bytesHex);
 		var guid = new Guid(bytes);
 		Assert.Equal(hyphenated, guid.ToString("D"));
+		Assert.Equal(hyphenated, guid.ToString());
 		Assert.Equal(compact, guid.ToString("N"));
-		Assert.Equal(bytes, Guid.Parse(compact).ToByteArray());
-		Assert.Equal(bytes, Guid.Parse(hyphenated).ToByteArray());
+		Assert.Equal(bytes, guid.ToByteArray());
+	}
+
+	[Theory]
+	[MemberData(nameof(Vectors))]
+	public void ParseAcceptsHyphenatedAndCompactInAnyCase(string bytesHex, string hyphenated, string compact)
+	{
+		byte[] bytes = Convert.FromHexString(bytesHex);
+		foreach (string text in new[] { hyphenated, compact, hyphenated.ToUpperInvariant(), compact.ToUpperInvariant() })
+		{
+			Assert.True(TryParseLikeRuntime(text, out Guid parsed), text);
+			Assert.Equal(bytes, parsed.ToByteArray());
+		}
+	}
+
+	[Theory]
+	[MemberData(nameof(InvalidTexts))]
+	public void ParseRejectsOtherForms(string text)
+	{
+		Assert.False(TryParseLikeRuntime(text, out _), $"[{text}]");
+	}
+
+	/// <summary>Runtime の nox::Guid::TryParse と同じものを受け付ける読み方。</summary>
+	private static bool TryParseLikeRuntime(string text, out Guid guid)
+	{
+		return Guid.TryParseExact(text, "D", out guid) || Guid.TryParseExact(text, "N", out guid);
+	}
+
+	private static string ReadVectorsFile()
+	{
+		for (DirectoryInfo? directory = new(AppContext.BaseDirectory); directory != null; directory = directory.Parent)
+		{
+			string path = Path.Combine(directory.FullName, VectorsRelativePath);
+			if (File.Exists(path))
+			{
+				return File.ReadAllText(path);
+			}
+		}
+
+		throw new FileNotFoundException($"{VectorsRelativePath} が、テストの出力先から上のどのフォルダにも見つかりません。");
 	}
 }

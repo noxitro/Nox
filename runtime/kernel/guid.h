@@ -5,6 +5,8 @@
 ///	@brief	guid
 #pragma once
 #include <array>
+#include <optional>
+#include <string_view>
 #include "basic_type.h"
 #include "nox_string.h"
 #include "type_traits/concepts.h"
@@ -87,7 +89,8 @@ namespace nox
 			return dest;
 		}
 
-		/// @brief ハイフン付きの小文字 36 文字。System.Guid の ToString("D") と同じ
+		/// @brief		ハイフン付きの小文字 36 文字。System.Guid の ToString("D") と同じ
+		/// @details	保存データと Editor との通信には、この形を書く
 		template<nox::concepts::Char T>
 		inline constexpr std::basic_string_view<T> ToString(std::array<T, 36>& dest)const noexcept
 		{
@@ -95,13 +98,81 @@ namespace nox
 		}
 
 		/// @brief		ハイフン無しの小文字 32 文字 ("00112233445566778899aabbccddeeff")。System.Guid の ToString("N") と同じ
-		/// @details	Editor はメタファイルの GUID をこの形で書く
+		/// @details	保存データには ToString の形 ("D") を書く。この形は、今のメタファイルなど既存のデータとの互換のために残す
 		template<nox::concepts::Char T>
 		inline constexpr std::basic_string_view<T> ToStringCompact(std::array<T, 32>& dest)const noexcept
 		{
 			return this->ToStringImpl<T>(std::span<T>{ dest }, false);
 		}
+
+		/// @brief		文字列から作る
+		/// @details	"D" (ハイフン付き 36 文字) と "N" (ハイフン無し 32 文字) を受け付け、英字の大文字と小文字は区別しない。
+		///				System.Guid の TryParseExact(text, "D") / TryParseExact(text, "N") と同じものを受け付ける
+		///				(波括弧や空白を含む形は受け付けない)。一致は guid_vectors.inc を両側のテストが読んで確かめている
+		/// @return		形が正しくなければ std::nullopt
+		template<nox::concepts::Char T>
+		static inline constexpr std::optional<nox::Guid> TryParse(std::basic_string_view<T> text)noexcept
+		{
+			const bool is_hyphenated = text.size() == 36;
+			if (!is_hyphenated && text.size() != 32)
+			{
+				return std::nullopt;
+			}
+
+			//	文字列の並び (data1 / data2 / data3 は上位のバイトから) のまま 16 byte を読む
+			std::array<nox::uint8, 16> digits{};
+			std::size_t p = 0;
+			for (std::size_t i = 0; i < digits.size(); ++i)
+			{
+				if (is_hyphenated && (i == 4 || i == 6 || i == 8 || i == 10))
+				{
+					if (text[p] != static_cast<T>(0x2D))	// '-'
+					{
+						return std::nullopt;
+					}
+					++p;
+				}
+				const int high = HexValue(text[p]);
+				const int low = HexValue(text[p + 1]);
+				if (high < 0 || low < 0)
+				{
+					return std::nullopt;
+				}
+				digits[i] = static_cast<nox::uint8>((high << 4) | low);
+				p += 2;
+			}
+
+			nox::Guid guid;
+			guid.data1 = (static_cast<nox::uint32>(digits[0]) << 24) | (static_cast<nox::uint32>(digits[1]) << 16)
+				| (static_cast<nox::uint32>(digits[2]) << 8) | static_cast<nox::uint32>(digits[3]);
+			guid.data2 = static_cast<nox::uint16>((digits[4] << 8) | digits[5]);
+			guid.data3 = static_cast<nox::uint16>((digits[6] << 8) | digits[7]);
+			for (std::size_t i = 0; i < 8; ++i)
+			{
+				guid.data4[i] = digits[8 + i];
+			}
+			return guid;
+		}
 	private:
+		/// @brief 16 進の 1 文字の値。16 進でなければ -1
+		template<nox::concepts::Char T>
+		static constexpr int HexValue(T c)noexcept
+		{
+			if (c >= static_cast<T>(0x30) && c <= static_cast<T>(0x39))	// '0'-'9'
+			{
+				return static_cast<int>(c - static_cast<T>(0x30));
+			}
+			if (c >= static_cast<T>(0x61) && c <= static_cast<T>(0x66))	// 'a'-'f'
+			{
+				return static_cast<int>(c - static_cast<T>(0x61)) + 10;
+			}
+			if (c >= static_cast<T>(0x41) && c <= static_cast<T>(0x46))	// 'A'-'F'
+			{
+				return static_cast<int>(c - static_cast<T>(0x41)) + 10;
+			}
+			return -1;
+		}
+
 		template<class T>
 		static constexpr T hex_nibble(nox::uint8 n)noexcept
 		{
