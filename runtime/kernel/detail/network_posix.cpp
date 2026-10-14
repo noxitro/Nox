@@ -7,5 +7,10 @@
 #include	"../network.h"
 
 #if NOX_LINUX || NOX_ANDROID || NOX_MACOS
+//	TODO: POSIX 版を実装する (network.h の関数すべて)
+#endif // NOX_LINUX || NOX_ANDROID || NOX_MACOS
+
+
+#if NOX_LINUX || NOX_ANDROID || NOX_MACOS
 //TODO: POSIX系のソケットAPIを実装する
 #endif // NOX_LINUX || NOX_ANDROID || NOX_MACOS

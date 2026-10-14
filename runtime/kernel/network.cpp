@@ -6,11 +6,4 @@
 #include	"pch.h"
 #include	"network.h"
 
-#include    "win64_socket.h"
-#include    "assertion.h"
-#include    "string_format.h"
-
-namespace
-{
-    
-}
+//	OS ごとの実装は detail/network_<os>.cpp に置く。ここには OS に依らないものだけを書く

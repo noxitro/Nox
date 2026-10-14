@@ -7,6 +7,7 @@
 #include	<expected>
 #include	<span>
 #include	<string_view>
+#include	<type_traits>
 #include	"basic_type.h"
 #include	"basic_definition.h"
 
@@ -42,7 +43,7 @@ namespace nox::os::network
 		Both,
 	};
 
-	enum class ReceiveFlag : nox::int32 
+	enum class ReceiveFlag : nox::uint32
 	{
 		None = 0,
 		Peek = 1 << 0,
@@ -67,6 +68,10 @@ namespace nox::os::network
 		HangUp = 1 << 3,
 		Invalid = 1 << 4,
 	};
+
+	NOX_ENABLE_ENUM_CLASS_FLAG(nox::os::network::SendFlag)
+	NOX_ENABLE_ENUM_CLASS_FLAG(nox::os::network::ReceiveFlag)
+	NOX_ENABLE_ENUM_CLASS_FLAG(nox::os::network::PollEvent)
 
 	///	@brief	ソケット操作のエラー。OS のエラーコード (WSAGetLastError / errno) から変換する
 	enum class Error : nox::uint8
@@ -99,12 +104,6 @@ namespace nox::os::network
 	{
 		Blocking,
 		NonBlocking,
-	};
-
-	struct AcceptedSocket final
-	{
-		nox::os::network::Socket socket;
-		nox::os::network::EndPoint remote;
 	};
 
 	/// @brief 0~65535 の範囲のポート番号
@@ -166,6 +165,14 @@ namespace nox::os::network
 		}
 	};
 
+	///	@brief	Accept の結果。相手のアドレスは accept が返すものをそのまま使う
+	///	@details	後から getpeername で取ると、相手がすぐ切断していると失敗するため
+	struct AcceptedSocket final
+	{
+		nox::os::network::Socket socket;
+		nox::os::network::EndPoint remote;
+	};
+
 	///	@brief		送受信の結果
 	///	@details	TCP の Receive で bytes == 0 かつ error == None は、相手が送信を閉じたことを表す。
 	struct [[nodiscard]] IoResult final
@@ -208,7 +215,8 @@ namespace nox::os::network
 	/// @param protocol 
 	/// @return 
 	[[nodiscard]] std::expected<nox::os::network::Socket, nox::os::network::Error> CreateSocket(nox::os::network::IpFamily family, nox::os::network::Protocol protocol)noexcept;
-	[[nodiscard]] std::expected<nox::os::network::AcceptedSocket, nox::os::network::Error> Accept(nox::os::network::Socket listener) noexcept;
+	///	@param	mode	受けたソケットのモード。待ち受け側の設定を引き継ぐかは OS ごとに違うので、明示して揃える
+	[[nodiscard]] std::expected<nox::os::network::AcceptedSocket, nox::os::network::Error> Accept(nox::os::network::Socket listener, nox::os::network::SocketMode mode) noexcept;
 	[[nodiscard]] std::expected<nox::os::network::EndPoint, nox::os::network::Error> GetLocalEndPoint(nox::os::network::Socket socket) noexcept;
 	[[nodiscard]] std::expected<nox::os::network::EndPoint, nox::os::network::Error> GetRemoteEndPoint(nox::os::network::Socket socket) noexcept;
 
