@@ -74,6 +74,7 @@
 #include	"clipboard.h"
 #include	"window.h"
 #include	"io/file.h"
+#include	"network.h"
 
 #include	"platform_type.h"
 //	end os

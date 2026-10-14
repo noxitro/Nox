@@ -566,6 +566,12 @@
     <ClCompile Include="file_system.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="detail\network_posix.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="detail\network_win64.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
     <ClCompile Include="network.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>

@@ -715,6 +715,8 @@
     </ClCompile>
     <ClCompile Include="detail\file_win64.cpp" />
     <ClCompile Include="detail\mutex_win64.cpp" />
+    <ClCompile Include="detail\network_posix.cpp" />
+    <ClCompile Include="detail\network_win64.cpp" />
     <ClCompile Include="detail\read_write_lock_win64.cpp">
       <SubType>
       </SubType>
