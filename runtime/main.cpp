@@ -35,6 +35,8 @@
 
 #endif // NOX_WIN64
 
+//	Windows のエントリポイントなので Windows.h を直接読む (OS の API を包むヘッダーは個別に include してよい)
+#include	"kernel/win64_api.h"
 #include	<shellapi.h>
 
 int WINAPI wWinMain(_In_ ::HINSTANCE /*hInstance*/, _In_opt_ ::HINSTANCE, _In_ LPWSTR /*lpCmdLine*/, _In_ int /*nCmdShow*/)

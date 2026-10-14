@@ -49,7 +49,7 @@ namespace nox::os::network
 				return nox::os::network::Error::None;
 			case WSAEWOULDBLOCK:
 				return nox::os::network::Error::WouldBlock;
-			case WSAEINPROGRESS:
+			//	WSAEINPROGRESS は「Winsock 1.1 のブロッキング呼び出しが進行中」で、接続の進行中 (POSIX の EINPROGRESS) とは別物なので Unknown に落とす
 			case WSAEALREADY:
 				return nox::os::network::Error::InProgress;
 			case WSAEINTR:
@@ -265,23 +265,23 @@ namespace nox::os::network
 			nox::os::network::PollEvent result = nox::os::network::PollEvent::None;
 			if ((revents & POLLIN) != 0)
 			{
-				result = result | nox::os::network::PollEvent::Readable;
+				result = nox::util::BitOr(result, nox::os::network::PollEvent::Readable);
 			}
 			if ((revents & POLLOUT) != 0)
 			{
-				result = result | nox::os::network::PollEvent::Writable;
+				result = nox::util::BitOr(result, nox::os::network::PollEvent::Writable);
 			}
 			if ((revents & POLLERR) != 0)
 			{
-				result = result | nox::os::network::PollEvent::Error;
+				result = nox::util::BitOr(result, nox::os::network::PollEvent::Error);
 			}
 			if ((revents & POLLHUP) != 0)
 			{
-				result = result | nox::os::network::PollEvent::HangUp;
+				result = nox::util::BitOr(result, nox::os::network::PollEvent::HangUp);
 			}
 			if ((revents & POLLNVAL) != 0)
 			{
-				result = result | nox::os::network::PollEvent::Invalid;
+				result = nox::util::BitOr(result, nox::os::network::PollEvent::Invalid);
 			}
 			return result;
 		}
@@ -394,6 +394,35 @@ std::expected<nox::os::network::EndPoint, nox::os::network::Error> nox::os::netw
 std::expected<nox::os::network::EndPoint, nox::os::network::Error> nox::os::network::GetRemoteEndPoint(const nox::os::network::Socket socket)noexcept
 {
 	return nox::os::network::GetEndPoint(socket, &::getpeername);
+}
+
+std::expected<nox::int32, nox::os::network::Error> nox::os::network::FormatAddress(const nox::os::network::EndPoint& end_point, const std::span<char> buffer)noexcept
+{
+	int native_family = 0;
+	switch (end_point.family)
+	{
+	case nox::os::network::IpFamily::IPv4:
+		native_family = AF_INET;
+		break;
+	case nox::os::network::IpFamily::IPv6:
+		native_family = AF_INET6;
+		break;
+	default:
+		return std::unexpected(nox::os::network::Error::InvalidArgument);
+	}
+
+	if (buffer.empty() == true || nox::os::network::detail::FitsInt(buffer.size()) == false)
+	{
+		return std::unexpected(nox::os::network::Error::InvalidArgument);
+	}
+
+	//	inet_ntop の address は in_addr / in6_addr を指す。EndPoint::address の先頭がそれと同じ並び (ネットワークバイト順)
+	if (::inet_ntop(native_family, end_point.address.data(), buffer.data(), buffer.size()) == nullptr)
+	{
+		//	バッファが足りないときは ERROR_INVALID_PARAMETER になる
+		return std::unexpected(nox::os::network::Error::InvalidArgument);
+	}
+	return static_cast<nox::int32>(std::strlen(buffer.data()));
 }
 
 std::expected<nox::os::network::EndPoint, nox::os::network::Error> nox::os::network::ParseAddress(const std::string_view text, const nox::os::network::Port port)noexcept
@@ -538,9 +567,18 @@ nox::os::network::Error nox::os::network::Connect(const nox::os::network::Socket
 		reinterpret_cast<const ::sockaddr*>(&native_address_opt->storage),
 		native_address_opt->length) == SOCKET_ERROR)
 	{
+		const int code = ::WSAGetLastError();
 		//	ノンブロッキングの connect は、WinSock では WSAEWOULDBLOCK になる (POSIX の EINPROGRESS に当たる)
-		const nox::os::network::Error error = nox::os::network::LastError();
-		return (error == nox::os::network::Error::WouldBlock) ? nox::os::network::Error::InProgress : error;
+		if (code == WSAEWOULDBLOCK)
+		{
+			return nox::os::network::Error::InProgress;
+		}
+		//	進行中の接続が済んだ後にもう一度呼ぶと WSAEISCONN になる。接続できているので成功として返す
+		if (code == WSAEISCONN)
+		{
+			return nox::os::network::Error::None;
+		}
+		return nox::os::network::ToError(code);
 	}
 	return nox::os::network::Error::None;
 }
@@ -587,6 +625,17 @@ nox::os::network::Error nox::os::network::SetNonBlocking(const nox::os::network:
 nox::os::network::Error nox::os::network::SetNoDelay(const nox::os::network::Socket socket, const bool enable)noexcept
 {
 	return nox::os::network::SetSocketOption(socket, IPPROTO_TCP, TCP_NODELAY, enable ? 1 : 0);
+}
+
+nox::os::network::Error nox::os::network::SetKeepAlive(const nox::os::network::Socket socket, const bool enable)noexcept
+{
+	return nox::os::network::SetSocketOption(socket, SOL_SOCKET, SO_KEEPALIVE, enable ? 1 : 0);
+}
+
+nox::os::network::Error nox::os::network::SetReuseAddress([[maybe_unused]] const nox::os::network::Socket socket, [[maybe_unused]] const bool enable)noexcept
+{
+	//	Windows では、閉じた直後のポートへの bind は既定で通る。SO_REUSEADDR は使用中のポートの横取りまで許すので設定しない
+	return nox::os::network::Error::None;
 }
 
 nox::os::network::Error nox::os::network::SetIPv6Only(const nox::os::network::Socket socket, const bool enable)noexcept

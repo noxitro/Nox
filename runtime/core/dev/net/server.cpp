@@ -7,7 +7,6 @@
 #include	"server.h"
 
 #include	"socket_scheduler.h"
-#include	"dev_net_api.h"
 #include	"dev_net_log_id.h"
 
 namespace nox::dev::net
@@ -15,12 +14,62 @@ namespace nox::dev::net
 	inline constexpr std::string_view k_hand_shake_str1 = "HandShake1";
 	inline constexpr std::string_view k_hand_shake_str2 = "HandShake2";
 	inline constexpr std::string_view k_hand_shake_str3 = "HandShake3";
+
+	/// @brief ハンドシェイクで相手の送信を待つ時間
+	inline constexpr nox::int32 k_hand_shake_timeout_milliseconds = 5000;
+
+	namespace
+	{
+		inline nox::int32 ToLogCode(const nox::os::network::Error error) noexcept
+		{
+			return static_cast<nox::int32>(nox::util::ToUnderlying(error));
+		}
+
+		/// @brief ハンドシェイクの受信を待つ
+		/// @param stage ログに出すハンドシェイクの段階 (1 か 3)
+		/// @return 読めるようになったら true。タイムアウト・エラーならログを出して false
+		bool WaitHandShake(const nox::os::network::Socket socket, const nox::int32 stage)
+		{
+			std::array<nox::os::network::PollEntry, 1> entries{};
+			entries[0].socket = socket;
+			entries[0].requested = nox::os::network::PollEvent::Readable;
+
+			const auto poll_result = nox::os::network::Poll(entries, k_hand_shake_timeout_milliseconds);
+			if (poll_result.has_value() == false)
+			{
+				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"poll(handshake{0}) failed. error={1}", stage, ToLogCode(poll_result.error()));
+				return false;
+			}
+
+			if (*poll_result == 0)
+			{
+				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"timeout handshake{0}", stage);
+				return false;
+			}
+
+			const nox::os::network::PollEvent returned = entries[0].returned;
+			if (nox::util::IsBitAnd(returned, nox::os::network::PollEvent::Error) ||
+				nox::util::IsBitAnd(returned, nox::os::network::PollEvent::Invalid))
+			{
+				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"exception handshake{0}", stage);
+				return false;
+			}
+
+			//	相手が閉じたとき (HangUp) も Readable が立ち、続く受信が 0 バイトで切断を返す
+			if (nox::util::IsBitAnd(returned, nox::os::network::PollEvent::Readable) == false)
+			{
+				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"invalid socket handshake{0}", stage);
+				return false;
+			}
+			return true;
+		}
+	}
 }
 
 nox::dev::net::Server::Server(nox::dev::net::IServerEventHandler& event_handler)noexcept :
 	event_handler_(event_handler),
 	initialize_context_{},
-	socket_(nox::dev::net::k_raw_invalid_socket),
+	socket_{},
 	is_startup_(false)
 {
 
@@ -37,144 +86,100 @@ bool nox::dev::net::Server::Startup(const InitializeContext& context)
 	{
 		this->Shutdown();
 	}
-	const nox::int32 err = ::WSAGetLastError();
 	initialize_context_ = context;
 
-	//PollAccept();
+	const auto created = nox::os::network::CreateSocket(nox::os::network::IpFamily::IPv4, nox::os::network::Protocol::TCP);
+	if (created.has_value() == false)
+	{
+		NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"socketの作成に失敗しました error={0}", ToLogCode(created.error()));
+		return false;
+	}
+	this->socket_ = *created;
 
-#if NOX_WINDOWS
-	raw_sockaddr_in ip_address;
-	ip_address.sin_family = AF_INET;
-	ip_address.sin_addr.S_un.S_addr = INADDR_ANY;	//	全てのマシンを受け付け
-	ip_address.sin_port = ::htons(static_cast<nox::uint16>(this->initialize_context_.port));
-	this->socket_ = ::socket(ip_address.sin_family, SOCK_STREAM, 0);
-
-	NOX_ASSERT(socket_ != INVALID_SOCKET, nox::util::Format(u"socket() failed. error_code={0}", ::WSAGetLastError()));
+	//	失敗したら作ったソケットを閉じる
+	bool success = false;
+	NOX_LOCAL_SCOPE(nox::util::ScopeExit([this, &success]() {
+		if (!success)
+		{
+			(void)nox::os::network::Close(this->socket_);
+		}
+		}));
 
 	//	非ブロッキング
-	::u_long nb = 1;
-	if (::ioctlsocket(this->socket_, FIONBIO, &nb) == k_raw_error_socket)
+	if (const nox::os::network::Error error = nox::os::network::SetNonBlocking(this->socket_, true); error != nox::os::network::Error::None)
 	{
-		NOX_ASSERT(false, nox::util::Format(u"ioctlsocket() failed. error_code={0}", ::WSAGetLastError()));
+		NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"非ブロッキングの設定に失敗しました error={0}", ToLogCode(error));
+		return false;
 	}
 
 	//	遅延を減らす
-	nox::dev::net::SetNoDelay(this->socket_, true);
+	(void)nox::os::network::SetNoDelay(this->socket_, true);
 
-	{
-		int reuse_address = 1;
-		::setsockopt(this->socket_, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&reuse_address), sizeof(reuse_address));
-	}
+	//	終了直後に立ち上げ直しても bind できるようにする
+	(void)nox::os::network::SetReuseAddress(this->socket_, true);
 
 	//TODO:	ネットワークレイテンシの向上
-#endif // NOX_WINDOWS
 
-	//	socketにアドレスを割り当て
-	nox::dev::net::Bind(this->socket_, *reinterpret_cast<const nox::dev::net::raw_sockaddr*>(&ip_address), sizeof(ip_address));
+	//	socketにアドレスを割り当て (全てのマシンを受け付け)
+	if (const nox::os::network::Error error = nox::os::network::Bind(this->socket_, nox::os::network::EndPoint::IPv4Any(this->initialize_context_.port)); error != nox::os::network::Error::None)
+	{
+		NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"Bindに失敗しました port={0} error={1}", this->initialize_context_.port, ToLogCode(error));
+		return false;
+	}
 
 	//	接続待ち状態にする
-	if (nox::dev::net::Listen(this->socket_, this->initialize_context_.max_connection) == k_raw_error_socket)
+	if (nox::os::network::Listen(this->socket_, this->initialize_context_.max_connection) != nox::os::network::Error::None)
 	{
 		NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"Listenに失敗しました");
 		return false;
 	}
 
+	success = true;
 	is_startup_ = true;
-	//nox::dev::net::SocketScheduler::Instance().RegisterEntity(*this);
 	return true;
 }
 
-void	nox::dev::net::Server::Connection(::fd_set& fds)
+void	nox::dev::net::Server::Connection()
 {
 	if (IsStartup() == false)
 	{
 		return;
 	}
 
-	if (!nox::os::file_descriptor::IsSet(this->socket_, fds))
-	{
-		return;
-	}
-
-	constexpr ::timeval timeout
-	{
-		.tv_sec = 5,
-		.tv_usec = 0
-	};
-
 	while (true)
 	{
 		//	受け付けられる接続が無くなるまでacceptを繰り返す
-		nox::dev::net::raw_sockaddr_in addr{};
-		int client_len = sizeof(addr);
-		const nox::dev::net::raw_socket_t client_socket = nox::dev::net::Accept(this->socket_, reinterpret_cast<nox::dev::net::raw_sockaddr&>(addr), client_len);
-		if (client_socket == nox::dev::net::k_raw_invalid_socket)
+		auto accepted = nox::os::network::Accept(this->socket_, nox::os::network::SocketMode::NonBlocking);
+		if (accepted.has_value() == false)
 		{
-			const int error_code = ::WSAGetLastError();
-			if (error_code == WSAEWOULDBLOCK || error_code == WSAEINTR)
+			const nox::os::network::Error error = accepted.error();
+			if (error == nox::os::network::Error::WouldBlock || error == nox::os::network::Error::Interrupted)
 			{
 				//	接続待ち無し
 				break;
 			}
-			NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, nox::util::Format(u"Acceptに失敗しました。error_code={0}", error_code));
+			NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"Acceptに失敗しました。error={0}", ToLogCode(error));
 			break;
 		}
 
-		// 接続ソケットに低遅延/KeepAlive等の推奨オプションを適用（任意）
-		{
-			::u_long nb = 1;
-			::ioctlsocket(client_socket, FIONBIO, &nb);
-			int on = 1;
+		nox::os::network::Socket client_socket = accepted->socket;
 
-			nox::dev::net::SetNoDelay(client_socket, true);
-
-			::setsockopt(client_socket, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&on), sizeof(on));
-			::setsockopt(client_socket, SOL_SOCKET, SO_KEEPALIVE, reinterpret_cast<const char*>(&on), sizeof(on));
-		}
+		// 接続ソケットに低遅延/KeepAliveを適用
+		(void)nox::os::network::SetNoDelay(client_socket, true);
+		(void)nox::os::network::SetKeepAlive(client_socket, true);
 
 		bool success = false;
 		NOX_LOCAL_SCOPE(nox::util::ScopeExit([&success, &client_socket]() {
 			if (!success)
 			{
-				::closesocket(client_socket);
+				(void)nox::os::network::Close(client_socket);
 			}
 			}));
 
 		//	handshake1の受信
 		{
-			::fd_set read_fds{};
-			::fd_set except_fds{};
-
-			nox::os::file_descriptor::Zero(read_fds);
-			nox::os::file_descriptor::Zero(except_fds);
-
-			nox::os::file_descriptor::Set(client_socket, read_fds);
-			nox::os::file_descriptor::Set(client_socket, except_fds);
-
-			const auto select_result = ::select(0, &read_fds, nullptr, &except_fds, &timeout);
-
-			if (select_result == nox::dev::net::k_raw_error_socket)
+			if (WaitHandShake(client_socket, 1) == false)
 			{
-				const int err = ::WSAGetLastError();
-				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, nox::util::Format(u"select(handshake1) failed. error_code={0}", err));
-				break;
-			}
-
-			if (select_result == 0)
-			{
-				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"timeout handshake1");
-				break;
-			}
-
-			if (nox::os::file_descriptor::IsSet(client_socket, except_fds) == true)
-			{
-				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"exception handshake1");
-				break;
-			}
-
-			if (nox::os::file_descriptor::IsSet(client_socket, read_fds) == false)
-			{
-				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"invalid socket handshake1");
 				break;
 			}
 
@@ -192,7 +197,7 @@ void	nox::dev::net::Server::Connection(::fd_set& fds)
 				break;
 			}
 		}
-		
+
 		//	handshake2の送信
 		{
 			const auto r = nox::dev::net::SendAll(client_socket, k_hand_shake_str2.data(), static_cast<nox::int32>(k_hand_shake_str2.length()));
@@ -205,39 +210,8 @@ void	nox::dev::net::Server::Connection(::fd_set& fds)
 
 		//	handshake3の受信
 		{
-			::fd_set read_fds{};
-			::fd_set except_fds{};
-
-			nox::os::file_descriptor::Zero(read_fds);
-			nox::os::file_descriptor::Zero(except_fds);
-
-			nox::os::file_descriptor::Set(client_socket, read_fds);
-			nox::os::file_descriptor::Set(client_socket, except_fds);
-
-			const auto select_result = ::select(0, &read_fds, nullptr, &except_fds, &timeout);
-
-			if (select_result == nox::dev::net::k_raw_error_socket)
+			if (WaitHandShake(client_socket, 3) == false)
 			{
-				const int err = ::WSAGetLastError();
-				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, nox::util::Format(u"select(handshake1) failed. error_code={0}", err));
-				break;
-			}
-
-			if (select_result == 0)
-			{
-				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"timeout handshake1");
-				break;
-			}
-
-			if (nox::os::file_descriptor::IsSet(client_socket, except_fds) == true)
-			{
-				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"exception handshake1");
-				break;
-			}
-
-			if (nox::os::file_descriptor::IsSet(client_socket, read_fds) == false)
-			{
-				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"invalid socket handshake1");
 				break;
 			}
 
@@ -262,25 +236,23 @@ void	nox::dev::net::Server::Connection(::fd_set& fds)
 			ConnectionContext connection_context;
 			{
 				connection_context.socket = client_socket;
-				connection_context.port = ::ntohs(addr.sin_port);
-
-				nox::memory::Copy(connection_context.address.data(), &addr.sin_addr, sizeof(addr.sin_addr));
+				connection_context.end_point = accepted->remote;
 
 				// IPアドレスの文字列表現を生成
 				{
-					nox::char_t ip_str_buffer[INET_ADDRSTRLEN] = {};
-					::inet_ntop(AF_INET, &addr.sin_addr, ip_str_buffer, sizeof(ip_str_buffer));
-					connection_context.peername = nox::util::CharCast<nox::char8>(ip_str_buffer);
+					std::array<char, nox::os::network::kMaxAddressStringLength> ip_str_buffer{};
+					if (nox::os::network::FormatAddress(accepted->remote, ip_str_buffer).has_value())
+					{
+						connection_context.peername = nox::util::CharCast<nox::char8>(ip_str_buffer.data());
+					}
 				}
 
 				// ポート番号の文字列表現を生成
 				{
 					nox::char_t port_str_buffer[6] = {};
-					::snprintf(port_str_buffer, sizeof(port_str_buffer), "%u", connection_context.port);
+					::snprintf(port_str_buffer, sizeof(port_str_buffer), "%u", static_cast<unsigned int>(accepted->remote.port));
 					connection_context.portname = nox::util::CharCast<nox::char8>(port_str_buffer);
 				}
-
-				connection_context.ip_family = IpFamily::IPv4;
 			}
           client_list_.emplace_back(PeerContext{ .connection = connection_context, .socket = client_socket });
 			NOX_INFO_LINE(nox::dev::net::log_id::DevNet, u"接続完了 name:{0}, port{1}", connection_context.peername, connection_context.portname);
@@ -302,57 +274,68 @@ void nox::dev::net::Server::Update(nox::legacy::World& world)
 		return;
 	}
 
-	::fd_set read_fds;
-	nox::os::file_descriptor::Zero(read_fds);
-
-	for (const auto& peer : client_list_)
+	//	読めるクライアントを集める。ヒープを使わないよう、kMaxPollEntries 件ずつスタック上で調べる
+	std::array<nox::os::network::PollEntry, nox::os::network::kMaxPollEntries> entries{};
+	std::array<nox::os::network::Socket, nox::os::network::kMaxPollEntries> readable_sockets{};
+	for (std::size_t begin = 0; begin < client_list_.size(); begin += entries.size())
 	{
-		nox::os::file_descriptor::Set(peer.socket, read_fds);
-	}
-
-	constexpr ::timeval timeout{ .tv_sec = 0, .tv_usec = 0 };
-	const auto result = ::select(0, &read_fds, nullptr, nullptr, &timeout);
-	if (result <= 0)
-	{
-		return;
-	}
-
-	nox::Vector<nox::dev::net::raw_socket_t> readable_sockets;
-	readable_sockets.reserve(client_list_.size());
-	for (const auto& peer : client_list_)
-	{
-		if (nox::os::file_descriptor::IsSet(peer.socket, read_fds))
+		const std::size_t count = std::min(entries.size(), client_list_.size() - begin);
+		for (std::size_t i = 0; i < count; ++i)
 		{
-			readable_sockets.emplace_back(peer.socket);
+			entries[i].socket = client_list_[begin + i].socket;
+			entries[i].requested = nox::os::network::PollEvent::Readable;
 		}
-	}
 
-	for (const auto socket : readable_sockets)
-	{
-		const auto current_it = std::find_if(client_list_.begin(), client_list_.end(), [socket](const PeerContext& context) {
-			return context.socket == socket;
-			});
-		if (current_it == client_list_.end())
+		const auto poll_result = nox::os::network::Poll(std::span(entries.data(), count), 0);
+		if (poll_result.has_value() == false || *poll_result <= 0)
 		{
 			continue;
 		}
-		
-		nox::char_t peek;
-		const nox::int32 n = nox::dev::net::Receive(socket, &peek, sizeof(peek), MSG_PEEK);
 
-		if (n == 0)
+		//	Disconnect で client_list_ が変わるので、先に読めるソケットを写しておく
+		std::size_t readable_count = 0;
+		for (std::size_t i = 0; i < count; ++i)
 		{
-			Disconnect(socket);
-			continue;
+			if (entries[i].returned != nox::os::network::PollEvent::None)
+			{
+				readable_sockets[readable_count++] = entries[i].socket;
+			}
 		}
 
-		if (n < 0 && ::WSAGetLastError() != WSAEWOULDBLOCK)
+		for (std::size_t i = 0; i < readable_count; ++i)
 		{
-			Disconnect(socket);
-			continue;
+			const nox::os::network::Socket socket = readable_sockets[i];
+			const auto current_it = std::find_if(client_list_.begin(), client_list_.end(), [socket](const PeerContext& context) {
+				return context.socket == socket;
+				});
+			if (current_it == client_list_.end())
+			{
+				continue;
+			}
+
+			nox::uint8 peek = 0;
+			const nox::os::network::IoResult result = nox::os::network::Receive(socket, std::span(&peek, 1), nox::os::network::ReceiveFlag::Peek);
+
+			if (result.IsOk() && result.bytes == 0)
+			{
+				Disconnect(socket);
+				continue;
+			}
+
+			if (result.IsOk() == false && result.error != nox::os::network::Error::WouldBlock)
+			{
+				Disconnect(socket);
+				continue;
+			}
+
+			event_handler_.OnServerReceive(world);
 		}
 
-		event_handler_.OnServerReceive(world);
+		//	Disconnect で数が減ったときは、続きの位置がずれるので次の Update に回す
+		if (begin + count > client_list_.size())
+		{
+			break;
+		}
 	}
 }
 
@@ -371,14 +354,11 @@ void nox::dev::net::Server::Shutdown()
 		this->Disconnect(client_list_.back().socket);
 	}
 
-	nox::dev::net::Shutdown(socket_, SD_BOTH);
-	nox::dev::net::CloseSocket(socket_);
-	socket_ = nox::dev::net::k_raw_invalid_socket;
-
-	//nox::dev::net::SocketScheduler::Instance().UnregisterEntity(*this);
+	(void)nox::os::network::Shutdown(socket_, nox::os::network::ShutdownMode::Both);
+	(void)nox::os::network::Close(socket_);
 }
 
-void nox::dev::net::Server::Disconnect(const nox::dev::net::raw_socket_t socket)
+void nox::dev::net::Server::Disconnect(const nox::os::network::Socket socket)
 {
 #if !NOX_MASTER
 	NOX_LOCAL_SCOPE(nox::util::ParallelExecuteCheckScope(pe_checker_clients_));
@@ -390,12 +370,13 @@ void nox::dev::net::Server::Disconnect(const nox::dev::net::raw_socket_t socket)
 
 	if (it == client_list_.end())
 	{
-		NOX_WARNING_LINE(nox::dev::net::log_id::DevNet, u8"切断するクライアントが見つかりませんでした socket={0}", socket);
+		NOX_WARNING_LINE(nox::dev::net::log_id::DevNet, u8"切断するクライアントが見つかりませんでした socket={0}", socket.value);
 		return;
 	}
 
-	nox::dev::net::Shutdown(socket, SD_BOTH);
-	nox::dev::net::CloseSocket(socket);
+	nox::os::network::Socket closing = socket;
+	(void)nox::os::network::Shutdown(closing, nox::os::network::ShutdownMode::Both);
+	(void)nox::os::network::Close(closing);
 
 	NOX_INFO_LINE(nox::dev::net::log_id::DevNet, u"切断完了 name:{0}, port:{1}", it->connection.peername, it->connection.portname);
 	event_handler_.OnServerDisconnected(it->connection);
@@ -403,10 +384,10 @@ void nox::dev::net::Server::Disconnect(const nox::dev::net::raw_socket_t socket)
 }
 
 std::expected<void, nox::dev::net::SocketIoError> nox::dev::net::Server::Send(
-	nox::dev::net::raw_socket_t socket,
+	nox::os::network::Socket socket,
 	nox::not_null<const void*> buffer,
 	nox::int32 size_to_send,
-	nox::dev::net::SendFlag flag)
+	nox::os::network::SendFlag flag)
 {
 	return nox::dev::net::SendAll(socket, buffer, size_to_send, flag);
 }

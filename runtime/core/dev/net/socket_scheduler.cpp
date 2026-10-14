@@ -46,12 +46,8 @@ nox::dev::net::SocketScheduler::~SocketScheduler()
 
 void	nox::dev::net::SocketScheduler::Initialize(nox::legacy::World& world)
 {
-#if NOX_WINDOWS
-	::WSADATA wsaData;
-	nox::dev::net::raw_socket_t sock = k_raw_invalid_socket;
-	const nox::int32 error_code = ::WSAStartup(WINSOCK_VERSION, &wsaData);
-	NOX_ASSERT(error_code == 0, nox::util::Format(u"WSAStartup failed. error_code={0}", error_code));
-#endif // NOX_WINDOWS
+	const nox::os::network::Error error = nox::os::network::Initialize();
+	NOX_ASSERT(error == nox::os::network::Error::None, nox::util::Format(u"network::Initialize failed. error={0}", static_cast<nox::int32>(nox::util::ToUnderlying(error))));
 
 	thread_.SetThreadName(u"SocketScheduler");
 	thread_.SetThreadPriority(nox::ThreadPriority::Lowest);
@@ -64,10 +60,7 @@ void	nox::dev::net::SocketScheduler::Finalize([[maybe_unused]] nox::legacy::Worl
 {
 	thread_.Wait();
 
-#if NOX_WINDOWS
-	const nox::int32 error_code = ::WSACleanup();
-	NOX_ASSERT(error_code == 0, nox::util::Format(u"WSACleanup failed. error_code={0}", error_code));
-#endif // NOX_WINDOWS
+	nox::os::network::Finalize();
 
 }
 
@@ -112,48 +105,42 @@ void	nox::dev::net::SocketScheduler::UpdateTask(nox::legacy::World& world)
 
 		//	リッスンsocketの新規接続を監視
 		{
-			::fd_set fds;
-			nox::os::file_descriptor::Zero(fds);
-
-			for (nox::dev::net::Server& server : server_list_)
+			//	サーバーは数個なので、kMaxPollEntries 件ずつスタック上で調べる
+			std::array<nox::os::network::PollEntry, nox::os::network::kMaxPollEntries> entries{};
+			for (std::size_t begin = 0; begin < server_list_.size(); begin += entries.size())
 			{
-				//	ソケット登録
-				nox::os::file_descriptor::Set(server.GetSocket(), fds);
-			}
-
-			//	タイムアウト設定
-			constexpr ::timeval timeout
-			{
-				.tv_sec = 0,
-				.tv_usec = 1000	//	1ms
-			};
-
-			//MEMO:	selectの第一引数はwindowsでは無視される
-			const auto select_result = ::select(0, &fds, nullptr, nullptr, &timeout);
-		
-			if (select_result == SOCKET_ERROR)
-			{
-				const int err = ::WSAGetLastError();
-				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"select() failed. error_code={0}", err);
-				continue;
-			}
-			else if (select_result == EINTR)
-			{
-				// シグナル受信によるselect終了の場合、再度待ち受けに戻る
-				NOX_WARNING_LINE(nox::dev::net::log_id::DevNet, u"select() interrupted by signal.");
-				continue;
-			}
-
-			for (nox::dev::net::Server& server : server_list_)
-			{
-				//	新規接続（リッスンソケットにイベントがあった場合のみ）
-				if (select_result > 0)
+				const std::size_t count = std::min(entries.size(), server_list_.size() - begin);
+				for (std::size_t i = 0; i < count; ++i)
 				{
-					server.Connection(fds);
+					//	ソケット登録
+					entries[i].socket = server_list_[begin + i].get().GetSocket();
+					entries[i].requested = nox::os::network::PollEvent::Readable;
 				}
 
-				//	受け付け処理
-				server.Update(world);
+				//	1ms 待つ
+				const auto poll_result = nox::os::network::Poll(std::span(entries.data(), count), 1);
+				if (poll_result.has_value() == false)
+				{
+					if (poll_result.error() != nox::os::network::Error::Interrupted)
+					{
+						NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u"poll() failed. error={0}", static_cast<nox::int32>(nox::util::ToUnderlying(poll_result.error())));
+					}
+					continue;
+				}
+
+				for (std::size_t i = 0; i < count; ++i)
+				{
+					nox::dev::net::Server& server = server_list_[begin + i].get();
+
+					//	新規接続（リッスンソケットにイベントがあった場合のみ）
+					if (nox::util::IsBitAnd(entries[i].returned, nox::os::network::PollEvent::Readable))
+					{
+						server.Connection();
+					}
+
+					//	受け付け処理
+					server.Update(world);
+				}
 			}
 		}
 	}

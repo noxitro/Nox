@@ -76,7 +76,7 @@ class nox::World::Archetype final
 
 	struct Edge final
 	{
-		nox::uint32 archetype_id : kArchetypeIdBitWidth;
+		nox::uint32 archetype_id : nox::World::kArchetypeIdBitWidth;
 		bool is_add_edge : 1u;
 	};
 
@@ -93,8 +93,25 @@ public:
 		return component_id_list_;
 	}
 
+	inline Edge* FindEdge(const nox::uint32 archetype_id)noexcept
+	{
+		for (nox::World::Archetype::Edge& edge : edges_)
+		{
+			if (edge.archetype_id == archetype_id)
+			{
+				return &edge;
+			}
+		}
+		return nullptr;
+	}
+
+	inline void AddEdge(const nox::uint32 archetype_id, const bool is_add_edge)noexcept
+	{
+		edges_.emplace_back(nox::World::Archetype::Edge{ .archetype_id = archetype_id, .is_add_edge = is_add_edge });
+	}
+
 private:
-	nox::uint32 archetype_id_ : kArchetypeIdBitWidth;
+	nox::uint32 archetype_id_ : nox::World::kArchetypeIdBitWidth;
 	const nox::Vector<nox::uint16> component_id_list_;
 
 	/// @brief このArchetypeに接続しているArchetypeのIDリスト
@@ -103,14 +120,13 @@ private:
 	nox::Vector<nox::Entity> entities_;
 };
 
-struct nox::World::Detail
+struct nox::World::Detail final
 {
 	Detail()noexcept = delete;
 
-	static inline nox::World::Archetype* AllocArchetype([[maybe_unused]] std::size_t size)
+	static inline nox::World::Archetype* AllocArchetype(const std::span<const nox::uint16> component_id_list)
 	{
-		//	TODO: 未実装
-		return nullptr;
+		return new nox::World::Archetype(component_id_list);
 	}
 };
 
@@ -201,11 +217,14 @@ void* nox::World::AddComponent(const nox::Entity entity, const nox::reflection::
 	}
 
 	nox::World::EntityRecord& record = entity_records_.at(entity.index);
+	nox::World::Archetype& archetype = *archetypes_[record.archetype_id];
+	
 	
 	return nullptr;
 }
 
 void* nox::World::GetComponent(const nox::Entity entity, const nox::reflection::Type& type)
 {
+	
 	return nullptr;
 }

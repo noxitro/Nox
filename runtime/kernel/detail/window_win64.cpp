@@ -131,8 +131,8 @@ void	nox::Window::CreateNative(const void* args_ptr)
 		.cbSize = sizeof(::WNDCLASSEX),
 		.style = (CS_HREDRAW | CS_VREDRAW),
 		.lpfnWndProc = nox::Window::Detail::CallbackWindow,
-		.hInstance = self.instance_handle_,
-		.hIcon = ::LoadIconW(self.instance_handle_, MAKEINTRESOURCEW(100)),
+		.hInstance = static_cast<::HINSTANCE>(self.instance_handle_),
+		.hIcon = ::LoadIconW(static_cast<::HINSTANCE>(self.instance_handle_), MAKEINTRESOURCEW(100)),
 		.hCursor = nullptr,
 		.hbrBackground = static_cast<HBRUSH>(::GetStockObject(DKGRAY_BRUSH)),
 		.lpszClassName = L"nox"
@@ -181,17 +181,17 @@ void	nox::Window::CreateNative(const void* args_ptr)
 
 void	nox::Window::SetPos(const nox::Int2& pos)
 {
-	::SetWindowPos(window_handle_.load(std::memory_order_acquire), nullptr, pos.x, pos.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+	::SetWindowPos(static_cast<::HWND>(window_handle_.load(std::memory_order_acquire)), nullptr, pos.x, pos.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
 }
 
 void nox::Window::SetSize(const nox::Int2& size)
 {
-	::SetWindowPos(window_handle_.load(std::memory_order_acquire), nullptr, 0, 0, size.x, size.y, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+	::SetWindowPos(static_cast<::HWND>(window_handle_.load(std::memory_order_acquire)), nullptr, 0, 0, size.x, size.y, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
 }
 
 std::u16string_view nox::Window::GetWindowTitle(std::span<nox::char16> dest)const noexcept
 {
-	::GetWindowTextW(window_handle_.load(std::memory_order_acquire), nox::util::CharCast<nox::wchar16>(dest.data()), dest.size());
+	::GetWindowTextW(static_cast<::HWND>(window_handle_.load(std::memory_order_acquire)), nox::util::CharCast<nox::wchar16>(dest.data()), dest.size());
 	return std::u16string_view(dest.data(), dest.size());
 }
 
@@ -200,8 +200,8 @@ void nox::Window::Show()
 	//	ゲームスレッドから呼ばれ、表示した直後にユーザーが閉じうるので、ハンドルは 1 回だけ読む。
 	const nox::WindowHandle handle = window_handle_.load(std::memory_order_acquire);
 	NOX_ASSERT(handle != nullptr, u8"ウィンドウハンドルが不正です");
-	::ShowWindow(handle, SW_SHOW);
-	::UpdateWindow(handle);
+	::ShowWindow(static_cast<::HWND>(handle), SW_SHOW);
+	::UpdateWindow(static_cast<::HWND>(handle));
 }
 
 void nox::Window::Dispose()
@@ -209,7 +209,7 @@ void nox::Window::Dispose()
 	const nox::WindowHandle handle = window_handle_.load(std::memory_order_acquire);
 	if (handle != nullptr)
 	{
-		::DestroyWindow(handle);
+		::DestroyWindow(static_cast<::HWND>(handle));
 		window_handle_.store(nullptr, std::memory_order_release);
 	}
 }
@@ -223,7 +223,7 @@ void nox::Window::RequestClose()noexcept
 	{
 		//	WM_CLOSE → DestroyWindow → WM_DESTROY → PostQuitMessage の順に、閉じるボタンと同じ経路をたどる
 		//	(CallbackWindow を参照)。DestroyWindow は作ったスレッドでしか効かないので、直接は呼ばない。
-		::PostMessageW(handle, WM_CLOSE, 0, 0);
+		::PostMessageW(static_cast<::HWND>(handle), WM_CLOSE, 0, 0);
 	}
 }
 

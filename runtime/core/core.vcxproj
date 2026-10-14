@@ -95,7 +95,6 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="dev\net\dev_net_api.h" />
     <ClInclude Include="dev\net\dev_net_definition.h">
       <SubType>
       </SubType>
@@ -401,7 +400,6 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="dev\net\dev_net_api.cpp" />
     <ClCompile Include="dev\net\dev_net_definition.cpp">
       <SubType>
       </SubType>

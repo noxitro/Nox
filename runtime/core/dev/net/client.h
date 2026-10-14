@@ -28,8 +28,8 @@ namespace nox::dev::net
 	public:
 		struct InitializeContext
 		{
-			nox::dev::net::address_t address;
-			nox::dev::net::Port port;
+			///	@brief	接続先のアドレスとポート
+			nox::os::network::EndPoint end_point;
 		};
 
 		void Initialize(const InitializeContext& context);
