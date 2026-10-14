@@ -150,7 +150,7 @@ namespace nox::os::network
 				auto& addr = reinterpret_cast<::sockaddr_in&>(result.storage);
 				addr.sin_family = AF_INET;
 				addr.sin_port = ::htons(end_point.port);
-				std::memcpy(&addr.sin_addr, end_point.address, 4);
+				std::memcpy(&addr.sin_addr, end_point.address.data(), 4);
 				result.length = static_cast<int>(sizeof(::sockaddr_in));
 			}
 			break;
@@ -160,7 +160,7 @@ namespace nox::os::network
 				addr.sin6_family = AF_INET6;
 				addr.sin6_port = ::htons(end_point.port);
 				addr.sin6_scope_id = end_point.scope_id;
-				std::memcpy(&addr.sin6_addr, end_point.address, 16);
+				std::memcpy(&addr.sin6_addr, end_point.address.data(), 16);
 				result.length = static_cast<int>(sizeof(::sockaddr_in6));
 			}
 			break;
@@ -184,7 +184,7 @@ namespace nox::os::network
 				const auto& addr = reinterpret_cast<const ::sockaddr_in&>(storage);
 				result.family = nox::os::network::IpFamily::IPv4;
 				result.port = ::ntohs(addr.sin_port);
-				std::memcpy(result.address, &addr.sin_addr, 4);
+				std::memcpy(result.address.data(), &addr.sin_addr, 4);
 			}
 			break;
 			case AF_INET6:
@@ -197,7 +197,7 @@ namespace nox::os::network
 				result.family = nox::os::network::IpFamily::IPv6;
 				result.port = ::ntohs(addr.sin6_port);
 				result.scope_id = addr.sin6_scope_id;
-				std::memcpy(result.address, &addr.sin6_addr, 16);
+				std::memcpy(result.address.data(), &addr.sin6_addr, 16);
 			}
 			break;
 			default:
@@ -396,12 +396,12 @@ std::expected<nox::os::network::EndPoint, nox::os::network::Error> nox::os::netw
 
 	nox::os::network::EndPoint result{};
 	result.port = port;
-	if (::inet_pton(AF_INET, buffer, result.address) == 1)
+	if (::inet_pton(AF_INET, buffer, result.address.data()) == 1)
 	{
 		result.family = nox::os::network::IpFamily::IPv4;
 		return result;
 	}
-	if (::inet_pton(AF_INET6, buffer, result.address) == 1)
+	if (::inet_pton(AF_INET6, buffer, result.address.data()) == 1)
 	{
 		result.family = nox::os::network::IpFamily::IPv6;
 		return result;

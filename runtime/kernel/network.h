@@ -125,7 +125,7 @@ namespace nox::os::network
 		nox::os::network::Port port = 0;
 		/// @brief IPv6のスコープID。IPv4では0
 		nox::uint32 scope_id = 0;
-		nox::uint8 address[16] = {};
+		std::array<nox::uint8, 16> address = {};
 
 		constexpr bool operator==(const EndPoint& rhs) const noexcept = default;
 
