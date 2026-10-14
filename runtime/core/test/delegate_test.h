@@ -560,7 +560,7 @@ namespace nox
 			(!nox::is_function_noexcept_v<_FunctionType> || nox::is_function_noexcept_v<decltype(_MemberPointerValue)>) &&
 
 			//	is invocable
-			std::is_same_v<nox::function_result_t<_FunctionType>, nox::invoke_result_with_tuple_like_t<decltype(_MemberPointerValue), nox::tuple_cat_t<_Instance, nox::function_args_tuple_t<_FunctionType>>>>
+			std::is_same_v<nox::function_result_t<_FunctionType>, nox::invoke_result_with_tuple_like_t<decltype(_MemberPointerValue), nox::tuple_cat_t<std::tuple<_Instance>, nox::function_args_tuple_t<_FunctionType>>>>
 			)
 			static constexpr bool kDelegateRequiresMemberFunctionPointer< _MemberPointerValue, _Instance> = true;
 
@@ -590,7 +590,7 @@ namespace nox
 
 		
 			//	is invocable
-			std::is_same_v<nox::function_result_t<_FunctionType>, nox::invoke_result_with_tuple_like_t<decltype(_MemberPointerValue), nox::tuple_cat_t<_Instance, nox::function_args_tuple_t<_FunctionType>>>>
+			std::is_same_v<nox::function_result_t<_FunctionType>, nox::invoke_result_with_tuple_like_t<decltype(_MemberPointerValue), nox::tuple_cat_t<std::tuple<_Instance>, nox::function_args_tuple_t<_FunctionType>>>>
 			)
 			static constexpr bool kDelegateRequiresMemberObjectPointer< _MemberPointerValue, _Instance> = true;
 
@@ -623,7 +623,7 @@ namespace nox
 			(_Alignment >= alignof(typename DelegateBase<_FunctionType>::template CallableMember<_Instance, _MemberPointerValue>)) &&
 
 			//	is invocable
-			std::is_same_v<nox::function_result_t<_FunctionType>, nox::invoke_result_with_tuple_like_t<decltype(_MemberPointerValue), nox::tuple_cat_t<_Instance, nox::function_args_tuple_t<_FunctionType>>>>
+			std::is_same_v<nox::function_result_t<_FunctionType>, nox::invoke_result_with_tuple_like_t<decltype(_MemberPointerValue), nox::tuple_cat_t<std::tuple<_Instance>, nox::function_args_tuple_t<_FunctionType>>>>
 				)
 		*/
 
@@ -859,7 +859,7 @@ namespace nox
 			(_Alignment >= alignof(typename DelegateBase<_FunctionType>::template CallableMember<_Instance, _MemberPointerValue>)) &&
 
 			//	is invocable
-			std::is_same_v<nox::function_result_t<_FunctionType>, nox::invoke_result_with_tuple_like_t<decltype(_MemberPointerValue), nox::tuple_cat_t<_Instance, nox::function_args_tuple_t<_FunctionType>>>>
+			std::is_same_v<nox::function_result_t<_FunctionType>, nox::invoke_result_with_tuple_like_t<decltype(_MemberPointerValue), nox::tuple_cat_t<std::tuple<_Instance>, nox::function_args_tuple_t<_FunctionType>>>>
 				)
 			inline constexpr Delegate(nox::nontype_tag<_MemberPointerValue>, _Instance&& instance)noexcept
 		{
@@ -1092,7 +1092,7 @@ namespace nox
 			(!nox::is_function_noexcept_v<_FunctionType> || nox::is_function_noexcept_v<decltype(_MemberPointerValue)>) &&
 
 			//	is invocable
-			std::is_same_v<nox::function_result_t<_FunctionType>, nox::invoke_result_with_tuple_like_t<decltype(_MemberPointerValue), nox::tuple_cat_t<_InstanceType, nox::function_args_tuple_t<_FunctionType>>>>
+			std::is_same_v<nox::function_result_t<_FunctionType>, nox::invoke_result_with_tuple_like_t<decltype(_MemberPointerValue), nox::tuple_cat_t<std::tuple<_InstanceType>, nox::function_args_tuple_t<_FunctionType>>>>
 			)
 		inline constexpr DelegateRef(nox::nontype_tag<_MemberPointerValue>, _InstanceType&& instance)noexcept:
 			object_(const_cast<void*>(static_cast<const void*>(nox::util::AddressOfLvalueReference(instance)))),
@@ -1111,7 +1111,7 @@ namespace nox
 				std::is_same_v<nox::function_result_t<_FunctionType>, nox::object_pointer_result_t<decltype(_MemberPointerValue)>>&&
 
 					//	is invocable
-					std::is_same_v<nox::function_result_t<_FunctionType>, nox::invoke_result_with_tuple_like_t<decltype(_MemberPointerValue), nox::tuple_cat_t<_InstanceType, nox::function_args_tuple_t<_FunctionType>>>>
+					std::is_same_v<nox::function_result_t<_FunctionType>, nox::invoke_result_with_tuple_like_t<decltype(_MemberPointerValue), nox::tuple_cat_t<std::tuple<_InstanceType>, nox::function_args_tuple_t<_FunctionType>>>>
 			)
 			inline constexpr DelegateRef(nox::nontype_tag<_MemberPointerValue>, _InstanceType&& instance)noexcept :
 			object_(const_cast<void*>(static_cast<const void*>(nox::util::AddressOfLvalueReference(instance)))),
