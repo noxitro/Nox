@@ -67,7 +67,9 @@ ClangCL は必須ゲート。MSVC が見逃す非適合を実際に拾ってい�
 
 ## 環境とビルド
 
-現在は Windows のみ実装済み (Linux / Android / macOS ではまだビルド・実行できない)。Runtime は Linux / Android / macOS への対応を予定しているので、Windows 専用を前提にした設計をしない。OS 固有の型やヘッダーは実装ファイルに閉じ込め、公開ヘッダーへ持ち込まない。
+現在は Windows のみ実装済み (Linux / Android / macOS ではまだビルド・実行できない)。Runtime は Linux / Android / macOS への対応を予定しているので、Windows 専用を前提にした設計をしない。POSIX の API (BSD ソケット、pthread、ファイル記述子など) も共通の前提にせず、OS 固有の型やヘッダーは実装ファイルに閉じ込め、公開ヘッダーへ持ち込まない。OS の機能の初期化は、設定とメモリをアプリから渡せる形にする。
+
+配信やオンライン機能のプラットフォーム (Steam など) との連携は、OS の抽象化とは別の層 (`network` モジュールなど) で扱う。
 
 ビルドには Visual Studio (C++ ワークロード) と .NET SDK を使う。
 
