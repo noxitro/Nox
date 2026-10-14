@@ -94,12 +94,19 @@ namespace nox::detail::updater_graph
 	/// @brief 引数またはthisの情報
 	struct NodeAccess final
 	{
+		enum class AccessSource : nox::uint8 {
+			Self,
+			Service,
+			Component,
+		};
+
 		/// @brief 修飾のない型情報
 		const nox::reflection::Type* type;
 		/// @brief 非constの書き込み可能
 		bool is_write : 1;
 		/// @brief 引数がオプションかどうか。オプションの場合、引数が存在しない場合はnullptrが渡される
 		bool is_optional : 1;
+		AccessSource source : 2;
 	};
 
 	/// @brief RunAfter/RunBeforeの情報
@@ -121,6 +128,9 @@ namespace nox::detail::updater_graph
 	struct NodeMethod final
 	{
 		std::string_view method_name;
+		void(*invoke)(void* owner, void* const* args, nox::detail::updater_graph::NodeFrameContext& frame);
+
+		nox::detail::updater_graph::NodeTrigger trigger;
 	};
 
 	/// @brief 

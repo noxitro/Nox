@@ -5,23 +5,21 @@
 /// @brief	System
 #pragma once
 #include	"ecs_definitions.h"
-#include	"updater_node.h"
+#include	"node_descriptor.h"
 #include	"entity.h"
 
 namespace nox
 {
-	class World;
-
 	namespace detail
 	{
-		struct IComponentData;
-
 		/// @brief		ECSのSystem
 		///				OnUpdate,OnAdd,OnRemoveを提供する
 		/// @details	インスタンス化は不可。
 		struct EntitySystemBase : nox::detail::UpdaterNodeOwnerBase
 		{
 			constexpr EntitySystemBase()noexcept = delete;
+			constexpr EntitySystemBase(const EntitySystemBase&)noexcept = delete;
+			constexpr EntitySystemBase(EntitySystemBase&&)noexcept = delete;
 		};
 	}
 
@@ -58,6 +56,31 @@ namespace nox
 			return true;
 		}
 
+	private:
+		// 既定: 定義していない
+		template<class U, nox::detail::updater_graph::NodeTrigger trigger>
+		struct EntitySystemRegister final{ using type = std::tuple<>; };
+
+		// 定義しているときだけ選ばれる。中身は選ばれたときにしか作られないので、&T::OnUpdate を書ける
+		template<class U> requires requires { &U::OnUpdate; }
+		struct EntitySystemRegister<U, nox::detail::updater_graph::NodeTrigger::Update>final
+		{ 
+			using type = std::tuple<nox::detail::updater_graph::Register<&U::OnUpdate, nox::detail::updater_graph::NodeTrigger::Update>>; 
+		};
+
+		template<class U> requires requires { &U::OnAdd; }
+		struct EntitySystemRegister<U, nox::detail::updater_graph::NodeTrigger::Add> final
+		{
+			using type = std::tuple<nox::detail::updater_graph::Register<&U::OnAdd, nox::detail::updater_graph::NodeTrigger::Add>>;
+		};
+
+		template<class U> requires requires { &U::OnRemove; }
+		struct EntitySystemRegister<U, nox::detail::updater_graph::NodeTrigger::Remove> final
+		{
+			using type = std::tuple<nox::detail::updater_graph::Register<&U::OnRemove, nox::detail::updater_graph::NodeTrigger::Remove>>;
+		};
+
+		
 	protected:
 		static consteval bool StaticDeclareVerify()noexcept
 		{
@@ -75,6 +98,16 @@ namespace nox
 			}
 
 			return true;
+		}
+	public:
+		static constexpr const nox::NodeDescriptor& GetNodeDescriptor()noexcept
+		{
+			using RegisterList = nox::tuple_cat_t<
+				typename EntitySystemRegister<T, nox::detail::updater_graph::NodeTrigger::Update>::type,
+				typename EntitySystemRegister<T, nox::detail::updater_graph::NodeTrigger::Add>::type,
+				typename EntitySystemRegister<T, nox::detail::updater_graph::NodeTrigger::Remove>::type>;
+
+			return nox::detail::NodeDescriptorBuilder<T, RegisterList>::value;
 		}
 	};
 }

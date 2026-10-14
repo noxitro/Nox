@@ -55,6 +55,8 @@ namespace nox
 			return static_cast<T*>(AddComponent(entity, nox::reflection::Typeof<T>()));
 		}
 
+		void* GetComponent(const nox::Entity entity, const nox::reflection::Type& type);
+
 		/// @brief runtimeで一度だけ呼ぶ初期化
 		static void GlobalInitialize();
 		/// @brief runtimeで一度だけ呼ぶ終了処理

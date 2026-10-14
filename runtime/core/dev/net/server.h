@@ -29,7 +29,7 @@ namespace nox::dev::net
 		struct InitializeContext
 		{
 			nox::uint16 max_connection;
-			nox::dev::net::port_t port;
+			nox::dev::net::Port port;
 			bool resume_port = false;
 		};
 

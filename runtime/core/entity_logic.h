@@ -26,9 +26,21 @@ namespace nox
 				Remove,
 			};
 
+		private:
+			static inline consteval nox::detail::updater_graph::NodeTrigger ToNodeTrigger(Trigger trigger)noexcept
+			{
+				switch (trigger)
+				{
+				case Trigger::Update: return nox::detail::updater_graph::NodeTrigger::Update;
+				case Trigger::Add: return nox::detail::updater_graph::NodeTrigger::Add;
+				case Trigger::Remove: return nox::detail::updater_graph::NodeTrigger::Remove;
+				default: return nox::detail::updater_graph::NodeTrigger::Update;
+				}
+			}
+
 		protected:
-			template<auto Method, nox::detail::EntityLogicBase::Trigger TriggerValue, class... Options>
-			using Register = nox::detail::updater_graph::Register<Method, static_cast<nox::detail::updater_graph::NodeTrigger>(TriggerValue), Options...>;
+			template<auto Method, nox::detail::EntityLogicBase::Trigger trigger, class... Options>
+			using Register = nox::detail::updater_graph::Register<Method, ToNodeTrigger(trigger), Options...>;
 
 			constexpr EntityLogicBase()noexcept = default;
 		};

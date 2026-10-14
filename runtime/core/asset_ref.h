@@ -14,14 +14,15 @@ namespace nox
 	{
 		struct AssetHandleBase
 		{
-			constexpr AssetHandleBase()noexcept : guid_(nox::Guid::Empty()) {}
+			constexpr AssetHandleBase()noexcept :
+				asset_id_(0) {}
 
-			inline constexpr nox::Guid GetGuid()const noexcept { return guid_; }
-			inline constexpr bool IsValid()const noexcept { return guid_ != nox::Guid::Empty(); }
+			inline constexpr nox::uint64 GetAssetId()const noexcept { return asset_id_; }
+			inline constexpr bool IsValid()const noexcept { return asset_id_ != 0; }
 
 		private:
 			NOX_ATTR_DECLARE(nox::attr::DataMember())
-			nox::Guid guid_;
+			nox::uint64 asset_id_;
 		};
 	}
 

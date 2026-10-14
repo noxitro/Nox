@@ -119,6 +119,7 @@
 #include	"nameof.h"
 #include	"nameof_value.h"
 #include	"crc32.h"
+#include	"network.h"
 
 //	STL コンテナ (nox のアロケータを使う別名)
 #include	"vector.h"

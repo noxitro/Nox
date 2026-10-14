@@ -49,6 +49,6 @@ namespace nox::dev::net
 		virtual void OnReceive([[maybe_unused]] nox::legacy::World& world) {}
 
 	protected:
-		static inline nox::dev::net::port_t base_port_ = 0;
+		static inline nox::dev::net::Port base_port_ = 0;
 	};
 }

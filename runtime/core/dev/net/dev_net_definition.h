@@ -56,7 +56,7 @@ namespace nox::dev::net
 	};
 
 #if NOX_WINDOWS
-	using port_t = nox::uint32;
+	using Port = nox::uint32;
 	using raw_socket_t = ::SOCKET;
 	using raw_sockaddr = ::sockaddr;
 	using raw_sockaddr_in = ::sockaddr_in;
@@ -92,7 +92,7 @@ namespace nox::dev::net
 		nox::dev::net::IpFamily ip_family;
 
 		/// @brief ネットワークポートを表す変数。接続元のポート番号
-		nox::dev::net::port_t port;
+		nox::dev::net::Port port;
 		
 		/// @brief 接続元のIPアドレス(バイナリ)
 		std::array<nox::uint8, 16> address;

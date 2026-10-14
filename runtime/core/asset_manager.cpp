@@ -191,12 +191,12 @@ void nox::AssetManager::Terminate()
 
 nox::Asset& nox::AssetManager::CreateAssetImpl(const nox::detail::AssetHandleBase& handle, const nox::reflection::Type& type)const
 {
-	const nox::Guid guid = handle.GetGuid();
+	const nox::uint64 asset_id = handle.GetAssetId();
 	//	キャッシュに存在する場合はそれを返す
 	{
 		NOX_LOCAL_SCOPE(nox::ScopedReadLock(rw_lock_));
 
-		const auto it = resource_cache_.find(guid);
+		const auto it = resource_cache_.find(asset_id);
 		if (it != resource_cache_.end())
 		{
 			return *it->second;
@@ -209,7 +209,7 @@ nox::Asset& nox::AssetManager::CreateAssetImpl(const nox::detail::AssetHandleBas
 		NOX_LOCAL_SCOPE(nox::ScopedWriteLock(rw_lock_));
 
 		// 共有ロックを外してから排他ロックを取るまでの間に、他のスレッドが足していた場合
-		const auto it = resource_cache_.find(guid);
+		const auto it = resource_cache_.find(asset_id);
 		if (it != resource_cache_.end())
 		{
 			
@@ -222,7 +222,7 @@ nox::Asset& nox::AssetManager::CreateAssetImpl(const nox::detail::AssetHandleBas
 		NOX_ASSERT(attr != nullptr, u8"asset attribute not found");
 
 		new_asset = static_cast<nox::Asset*>(type.CreateObject());
-		resource_cache_.emplace(guid, new_asset);
+		resource_cache_.emplace(asset_id, new_asset);
 	}
 
 	{

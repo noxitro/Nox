@@ -29,7 +29,7 @@ namespace nox::dev::net
 		struct InitializeContext
 		{
 			nox::dev::net::address_t address;
-			nox::dev::net::port_t port;
+			nox::dev::net::Port port;
 		};
 
 		void Initialize(const InitializeContext& context);

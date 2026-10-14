@@ -95,12 +95,12 @@ namespace nox
 
 		static const nox::NodeDescriptor& GetNodeDescriptor()noexcept;
 	private:
-		mutable nox::UnorderedMap<nox::Guid, nox::Asset*> resource_cache_;
+		mutable nox::UnorderedMap<nox::uint64, nox::Asset*> resource_cache_;
 		nox::UnorderedMap<std::u8string_view, std::reference_wrapper<const nox::reflection::ClassInfo>> resource_typeinfo_map_with_extension_;
 		 mutable nox::Queue<nox::Asset*> load_queue_;
 
 #if NOX_DEVELOP
-		nox::Vector<nox::Guid> send_query_queue_;
+		nox::Vector<nox::uint64> send_query_queue_;
 #endif // NOX_DEVELOP
 
 

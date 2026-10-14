@@ -44,7 +44,6 @@ namespace nox::systems
 			const nox::components::CameraSettings& settings
 		)
 		{
-
 		}
 	};
 }
