@@ -286,7 +286,8 @@ namespace nox::os::network
 			return result;
 		}
 
-		using GetNameFunction = int (WSAAPI*)(::SOCKET, ::sockaddr*, int*);
+		//	WSAAPI (FAR PASCAL) は win64_api.h が far を外しているので書けない。宣言から型を取る
+		using GetNameFunction = decltype(&::getsockname);
 
 		inline std::expected<nox::os::network::EndPoint, nox::os::network::Error> GetEndPoint(const nox::os::network::Socket socket, const GetNameFunction function)noexcept
 		{
