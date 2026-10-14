@@ -207,5 +207,5 @@ void* nox::World::AddComponent(const nox::Entity entity, const nox::reflection::
 
 void* nox::World::GetComponent(const nox::Entity entity, const nox::reflection::Type& type)
 {
-
+	return nullptr;
 }
