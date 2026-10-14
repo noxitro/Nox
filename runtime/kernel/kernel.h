@@ -74,7 +74,10 @@
 #include	"clipboard.h"
 #include	"window.h"
 #include	"io/file.h"
+//	ReflectionGenerator は隠れた friend の演算子と配列のメンバ (EndPoint) を扱えないので、生成器の解析時は外す
+#if !NOX_REFLECTION_GENERATOR
 #include	"network.h"
+#endif // !NOX_REFLECTION_GENERATOR
 
 #include	"platform_type.h"
 //	end os
