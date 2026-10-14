@@ -11,13 +11,6 @@
 #include	"basic_type.h"
 #include	"basic_definition.h"
 
-#define NOX_ENABLE_ENUM_CLASS_FLAG(EnumType) \
-	static_assert(std::is_scoped_enum_v<EnumType>, "EnumType must be a scoped enum class"); \
-	inline constexpr EnumType operator|(EnumType lhs, EnumType rhs) noexcept \
-	{ \
-		return static_cast<EnumType>(static_cast<::std::underlying_type_t<EnumType>>(lhs) | static_cast<::std::underlying_type_t<EnumType>>(rhs)); \
-	}
-
 namespace nox::os::network
 {
 	/// @brief IPアドレスの種類
@@ -234,7 +227,7 @@ namespace nox::os::network
 	[[nodiscard]] nox::os::network::Error Bind(nox::os::network::Socket socket, const nox::os::network::EndPoint& end_point) noexcept;
 	[[nodiscard]] nox::os::network::Error Listen(nox::os::network::Socket socket, nox::int32 backlog) noexcept;
 
-	///	@details	ノンブロッキングでは InProgress を返す。Poll で Writable を待ち、GetPendingError で結果を見る
+	///	@details	ノンブロッキングでは InProgress を返す。Poll でWritable か Error / HangUp を待つ、GetPendingError で結果を見る
 	[[nodiscard]] nox::os::network::Error Connect(nox::os::network::Socket socket, const nox::os::network::EndPoint& end_point) noexcept;
 
 	///	@brief	溜まっているエラー (SO_ERROR) を取り出す。取り出し自体の失敗もその Error で返す

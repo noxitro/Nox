@@ -328,7 +328,20 @@ std::expected<nox::os::network::Socket, nox::os::network::Error> nox::os::networ
 		return std::unexpected(nox::os::network::Error::InvalidArgument);
 	}
 
-	const bool is_tcp = (protocol == nox::os::network::Protocol::TCP);
+	bool is_tcp ;
+	switch (protocol)
+	{
+	case nox::os::network::Protocol::TCP:
+		is_tcp = true;
+		break;
+	case nox::os::network::Protocol::UDP:
+		is_tcp = false;
+		break;
+	default:
+		return std::unexpected(nox::os::network::Error::InvalidArgument);
+	}
+
+	//const bool is_tcp = (protocol == nox::os::network::Protocol::TCP);
 	const ::SOCKET socket = ::WSASocketW(
 		native_family,
 		is_tcp ? SOCK_STREAM : SOCK_DGRAM,

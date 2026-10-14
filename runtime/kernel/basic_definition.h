@@ -21,13 +21,6 @@ namespace nox
 #define NOX_ANDROID 0
 #define NOX_MACOS 0
 #define NOX_IOS 0
-#elif defined(__linux__)
-#define NOX_WIN64 0
-#define NOX_WINDOWS 0
-#define NOX_LINUX 1
-#define NOX_ANDROID 0
-#define NOX_MACOS 0
-#define NOX_IOS 0
 #elif defined(__ANDROID__)
 #define NOX_WIN64 0
 #define NOX_WINDOWS 0
@@ -35,6 +28,20 @@ namespace nox
 #define NOX_ANDROID 1
 #define NOX_MACOS 0
 #define NOX_IOS 0
+#elif defined(__linux__)
+#define NOX_WIN64 0
+#define NOX_WINDOWS 0
+#define NOX_LINUX 1
+#define NOX_ANDROID 0
+#define NOX_MACOS 0
+#define NOX_IOS 0
+#elif defined(__APPLE__) && TARGET_OS_IPHONE
+#define NOX_WIN64 0
+#define NOX_WINDOWS 0
+#define NOX_LINUX 0
+#define NOX_ANDROID 0
+#define NOX_MACOS 0
+#define NOX_IOS 1
 #elif defined(__APPLE__)
 #define NOX_WIN64 0
 #define NOX_WINDOWS 0
@@ -42,13 +49,6 @@ namespace nox
 #define NOX_ANDROID 0
 #define NOX_MACOS 1
 #define NOX_IOS 0
-#elif defined(__APPLE__) && defined(TARGET_OS_IPHONE)
-#define NOX_WIN64 0
-#define NOX_WINDOWS 0
-#define NOX_LINUX 0
-#define NOX_ANDROID 0
-#define NOX_MACOS 0
-#define NOX_IOS 1
 #else
 ///	@brief X64環境か
 #define	NOX_WIN64 0

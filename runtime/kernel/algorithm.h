@@ -277,11 +277,11 @@ namespace nox::util
 	template<concepts::ClassOrUnion T>
 	[[nodiscard]] inline constexpr T BitOr(const T& a, const T& b)noexcept { return std::bit_or<T>()(a, b); }
 
-	template<concepts::Enum T>
-	[[nodiscard]] inline constexpr T BitOr(const T a, const T b)noexcept { return static_cast<T>(std::bit_or<std::underlying_type_t<T>>()(ToUnderlying(a), ToUnderlying(b))); }
-
 	template<std::integral T>
 	[[nodiscard]] inline constexpr T BitOr(const T a, const T b)noexcept { return std::bit_or<T>()(a, b); }
+
+	template<concepts::Enum T>
+	[[nodiscard]] inline constexpr T BitOr(const T a, const T b)noexcept { return static_cast<T>(nox::util::BitOr<std::underlying_type_t<T>>(nox::util::ToUnderlying(a), nox::util::ToUnderlying(b))); }
 
 	template<nox::concepts::Enum T, nox::concepts::Enum... Rest>
 		requires(sizeof...(Rest) > 1 && std::is_same_v<T, std::tuple_element_t<0, std::tuple<Rest...>>>)

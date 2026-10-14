@@ -85,7 +85,7 @@ TEST(NetworkEndPoint, Factories)
 	static_assert(EndPoint::IPv6Loopback(0).address[15] == 1);
 	static_assert(EndPoint::IPv4Any(0) == EndPoint::MakeIPv4(0, 0, 0, 0, 0));
 	static_assert(Socket{}.IsValid() == false);
-	static_assert((network::SendFlag::Oob | network::SendFlag::DontRoute) != network::SendFlag::None);
+	static_assert(nox::util::BitOr(network::SendFlag::Oob, network::SendFlag::DontRoute) != network::SendFlag::None);
 
 	EXPECT_EQ(EndPoint::IPv4Loopback(8080).port, 8080);
 	EXPECT_EQ(EndPoint::IPv6Any(1).family, IpFamily::IPv6);
