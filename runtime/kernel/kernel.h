@@ -25,6 +25,7 @@
 #include	<format>
 #include	<functional>
 #include	<limits>
+#include	<memory>
 #include	<optional>
 #include	<ranges>
 #include	<semaphore>
