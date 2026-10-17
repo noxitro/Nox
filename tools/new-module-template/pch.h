@@ -1,4 +1,4 @@
-//	Copyright (c) 2023-$year$ noxitro
+//	Copyright (c) 2023-{{YEAR}} noxitro
 //	SPDX-License-Identifier: MIT
 
 ///	@file	pch.h
@@ -8,3 +8,4 @@
 #include	"../../kernel/kernel.h"
 #include	"../../reflection/reflection.h"
 #include	"../../core/core.h"
+{{DEPENDENCY_INCLUDES}}

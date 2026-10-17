@@ -130,3 +130,36 @@ pwsh tools/vs-templates/install.ps1
 各フォルダを zip にして `ドキュメント\Visual Studio 18\Templates\ItemTemplates` へ
 コピーする。OneDrive のバックアップが有効なら `%OneDrive%\Documents` 側も探す。
 見つからないときは `-Destination` で置き場を指定する。
+
+### module の追加
+
+`runtime/modules` に module (静的ライブラリのプロジェクト) を足すときは
+`tools/new-module.ps1` を使う。ダブルクリックで起動するなら `tools/new-module.bat`
+(名前を尋ねられる)。
+
+```powershell
+pwsh tools/new-module.ps1 render.mesh
+```
+
+`runtime/modules/<名前>/` にプロジェクト一式 (vcxproj・代表ヘッダ・module クラス・pch) を
+書き出し、`runtime/runtime.slnx` の `/modules/` に登録する。名前空間・クラス名・ファイル名は
+名前から次のように決まる。
+
+| 名前 | 名前空間 | クラス | ファイル |
+|---|---|---|---|
+| `render` | `nox::render` | `RenderModule` | `render_module.h` |
+| `render.mesh` | `nox::render` | `MeshModule` | `mesh_module.h` |
+| `render.debug_draw` | `nox::render` | `DebugDrawModule` | `debug_draw_module.h` |
+| `hid` | `nox::hid` | `HidModule` | `hid_module.h` |
+
+- 名前は小文字の snake_case をドットでつなぐ。名前空間は最初の区切りだけで決まる。
+- ドットで区切った名前は、1 つ手前の module (`render.mesh` なら `render`) に依存する。
+  そのほかの module にも依存するなら `-DependsOn hid` のように足す。依存先の代表ヘッダは
+  `pch.h` に書かれ、slnx の依存にも入る。依存先の module は先に作っておく。
+- `-WhatIf` を付けると、何も書き出さずに決まる内容だけを表示する。
+- Visual Studio で `runtime.slnx` を開いたまま実行したら、再読み込みを求められたときに応じる。
+
+以前は Visual Studio のプロジェクトテンプレート (`Nox Module`) で作っていた。
+ドットを含む名前を扱えないので、このスクリプトに置き換えた。`install.ps1` で
+入れたことがあるなら、`ドキュメント\Visual Studio 18\Templates\ProjectTemplates\nox_module.zip`
+は使わないので消してよい。

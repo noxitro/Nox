@@ -17,8 +17,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>18.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{$guid1$}</ProjectGuid>
-    <RootNamespace>$safeprojectname$</RootNamespace>
+    <ProjectGuid>{{{GUID}}}</ProjectGuid>
+    <RootNamespace>{{PROJECT}}</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -57,7 +57,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <ItemGroup>
-    <ClCompile Include="$safeprojectname$_module.cpp" />
+    <ClCompile Include="{{MODULE_FILE}}.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Master|x64'">Create</PrecompiledHeader>
@@ -65,8 +65,8 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$safeprojectname$.h" />
-    <ClInclude Include="$safeprojectname$_module.h" />
+    <ClInclude Include="{{PROJECT}}.h" />
+    <ClInclude Include="{{MODULE_FILE}}.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
