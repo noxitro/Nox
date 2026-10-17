@@ -5,11 +5,31 @@
 ///	@brief	updater_graph
 #pragma once
 
-namespace nox::detail
+namespace nox
 {
+	struct NodeDescriptor;
+}
+
+namespace nox
+{
+
 	/// @brief 実行
 	class UpdaterGraph final
 	{
+		enum class Stage : nox::uint8
+		{
+			Init,
+			Update,
+			Terminate,
+		};
 
+		struct Node
+		{
+
+		};
+	public:
+
+	private:
+		
 	};
 }

@@ -252,6 +252,9 @@
     <ClInclude Include="updater_graph.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="service_container.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -471,6 +474,9 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="updater_graph.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="service_container.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

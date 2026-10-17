@@ -6,18 +6,23 @@
 #pragma once
 #include	"component.h"
 
+namespace nox
+{
+	enum class ComponentId : nox::uint16 {};
+}
+
 namespace nox::detail
 {
 	constexpr nox::uint16 kMaxComponentTypeCount = std::numeric_limits<nox::uint16>::max();
 
-	const nox::reflection::Type& GetComponentType(const nox::uint16 id)noexcept;
-	nox::uint16 GetComponentId(const nox::reflection::Type& type)noexcept;
-	nox::uint16 AssignComponentId(const nox::reflection::Type& type)noexcept;
+	const nox::reflection::Type& GetComponentType(const nox::ComponentId id)noexcept;
+	nox::ComponentId GetComponentId(const nox::reflection::Type& type)noexcept;
+	nox::ComponentId AssignComponentId(const nox::reflection::Type& type)noexcept;
 
 	template<std::derived_from<nox::detail::IComponentData> T>
-	inline nox::uint16 GetComponentId()noexcept
+	inline nox::ComponentId GetComponentId()noexcept
 	{
-		static const nox::uint16 id = nox::detail::GetComponentId(nox::reflection::Typeof<T>());
+		static const nox::ComponentId id = nox::detail::GetComponentId(nox::reflection::Typeof<T>());
 		return id;
 	}
 }

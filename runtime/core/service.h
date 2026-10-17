@@ -74,7 +74,6 @@ namespace nox
 
 		static consteval bool StaticDeclareVerify()noexcept
 		{
-			static_assert(std::is_polymorphic_v<T> == false, "Service must not be polymorphic");
 			static_assert(requires { T::GetNodeDescriptor(); }, "Service must have a valid NodeDescriptor");
 			return true;
 		}
