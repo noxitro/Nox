@@ -1,7 +1,7 @@
-﻿//	Copyright (c) 2023-$year$ noxitro
+//	Copyright (c) 2023-{{YEAR}} noxitro
 //	SPDX-License-Identifier: MIT
 
-///	@file	$safeprojectname$.h
-///	@brief	$safeprojectname$
+///	@file	{{PROJECT}}.h
+///	@brief	{{PROJECT}}
 ///	@note	リフレクション生成器 (ReflectionGenerator) が生成コードから include する。削除・改名しないこと
 #pragma once
