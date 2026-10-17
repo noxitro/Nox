@@ -6,6 +6,7 @@
 
 #include "pch.h"
 #include <array>
+#include <string_view>
 #include "../algorithm.h"
 #include "../network.h"
 
@@ -41,6 +42,17 @@ namespace
 		void TearDown() override
 		{
 			network::Finalize();
+		}
+
+		///	@brief	読めるようになるまで期限付きで待つ。ブロッキングの受信で CI が止まらないよう、受ける前に呼ぶ
+		static void WaitReadable(const Socket socket)
+		{
+			std::array<network::PollEntry, 1> entries = {};
+			entries[0].socket = socket;
+			entries[0].requested = network::PollEvent::Readable;
+			const auto ready = network::Poll(entries, 5000);
+			ASSERT_TRUE(ready.has_value());
+			ASSERT_EQ(*ready, 1) << "5 秒待っても読めるようにならなかった";
 		}
 
 		static void Create(const IpFamily family, const Protocol protocol, ScopedSocket& out)
@@ -106,6 +118,96 @@ TEST_F(NetworkTest, ParseAddress)
 	EXPECT_EQ(network::ParseAddress("localhost", 0).error(), Error::InvalidArgument);
 }
 
+TEST_F(NetworkTest, FormatAddress)
+{
+	std::array<char, network::kMaxAddressStringLength> buffer = {};
+
+	const auto ipv4 = network::FormatAddress(EndPoint::MakeIPv4(192, 168, 0, 1, 80), buffer);
+	ASSERT_TRUE(ipv4.has_value());
+	EXPECT_EQ(std::string_view(buffer.data(), static_cast<std::size_t>(*ipv4)), "192.168.0.1");
+
+	const auto ipv6 = network::FormatAddress(EndPoint::IPv6Loopback(0), buffer);
+	ASSERT_TRUE(ipv6.has_value());
+	EXPECT_EQ(std::string_view(buffer.data(), static_cast<std::size_t>(*ipv6)), "::1");
+
+	//	ParseAddress と往復できる
+	const auto parsed = network::ParseAddress(std::string_view(buffer.data(), static_cast<std::size_t>(*ipv6)), 0);
+	ASSERT_TRUE(parsed.has_value());
+	EXPECT_EQ(*parsed, EndPoint::IPv6Loopback(0));
+
+	EXPECT_EQ(network::FormatAddress(EndPoint{}, buffer).error(), Error::InvalidArgument);
+
+	//	書き込み先が足りなければ失敗する
+	std::array<char, 4> small = {};
+	EXPECT_FALSE(network::FormatAddress(EndPoint::MakeIPv4(192, 168, 0, 1, 80), small).has_value());
+}
+
+TEST_F(NetworkTest, SocketOptions)
+{
+	ScopedSocket socket;
+	ASSERT_NO_FATAL_FAILURE(Create(IpFamily::IPv4, Protocol::TCP, socket));
+	EXPECT_EQ(network::SetKeepAlive(socket.socket, true), Error::None);
+	EXPECT_EQ(network::SetReuseAddress(socket.socket, true), Error::None);
+	EXPECT_EQ(network::SetSendBufferSize(socket.socket, 64 * 1024), Error::None);
+	EXPECT_EQ(network::SetReceiveBufferSize(socket.socket, 64 * 1024), Error::None);
+}
+
+TEST_F(NetworkTest, BindSamePortFails)
+{
+	ScopedSocket first;
+	ASSERT_NO_FATAL_FAILURE(Create(IpFamily::IPv4, Protocol::TCP, first));
+	ASSERT_EQ(network::Bind(first.socket, EndPoint::IPv4Loopback(0)), Error::None);
+	ASSERT_EQ(network::Listen(first.socket, 1), Error::None);
+	const auto bound = network::GetLocalEndPoint(first.socket);
+	ASSERT_TRUE(bound.has_value());
+
+	//	SetReuseAddress を呼んでも、使用中のポートは横取りできない
+	ScopedSocket second;
+	ASSERT_NO_FATAL_FAILURE(Create(IpFamily::IPv4, Protocol::TCP, second));
+	ASSERT_EQ(network::SetReuseAddress(second.socket, true), Error::None);
+	EXPECT_EQ(network::Bind(second.socket, *bound), Error::AddressInUse);
+}
+
+TEST_F(NetworkTest, NonBlockingConnect)
+{
+	ScopedSocket listener;
+	ASSERT_NO_FATAL_FAILURE(Create(IpFamily::IPv4, Protocol::TCP, listener));
+	ASSERT_EQ(network::Bind(listener.socket, EndPoint::IPv4Loopback(0)), Error::None);
+	ASSERT_EQ(network::Listen(listener.socket, 1), Error::None);
+	const auto bound = network::GetLocalEndPoint(listener.socket);
+	ASSERT_TRUE(bound.has_value());
+
+	ScopedSocket client;
+	ASSERT_NO_FATAL_FAILURE(Create(IpFamily::IPv4, Protocol::TCP, client));
+	ASSERT_EQ(network::SetNonBlocking(client.socket, true), Error::None);
+
+	const Error connect_error = network::Connect(client.socket, *bound);
+	ASSERT_TRUE(connect_error == Error::None || connect_error == Error::InProgress) << static_cast<int>(connect_error);
+
+	std::array<network::PollEntry, 1> entries = {};
+	entries[0].socket = client.socket;
+	entries[0].requested = network::PollEvent::Writable;
+	const auto ready = network::Poll(entries, 5000);
+	ASSERT_TRUE(ready.has_value());
+	ASSERT_EQ(*ready, 1);
+	EXPECT_TRUE(nox::util::IsBitAnd(entries[0].returned, network::PollEvent::Writable));
+	EXPECT_EQ(network::GetPendingError(client.socket), Error::None);
+
+	//	接続が済んだ後にもう一度呼んでも、成功として返る
+	EXPECT_EQ(network::Connect(client.socket, *bound), Error::None);
+
+	const auto accepted = network::Accept(listener.socket, SocketMode::Blocking);
+	ASSERT_TRUE(accepted.has_value());
+	ScopedSocket server;
+	server.socket = accepted->socket;
+
+	const auto remote = network::GetRemoteEndPoint(server.socket);
+	const auto client_local = network::GetLocalEndPoint(client.socket);
+	ASSERT_TRUE(remote.has_value());
+	ASSERT_TRUE(client_local.has_value());
+	EXPECT_EQ(*remote, *client_local);
+}
+
 TEST_F(NetworkTest, CreateSocketRejectsUnknownFamily)
 {
 	const auto created = network::CreateSocket(IpFamily::Unknown, Protocol::TCP);
@@ -140,6 +242,7 @@ TEST_F(NetworkTest, TcpSendReceive)
 	ASSERT_EQ(send_result.bytes, 5);
 
 	std::array<nox::uint8, 5> received = {};
+	ASSERT_NO_FATAL_FAILURE(WaitReadable(server.socket));
 	const network::IoResult receive_result = network::Receive(server.socket, received, network::ReceiveFlag::WaitAll);
 	ASSERT_TRUE(receive_result.IsOk());
 	ASSERT_EQ(receive_result.bytes, 5);
@@ -147,6 +250,7 @@ TEST_F(NetworkTest, TcpSendReceive)
 
 	//	送信を閉じると、相手の Receive は 0 バイトで成功する
 	ASSERT_EQ(network::Shutdown(client.socket, network::ShutdownMode::Send), Error::None);
+	ASSERT_NO_FATAL_FAILURE(WaitReadable(server.socket));
 	const network::IoResult closed_result = network::Receive(server.socket, received);
 	EXPECT_TRUE(closed_result.IsOk());
 	EXPECT_EQ(closed_result.bytes, 0);
@@ -201,6 +305,7 @@ TEST_F(NetworkTest, AcceptOnNonBlockingListener)
 	const std::array<nox::uint8, 2> sent = { 1, 2 };
 	ASSERT_TRUE(network::Send(client.socket, sent).IsOk());
 	std::array<nox::uint8, 2> received = {};
+	ASSERT_NO_FATAL_FAILURE(WaitReadable(server.socket));
 	const network::IoResult result = network::Receive(server.socket, received, network::ReceiveFlag::WaitAll);
 	ASSERT_TRUE(result.IsOk());
 	EXPECT_EQ(result.bytes, 2);
@@ -264,6 +369,7 @@ TEST_F(NetworkTest, UdpSendToReceiveFrom)
 	ASSERT_EQ(send_result.bytes, 3);
 
 	std::array<nox::uint8, 8> received = {};
+	ASSERT_NO_FATAL_FAILURE(WaitReadable(receiver.socket));
 	const network::ReceiveFromResult receive_result = network::ReceiveFrom(receiver.socket, received);
 	ASSERT_TRUE(receive_result.IsOk());
 	ASSERT_EQ(receive_result.bytes, 3);
@@ -288,6 +394,7 @@ TEST_F(NetworkTest, UdpTruncationIsReported)
 
 	//	受信バッファより大きいデータグラムは、入った分だけ書いて MessageTooLong を返す
 	std::array<nox::uint8, 4> received = {};
+	ASSERT_NO_FATAL_FAILURE(WaitReadable(receiver.socket));
 	const network::ReceiveFromResult result = network::ReceiveFrom(receiver.socket, received);
 	EXPECT_EQ(result.error, Error::MessageTooLong);
 	EXPECT_EQ(result.bytes, 4);

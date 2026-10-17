@@ -3,13 +3,12 @@
 
 ///	@file	dev_net_definition.h
 ///	@brief	dev_net_definition
+///	@details	ソケットの操作は kernel の nox::os::network を使う。OS のヘッダーや型はここに持ち込まない。
 #pragma once
-#if NOX_WINDOWS
-#include	"../../../kernel/win64_socket.h"
-#endif // NOX_WINDOWS
 
 namespace nox::dev::net
 {
+	///	@brief	ハンドシェイクの段階 (Editor と取り決めたプロトコル)
 	enum class ConnectionState : nox::uint8
 	{
 		Invalid,
@@ -19,96 +18,27 @@ namespace nox::dev::net
 		Connected,
 	};
 
-	// --- 新規: IP アドレス / エンドポイント抽象 ------------------------
-	enum class IpFamily : nox::uint8 
-	{ 
-		Unknown = 0, 
-		IPv4 = 1, 
-		IPv6 = 2 
-	};
-
-	/// @brief 受信フラグ
-	enum class ReceiveFlag : nox::int32
-	{
-		/// @brief 通常受信
-		None = 0,
-
-#if NOX_WINDOWS
-		/// @brief バッファから取り出さずに先読み（ヘッダ検査などに有用）
-		Peek = MSG_PEEK,
-		/// @brief 緊急データ（ほぼ未使用）
-		Oob = MSG_OOB,
-		/// @brief 指定バイト数に達するまでブロック（非ブロッキングソケットでは非推奨）
-		WaitAll = MSG_WAITALL,
-#endif // NOX_WINDOWS
-	};
-
-	/// @brief 送信フラグ
-	enum class SendFlag : nox::int32
-	{
-		/// @brief 通常送信
-		None = 0,
-#if NOX_WINDOWS
-		Oob = MSG_OOB,
-		DontRoute = MSG_DONTROUTE,
-		Partial = MSG_PARTIAL, // メッセージ指向のみ想定。TCPでは通常使わない
-#endif
-	};
-
-#if NOX_WINDOWS
-	using Port = nox::uint32;
-	using raw_socket_t = ::SOCKET;
-	using raw_sockaddr = ::sockaddr;
-	using raw_sockaddr_in = ::sockaddr_in;
-	constexpr raw_socket_t k_raw_invalid_socket = INVALID_SOCKET;
-	constexpr nox::int32 k_raw_error_socket = SOCKET_ERROR;
-
-	/// @brief IPアドレス情報(バイナリ)
-	struct address_t
-	{
-		constexpr std::span<nox::uint8> data() noexcept { return buffer; }
-		inline constexpr std::span<const nox::uint8> data()const noexcept { return buffer; }
-
-	private:
-		nox::uint8 buffer[64];
-	};
-
-	struct peer_name_t
-	{
-		constexpr std::span<nox::uint8> data() noexcept { return buffer; }
-		inline constexpr std::span<const nox::uint8> data()const noexcept { return buffer; }
-
-	private:
-		nox::uint8 buffer[64];
-	};
-
-#endif // NOX_WINDOWS
-	using port_name_t = peer_name_t;
+	using Port = nox::os::network::Port;
 
 	struct ConnectionContext
 	{
-		nox::uint32 unique_id;
-		/// @brief IPv4/IPv6
-		nox::dev::net::IpFamily ip_family;
+		nox::uint32 unique_id = 0;
 
-		/// @brief ネットワークポートを表す変数。接続元のポート番号
-		nox::dev::net::Port port;
-		
-		/// @brief 接続元のIPアドレス(バイナリ)
-		std::array<nox::uint8, 16> address;
+		///	@brief	接続元のアドレスとポート
+		nox::os::network::EndPoint end_point;
 
 		/// @brief IPアドレスの文字列表現 (例: "192.168.0.1")
-		nox::U8FixedString<46> peername;
+		nox::U8FixedString<nox::os::network::kMaxAddressStringLength> peername;
 		/// @brief ポート番号の文字列表現 (例: "8080")
 		nox::U8FixedString<6> portname;
-		nox::dev::net::raw_socket_t socket;
+		nox::os::network::Socket socket;
 	};
 	using DisconnectionContext = ConnectionContext;
 
 	struct PeerContext
 	{
 		ConnectionContext connection;
-		raw_socket_t socket;
+		nox::os::network::Socket socket;
 	};
 
 	struct SocketIoError
@@ -117,15 +47,15 @@ namespace nox::dev::net
 		{
 			InvalidSocket,   // 無効なソケット
 			Disconnected,    // 正常切断/相手切断
-			WouldBlock,      // 非ブロッキングで未完了（WSAEWOULDBLOCK）
-			Interrupted,     // 割り込み（WSAEINTR）
-			Other,           // 上記以外（platform_code を参照）
+			WouldBlock,      // 非ブロッキングで未完了
+			Interrupted,     // 割り込み
+			Other,           // 上記以外（network_error を参照）
 		};
 		using enum Kind;
 
 		Kind kind;
 
-		/// @brief プラットフォーム固有のエラーコード（Windows: WSAGetLastError() の値、未設定=0）
-		nox::int32 platform_code=0;
+		/// @brief ソケット層のエラー (未設定は None)
+		nox::os::network::Error network_error = nox::os::network::Error::None;
 	};
 }

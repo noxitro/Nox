@@ -28,8 +28,11 @@ namespace nox
 				row(0u)
 			{}
 
+			/// @brief 世代番号(破棄/再利用で更新され、stale handleの検出に使う)
 			nox::uint32 generation;
-			nox::uint32 archetype_id;
+			/// @brief 所属するArchetypeのID
+			nox::uint32 archetype_id : kArchetypeIdBitWidth;
+			/// @brief Archetype内のcomponentsのrow番号
 			nox::uint32 row;
 		};
 
@@ -48,11 +51,26 @@ namespace nox
 		void Delete(nox::Entity entity);
 		bool IsAlive(nox::Entity entity)const noexcept;
 
+		/// @brief componentを追加する。既に同じ型のcomponentが存在する場合は何もせずnullptrを返す。
+		/// @param entity 
+		/// @param type 
+		/// @return 
 		void* AddComponent(const nox::Entity entity, const nox::reflection::Type& type);
 		template<class T>
 		inline T* AddComponent(const nox::Entity entity)
 		{
 			return static_cast<T*>(AddComponent(entity, nox::reflection::Typeof<T>()));
+		}
+
+		template<class T>
+		inline T* AddComponent(const nox::Entity entity, T&& component)
+		{
+			T*const ptr = AddComponent<T>(entity);
+			if (ptr)
+			{
+				*ptr = std::forward<T>(component);
+			}
+			return ptr;
 		}
 
 		void* GetComponent(const nox::Entity entity, const nox::reflection::Type& type);

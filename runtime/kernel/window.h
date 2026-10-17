@@ -11,21 +11,11 @@
 #include	<string_view>
 #include	"math/math.h"
 
-#if NOX_WINDOWS
-struct HWND__;
-struct HINSTANCE__;
-#endif // NOX_WINDOWS
-
-
 namespace nox
 {
-#if NOX_WINDOWS
-	using WindowHandle = ::HWND__*;
-	using InstanceHandle = ::HINSTANCE__*;
-#else
+	///	@brief	OS のウィンドウハンドル。OS の型 (HWND など) は公開ヘッダーに出さず、各 OS の実装で変換する
 	using WindowHandle = void*;
 	using InstanceHandle = void*;
-#endif // NOX_WINDOWS
 
 	enum class WindowStyle : nox::uint8
 	{

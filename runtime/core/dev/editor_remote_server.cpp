@@ -10,7 +10,6 @@
 #include	"net/socket_scheduler.h"
 #include	"editor_remote_response.h"
 #include	"editor_remote_query.h"
-#include	"net/dev_net_api.h"
 #include	"net/dev_net_log_id.h"
 #include	"../world_legacy.h"
 #include	"../log_service.h"
@@ -77,7 +76,7 @@ void	nox::dev::editor_remote::EditorRemoteServer::SendQuery(nox::dev::editor_rem
 
 void	nox::dev::editor_remote::EditorRemoteServer::SendBuffer(std::span<const nox::uint8> buffer)
 {
-	if (main_client_.socket != nox::dev::net::k_raw_invalid_socket)
+	if (main_client_.socket.IsValid())
 	{
 		const auto send_result = server_.Send(main_client_.socket, static_cast<const void*>(buffer.data()), static_cast<nox::int32>(buffer.size()));
 		if (send_result.has_value() == false)
@@ -123,7 +122,7 @@ void nox::dev::editor_remote::EditorRemoteServer::Terminate([[maybe_unused]] nox
 
 void	nox::dev::editor_remote::EditorRemoteServer::Update(nox::legacy::World& world)
 {
-	if (main_client_.socket != nox::dev::net::k_raw_invalid_socket)
+	if (main_client_.socket.IsValid())
 	{
 		UpdateReceive(world);
 	}
@@ -230,28 +229,19 @@ void nox::dev::editor_remote::EditorRemoteServer::OnServerReceive(nox::legacy::W
 		return;
 	}
 
-	const nox::int32 receive_size = nox::dev::net::Receive(main_client_.socket, static_cast<char*>(static_cast<void*>(receive_buffer.data())), static_cast<nox::int32>(receive_buffer.size()));
-	if (receive_size > 0)
+	const nox::os::network::IoResult result = nox::os::network::Receive(main_client_.socket, receive_buffer);
+	if (result.IsOk() && result.bytes > 0)
 	{
 		{
 			NOX_LOCAL_SCOPE(nox::ScopedLock(mutex_reader_));
-			reader_.AddReceiveBuffer(std::span(receive_buffer.data(), static_cast<std::size_t>(receive_size)));
+			reader_.AddReceiveBuffer(std::span(receive_buffer.data(), static_cast<std::size_t>(result.bytes)));
 		}
 		UpdateReceive(world);
 	}
-	else if (receive_size < 0)
+	else if (result.IsOk() == false && result.error != nox::os::network::Error::WouldBlock)
 	{
-		//	エラー
-		const int err = ::WSAGetLastError();
-		switch (err)
-		{
-			case WSAEWOULDBLOCK:
-			//	受信できるデータがない
-			break;
-			default:
-				NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u8"受信エラー err={0}", err);
-				break;
-		}
+		//	エラー (WouldBlock は受信できるデータがないだけ)
+		NOX_ERROR_LINE(nox::dev::net::log_id::DevNet, u8"受信エラー err={0}", static_cast<nox::int32>(nox::util::ToUnderlying(result.error)));
 	}
 }
 
@@ -265,7 +255,7 @@ void	nox::dev::editor_remote::EditorRemoteServer::OnServerConnected(const nox::d
 
 void	nox::dev::editor_remote::EditorRemoteServer::OnServerDisconnected([[maybe_unused]] const nox::dev::net::ConnectionContext& context)
 {
-	main_client_.socket = nox::dev::net::k_raw_invalid_socket;
+	main_client_.socket = nox::os::network::Socket{};
 
 	impl_->log_service.DetachServer();
 }

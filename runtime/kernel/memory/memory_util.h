@@ -13,6 +13,7 @@
 #include	"../basic_definition.h"
 #include	"../basic_type.h"
 #include	"../type_traits/concepts.h"
+#include	"../assertion_kernel.h"
 
 namespace nox::memory
 {
@@ -67,6 +68,22 @@ namespace nox::memory
 	{
 		nox::memory::detail::CheckConstructAt(sizeof(T), storage.size());
 		return std::construct_at(static_cast<T*>(static_cast<void*>(storage.data())), std::forward<Args>(args)...);
+	}
+
+	/// @brief valueをalignmentの倍数へ切り上げる
+	/// @param alignment 2のべき乗であること
+	template<std::unsigned_integral T>
+	[[nodiscard]] inline constexpr T AlignUp(const T value, const std::type_identity_t<T> alignment)noexcept
+	{
+		return static_cast<T>((value + (alignment - 1u)) & ~static_cast<T>(alignment - 1u));
+	}
+
+	/// @brief valueをalignmentの倍数へ切り捨てる
+	/// @param alignment 2のべき乗であること
+	template<std::unsigned_integral T>
+	[[nodiscard]] inline constexpr T AlignDown(const T value, const std::type_identity_t<T> alignment)noexcept
+	{
+		return static_cast<T>(value & ~static_cast<T>(alignment - 1u));
 	}
 }
 

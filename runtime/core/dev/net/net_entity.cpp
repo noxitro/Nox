@@ -6,12 +6,27 @@
 #include	"pch.h"
 #include	"net_entity.h"
 
-#include	"dev_net_api.h"
 
 namespace nox::dev::net
 {
 	/// @brief 送受信の最大サイズ
 	constexpr nox::int32 k_max_size = 65536;
+
+	namespace
+	{
+		inline nox::dev::net::SocketIoError ToSocketIoError(const nox::os::network::Error error) noexcept
+		{
+			switch (error)
+			{
+			case nox::os::network::Error::WouldBlock:
+				return nox::dev::net::SocketIoError{ .kind = nox::dev::net::SocketIoError::WouldBlock, .network_error = error };
+			case nox::os::network::Error::Interrupted:
+				return nox::dev::net::SocketIoError{ .kind = nox::dev::net::SocketIoError::Interrupted, .network_error = error };
+			default:
+				return nox::dev::net::SocketIoError{ .kind = nox::dev::net::SocketIoError::Other, .network_error = error };
+			}
+		}
+	}
 }
 
 nox::dev::net::Entity::Entity()
@@ -23,92 +38,90 @@ nox::dev::net::Entity::~Entity()
 }
 
 std::expected<void, nox::dev::net::SocketIoError> nox::dev::net::ReceiveAll(
-	nox::dev::net::raw_socket_t socket,
+	nox::os::network::Socket socket,
 	nox::not_null<void*> buffer,
 	nox::int32 size_to_read,
-	nox::dev::net::ReceiveFlag flag)
+	nox::os::network::ReceiveFlag flag)
 {
 	NOX_ASSERT(size_to_read > 0 && size_to_read <= k_max_size, nox::util::Format(u"size_to_read is zero or too large. size:{0}", size_to_read));
 
-	if (socket == k_raw_invalid_socket)
+	if (socket.IsValid() == false)
 	{
 		return std::unexpected(SocketIoError{ .kind = nox::dev::net::SocketIoError::InvalidSocket });
 	}
 
 	//	受け取りきる
+	nox::uint8* const dest = static_cast<nox::uint8*>(buffer.get());
 	nox::int32 remain_size = size_to_read;
 	while (remain_size > 0)
 	{
-		nox::int32 recived = nox::dev::net::Receive(socket, static_cast<char*>(buffer.get()) + (size_to_read - remain_size), remain_size, nox::util::ToUnderlying(flag));
-		if (recived > 0)
+		const nox::os::network::IoResult result = nox::os::network::Receive(
+			socket,
+			std::span<nox::uint8>(dest + (size_to_read - remain_size), static_cast<std::size_t>(remain_size)),
+			flag);
+		if (result.IsOk() == false)
 		{
-			remain_size -= recived;
+			return std::unexpected(nox::dev::net::ToSocketIoError(result.error));
 		}
-		else if (recived == 0)
+		if (result.bytes == 0)
 		{
 			// 切断
 			return std::unexpected(SocketIoError{ .kind = nox::dev::net::SocketIoError::Disconnected });
 		}
-		else
-		{
-			const nox::int32 err = ::WSAGetLastError();
-			// その他エラー処理
-			return std::unexpected(SocketIoError{ .kind = SocketIoError::Other, .platform_code = err });
-		}
+		remain_size -= result.bytes;
 	}
 
 	return {};
 }
 
 std::expected<void, nox::dev::net::SocketIoError> nox::dev::net::SendAll(
-	nox::dev::net::raw_socket_t socket,
+	nox::os::network::Socket socket,
 	nox::not_null<const void*> buffer,
 	nox::int32 size_to_send,
-	nox::dev::net::SendFlag flag)
+	nox::os::network::SendFlag flag)
 {
 	NOX_ASSERT(size_to_send > 0 && size_to_send <= k_max_size, nox::util::Format(u"size_to_send is zero or too large. size:{0}", size_to_send));
-	if (socket == k_raw_invalid_socket)
+	if (socket.IsValid() == false)
 	{
 		return std::unexpected(SocketIoError{ .kind = nox::dev::net::SocketIoError::InvalidSocket });
 	}
 	//	送りきる
+	const nox::uint8* const source = static_cast<const nox::uint8*>(buffer.get());
 	nox::int32 remain_size = size_to_send;
 	while (remain_size > 0)
 	{
-		nox::int32 sent = nox::dev::net::Send(socket, static_cast<const char*>(buffer.get()) + (size_to_send - remain_size), remain_size, nox::util::ToUnderlying(flag));
-		if (sent > 0)
+		const nox::os::network::IoResult result = nox::os::network::Send(
+			socket,
+			std::span<const nox::uint8>(source + (size_to_send - remain_size), static_cast<std::size_t>(remain_size)),
+			flag);
+		if (result.IsOk() == false)
 		{
-			remain_size -= sent;
+			return std::unexpected(nox::dev::net::ToSocketIoError(result.error));
 		}
-		else if (sent == 0)
+		if (result.bytes == 0)
 		{
 			// 切断
 			return std::unexpected(SocketIoError{ .kind = nox::dev::net::SocketIoError::Disconnected });
 		}
-		else
-		{
-			const nox::int32 err = ::WSAGetLastError();
-			// その他エラー処理
-			return std::unexpected(SocketIoError{ .kind = SocketIoError::Other, .platform_code = err });
-		}
+		remain_size -= result.bytes;
 	}
 	return {};
 }
 
 std::expected<void, nox::dev::net::SocketIoError> nox::dev::net::Entity::Receive(
-	nox::dev::net::raw_socket_t socket,
+	nox::os::network::Socket socket,
 	nox::not_null<void*> buffer,
 	nox::int32 size_to_read,
-	nox::dev::net::ReceiveFlag flag)
+	nox::os::network::ReceiveFlag flag)
 {
 	return nox::dev::net::ReceiveAll(socket, buffer, size_to_read, flag);
 }
 
 std::expected<void, nox::dev::net::SocketIoError> nox::dev::net::Entity::Send(
-	nox::dev::net::raw_socket_t socket,
+	nox::os::network::Socket socket,
 	nox::not_null<const void*> buffer,
 	nox::int32 size_to_send,
-	nox::dev::net::SendFlag flag)
+	nox::os::network::SendFlag flag)
 {
 	return nox::dev::net::SendAll(socket, buffer, size_to_send, flag);
 }

@@ -45,7 +45,7 @@ namespace nox::dev::net
 
 		struct PendingPeerContext
 		{
-			nox::dev::net::raw_socket_t  socket;
+			nox::os::network::Socket socket;
 			ConnectionContext connection;
 			ConnectionState connection_state = ConnectionState::Invalid;
 		};
@@ -64,30 +64,29 @@ namespace nox::dev::net
 		inline bool IsStartup()const noexcept { return is_startup_; }
 		//void PollAccept();
 
-		/// @brief 接続処理
-		/// @param fd 
-		void	Connection(::fd_set& fds);
+		/// @brief 接続処理。待ち受けのソケットが読めるとき (接続が届いたとき) に SocketScheduler から呼ばれる
+		void	Connection();
 
 		/// @brief SocketSchedulerから呼び出される更新処理
 		void Update(nox::legacy::World& world);
 
 		/// @brief clientを切断
 		/// @param socket 切断するclientのソケット
-		void Disconnect(const nox::dev::net::raw_socket_t socket);
+		void Disconnect(const nox::os::network::Socket socket);
 
-		inline constexpr nox::dev::net::raw_socket_t GetSocket()const noexcept { return socket_; }
+		inline constexpr nox::os::network::Socket GetSocket()const noexcept { return socket_; }
 
 		std::expected<void, nox::dev::net::SocketIoError> Send(
-			nox::dev::net::raw_socket_t socket,
+			nox::os::network::Socket socket,
 			nox::not_null<const void*> buffer,
 			nox::int32 size_to_send,
-			nox::dev::net::SendFlag flag = nox::dev::net::SendFlag::None);
+			nox::os::network::SendFlag flag = nox::os::network::SendFlag::None);
 
 		template<nox::concepts::TriviallyCopyable T>
 		inline std::expected<void, nox::dev::net::SocketIoError> Send(
-			nox::dev::net::raw_socket_t socket,
+			nox::os::network::Socket socket,
 			const T& buffer,
-			nox::dev::net::SendFlag flag = nox::dev::net::SendFlag::None)
+			nox::os::network::SendFlag flag = nox::os::network::SendFlag::None)
 		{
 			return this->Send(socket, static_cast<const void*>(&buffer), static_cast<nox::int32>(sizeof(T)), flag);
 		}
@@ -97,8 +96,8 @@ namespace nox::dev::net
 		nox::Vector<PeerContext> client_list_;
 
 		/// @brief 
-		nox::Vector<nox::dev::net::raw_socket_t> detached_client_list_;
-		nox::dev::net::raw_socket_t socket_;
+		nox::Vector<nox::os::network::Socket> detached_client_list_;
+		nox::os::network::Socket socket_;
 
 		bool is_startup_:1;
 

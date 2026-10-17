@@ -4,6 +4,7 @@
 ///	@file	network.h
 ///	@brief	network
 #pragma once
+#include	<array>
 #include	<expected>
 #include	<span>
 #include	<string_view>
@@ -61,10 +62,6 @@ namespace nox::os::network
 		HangUp = 1 << 3,
 		Invalid = 1 << 4,
 	};
-
-	NOX_ENABLE_ENUM_CLASS_FLAG(nox::os::network::SendFlag)
-	NOX_ENABLE_ENUM_CLASS_FLAG(nox::os::network::ReceiveFlag)
-	NOX_ENABLE_ENUM_CLASS_FLAG(nox::os::network::PollEvent)
 
 	///	@brief	ソケット操作のエラー。OS のエラーコード (WSAGetLastError / errno) から変換する
 	enum class Error : nox::uint8
@@ -199,6 +196,9 @@ namespace nox::os::network
 	/// @brief 1回の poll で処理する最大エントリ数
 	inline constexpr nox::int32 kMaxPollEntries = 64;
 
+	/// @brief FormatAddress が書く文字列の最大長 (終端の 0 を含む)。IPv6 の最長表記が入る大きさ
+	inline constexpr nox::int32 kMaxAddressStringLength = 46;
+
 	[[nodiscard]] nox::os::network::Error Initialize()noexcept;
 	void Finalize()noexcept;
 
@@ -212,6 +212,11 @@ namespace nox::os::network
 	[[nodiscard]] std::expected<nox::os::network::AcceptedSocket, nox::os::network::Error> Accept(nox::os::network::Socket listener, nox::os::network::SocketMode mode) noexcept;
 	[[nodiscard]] std::expected<nox::os::network::EndPoint, nox::os::network::Error> GetLocalEndPoint(nox::os::network::Socket socket) noexcept;
 	[[nodiscard]] std::expected<nox::os::network::EndPoint, nox::os::network::Error> GetRemoteEndPoint(nox::os::network::Socket socket) noexcept;
+
+	///	@brief	アドレスを数値表記の文字列 ("127.0.0.1"、"::1" など) にする。ポートは含めない
+	///	@param	buffer	書き込み先。kMaxAddressStringLength あれば足りる
+	///	@return	書いた文字数 (終端の 0 を含まない)
+	[[nodiscard]] std::expected<nox::int32, nox::os::network::Error> FormatAddress(const nox::os::network::EndPoint& end_point, std::span<char> buffer) noexcept;
 
 	///	@brief	数値表記のアドレス ("127.0.0.1"、"::1" など) を読む。名前解決はしない
 	[[nodiscard]] std::expected<nox::os::network::EndPoint, nox::os::network::Error> ParseAddress(std::string_view text, nox::os::network::Port port) noexcept;
@@ -236,6 +241,15 @@ namespace nox::os::network
 	[[nodiscard]] nox::os::network::Error Shutdown(nox::os::network::Socket socket, nox::os::network::ShutdownMode mode) noexcept;
 	[[nodiscard]] nox::os::network::Error SetNonBlocking(nox::os::network::Socket socket, bool enable) noexcept;
 	[[nodiscard]] nox::os::network::Error SetNoDelay(nox::os::network::Socket socket, bool enable) noexcept;
+
+	///	@brief	TCP のキープアライブ (SO_KEEPALIVE)
+	[[nodiscard]] nox::os::network::Error SetKeepAlive(nox::os::network::Socket socket, bool enable) noexcept;
+
+	///	@brief	閉じた直後 (TIME_WAIT) のポートへ、すぐ bind し直せるようにする。Bind の前に呼ぶ
+	///	@details	Windows は既定でそうなるので何もしない。Windows の SO_REUSEADDR は使用中のポートの横取りまで許すため使わない。
+	///				POSIX では SO_REUSEADDR を設定する。
+	[[nodiscard]] nox::os::network::Error SetReuseAddress(nox::os::network::Socket socket, bool enable) noexcept;
+
 	[[nodiscard]] nox::os::network::Error SetIPv6Only(nox::os::network::Socket socket, bool enable) noexcept;
 	[[nodiscard]] nox::os::network::Error SetSendBufferSize(nox::os::network::Socket socket, nox::int32 size) noexcept;
 	[[nodiscard]] nox::os::network::Error SetReceiveBufferSize(nox::os::network::Socket socket, nox::int32 size) noexcept;

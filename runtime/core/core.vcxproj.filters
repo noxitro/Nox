@@ -96,9 +96,6 @@
     <ClInclude Include="dev\editor_remote_response.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="dev\net\dev_net_api.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="dev\net\dev_net_log_id.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -348,9 +345,6 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="dev\editor_remote_response.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="dev\net\dev_net_api.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="dev\net\dev_net_log_id.cpp">
