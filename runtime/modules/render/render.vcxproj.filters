@@ -21,10 +21,13 @@
     <ClCompile Include="render_resource.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="os\device_dx12.cpp">
+    <ClCompile Include="detail\device_dx12.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="os\os_dx12.cpp">
+    <ClCompile Include="detail\render_device_factory.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="detail\sdk_dx12.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="definition.cpp">
@@ -36,13 +39,13 @@
     <ClCompile Include="render_command.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="os\render_device.cpp">
+    <ClCompile Include="render_device.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="renderer.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="os\definition_dx12.cpp">
+    <ClCompile Include="detail\definition_dx12.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="render_context.cpp">
@@ -60,7 +63,7 @@
     <ClCompile Include="render_module.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="os\os_vulkan.cpp">
+    <ClCompile Include="detail\sdk_vulkan.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="debug_draw.cpp">
@@ -74,10 +77,13 @@
     <ClInclude Include="render_resource.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="os\device_dx12.h">
+    <ClInclude Include="detail\device_dx12.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="os\os_dx12.h">
+    <ClInclude Include="detail\render_device_factory.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="detail\sdk_dx12.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="definition.h">
@@ -89,13 +95,13 @@
     <ClInclude Include="render_command.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="os\render_device.h">
+    <ClInclude Include="render_device.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="renderer.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="os\definition_dx12.h">
+    <ClInclude Include="detail\definition_dx12.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="render_context.h">
@@ -113,10 +119,10 @@
     <ClInclude Include="render_module.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="os\device_dx12_internal.h">
+    <ClInclude Include="detail\device_dx12_internal.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="os\os_vulkan.h">
+    <ClInclude Include="detail\sdk_vulkan.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="debug_draw.h">

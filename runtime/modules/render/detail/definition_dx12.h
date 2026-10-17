@@ -4,9 +4,9 @@
 ///	@file	definition_dx12.h
 ///	@brief	definition_dx12
 #pragma once
-#include	"os_dx12.h"
+#include	"sdk_dx12.h"
 
-namespace nox::render::os
+namespace nox::render::detail
 {
 	namespace
 	{

@@ -4,18 +4,18 @@
 ///	@file	device_dx12_internal.h
 ///	@brief	device_dx12_internal
 #pragma once
-#include	"os_dx12.h"
+#include	"sdk_dx12.h"
 
 #if NOX_RENDER_DX12
 #include	"../graphic_buffer.h"
 
-namespace nox::render::os
+namespace nox::render::detail
 {
 	namespace
 	{
 		class VertexBufferDX12 final : public nox::render::VertexBuffer
 		{
-			NOX_DECLARE_OBJECT(nox::render::os::VertexBufferDX12, nox::render::VertexBuffer);
+			NOX_DECLARE_OBJECT(nox::render::detail::VertexBufferDX12, nox::render::VertexBuffer);
 		public:
 			inline constexpr explicit VertexBufferDX12(::ID3D12Resource2* resource, nox::uint32 byte_size, nox::uint32 stride_size)noexcept :
 				nox::render::VertexBuffer(byte_size, stride_size),

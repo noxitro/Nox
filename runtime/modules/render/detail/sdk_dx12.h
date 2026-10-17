@@ -1,8 +1,8 @@
 //	Copyright (c) 2023-2026 noxitro
 //	SPDX-License-Identifier: MIT
 
-///	@file	os_dx12.h
-///	@brief	os_dx12
+///	@file	sdk_dx12.h
+///	@brief	DirectX 12 の SDK ヘッダを読み込む。render の外へ公開しない
 #pragma once
 #include	"../definition.h"
 

@@ -4,8 +4,8 @@
 ///	@file	device_dx12.h
 ///	@brief	device_dx12
 #pragma once
-#include	"render_device.h"
-#include	"os_dx12.h"
+#include	"../render_device.h"
+#include	"sdk_dx12.h"
 
 namespace nox::render
 {
@@ -20,11 +20,11 @@ namespace nox::render
 	}
 }
 
-namespace nox::render::os
+namespace nox::render::detail
 {
 	class DeviceDX12 final: public nox::render::RenderDevice
 	{
-		NOX_DECLARE_OBJECT(nox::render::os::DeviceDX12, nox::render::RenderDevice);
+		NOX_DECLARE_OBJECT(nox::render::detail::DeviceDX12, nox::render::RenderDevice);
 	public:
 		inline constexpr DeviceDX12()noexcept:
 			device_(nullptr),

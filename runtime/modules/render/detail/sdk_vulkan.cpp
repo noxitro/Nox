@@ -1,7 +1,7 @@
 // Copyright (c) 2023-2026 noxitro
 // SPDX-License-Identifier: MIT
 
-/// @file	os_vulkan.cpp
-/// @brief	os_vulkan
+/// @file	sdk_vulkan.cpp
+/// @brief	sdk_vulkan
 #include "pch.h"
-#include "os_vulkan.h"
+#include "sdk_vulkan.h"
