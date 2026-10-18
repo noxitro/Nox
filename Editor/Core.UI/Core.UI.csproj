@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dirkster.AvalonDock" Version="5.0.0" />
+    <PackageReference Include="Dirkster.AvalonDock" Version="5.0.1" />
   </ItemGroup>
 
   <ItemGroup>
