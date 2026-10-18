@@ -28,7 +28,7 @@ namespace nox::render
 
 	private:
 
-		inline constexpr auto& GetDevice()const noexcept;
+		inline constexpr nox::render::RenderDevice& GetDevice()const noexcept;
 
 	private:
 		nox::render::RenderDevice* render_device_;

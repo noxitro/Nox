@@ -91,7 +91,7 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="os\os_vulkan.cpp">
+    <ClCompile Include="detail\sdk_vulkan.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -107,15 +107,19 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="os\definition_dx12.cpp">
+    <ClCompile Include="detail\definition_dx12.cpp">
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="os\device_dx12.cpp">
+    <ClCompile Include="detail\device_dx12.cpp">
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="os\os_dx12.cpp">
+    <ClCompile Include="detail\render_device_factory.cpp">
+      <SubType>
+      </SubType>
+    </ClCompile>
+    <ClCompile Include="detail\sdk_dx12.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -127,7 +131,7 @@
       <SubType>
       </SubType>
     </ClCompile>
-    <ClCompile Include="os\render_device.cpp">
+    <ClCompile Include="render_device.cpp">
       <SubType>
       </SubType>
     </ClCompile>
@@ -164,11 +168,11 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="os\device_dx12_internal.h">
+    <ClInclude Include="detail\device_dx12_internal.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="os\os_vulkan.h">
+    <ClInclude Include="detail\sdk_vulkan.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -184,15 +188,19 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="os\definition_dx12.h">
+    <ClInclude Include="detail\definition_dx12.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="os\device_dx12.h">
+    <ClInclude Include="detail\device_dx12.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="os\os_dx12.h">
+    <ClInclude Include="detail\render_device_factory.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="detail\sdk_dx12.h">
       <SubType>
       </SubType>
     </ClInclude>
@@ -204,7 +212,7 @@
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="os\render_device.h">
+    <ClInclude Include="render_device.h">
       <SubType>
       </SubType>
     </ClInclude>

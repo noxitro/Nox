@@ -11,7 +11,7 @@
 #include	"definition_dx12.h"
 #include	"device_dx12_internal.h"
 
-void nox::render::os::DeviceDX12::Initialize()
+void nox::render::detail::DeviceDX12::Initialize()
 {
 	//	deviceの初期化
 	{
@@ -44,7 +44,7 @@ void nox::render::os::DeviceDX12::Initialize()
 	}
 }
 
-nox::IntrusivePtr<nox::render::VertexBuffer> nox::render::os::DeviceDX12::CreateVertexBuffer(const GraphicBufferDesc& desc, const GraphicBufferSubResourceDesc& sub_resource_desc)
+nox::IntrusivePtr<nox::render::VertexBuffer> nox::render::detail::DeviceDX12::CreateVertexBuffer(const GraphicBufferDesc& desc, const GraphicBufferSubResourceDesc& sub_resource_desc)
 {
 	if (device_ == nullptr)
 	{

@@ -2,7 +2,7 @@
 //	SPDX-License-Identifier: MIT
 
 ///	@file	render_device.h
-///	@brief	render_device
+///	@brief	バックエンドに依存しない描画デバイスのインターフェイス
 #pragma once
 
 namespace nox::render

@@ -6,8 +6,8 @@
 #include	"pch.h"
 #include	"renderer.h"
 
-#include	"os/device_dx12.h"
-#include	"definition.h"
+#include	"render_device.h"
+#include	"detail/render_device_factory.h"
 
 namespace nox::render
 {
@@ -15,13 +15,7 @@ namespace nox::render
 }
 
 nox::render::Renderer::Renderer():
-	render_device_(
-#if NOX_RENDER_DX12
-		new nox::render::os::DeviceDX12()
-#else
-		nullptr
-#endif // NOX_RENDER_DX12
-	)
+	render_device_(nox::render::detail::CreateRenderDevice())
 {
 }
 
@@ -31,15 +25,9 @@ nox::render::Renderer::~Renderer()
 	render_device_ = nullptr;
 }
 
-inline constexpr auto& nox::render::Renderer::GetDevice()const noexcept
+inline constexpr nox::render::RenderDevice& nox::render::Renderer::GetDevice()const noexcept
 {
-#if NOX_RENDER_DX12
-	return *static_cast<nox::render::os::DeviceDX12*>(render_device_);
-#else
-	static_assert(false, "Not implemented");
 	return *render_device_;
-#endif // NOX_RENDER_DX12
-
 }
 
 void nox::render::Renderer::Init(nox::legacy::World& world)

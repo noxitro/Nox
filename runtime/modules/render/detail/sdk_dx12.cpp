@@ -1,7 +1,7 @@
 //	Copyright (c) 2023-2026 noxitro
 //	SPDX-License-Identifier: MIT
 
-///	@file	os_dx12.cpp
-///	@brief	os_dx12
+///	@file	sdk_dx12.cpp
+///	@brief	sdk_dx12
 #include	"pch.h"
-#include	"os_dx12.h"
+#include	"sdk_dx12.h"
