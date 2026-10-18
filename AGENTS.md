@@ -83,7 +83,7 @@ ClangCL は必須ゲート。MSVC が見逃す非適合を実際に拾ってい�
 
 ### ReflectionGenerator (C#)
 
-C++ ビルドの前に、`runtime/bin/source` のコード生成器 (CustomTask と ReflectionGenerator) を建てて `runtime/bin/` に置く必要がある。リポジトリ直下の `startup.ps1` (ダブルクリック用は `startup.bat`) がこれを行い、CI (`setup-nox-build`) も同じスクリプトを呼ぶ。`dotnet build` だけでは `runtime/bin/` へ配置されない。
+C++ ビルドの前に、`runtime/bin/source` のコード生成器 (CustomTask・ReflectionGenerator・MakeAllIncludeHeader) を建てて `runtime/bin/` に置く必要がある。リポジトリ直下の `startup.ps1` (ダブルクリック用は `startup.bat`) がこれを行い、CI (`setup-nox-build`) も同じスクリプトを呼ぶ。`dotnet build` だけでは `runtime/bin/` へ配置されない。
 
 ```powershell
 ./startup.ps1

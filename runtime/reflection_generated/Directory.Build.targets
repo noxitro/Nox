@@ -83,6 +83,7 @@
 		<NoxCodeGeneratorSource Include="$(NoxCodeGeneratorSourceDir)RuntimeTypeDB\*.cs;$(NoxCodeGeneratorSourceDir)RuntimeTypeDB\*.csproj" />
 		<NoxCodeGeneratorSource Include="$(NoxCodeGeneratorSourceDir)ReflectionGenerator\*.cs;$(NoxCodeGeneratorSourceDir)ReflectionGenerator\*.csproj" />
 		<NoxCodeGeneratorSource Include="$(NoxCodeGeneratorSourceDir)ReflectionGenerator\Generator\**\*.cs;$(NoxCodeGeneratorSourceDir)ReflectionGenerator\Parser\**\*.cs" />
+		<NoxCodeGeneratorSource Include="$(NoxCodeGeneratorSourceDir)MakeAllIncludeHeader\*.cs;$(NoxCodeGeneratorSourceDir)MakeAllIncludeHeader\*.csproj" />
 	</ItemGroup>
 
 	<Target
