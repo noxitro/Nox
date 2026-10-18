@@ -23,6 +23,12 @@
 #         コメント。main では常にフルで建てる。FlaUI だけ落ちて直したいときは
 #         「Re-run failed jobs」ではなく「Re-run all jobs」を使う (plan が再評価され、
 #         FlaUI の前に保存済みの runtime キャッシュが使われる)。
+# 文書  : 文書など (下の ci_key の除外) だけが違い、それ以外が前に CI gate まで
+#         通った run と同じなら、Windows のジョブを全部飛ばして CI gate だけ緑にする。
+#         paths-ignore で run ごと起こさない形だと、文書だけの push をした PR で
+#         必須チェックが報告されず、マージできないまま残るため。
+# 必須  : ルールセットの必須チェックには CI gate だけを登録する。matrix のジョブ名は
+#         構成を増減すると変わるので、個別には登録しない。
 # 環境  : windows。runtime は PlatformToolset=v145 (runtime/Directory.Build.props)
 #         (Visual Studio 2026) を要求するため windows-2022 では動かない。
 # 費用  : 公開リポジトリなので GitHub ホストランナーは無料 (実行の usage で
@@ -42,14 +48,8 @@ on:
     # ci-media/** は下の editor-media ジョブがスクリーンショットと動画を置くための一時ブランチ。
     # GITHUB_TOKEN の push はそもそもワークフローを起こさないが、明示的にも外しておく。
     branches: ['**', '!ci-media/**']
-    # 文書だけの変更で windows ランナーを起こさない
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - '.gitignore'
-      - 'LICENSE'
-      # ベンチマークの結果ページだけの変更は bench-publish.yml が計測なしで作り直す
-      - 'tools/bench-site/**'
+    # paths-ignore は置かない。文書だけの変更は plan ジョブの skip で飛ばす
+    # (ファイル冒頭の「文書」を参照)。
   # pull_request は外してある。同一リポジトリのブランチへの PR は push 側と
   # 合わせて毎回 2 倍走り、ref が違うので concurrency でも畳めないため。
   # 公開後もフォーク PR は受けていない。受けるなら pull_request を戻し、
@@ -111,6 +111,14 @@ jobs:
   #
   # cache の version には path の文字列が入るので、保存・復元の path を変えたら
   # キーの v2 を上げること (古いエントリが見えなくなり、6 つ揃わず永久にフルになる)。
+  #
+  # skip は run 全体を飛ばすかの判定。ci_key は git ls-tree -r HEAD から、文書など
+  # (.md・docs/・ルートの .gitignore と LICENSE・tools/bench-site/) を除いた行の sha256。
+  # 除外はもとの paths-ignore と同じ。CI gate が緑で終わると nox-ci-ok-v1-<ci_key> を
+  # 保存するので、それが今の ref か main から読めれば skip=true にし、Windows の
+  # ジョブを全部飛ばして CI gate だけ緑にする。main では main 自身の記録だけを見る
+  # (ブランチで通っただけの木を、main のフルビルドの代わりにしないため)。
+  # 一覧の取得に失敗したときは skip=false に倒す。
   # =========================================================
   plan:
     name: Plan
@@ -122,6 +130,8 @@ jobs:
     outputs:
       reuse: ${{ steps.decide.outputs.reuse }}
       runtime_key: ${{ steps.key.outputs.runtime_key }}
+      skip: ${{ steps.skip.outputs.skip }}
+      ci_key: ${{ steps.ci-key.outputs.ci_key }}
     steps:
       # ls-tree は木だけ読めれば足りるので、作業ツリーは .github だけにする
       - name: Checkout
@@ -146,6 +156,57 @@ jobs:
           key=$(printf '%s\n' "$src" | sha256sum | cut -c1-40)
           echo "runtime_key=$key" >> "$GITHUB_OUTPUT"
           echo "runtime_key: $key"
+
+      # 引用符で囲まれたパス (タブや引用符を含む名前) は除外に当たらずキーに残る。
+      # 倒れる向きは「飛ばさない」なので害はない。
+      - name: Compute CI key
+        id: ci-key
+        shell: bash
+        run: |
+          set -euo pipefail
+          exclude='(\.md$|^docs/|^\.gitignore$|^LICENSE$|^tools/bench-site/)'
+          key=$(git -c core.quotepath=false ls-tree -r HEAD | re="$exclude" awk -F'\t' '$2 !~ ENVIRON["re"]' | sha256sum | cut -c1-40)
+          echo "ci_key=$key" >> "$GITHUB_OUTPUT"
+          echo "ci_key: $key"
+
+      - name: Decide skip
+        id: skip
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_KEY: ${{ steps.ci-key.outputs.ci_key }}
+          FULL: ${{ inputs.full && 'true' || 'false' }}
+        run: |
+          set -uo pipefail
+          skip=false
+          if [ "$FULL" = "true" ]; then
+            reason='workflow_dispatch で full が指定された'
+          else
+            marker="nox-ci-ok-v1-$CI_KEY"
+            refs="$GITHUB_REF"
+            [ "$GITHUB_REF" = "refs/heads/main" ] || refs+=" refs/heads/main"
+            found=''
+            for ref in $refs; do
+              if keys=$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/caches" \
+                  -f key="$marker" -f ref="$ref" -F per_page=100 --jq '.actions_caches[].key'); then
+                found+="$keys"$'\n'
+              fi
+            done
+            if grep -qxF "$marker" <<<"$found"; then
+              skip=true
+              reason='文書など以外が、CI gate まで通った run と同じ'
+            else
+              reason='文書など以外が同じで CI gate まで通った run が見つからない'
+            fi
+          fi
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+          echo "skip=$skip ($reason)"
+          {
+            echo "## Plan"
+            echo ""
+            echo "- ci_key: \`$CI_KEY\`"
+            echo "- skip: **$skip** ($reason)"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Decide reuse
         id: decide
@@ -191,8 +252,6 @@ jobs:
           echo "reuse=$reuse" >> "$GITHUB_OUTPUT"
           echo "reuse=$reuse ($reason)"
           {
-            echo "## Plan"
-            echo ""
             echo "- runtime_key: \`$KEY\`"
             echo "- reuse: **$reuse** ($reason)"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -224,6 +283,7 @@ jobs:
   build:
     name: Build & test (${{ matrix.compiler }} / ${{ matrix.configuration }})
     needs: [plan]
+    if: needs.plan.outputs.skip != 'true'
     # 既定は GitHub ホストの windows-latest。リポジトリ変数 NOX_RUNNER を
     # 設定するとそちらへ回す (例: NOX_RUNNER=self-hosted)。セルフホストの
     # 実行時間は無料枠を消費しないので、6 構成を毎 push で建てるならこれ。
@@ -1138,6 +1198,9 @@ jobs:
   # =========================================================
   editor:
     name: Build Editor (C#)
+    # plan を待つのは skip を読むためだけ (plan は 10 秒ほどで終わる)
+    needs: [plan]
+    if: needs.plan.outputs.skip != 'true'
     # 既定は GitHub ホストの windows-latest。リポジトリ変数 NOX_RUNNER を
     # 設定するとそちらへ回す (例: NOX_RUNNER=self-hosted)。セルフホストの
     # 実行時間は無料枠を消費しないので、6 構成を毎 push で建てるならこれ。
@@ -1209,7 +1272,7 @@ jobs:
   build-insights:
     name: Build Insights report
     needs: [plan, build]
-    if: always() && !cancelled() && needs.plan.outputs.reuse != 'true'
+    if: always() && !cancelled() && needs.plan.outputs.skip != 'true' && needs.plan.outputs.reuse != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -1342,7 +1405,7 @@ jobs:
   bench-publish:
     name: Benchmark publish
     needs: [plan, build, build-insights]
-    if: always() && !cancelled()
+    if: always() && !cancelled() && needs.plan.outputs.skip != 'true'
     uses: ./.github/workflows/bench-publish.yml
     permissions:
       contents: read
@@ -1379,8 +1442,8 @@ jobs:
   # =========================================================
   editor-media:
     name: Editor screenshots to PR
-    needs: [build]
-    if: always() && !cancelled() && github.event_name == 'push' && github.ref != 'refs/heads/main'
+    needs: [plan, build]
+    if: always() && !cancelled() && needs.plan.outputs.skip != 'true' && github.event_name == 'push' && github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -1517,6 +1580,67 @@ jobs:
           {
             echo "## :camera: Editor のスクリーンショットを PR #$pr に貼った"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # =========================================================
+  # CI gate: ルールセットの必須チェックに登録する集約ジョブ
+  #
+  # 見るのは合否に効く plan / build / editor だけ。build-insights と bench-publish は
+  # レポートで、editor-media は補助なので入れない (落ちたら notify が拾う)。
+  # failure と cancelled は落とす。skip でない run では build と editor の success を
+  # 求める (skipped で素通りさせない)。
+  # 緑で終わったら nox-ci-ok-v1-<ci_key> を保存し、文書だけ違う次の push で
+  # plan が skip にできるようにする (plan ジョブの説明を参照)。
+  # =========================================================
+  gate:
+    name: CI gate
+    needs: [plan, build, editor]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Check results
+        shell: bash
+        env:
+          PLAN: ${{ needs.plan.result }}
+          BUILD: ${{ needs.build.result }}
+          EDITOR: ${{ needs.editor.result }}
+          SKIP: ${{ needs.plan.outputs.skip }}
+        run: |
+          set -uo pipefail
+          echo "plan=$PLAN build=$BUILD editor=$EDITOR skip=$SKIP"
+          if [ "$PLAN" != success ]; then
+            echo "::error::plan が $PLAN"
+            exit 1
+          fi
+          if [ "$SKIP" = true ]; then
+            if [ "$BUILD" != skipped ] || [ "$EDITOR" != skipped ]; then
+              echo "::error::skip なのに飛ばされていないジョブがある (build=$BUILD editor=$EDITOR)"
+              exit 1
+            fi
+            echo '文書など以外は検証済みなので、ビルドは飛ばした'
+            exit 0
+          fi
+          if [ "$BUILD" != success ] || [ "$EDITOR" != success ]; then
+            echo "::error::build=$BUILD editor=$EDITOR"
+            exit 1
+          fi
+
+      - name: Write CI verified marker
+        if: needs.plan.outputs.skip != 'true'
+        shell: bash
+        run: |
+          mkdir -p ci-verified
+          echo "$GITHUB_SHA" > ci-verified/marker.txt
+
+      # 同じキーが既にあれば保存は警告だけで飛ばされる
+      - name: Save CI verified marker
+        if: needs.plan.outputs.skip != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ci-verified
+          key: nox-ci-ok-v1-${{ needs.plan.outputs.ci_key }}
 
   # =========================================================
   # Notify: 転んだとき / 転んだ状態から戻ったときだけ Discord に流す

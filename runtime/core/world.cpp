@@ -16,8 +16,7 @@ namespace nox
 {
 	namespace
 	{
-		/// @brief 空のArchetypeのID。Componentが1つもないEntityが所属する。
-		inline constexpr nox::uint32 kEmptyArchetypeId = 0;
+		/// @brief archetypeが持てる最大コンポーネント数
 		inline constexpr nox::uint16 kArchetypeComponentMaxCount = 255;
 
 		class ComponentTypeSet final
@@ -69,6 +68,7 @@ namespace nox
 
 class nox::World::Archetype final
 {
+	/// @brief Archetype内の1列の情報
 	struct Column final
 	{
 		/// @brief Chunk先頭からのオフセット
@@ -77,12 +77,13 @@ class nox::World::Archetype final
 		nox::uint32 size;
 	};
 
+	/// @brief このArchetypeからの接続先情報
 	struct Edge final
 	{
 		/// @brief 遷移先のArchetypeのID
-		nox::uint32 archetype_id : nox::World::kArchetypeIdBitWidth;
+		ArchetypeId archetype_id : nox::World::kArchetypeIdBitWidth;
 		/// @brief 追加/削除されたcomponentのid
-		nox::uint16 component_id;
+		nox::ComponentId component_id;
 	};
 
 	/// @brief 1chunkのサイズ
@@ -92,9 +93,10 @@ class nox::World::Archetype final
 	inline static constexpr nox::uint32 kInvalidColumn = std::numeric_limits<nox::uint32>::max();
 public:
 	Archetype()noexcept = delete;
-	explicit Archetype(const std::span<const nox::uint16> component_id_list)noexcept:
+	inline explicit Archetype(const std::span<const nox::ComponentId> component_id_list)noexcept:
 		archetype_id_(kInvalidArchetypeId),
-		component_id_list_(std::from_range, component_id_list)
+		component_id_list_(std::from_range, component_id_list),
+		entity_count_(0u)
 	{
 		NOX_ASSERT(std::ranges::is_sorted(component_id_list), u8"Component IDは昇順で渡してください");
 		NOX_ASSERT(component_id_list.size() <= kArchetypeComponentMaxCount, u8"1Archetypeが持てるComponentの数を超えました");
@@ -102,7 +104,7 @@ public:
 		//	1行あたりのバイト数と、列ごとのアラインメント調整で出る余白の上限
 		nox::uint32 row_stride = static_cast<nox::uint32>(sizeof(nox::Entity));
 		nox::uint32 padding_budget = 0u;
-		for (const nox::uint16 component_id : component_id_list)
+		for (const nox::ComponentId component_id : component_id_list)
 		{
 			const nox::reflection::Type& type = nox::detail::GetComponentType(component_id);
 			row_stride += type.GetTypeSize();
@@ -114,7 +116,7 @@ public:
 
 		columns_.reserve(component_id_list.size());
 		nox::uint32 offset = chunk_capacity_ * static_cast<nox::uint32>(sizeof(nox::Entity));
-		for (const nox::uint16 component_id : component_id_list)
+		for (const nox::ComponentId component_id : component_id_list)
 		{
 			const nox::reflection::Type& type = nox::detail::GetComponentType(component_id);
 			offset = nox::memory::AlignUp(offset, type.GetAlignmentOf());
@@ -133,12 +135,12 @@ public:
 		}
 	}
 
-	inline constexpr std::span<const nox::uint16> GetComponentIdList()const noexcept
+	inline constexpr std::span<const nox::ComponentId> GetComponentIdList()const noexcept
 	{
 		return component_id_list_;
 	}
 
-	inline constexpr bool ContainsComponent(const nox::uint16 component_id)const noexcept
+	inline constexpr bool ContainsComponent(const nox::ComponentId component_id)const noexcept
 	{
 		return std::ranges::binary_search(component_id_list_, component_id);
 	}
@@ -148,7 +150,7 @@ public:
 		return entity_count_;
 	}
 
-	[[nodiscard]] inline constexpr nox::uint32 FindColumn(const nox::uint16 component_id)const noexcept
+	[[nodiscard]] inline constexpr nox::uint32 FindColumn(const nox::ComponentId component_id)const noexcept
 	{
 		const auto it = std::ranges::lower_bound(component_id_list_, component_id);
 		if (it == component_id_list_.end() || *it != component_id)
@@ -163,25 +165,40 @@ public:
 		return columns_[column].size;
 	}
 
-	[[nodiscard]] inline std::byte* GetComponentPtr(const nox::uint32 column, const nox::uint32 row)noexcept
+	template<class Self> requires std::same_as<std::remove_const_t<Self>, Archetype>
+	[[nodiscard]] inline constexpr auto GetComponentPtr(this Self& self, const nox::uint32 column, const nox::uint32 row)noexcept
+		-> std::conditional_t<std::is_const_v<Self>, const std::byte*, std::byte*>
 	{
-		NOX_ASSERT(row < entity_count_, u8"行が範囲外です");
-		const Column& info = columns_[column];
-		return chunks_[row / chunk_capacity_] + info.offset + static_cast<std::size_t>(row % chunk_capacity_) * info.size;
+		
+		NOX_ASSERT(row < self.entity_count_, u8"行が範囲外です");
+		const Column& info = self.columns_[column];
+
+		//	1chunkの先頭アドレス + chunk内のオフセット + row * 1要素のバイト数
+		std::byte* const chunk = self.chunks_[row / self.chunk_capacity_];
+		return chunk + info.offset + static_cast<std::size_t>(row % self.chunk_capacity_) * info.size;
 	}
 
-	[[nodiscard]] inline const std::byte* GetComponentPtr(const nox::uint32 column, const nox::uint32 row)const noexcept
+	template<class Self> requires std::same_as<std::remove_const_t<Self>, Archetype>
+	[[nodiscard]] inline constexpr auto GetComponentPtr(this Self& self, nox::ComponentId component_id, const nox::uint32 row)noexcept
+		-> std::conditional_t<std::is_const_v<Self>, const std::byte*, std::byte*>
 	{
-		return nullptr;
+		const nox::uint32 column = self.FindColumn(component_id);
+		if (column == kInvalidColumn)
+		{
+			return nullptr;
+		}
+		return self.GetComponentPtr(column, row);
 	}
 
-	[[nodiscard]] inline nox::Entity& GetEntity(const nox::uint32 row)noexcept
+	template<class Self> requires std::same_as<std::remove_const_t<Self>, Archetype>
+	[[nodiscard]] inline constexpr auto GetEntity(this Self& self, const nox::uint32 row)noexcept
+		-> std::conditional_t<std::is_const_v<Self>, const nox::Entity&, nox::Entity&>
 	{
-		NOX_ASSERT(row < entity_count_, u8"行が範囲外です");
-		return reinterpret_cast<nox::Entity*>(chunks_[row / chunk_capacity_])[row % chunk_capacity_];
+		NOX_ASSERT(row < self.entity_count_, u8"行が範囲外です");
+		return reinterpret_cast<nox::Entity*>(self.chunks_[row / self.chunk_capacity_])[row % self.chunk_capacity_];
 	}
 
-	inline nox::uint32 FindEdgeArchetypeId(const nox::uint16 component_id)noexcept
+	inline ArchetypeId FindEdgeArchetypeId(const nox::ComponentId component_id)noexcept
 	{
 		for (nox::World::Archetype::Edge& edge : edges_)
 		{
@@ -193,12 +210,11 @@ public:
 		return nox::World::kInvalidArchetypeId;
 	}
 
-	inline void AddEdge(const nox::uint32 archetype_id, const nox::uint16 component_id)noexcept
+	inline void AddEdge(const ArchetypeId archetype_id, const nox::ComponentId component_id)noexcept
 	{
 		NOX_ASSERT(FindEdgeArchetypeId(component_id) == nox::World::kInvalidArchetypeId, u8"同じComponentのエッジを二重に登録しようとしました");
 		edges_.emplace_back(nox::World::Archetype::Edge{ .archetype_id = archetype_id, .component_id = component_id });
 	}
-
 
 	[[nodiscard]] inline nox::uint32 AddEntity(const nox::Entity entity)noexcept
 	{
@@ -214,8 +230,8 @@ public:
 	}
 	
 private:
-	nox::uint32 archetype_id_ : nox::World::kArchetypeIdBitWidth;
-	const nox::Vector<nox::uint16> component_id_list_;
+	ArchetypeId archetype_id_ : nox::World::kArchetypeIdBitWidth;
+	const nox::Vector<nox::ComponentId> component_id_list_;
 	nox::Vector<Column> columns_;
 
 	/// @brief このArchetypeに接続しているArchetypeのIDリスト
@@ -225,7 +241,7 @@ private:
 	/// @brief 1chunkに入る行数
 	nox::uint32 chunk_capacity_;
 
-	
+	/// @brief バッファ
 	nox::Vector<std::byte*> chunks_;
 };
 
@@ -233,20 +249,22 @@ struct nox::World::Detail final
 {
 	Detail()noexcept = delete;
 
-	static inline nox::World::Archetype* AllocArchetype(const std::span<const nox::uint16> component_id_list)
+	static inline nox::World::Archetype* AllocArchetype(const std::span<const nox::ComponentId> component_id_list)
 	{
 		return new nox::World::Archetype(component_id_list);
 	}
 
-	static inline nox::uint32 MoveEntity(nox::World& self, const nox::Entity entity, const nox::uint32 archetype_id)
+	static inline nox::uint32 MoveEntity(nox::World& self, const nox::Entity entity, const ArchetypeId archetype_id)
 	{
 		nox::World::EntityRecord& record = self.entity_records_[entity.index];
 		NOX_ASSERT(record.archetype_id != archetype_id, u8"同じArchetypeに移動しようとしました");
 
-		nox::World::Archetype& src_archetype = *self.archetypes_[record.archetype_id];
-		nox::World::Archetype& dst_archetype = *self.archetypes_[archetype_id];
+		nox::World::Archetype& src_archetype = *self.archetypes_[nox::util::ToUnderlying(record.archetype_id)];
+		nox::World::Archetype& dst_archetype = *self.archetypes_[nox::util::ToUnderlying(archetype_id)];
 		const nox::uint32 src_row = record.row;
 		const nox::uint32 dst_row = static_cast<nox::uint32>(dst_archetype.GetComponentIdList().size());
+
+		return dst_row;
 	}
 };
 
@@ -255,7 +273,7 @@ nox::World::World():
 {
 	static_assert(sizeof(nox::World::Archetype) <= sizeof(decltype(empty_archetype_buffer_)), "空のArchetypeのバッファが小さすぎます");
 
-	nox::World::Archetype*const empty_archetype = std::construct_at(reinterpret_cast<nox::World::Archetype*>(empty_archetype_buffer_.data()), std::span<const nox::uint16>{});
+	nox::World::Archetype*const empty_archetype = std::construct_at(reinterpret_cast<nox::World::Archetype*>(empty_archetype_buffer_.data()), std::span<const nox::ComponentId>{});
 	archetypes_.emplace_back(empty_archetype);
 }
 
@@ -288,17 +306,26 @@ void nox::World::Init()
 		});
 }
 
+void nox::World::Init(const std::span<const nox::reflection::Type* const> module_types)
+{
+	return;
+}
+
 void nox::World::Update()
 {
 
-}	
+}
 
 nox::Entity nox::World::CreateEntity()
 {
 	if (free_entities_.empty())
 	{
 		const nox::uint32 entity_index = static_cast<nox::uint32>(entity_records_.size());
-		entity_records_.emplace_back(nox::World::EntityRecord{});
+		entity_records_.emplace_back(nox::World::EntityRecord{ 
+			.generation = 0u, 
+			.archetype_id = nox::World::kEmptyArchetypeId,
+			.row = 0u }
+			);
 		return nox::Entity{ .generation = 0u, .index = entity_index };
 	}
 	else
@@ -337,7 +364,7 @@ void* nox::World::AddComponent(const nox::Entity entity, const nox::reflection::
 	}
 
 	nox::World::EntityRecord& record = entity_records_.at(entity.index);
-	nox::World::Archetype& archetype = *archetypes_[record.archetype_id];
+	nox::World::Archetype& archetype = *archetypes_[nox::util::ToUnderlying(record.archetype_id)];
 	const auto component_id = nox::detail::GetComponentId(type);
 	nox::World::Archetype* new_archetype = nullptr;
 
@@ -345,19 +372,19 @@ void* nox::World::AddComponent(const nox::Entity entity, const nox::reflection::
 		auto new_archetype_id = archetype.FindEdgeArchetypeId(component_id);
 		if (new_archetype_id == nox::World::kInvalidArchetypeId)
 		{
-			nox::Vector<nox::uint16> new_component_id_list;
-			new_component_id_list.resize(archetype.GetComponentIdList().size() + 1u);
+			nox::Vector<nox::ComponentId> new_component_id_list;
+			new_component_id_list.reserve(archetype.GetComponentIdList().size() + 1u);
 			new_component_id_list.append_range(archetype.GetComponentIdList());
 			new_component_id_list.emplace_back(component_id);
 
 			new_archetype = nox::World::Detail::AllocArchetype(new_component_id_list);
-			new_archetype_id = static_cast<nox::uint32>(archetypes_.size());
+			new_archetype_id = ArchetypeId{ static_cast<nox::uint32>(archetypes_.size()) };
 			archetypes_.emplace_back(new_archetype);
 			archetype.AddEdge(new_archetype_id, component_id);
 		}
 		else
 		{
-			new_archetype = archetypes_[new_archetype_id];
+			new_archetype = archetypes_[nox::util::ToUnderlying(new_archetype_id)];
 		}
 	}
 	
@@ -366,8 +393,19 @@ void* nox::World::AddComponent(const nox::Entity entity, const nox::reflection::
 	return nullptr;
 }
 
-void* nox::World::GetComponent(const nox::Entity entity, const nox::reflection::Type& type)
+void* nox::World::GetComponent(const nox::Entity entity, const nox::reflection::Type& type)noexcept
 {
-	
-	return nullptr;
+	return const_cast<void*>(std::as_const(*this).GetComponent(entity, type));
+}
+
+const void* nox::World::GetComponent(const nox::Entity entity, const nox::reflection::Type& type)const noexcept
+{
+	if (IsAlive(entity) == false)
+	{
+		return nullptr;
+	}
+	const nox::World::EntityRecord& record = entity_records_[entity.index];
+	const Archetype& archetype = *archetypes_[nox::util::ToUnderlying(record.archetype_id)];
+
+	return archetype.GetComponentPtr(nox::detail::GetComponentId(type), record.row);
 }

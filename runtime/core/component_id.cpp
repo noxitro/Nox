@@ -13,7 +13,7 @@ namespace nox::detail
 	{
 		struct
 		{
-			nox::UnorderedMap<const nox::reflection::Type*, nox::uint16> type_to_id_map_;
+			nox::UnorderedMap<const nox::reflection::Type*, nox::ComponentId> type_to_id_map_;
 		}* cache_ = nullptr;
 
 		constinit std::array<std::byte, sizeof(std::remove_pointer_t<decltype(cache_)>)> cache_storage{ std::byte{} };
@@ -35,13 +35,13 @@ void nox::World::GlobalTerminate()
 	nox::detail::cache_ = nullptr;
 }
 
-const nox::reflection::Type& nox::detail::GetComponentType(const nox::uint16 id)noexcept
+const nox::reflection::Type& nox::detail::GetComponentType(const nox::ComponentId id)noexcept
 {
 	//	idでアクセスする辞典でキャッシュには登録済みのはずなので、ロックなしでアクセスする
-	return *nox::detail::component_type_indices_[id];
+	return *nox::detail::component_type_indices_[nox::util::ToUnderlying(id)];
 }
 
-nox::uint16 nox::detail::GetComponentId(const nox::reflection::Type& type)noexcept
+nox::ComponentId nox::detail::GetComponentId(const nox::reflection::Type& type)noexcept
 {
 	{
 		NOX_LOCAL_SCOPE(nox::ScopedReadLock(g_component_type_indices_lock));
@@ -54,14 +54,14 @@ nox::uint16 nox::detail::GetComponentId(const nox::reflection::Type& type)noexce
 	return nox::detail::AssignComponentId(type);
 }
 
-nox::uint16 nox::detail::AssignComponentId(const nox::reflection::Type& type)noexcept
+nox::ComponentId nox::detail::AssignComponentId(const nox::reflection::Type& type)noexcept
 {
-	const nox::uint16 id = g_component_count.fetch_add(1u, std::memory_order_relaxed);
+	const nox::ComponentId id = nox::ComponentId{ g_component_count.fetch_add(1u, std::memory_order_relaxed) };
 
 	{
 		NOX_LOCAL_SCOPE(nox::ScopedWriteLock(g_component_type_indices_lock));
 		nox::detail::cache_->type_to_id_map_.emplace(&type, id);
-		nox::detail::component_type_indices_[id] = &type;
+		nox::detail::component_type_indices_[nox::util::ToUnderlying(id)] = &type;
 	}
 
 	return id;
