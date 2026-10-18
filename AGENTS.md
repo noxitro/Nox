@@ -139,6 +139,16 @@ dotnet build Editor/Studio.slnx
 - 例外は ReflectionGenerator の解析の起点 `reflection_generated/reflect.cpp` と `reflection_generated_test/reflect.cpp`。PCH なしで単独で解析されるので、代表ヘッダを直接 include する。同じプロジェクトの `pch.h` も、生成コードが `pch.h` しか見ないので、解析の起点と同じもの (`reflection/reflection_generated_register.h`、テスト版は `core/test/test_types.h`) を直接 include する。
 - プロジェクト内のヘッダ同士 (core の中で `archetype.h` を読むなど) は、従来どおり必要なものを直接 include する。
 
+### module のプロジェクト
+
+`runtime/modules` の module は `tools/new-module.ps1` で作る (使い方は README の「module の追加」)。名前と中身の対応は次のとおりで、手で作るときも合わせる。
+
+- フォルダとプロジェクトは `modules/<名前>/<名前>.vcxproj`。ある module のフォルダの中に別の module を置かない (`render.mesh` は `modules/render.mesh/`)。
+- 名前空間は名前の最初の区切りだけで決める (`render.mesh` も `nox::render`)。型の完全修飾名は保存データに載るので、プロジェクトの分け方を変えても名前が変わらないようにする。
+- 代表ヘッダは `<名前>.h` (`render.mesh.h`)。ReflectionGenerator が vcxproj のパスから求めて include するので、別の名前にしない。
+- module クラスは最後の区切りを PascalCase にして `Module` を付ける (`MeshModule`)。同じ名前空間に複数の module が入るので、`Module` だけの名前にしない。
+- 同じ名前空間に複数のプロジェクトが入るので、`.cpp` の中だけで使うものは無名名前空間に置く。複数のファイルで共有する内部実装の名前が、別のプロジェクトと重ならないようにする (同名の inline 関数やクラスは ODR 違反になり、リンカーが黙ってどちらかを選ぶ)。
+
 ### Reflection / 属性マクロ
 
 `NOX_ATTR_DECLARATION` / `NOX_ATTR_DECLARE` は型専用ではない。メンバ変数・メンバ関数に加え、グローバル変数・グローバル関数など型以外の宣言にも付く。ReflectionGenerator を直すときも型専用として扱わない。
