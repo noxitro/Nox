@@ -371,7 +371,7 @@ if (-not (Get-Command gh -ErrorAction SilentlyContinue))
 	exit 0
 }
 
-# 実行が登録されるまで少し待つ。文書だけの変更では ci.yml が走らない (paths-ignore)。
+# 実行が登録されるまで少し待つ。文書だけの変更でも ci.yml は走る (plan が skip にして CI gate だけ緑にする)。
 $run = $null
 for ($i = 0; $i -lt 18 -and -not $run; $i++)
 {
@@ -381,7 +381,7 @@ for ($i = 0; $i -lt 18 -and -not $run; $i++)
 }
 if (-not $run)
 {
-	Write-Host 'ci-try: 90 秒待っても CI の実行が見つからない。文書だけの変更なら CI (ビルド) は走らない' -ForegroundColor Yellow
+	Write-Host 'ci-try: 90 秒待っても CI の実行が見つからない' -ForegroundColor Yellow
 	exit 1
 }
 
