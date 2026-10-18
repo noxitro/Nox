@@ -13,9 +13,6 @@ REQUIRED = [
     "*.ps1",
     "*.psm1",
     "*.psd1",
-    # Visual Studio のテンプレートのうち日本語を含むもの。パラメーター置換で読み込まれる
-    "tools/vs-templates/nox_module/root.h",
-    "tools/vs-templates/nox_module/NoxModule.vcxproj.filters",
 ]
 
 # どちらでもよいもの (移行中)

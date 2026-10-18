@@ -14,10 +14,13 @@ namespace nox::detail::updater_graph
 	template<class T, auto function, nox::detail::updater_graph::NodeTrigger trigger, class... Options>
 	struct RegisterTraits<T, nox::detail::updater_graph::Register<function, trigger, Options...>> final
 	{
+	private:
 		constexpr RegisterTraits() = delete;
 		constexpr RegisterTraits(const RegisterTraits&) = delete;
 		constexpr RegisterTraits(RegisterTraits&&) = delete;
 
+
+	public:
 		static constexpr nox::detail::updater_graph::NodeMethod value
 		{
 			.method_name = nox::util::NameofValue<function>()
