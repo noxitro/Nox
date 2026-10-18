@@ -35,26 +35,23 @@ namespace MakeAllIncludeHeader;
 		private Stack<ScopeType> _ScopeStack = new Stack<ScopeType>();
 		private Stack<string> _NestList = new Stack<string>();
 
-#if DEBUG
+		/// <summary>
+		/// 書き出し先のパス。閉じるまではメモリ (_Stream の下の MemoryStream) に溜める
+		/// </summary>
 		private readonly string _FilePath;
-#endif
+
+		private bool _IsClosed = false;
 		#endregion
 
 		/// <summary>
-		/// ファイルが存在しない場合作成します
+		/// 閉じたときに path へ書き出します。中身が既存のファイルと同じなら書き込みません
 		/// </summary>
 		/// <param name="path"></param>
 		public CodeWriter(string path)
 		{
 			//	BOM なしの UTF-8 で書く (Encoding.UTF8 は BOM を付ける)。AGENTS.md の「ファイル形式」
-			_Stream = new StreamWriter(path, false, new UTF8Encoding(false));
-
-			//  ファイルをクリア
-			_Stream.BaseStream.SetLength(0);
-
-#if DEBUG
+			_Stream = new StreamWriter(new MemoryStream(), new UTF8Encoding(false));
 			_FilePath = path;
-#endif
 		}
 
 
@@ -68,10 +65,42 @@ namespace MakeAllIncludeHeader;
 #endif
 			}
 
+			Close();
+		}
+
+		/// <summary>
+		/// 溜めた中身をファイルへ書き出します。
+		/// 既存のファイルと中身が同じなら書き込まず、更新日時を変えない。all_include.h は app.h から
+		/// 読まれるので、更新日時が毎回新しくなると、中身が同じでも app と runtime が再コンパイルされる
+		/// </summary>
+		public void Close()
+		{
+			if (_IsClosed)
+			{
+				return;
+			}
+			_IsClosed = true;
+
+			_Stream.Flush();
+			MemoryStream memoryStream = (MemoryStream)_Stream.BaseStream;
+			ReadOnlySpan<byte> content = memoryStream.GetBuffer().AsSpan(0, (int)memoryStream.Length);
+			if (IsSameContent(_FilePath, content) == false)
+			{
+				using FileStream fileStream = new(_FilePath, FileMode.Create, FileAccess.Write);
+				fileStream.Write(content);
+			}
 			_Stream.Close();
 		}
 
-		public void Close() => _Stream.Close();
+		private static bool IsSameContent(string path, ReadOnlySpan<byte> content)
+		{
+			FileInfo fileInfo = new(path);
+			if (fileInfo.Exists == false || fileInfo.Length != content.Length)
+			{
+				return false;
+			}
+			return File.ReadAllBytes(path).AsSpan().SequenceEqual(content);
+		}
 
 
 

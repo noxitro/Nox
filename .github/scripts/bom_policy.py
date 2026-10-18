@@ -16,12 +16,7 @@ REQUIRED = [
 ]
 
 # どちらでもよいもの (移行中)
-ANY = [
-    # リポジトリに入っている MakeAllIncludeHeader.exe が古く、ビルドのたびに BOM 付きで
-    # 書き出す。exe を作り直したら (生成器のソースは BOM なしで書くよう直してある) 消す
-    "runtime/app/all_include.h",
-    "runtime/app/all_include.cpp",
-]
+ANY = []
 
 REQUIRED_POLICY = "required"
 FORBIDDEN_POLICY = "forbidden"

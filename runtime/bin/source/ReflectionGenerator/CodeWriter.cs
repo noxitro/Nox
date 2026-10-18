@@ -119,29 +119,27 @@ public class CodeWriter : BaseCodeWriter, IDisposable
     #region 非公開フィールド
 		private readonly StreamWriter _Stream;
 
+    /// <summary>
+    /// 書き出し先のパス。閉じるまではメモリ (_Stream の下の MemoryStream) に溜める
+    /// </summary>
+    private readonly string _FilePath;
+
+    private bool _IsClosed = false;
+
     private Stack<ScopeType> _ScopeStack = new Stack<ScopeType>();
 
-#if DEBUG
-		private readonly string _FilePath;
-#endif
 #endregion
 
     #region 公開メソッド
     /// <summary>
-    /// ファイルが存在しない場合作成します
+    /// 閉じたときに path へ書き出します。中身が既存のファイルと同じなら書き込みません
     /// </summary>
     /// <param name="path"></param>
     public CodeWriter(string path)
     {
         //	BOM なしの UTF-8 で書く (Encoding.UTF8 は BOM を付ける)。AGENTS.md の「ファイル形式」
-        _Stream = new System.IO.StreamWriter(path, false, new System.Text.UTF8Encoding(false));
-
-        //  ファイルをクリア
-        _Stream.BaseStream.SetLength(0);
-
-#if DEBUG
+        _Stream = new System.IO.StreamWriter(new System.IO.MemoryStream(), new System.Text.UTF8Encoding(false));
         _FilePath = path;
-#endif
     }
 
     public void Dispose()
@@ -154,10 +152,32 @@ public class CodeWriter : BaseCodeWriter, IDisposable
 #endif
         }
 
-        _Stream.Close();
+        Close();
     }
 
-    public void Close() => _Stream.Close();
+    /// <summary>
+    /// 溜めた中身をファイルへ書き出します。
+    /// 既存のファイルと中身が同じなら書き込まず、更新日時を変えない。生成物の更新日時が
+    /// 毎回新しくなると、MSBuild は中身が同じでも生成物とそれを読む翻訳単位を再コンパイルする
+    /// </summary>
+    public void Close()
+    {
+        if (_IsClosed)
+        {
+            return;
+        }
+        _IsClosed = true;
+
+        _Stream.Flush();
+        System.IO.MemoryStream memoryStream = (System.IO.MemoryStream)_Stream.BaseStream;
+        ReadOnlySpan<byte> content = memoryStream.GetBuffer().AsSpan(0, (int)memoryStream.Length);
+        if (IsSameContent(_FilePath, content) == false)
+        {
+            using System.IO.FileStream fileStream = new(_FilePath, System.IO.FileMode.Create, System.IO.FileAccess.Write);
+            fileStream.Write(content);
+        }
+        _Stream.Close();
+    }
 
     public void PushScope(ScopeType scopeType)
     {
@@ -239,6 +259,15 @@ public class CodeWriter : BaseCodeWriter, IDisposable
     #endregion
 
     #region 非公開メソッド
+    private static bool IsSameContent(string path, ReadOnlySpan<byte> content)
+    {
+        System.IO.FileInfo fileInfo = new(path);
+        if (fileInfo.Exists == false || fileInfo.Length != content.Length)
+        {
+            return false;
+        }
+        return System.IO.File.ReadAllBytes(path).AsSpan().SequenceEqual(content);
+    }
     #endregion
 	}
 
