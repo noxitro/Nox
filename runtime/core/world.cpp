@@ -263,6 +263,8 @@ struct nox::World::Detail final
 		nox::World::Archetype& dst_archetype = *self.archetypes_[nox::util::ToUnderlying(archetype_id)];
 		const nox::uint32 src_row = record.row;
 		const nox::uint32 dst_row = static_cast<nox::uint32>(dst_archetype.GetComponentIdList().size());
+
+		return dst_row;
 	}
 };
 
