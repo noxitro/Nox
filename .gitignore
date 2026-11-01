@@ -153,9 +153,11 @@
 /runtime/bin/build/intermediate/x64/Debug/reflection_generated
 /runtime/bin/RuntimeTypeDB.dll
 
-# ReflectionGenerator の実行時生成物
+# ReflectionGenerator / MakeAllIncludeHeader の実行時生成物 (startup.ps1 が配置する)
 /runtime/bin/ReflectionGenerator.deps.json
 /runtime/bin/ReflectionGenerator.runtimeconfig.json
+/runtime/bin/MakeAllIncludeHeader.deps.json
+/runtime/bin/MakeAllIncludeHeader.runtimeconfig.json
 # startup.ps1 が生成器を配置し終えた印 (reflection_generated のビルドが鮮度検査に使う)
 /runtime/bin/startup.stamp
 # モジュール配下のテストプロジェクトを単体ビルドしたときの出力
@@ -176,8 +178,6 @@
 #
 # 注意: `bin/` は一律に無視してはいけない。runtime/bin/ はビルド出力ではなく
 #       ReflectionGenerator などツール群のソース置き場で、追跡が必要。
-#       同じ理由で runtime/bin/MakeAllIncludeHeader.exe は *.exe 指定の例外と
-#       して追跡し続けている (app.vcxproj のプリビルドが呼ぶ)。
 # ---------------------------------------------------------------------------
 
 # MSBuild / .NET の中間出力
@@ -219,9 +219,6 @@
 
 # ローカルのビルドログ
 build-*.log
-
-# 例外: ビルドが実際に呼ぶツールバイナリは追跡し続ける
-!runtime/bin/MakeAllIncludeHeader.exe
 
 # テスト実行の出力 (実行ユーザー名や絶対パスを含むので追跡しない)
 TestResults/

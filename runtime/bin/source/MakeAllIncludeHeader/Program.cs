@@ -84,8 +84,7 @@ namespace MakeAllIncludeHeader;
 			using (CodeWriter codeWriter = new CodeWriter(filePath))
 			{
 				WriteCopyRight(codeWriter);
-				codeWriter.WriteLine("#include\t\"stdafx.h\"");
-				codeWriter.WriteNewLine();
+				codeWriter.WriteLine("#include\t\"pch.h\"");
 				codeWriter.WriteLine($"#include\t\"{allIncludeFileName}.h\"");
 			}
 

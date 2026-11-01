@@ -53,7 +53,7 @@ ClangCL は必須ゲート。MSVC が見逃す非適合を実際に拾ってい�
 
 - 禁止する名前は共通の git フック (`noxitro/github-templates` の `git-hooks/external-names.sha256`) にハッシュで置いてあり、フック (commit-msg / pre-commit / pre-push) と CI の Secret scan が検査する。
 - 新しく避けたい名前が出たら `python3 ~/.config/nox/github-templates/git-hooks/check-external-names.py --hash '<名前>'` の出力を github-templates の `external-names.sha256` に追記する (PR で入れる)。名前そのものはコメントにも書かない。
-- ユーザーの所属先など、リポジトリにハッシュでも置かない名前は手元の非公開リスト (`~/.config/nox/private-names.sha256`) にあり、フックが `[PRIVATE-NAME]` で止める。止まったら、その語を消して書き直す (リストの中身を調べたり、該当語を推測して書いたりしない)。
+- 公開しない固有名詞など、リポジトリにハッシュでも置かない名前は手元の非公開リスト (`~/.config/nox/private-names.sha256`) にあり、フックが `[PRIVATE-NAME]` で止める。止まったら、その語を消して書き直す (リストの中身を調べたり、該当語を推測して書いたりしない)。
 - 手元の資料は `docs/references/local/` (`.gitignore` 済み) に置き、コミットしない。
 
 ### ファイル形式
@@ -83,7 +83,7 @@ ClangCL は必須ゲート。MSVC が見逃す非適合を実際に拾ってい�
 
 ### ReflectionGenerator (C#)
 
-C++ ビルドの前に、`runtime/bin/source` のコード生成器 (CustomTask と ReflectionGenerator) を建てて `runtime/bin/` に置く必要がある。リポジトリ直下の `startup.ps1` (ダブルクリック用は `startup.bat`) がこれを行い、CI (`setup-nox-build`) も同じスクリプトを呼ぶ。`dotnet build` だけでは `runtime/bin/` へ配置されない。
+C++ ビルドの前に、`runtime/bin/source` のコード生成器 (CustomTask・ReflectionGenerator・MakeAllIncludeHeader) を建てて `runtime/bin/` に置く必要がある。リポジトリ直下の `startup.ps1` (ダブルクリック用は `startup.bat`) がこれを行い、CI (`setup-nox-build`) も同じスクリプトを呼ぶ。`dotnet build` だけでは `runtime/bin/` へ配置されない。
 
 ```powershell
 ./startup.ps1

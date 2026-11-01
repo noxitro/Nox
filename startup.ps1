@@ -4,6 +4,8 @@
 #   1. CustomTask          : reflection_generated のビルドで MSBuild が読み込むカスタムタスク
 #   2. ReflectionGenerator : リフレクション情報を C++ ソースとして書き出す生成器
 #                            (ProjectReference の RuntimeTypeDB も同時に建つ)
+#   3. MakeAllIncludeHeader: app のビルド後に all_include.h / .cpp を書き出すツール
+#                            (runtime/app/app.vcxproj の PostBuildEvent が呼ぶ)
 #
 # 配置するバイナリは .gitignore 済みでリポジトリに入っていない。生成器のソースを pull しても
 # 配置済みのバイナリは古いままなので、初回と、生成器のソースが変わったときに実行する。
@@ -73,7 +75,7 @@ if (-not (Get-Command dotnet -ErrorAction SilentlyContinue))
 
 # 1. CustomTask
 #    ReflectionGenerator.csproj が runtime/bin/CustomTask.dll を HintPath で参照しているので、先に配置する
-Write-Host '[1/2] CustomTask をビルドします'
+Write-Host '[1/3] CustomTask をビルドします'
 $customTaskDir = Join-Path $sourceDir 'CustomTask'
 Invoke-DotnetBuild (Join-Path $customTaskDir 'CustomTask.csproj')
 $customTaskOut = Join-Path $customTaskDir 'bin\Debug\netstandard2.0'
@@ -83,15 +85,23 @@ Write-Host "      $copied 個のファイルを配置しました"
 # 2. ReflectionGenerator
 #    出力ディレクトリを丸ごと写す。dotnet build の出力は単一ファイルではなく、ClangSharp /
 #    MessagePack / Microsoft.Build と runtimes\win-x64 の libclang ネイティブが揃って初めて動く
-Write-Host '[2/2] ReflectionGenerator をビルドします'
+Write-Host '[2/3] ReflectionGenerator をビルドします'
 $generatorDir = Join-Path $sourceDir 'ReflectionGenerator'
 Invoke-DotnetBuild (Join-Path $generatorDir 'ReflectionGenerator.csproj')
 $generatorOut = Join-Path $generatorDir 'bin\Debug\net10.0'
 $copied = Copy-ChangedFiles -BaseDir $generatorOut -Files (Get-ChildItem -LiteralPath $generatorOut -Recurse -File) -To $binDir
 Write-Host "      $copied 個のファイルを配置しました"
 
+# 3. MakeAllIncludeHeader
+Write-Host '[3/3] MakeAllIncludeHeader をビルドします'
+$allIncludeDir = Join-Path $sourceDir 'MakeAllIncludeHeader'
+Invoke-DotnetBuild (Join-Path $allIncludeDir 'MakeAllIncludeHeader.csproj')
+$allIncludeOut = Join-Path $allIncludeDir 'bin\Debug\net10.0'
+$copied = Copy-ChangedFiles -BaseDir $allIncludeOut -Files (Get-ChildItem -LiteralPath $allIncludeOut -Recurse -File) -To $binDir
+Write-Host "      $copied 個のファイルを配置しました"
+
 # 期待どおり置けたか確かめる。欠けたまま進むと、後段で原因の見えにくいビルドエラーに化ける
-foreach ($name in 'CustomTask.dll', 'ReflectionGenerator.exe', 'ReflectionGenerator.dll', 'RuntimeTypeDB.dll')
+foreach ($name in 'CustomTask.dll', 'ReflectionGenerator.exe', 'ReflectionGenerator.dll', 'RuntimeTypeDB.dll', 'MakeAllIncludeHeader.exe', 'MakeAllIncludeHeader.dll')
 {
 	if (-not (Test-Path -LiteralPath (Join-Path $binDir $name)))
 	{
