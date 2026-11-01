@@ -13,7 +13,7 @@
 	- origin/main からの差分全体を、そのフックの scan.sh と gitleaks で検査する
 	  (フックは前回の push との差分しか見ないので、それに頼らず全体を見る)
 	- 含まれる未追跡のファイルを一覧で見せ、y/n で確認する
-	- (選んだときだけ) 追加された行を Sonnet に読ませ、個人情報・所属先・秘密情報・
+	- (選んだときだけ) 追加された行を Sonnet に読ませ、個人情報・勤務に関わる情報・秘密情報・
 	  ライセンスの観点でレビューする。指摘があれば既定で中止し、force と答えたときだけ進む
 
 .PARAMETER Branch
@@ -200,7 +200,7 @@ if ($Review -and $NoReview) { Fail '-Review と -NoReview は同時に付けな�
 $doReview = $Review.IsPresent
 if (-not $Review -and -not $NoReview -and -not $Yes)
 {
-	$answer = Read-Host 'Sonnet で公開前レビュー (個人情報・所属先・秘密情報・ライセンス) をするか (y/N)'
+	$answer = Read-Host 'Sonnet で公開前レビュー (個人情報・勤務に関わる情報・秘密情報・ライセンス) をするか (y/N)'
 	$doReview = $answer -match '^(y|yes)$'
 }
 if (-not (Get-Command gh -ErrorAction SilentlyContinue) -and -not $NoWatch)
@@ -312,7 +312,7 @@ if (-not $scanOk) { Fail '検査で止まった。上の出力を見て直して
 Write-Host 'ci-try: 検査は通った' -ForegroundColor Green
 
 # --- LLM レビュー --------------------------------------------------------------
-# 決まったルールで拾えない、文脈で判断するもの (氏名・職場を示す記述など) を見る。
+# 決まったルールで拾えない、文脈で判断するもの (氏名・勤務に関わる記述など) を見る。
 # 判定はぶれるので、指摘があれば既定で止め、誤検出と判断したときだけ force で進める。
 if ($doReview)
 {
