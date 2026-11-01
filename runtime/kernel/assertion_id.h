@@ -10,17 +10,6 @@
 #include	<string_view>
 #include	<type_traits>
 
-namespace nox::util
-{
-	/// @brief		定数評価中に失敗した場合にコンパイルエラーを発生させる
-	/// @details	実際に呼び出されることはない
-	[[noreturn]] consteval void ConstevalFail(const char* message)noexcept
-	{
-		// メッセージがログに出るので便利
-		throw message;
-	}
-}
-
 namespace nox::assertion
 {
 	/// @brief		アサーションID
@@ -29,13 +18,14 @@ namespace nox::assertion
 	{
 		std::u8string_view value;
 
-		consteval explicit ErrorId(std::u8string_view v)noexcept : value(v)
+		consteval explicit ErrorId(std::u8string_view v) : value(v)
 		{
 			for (const char8_t c : v)
 			{
 				if (c > 0x7F)
 				{
-					nox::util::ConstevalFail("ErrorId must be ASCII");
+					//	定数評価中のthrowはコンパイルエラーになる
+					throw "ErrorId must be ASCII";
 				}
 			}
 		}
