@@ -119,7 +119,7 @@ void nox::Window::Create(const nox::WindowSetupDesc& desc)
 
 void	nox::Window::CreateNative(const void* args_ptr)
 {
-	NOX_ASSERT(args_ptr != nullptr, u"self is null");
+	NOX_ASSERT(args_ptr != nullptr, u8"self is null");
 	const auto* args = static_cast<const nox::detail::NativeCreateArgs*>(args_ptr);
 	nox::Window& self = args->self;
 	const nox::WindowSetupDesc& desc = args->desc;
@@ -141,7 +141,7 @@ void	nox::Window::CreateNative(const void* args_ptr)
 	if (::RegisterClassExW(&window_class) == 0)
 	{
 		auto error_code = ::GetLastError();
-		NOX_ASSERT(false, u"ウィンドウクラスの登録に失敗しました");
+		NOX_ASSERT(false, u8"ウィンドウクラスの登録に失敗しました");
 		return;
 	}
 

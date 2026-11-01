@@ -96,7 +96,7 @@ void	nox::dev::editor_remote::EditorRemoteServer::Start(nox::legacy::World& worl
 	if (started && socket_scheduler_ == nullptr)
 	{
 		socket_scheduler_ = world.FindSystem<nox::dev::net::SocketScheduler>();
-		NOX_ASSERT(socket_scheduler_ != nullptr, u"SocketSchedulerが登録されていません");
+		NOX_ASSERT(socket_scheduler_ != nullptr, u8"SocketSchedulerが登録されていません");
 		if (socket_scheduler_ != nullptr)
 		{
 			socket_scheduler_->RegisterEntity(server_);
@@ -158,7 +158,7 @@ void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive(nox::legacy::Wor
 		}
 
 		const nox::reflection::ClassInfo*const class_info = nox::reflection::FindClassInfo(entity_full_name);
-		NOX_ASSERT(class_info != nullptr, u"不明なEntity:{0}", entity_full_name);
+		NOX_ASSERT(class_info != nullptr, u8"不明なEntity:{0}", entity_full_name);
 
 		bool is_heap_entity = false;
 		nox::dev::editor_remote::EditorRemoteEntity* entity = static_cast<nox::dev::editor_remote::EditorRemoteEntity*>(class_info->GetType().CreateObject(entity_buffer));
@@ -167,7 +167,7 @@ void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive(nox::legacy::Wor
 			entity = static_cast<nox::dev::editor_remote::EditorRemoteEntity*>(class_info->GetType().CreateObject());
 			is_heap_entity = true;
 		}
-		NOX_ASSERT(entity != nullptr, u"EditorIpcEntityの生成に失敗:{0}", entity_full_name);
+		NOX_ASSERT(entity != nullptr, u8"EditorIpcEntityの生成に失敗:{0}", entity_full_name);
 
 		NOX_LOCAL_SCOPE(nox::util::ScopeExit([entity, is_heap_entity]() {
 			if (is_heap_entity)
@@ -214,7 +214,7 @@ void nox::dev::editor_remote::EditorRemoteServer::UpdateReceive(nox::legacy::Wor
 		}
 		else
 		{
-			NOX_ASSERT(false, u"不明な型:{0}", entity_full_name);
+			NOX_ASSERT(false, u8"不明な型:{0}", entity_full_name);
 		}
 	}
 }

@@ -32,7 +32,7 @@ namespace nox
         {
             if (s.length() > _Length)
             {
-                NOX_ASSERT_KERNEL_ID(false, nox::assertion::id::OutOfRange, u"OutOfRange");
+                NOX_ASSERT_KERNEL(false, nox::assertion::OutOfRange{ s.length(), _Length });
             }
             std::ranges::copy_n(s.data(), s.length(), array_.begin());
         }

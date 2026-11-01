@@ -146,7 +146,7 @@ void nox::dev::editor_remote::SocketStreamWriter::Write(nox::IntrusivePtr<nox::O
  //	リモートインスタンスとして登録して、ID/FQN/プロパティバッファを書き込む
    server_.RegisterRemoteInstance(value_ref, instance_id);
 	const nox::int64 registered_instance_id = server_.FindRemoteInstanceId(value_ref);
-	NOX_ASSERT(registered_instance_id != 0, u"リモートインスタンスIDの登録に失敗しました");
+	NOX_ASSERT(registered_instance_id != 0, u8"リモートインスタンスIDの登録に失敗しました");
 	Write(registered_instance_id);
 
 	//	型情報の取得

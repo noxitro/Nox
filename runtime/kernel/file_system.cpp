@@ -21,7 +21,7 @@ nox::U16String	nox::filesystem::GetCurrentPath()
 	std::array<nox::wchar16, nox::k_max_path_length> path_buffer;
 	if (::GetCurrentDirectoryW(static_cast<::DWORD>(path_buffer.size()), path_buffer.data()) == 0)
 	{
-		NOX_ASSERT(false, u"");
+		NOX_ASSERT(false, u8"");
 	}
 
 	return nox::U16String(nox::unicode::ConvertString<nox::StlU16String>(path_buffer.data()));
