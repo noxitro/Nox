@@ -48,7 +48,7 @@ void	nox::Thread::Dispatch( std::move_only_function<void()> func)
 {
 	//	関数をセット
 	thread_func_ = std::move(func);
-	NOX_ASSERT(thread_func_ != nullptr, u"スレッドコールバックがnullです");
+	NOX_ASSERT(thread_func_ != nullptr, u8"スレッドコールバックがnullです");
 	
 	native_thread_handle_ = reinterpret_cast<::HANDLE>(::_beginthreadex(
 		nullptr,	//	
@@ -137,7 +137,7 @@ void	nox::Thread::AssignThreadId()
 	}
 
 	//	空きスレッドが見つからなかった
-	NOX_ASSERT(threadId >= 0, u"空きスレッドが見つかりませんでした");
+	NOX_ASSERT(threadId >= 0, u8"空きスレッドが見つかりませんでした");
 
 	if (::DuplicateHandle(
 		::GetCurrentProcess(),
@@ -149,7 +149,7 @@ void	nox::Thread::AssignThreadId()
 		DUPLICATE_SAME_ACCESS
 	) == FALSE)
 	{
-		NOX_ASSERT(false, u"スレッドの複製に失敗しました");
+		NOX_ASSERT(false, u8"スレッドの複製に失敗しました");
 		return;
 	}
 
@@ -161,7 +161,7 @@ void	nox::Thread::AssignThreadId()
 void nox::Thread::AssignThisNativeThreadId()
 {
 	local_native_thread_id_ = ::GetCurrentThreadId();
-	NOX_ASSERT(local_native_thread_id_ != 0, u"ネイティブスレッドIDの取得に失敗しました");
+	NOX_ASSERT(local_native_thread_id_ != 0, u8"ネイティブスレッドIDの取得に失敗しました");
 }
 
 void nox::Thread::SetCurrentThreadName(nox::not_null<nox::char16*> name)

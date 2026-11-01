@@ -15,15 +15,15 @@ void nox::test::TestEntityCommandBuffer()
 		.index = 42u,
 	};
 
-	NOX_ASSERT(commands.TryDestroy(entity), u"EntityCommandBufferへの記録に失敗しました");
+	NOX_ASSERT(commands.TryDestroy(entity), u8"EntityCommandBufferへの記録に失敗しました");
 	nox::legacy::EntityCommand recorded{};
-	NOX_ASSERT(commands.TryGet(0u, recorded), u"EntityCommandBufferの記録取得に失敗しました");
-	NOX_ASSERT(commands.GetLength() == 1u, u"EntityCommandBufferの記録数が不正です");
-	NOX_ASSERT(recorded.type == nox::legacy::EntityCommandType::Destroy, u"EntityCommandBufferのコマンド種別が不正です");
-	NOX_ASSERT(recorded.entity_raw == entity(), u"EntityCommandBufferのEntityIdが不正です");
+	NOX_ASSERT(commands.TryGet(0u, recorded), u8"EntityCommandBufferの記録取得に失敗しました");
+	NOX_ASSERT(commands.GetLength() == 1u, u8"EntityCommandBufferの記録数が不正です");
+	NOX_ASSERT(recorded.type == nox::legacy::EntityCommandType::Destroy, u8"EntityCommandBufferのコマンド種別が不正です");
+	NOX_ASSERT(recorded.entity_raw == entity(), u8"EntityCommandBufferのEntityIdが不正です");
 
 	commands.Clear();
-	NOX_ASSERT(commands.GetLength() == 0u, u"EntityCommandBufferのClear結果が不正です");
+	NOX_ASSERT(commands.GetLength() == 0u, u8"EntityCommandBufferのClear結果が不正です");
 
 	constexpr nox::uint32 command_count = 64u;
 	constexpr nox::uint32 producer_count = 4u;
@@ -54,12 +54,12 @@ void nox::test::TestEntityCommandBuffer()
 	}
 
 	concurrent_commands.BeginPlayback();
-	NOX_ASSERT(recorded_count.load(std::memory_order_relaxed) == command_count, u"並列EntityCommandBufferの記録数が不正です");
+	NOX_ASSERT(recorded_count.load(std::memory_order_relaxed) == command_count, u8"並列EntityCommandBufferの記録数が不正です");
 	for (nox::uint32 command_index = 0u; command_index < command_count; ++command_index)
 	{
 		nox::legacy::EntityCommand concurrent_command{};
-		NOX_ASSERT(concurrent_commands.TryGet(command_index, concurrent_command), u"並列EntityCommandBufferのコマンド取得に失敗しました");
-		NOX_ASSERT(concurrent_command.type == nox::legacy::EntityCommandType::Destroy, u"並列EntityCommandBufferのコマンド種別が不正です");
+		NOX_ASSERT(concurrent_commands.TryGet(command_index, concurrent_command), u8"並列EntityCommandBufferのコマンド取得に失敗しました");
+		NOX_ASSERT(concurrent_command.type == nox::legacy::EntityCommandType::Destroy, u8"並列EntityCommandBufferのコマンド種別が不正です");
 	}
 	concurrent_commands.Clear();
 }

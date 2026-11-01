@@ -69,14 +69,14 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 {
 	nox::dev::editor_remote::EditorRemoteServer& server = world.GetBridgedService<nox::dev::editor_remote::EditorRemoteServer>();
 	const nox::int64 remote_instance_id = GetRemoteInstanceId();
-	NOX_ASSERT(remote_instance_id > 0, u"Editor owned remote instance id must be positive. id:{0}", remote_instance_id);
+	NOX_ASSERT(remote_instance_id > 0, u8"Editor owned remote instance id must be positive. id:{0}", remote_instance_id);
 	auto response = nox::PlacementObject<nox::dev::editor_remote::SyncResponse>::Construct(storage);
 	response->SetRemoteInstanceId(remote_instance_id);
 
 	if (nox::Object* const registered_object = server.FindRemoteInstance(remote_instance_id))
 	{
 		nox::Object* const managed_object = static_cast<nox::Object*>(registered_object);
-		NOX_ASSERT(managed_object != nullptr, u"Registered remote instance is not ManagedObject. id:{0}", remote_instance_id);
+		NOX_ASSERT(managed_object != nullptr, u8"Registered remote instance is not ManagedObject. id:{0}", remote_instance_id);
 		if (managed_object != nullptr)
 		{
 			nox::dev::editor_remote::SetPropertiesFromBytes(GetPropertyByteBuffer(), *managed_object);
@@ -86,7 +86,7 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 	}
 
 	const nox::reflection::ClassInfo* const class_info = nox::reflection::FindClassInfo(GetFqn());
-	NOX_ASSERT(class_info != nullptr, u"SyncQuery unknown type: {0}", GetFqn());
+	NOX_ASSERT(class_info != nullptr, u8"SyncQuery unknown type: {0}", GetFqn());
 	if (class_info == nullptr)
 	{
 		response->SetApplied(false);
@@ -172,13 +172,13 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 {
 	/*nox::dev::editor_remote::EditorRemoteServer& server = world.GetBridgedService<nox::dev::editor_remote::EditorRemoteServer>();
 	const nox::int64 remote_instance_id = GetRemoteInstanceId();
-	NOX_ASSERT(remote_instance_id > 0, u"Editor owned Component id must be positive. id:{0}", remote_instance_id);
+	NOX_ASSERT(remote_instance_id > 0, u8"Editor owned Component id must be positive. id:{0}", remote_instance_id);
 	auto response = nox::PlacementObject<nox::dev::editor_remote::AddComponentResponse>::Construct(storage);
 	response->SetRemoteInstanceId(remote_instance_id);
 
 	nox::Object* const entity_object = server.FindRemoteInstance(GetEntityNodeRemoteInstanceId());
 	nox::EntityNode* const entity_node = entity_object != nullptr ? static_cast<nox::EntityNode*>(entity_object) : nullptr;
-	NOX_ASSERT(entity_node != nullptr, u"AddComponentQuery target EntityNode was not registered. id:{0}", GetEntityNodeRemoteInstanceId());
+	NOX_ASSERT(entity_node != nullptr, u8"AddComponentQuery target EntityNode was not registered. id:{0}", GetEntityNodeRemoteInstanceId());
 	if (entity_node == nullptr)
 	{
 		return response;
@@ -189,7 +189,7 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 	if (component == nullptr)
 	{
 		const nox::reflection::ClassInfo* const class_info = nox::reflection::FindClassInfo(GetComponentTypeFqn());
-		NOX_ASSERT(class_info != nullptr, u"AddComponentQuery unknown component type: {0}", GetComponentTypeFqn());
+		NOX_ASSERT(class_info != nullptr, u8"AddComponentQuery unknown component type: {0}", GetComponentTypeFqn());
 		if (class_info == nullptr || class_info->IsSubclassOf<nox::Component>() == false)
 		{
 			return response;
@@ -232,7 +232,7 @@ nox::PlacementObject<nox::dev::editor_remote::Response> nox::dev::editor_remote:
 	}
 
 	nox::EntityNode* const entity_node = static_cast<nox::EntityNode*>(object);
-	NOX_ASSERT(entity_node != nullptr, u"DestroyEntityNodeQuery target is not EntityNode. id:{0}", GetRemoteInstanceId());
+	NOX_ASSERT(entity_node != nullptr, u8"DestroyEntityNodeQuery target is not EntityNode. id:{0}", GetRemoteInstanceId());
 	if (entity_node == nullptr)
 	{
 		return nullptr;

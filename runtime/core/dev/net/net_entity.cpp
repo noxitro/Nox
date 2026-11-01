@@ -43,7 +43,7 @@ std::expected<void, nox::dev::net::SocketIoError> nox::dev::net::ReceiveAll(
 	nox::int32 size_to_read,
 	nox::os::network::ReceiveFlag flag)
 {
-	NOX_ASSERT(size_to_read > 0 && size_to_read <= k_max_size, nox::util::Format(u"size_to_read is zero or too large. size:{0}", size_to_read));
+	NOX_ASSERT(size_to_read > 0 && size_to_read <= k_max_size, u8"size_to_read is zero or too large. size:{0}", size_to_read);
 
 	if (socket.IsValid() == false)
 	{
@@ -80,7 +80,7 @@ std::expected<void, nox::dev::net::SocketIoError> nox::dev::net::SendAll(
 	nox::int32 size_to_send,
 	nox::os::network::SendFlag flag)
 {
-	NOX_ASSERT(size_to_send > 0 && size_to_send <= k_max_size, nox::util::Format(u"size_to_send is zero or too large. size:{0}", size_to_send));
+	NOX_ASSERT(size_to_send > 0 && size_to_send <= k_max_size, u8"size_to_send is zero or too large. size:{0}", size_to_send);
 	if (socket.IsValid() == false)
 	{
 		return std::unexpected(SocketIoError{ .kind = nox::dev::net::SocketIoError::InvalidSocket });

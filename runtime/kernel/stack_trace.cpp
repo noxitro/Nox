@@ -291,18 +291,18 @@ std::span<nox::char16>	nox::stack_walker::detail::WalkerBase::GetStackTraceU16St
 }
 
 const nox::stack_walker::StackFrame& nox::stack_walker::detail::WalkerBase::GetStack(const uint8 index)const {
-	NOX_ASSERT_ID(index < collect_length_, nox::assertion::id::OutOfRange, u"コールスタックの取得に失敗");
+	NOX_ASSERT(index < collect_length_, nox::assertion::OutOfRange{ index, collect_length_ }, u8"コールスタックの取得に失敗");
 	return stack_table_[index];
 }
 
 nox::stack_walker::StackFrame& nox::stack_walker::detail::WalkerBase::GetStack(const uint8 index) {
-	NOX_ASSERT_ID(index < collect_length_, nox::assertion::id::OutOfRange, u"コールスタックの取得に失敗");
+	NOX_ASSERT(index < collect_length_, nox::assertion::OutOfRange{ index, collect_length_ }, u8"コールスタックの取得に失敗");
 	return stack_table_[index];
 }
 
 void nox::stack_walker::detail::WalkerBase::SetCollectLength(const uint8 length)
 {
-	NOX_ASSERT_ID(length <= stack_length_, nox::assertion::id::OutOfRange, u"コールスタックの取得に失敗");
+	NOX_ASSERT(length <= stack_length_, nox::assertion::OutOfRange{ length, stack_length_ }, u8"コールスタックの取得に失敗");
 	collect_length_ = length;
 }
 
@@ -483,23 +483,23 @@ std::u16string_view nox::stack_walker::detail::WalkerSlimBase::GetStackTraceU16(
 
 void nox::stack_walker::detail::WalkerSlimBase::SetCollectLength(const uint8 length)
 {
-	NOX_ASSERT_ID(length <= stack_length_, nox::assertion::id::OutOfRange, u"コールスタックの取得に失敗");
+	NOX_ASSERT(length <= stack_length_, nox::assertion::OutOfRange{ length, stack_length_ }, u8"コールスタックの取得に失敗");
 	collect_length_ = length;
 }
 
 const nox::stack_walker::SlimStackFrame& nox::stack_walker::detail::WalkerSlimBase::GetStack(const uint8 index)const {
-	NOX_ASSERT_ID(index < collect_length_, nox::assertion::id::OutOfRange, u"コールスタックの取得に失敗");
+	NOX_ASSERT(index < collect_length_, nox::assertion::OutOfRange{ index, collect_length_ }, u8"コールスタックの取得に失敗");
 	return stack_table_[index];
 }
 
 nox::stack_walker::SlimStackFrame& nox::stack_walker::detail::WalkerSlimBase::GetStack(const uint8 index) {
-	NOX_ASSERT_ID(index < collect_length_, nox::assertion::id::OutOfRange, u"コールスタックの取得に失敗");
+	NOX_ASSERT(index < collect_length_, nox::assertion::OutOfRange{ index, collect_length_ }, u8"コールスタックの取得に失敗");
 	return stack_table_[index];
 }
 
 void	nox::stack_walker::Initialize()
 {
-	NOX_ASSERT(mHandlePtr == nullptr, u"初期化済み");
+	NOX_ASSERT(mHandlePtr == nullptr, u8"初期化済み");
 	mHandlePtr = os::LoadDLL(u"kernel32.dll");
 	gRtiCaptureStackBackTrace = os::GetProcAddress<StackBackTraceFuncType>(mHandlePtr, "RtlCaptureStackBackTrace");
 
@@ -507,7 +507,7 @@ void	nox::stack_walker::Initialize()
 
 void	nox::stack_walker::Finalize()
 {
-	NOX_ASSERT(mHandlePtr != nullptr, u"破棄済み");
+	NOX_ASSERT(mHandlePtr != nullptr, u8"破棄済み");
 	gRtiCaptureStackBackTrace = nullptr;
 	os::UnloadDLL(mHandlePtr);
 }

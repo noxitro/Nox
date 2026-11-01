@@ -53,7 +53,7 @@ namespace nox::reflection
 
 			inline const nox::reflection::ClassInfo& getClassInfo()const noexcept
 			{
-				NOX_ASSERT(class_info != nullptr, u"ClassInfo is null");
+				NOX_ASSERT(class_info != nullptr, u8"ClassInfo is null");
 				return *class_info;
 			}
 
@@ -136,7 +136,7 @@ namespace nox::reflection
 		inline	const nox::reflection::ClassNode& GetRootClassNode()noexcept
 		{
 			auto r = GetDB().chunk_with_type_id.class_node_map.find(&nox::reflection::Typeof<nox::reflection::ReflectionObject>());
-			NOX_ASSERT(r != GetDB().chunk_with_type_id.class_node_map.end(), u"ReflectionObject class node not found");
+			NOX_ASSERT(r != GetDB().chunk_with_type_id.class_node_map.end(), u8"ReflectionObject class node not found");
 			return r->second;
 		}
 
@@ -452,9 +452,9 @@ void	nox::reflection::Register(const nox::reflection::ClassInfo& data)
 	if (data.GetType().IsUnion() == true)
 	{
 		const auto r = GetDB().chunk_with_type_id.union_map.emplace(&type, data);
-		NOX_ASSERT(r.second, u"union already registered:{}", data.GetFullName());
+		NOX_ASSERT(r.second, u8"union already registered:{}", data.GetFullName());
 		const auto r2 = GetDB().chunk_with_name_hash.union_map.emplace(nox::util::Crc32(data.GetFullName()), data);
-		NOX_ASSERT(r2.second, u"union already registered with name hash:{}", data.GetFullName());
+		NOX_ASSERT(r2.second, u8"union already registered with name hash:{}", data.GetFullName());
 		return;
 	}
 	else
@@ -466,20 +466,20 @@ void	nox::reflection::Register(const nox::reflection::ClassInfo& data)
 			{
 				//	既に存在する場合
 				ClassNode& node = r.value();
-				NOX_ASSERT(node.class_info == nullptr, u"already registered class info:{}", data.GetFullName());
+				NOX_ASSERT(node.class_info == nullptr, u8"already registered class info:{}", data.GetFullName());
 				node.class_info = &data;
 
 				const auto r2 = GetDB().chunk_with_name_hash.class_node_map.emplace(nox::util::Crc32(data.GetFullName()), node);
-				NOX_ASSERT(r2.second, u"class already registered with name hash:{}", data.GetFullName());
+				NOX_ASSERT(r2.second, u8"class already registered with name hash:{}", data.GetFullName());
 				return node;
 			}
 			else
 			{
 				const auto r2 = GetDB().chunk_with_type_id.class_node_map.emplace(&type, ClassNode(data));
-				NOX_ASSERT(r2.second, u"class already registered:{}", data.GetFullName());
+				NOX_ASSERT(r2.second, u8"class already registered:{}", data.GetFullName());
 				ClassNode& new_class_node = r2.first->second;
 				const auto r3 = GetDB().chunk_with_name_hash.class_node_map.emplace(nox::util::Crc32(data.GetFullName()), new_class_node);
-				NOX_ASSERT(r3.second, u"class already registered with name hash:{}", data.GetFullName());
+				NOX_ASSERT(r3.second, u8"class already registered with name hash:{}", data.GetFullName());
 				return new_class_node;
 			}
 			}();
@@ -494,7 +494,7 @@ void	nox::reflection::Register(const nox::reflection::ClassInfo& data)
 			if (GetDB().chunk_with_type_id.class_node_map.contains(&base_type) == false)
 			{
 				const auto r = GetDB().chunk_with_type_id.class_node_map.emplace(&base_type, ClassNode(base_type));
-				NOX_ASSERT(r.second, u"base class already registered:{}", base_type.GetTypeName());
+				NOX_ASSERT(r.second, u8"base class already registered:{}", base_type.GetTypeName());
 			}
 
 			ClassNode& parent_class_node = GetDB().chunk_with_type_id.class_node_map.at(&base_type);
@@ -586,9 +586,9 @@ void nox::reflection::Register(const nox::reflection::EnumInfo& data)
 	const nox::reflection::Type& type = data.GetType();
 
 	const auto r = GetDB().chunk_with_type_id.enum_map.emplace(&type, data);
-	NOX_ASSERT(r.second, u"enum already registered:{}", data.GetFullName());
+	NOX_ASSERT(r.second, u8"enum already registered:{}", data.GetFullName());
 	const auto r2 = GetDB().chunk_with_name_hash.enum_map.emplace(nox::util::Crc32(data.GetFullName()), data);
-	NOX_ASSERT(r2.second, u"enum already registered with name hash:{}", data.GetFullName());
+	NOX_ASSERT(r2.second, u8"enum already registered with name hash:{}", data.GetFullName());
 }
 
 void nox::reflection::Unregister(const nox::reflection::EnumInfo& data)

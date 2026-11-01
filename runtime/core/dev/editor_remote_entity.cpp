@@ -15,7 +15,7 @@ void nox::dev::editor_remote::EditorRemoteEntity::Serialize(const nox::uint32 id
 {
 	const nox::reflection::Type& type = GetType();
 	const nox::reflection::ClassInfo* const class_info = nox::reflection::FindClassInfo(type);
-	NOX_ASSERT(class_info != nullptr, u"不明なEditorRemoteEntity:{0}", type.GetTypeName());
+	NOX_ASSERT(class_info != nullptr, u8"不明なEditorRemoteEntity:{0}", type.GetTypeName());
 
 	writer.Write(class_info->GetFullName());
 

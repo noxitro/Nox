@@ -47,7 +47,7 @@ nox::dev::net::SocketScheduler::~SocketScheduler()
 void	nox::dev::net::SocketScheduler::Initialize(nox::legacy::World& world)
 {
 	const nox::os::network::Error error = nox::os::network::Initialize();
-	NOX_ASSERT(error == nox::os::network::Error::None, nox::util::Format(u"network::Initialize failed. error={0}", static_cast<nox::int32>(nox::util::ToUnderlying(error))));
+	NOX_ASSERT(error == nox::os::network::Error::None, u8"network::Initialize failed. error={0}", static_cast<nox::int32>(nox::util::ToUnderlying(error)));
 
 	thread_.SetThreadName(u"SocketScheduler");
 	thread_.SetThreadPriority(nox::ThreadPriority::Lowest);

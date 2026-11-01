@@ -10,7 +10,7 @@
 
 nox::DelegateHandle::~DelegateHandle()
 {
-	NOX_ASSERT(owner == nullptr, u"DelegateHandle is not disposed");
+	NOX_ASSERT(owner == nullptr, u8"DelegateHandle is not disposed");
 }
 
 void nox::DelegateHandle::Dispose()

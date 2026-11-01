@@ -243,7 +243,7 @@ namespace nox
 
 			inline constexpr ICallable* Clone(uint8&)const noexcept override
 			{
-				NOX_ASSERT(false, U"等価比較用オブジェクトのため複製はできません");
+				NOX_ASSERT(false, u8"等価比較用オブジェクトのため複製はできません");
 				return nullptr;
 			}
 
@@ -341,7 +341,7 @@ namespace nox
 			)
 			inline constexpr function_result_t<_FuncType> Invoke(Args&&... args)const
 		{
-			NOX_ASSERT(this->callable_ptr_ != nullptr, U"");
+			NOX_ASSERT(this->callable_ptr_ != nullptr, u8"");
 
 			if constexpr (std::is_void_v< function_result_t<_FuncType>> == true)
 			{
@@ -569,7 +569,7 @@ namespace nox
 			)
 			inline constexpr void Bind(T&& func, U&& instance)
 		{
-			NOX_ASSERT(util::IsNullPointer(std::forward<U>(instance)) == false, U"instanceがnullptrです");
+			NOX_ASSERT(util::IsNullPointer(std::forward<U>(instance)) == false, u8"instanceがnullptrです");
 
 			if (IDelegate<_FuncType>::IsEmpty() == false)
 			{
