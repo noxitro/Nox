@@ -98,7 +98,7 @@ gitleaks の誤検知は `.gitleaks.toml` の allowlist に足す。
 winget install Gitleaks.Gitleaks
 ```
 
-所属先など、ハッシュにしてもリポジトリに置きたくない名前は、手元だけの非公開リスト
+公開しない固有名詞など、ハッシュにしてもリポジトリに置きたくない名前は、手元だけの非公開リスト
 (`~/.config/nox/private-names.sha256`) に入れる。フックが同じように止める
 (CI には無いので、止めるのは手元のフックだけ)。
 

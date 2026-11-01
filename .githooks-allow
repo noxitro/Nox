@@ -4,3 +4,7 @@
 # app.vcxproj のプリビルドが呼ぶツールバイナリ。ビルドに必要なので追跡している。
 # 中身は確認済みで、ローカル絶対パスも個人情報も含まない。
 runtime/bin/MakeAllIncludeHeader.exe
+
+# 公開前レビューの LLM へ渡す判定基準。検出したい語の定義そのものを書いているので、
+# 文脈の語の検査では誤検出になる。出力のカテゴリ名もこの語に依存する。
+tools/ci-try/review-prompt.md
