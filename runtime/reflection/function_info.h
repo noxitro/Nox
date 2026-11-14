@@ -178,7 +178,7 @@ namespace nox::reflection
 		inline	constexpr	ResultType	Invoke(Args&&... args)const
 		{
 			nox::reflection::ReflectionOptional<ResultType> result = TryInvoke<ResultType>(std::forward<Args>(args)...);
-			NOX_ASSERT(result.has_value(), u"関数呼び出しに失敗しました");
+			NOX_ASSERT(result.has_value(), u8"関数呼び出しに失敗しました");
 
 			if constexpr (std::is_void_v<ResultType>)
 			{

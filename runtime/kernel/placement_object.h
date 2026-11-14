@@ -69,7 +69,7 @@ namespace nox
 				}
 				else
 				{
-					NOX_ASSERT_KERNEL(false, u"ここには来ないはず");
+					NOX_ASSERT_KERNEL(false, u8"ここには来ないはず");
 				}
 			}
 		}
@@ -99,8 +99,8 @@ namespace nox
 		template<class... Args>
 		[[nodiscard]] static inline PlacementObject<T> Construct(std::span<nox::uint8> storage, Args&&... args)
 		{
-			NOX_ASSERT_KERNEL(storage.size() >= sizeof(T), u"PlacementObject::Construct: バッファサイズが不足しています");
-			NOX_ASSERT_KERNEL(reinterpret_cast<std::uintptr_t>(storage.data()) % alignof(T) == 0, u"PlacementObject::Construct: アラインメントが不正です");
+			NOX_ASSERT_KERNEL(storage.size() >= sizeof(T), u8"PlacementObject::Construct: バッファサイズが不足しています");
+			NOX_ASSERT_KERNEL(reinterpret_cast<std::uintptr_t>(storage.data()) % alignof(T) == 0, u8"PlacementObject::Construct: アラインメントが不正です");
 
 			T* ptr = std::construct_at(reinterpret_cast<T*>(storage.data()), std::forward<Args>(args)...);
 			return ptr;

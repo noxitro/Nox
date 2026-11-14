@@ -18,7 +18,7 @@ namespace nox
 		template<class T, class... Args>
 		inline constexpr T& ObjectCtor(Args&&...)noexcept
 		{
-			NOX_ASSERT(false, u"ここには来ないはず");
+			NOX_ASSERT(false, u8"ここには来ないはず");
 			T*const dummy = nullptr;
 			return *dummy;
 		}

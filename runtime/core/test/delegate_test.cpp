@@ -17,14 +17,14 @@ void nox::test::TestDelegate()
 	MoveOnlyDelegate<void(int)> delegate{ [&invocation_count](int value) noexcept { invocation_count += value; } };
 	IDelegate<void(int)>& delegate_view = delegate;
 	delegate_view(4);
-	NOX_ASSERT(invocation_count == 4, u"IDelegate の呼び出し結果が不正です");
+	NOX_ASSERT(invocation_count == 4, u8"IDelegate の呼び出し結果が不正です");
 
 	auto moved_delegate = std::move(delegate);
-	NOX_ASSERT(!delegate && moved_delegate, u"MoveOnlyDelegate のムーブ状態が不正です");
+	NOX_ASSERT(!delegate && moved_delegate, u8"MoveOnlyDelegate のムーブ状態が不正です");
 	moved_delegate(5);
-	NOX_ASSERT(invocation_count == 9, u"MoveOnlyDelegate のムーブ後の呼び出し結果が不正です");
+	NOX_ASSERT(invocation_count == 9, u8"MoveOnlyDelegate のムーブ後の呼び出し結果が不正です");
 
 	CopyableDelegate<int(int)> copyable_delegate{ [](int value) noexcept { return value * 2; } };
 	auto copied_delegate = copyable_delegate;
-	NOX_ASSERT(copyable_delegate(3) == 6 && copied_delegate(4) == 8, u"CopyableDelegate のコピー結果が不正です");
+	NOX_ASSERT(copyable_delegate(3) == 6 && copied_delegate(4) == 8, u8"CopyableDelegate のコピー結果が不正です");
 }

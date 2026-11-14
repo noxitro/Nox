@@ -10,5 +10,5 @@
 
 void nox::util::detail::AssertDeref(std::string_view name)
 {
-	NOX_ASSERT(false, u"{0}はnullptrです", name);
+	NOX_ASSERT(false, u8"{0}はnullptrです", name);
 }

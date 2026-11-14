@@ -51,7 +51,7 @@ namespace nox
 				const std::size_t padding = aligned_address - current_address;
 				if (aligned_address + bytes > reinterpret_cast<std::uintptr_t>(buffer_.data()) + Size)
 				{
-					NOX_ASSERT_KERNEL(false, u"スタックアロケータの容量を超えました");
+					NOX_ASSERT_KERNEL(false, u8"スタックアロケータの容量を超えました");
 				}
 				pos_ += padding + bytes;
 				return reinterpret_cast<void*>(aligned_address);
@@ -91,7 +91,7 @@ namespace nox
 				const std::size_t padding = aligned_address - current_address;
 				if (aligned_address + bytes > reinterpret_cast<std::uintptr_t>(buffer_.data()) + buffer_.size())
 				{
-					NOX_ASSERT_KERNEL(false, u"SpanMemoryResource の容量を超えました");
+					NOX_ASSERT_KERNEL(false, u8"SpanMemoryResource の容量を超えました");
 				}
 				pos_ += padding + bytes;
 				return reinterpret_cast<void*>(aligned_address);

@@ -7,6 +7,7 @@
 #include	"pch.h"
 
 #include	<cassert>
+#include	<cstdlib>
 #include	<stacktrace>
 
 #include	"memory/stl_allocate_adapter.h"
@@ -18,10 +19,9 @@
 #include	"string_format.h"
 #include	"mutex.h"
 #include	"scoped_lock.h"
-#include	<array>
-#include	<source_location>
+#include	"os_definition.h"
 
-namespace nox
+namespace nox::detail
 {
 	namespace
 	{
@@ -41,23 +41,40 @@ namespace nox
 	}
 }
 
-void	nox::assertion::detail::Assert(std::u16string_view error_category, std::u8string_view message, const std::wstring_view file_name, const std::source_location& source_location)noexcept(false)
-{
-	std::array<nox::char16, 1024> native_message = { 0 };
-	unicode::ConvertU16String(message, native_message);
-
-	nox::assertion::detail::Assert(error_category, native_message.data(), file_name, source_location);
-}
-
-void	nox::assertion::detail::Assert(std::u16string_view error_category, std::u16string_view message, const std::wstring_view file_name, const std::source_location& source_location)noexcept(false)
+void	nox::detail::Assert(const nox::assertion::ErrorId id, std::u8string_view message, const std::source_location& source_location)
 {
 	nox::stack_walker::StackWalkerSlim stack_walker;
 	stack_walker.Collect(1);
 
-	std::array<nox::char16, 4096> assert_message = { 0 };
-	nox::util::Format(assert_message, u"{0}\n{1}\nLine:{2}, Column:{3}", message, file_name.data(), source_location.line(), source_location.column());
-	
-	NOX_LOCAL_SCOPE(nox::ScopedLock{ kMutex });
+	//	Formatの引数変換バッファ(512文字)へ収まらないので、ここで変換しておく
+	std::array<nox::char16, 64> native_id = { 0 };
+	const std::u16string_view id_view = nox::unicode::ConvertU16String(id.value, native_id);
 
-	::_wassert(nox::util::CharCast<wchar16>(assert_message.data()), file_name.data(), source_location.line());
+	std::array<nox::char16, 2048> native_message = { 0 };
+	const std::u16string_view message_view = nox::unicode::ConvertU16String(message, native_message);
+
+	std::array<nox::char16, nox::k_max_path_length> file_path = { 0 };
+	const std::string_view file_name = std::string_view{ source_location.file_name() }.substr(0, file_path.size() - 1);
+	const std::u16string_view file_path_view = nox::unicode::ConvertU16String(file_name, file_path);
+
+	std::array<nox::char16, 4096> assert_message = { 0 };
+	nox::util::Format(assert_message, u"{0}\n{1}\n{2}\nLine:{3}, Column:{4}",
+		id_view,
+		message_view,
+		file_path_view,
+		source_location.line(),
+		source_location.column()
+	);
+
+	NOX_LOCAL_SCOPE(nox::ScopedLock{ nox::detail::kMutex });
+
+#if NOX_WINDOWS
+	::_wassert(
+		nox::util::CharCast<wchar16>(assert_message.data()),
+		nox::util::CharCast<wchar16>(file_path.data()),
+		source_location.line()
+	);
+#else
+	std::abort();
+#endif // NOX_WINDOWS
 }

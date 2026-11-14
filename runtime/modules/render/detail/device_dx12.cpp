@@ -21,7 +21,7 @@ void nox::render::detail::DeviceDX12::Initialize()
 #endif
 		::IDXGIFactory4* dxgi_factory = nullptr;
 		::HRESULT hr = ::CreateDXGIFactory2(dxgi_factory_flags, IID_PPV_ARGS(&dxgi_factory));
-		NOX_ASSERT(SUCCEEDED(hr), u"Failed to create DXGI Factory");
+		NOX_ASSERT(SUCCEEDED(hr), u8"Failed to create DXGI Factory");
 
 		::IDXGIAdapter1* adapter = nullptr;
 		for (::UINT adapter_index = 0; dxgi_factory->EnumAdapters1(adapter_index, &adapter) != DXGI_ERROR_NOT_FOUND; ++adapter_index)
@@ -39,7 +39,7 @@ void nox::render::detail::DeviceDX12::Initialize()
 			adapter = nullptr;
 		}
 		dxgi_factory->Release();
-		NOX_ASSERT(device_ != nullptr, u"Failed to create D3D12 Device");
+		NOX_ASSERT(device_ != nullptr, u8"Failed to create D3D12 Device");
 
 	}
 }
@@ -48,17 +48,17 @@ nox::IntrusivePtr<nox::render::VertexBuffer> nox::render::detail::DeviceDX12::Cr
 {
 	if (device_ == nullptr)
 	{
-		NOX_ASSERT(false, u"DeviceDX12 is not initialized");
+		NOX_ASSERT(false, u8"DeviceDX12 is not initialized");
 		return nullptr;
 	}
 	if (desc.byte_size == 0)
 	{
-		NOX_ASSERT(false, u"Byte size must be greater than 0");
+		NOX_ASSERT(false, u8"Byte size must be greater than 0");
 		return nullptr;
 	}
 	if (desc.usage_type == UsageType::Staging)
 	{
-		NOX_ASSERT(false, u"Staging usage type is not supported for vertex buffer");
+		NOX_ASSERT(false, u8"Staging usage type is not supported for vertex buffer");
 		return nullptr;
 	}
 	return new VertexBufferDX12(nullptr, desc.byte_size, 0);

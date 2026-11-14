@@ -160,7 +160,7 @@ std::optional<std::u16string_view> nox::os::GetCommandLineArgValue(std::u16strin
 nox::StlU16String	nox::os::GetDirectoryUTF8()
 {
 	std::array<nox::wchar16, nox::k_max_path_length> buffer;
-	NOX_ASSERT(::GetCurrentDirectoryW(nox::k_max_path_length, buffer.data()) != NULL, u"GetCurrentDirectoryW failed");
+	NOX_ASSERT(::GetCurrentDirectoryW(nox::k_max_path_length, buffer.data()) != NULL, u8"GetCurrentDirectoryW failed");
 
 	return nox::StlU16String(reinterpret_cast<const char16*>(buffer.data()));
 }
@@ -174,7 +174,7 @@ nox::U16String	nox::os::GetDirectory()
 std::u16string_view	nox::os::GetDirectory(std::span<nox::char16> dest_buffer)
 {
 	std::array<nox::wchar16, nox::k_max_path_length> native_buffer;
-	NOX_ASSERT(::GetCurrentDirectoryW(nox::k_max_path_length, native_buffer.data()) != NULL, u"GetCurrentDirectoryW failed");
+	NOX_ASSERT(::GetCurrentDirectoryW(nox::k_max_path_length, native_buffer.data()) != NULL, u8"GetCurrentDirectoryW failed");
 
 	nox::unicode::ConvertU16String(native_buffer.data(), dest_buffer);
 	return std::u16string_view(dest_buffer.data(), dest_buffer.size());
@@ -192,7 +192,7 @@ nox::os::ProcessMemoryInfo nox::os::GetCurrentProcessMemoryInfo()
 
 	::CloseHandle(hProc);
 
-	NOX_ASSERT(isSuccess == TRUE, u"GetProcessMemoryInfoに失敗しました");
+	NOX_ASSERT(isSuccess == TRUE, u8"GetProcessMemoryInfoに失敗しました");
 
 	return ProcessMemoryInfo
 	{

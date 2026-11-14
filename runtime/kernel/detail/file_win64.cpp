@@ -193,7 +193,7 @@ void nox::io::File::Close() noexcept
 
 void nox::io::File::Write(std::span<const std::byte> src)const
 {
-	NOX_ASSERT(IsOpen() == true, u"file is not open");
+	NOX_ASSERT(IsOpen() == true, u8"file is not open");
 	if (IsOpen() == false)
 	{
 		return;
@@ -211,8 +211,8 @@ void nox::io::File::Write(std::span<const std::byte> src)const
 			chunk_size,
 			&written_size,
 			nullptr);
-		NOX_ASSERT(is_success == TRUE, u"WriteFile failed");
-		NOX_ASSERT(written_size != 0, u"WriteFile wrote zero bytes");
+		NOX_ASSERT(is_success == TRUE, u8"WriteFile failed");
+		NOX_ASSERT(written_size != 0, u8"WriteFile wrote zero bytes");
 		if (is_success == FALSE || written_size == 0)
 		{
 			return;
@@ -224,7 +224,7 @@ void nox::io::File::Write(std::span<const std::byte> src)const
 
 std::span<std::byte> nox::io::File::Read(std::span<std::byte> dest)const
 {
-	NOX_ASSERT(IsOpen() == true, u"file is not open");
+	NOX_ASSERT(IsOpen() == true, u8"file is not open");
 	if (IsOpen() == false)
 	{
 		return {};
@@ -243,7 +243,7 @@ std::span<std::byte> nox::io::File::Read(std::span<std::byte> dest)const
 			chunk_size,
 			&read_size,
 			nullptr);
-		NOX_ASSERT(is_success == TRUE, u"ReadFile failed");
+		NOX_ASSERT(is_success == TRUE, u8"ReadFile failed");
 		if (is_success == FALSE || read_size == 0)
 		{
 			break;
@@ -263,7 +263,7 @@ std::span<std::byte> nox::io::File::Read(std::span<std::byte> dest)const
 
 std::size_t nox::io::File::GetSize()const
 {
-	NOX_ASSERT(IsOpen() == true, u"file is not open");
+	NOX_ASSERT(IsOpen() == true, u8"file is not open");
 	if (IsOpen() == false)
 	{
 		return 0;
@@ -271,7 +271,7 @@ std::size_t nox::io::File::GetSize()const
 
 	::LARGE_INTEGER file_size{};
 	const ::BOOL is_success = ::GetFileSizeEx(ToNativeHandle(native_file_handle_), &file_size);
-	NOX_ASSERT(is_success == TRUE, u"GetFileSizeEx failed");
+	NOX_ASSERT(is_success == TRUE, u8"GetFileSizeEx failed");
 	if (is_success == FALSE || file_size.QuadPart < 0)
 	{
 		return 0;

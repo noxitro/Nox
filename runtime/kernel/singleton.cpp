@@ -57,7 +57,7 @@ void	nox::detail::SingletonManager::Register(nox::detail::ISingletonBase& obj)
 void	nox::detail::SingletonManager::Unregister(nox::detail::ISingletonBase& obj)
 {
 	NOX_LOCAL_SCOPE(nox::ScopedLock{ singleton_mutex_ });
-	NOX_ASSERT(root_ != nullptr, u"シングルトンが登録されていません");
+	NOX_ASSERT(root_ != nullptr, u8"シングルトンが登録されていません");
 
 	if (root_->next_ == nullptr)
 	{
@@ -91,18 +91,18 @@ void	nox::detail::SingletonManager::CheckReak()
 	ISingletonBase* current = root_;
 	while (current != nullptr)
 	{
-		NOX_ASSERT(current->prev_ == nullptr, u"リークしているシングルトンがあります");
+		NOX_ASSERT(current->prev_ == nullptr, u8"リークしているシングルトンがあります");
 		current = current->next_;
 	}
 }
 
 void	nox::detail::CheckSingletonCreateInstance(void* instance_ptr, std::string_view type_name)noexcept(false)
 {
-	NOX_ASSERT(instance_ptr == nullptr, u"インスタンスを生成済みです:{0}", type_name.data());
+	NOX_ASSERT(instance_ptr == nullptr, u8"インスタンスを生成済みです:{0}", type_name.data());
 }
 
 void	nox::detail::CheckSingletonDeleteInstance(void* instance_ptr, std::string_view type_name)noexcept(false)
 {
-	NOX_ASSERT(instance_ptr != nullptr, u"インスタンスを破棄済みです:{0}", type_name.data());
+	NOX_ASSERT(instance_ptr != nullptr, u8"インスタンスを破棄済みです:{0}", type_name.data());
 }
 

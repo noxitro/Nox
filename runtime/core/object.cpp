@@ -33,16 +33,16 @@ nox::U8StringView	nox::Object::ToString(std::span<nox::char8> dest_buffer)const
 
 void nox::Object::AddRef()
 {
-	NOX_ASSERT(nox::memory::IsHeapPtr(this), u"Object is not allocated on the heap");
+	NOX_ASSERT(nox::memory::IsHeapPtr(this), u8"Object is not allocated on the heap");
 	this->ref_count_.fetch_add(1, std::memory_order_relaxed);
 }
 
 void nox::Object::Release()
 {
-	NOX_ASSERT(nox::memory::IsHeapPtr(this), u"Object is not allocated on the heap");
+	NOX_ASSERT(nox::memory::IsHeapPtr(this), u8"Object is not allocated on the heap");
 	const auto ref_count = this->ref_count_.fetch_sub(1, std::memory_order_acq_rel) - 1;
 
-	NOX_ASSERT(ref_count >= -2, u"");
+	NOX_ASSERT(ref_count >= -2, u8"");
 
 	switch (ref_count)
 	{

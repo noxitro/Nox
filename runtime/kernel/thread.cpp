@@ -19,7 +19,7 @@ namespace nox
 
 void	nox::Thread::SetThreadName(std::u16string_view name)
 {
-	NOX_ASSERT(native_thread_handle_ == 0, u"SetName は Dispatch の前に呼ぶ");
+	NOX_ASSERT(native_thread_handle_ == 0, u8"SetName は Dispatch の前に呼ぶ");
 	thread_name_.fill(u'\0');
 	std::size_t length = std::min(name.size(), thread_name_.size() - 1);
 	std::ranges::copy_n(name.data(), length, thread_name_.data());

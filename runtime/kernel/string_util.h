@@ -4,6 +4,7 @@
 ///	@file	string_util.h
 ///	@brief	string_util
 #pragma once
+#include	<algorithm>
 #include	<ranges>
 #include	<span>
 #include	<string_view>
@@ -20,15 +21,15 @@ namespace nox::util
 	template <concepts::Char CharType>
 	inline void StrCopy(std::basic_string_view<CharType> source, std::span<CharType> dest_buffer)
 	{
-	//	NOX_ASSERT(dest_buffer.size() >= source.size(), U"buffer size over");
-		std::ranges::copy(source, dest_buffer.data());
-		//	buffer[size] = std::char_traits<Char>::eof();	//	終端文字を格納
+		//	収まらない分は切り詰める
+		const size_t copy_size = std::min(source.size(), dest_buffer.size());
+		std::ranges::copy(source.substr(0, copy_size), dest_buffer.data());
 
 		//	終端文字を格納
 		//	サイズがちょうどの場合は何もしない
-		if (dest_buffer.size() < source.size())
+		if (copy_size < dest_buffer.size())
 		{
-			dest_buffer[source.size()] = 0;
+			dest_buffer[copy_size] = 0;
 		}
 	}
 #pragma endregion
