@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="envdte80" Version="17.14.40260" />
+    <PackageReference Include="envdte80" Version="18.12.1603" />
   </ItemGroup>
 
 </Project>
