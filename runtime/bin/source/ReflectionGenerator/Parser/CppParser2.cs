@@ -744,7 +744,6 @@ namespace ReflectionGenerator.Parser2;
 						case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_TemplateSpecialization:
 						case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_SubstTemplateTypeParm:
 						case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_DependentName:
-						case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_DependentTemplateSpecialization:
 						case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_TemplateTypeParm:
 						case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_InjectedClassName:
 						case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_UnaryTransform:
@@ -2868,7 +2867,11 @@ public class EnumDecl : TypeDecl
             return;
         }
 
-        ClangSharp.Interop.CXCursor referCursor = cursor.Referenced;
+			ClangSharp.Interop.CXCursor referCursor = cursor.Referenced;
+			if (referCursor.TryGetDefinitionCursor(out ClangSharp.Interop.CXCursor definitionCursor))
+			{
+				referCursor = definitionCursor;
+			}
 
 			BaseSpecifierDecl decl = new BaseSpecifierDecl()
         {
@@ -3440,6 +3443,11 @@ public class EnumDecl : TypeDecl
 			TypeAttributeFlag typeAttributeFlags = GetTypeAttributeFlags(type) | addtionalAttributeFlags;
 			TypeKind typeKind = Local.GetTypeKind(type);
 
+			if (type.kind == ClangSharp.Interop.CXTypeKind.CXType_Elaborated)
+			{
+				return GetOrCreateTypeInfo(type.CanonicalType, typeAttributeFlags);
+			}
+
 			switch (type.TypeClass)
         {
 				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Builtin:
@@ -3602,19 +3610,6 @@ public class EnumDecl : TypeDecl
 					break;
 					
 
-            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Elaborated:
-					return GetOrCreateTypeInfo(type.CanonicalType, typeAttributeFlags);
-					//typeInfo = new ElaboratedTypeInfo()
-					//{
-					//	TypeAttributeFlags = typeAttributeFlags,
-					//	Name = type.Spelling.CString,
-					//	FullName = type.CanonicalType.Spelling.CString,
-					//	Namespace = type.GetNamespace(),
-					//	PointeeType = GetOrCreateTypeInfo(type.CanonicalType),
-					//	DeclHash = type.Declaration.GetDeclId(),
-					//	TypeKind = typeKind,
-					//};
-					//break;
             case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Typedef:
             case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Using:
                 typeInfo = new TypeAliasInfo()
@@ -3745,7 +3740,6 @@ public class EnumDecl : TypeDecl
 
             case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_TemplateSpecialization:
             case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_DeducedTemplateSpecialization:
-            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_DependentTemplateSpecialization:
 					typeInfo = new UnknownTypeInfo()
 					{
 						TypeAttributeFlags = typeAttributeFlags,
@@ -3977,7 +3971,10 @@ public class EnumDecl : TypeDecl
                 continue;
             }
 
-            DeclBase tmpBaseDecl = GetDecl(baseSpecifierDecl.GetPointeeMeta().UniqueDeclKey);
+            DeclBase tmpBaseDecl =
+                _DeclWithHashDict.TryGetValue(baseSpecifierDecl.PointeeDeclHash, out DeclBase? pointeeDecl)
+                    ? pointeeDecl
+                    : GetDecl(baseSpecifierDecl.GetPointeeMeta().UniqueDeclKey);
             while (true)
             {
                 if (tmpBaseDecl is RecordDecl tmpClassDecl)
