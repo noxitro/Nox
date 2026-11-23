@@ -305,7 +305,7 @@ void    nox::memory::detail::BeginMemorySegment(const SegmentType segment)
 	nox::memory::ThreadMemoryInfo& thread_memory_info = k_thread_memory_info_table_[thread_id];
 	thread_memory_info.segment_stack[thread_memory_info.segment_counter++] = segment;
 
-    NOX_ASSERT(thread_memory_info.segment_counter < nox::memory::k_max_segment_stack, u"segment stack over");
+    NOX_ASSERT(thread_memory_info.segment_counter < nox::memory::k_max_segment_stack, u8"segment stack over");
 
     thread_memory_info.is_dirty = false;
 }
@@ -339,7 +339,7 @@ namespace nox::memory
         inline void* Allocate2(const size_t size, size_t align_mask, const InstanceType instance_type)
         {
             NOX_ASSERT(g_unique_flag.IsOn(UniqueFlag::Finalized) == false,
-                u"メモリアロケータの終了処理後にメモリ確保が行われました");
+                u8"メモリアロケータの終了処理後にメモリ確保が行われました");
 
             // HeapInfo 分 + ユーザ要求サイズ分
             const size_t header_size = sizeof(HeapInfo);
@@ -351,7 +351,7 @@ namespace nox::memory
             const nox::uint32 alloc_size = use_block << k_heap_shift;
 
             void* const raw_ptr = std::malloc(alloc_size);
-            NOX_ASSERT(raw_ptr != nullptr, u"メモリ確保に失敗しました");
+            NOX_ASSERT(raw_ptr != nullptr, u8"メモリ確保に失敗しました");
 
             const nox::memory::SegmentType segment_type = GetSegmentType(true);
 
@@ -432,7 +432,7 @@ void* nox::memory::Allocate(const std::size_t size, std::size_t alignment, const
 	//  つまり最小確保サイズはheaderを含めて32byte以上になる
     
     //  アライメントチェック
-    NOX_ASSERT(alignment >= 1 || nox::math::IsPow2(alignment), u"アライメントサイズは2の累乗で指定してください");
+    NOX_ASSERT(alignment >= 1 || nox::math::IsPow2(alignment), u8"アライメントサイズは2の累乗で指定してください");
 
     const auto align_mask = alignment > 0 ? alignment - 1 : 0;
 
@@ -469,7 +469,7 @@ void* nox::memory::Allocate(const std::size_t size, std::size_t alignment, const
 #else
 void* nox::memory::Allocate(const size_t size, size_t align_mask, const InstanceType instance_type)
 {
-	NOX_ASSERT(g_unique_flag.IsOn(UniqueFlag::Finalized) == false, u"メモリアロケータの終了処理後にメモリ確保が行われました");
+	NOX_ASSERT(g_unique_flag.IsOn(UniqueFlag::Finalized) == false, u8"メモリアロケータの終了処理後にメモリ確保が行われました");
 
     const nox::uint32 align_size = align_mask <= sizeof(HeapInfo) ? sizeof(HeapInfo) : static_cast<nox::uint32>(sizeof(HeapInfo)) + align_mask;
   //  const nox::uint32 align_size = sizeof(HeapInfo) + align_mask;
@@ -611,6 +611,6 @@ bool nox::memory::IsHeapPtr(nox::not_null<const void*> ptr)noexcept
 void nox::memory::VerifyMemory()
 {
     nox::memory::CollectHeapInfoList([](const nox::memory::HeapInfo& heap_info)noexcept {
-		NOX_ASSERT(nox::memory::IsValidHeapInfo(heap_info) == true, u"Invalid Heap Info");
+		NOX_ASSERT(nox::memory::IsValidHeapInfo(heap_info) == true, u8"Invalid Heap Info");
         });
 }

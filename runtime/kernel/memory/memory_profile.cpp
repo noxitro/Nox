@@ -146,7 +146,7 @@ const nox::memory::profile::ProfileData& nox::memory::profile::FindProfileData(n
 		return handle_data;
 	}
 
-	NOX_ASSERT(false, nox::util::Format(u"プロファイルデータが見つかりませんでした handle:{0}", profiler_handle));
+	NOX_ASSERT(false, u8"プロファイルデータが見つかりませんでした handle:{0}", profiler_handle);
 	//	Master ではアサートが消えるので、無効なハンドル (0) のデータを返す
 	static constexpr ProfileData kInvalidProfileData{};
 	return kInvalidProfileData;

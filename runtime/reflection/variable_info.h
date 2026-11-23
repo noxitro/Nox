@@ -231,7 +231,7 @@ namespace nox::reflection
 		inline constexpr void SetValue(TInstanceType&& instance, TValueType&& value)const noexcept(false)
 		{
 			bool success = TrySetValue<TInstanceType, TValueType>(std::forward<TInstanceType>(instance), std::forward<TValueType>(value));
-			NOX_ASSERT(success, u"変数の設定に失敗しました");
+			NOX_ASSERT(success, u8"変数の設定に失敗しました");
 		}
 
 #pragma endregion
@@ -242,7 +242,7 @@ namespace nox::reflection
 		inline constexpr R GetValue()const
 		{
 			std::optional<R> result = this->TryGetValue<R>();
-			NOX_ASSERT(result.has_value(), u"変数の取得に失敗しました");
+			NOX_ASSERT(result.has_value(), u8"変数の取得に失敗しました");
 			return result.value();
 		}
 
@@ -250,7 +250,7 @@ namespace nox::reflection
 		inline constexpr R GetValue(_InstanceType&& owner_instance)const
 		{
 			std::optional<R> result = this->TryGetValue<R>(std::forward<_InstanceType>(owner_instance));
-			NOX_ASSERT(result.has_value(), u"変数の取得に失敗しました");
+			NOX_ASSERT(result.has_value(), u8"変数の取得に失敗しました");
 			return result.value();
 		}
 

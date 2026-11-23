@@ -88,7 +88,7 @@ namespace nox
 		inline constexpr std::array<T, _Size> Make(std::span<T> v)
 		{
 			std::array<T, _Size> result{};
-			NOX_ASSERT_KERNEL(v.size() <= Size, u"FixedVectorのサイズがオーバーフローしました");
+			NOX_ASSERT_KERNEL(v.size() <= Size, u8"FixedVectorのサイズがオーバーフローしました");
 			const nox::uint32 copy_count = static_cast<nox::uint32>(v.size());
 			std::ranges::copy_n(v.begin(), copy_count, result.begin());
 			return result;
@@ -96,7 +96,7 @@ namespace nox
 
 		inline void CheckOverflow()const
 		{
-			NOX_ASSERT_KERNEL(length_ <= Size, u"FixedVectorのサイズがオーバーフローしました");
+			NOX_ASSERT_KERNEL(length_ <= Size, u8"FixedVectorのサイズがオーバーフローしました");
 		}
 	private:
 		std::array<T, _Size> storage_;

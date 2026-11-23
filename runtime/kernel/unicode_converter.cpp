@@ -448,7 +448,7 @@ nox::StlNString	nox::unicode::ConvertNString(std::u32string_view str_view)
 
 std::string_view	nox::unicode::ConvertNString(std::u8string_view str_view, std::span<char> dest_buffer)
 {
-    NOX_ASSERT(dest_buffer.size() >= str_view.size(), u"buffer size over");
+    NOX_ASSERT(dest_buffer.size() >= str_view.size(), u8"buffer size over");
 
     char* dest_ptr = dest_buffer.data();
     for (const nox::char8 c : str_view)
@@ -502,7 +502,7 @@ namespace
 {
     inline bool ConvertU8StringImpl(const std::u32string_view str_view, const size_t str_view_utf8_length, std::span<nox::char8> dest_buffer)
     {
-        NOX_ASSERT(dest_buffer.size() >= str_view_utf8_length, u"buffer size over");
+        NOX_ASSERT(dest_buffer.size() >= str_view_utf8_length, u8"buffer size over");
 
         //decltype(auto) it = str_view.begin();
 
@@ -521,7 +521,7 @@ namespace
 
     inline bool ConvertU8StringImpl(const std::u16string_view str_view, const size_t str_view_utf8_length, std::span<nox::char8> dest_buffer)
     {
-        NOX_ASSERT(dest_buffer.size() >= str_view_utf8_length, u"buffer size over");
+        NOX_ASSERT(dest_buffer.size() >= str_view_utf8_length, u8"buffer size over");
 
         const nox::char16* pSrc = str_view.data();
         const nox::char16* const pSrcEnd = pSrc + str_view.size();
@@ -563,7 +563,7 @@ nox::StlU8String	nox::unicode::ConvertU8String(std::u32string_view str_view)
 
 std::u8string_view	nox::unicode::ConvertU8String(std::string_view str_view, std::span<nox::char8> dest_buffer)
 {
-  NOX_ASSERT(dest_buffer.size() >= str_view.size(), u"buffer size over");
+  NOX_ASSERT(dest_buffer.size() >= str_view.size(), u8"buffer size over");
 
     nox::char8* dest_ptr = dest_buffer.data();
     for (const char c : str_view)
@@ -594,7 +594,7 @@ namespace
 {
     inline bool ConvertU16StringImpl(const std::u8string_view str_view, const size_t str_view_utf16_length, std::span<nox::char16> dest_buffer)
     {
-        NOX_ASSERT(dest_buffer.size() >= str_view_utf16_length, u"buffer size over");
+        NOX_ASSERT(dest_buffer.size() >= str_view_utf16_length, u8"buffer size over");
 
         decltype(auto) it = str_view.begin();
         
@@ -612,7 +612,7 @@ namespace
     template<nox::concepts::Char DestCharType, nox::concepts::Char SourceCharType>
     inline bool ConvertStringImpl(void(*encode_func)(DestCharType*&, SourceCharType), const std::basic_string_view<SourceCharType> str_view, const size_t str_view_length, std::span<DestCharType> dest_buffer)
     {
-        NOX_ASSERT(dest_buffer.size() >= str_view_length, u"buffer size over");
+        NOX_ASSERT(dest_buffer.size() >= str_view_length, u8"buffer size over");
 
         DestCharType* dest_ptr = dest_buffer.data();
 
@@ -646,7 +646,7 @@ std::u16string_view	nox::unicode::ConvertU16String(const std::wstring_view str_v
 
 nox::StlU16String	nox::unicode::ConvertU16String(std::string_view str_view)
 {
-	NOX_ASSERT(false, u"未実装");
+	NOX_ASSERT(false, u8"未実装");
     return {};
 }
 
@@ -665,7 +665,7 @@ nox::StlU16String	nox::unicode::ConvertU16String(std::u32string_view str_view)
     const size_t length = GetUTF16Length(str_view);
     nox::StlU16String result(length, '0');
 
-    NOX_ASSERT(ConvertStringImpl(EncodeUTF16<char16>, str_view, length, std::span<char16>(result)) == true, u"");
+    NOX_ASSERT(ConvertStringImpl(EncodeUTF16<char16>, str_view, length, std::span<char16>(result)) == true, u8"");
 
     return result;
 }
@@ -677,7 +677,7 @@ namespace
 
     inline bool ConvertU32String(const std::u8string_view str_view, const size_t str_view_utf32_length, std::span<nox::char32> dest_buffer)
     {
-        NOX_ASSERT(dest_buffer.size() >= str_view_utf32_length, u"buffer size over");
+        NOX_ASSERT(dest_buffer.size() >= str_view_utf32_length, u8"buffer size over");
 
         nox::char32* pDst = &*dest_buffer.begin();
 
@@ -695,7 +695,7 @@ namespace
 
     inline bool	ConvertU32String(const std::u16string_view str_view, const size_t str_view_utf32_length, std::span<nox::char32> dest_buffer)
     {
-        NOX_ASSERT(dest_buffer.size() >= str_view_utf32_length, u"buffer size over");
+        NOX_ASSERT(dest_buffer.size() >= str_view_utf32_length, u8"buffer size over");
 
         nox::char32* pDst = &*dest_buffer.begin();
 

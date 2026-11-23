@@ -185,15 +185,15 @@ namespace
 	{
 		//	型ごとに一意な密インデックスが振られる。
 		NOX_ASSERT(nox::ComponentTypeIndexOf<TestPosition>() != nox::ComponentTypeIndexOf<TestVelocity>(),
-			u"ComponentTypeIndexが重複しています");
+			u8"ComponentTypeIndexが重複しています");
 		NOX_ASSERT(nox::ComponentTypeOf<TestPosition>().size == sizeof(TestPosition),
-			u"ComponentTypeInfoのサイズが不正です");
+			u8"ComponentTypeInfoのサイズが不正です");
 
 		const nox::ComponentMask mask = nox::MakeComponentMask<TestPosition, TestVelocity>();
-		NOX_ASSERT(mask.Test(nox::ComponentTypeIndexOf<TestPosition>()), u"ComponentMaskにビットが立っていません");
-		NOX_ASSERT(mask.Test(nox::ComponentTypeIndexOf<TestHealth>()) == false, u"ComponentMaskに余分なビットが立っています");
-		NOX_ASSERT(mask.Contains(nox::MakeComponentMask<TestPosition>()), u"ComponentMask::Containsが不正です");
-		NOX_ASSERT(nox::MakeComponentMask<TestPosition>().Contains(mask) == false, u"ComponentMask::Containsが不正です");
+		NOX_ASSERT(mask.Test(nox::ComponentTypeIndexOf<TestPosition>()), u8"ComponentMaskにビットが立っていません");
+		NOX_ASSERT(mask.Test(nox::ComponentTypeIndexOf<TestHealth>()) == false, u8"ComponentMaskに余分なビットが立っています");
+		NOX_ASSERT(mask.Contains(nox::MakeComponentMask<TestPosition>()), u8"ComponentMask::Containsが不正です");
+		NOX_ASSERT(nox::MakeComponentMask<TestPosition>().Contains(mask) == false, u8"ComponentMask::Containsが不正です");
 	}
 
 	void TestArchetypeStorage()
@@ -204,7 +204,7 @@ namespace
 		};
 		nox::Archetype archetype(nox::MakeComponentMask<TestPosition, TestVelocity>(), std::span(types));
 
-		NOX_ASSERT(archetype.GetChunkCapacity() > 0u, u"Chunkの容量が0です");
+		NOX_ASSERT(archetype.GetChunkCapacity() > 0u, u8"Chunkの容量が0です");
 
 		//	Chunkをまたぐ数だけ詰めて、位置とデータの対応が崩れないことを見る。
 		const nox::uint32 entity_count = archetype.GetChunkCapacity() + 3u;
@@ -217,12 +217,12 @@ namespace
 
 			auto* const positions = static_cast<TestPosition*>(
 				archetype.TryGetComponentArray(location.chunk_index, nox::ComponentTypeIndexOf<TestPosition>()));
-			NOX_ASSERT(positions != nullptr, u"ComponentDataの列が取得できません");
+			NOX_ASSERT(positions != nullptr, u8"ComponentDataの列が取得できません");
 			positions[location.row].x = static_cast<nox::float32>(entity_index);
 		}
 
-		NOX_ASSERT(archetype.GetEntityCount() == entity_count, u"Archetypeのentity数が不正です");
-		NOX_ASSERT(archetype.GetChunkCount() >= 2u, u"Chunkが分割されていません");
+		NOX_ASSERT(archetype.GetEntityCount() == entity_count, u8"Archetypeのentity数が不正です");
+		NOX_ASSERT(archetype.GetChunkCount() >= 2u, u8"Chunkが分割されていません");
 
 		for (nox::uint32 entity_index = 0u; entity_index < entity_count; ++entity_index)
 		{
@@ -230,58 +230,58 @@ namespace
 			const auto* const positions = static_cast<const TestPosition*>(
 				archetype.TryGetComponentArray(location.chunk_index, nox::ComponentTypeIndexOf<TestPosition>()));
 			NOX_ASSERT(positions[location.row].x == static_cast<nox::float32>(entity_index),
-				u"Chunkをまたいだ書き込み位置がずれています");
+				u8"Chunkをまたいだ書き込み位置がずれています");
 		}
 
 		//	swap-removeで末尾のentityが穴に移動してくる。
 		const nox::Entity moved = archetype.RemoveEntity(locations[0]);
-		NOX_ASSERT(moved.index == entity_count - 1u, u"swap-removeで移動したentityが不正です");
+		NOX_ASSERT(moved.index == entity_count - 1u, u8"swap-removeで移動したentityが不正です");
 		const auto* const positions = static_cast<const TestPosition*>(
 			archetype.TryGetComponentArray(locations[0].chunk_index, nox::ComponentTypeIndexOf<TestPosition>()));
 		NOX_ASSERT(positions[locations[0].row].x == static_cast<nox::float32>(entity_count - 1u),
-			u"swap-removeでComponentDataが移動していません");
+			u8"swap-removeでComponentDataが移動していません");
 
 		//	宣言外の型は引けない。
 		NOX_ASSERT(archetype.TryGetComponentArray(0u, nox::ComponentTypeIndexOf<TestHealth>()) == nullptr,
-			u"Archetypeが持たない型の列が引けてしまいました");
+			u8"Archetypeが持たない型の列が引けてしまいました");
 	}
 
 	void TestWorldStructuralChange(nox::legacy::World& world)
 	{
 		const nox::Entity entity = world.CreateEntity();
-		NOX_ASSERT(world.IsAlive(entity), u"生成直後のentityが生存していません");
-		NOX_ASSERT(world.HasComponent<TestPosition>(entity) == false, u"未追加のComponentDataを持っています");
+		NOX_ASSERT(world.IsAlive(entity), u8"生成直後のentityが生存していません");
+		NOX_ASSERT(world.HasComponent<TestPosition>(entity) == false, u8"未追加のComponentDataを持っています");
 
 		auto* const position = world.AddComponent<TestPosition>(entity);
-		NOX_ASSERT(position != nullptr, u"ComponentDataの追加に失敗しました");
+		NOX_ASSERT(position != nullptr, u8"ComponentDataの追加に失敗しました");
 		position->x = 10.0f;
 		position->y = 20.0f;
 
 		//	Archetype間の移動を挟んでも既存のComponentDataは引き継がれる。
 		auto* const velocity = world.AddComponent<TestVelocity>(entity);
-		NOX_ASSERT(velocity != nullptr, u"ComponentDataの追加に失敗しました");
+		NOX_ASSERT(velocity != nullptr, u8"ComponentDataの追加に失敗しました");
 		velocity->x = 1.0f;
 
 		const auto* const moved_position = world.TryGetComponent<TestPosition>(entity);
-		NOX_ASSERT(moved_position != nullptr, u"Archetype移動後にComponentDataが引けません");
+		NOX_ASSERT(moved_position != nullptr, u8"Archetype移動後にComponentDataが引けません");
 		NOX_ASSERT(moved_position->x == 10.0f && moved_position->y == 20.0f,
-			u"Archetype移動でComponentDataの値が失われました");
+			u8"Archetype移動でComponentDataの値が失われました");
 
 		//	削除しても残りは保持される。
 		world.RemoveComponent<TestVelocity>(entity);
-		NOX_ASSERT(world.HasComponent<TestVelocity>(entity) == false, u"ComponentDataが削除されていません");
+		NOX_ASSERT(world.HasComponent<TestVelocity>(entity) == false, u8"ComponentDataが削除されていません");
 		NOX_ASSERT(world.TryGetComponent<TestPosition>(entity)->x == 10.0f,
-			u"ComponentData削除で他の値が失われました");
+			u8"ComponentData削除で他の値が失われました");
 
 		//	同じentityに2つ目を足してswap-removeを起こしても、他entityの位置情報が壊れない。
 		const nox::Entity other = world.CreateEntity();
 		world.AddComponent<TestPosition>(other)->x = 99.0f;
 		world.DestroyEntity(entity);
-		NOX_ASSERT(world.IsAlive(entity) == false, u"破棄したentityが生存しています");
+		NOX_ASSERT(world.IsAlive(entity) == false, u8"破棄したentityが生存しています");
 		NOX_ASSERT(world.TryGetComponent<TestPosition>(other) != nullptr,
-			u"swap-remove後に他entityのComponentDataが引けません");
+			u8"swap-remove後に他entityのComponentDataが引けません");
 		NOX_ASSERT(world.TryGetComponent<TestPosition>(other)->x == 99.0f,
-			u"swap-remove後に他entityの位置情報が更新されていません");
+			u8"swap-remove後に他entityの位置情報が更新されていません");
 
 		world.DestroyEntity(other);
 	}
@@ -290,8 +290,8 @@ namespace
 	{
 		//	ヘッダに定義しただけで、生成コードの表に型記述子が載っている。
 		const nox::legacy::EntitySystemTypeDescriptor* const registered = FindEntitySystemType("TestMoveSystem");
-		NOX_ASSERT(registered != nullptr, u"EntitySystemが自動登録されていません");
-		NOX_ASSERT(registered != nullptr && registered->execute != nullptr, u"EntitySystemの実行本体が束縛されていません");
+		NOX_ASSERT(registered != nullptr, u8"EntitySystemが自動登録されていません");
+		NOX_ASSERT(registered != nullptr && registered->execute != nullptr, u8"EntitySystemの実行本体が束縛されていません");
 
 		nox::FixedVector<nox::Entity, 4> entities;
 		for (nox::uint32 entity_index = 0u; entity_index < 4u; ++entity_index)
@@ -310,15 +310,15 @@ namespace
 		world.BuildQuery(system.GetQuery(), system.GetDescriptor().make_read_write_mask());
 		system.Execute(world);
 
-		NOX_ASSERT(system.processed_count == 4, u"EntitySystemの処理対象数が不正です");
+		NOX_ASSERT(system.processed_count == 4, u8"EntitySystemの処理対象数が不正です");
 		for (nox::uint32 entity_index = 0u; entity_index < 4u; ++entity_index)
 		{
 			const nox::Entity entity = entities.GetStorage()[entity_index];
 			NOX_ASSERT(world.TryGetComponent<TestPosition>(entity)->x == static_cast<nox::float32>(entity_index) + 2.0f,
-				u"EntitySystemの書き込み結果が不正です");
+				u8"EntitySystemの書き込み結果が不正です");
 		}
 		NOX_ASSERT(world.TryGetComponent<TestPosition>(ignored)->x == 1000.0f,
-			u"宣言外のentityが処理されました");
+			u8"宣言外のentityが処理されました");
 
 		for (nox::uint32 entity_index = 0u; entity_index < 4u; ++entity_index)
 		{
@@ -395,11 +395,11 @@ namespace
 	void TestParallelForEachEntitySystem(nox::legacy::World& world)
 	{
 		const nox::legacy::EntitySystemTypeDescriptor* const registered = FindEntitySystemType("TestParallelAddSystem");
-		NOX_ASSERT(registered != nullptr, u"Chunk並列SystemがWorldの表に載っていません");
+		NOX_ASSERT(registered != nullptr, u8"Chunk並列SystemがWorldの表に載っていません");
 		NOX_ASSERT(registered != nullptr && registered->parallel_for_each,
-			u"k_parallel_for_eachの宣言が記述子に伝わっていません");
+			u8"k_parallel_for_eachの宣言が記述子に伝わっていません");
 		NOX_ASSERT(registered != nullptr && registered->execute_chunk != nullptr,
-			u"Chunk単位の実行本体が束縛されていません");
+			u8"Chunk単位の実行本体が束縛されていません");
 
 		//	Chunk容量はArchetypeが決めるので、まず1つ作って容量を読む。
 		const nox::Entity probe = world.CreateEntity();
@@ -407,7 +407,7 @@ namespace
 		world.AddComponent<TestVelocity>(probe)->x = 1.0f;
 
 		nox::Archetype* const archetype = world.TryGetArchetype(probe);
-		NOX_ASSERT(archetype != nullptr, u"Archetypeが引けません");
+		NOX_ASSERT(archetype != nullptr, u8"Archetypeが引けません");
 		if (archetype == nullptr)
 		{
 			world.DestroyEntity(probe);
@@ -432,19 +432,19 @@ namespace
 		world.BuildQuery(system.GetQuery(), system.GetDescriptor().make_read_write_mask());
 
 		const nox::uint32 chunk_count = system.GetQuery().GetTotalChunkCount();
-		NOX_ASSERT(chunk_count >= 2u, u"複数Chunkにまたがっていません(テストの前提が崩れています)");
+		NOX_ASSERT(chunk_count >= 2u, u8"複数Chunkにまたがっていません(テストの前提が崩れています)");
 
 		//	chunk参照の列挙は「空でないChunkをちょうど1回ずつ」でなければならない。
 		std::array<nox::legacy::EntityChunkRef, 64> refs{};
 		const nox::uint32 filled = system.GetQuery().FillChunkRefs(0u, std::span<nox::legacy::EntityChunkRef>(refs));
-		NOX_ASSERT(filled == chunk_count, u"chunk参照の列挙数が総数と一致しません");
+		NOX_ASSERT(filled == chunk_count, u8"chunk参照の列挙数が総数と一致しません");
 		for (nox::uint32 i = 0u; i < filled; ++i)
 		{
 			for (nox::uint32 j = i + 1u; j < filled; ++j)
 			{
 				NOX_ASSERT(
 					(refs[i].archetype != refs[j].archetype) || (refs[i].chunk_index != refs[j].chunk_index),
-					u"同じChunkが2回列挙されています(二重更新になります)");
+					u8"同じChunkが2回列挙されています(二重更新になります)");
 			}
 		}
 
@@ -452,7 +452,7 @@ namespace
 		{
 			nox::JobSystem serial_job_system;
 			serial_job_system.Initialize(0u);
-			NOX_ASSERT(serial_job_system.GetWorkerCount() == 0u, u"ワーカー0本の指定が効いていません");
+			NOX_ASSERT(serial_job_system.GetWorkerCount() == 0u, u8"ワーカー0本の指定が効いていません");
 			ExecuteEntitySystemChunkParallel(world, system, serial_job_system);
 			serial_job_system.Finalize();
 		}
@@ -460,7 +460,7 @@ namespace
 		for (nox::uint32 index = 0u; index < entity_count; ++index)
 		{
 			NOX_ASSERT(world.TryGetComponent<TestPosition>(entities[index])->x == 1.0f,
-				u"ワーカー0本のChunk実行で、全entityがちょうど1回だけ更新されていません");
+				u8"ワーカー0本のChunk実行で、全entityがちょうど1回だけ更新されていません");
 		}
 
 		//	既定ワーカー数。Chunkがワーカーへ配られる。結果は0本のときと完全に一致しなければならない。
@@ -474,7 +474,7 @@ namespace
 		for (nox::uint32 index = 0u; index < entity_count; ++index)
 		{
 			NOX_ASSERT(world.TryGetComponent<TestPosition>(entities[index])->x == 2.0f,
-				u"並列Chunk実行で、全entityがちょうど1回だけ更新されていません");
+				u8"並列Chunk実行で、全entityがちょうど1回だけ更新されていません");
 		}
 
 		NOX_INFO_LINE(nox::log_id::CoreCommon,
@@ -490,7 +490,7 @@ namespace
 	void TestEntityLogicLifecycle(nox::legacy::World& world)
 	{
 		const nox::legacy::EntityLogicTypeDescriptor* const logic_descriptor = FindEntityLogicType("TestPlayerLogic");
-		NOX_ASSERT(logic_descriptor != nullptr, u"EntityLogicが自動登録されていません");
+		NOX_ASSERT(logic_descriptor != nullptr, u8"EntityLogicが自動登録されていません");
 		if (logic_descriptor == nullptr)
 		{
 			return;
@@ -501,11 +501,11 @@ namespace
 		const nox::ComponentMask required_mask = logic_descriptor->make_required_mask();
 		const nox::ComponentMask expected_mask = nox::MakeComponentMask<TestPosition, TestHealth, TestVelocity>();
 		NOX_ASSERT(required_mask == expected_mask,
-			u"必須ComponentDataがメソッドの引数から導出されていません");
+			u8"必須ComponentDataがメソッドの引数から導出されていません");
 
 		auto* const counter_service = new TestCounterService();
 		world.RegisterService(*counter_service);
-		NOX_ASSERT(world.TryGetService<TestCounterService>() == counter_service, u"Serviceが引けません");
+		NOX_ASSERT(world.TryGetService<TestCounterService>() == counter_service, u8"Serviceが引けません");
 
 		nox::legacy::EntityLogicStorage storage(*logic_descriptor);
 		const nox::Entity entity = world.CreateEntity();
@@ -514,15 +514,15 @@ namespace
 		world.AddComponent<TestPosition>(entity)->x = 5.0f;
 		world.AddComponent<TestHealth>(entity)->value = 3;
 		NOX_ASSERT(world.TryGetArchetype(entity)->GetMask().Contains(required_mask) == false,
-			u"必須ComponentDataがまだ揃っていないはずです");
+			u8"必須ComponentDataがまだ揃っていないはずです");
 
 		world.AddComponent<TestVelocity>(entity)->x = 2.0f;
 		NOX_ASSERT(world.TryGetArchetype(entity)->GetMask().Contains(required_mask),
-			u"必須ComponentDataが揃っていません");
+			u8"必須ComponentDataが揃っていません");
 
 		storage.CreateInstance(world, entity);
-		NOX_ASSERT(storage.Contains(entity), u"EntityLogicのインスタンスが生成されていません");
-		NOX_ASSERT(storage.GetEntries().size() == 1u, u"EntityLogicのインスタンス数が不正です");
+		NOX_ASSERT(storage.Contains(entity), u8"EntityLogicのインスタンスが生成されていません");
+		NOX_ASSERT(storage.GetEntries().size() == 1u, u8"EntityLogicのインスタンス数が不正です");
 
 		//	メソッド呼び出しは引数リストどおりに束縛される。
 		for (const nox::legacy::EntityLogicMethodDescriptor& method : logic_descriptor->get_methods())
@@ -530,7 +530,7 @@ namespace
 			for (const nox::legacy::EntityLogicStorage::Entry& entry : storage.GetEntries())
 			{
 				auto* const logic = static_cast<TestPlayerLogic*>(entry.instance);
-				NOX_ASSERT(logic->GetEntity() == entity, u"EntityLogicが保持するentityが不正です");
+				NOX_ASSERT(logic->GetEntity() == entity, u8"EntityLogicが保持するentityが不正です");
 				method.invoke(
 					entry.instance,
 					world,
@@ -542,19 +542,19 @@ namespace
 
 		auto* const logic = static_cast<TestPlayerLogic*>(storage.GetEntries()[0].instance);
 		NOX_ASSERT(logic->process0_count == 1 && logic->process1_count == 1 && logic->process2_count == 1,
-			u"EntityLogicの各メソッドが1回ずつ呼ばれていません");
+			u8"EntityLogicの各メソッドが1回ずつ呼ばれていません");
 		//	nox::legacy::EntityCommands&を引数に並べたメソッドへ、Worldへのビューが束縛されている。
-		NOX_ASSERT(logic->last_alive, u"nox::legacy::EntityCommandsが引数として届いていません");
+		NOX_ASSERT(logic->last_alive, u8"nox::legacy::EntityCommandsが引数として届いていません");
 		//	Process0でHealthの3、Process2でVelocityの2が足される。
 		NOX_ASSERT(world.TryGetComponent<TestPosition>(entity)->x == 10.0f,
-			u"EntityLogicの書き込み結果が不正です");
+			u8"EntityLogicの書き込み結果が不正です");
 		NOX_ASSERT(world.TryGetComponent<TestPosition>(entity)->y == 1.0f,
-			u"Serviceをポインタで受けるメソッドの書き込み結果が不正です");
+			u8"Serviceをポインタで受けるメソッドの書き込み結果が不正です");
 		//	ポインタ経由と参照経由で同じServiceインスタンスに届いている。
-		NOX_ASSERT(counter_service->call_count == 2, u"Serviceが引数として届いていません");
+		NOX_ASSERT(counter_service->call_count == 2, u8"Serviceが引数として届いていません");
 
 		storage.DestroyInstance(entity);
-		NOX_ASSERT(storage.Contains(entity) == false, u"EntityLogicのインスタンスが破棄されていません");
+		NOX_ASSERT(storage.Contains(entity) == false, u8"EntityLogicのインスタンスが破棄されていません");
 
 		world.DestroyEntity(entity);
 	}
@@ -619,25 +619,25 @@ namespace
 			std::span<const nox::legacy::UpdaterNodeAccess>(accesses),
 			std::span<nox::uint32>(layer_indices));
 
-		NOX_ASSERT(layer_indices[0] == 0u, u"書き込みだけのノードは先頭レイヤーに置かれるはずです");
-		NOX_ASSERT(layer_indices[1] == 1u, u"書き込みを読むノードが直列化されていません");
-		NOX_ASSERT(layer_indices[2] == 0u, u"衝突しないノードが不要に直列化されています");
-		NOX_ASSERT(layer_indices[3] == 1u, u"読み同士が衝突扱いになっています");
-		NOX_ASSERT(layer_indices[4] == 2u, u"読み手の後ろに書き手が置かれていません");
-		NOX_ASSERT(layer_indices[5] == 3u, u"同一EntityLogic型のメソッドが直列化されていません");
-		NOX_ASSERT(layer_indices[6] == 0u, u"Serviceだけを触るノードの配置が不正です");
-		NOX_ASSERT(layer_indices[7] == 1u, u"同一Serviceへの書き込みと読み取りが直列化されていません");
-		NOX_ASSERT(layer_count == 4u, u"レイヤー数が不正です");
+		NOX_ASSERT(layer_indices[0] == 0u, u8"書き込みだけのノードは先頭レイヤーに置かれるはずです");
+		NOX_ASSERT(layer_indices[1] == 1u, u8"書き込みを読むノードが直列化されていません");
+		NOX_ASSERT(layer_indices[2] == 0u, u8"衝突しないノードが不要に直列化されています");
+		NOX_ASSERT(layer_indices[3] == 1u, u8"読み同士が衝突扱いになっています");
+		NOX_ASSERT(layer_indices[4] == 2u, u8"読み手の後ろに書き手が置かれていません");
+		NOX_ASSERT(layer_indices[5] == 3u, u8"同一EntityLogic型のメソッドが直列化されていません");
+		NOX_ASSERT(layer_indices[6] == 0u, u8"Serviceだけを触るノードの配置が不正です");
+		NOX_ASSERT(layer_indices[7] == 1u, u8"同一Serviceへの書き込みと読み取りが直列化されていません");
+		NOX_ASSERT(layer_count == 4u, u8"レイヤー数が不正です");
 
 		//	衝突判定そのものの規則。読み同士は並列、書きが絡めば直列。
 		NOX_ASSERT(nox::legacy::ConflictsUpdaterNodeAccess(accesses[1], accesses[3]) == false,
-			u"読み同士が衝突しています");
+			u8"読み同士が衝突しています");
 		NOX_ASSERT(nox::legacy::ConflictsUpdaterNodeAccess(accesses[0], accesses[1]),
-			u"同一ComponentDataのRWが衝突していません");
+			u8"同一ComponentDataのRWが衝突していません");
 		NOX_ASSERT(nox::legacy::ConflictsUpdaterNodeAccess(accesses[4], accesses[5]),
-			u"同一EntityLogic型のメソッドが衝突していません");
+			u8"同一EntityLogic型のメソッドが衝突していません");
 		NOX_ASSERT(nox::legacy::ConflictsUpdaterNodeAccess(accesses[6], accesses[7]),
-			u"同一Serviceのwrite/readが衝突していません");
+			u8"同一Serviceのwrite/readが衝突していません");
 	}
 
 	/// @brief 引数リストからServiceのアクセス宣言が導出される。
@@ -647,25 +647,25 @@ namespace
 		using ReadSignature = nox::legacy::EntitySignature<const TestCounterService&>;
 
 		const std::span<const nox::legacy::ServiceAccess> write_accesses = WriteSignature::GetServiceAccesses();
-		NOX_ASSERT(write_accesses.size() == 1u, u"Serviceのアクセス宣言が導出されていません");
+		NOX_ASSERT(write_accesses.size() == 1u, u8"Serviceのアクセス宣言が導出されていません");
 		NOX_ASSERT(write_accesses[0].type == &nox::reflection::Typeof<TestCounterService>(),
-			u"Serviceの型情報が一致しません");
-		NOX_ASSERT(write_accesses[0].write, u"非constのServiceが書き込み扱いになっていません");
+			u8"Serviceの型情報が一致しません");
+		NOX_ASSERT(write_accesses[0].write, u8"非constのServiceが書き込み扱いになっていません");
 
 		const std::span<const nox::legacy::ServiceAccess> read_accesses = ReadSignature::GetServiceAccesses();
-		NOX_ASSERT(read_accesses.size() == 1u, u"const参照のServiceが宣言に載っていません");
-		NOX_ASSERT(read_accesses[0].write == false, u"const参照のServiceが書き込み扱いになっています");
+		NOX_ASSERT(read_accesses.size() == 1u, u8"const参照のServiceが宣言に載っていません");
+		NOX_ASSERT(read_accesses[0].write == false, u8"const参照のServiceが書き込み扱いになっています");
 
 		//	ComponentDataとEntityCommandsはServiceの宣言に算入されない。
 		NOX_ASSERT((nox::legacy::EntitySignature<TestPosition&, nox::legacy::EntityCommands&>::GetServiceAccesses().empty()),
-			u"Service以外の引数がServiceの宣言に混ざっています");
+			u8"Service以外の引数がServiceの宣言に混ざっています");
 
 		//	記述子経由でも同じ宣言が読める。
 		const nox::legacy::EntitySystemTypeDescriptor* const move_system = FindEntitySystemType("TestMoveSystem");
 		NOX_ASSERT(move_system != nullptr && move_system->get_service_accesses != nullptr,
-			u"EntitySystemの記述子にServiceの宣言が載っていません");
+			u8"EntitySystemの記述子にServiceの宣言が載っていません");
 		NOX_ASSERT(move_system != nullptr && move_system->get_service_accesses().empty(),
-			u"Serviceを宣言していないSystemにServiceの宣言が載っています");
+			u8"Serviceを宣言していないSystemにServiceの宣言が載っています");
 	}
 
 	/// @brief 生成器が名前を書けない型でも、手書きの特殊化で同じ経路に載る。
@@ -677,19 +677,19 @@ namespace
 		static constexpr nox::legacy::EntityLogicTypeDescriptor k_descriptor =
 			nox::legacy::MakeEntityLogicTypeDescriptor<ManualLogic>();
 
-		NOX_ASSERT(k_descriptor.get_methods().size() == 1u, u"手書きのメソッド表が読めていません");
+		NOX_ASSERT(k_descriptor.get_methods().size() == 1u, u8"手書きのメソッド表が読めていません");
 		NOX_ASSERT(k_descriptor.make_required_mask() == nox::MakeComponentMask<TestHealth>(),
-			u"手書きのメソッド表から必須ComponentDataが導出されていません");
+			u8"手書きのメソッド表から必須ComponentDataが導出されていません");
 		//	Worldの表には載らない(生成器から見えない型のため)。
 		NOX_ASSERT(FindEntityLogicType("ManualHealthLogic") == nullptr,
-			u"生成コードから見えないはずの型が表に載っています");
+			u8"生成コードから見えないはずの型が表に載っています");
 
 		nox::legacy::EntityLogicStorage storage(k_descriptor);
 		const nox::Entity entity = world.CreateEntity();
 		world.AddComponent<TestHealth>(entity)->value = 7;
 
 		storage.CreateInstance(world, entity);
-		NOX_ASSERT(storage.GetEntries().size() == 1u, u"手書き経路でインスタンスが生成されていません");
+		NOX_ASSERT(storage.GetEntries().size() == 1u, u8"手書き経路でインスタンスが生成されていません");
 
 		const nox::legacy::EntityLogicStorage::Entry& entry = storage.GetEntries()[0];
 		k_descriptor.get_methods()[0].invoke(
@@ -700,9 +700,9 @@ namespace
 			entry.entity);
 
 		NOX_ASSERT(static_cast<ManualLogic*>(entry.instance)->tick_count == 1,
-			u"手書き経路のメソッドが呼ばれていません");
+			u8"手書き経路のメソッドが呼ばれていません");
 		NOX_ASSERT(world.TryGetComponent<TestHealth>(entity)->value == 6,
-			u"手書き経路の書き込み結果が不正です");
+			u8"手書き経路の書き込み結果が不正です");
 
 		storage.DestroyInstance(entity);
 		world.DestroyEntity(entity);

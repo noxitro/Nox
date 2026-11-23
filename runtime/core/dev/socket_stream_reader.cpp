@@ -17,7 +17,7 @@ nox::uint64 nox::dev::editor_remote::SocketStreamReader::ReadLength()
 	// LEB128（unsigned）をデコードして uint64 を返す。
 // 注意: 呼び出し側は事前に十分なバイトがバッファにあることを保証するか、
 // 	   // バッファに少なくとも1バイトあることを確認
-	NOX_ASSERT(GetReceivedSize() > 0, u"SocketStreamReaderの受信バッファが不足しています (ReadLength)");
+	NOX_ASSERT(GetReceivedSize() > 0, u8"SocketStreamReaderの受信バッファが不足しています (ReadLength)");
 //       ここでアサートが発生することを許容すること。
 	nox::uint64 value = 0;
 	nox::uint32 shift = 0;
@@ -44,7 +44,7 @@ nox::uint64 nox::dev::editor_remote::SocketStreamReader::ReadLength()
 	}
 
 	// ここに到達するのはフォーマット異常（過剰なバイト）
-	NOX_ASSERT(false, u"LEB128 デコードエラー: 長すぎるエンコーディング");
+	NOX_ASSERT(false, u8"LEB128 デコードエラー: 長すぎるエンコーディング");
 	return 0;
 }
 
@@ -59,7 +59,7 @@ void nox::dev::editor_remote::SocketStreamReader::AddReceiveBuffer(std::span<con
     const nox::uint32 free_size = k_buffer_size - GetReceivedSize() - 1;
 
 	//	バッファオーバーチェック
-	NOX_ASSERT(write_size <= free_size, u"SocketStreamReaderの受信バッファがオーバーフローしました");
+	NOX_ASSERT(write_size <= free_size, u8"SocketStreamReaderの受信バッファがオーバーフローしました");
 
 	//	先に書き込み、そのあとにrecv_pos_を更新する
 	const nox::uint32 received_pos = (recv_pos_ + write_size) & (k_buffer_size - 1);
@@ -86,7 +86,7 @@ void	nox::dev::editor_remote::SocketStreamReader::ReadBytes(std::span<nox::uint8
 	const nox::uint32 need = static_cast<nox::uint32>(dest.size());
 
 	//	バッファチェック
-	NOX_ASSERT(need <= GetReceivedSize(), u"SocketStreamReaderの受信バッファが不足しています");
+	NOX_ASSERT(need <= GetReceivedSize(), u8"SocketStreamReaderの受信バッファが不足しています");
 
 	//const nox::uint32 recv_pos = recv_pos_;
 
@@ -110,14 +110,14 @@ void	nox::dev::editor_remote::SocketStreamReader::ReadBytes(std::span<nox::uint8
 void nox::dev::editor_remote::SocketStreamReader::Read(std::span<nox::uint8> dest)
 {
 	const nox::uint64 length = ReadLength();
-	NOX_ASSERT(length <= static_cast<nox::uint64>(dest.size()), u"SocketStreamReader::ReadString: バッファサイズオーバー");
+	NOX_ASSERT(length <= static_cast<nox::uint64>(dest.size()), u8"SocketStreamReader::ReadString: バッファサイズオーバー");
 	this->ReadBytes(std::span(dest.data(), static_cast<nox::uint32>(length)));
 }
 
 void nox::dev::editor_remote::SocketStreamReader::Read(std::span<nox::char8> dest)
 {
 	const nox::uint64 length = ReadLength();
-	NOX_ASSERT(length <= static_cast<nox::uint64>(dest.size()), u"SocketStreamReader::ReadString: バッファサイズオーバー length:{0}, buffer_size:{1}", length, dest.size());
+	NOX_ASSERT(length <= static_cast<nox::uint64>(dest.size()), u8"SocketStreamReader::ReadString: バッファサイズオーバー length:{0}, buffer_size:{1}", length, dest.size());
 	this->ReadBytes(std::span<nox::uint8>(reinterpret_cast<nox::uint8*>(dest.data()), static_cast<nox::uint32>(length)));
 }
 
@@ -139,7 +139,7 @@ void nox::dev::editor_remote::SocketStreamReader::Read(nox::IntrusivePtr<nox::Ob
 	{
 		//	remote instance idが0でないなら、リモートインスタンスを探して返す
 		nox::Object* remote_instance = server_.FindRemoteInstance(remote_instance_id);
-		NOX_ASSERT(remote_instance != nullptr, u"リモートインスタンスが見つかりませんでした remote_instance_id:{0}", remote_instance_id);
+		NOX_ASSERT(remote_instance != nullptr, u8"リモートインスタンスが見つかりませんでした remote_instance_id:{0}", remote_instance_id);
 	
 		value.Reset(remote_instance);
 		return;
@@ -154,9 +154,9 @@ void nox::dev::editor_remote::SocketStreamReader::Read(nox::IntrusivePtr<nox::Ob
 			return nox::util::Deref(nox::reflection::FindClassInfo(type_name));
 		}();
 		
-	NOX_ASSERT(class_info.IsSubclassOf<nox::reflection::ReflectionObject>(), u"ReflectionObject継承のクラスではありません:{0}", class_info.GetFullName());
+	NOX_ASSERT(class_info.IsSubclassOf<nox::reflection::ReflectionObject>(), u8"ReflectionObject継承のクラスではありません:{0}", class_info.GetFullName());
 	nox::reflection::ReflectionObject* obj = static_cast<nox::reflection::ReflectionObject*>(class_info.GetType().CreateObject());
-	NOX_ASSERT(obj != nullptr, u"インスタンスの作成に失敗しました:{0}", class_info.GetFullName());
+	NOX_ASSERT(obj != nullptr, u8"インスタンスの作成に失敗しました:{0}", class_info.GetFullName());
 
 	const auto variable_list = class_info.GetVariableList();
 
@@ -255,28 +255,28 @@ void nox::dev::editor_remote::SocketStreamReader::Read(nox::IntrusivePtr<nox::Ob
 			{
 				if (variable_type_class_info->IsBaseOf(nox::reflection::Typeof<nox::reflection::ReflectionObject>()) == true)
 				{
-					NOX_ASSERT(false, u"未実装");
+					NOX_ASSERT(false, u8"未実装");
 					//	ReflectionObjectを継承したクラスか？
 				}
 				else if (variable_type.IsTypeAttributeFlag(nox::reflection::TypeAttributeFlag::TrivialCopyable))
 				{
 					//	トリビアルなクラス
-					NOX_ASSERT(false, u"未実装");
+					NOX_ASSERT(false, u8"未実装");
 				}
 				else
 				{
-					NOX_ASSERT(false, u"SocketStreamReader::Read: クラス型ですがリフレクション非対応の型です");
+					NOX_ASSERT(false, u8"SocketStreamReader::Read: クラス型ですがリフレクション非対応の型です");
 				}
 			}
 			else
 			{
-				NOX_ASSERT(false, u"SocketStreamReader::Read: クラス型ですがリフレクション非対応の型です");
+				NOX_ASSERT(false, u8"SocketStreamReader::Read: クラス型ですがリフレクション非対応の型です");
 			}
 		}
 		break;
 
 		default:
-			NOX_ASSERT(false, u"SocketStreamReader::Read: 対応していない型です");
+			NOX_ASSERT(false, u8"SocketStreamReader::Read: 対応していない型です");
 			break;
 		}
 	}
@@ -316,7 +316,7 @@ void nox::dev::editor_remote::SocketStreamReader::SkipHeader()
 	// 先頭のパケット全長(LEB128)を読み飛ばす
 	for (nox::uint32 i = 0; i < 10; ++i)
 	{
-		NOX_ASSERT(i < GetReceivedSize(), u"SocketStreamReaderの受信バッファが不足しています (SkipHeader)");
+		NOX_ASSERT(i < GetReceivedSize(), u8"SocketStreamReaderの受信バッファが不足しています (SkipHeader)");
 		const nox::uint32 idx = (read_pos_ + i) & (k_buffer_size - 1);
 		const nox::uint8 byte = buffer_[idx];
 		read_pos_ = (read_pos_ + 1) & (k_buffer_size - 1);
@@ -325,6 +325,6 @@ void nox::dev::editor_remote::SocketStreamReader::SkipHeader()
 			return;
 		}
 	}
-	NOX_ASSERT(false, u"LEB128 デコードエラー: 長すぎるエンコーディング");
+	NOX_ASSERT(false, u8"LEB128 デコードエラー: 長すぎるエンコーディング");
 }
 #endif // NOX_DEVELOP

@@ -37,7 +37,7 @@ namespace nox::render::detail
 		case nox::render::HeapType::Custom:	return ::D3D12_HEAP_TYPE_CUSTOM;
 		case nox::render::HeapType::GpuUpload:	return ::D3D12_HEAP_TYPE_UPLOAD;
 		default:
-			NOX_ASSERT(false, u"Invalid HeapType");
+			NOX_ASSERT(false, u8"Invalid HeapType");
 			return ::D3D12_HEAP_TYPE_DEFAULT;
 		}
 	}

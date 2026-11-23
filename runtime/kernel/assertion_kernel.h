@@ -6,41 +6,64 @@
 ///			assertion.hのインクルードチェーンは複雑なため、kernelでは極力こちらを使用する
 ///			制約としてfmtフォーマット処理が使えません
 #pragma once
+#include	<array>
+#include	<cstddef>
 #include	<source_location>
-#include	<concepts>
+#include	<span>
+#include	<string_view>
+#include	<type_traits>
 #include	"basic_definition.h"
 #include	"assertion_id.h"
 
-namespace nox::assertion::detail
+namespace nox::detail
 {
-	void AssertKernel(std::u16string_view error_category, std::u8string_view message, std::wstring_view filename, const std::source_location location);
-	void AssertKernel(std::u16string_view error_category, std::u16string_view message, std::wstring_view filename, const std::source_location location);
+	/// @brief	アサート失敗を通知する
+	/// @param	id				エラーID
+	/// @param	message			表示する文面
+	/// @param	source_location	発生箇所
+	void	Assert(nox::assertion::ErrorId id, std::u8string_view message, const std::source_location& source_location);
 
-	template<std::derived_from<nox::assertion::id::ErrorId> Id> //requires(std::is_invocable_r_v<std::u8string_view, Id>)
-	inline void AssertKernel(std::u8string_view message, std::wstring_view filename, const std::source_location location)
+	/// @brief	エラー型の値を整形する
+	/// @return	書き込んだ文字数
+	template<nox::assertion::AssertError Error>
+	inline std::size_t FormatDetail(const Error& error, std::span<char8_t> buffer)
 	{
-		nox::assertion::detail::AssertKernel(Id()(), message, filename, location);
+		if constexpr (std::is_empty_v<Error>)
+		{
+			return 0;
+		}
+		else
+		{
+			error.Format(buffer);
+			return std::u8string_view{ buffer.data() }.size();
+		}
 	}
 
-	template<std::derived_from<nox::assertion::id::ErrorId> Id> //requires(std::is_invocable_r_v<std::u8string_view, Id>)
-	inline void AssertKernel(std::u16string_view message, std::wstring_view filename, const std::source_location location)
+	/// @brief	エラー型のみ
+	template<nox::assertion::AssertError Error>
+	inline void AssertFailed(const std::source_location& location, const Error& error)
 	{
-		nox::assertion::detail::AssertKernel(Id()(), message, filename, location);
+		//	動的メモリ確保を避けるため、失敗時のみスタックのバッファを使用
+		std::array<char8_t, 1024> buffer = { 0 };
+		nox::detail::FormatDetail(error, std::span<char8_t>(buffer).first(buffer.size() - 1));
+		nox::detail::Assert(Error::kId, buffer.data(), location);
+	}
+
+	/// @brief	文面のみ (LogicError 扱い)
+	inline void AssertFailed(const std::source_location& location, const char8_t* message)
+	{
+		nox::detail::Assert(nox::assertion::LogicError::kId, message, location);
 	}
 }
 
 #if NOX_DEBUG || NOX_RELEASE
-#define NOX_ASSERT_KERNEL_ID_IMPL(expression, id, message) \
-	((void)(			\
-	(!!(expression)) || \
-	(::nox::assertion::detail::AssertKernel<id>(message, __FILEW__, ::std::source_location::current()),0))\
-	)
+/// @brief	アサート
+/// @param	expression	条件式
+/// @param	...			エラー型か文面のどちらか1つ
+#define	NOX_ASSERT_KERNEL(expression, ...) \
+	((void)((!!(expression)) || (::nox::detail::AssertFailed(::std::source_location::current(), __VA_ARGS__), 0)))
 //	end define
 
-/// @brief アサート
-#define NOX_ASSERT_KERNEL_ID(expression, id, message) NOX_ASSERT_KERNEL_ID_IMPL(expression, id, message)
-#define	NOX_ASSERT_KERNEL(expression, message) NOX_ASSERT_KERNEL_ID(expression, ::nox::assertion::id::Invalid, message)
 #else
-#define	NOX_ASSERT_KERNEL(...) 
-#define NOX_ASSERT_KERNEL_ID(...)
+#define	NOX_ASSERT_KERNEL(...)
 #endif // NOX_DEBUG || NOX_RELEASE

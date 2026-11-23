@@ -9,5 +9,5 @@
 #include	"assertion.h"
 void nox::detail::IntrusivePtrAbort()
 {
-	NOX_ASSERT(false, u"ここには来ないはず");
+	NOX_ASSERT(false, u8"ここには来ないはず");
 }

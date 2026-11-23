@@ -20,6 +20,6 @@ void nox::render::RenderResource::Release()
 	}
 	else if (ref_count < 0)
 	{
-		NOX_ASSERT(false, u"RenderResource::Release() ref_count_ < 0");
+		NOX_ASSERT(false, u8"RenderResource::Release() ref_count_ < 0");
 	}
 }

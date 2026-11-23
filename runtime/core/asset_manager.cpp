@@ -129,7 +129,7 @@ void nox::AssetManager::Init()
 	nox::reflection::ForeachDerivedClassInfoList<nox::Asset>([this](const nox::reflection::ClassInfo& class_info)
 		{
 			const nox::attr::Asset* const resource_attr = class_info.GetAttribute<nox::attr::Asset>();
-			NOX_ASSERT(resource_attr != nullptr, u"Asset attribute not found:{0}", class_info.GetFullName());
+			NOX_ASSERT(resource_attr != nullptr, u8"Asset attribute not found:{0}", class_info.GetFullName());
 			if (resource_attr == nullptr)
 			{
 				return;
