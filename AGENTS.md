@@ -100,6 +100,8 @@ dotnet build Editor/Studio.Wpf/Studio.Wpf.csproj
 dotnet build Editor/Studio.slnx
 ```
 
+AvalonDock は `Dirkster.AvalonDock` (名前空間 `AvalonDock`) を使う。Xceed 版の名前空間 (`Xceed.Wpf.AvalonDock`) やコンポーネントは使わない。
+
 ## Runtime (C++) コーディング規約
 
 原則として [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html) に従う。ただし「最優先ルール」と以下の例外が優先する。
@@ -151,7 +153,7 @@ dotnet build Editor/Studio.slnx
 
 ### Reflection / 属性マクロ
 
-`NOX_ATTR_DECLARATION` / `NOX_ATTR_DECLARE` は型専用ではない。メンバ変数・メンバ関数に加え、グローバル変数・グローバル関数など型以外の宣言にも付く。ReflectionGenerator を直すときも型専用として扱わない。
+属性を付けるマクロは、型用の `NOX_ATTR_TYPE` と、型以外の宣言用の `NOX_ATTR_DECLARE` に分かれている。`NOX_ATTR_DECLARE` はメンバ変数・メンバ関数に加え、グローバル変数・グローバル関数にも付く。ReflectionGenerator を直すときも、属性を型専用として扱わない。
 
 ### ECS の型の置き場所と書き方
 
@@ -163,7 +165,7 @@ dotnet build Editor/Studio.slnx
 - EntityLogic のメソッドは、自由な名前のメンバ関数を `RegisterList` に `Register<&T::Method, Trigger, Options...>` で登録する。オプションは基底と `Register` の両方に書ける (Add / Remove の `Register` には Query を変えるオプションを書けない)。別々に登録したメソッドの間に順番の保証はない。
 - メソッドの中で使うもの (Component、Service、`EntityCommands&` など) は引数で受け取り、オプションにしない。
 - 利用者の System / Logic は全て Update の区間で動く (区間を選ぶ書き方は無い)。
-- 詳細と決めた理由は `docs/runtime-ecs.md`。
+- 詳細と決めた理由は `docs/runtime-ecs.md`。main の実装がまだこの形に揃っていない所 (`nox::concepts::OrderTarget` が無い、など) は、同じ文書の冒頭にまとめてある。
 
 ## Editor / Runtime の構成
 

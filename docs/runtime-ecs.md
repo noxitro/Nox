@@ -9,10 +9,11 @@
   - 同じ EntityLogic の型のメソッドどうしの衝突: そのブランチは必ず衝突させるが、この文書では `this` を Component へのアクセスとして扱って判定する (§4)。
 - Service の書き方 (寿命、ノードになるメソッドの宣言) は、まだこの文書の対象外。`RunAfter` / `RunBefore` の相手に Service を書いたときの意味だけを §7 で決める。
 - main のコードは、まだこの文書の形に揃っていない。実装を合わせるときは、この文書を正とする。
-  - `runtime/core/entity_system.h` には `nox::EntitySystem<T, Options...>` の宣言と印の型 (`nox::RequireComponents` / `nox::RunAfter` / `nox::RunBefore`) があるが、Doxygen の説明は位置で決まる旧い形 (ExtraRequiredComponents / AfterSystems / BeforeSystems) のまま。
-  - 基底は `nox::EntitySystemBase` (`nox` 直下) のままで、`nox::concepts::EntitySystem` もそれを参照している。`nox::detail` へは未移動。
-  - オプションの解析、private への格納、private メソッドの検出は未実装。`nox::ExcludeComponents` も未実装。
-  - 実際に使われている System は `nox::legacy::EntitySystem`。EntityLogic の新しい形は main にまだ無い。
+  - `runtime/core/entity_system.h` には `nox::EntitySystem<T, Options...>` の宣言が、`runtime/core/updater_node.h` には印の型 (`nox::RequireComponents` / `nox::ExcludeComponents` / `nox::RunAfter` / `nox::RunBefore`) があるが、`nox::EntitySystem` の Doxygen の説明は位置で決まる旧い形 (ExtraRequiredComponents / AfterSystems / BeforeSystems) のまま。
+  - EntitySystem / EntityLogic の基底は `nox::detail::EntitySystemBase` / `nox::detail::EntityLogicBase` へ移してあり (§1)、`nox::concepts::EntitySystem` もそれを参照している。
+  - オプションの解析、private への格納、private メソッドの検出は未実装。印の型は宣言だけで、基底と `Register` のどちらに書いたオプションもまだ読まれない。
+  - 新しい形で書いてあるのは `nox::systems::Camera` (`nox::EntitySystem`) と `nox::dev::entity_logics` の 2 つ (`nox::EntityLogic`) だけで、テストとベンチマークの System / Logic は `nox::legacy::EntitySystem` / `nox::legacy::EntityLogic` のまま。
+  - EntityLogic のメソッドの登録は、§4 の `RegisterList` ではなく、static の `GetNodeDescriptor()` が `node_descriptor_v<Register<...>...>` を返す形になっている。
   - Component の基底は `nox::detail::IComponentData` へ移してあり (§1)、core・テスト・ベンチマークの Component は `final` で `nox::Component<T>` を継承している。`nox` 直下の前方宣言は残っていない。`RunAfter` / `RunBefore` の相手を表す共通の印の基底 `nox::detail::UpdaterNodeOwnerBase` はあるが、コンセプト `nox::concepts::OrderTarget` (§1) は無く、`RunAfter` / `RunBefore` は相手を検査していない。
 - 決まっていない点は §10 にまとめる。
 
