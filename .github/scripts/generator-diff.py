@@ -46,8 +46,16 @@ CHILD_LABELS = {
     "EnumList": "enum",
 }
 
-# 要約に載せる差分の行数。全体は generator.diff を読む
+# 要約に載せる差分の抜粋の量。全体は generator.diff を読む。
+# TypeDB を直したテキストは 1 行が長い (関数 1 つで数千文字) ので、行の長さと全体の文字数も絞る。
+# GITHUB_STEP_SUMMARY は 1 ステップあたり 1 MiB までで、超えると要約ごと捨てられる。
 SUMMARY_DIFF_LINES = 200
+SUMMARY_LINE_CHARS = 300
+SUMMARY_DIFF_CHARS = 60_000
+
+# TypeDB のフィールドの違いの表に載せる種類の数と、例の文字数
+SUMMARY_FIELD_ROWS = 40
+SUMMARY_EXAMPLE_CHARS = 160
 
 
 def list_files(root: str) -> dict:
@@ -100,6 +108,86 @@ def dump_typedb(src: str, dst: str) -> None:
 
         for namespace in root.get("NamespaceList") or ():
             emit("namespace", namespace, 0)
+
+
+def _field_diffs(a, b, path: str = ""):
+    """2 つの値 (TypeDB の宣言を JSON にしたもの) の、違うフィールドを (パス, 基準の値, 今の値) で列挙する"""
+    if type(a) is not type(b):
+        yield path, a, b
+    elif isinstance(a, dict):
+        for key in list(a.keys()) + [k for k in b.keys() if k not in a]:
+            if a.get(key) != b.get(key):
+                yield from _field_diffs(a.get(key), b.get(key), f"{path}.{key}")
+    elif isinstance(a, list):
+        if len(a) != len(b):
+            yield f"{path}[] の数", len(a), len(b)
+        else:
+            for x, y in zip(a, b):
+                if x != y:
+                    yield from _field_diffs(x, y, f"{path}[]")
+    else:
+        yield path, a, b
+
+
+def summarize_typedb_patch(patch: str, counter: dict) -> None:
+    """TypeDB の差分 (宣言 1 つが 1 行) を、宣言の種類とフィールドごとに数えて counter に足す
+
+    削除行と追加行が同じ数だけ並ぶ塊は、同じ宣言の中身が変わったものとして 1 行ずつ組にし、
+    違うフィールドを数える。数が合わない塊は、宣言の追加・削除・並びの変化として数える。
+    counter は (宣言の種類, フィールド) → [件数, 例] の辞書。
+    """
+
+    def parse(line: str):
+        label, _, text = line.strip().partition(" ")
+        return label, json.loads(text)
+
+    def add(key, example):
+        entry = counter.setdefault(key, [0, example])
+        entry[0] += 1
+
+    def flush(removed: list, added: list) -> None:
+        if not removed and not added:
+            return
+        if len(removed) != len(added):
+            for line in removed:
+                label, node = parse(line)
+                add((label, "(宣言の削除・並びの変化)"), (node.get("FullName", ""), "", ""))
+            for line in added:
+                label, node = parse(line)
+                add((label, "(宣言の追加・並びの変化)"), (node.get("FullName", ""), "", ""))
+            return
+        for before, after in zip(removed, added):
+            label, a = parse(before)
+            _, b = parse(after)
+            for path, va, vb in _field_diffs(a, b):
+                add((label, path or "(全体)"), (a.get("FullName", ""), va, vb))
+
+    removed, added = [], []
+    in_header = True
+    for line in patch.splitlines():
+        if line.startswith("@@"):
+            in_header = False
+            flush(removed, added)
+            removed, added = [], []
+            continue
+        if in_header:
+            continue
+        if line.startswith("-"):
+            if added:
+                flush(removed, added)
+                removed, added = [], []
+            removed.append(line[1:])
+        elif line.startswith("+"):
+            added.append(line[1:])
+        else:
+            flush(removed, added)
+            removed, added = [], []
+    flush(removed, added)
+
+
+def clip(value, limit: int) -> str:
+    text = str(value)
+    return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
 def git_diff(base: str, head: str, label: str) -> tuple[str, int, int]:
@@ -167,6 +255,7 @@ def main() -> int:
     rows = []  # (相対パス, 状態, 追加, 削除)
     patches = []
     unchanged = 0
+    typedb_fields = {}  # (宣言の種類, フィールド) → [件数, 例]
     for rel in sorted(set(base_files) | set(head_files)):
         base_path = base_files.get(rel)
         head_path = head_files.get(rel)
@@ -194,6 +283,7 @@ def main() -> int:
                 # 宣言の中身は同じで、MessagePack の符号化だけが違う
                 rows.append((rel, "変更 (符号化だけ)", "0", "0"))
                 continue
+            summarize_typedb_patch(patch, typedb_fields)
         else:
             patch, added, removed = git_diff(base_path, head_path, rel)
         rows.append((rel, "変更", str(added), str(removed)))
@@ -214,11 +304,33 @@ def main() -> int:
         lines.append("|---|---|---:|---:|")
         for rel, state, added, removed in rows:
             lines.append(f"| `{rel}` | {state} | {added} | {removed} |")
+        if typedb_fields:
+            # 違いを宣言の種類とフィールドで数えた表。TypeDB の差分は行が長く、抜粋だけでは何が変わったか読めないため
+            lines.append("")
+            lines.append("TypeDB の違い (宣言の種類とフィールドごとの件数。例は最初に見つかったもの):")
+            lines.append("")
+            lines.append("| 宣言 | フィールド | 件数 | 例 (宣言 / 基準 → 今) |")
+            lines.append("|---|---|---:|---|")
+            ordered = sorted(typedb_fields.items(), key=lambda item: -item[1][0])
+            for (label, path), (count, (name, before, after)) in ordered[:SUMMARY_FIELD_ROWS]:
+                example = f"`{clip(name, SUMMARY_EXAMPLE_CHARS)}`"
+                if before != "" or after != "":
+                    example += f" / `{clip(before, SUMMARY_EXAMPLE_CHARS)}` → `{clip(after, SUMMARY_EXAMPLE_CHARS)}`"
+                lines.append(f"| {label} | `{path}` | {count} | {example.replace('|', '&#124;')} |")
+            if len(ordered) > SUMMARY_FIELD_ROWS:
+                lines.append(f"| … | ほか {len(ordered) - SUMMARY_FIELD_ROWS} 種類 | | |")
         all_lines = "".join(patches).splitlines()
         if all_lines:
-            shown = all_lines[:SUMMARY_DIFF_LINES]
+            shown = []
+            size = 0
+            for line in all_lines[:SUMMARY_DIFF_LINES]:
+                line = clip(line, SUMMARY_LINE_CHARS)
+                size += len(line) + 1
+                if size > SUMMARY_DIFF_CHARS:
+                    break
+                shown.append(line)
             lines.append("")
-            lines.append(f"<details><summary>差分 (先頭 {len(shown)} / {len(all_lines)} 行。全体はアーティファクトの generator.diff)</summary>")
+            lines.append(f"<details><summary>差分 (先頭 {len(shown)} / {len(all_lines)} 行、長い行は切り詰め。全体はアーティファクトの generator.diff)</summary>")
             lines.append("")
             lines.append("```diff")
             lines.extend(shown)
