@@ -59,7 +59,7 @@ MSVC でビルドした場合 `ReflectionParseIncludePath` は `$(IncludePath)` 
 
 解析に使う libclang は `ReflectionGenerator.csproj` の 4 つのパッケージ (`ClangSharp` / `ClangSharp.Interop` / `libclang.runtime.win-x64` / `libClangSharp.runtime.win-x64`) で決まる。版は揃えて上げる (`libClangSharp.runtime.win-x64` は `ClangSharp.Interop` の nuspec が求める版にする)。
 
-- MSVC の標準ライブラリは、対応する clang の最低の版を `yvals_core.h` の static_assert (STL1000) で確かめる。ランナーの MSVC が上がると、古い libclang では解析の最初で止まる。
+- MSVC の標準ライブラリは、対応する clang の最低の版を `yvals_core.h` の static_assert (STL1000) で確かめる。ランナーの MSVC が上がると、古い libclang では解析の最初で止まる。解析のときだけ `_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH` を定義すれば検査は外れるが、標準ライブラリが新しい clang の機能に頼り始めると通らなくなるので、仮の対処に留めて libclang を上げる。
 - 型の完全修飾名や宣言の並びは、生成コードと RuntimeTypeDB を通じて保存データと Editor の通信に載る。生成器を変えた push では CI の Generator diff ジョブが、変える前の生成器と生成物を比べるので、差分が無いか、意図した差分だけかを確かめてから入れる (`.github/workflows/ci.yml` のジョブのコメント)。
 - 型から宣言を引くときは `CXType.Declaration` ではなく `GetDeclaration()` (`Parser/ClangSharpExtension.cs`) を使う。libclang 22 から、型が返す宣言は定義とは限らない (正規の型なら最初の宣言、ソースに書いた型なら名前で見つけた宣言) ので、定義 (無ければ最初の宣言) に揃えている。宣言のキー (`UniqueDeclKey`) はソース上の位置を含むので、揃えないと登録した定義のキーと食い違う。
 - libclang 21 までは、ソースに書いた型名 (別名・修飾付きの型・テンプレートの特殊化) が `Elaborated` に包まれて届いた。22 では型そのものが修飾を持つ形で届くので、`IsWrittenTypeName()` (`Parser/CppParser2.cs`) で見分けて正規の型へ進める。
