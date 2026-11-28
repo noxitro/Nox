@@ -19,6 +19,56 @@ runs:
   using: composite
   steps:
     # -------------------------------------------------------
+    # Visual Studio のツールチェーン固定
+    #
+    # windows-latest は定期的に Visual Studio の更新を受ける。
+    # 18.12 の MSVC で reflection_generated_test の compiler-generated .asm が
+    # 開けず C1083 / D8040 が再現したため、18.11 LTSCへ固定する。
+    #
+    # 18.11 系が既に入っているホストではインストーラーを起動せず、
+    # 18.12 系だけ LTSC Enterpriseへ切り替える。
+    # -------------------------------------------------------
+    - name: Pin MSBuild to Visual Studio LTSC 18.11
+      shell: pwsh
+      run: |
+        $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+        $ltscPath = & $vswhere -all -products * -requires Microsoft.Component.MSBuild -version "[18.11,18.12)" -property installationPath |
+          Select-Object -First 1
+        if ($ltscPath)
+        {
+          Write-Host "Visual Studio LTSC 18.11: $ltscPath"
+          exit 0
+        }
+
+        $bootstrapper = Join-Path $env:RUNNER_TEMP "vs_enterprise_18.11.exe"
+        Invoke-WebRequest `
+          -Uri "https://aka.ms/vs/18/release.ltsc.18.11/vs_enterprise.exe" `
+          -OutFile $bootstrapper
+        $arguments = @(
+          "--quiet",
+          "--wait",
+          "--norestart",
+          "--installWhileDownloading",
+          "--channelUri", "https://aka.ms/vs/18/release.ltsc.18.11/channel",
+          "--channelId", "VisualStudio.18.Release.LTSC.18.11",
+          "--add", "Microsoft.VisualStudio.Workload.NativeDesktop",
+          "--includeRecommended"
+        )
+        $process = Start-Process -FilePath $bootstrapper -ArgumentList $arguments -PassThru -Wait
+        if ($process.ExitCode -ne 0)
+        {
+          throw "Visual Studio LTSC 18.11 のセットアップに失敗しました (exit $($process.ExitCode))"
+        }
+
+        $ltscPath = & $vswhere -all -products * -requires Microsoft.Component.MSBuild -version "[18.11,18.12)" -property installationPath |
+          Select-Object -First 1
+        if (-not $ltscPath)
+        {
+          throw "Visual Studio LTSC 18.11 がセットアップ後に見つかりません"
+        }
+        Write-Host "Visual Studio LTSC 18.11: $ltscPath"
+
+    # -------------------------------------------------------
     # MSBuild の解決
     #
     # runtime 配下は PlatformToolset=v145 (runtime/Directory.Build.props)、つまり
