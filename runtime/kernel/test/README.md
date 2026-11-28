@@ -79,16 +79,48 @@ exe と gtest.dll が同じ CRT ヒープを共有する状態になります。
 
 ### コマンドラインでのビルド
 
+テストプロジェクト (`kernel_test` / `reflection_generated_test` / `core_test`) は
+`runtime.slnx` で `<Build Project="false" />` が付いていて、ソリューションのビルドでは建ちません
+(ビルドを分けている理由は `.github/workflows/ci.yml` の GoogleTest の説明を参照)。
+CI の「Build test projects」と同じく、ソリューションを建てた後に 3 つの vcxproj を直接建てます。
+順番は `kernel_test` → `reflection_generated_test` → `core_test` です。
+
 ```cmd
 cd runtime
 msbuild runtime.slnx -p:Configuration=Debug -p:Platform=x64 -m
+set TEST_PROPS=-p:Configuration=Debug -p:Platform=x64 -p:SolutionDir=%CD%\ -p:SolutionName=runtime -p:SolutionPath=%CD%\runtime.slnx -p:BuildProjectReferences=false -m
+msbuild kernel\test\kernel_test.vcxproj %TEST_PROPS%
+msbuild reflection_generated_test\reflection_generated_test.vcxproj %TEST_PROPS%
+msbuild core\test\core_test.vcxproj %TEST_PROPS%
 ```
 
-vcpkg のインストール先を差し替える場合:
+`kernel_test` だけを建てるなら、`reflection_generated_test` と `core_test` の行は要りません。
+
+vcxproj を直接建てると MSBuild はソリューション由来のプロパティを設定しないので、
+ソリューションのビルドと同じ値を渡します。
+
+- `SolutionDir`: `OutDir` / `IntDir` の起点 (`property_sheet/nox_common.props`)。
+  生成器も `$(SolutionDir)bin\` から読むので、`startup.ps1` を実行したツリーの `runtime` を渡します。
+  `\` 区切りのまま、末尾に `\` を付けます。
+- `SolutionName`: 出力先 `build\<SolutionName>\` に入ります。
+- `SolutionPath`: `reflection_generated_test` が生成器へ `-solution` として渡します。
+  渡さないと `*Undefined*` という文字列のままになり、生成器が落ちます。
+- `BuildProjectReferences=false`: 参照先 (`app` / `core` / `kernel` / `reflection`) は
+  直前のソリューションのビルドで出来ているので建て直しません。
+  `core_test` の参照からは `reflection_generated_test` も建たないので、先に明示して建てます。
+
+`Configuration` / `Platform` はソリューションのビルドと揃えます
+(clang-cl で建てたなら、`-p:PlatformToolset=ClangCL` を両方に付けます)。
+`SolutionDir` を引用符で囲むと、末尾の `\"` が引用符のエスケープと解釈されて壊れます。
+パスに空白があって囲むときは、末尾を `\\"` と重ねます。
+
+手元でビルドするときの前提 (生成器の準備、ワークツリーでのビルド、vcpkg の共有) は
+`docs/local-build.md` を参照してください。
+vcpkg のインストール先を差し替える場合は、ビルドの前に環境変数を設定します
+(ソリューションのビルドとテストのビルドの両方に効きます)。
 
 ```cmd
 set NOX_VCPKG_INSTALLED_DIR=E:\path\to\vcpkg_installed
-msbuild runtime.slnx -p:Configuration=Debug -p:Platform=x64 -m
 ```
 
 ## テストの実行
