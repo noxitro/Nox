@@ -40,23 +40,32 @@ runs:
           exit 0
         }
 
-        $bootstrapper = Join-Path $env:RUNNER_TEMP "vs_enterprise_18.11.exe"
+        $bootstrapper = Join-Path $env:RUNNER_TEMP "vs_buildtools_18.11.exe"
+        $installPath = "C:\VS18LTSC"
+        $logPath = Join-Path $env:RUNNER_TEMP "vs18ltc.log"
         Invoke-WebRequest `
-          -Uri "https://aka.ms/vs/18/release.ltsc.18.11/vs_enterprise.exe" `
+          -Uri "https://aka.ms/vs/18/release.ltsc.18.11/vs_buildtools.exe" `
           -OutFile $bootstrapper
         $arguments = @(
           "--quiet",
           "--wait",
           "--norestart",
           "--installWhileDownloading",
+          "--installPath", $installPath,
           "--channelUri", "https://aka.ms/vs/18/release.ltsc.18.11/channel",
           "--channelId", "VisualStudio.18.Release.LTSC.18.11",
-          "--add", "Microsoft.VisualStudio.Workload.NativeDesktop",
-          "--includeRecommended"
+          "--add", "Microsoft.VisualStudio.Workload.VCTools",
+          "--includeRecommended",
+          "--nocache",
+          "--log", $logPath
         )
         $process = Start-Process -FilePath $bootstrapper -ArgumentList $arguments -PassThru -Wait
         if ($process.ExitCode -ne 0)
         {
+          if (Test-Path $logPath)
+          {
+            Get-Content $logPath -Tail 80
+          }
           throw "Visual Studio LTSC 18.11 のセットアップに失敗しました (exit $($process.ExitCode))"
         }
 
