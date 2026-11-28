@@ -744,6 +744,7 @@ namespace ReflectionGenerator.Parser2;
 						case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_TemplateSpecialization:
 						case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_SubstTemplateTypeParm:
 						case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_DependentName:
+						case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_DependentTemplateSpecialization:
 						case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_TemplateTypeParm:
 						case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_InjectedClassName:
 						case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_UnaryTransform:
@@ -3437,31 +3438,6 @@ public class EnumDecl : TypeDecl
 			}
 
 			TypeAttributeFlag typeAttributeFlags = GetTypeAttributeFlags(type) | addtionalAttributeFlags;
-
-			//	ソースに書いた型名 (別名・名前空間で修飾した型・テンプレートの特殊化など) は、正規の型へ進めてから扱う。
-			//	libclang 21 までは、こうした型名が Elaborated に包まれて届き、その case で正規の型へ進めていた。
-			//	libclang 22 で Elaborated が無くなり、型そのものが修飾を持つ形で届くので、同じ結果になるようここで進める。
-			//	正規の型 (テンプレートの中の依存型など) は、そのまま下の switch で扱う。
-			switch (type.TypeClass)
-			{
-				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Typedef:
-				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Using:
-				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_UnresolvedUsing:
-				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Record:
-				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Enum:
-				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_InjectedClassName:
-				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_TemplateSpecialization:
-				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_DeducedTemplateSpecialization:
-					{
-						ClangSharp.Interop.CXType canonicalType = type.CanonicalType;
-						if (ClangSharp.Interop.clang.equalTypes(type, canonicalType) == 0)
-						{
-							return GetOrCreateTypeInfo(canonicalType, typeAttributeFlags);
-						}
-					}
-					break;
-			}
-
 			TypeKind typeKind = Local.GetTypeKind(type);
 
 			switch (type.TypeClass)
@@ -3626,6 +3602,19 @@ public class EnumDecl : TypeDecl
 					break;
 					
 
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Elaborated:
+					return GetOrCreateTypeInfo(type.CanonicalType, typeAttributeFlags);
+					//typeInfo = new ElaboratedTypeInfo()
+					//{
+					//	TypeAttributeFlags = typeAttributeFlags,
+					//	Name = type.Spelling.CString,
+					//	FullName = type.CanonicalType.Spelling.CString,
+					//	Namespace = type.GetNamespace(),
+					//	PointeeType = GetOrCreateTypeInfo(type.CanonicalType),
+					//	DeclHash = type.Declaration.GetDeclId(),
+					//	TypeKind = typeKind,
+					//};
+					//break;
             case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Typedef:
             case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Using:
                 typeInfo = new TypeAliasInfo()
@@ -3756,6 +3745,7 @@ public class EnumDecl : TypeDecl
 
             case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_TemplateSpecialization:
             case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_DeducedTemplateSpecialization:
+            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_DependentTemplateSpecialization:
 					typeInfo = new UnknownTypeInfo()
 					{
 						TypeAttributeFlags = typeAttributeFlags,
