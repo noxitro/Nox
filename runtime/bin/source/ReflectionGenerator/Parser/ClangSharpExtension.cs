@@ -277,6 +277,47 @@ public static class ClangSharpExtension
         }
     }
 
+    /// <summary>
+    /// 型が指す宣言を取得する。クラス・共用体・列挙型は定義 (無ければ最初の宣言) に揃える
+    /// </summary>
+    /// <remarks>
+    /// libclang 21 までは、型から引いたクラス・列挙型の宣言は定義だった (再宣言の中から定義を選んで返していた)。
+    /// 22 からは型が覚えている宣言がそのまま返る。正規の型なら最初の宣言 (前方宣言があればそれ)、
+    /// ソースに書いた型なら名前で見つけた宣言 (定義の後に書いた前方宣言など) で、どちらも定義とは限らない。
+    /// 宣言のキー (UniqueDeclKey) はソース上の位置を含み、宣言の種類 (class / struct) も再宣言ごとに違い得るので、
+    /// 型から宣言を引くときは CXType.Declaration ではなくこちらを使う。
+    /// </remarks>
+    public static CXCursor GetDeclaration(this in CXType type)
+    {
+        return type.Declaration.GetDefinitionOrFirstDeclaration();
+    }
+
+    /// <summary>
+    /// クラス・共用体・列挙型の宣言を、定義 (無ければ最初の宣言) に揃える。それ以外の宣言はそのまま返す
+    /// </summary>
+    /// <remarks>
+    /// libclang 21 の型が返していた宣言と同じものを選ぶ (GetDeclaration を参照)。
+    /// 基底クラスの指定子から引いた宣言 (CXCursor.Referenced) も、libclang の中で型から引いているので、これで揃える。
+    /// </remarks>
+    public static CXCursor GetDefinitionOrFirstDeclaration(this in CXCursor cursor)
+    {
+        switch (cursor.Kind)
+        {
+            case CXCursorKind.CXCursor_ClassDecl:
+            case CXCursorKind.CXCursor_StructDecl:
+            case CXCursorKind.CXCursor_UnionDecl:
+            case CXCursorKind.CXCursor_EnumDecl:
+            case CXCursorKind.CXCursor_ClassTemplatePartialSpecialization:
+                {
+                    CXCursor definition = cursor.Definition;
+                    return definition.IsNull ? cursor.CanonicalCursor : definition;
+                }
+
+            default:
+                return cursor;
+        }
+    }
+
     public static string GetNamespace(this ClangSharp.Interop.CXCursor cursor)
     {
         string str = string.Empty;
@@ -303,7 +344,7 @@ public static class ClangSharpExtension
 
     public static string GetNamespace(this ClangSharp.Interop.CXType cxType)
     {
-        return cxType.Declaration.GetNamespace();
+        return cxType.GetDeclaration().GetNamespace();
     }
 
     public static List<string> GetNamespaceList(this ClangSharp.Interop.CXCursor cursor)
@@ -362,7 +403,7 @@ public static class ClangSharpExtension
     /// <returns></returns>
     public static string GetCanonicalTypeFullName(this in ClangSharp.Interop.CXType type)
     {
-        ClangSharp.Interop.CXCursor cursor = type.CanonicalType.Declaration;
+        ClangSharp.Interop.CXCursor cursor = type.CanonicalType.GetDeclaration();
 
 			if (cursor.Kind == CXCursorKind.CXCursor_NoDeclFound)
         {
@@ -610,16 +651,8 @@ public static class ClangSharpExtension
 
     private static bool IsIgnoreProperty(CXType cxType, string propertyName)
     {
-        switch (cxType.kind)
-        {
-            case CXTypeKind.CXType_Elaborated:
-                switch (propertyName)
-                {
-                    case nameof(CXType.AddrSpaceExpr):
-                        return true;
-                }
-                break;
-        }
+        //  NOTE:   libclang 21 までは、修飾付きの型名 (CXType_Elaborated) の AddrSpaceExpr を除いていた。
+        //          22 で Elaborated が無くなり、その種類の型はもう届かない。
 			return false;
 		}
 

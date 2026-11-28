@@ -9,10 +9,12 @@
   - 同じ EntityLogic の型のメソッドどうしの衝突: そのブランチは必ず衝突させるが、この文書では `this` を Component へのアクセスとして扱って判定する (§4)。
 - Service の書き方 (寿命、ノードになるメソッドの宣言) は、まだこの文書の対象外。`RunAfter` / `RunBefore` の相手に Service を書いたときの意味だけを §7 で決める。
 - main のコードは、まだこの文書の形に揃っていない。実装を合わせるときは、この文書を正とする。
-  - `runtime/core/entity_system.h` には `nox::EntitySystem<T, Options...>` の宣言と印の型 (`nox::RequireComponents` / `nox::RunAfter` / `nox::RunBefore`) があるが、Doxygen の説明は位置で決まる旧い形 (ExtraRequiredComponents / AfterSystems / BeforeSystems) のまま。
-  - 基底は `nox::EntitySystemBase` (`nox` 直下) のままで、`nox::concepts::EntitySystem` もそれを参照している。`nox::detail` へは未移動。
-  - オプションの解析、private への格納、private メソッドの検出は未実装。`nox::ExcludeComponents` も未実装。
-  - 実際に使われている System は `nox::legacy::EntitySystem`。EntityLogic の新しい形は main にまだ無い。
+  - `runtime/core/entity_system.h` には `nox::EntitySystem<T, Options...>` の宣言が、`runtime/core/updater_node.h` には印の型 (`nox::RequireComponents` / `nox::ExcludeComponents` / `nox::RunAfter` / `nox::RunBefore`) があるが、`nox::EntitySystem` の Doxygen の説明は位置で決まる旧い形 (ExtraRequiredComponents / AfterSystems / BeforeSystems) のまま。
+  - EntitySystem / EntityLogic の基底は `nox::detail::EntitySystemBase` / `nox::detail::EntityLogicBase` へ移してあり (§1)、`nox::concepts::EntitySystem` もそれを参照している。
+  - オプションの解析、private への格納、private メソッドの検出は未実装。印の型は宣言だけで、基底と `Register` のどちらに書いたオプションもまだ読まれない。
+  - §3 の「1 つも定義していなければコンパイルエラー」と、§4 の登録する翻訳単位での検査も未実装。`NOX_ECS_DECLARE_VERIFY` は friend を宣言せず、`StaticDeclareVerify()` を呼ぶだけ。`Register` の `Trigger` も記述子 (`NodeMethod`) にはまだ入らない (`RegisterTraits` はメソッド名だけを埋める)。
+  - 新しい形で書いてあるのは `nox::systems::Camera` (`nox::EntitySystem`) と `nox::dev::entity_logics` の 2 つ (`nox::EntityLogic`) だけで、テストとベンチマークの System / Logic は `nox::legacy::EntitySystem` / `nox::legacy::EntityLogic` のまま。新しい形の型は、まだどこからも登録されない (生成器の購読 (`EntityTypeGenerator.cs`) が拾うのは legacy の基底を継承した型だけで、`WorldRegistery` に登録しているのは Service だけ)。
+  - EntityLogic の `GetNodeDescriptor()` は本体をヘッダに書いている (`dev_entity_logics.h`)。クラステンプレートでないので、`node_descriptor_v<...>` はクラスの定義を読む全ての翻訳単位で実体化される。オプションの解析を足すと、§3「基底はオプションを持つだけ」と §7 の「相手の種類の検査は登録する翻訳単位で、完全型が揃ってから行う」「相手は前方宣言でよい」が EntityLogic では成り立たない (§10)。Service は本体を .cpp に書いている (`asset_manager.cpp`)。
   - Component の基底は `nox::detail::IComponentData` へ移してあり (§1)、core・テスト・ベンチマークの Component は `final` で `nox::Component<T>` を継承している。`nox` 直下の前方宣言は残っていない。`RunAfter` / `RunBefore` の相手を表す共通の印の基底 `nox::detail::UpdaterNodeOwnerBase` はあるが、コンセプト `nox::concepts::OrderTarget` (§1) は無く、`RunAfter` / `RunBefore` は相手を検査していない。
 - 決まっていない点は §10 にまとめる。
 
@@ -58,13 +60,13 @@
 ### 継承する型と、基底の置き場所
 
 - Component / EntitySystem / EntityLogic は、テンプレートの `nox::Component<T>` / `nox::EntitySystem<T, Options...>` / `nox::EntityLogic<T, Options...>` を継承する。
-- テンプレートでない基底 (`IComponentData` / `EntitySystemBase` / `EntityLogicBase`) は `nox::detail` に置く。利用者が名前を書くことはない。基底の入れ子の名前 (`Register` / `Trigger`) は、基底の名前空間に関係なく派生クラスの中からそのまま使える。ただし派生クラス自身がクラステンプレートのとき (基底がテンプレート引数に依存するとき) は、修飾なしでは見つからないので、基底の名前で修飾する。
-- Service の基底 (`nox::ServiceBase`) と、利用者が継承する `nox::Service<T>` は、Service の書き方を決めるまで今の場所のまま (§10)。ただし下の共通の印の基底は継承する。
+- テンプレートでない基底 (`IComponentData` / `EntitySystemBase` / `EntityLogicBase`) は `nox::detail` に置く。利用者が名前を書くことはない。基底の入れ子の名前 (`Register` / `Trigger` / `node_descriptor_v`) は、基底の名前空間に関係なく派生クラスの中からそのまま使える。ただし派生クラス自身がクラステンプレートのとき (基底がテンプレート引数に依存するとき) は、修飾なしでは見つからないので、基底の名前で修飾する。`node_descriptor_v` は名前空間 `nox` にも同じ名前の別のもの (`nox::node_descriptor_v<T, Registers...>`。先頭に型を取る) があり、`nox` の中で修飾しないとそちらに当たる。
+- Service の基底 (`nox::detail::ServiceBase`) と、利用者が継承する `nox::Service<T>` は、Service の書き方を決めるまで今の形のまま (§10)。下の共通の印の基底は継承している。
 - 基底を置く `detail` の名前空間のブロックには、反射の対象外の印 (`IgnoreReflection`) を付けない。Editor のロジックの一覧などで、反射の派生クラスの列挙の起点にするため。
 - Component の基底は `nox::detail::IComponentData`。Component は必ず `nox::Component<T>` を継承し、`IComponentData` を直接継承しない。テスト・ベンチマークと `nox::LocalTransform` で `nox::IComponentData` を直接継承している Component は、`IComponentData` を移すのと同じ変更で `nox::Component<T>` へ直す。名前で参照している所 (`entity_access_legacy.h`、`component_id.h`) も同じ変更で直す。`nox` 直下に `IComponentData` の前方宣言を残さない (`entity_system.h` と `world_legacy.h` にあるものも消す) (残すと `nox::IComponentData` が中身の無い別の型を指し、継承した所はコンパイルエラーに、`std::derived_from<nox::IComponentData>` のような検査は黙って常に偽になる)。
 - EntitySystem / EntityLogic / Service の基底は、共通の印 `nox::detail::UpdaterNodeOwnerBase` を public に継承する。`RunAfter` / `RunBefore` の相手になれる型 (UpdaterGraph のノードを持つ型) を、コンセプト `nox::concepts::OrderTarget` (`std::derived_from<T, nox::detail::UpdaterNodeOwnerBase>`) で判定するためで、中身も仮想関数も持たない。Component は継承しない (ノードを持たないので相手にならない)。
   - 基底の型そのもの (`nox::EntitySystem<X>` など) もコンセプトを満たしてしまうが、ノードを持たないので §7 の起動の失敗の判定で検出される。
-  - 空の基底は 1 本の継承の鎖にする。空の基底を複数並べると、MSVC の ABI (MSVC と ClangCL の両方) では空の基底の最適化が効かず、型が大きくなる。今の `nox::detail::IECSBase` / `nox::detail::ISystemBase` はこの印の基底に置き換えるか、印の基底から派生させる。
+  - 空の基底は 1 本の継承の鎖にする。空の基底を複数並べると、MSVC の ABI (MSVC と ClangCL の両方) では空の基底の最適化が効かず、型が大きくなる。今の `EntitySystemBase` / `EntityLogicBase` / `ServiceBase` は、どれも印の基底を直接継承している。
   - 1 本の鎖なら、EntityLogic の状態の大きさは増えず、「状態を持たない」の判定 (`std::is_empty_v`) も変わらない。実装ではテストで確かめる (状態を持たないロジックが `std::is_empty_v` を満たすこと、状態を持つロジックの `sizeof` が、同じメンバだけを持つ構造体の `sizeof` と一致すること)。
 
 ### 置かない場所
@@ -133,7 +135,7 @@ namespace nox::systems
 
 ### メソッドは決まった名前の static だけ
 
-- 定義できるのは `OnUpdate` / `OnAdd` / `OnRemove` の 3 つで、**全て static**。登録の一覧 (`RegisterList`) は書かない。
+- 定義できるのは `OnUpdate` / `OnAdd` / `OnRemove` の 3 つで、**全て static**。登録の記述子を返す `GetNodeDescriptor()` は基底が用意するので書かない。
 - **インスタンスは作れない。** 基底のコンストラクタは削除してある。System は状態を持たない。entity ごとの状態は Component に、World に 1 つの状態は Service に置く。
 - 関数の中の static 変数や、書き換えるグローバル変数を使わない。隠れた共有状態になり、並列に回すと競合する (コンパイル時には検出できないので規約で守る)。
 - 1 つも定義していなければコンパイルエラーにする (名前の書き間違いで、黙って何もしない System になるのを防ぐ)。この検査は、登録する翻訳単位でも行う。`NOX_ECS_DECLARE_VERIFY` は書かなくてもよいマクロなので、マクロ経由の検査だけに頼ると、書き忘れたときに検査が走らない。
@@ -179,10 +181,13 @@ namespace nox::entity_logics
 		void Initialize(nox::Entity self, const nox::components::Spawn& spawn);
 		void UpdateAI(nox::Entity self, nox::components::LocalPosition& position, const nox::services::Time& time);
 	public:
-		using RegisterList = std::tuple<
-			Register<&EnemyAI::Initialize, Trigger::Add>,
-			Register<&EnemyAI::UpdateAI, Trigger::Update, nox::RunAfter<nox::systems::Navigation>>
-		>;
+		static constexpr const nox::NodeDescriptor& GetNodeDescriptor()noexcept
+		{
+			return node_descriptor_v<
+				Register<&EnemyAI::Initialize, Trigger::Add>,
+				Register<&EnemyAI::UpdateAI, Trigger::Update, nox::RunAfter<nox::systems::Navigation>>
+			>;
+		}
 	private:
 		enum class State : nox::uint8 { Idle, Chase, Attack };
 		State state_;
@@ -191,22 +196,22 @@ namespace nox::entity_logics
 }
 ```
 
-### メソッドは `RegisterList` に自由な名前で登録する
+### メソッドは `GetNodeDescriptor()` に自由な名前で登録する
 
-- `Register<&T::Method, Trigger, Options...>` を `RegisterList` (`std::tuple`) に並べる。メソッドの名前は自由。
+- static の `GetNodeDescriptor()` を書き、基底が持つ `node_descriptor_v<...>` (`T` は基底が埋める) に `Register<&T::Method, Trigger, Options...>` を並べて返す。メソッドの名前は自由。
 - `Trigger` は呼ばれるきっかけで、`Update` (毎フレーム) / `Add` (Query に入ったとき) / `Remove` (Query から出るとき) のどれか。呼ばれる段階は §2 のとおり。
 - **ロジックの Query** は、ロジック自身のタグ + 基底の `RequireComponents` / `ExcludeComponents` で決まる。`Trigger::Add` / `Trigger::Remove` のメソッドは、entity がロジックの Query に入ったとき・出るときに呼ばれる。
 - 毎フレームのメソッドの Query は、ロジックの Query に、そのメソッドの引数の Component と `Register` のオプションを足したもの。ロジックの Query より広くならないので、毎フレームのメソッドは必ず Add の後に呼ばれる (Add の段階は毎フレームの段階より先)。状態の初期値を Add のメソッドで入れられるのは、この保証による。
 - 登録する翻訳単位で、Add / Remove のメソッドについて次を検査する: 引数に取る Component はロジックの Query で保証される型 (基底の `RequireComponents`) に限る。`Register` に Query を変えるオプション (`RequireComponents` / `ExcludeComponents`) を書かない (`RunAfter` / `RunBefore` は書ける)。
 - メソッドは static でないメンバ関数。状態を持つことが EntityLogic の存在理由なので、static で済むなら EntitySystem にする。
 - メソッドは private のままでよい (ポインタをクラスの中で取るので、アクセスの検査はそこで済む)。
-- `RegisterList` は public に書く (`NOX_ECS_DECLARE_VERIFY` は省略できるので、friend に頼らず登録の処理から読めるようにする)。
-- 登録する翻訳単位で次を検査する: 一覧が `Register` の並びである、メソッドが `T` 自身のメンバ関数である、static でない、同じメソッドを 2 回登録していない。
+- `GetNodeDescriptor()` は public に書く (`NOX_ECS_DECLARE_VERIFY` は省略できるので、friend に頼らず登録の処理から読めるようにする)。非公開にすると、エラーにならずに登録から漏れる (`WorldRegistery` は `T::GetNodeDescriptor()` を呼べるかで判定する)。
+- 登録する翻訳単位で次を検査する: `node_descriptor_v<...>` に並べた型が全て `Register` である、メソッドが `T` 自身のメンバ関数である、static でない、同じメソッドを 2 回登録していない。
 
 ### 1 つの処理は 1 つのメソッドにまとめる
 
 - 別々に登録したメソッドは、UpdaterGraph の別々のノードになる。衝突しなければ並列に動き、衝突すれば全体の実行順 (明示した辺のトポロジカル順。決まらない所は完全修飾の型名 (`Type::GetTypeName()`) + メソッド名の順。種類をまたいで短い名前が同じ型があるので、短い名前では順番が決まらない) で直列になる。
-- **同じロジックの、別々に登録したメソッドの間に順番の保証はない。** `RegisterList` に書いた順番にも意味は無い。
+- **同じロジックの、別々に登録したメソッドの間に順番の保証はない。** `node_descriptor_v<...>` に並べた順番にも意味は無い。
 - 手順を踏む処理 (知覚 → 判断 → 行動など) は、1 つのメソッド (`UpdateAI`) の中で、状態 (`State` など) を持って進める。
 - 別々に登録するのは、並列にしたいとき、きっかけが違うとき、必要な Component が違うとき (メソッドごとのオプション) に限る。
 
@@ -324,10 +329,10 @@ entity の生成・破棄、Component の追加・削除は、`nox::EntityComman
 | 型名の末尾に種類の語を付ける (`nox::systems::MoveSystem`) | 名前空間で種類が分かるので重複になる。名前空間なしで表示される場面は、表示を完全修飾名にすることで補う |
 | `IComponentData` を旧版を消すまで `nox` 直下に残す | Component の基底の置き場所が、新旧で割れたままになる。直接継承している所 (テスト・ベンチマーク・`nox::LocalTransform`) と名前で参照している所 (旧版) は機械的に直せるので、今移す |
 | 利用者も FrameIngress / Update / Presentation などの区間を選べるようにする | 区間を必要としているのはエンジンの都合 (入力の取り込み、描画への受け渡し) で、利用者のロジックにはまだ要らない。選ばせると判断が増え、区間の境目で並列性も切れる |
-| EntitySystem も `RegisterList` でメソッドを登録する | よくある形 (`OnUpdate` 1 つ) の記述が増え、メソッド名ときっかけを二重に書く。メソッドごとのオプションと複数メソッドは、関心事が 1 つの System では使わない |
+| EntitySystem も `GetNodeDescriptor()` を書いてメソッドを登録する | よくある形 (`OnUpdate` 1 つ) の記述が増え、メソッド名ときっかけを二重に書く。メソッドごとのオプションと複数メソッドは、関心事が 1 つの System では使わない |
 | EntitySystem にインスタンス (メンバ) を持たせる | Chunk を並列に回したときにメンバへの書き込みが競合する。状態は Component か Service に置けば足りる |
 | EntityLogic も決まった名前 (`OnUpdate` / `OnAdd` / `OnRemove`) にする | 1 つの Update では足りず、並列化のために別々のノードとして登録したいメソッドや、必要な Component が違うメソッドを書けない |
-| EntityLogic のメソッドを `RegisterList` に書いた順に実行する | 順番が要る処理は 1 つのメソッドにまとめる方針。別々に登録したメソッドは UpdaterGraph が並列・直列を決める |
+| EntityLogic のメソッドを `GetNodeDescriptor()` に並べた順に実行する | 順番が要る処理は 1 つのメソッドにまとめる方針。別々に登録したメソッドは UpdaterGraph が並列・直列を決める |
 | `Register` のオプションを `std::tuple<...>` で包んで渡す | 包み忘れたときに中身の無い基本テンプレートに当たり、分かりにくいエラーになる。最初から可変長で受け取れば部分特殊化も要らない |
 | きっかけの列挙を `Phase::OnUpdate` / `OnAdd` / `OnRemove` と呼ぶ | メソッドの名前が自由になると、`OnUpdate` は「`OnUpdate` という名前のメソッド」と紛らわしい。フレームの区間とも紛れるので、`Trigger::Update` / `Add` / `Remove` にする |
 | EntityLogic の Add / Remove のきっかけを、メソッドごとの Query にする | Add のメソッドの引数が揃わない entity では Add が呼ばれず、毎フレームのメソッドが状態 0 のまま動きうる。状態の初期値を Add で入れる前提が崩れる |
@@ -343,7 +348,8 @@ entity の生成・破棄、Component の追加・削除は、`nox::EntityComman
 
 ## 10. 決まっていない点
 
-- Service の書き方 (寿命、ノードになるメソッドの宣言、基底を `nox::detail` に移す時期)。
+- Service の書き方 (寿命、ノードになるメソッドの宣言)。
+- EntityLogic の `GetNodeDescriptor()` の本体の置き場所。ヘッダに書くと `node_descriptor_v<...>` がクラスを読む全ての翻訳単位で実体化されるので、§3・§7 の「オプションの解析と相手の種類の検査は登録する翻訳単位でだけ、完全型が揃ってから行う」「相手は前方宣言でよい」とどう両立させるか (Service と同じく本体を .cpp に 1 つだけ置くか、検査を別の入口へ分けるか)。
 - エンジンの区間の反映で Query から出る entity の Remove をいつ呼ぶか (反映の前にその場で呼ぶか、Update の区間まで遅らせるか)。利用者のメソッドは Update の区間で動くという規則との兼ね合いで決める。
 - Remove のメソッドが `EntityCommands&` に積んだ構造変更をいつ反映するか (同じ反映に含めるか、次の区間の末尾に回すか、Remove のメソッドでは受け取れないようにするか)。
 - EntityLogic を、その World で登録していないときの扱い (データとして付けられるが動かない、にするか)。

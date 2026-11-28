@@ -1,4 +1,1 @@
-# Copilot Instructions
-
-## General Guidelines
-- Use Dirkster.AvalonDock namespaces/components (not xceed) for AvalonDock in this repo; avoid xceed namespaces.
+このリポジトリの規約は [AGENTS.md](../../AGENTS.md) にあります。作業の前に必ず読み、それに従ってください。
