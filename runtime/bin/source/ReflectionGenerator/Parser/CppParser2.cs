@@ -1782,6 +1782,12 @@ public class EnumDecl : TypeDecl
 				//  解析時にのみ有効にするマクロ
 				parseCommandLineList.Add($"-D {Define.RUNTIME_REFLECTION_GENERATOR_DEFINE}");
 
+				//  解析に使う libclang (ClangSharp のパッケージ) は、ビルドに使う MSVC 標準ライブラリが要求する
+				//  clang より古いことがある。そのとき標準ライブラリは yvals_core.h の static_assert (STL1000) で止めるので、
+				//  解析のときだけ版の検査を外す。libclang を上げると生成結果 (型の名前など) が変わり得るので、
+				//  上げるときは生成物の差分を確かめてから入れ、そのときにこの定義を外せるか見直す。
+				parseCommandLineList.Add("-D _ALLOW_COMPILER_AND_STL_VERSION_MISMATCH");
+
 				//  カスタムタスクで解析した情報をセット
 				parseCommandLineList.Add(setupParam.CppVersion);
 
