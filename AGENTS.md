@@ -32,6 +32,7 @@
 - 落ちたらログ (`gh run view <run-id> --log-failed` など) を読み、直して push し直す。
 - runtime に効く入力が検証済みの run と同じ push (Editor だけの変更など) では、runtime の 6 構成のビルドとテストを飛ばし、キャッシュした `runtime.exe` と TypeDB で Editor と FlaUI だけを走らせる。判定は `ci.yml` の plan ジョブ。FlaUI だけ落ちて直すときは「Re-run all jobs」を使う。
 - 文書だけの変更 (`.md`・`docs/` など。除外の一覧は `ci.yml` の plan ジョブ) で、それ以外が CI gate まで通った run と同じなら、Windows のジョブを飛ばして CI gate だけ緑にする。File format の検査は走る。
+- 生成器 (`runtime/bin/source`) を変えた push では、Generator diff ジョブが変える前の生成器と同じソースを解析させ、生成物 (生成コードと RuntimeTypeDB) を 3 構成で比べる。差分があっても落ちず、警告とジョブの Summary に出る (全差分はアーティファクト `generator-diff-<構成>`)。意図した差分かを読んで確かめ、PR に書く。基準は main との分岐点。main にまだ入っていない PR の上に積んだときなどは、HEAD のコミットメッセージの最後の段落に `Generator-Diff-Base: <SHA 40 桁かブランチ名>` の行を書いて選ぶ。
 - ルールセットの必須チェックには `CI gate` を登録する。CI gate は plan / build / editor の結果を集約するジョブ。
 - テストは `runtime/core/test/` と `runtime/kernel/test/` (GoogleTest)。reflection / delegate / 型システム / メモリ管理を重点に書く。
 - ベンチマークは `runtime/bench/`。1 op あたりの確保回数が予算 (`alloc_budget`) を超えると CI が落ちる。詳細は `runtime/bench/README.md`。

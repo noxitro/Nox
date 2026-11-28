@@ -14,6 +14,8 @@
 #         をリンクする。runtime.exe がリンクする reflection_generated には
 #         テスト用の型が入らないので、構成によらずテストと本体が分かれている。
 #         前準備は .github/actions/setup-nox-build に切り出してある。
+#         生成器 (runtime/bin/source) を変えた push では Generator diff ジョブも走り、
+#         変える前の生成器と生成物 (生成コードと RuntimeTypeDB) を比べる (ジョブのコメント)。
 #         MSVC の 3 ジョブは Build runtime.slnx を C++ Build Insights で計測し、
 #         build-insights ジョブが重いヘッダ・テンプレート・関数のレポートにする
 #         (tools/build-insights/README.md)。
@@ -64,6 +66,10 @@ on:
         description: 'runtime の検証済みキャッシュを使わず、6 構成をフルで建てる'
         type: boolean
         default: false
+      generator_base:
+        description: 'Generator diff で比べる基準の生成器 (コミットの SHA 40 桁かブランチ名)。空なら main との分岐点'
+        type: string
+        default: ''
 
 # 同じ ref に新しい push が来たら、走っている古い実行を打ち切る。
 # ただし main は打ち切らない。main へ連続 push すると完了した結果が
@@ -132,6 +138,7 @@ jobs:
       runtime_key: ${{ steps.key.outputs.runtime_key }}
       skip: ${{ steps.skip.outputs.skip }}
       ci_key: ${{ steps.ci-key.outputs.ci_key }}
+      generator_base: ${{ steps.generator-base.outputs.base }}
     steps:
       # ls-tree は木だけ読めれば足りるので、作業ツリーは .github だけにする
       - name: Checkout
@@ -255,6 +262,63 @@ jobs:
             echo "- runtime_key: \`$KEY\`"
             echo "- reuse: **$reuse** ($reason)"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # generator-diff ジョブで比べる基準 (変える前の生成器のコミット) を決める。
+      # 基準は次の順で選ぶ。
+      #   1. workflow_dispatch の generator_base
+      #   2. HEAD のコミットメッセージの「Generator-Diff-Base: <SHA 40 桁かブランチ名>」の行
+      #      (トレーラー。Co-Authored-By などと同じ最後の段落に書く)
+      #   3. main との分岐点 (compare API の merge_base_commit)
+      # 2 は、main にまだ入っていない PR の上に積んだときのため (分岐点の生成器が
+      # 今のランナーの環境で解析できないなど)。main では比べない。
+      # 生成器 (runtime/bin/source と、それを建てる startup.ps1) が基準と同じなら base を空にする。
+      # 基準を決められないときも空にして比べない (plan は落とさない)。
+      - name: Decide generator diff base
+        id: generator-base
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_BASE: ${{ inputs.generator_base }}
+        run: |
+          set -uo pipefail
+          base=''
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            reason='main では比べない'
+          else
+            if [ -n "$INPUT_BASE" ]; then
+              ref="$INPUT_BASE"
+              from='workflow_dispatch の generator_base'
+            else
+              ref=$(git log -1 --format='%(trailers:key=Generator-Diff-Base,valueonly)' HEAD | head -n 1 | tr -d '[:space:]')
+              from='コミットメッセージの Generator-Diff-Base'
+              if [ -z "$ref" ]; then
+                ref=$(gh api "repos/$GITHUB_REPOSITORY/compare/main...$GITHUB_SHA" --jq '.merge_base_commit.sha') || ref=''
+                from='main との分岐点'
+              fi
+            fi
+            if [ -z "$ref" ]; then
+              reason="基準を決められない ($from)"
+            elif ! git fetch --no-tags --depth=1 origin "$ref"; then
+              reason="基準 $ref を取得できない ($from)"
+            else
+              candidate=$(git rev-parse FETCH_HEAD)
+              changed=false
+              for p in runtime/bin/source startup.ps1; do
+                if [ "$(git rev-parse -q --verify "$candidate:$p")" != "$(git rev-parse -q --verify "HEAD:$p")" ]; then
+                  changed=true
+                fi
+              done
+              if [ "$changed" = true ]; then
+                base="$candidate"
+                reason="生成器が $from ($candidate) と違う"
+              else
+                reason="生成器が $from ($candidate) と同じ"
+              fi
+            fi
+          fi
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          echo "generator_base=$base ($reason)"
+          echo "- generator diff: **${base:-なし}** ($reason)" >> "$GITHUB_STEP_SUMMARY"
 
   # =========================================================
   # Build & test: runtime.slnx を 2 コンパイラ x 3 構成で建て、
@@ -1261,6 +1325,171 @@ jobs:
           if-no-files-found: warn
 
   # =========================================================
+  # Generator diff: 生成器を変えた push で、変える前の生成器と生成物を比べる
+  #
+  # 型の完全修飾名や宣言の並びは、生成コードと RuntimeTypeDB を通じて保存データと
+  # Editor の通信に載る (AGENTS.md「ECS の型の置き場所と書き方」)。生成器 (libclang の版や
+  # 解析の手順) を変えて生成結果が黙って変わると壊れるので、同じソースを 2 つの生成器で
+  # 解析させ、生成物 (gen/ の生成コードと RuntimeTypeDB) を突き合わせる。
+  #
+  # 基準 (変える前の生成器) は plan が決める (Decide generator diff base のコメント)。
+  # 生成器が基準と同じ push、main、文書だけの push では走らない。
+  #
+  # C++ はビルドしない。reflection_generated と reflection_generated_test の
+  # ReflectionGeneratorPreProcess ターゲット (解析の前処理と生成器の呼び出し) だけを
+  # 直接走らせる。1 回目は今の生成器 (startup.ps1 が runtime\bin に置いたもの)。
+  # 2 回目は、基準のコミットを別の worktree に取り出して、その startup.ps1 で建てた生成器に
+  # NoxReflectionGeneratorExe で差し替える (reflection_generated/Directory.Build.targets)。
+  # 前処理 (CustomTask) は 2 回とも今のものを使うので、CustomTask の出力形式を変えた push では
+  # 基準の生成器が読めずに落ちることがある。
+  #
+  # 生成物は構成 (NOX_DEBUG / NOX_RELEASE / NOX_MASTER) で変わるので 3 構成で比べる。
+  # コンパイラでは変わらない (解析のインクルードパスはツールセットに依存させていない。
+  # reflection_generated/Directory.Build.targets の ReflectionParseIncludePath) ので、
+  # ツールセットは既定 (v145) のままにする。
+  #
+  # 差分があってもジョブは落とさない。生成器を変えれば生成物が変わるのは普通なので、
+  # 警告と要約 (ジョブの Summary) で知らせ、全差分はアーティファクト generator-diff-<構成> に置く。
+  # 意図した差分かは人が読んで決める。落とすのは、今の生成器での生成に失敗したときと、
+  # 比べる手順そのものが壊れたとき。基準の生成器が建たない・解析に失敗したときは、
+  # 比べられなかったことを警告して終える (基準の生成器が今のランナーの環境で動かない
+  # ことがあるため。そのときは Generator-Diff-Base で基準を選び直す)。
+  # =========================================================
+  generator-diff:
+    name: Generator diff (${{ matrix.configuration }})
+    needs: [plan]
+    if: needs.plan.outputs.skip != 'true' && needs.plan.outputs.generator_base != ''
+    runs-on: ${{ vars.NOX_RUNNER || 'windows-latest' }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration: [Debug, Release, Master]
+    env:
+      NOX_GENERATOR_BASE: ${{ needs.plan.outputs.generator_base }}
+      NOX_CONFIGURATION: ${{ matrix.configuration }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup build prerequisites
+        uses: ./.github/actions/setup-nox-build
+
+      # 生成物は gen\ に書かれる。前の生成物が残っていると、生成しなかったファイルまで
+      # 比べてしまうので、毎回消してから生成する。比べるのは生成物だけで、
+      # 解析の入力 (CustomTask が書く NoxReflectionPreData.*) は写さない。
+      - name: Generate with the current generator
+        run: |
+          $solutionDir  = (Resolve-Path 'runtime').Path + '\'
+          $solutionPath = $solutionDir + 'runtime.slnx'
+          foreach ($name in 'reflection_generated', 'reflection_generated_test') {
+            $gen = "runtime\$name\gen"
+            if (Test-Path $gen) { Remove-Item -Recurse -Force $gen }
+            msbuild "runtime\$name\$name.vcxproj" /t:ReflectionGeneratorPreProcess `
+              /p:Configuration=$env:NOX_CONFIGURATION /p:Platform=x64 `
+              "/p:SolutionDir=$solutionDir" /p:SolutionName=runtime "/p:SolutionPath=$solutionPath" `
+              /v:normal /nologo
+            if ($LASTEXITCODE -ne 0) { throw "今の生成器での生成に失敗: $name" }
+            $dest = Join-Path $env:RUNNER_TEMP "generator-diff\head\$name"
+            New-Item -ItemType Directory -Force -Path (Split-Path $dest) | Out-Null
+            Copy-Item -Recurse -Path $gen -Destination $dest
+            Remove-Item -Path (Join-Path $dest 'NoxReflectionPreData.*')
+          }
+
+      # 基準のコミットを別の worktree に取り出し、その startup.ps1 で生成器を建てる。
+      # 失敗したら比べられなかったことを警告し、ok=false で後の手順を飛ばす (ジョブは落とさない)。
+      - name: Build the base generator
+        id: base
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'generator-base'
+          $ok = $false
+          try {
+            git fetch --no-tags --depth=1 origin $env:NOX_GENERATOR_BASE
+            if ($LASTEXITCODE -ne 0) { throw "基準 $env:NOX_GENERATOR_BASE を取得できない" }
+            git worktree add --detach $dir $env:NOX_GENERATOR_BASE
+            if ($LASTEXITCODE -ne 0) { throw "基準 $env:NOX_GENERATOR_BASE を取り出せない" }
+            $startup = Join-Path $dir 'startup.ps1'
+            if (-not (Test-Path $startup)) { throw '基準に startup.ps1 が無い' }
+            & $startup
+            $exe = Join-Path $dir 'runtime\bin\ReflectionGenerator.exe'
+            if (-not (Test-Path $exe)) { throw "基準の生成器が無い: $exe" }
+            "exe=$exe" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            $ok = $true
+          }
+          catch {
+            Write-Host "::warning::基準 ($env:NOX_GENERATOR_BASE) の生成器を建てられないので、生成物を比べられなかった: $_"
+          }
+          "ok=$($ok.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          exit 0
+
+      - name: Generate with the base generator
+        id: base-generate
+        if: steps.base.outputs.ok == 'true'
+        env:
+          BASE_EXE: ${{ steps.base.outputs.exe }}
+        run: |
+          $solutionDir  = (Resolve-Path 'runtime').Path + '\'
+          $solutionPath = $solutionDir + 'runtime.slnx'
+          $ok = $true
+          foreach ($name in 'reflection_generated', 'reflection_generated_test') {
+            $gen = "runtime\$name\gen"
+            if (Test-Path $gen) { Remove-Item -Recurse -Force $gen }
+            msbuild "runtime\$name\$name.vcxproj" /t:ReflectionGeneratorPreProcess `
+              /p:Configuration=$env:NOX_CONFIGURATION /p:Platform=x64 `
+              "/p:SolutionDir=$solutionDir" /p:SolutionName=runtime "/p:SolutionPath=$solutionPath" `
+              "/p:NoxReflectionGeneratorExe=$env:BASE_EXE" `
+              /v:normal /nologo
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "::warning::基準 ($env:NOX_GENERATOR_BASE) の生成器での生成に失敗したので、生成物を比べられなかった: $name"
+              $ok = $false
+              break
+            }
+            $dest = Join-Path $env:RUNNER_TEMP "generator-diff\base\$name"
+            New-Item -ItemType Directory -Force -Path (Split-Path $dest) | Out-Null
+            Copy-Item -Recurse -Path $gen -Destination $dest
+            Remove-Item -Path (Join-Path $dest 'NoxReflectionPreData.*')
+          }
+          "ok=$($ok.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          exit 0
+
+      # TypeDB (MessagePack) を読めるテキストに直すのに msgpack を使う (generator-diff.py)
+      - name: Compare
+        if: steps.base-generate.outputs.ok == 'true'
+        run: |
+          python -m pip install --quiet --disable-pip-version-check msgpack==1.1.0
+          if ($LASTEXITCODE -ne 0) { throw 'msgpack を入れられない' }
+          $root = Join-Path $env:RUNNER_TEMP 'generator-diff'
+          python .github/scripts/generator-diff.py `
+            --base (Join-Path $root 'base') `
+            --head (Join-Path $root 'head') `
+            --out generator-diff `
+            --title "生成物の差分 ($env:NOX_CONFIGURATION、基準 $($env:NOX_GENERATOR_BASE.Substring(0, 12)))" `
+            --summary $env:GITHUB_STEP_SUMMARY
+          if ($LASTEXITCODE -ne 0) { throw "生成物の比較に失敗 (exit $LASTEXITCODE)" }
+
+      - name: Note skipped comparison in summary
+        if: steps.base.outputs.ok != 'true' || steps.base-generate.outputs.ok != 'true'
+        run: |
+          @('', "## :warning: 生成物の差分 ($env:NOX_CONFIGURATION)", '',
+            "基準 ($env:NOX_GENERATOR_BASE) の生成器を建てられないか、その生成器での生成に失敗したので、比べていない。ログの警告を参照。") |
+            Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+      # TypeDB を直したテキスト (generator-diff/typedb) は大きいので上げない
+      - name: Upload diff
+        if: always() && hashFiles('generator-diff/summary.md') != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: generator-diff-${{ matrix.configuration }}
+          path: |
+            generator-diff/summary.md
+            generator-diff/generator.diff
+          retention-days: 14
+          if-no-files-found: warn
+
+  # =========================================================
   # Build insights: 各構成のビルド計測をまとめ、レポート (単一 HTML) と要約を作る
   #
   # build マトリクスの MSVC ジョブが上げた build-insights-MSVC-<構成> を集め、
@@ -1589,16 +1818,17 @@ jobs:
   # =========================================================
   # CI gate: ルールセットの必須チェックに登録する集約ジョブ
   #
-  # 見るのは合否に効く plan / build / editor だけ。build-insights と bench-publish は
+  # 見るのは合否に効く plan / build / editor / generator-diff だけ。build-insights と bench-publish は
   # レポートで、editor-media は補助なので入れない (落ちたら notify が拾う)。
   # failure と cancelled は落とす。skip でない run では build と editor の success を
-  # 求める (skipped で素通りさせない)。
+  # 求める (skipped で素通りさせない)。generator-diff は生成器を変えた push でしか
+  # 走らないので skipped でよく、走ったときだけ success を求める (生成物の差分では落ちない)。
   # 緑で終わったら nox-ci-ok-v1-<ci_key> を保存し、文書だけ違う次の push で
   # plan が skip にできるようにする (plan ジョブの説明を参照)。
   # =========================================================
   gate:
     name: CI gate
-    needs: [plan, build, editor]
+    needs: [plan, build, editor, generator-diff]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -1611,10 +1841,11 @@ jobs:
           PLAN: ${{ needs.plan.result }}
           BUILD: ${{ needs.build.result }}
           EDITOR: ${{ needs.editor.result }}
+          GENERATOR_DIFF: ${{ needs.generator-diff.result }}
           SKIP: ${{ needs.plan.outputs.skip }}
         run: |
           set -uo pipefail
-          echo "plan=$PLAN build=$BUILD editor=$EDITOR skip=$SKIP"
+          echo "plan=$PLAN build=$BUILD editor=$EDITOR generator-diff=$GENERATOR_DIFF skip=$SKIP"
           if [ "$PLAN" != success ]; then
             echo "::error::plan が $PLAN"
             exit 1
@@ -1629,6 +1860,10 @@ jobs:
           fi
           if [ "$BUILD" != success ] || [ "$EDITOR" != success ]; then
             echo "::error::build=$BUILD editor=$EDITOR"
+            exit 1
+          fi
+          if [ "$GENERATOR_DIFF" != success ] && [ "$GENERATOR_DIFF" != skipped ]; then
+            echo "::error::generator-diff=$GENERATOR_DIFF"
             exit 1
           fi
 
@@ -1665,7 +1900,7 @@ jobs:
     # 次の成功で「復旧」だけが流れる。
     # build-insights も同じ理由で含める (レポートの生成が落ちたら気付きたい。計測自体の失敗は
     # ビルドの合否に影響させず、警告として要約に出る)。
-    needs: [plan, build, editor, build-insights, bench-publish]
+    needs: [plan, build, editor, generator-diff, build-insights, bench-publish]
     # 判定は step 側で needs.*.result を見るので、ここでは always() で拾うだけ。
     if: always() && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
