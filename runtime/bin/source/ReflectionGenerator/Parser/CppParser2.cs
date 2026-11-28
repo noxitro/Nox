@@ -129,15 +129,51 @@ namespace ReflectionGenerator.Parser2;
 
 				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Enum:
 				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Record:
-					return NormalizeTypeFqn(QualifyFqn(type.Declaration.GetFQN(), type.IsConstQualified, type.IsVolatileQualified));
+					//	ソースに書いた型名 (libclang 21 までは Elaborated だった) は、21 と同じく下の default で扱う
+					if (type.IsWrittenTypeName() == true)
+					{
+						return NormalizeTypeFqn(type.CanonicalType.Spelling.CString);
+					}
+					return NormalizeTypeFqn(QualifyFqn(type.GetDeclaration().GetFQN(), type.IsConstQualified, type.IsVolatileQualified));
 				default:
 					return NormalizeTypeFqn(type.CanonicalType.Spelling.CString);
 			}
 		}
 
+		/// <summary>
+		/// ソースに書いた型名か (libclang 21 までなら Elaborated に包まれて届いた型か)
+		/// </summary>
+		/// <remarks>
+		/// libclang 21 までは、ソースに書いた型名 (別名・名前空間で修飾した型・テンプレートの特殊化など) は
+		/// Elaborated に包まれて届き、生成器はそれを正規の型へ進めてから扱っていた。
+		/// 22 で Elaborated が無くなり、型そのものが修飾を持つ形 (正規でない Record / Typedef / TemplateSpecialization など) で届く。
+		/// 21 で Elaborated が包んでいた種類のうち、正規でないものを、ソースに書いた型名とみなす。
+		/// 正規の型 (宣言から引いた型やテンプレートの中の依存型など) は、21 でも包まれずに届いていたので false。
+		/// 例外として、別名の宣言そのものの型 (TypeAliasDecl から引いた Typedef) は 21 では包まれていなかったが、
+		/// 22 では書いた型名と見分けられないので true になる (TemplateTypeAliasDecl.PointeeType だけで、生成物には載らない)。
+		/// </remarks>
+		public static bool IsWrittenTypeName(this in ClangSharp.Interop.CXType type)
+		{
+			switch (type.TypeClass)
+			{
+				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Typedef:
+				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Using:
+				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_UnresolvedUsing:
+				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Record:
+				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Enum:
+				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_InjectedClassName:
+				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_TemplateSpecialization:
+				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_DeducedTemplateSpecialization:
+					return ClangSharp.Interop.clang.equalTypes(type, type.CanonicalType) == 0;
+
+				default:
+					return false;
+			}
+		}
+
 		private static string GetName(this in ClangSharp.Interop.CXType type)
 		{
-			return GetName(type.Declaration);
+			return GetName(type.GetDeclaration());
 		}
 
 		private static bool HasPackTemplateArgument(this ClangSharp.Interop.CXCursor cursor)
@@ -365,7 +401,7 @@ namespace ReflectionGenerator.Parser2;
 			}
 
 			// 型宣言経由
-			var td = c.Type.Declaration;
+			var td = c.Type.GetDeclaration();
 			if (!td.IsNull && td.IsDefinition)
 			{
 				def = td;
@@ -377,7 +413,7 @@ namespace ReflectionGenerator.Parser2;
 				c.kind == ClangSharp.Interop.CXCursorKind.CXCursor_TypeAliasTemplateDecl)
 			{
 				var underlying = c.TemplatedDecl.IsNull
-					? c.Type.CanonicalType.Declaration
+					? c.Type.CanonicalType.GetDeclaration()
 					: c.TemplatedDecl.UnderlyingDecl;
 
 				if (!underlying.IsNull && underlying.IsDefinition)
@@ -720,7 +756,8 @@ namespace ReflectionGenerator.Parser2;
 					return TypeKind.TypeAlias;
 				case ClangSharp.Interop.CXTypeKind.CXType_Record:
 					{
-						ClangSharp.Interop.CXCursor declaration = type.Declaration;
+						//	class / struct は再宣言ごとに違い得るので、定義の宣言で決める
+						ClangSharp.Interop.CXCursor declaration = type.GetDeclaration();
 						Util.Assert(declaration.IsNull == false);
 
 						switch(declaration.kind)
@@ -744,7 +781,6 @@ namespace ReflectionGenerator.Parser2;
 						case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_TemplateSpecialization:
 						case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_SubstTemplateTypeParm:
 						case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_DependentName:
-						case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_DependentTemplateSpecialization:
 						case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_TemplateTypeParm:
 						case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_InjectedClassName:
 						case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_UnaryTransform:
@@ -765,8 +801,7 @@ namespace ReflectionGenerator.Parser2;
 							Trace.Error(null, $"未知のタイプ:{type.kind.ToString()}");
 							return TypeKind.Invalid;
 					}
-				case ClangSharp.Interop.CXTypeKind.CXType_Elaborated:
-					return TypeKind.Invalid;
+				//	NOTE:	CXType_Elaborated は libclang 22 から届かない (修飾付きの型名は、修飾を持つ Record などで届く)
 				case ClangSharp.Interop.CXTypeKind.CXType_NullPtr:
 					return TypeKind.Nullptr;
 				default:
@@ -2748,7 +2783,7 @@ public class EnumDecl : TypeDecl
 				return;
 			}
 
-			ClangSharp.Interop.CXCursor pointeeCursor = cursor.Type.CanonicalType.Declaration;
+			ClangSharp.Interop.CXCursor pointeeCursor = cursor.Type.CanonicalType.GetDeclaration();
 			//Util.Assert(pointeeCursor.kind != ClangSharp.Interop.CXCursorKind.CXCursor_NoDeclFound, "no found decl");
 			uint pointeeDeclHash = pointeeCursor.GetDeclId();
         ClangSharp.Interop.CXCursor parentCursor = GetParentDeclCursor(cursor);
@@ -2780,7 +2815,7 @@ public class EnumDecl : TypeDecl
 				Util.BreakPoint();
 			}
 
-        VisitCursor(cursor.Type.CanonicalType.Declaration);
+        VisitCursor(cursor.Type.CanonicalType.GetDeclaration());
         VisitCursor(parentCursor);
 
 		}
@@ -2856,7 +2891,7 @@ public class EnumDecl : TypeDecl
 			};
 			AddDecl(decl);
 
-			VisitCursor(cursor.Type.CanonicalType.Declaration);
+			VisitCursor(cursor.Type.CanonicalType.GetDeclaration());
 			VisitCursor(parentCursor);
 		}
 
@@ -2874,7 +2909,9 @@ public class EnumDecl : TypeDecl
             return;
         }
 
-        ClangSharp.Interop.CXCursor referCursor = cursor.Referenced;
+			//	基底の型が指す宣言。登録した定義のキー (位置を含む) と揃えるため、定義に寄せる
+			//	(libclang 22 からは、名前で見つけた前方宣言などが返ることがある。GetDeclaration を参照)
+			ClangSharp.Interop.CXCursor referCursor = cursor.Referenced.GetDefinitionOrFirstDeclaration();
 
 			BaseSpecifierDecl decl = new BaseSpecifierDecl()
         {
@@ -3412,7 +3449,7 @@ public class EnumDecl : TypeDecl
 
 		private T GetOrCreateTypeInfo<T>(in ClangSharp.Interop.CXType type) where T : TypeInfo
 		{
-			return GetOrCreateTypeInfo<T>(type, type.Declaration);
+			return GetOrCreateTypeInfo<T>(type, type.GetDeclaration());
 		}
 
 		private T GetOrCreateTypeInfo<T>(in ClangSharp.Interop.CXType type, in ClangSharp.Interop.CXCursor declaration) where T : TypeInfo
@@ -3426,7 +3463,7 @@ public class EnumDecl : TypeDecl
 
 		private TypeInfo GetOrCreateTypeInfo(in ClangSharp.Interop.CXType type, TypeAttributeFlag addtionalAttributeFlags = TypeAttributeFlag.None)
 		{
-			return GetOrCreateTypeInfo(type, type.Declaration, addtionalAttributeFlags);
+			return GetOrCreateTypeInfo(type, type.GetDeclaration(), addtionalAttributeFlags);
 		}
 
 		private TypeInfo GetOrCreateTypeInfo(in ClangSharp.Interop.CXType type, in ClangSharp.Interop.CXCursor declaration, TypeAttributeFlag addtionalAttributeFlags = TypeAttributeFlag.None)
@@ -3444,6 +3481,16 @@ public class EnumDecl : TypeDecl
 			}
 
 			TypeAttributeFlag typeAttributeFlags = GetTypeAttributeFlags(type) | addtionalAttributeFlags;
+
+			//	ソースに書いた型名 (別名・名前空間で修飾した型・テンプレートの特殊化など) は、正規の型へ進めてから扱う。
+			//	libclang 21 までは、こうした型名が Elaborated に包まれて届き、その case で正規の型へ進めていた。
+			//	22 で Elaborated が無くなり、型そのものが修飾を持つ形で届くので、同じ結果になるようここで進める (IsWrittenTypeName)。
+			//	21 の Elaborated と同じく、書いた型名の方は _TypeDict2 に入れない。
+			if (type.IsWrittenTypeName() == true)
+			{
+				return GetOrCreateTypeInfo(type.CanonicalType, typeAttributeFlags);
+			}
+
 			TypeKind typeKind = Local.GetTypeKind(type);
 
 			switch (type.TypeClass)
@@ -3476,16 +3523,16 @@ public class EnumDecl : TypeDecl
 								typeInfo = new TemplateRecordTypeInfo()
 								{
 									TypeAttributeFlags = typeAttributeFlags,
-									Name = type.Declaration.Spelling.CString,
+									Name = type.GetDeclaration().Spelling.CString,
 									FullName = type.GetFQN(),
 									Namespace = type.GetNamespace(),
-									DeclHash = type.Declaration.GetDeclId(),
+									DeclHash = type.GetDeclaration().GetDeclId(),
 									TypeKind = typeKind,
 									TemplateArgumentList = CreateTemplateArguments(type),
 									Size = type.SizeOf,
 									Alignment = type.AlignOf,
 #if DEBUG
-									CXDecl = type.Declaration.GetDefinitionCursor(),
+									CXDecl = type.GetDeclaration().GetDefinitionCursor(),
 #endif
 								};
 								break;
@@ -3493,15 +3540,15 @@ public class EnumDecl : TypeDecl
 								typeInfo = new RecordTypeInfo()
 								{
 									TypeAttributeFlags = typeAttributeFlags,
-									Name = type.Declaration.Spelling.CString,
+									Name = type.GetDeclaration().Spelling.CString,
 									FullName = type.GetFQN(),
 									Namespace = type.GetNamespace(),
-									DeclHash = type.Declaration.GetDeclId(),
+									DeclHash = type.GetDeclaration().GetDeclId(),
 									TypeKind = typeKind,
 									Size = type.SizeOf,
 									Alignment = type.AlignOf,
 #if DEBUG
-									CXDecl = type.Declaration.GetDefinitionCursor(),
+									CXDecl = type.GetDeclaration().GetDefinitionCursor(),
 #endif
 								};
 								break;
@@ -3512,15 +3559,15 @@ public class EnumDecl : TypeDecl
 					typeInfo = new RecordTypeInfo()
 					{
 						TypeAttributeFlags = typeAttributeFlags,
-						Name = type.Declaration.Spelling.CString,
+						Name = type.GetDeclaration().Spelling.CString,
 						FullName = type.GetFQN(),
 						Namespace = type.GetNamespace(),
-						DeclHash = type.Declaration.GetDeclId(),
+						DeclHash = type.GetDeclaration().GetDeclId(),
 						TypeKind = typeKind,
 						Size = type.SizeOf,
 						Alignment = type.AlignOf,
 #if DEBUG
-						CXDecl = type.Declaration.GetDefinitionCursor(),
+						CXDecl = type.GetDeclaration().GetDefinitionCursor(),
 #endif
 					};
 					break;
@@ -3582,7 +3629,7 @@ public class EnumDecl : TypeDecl
                     FullName = type.GetFQN(),
                     Namespace = type.GetNamespace(),
                     PointeeType = GetOrCreateTypeInfo(type.PointeeType),
-                    DeclHash = type.Declaration.GetDeclId(),
+                    DeclHash = type.GetDeclaration().GetDeclId(),
 						TypeKind = typeKind,
 						Size = type.SizeOf,
 						Alignment = type.AlignOf,
@@ -3600,7 +3647,7 @@ public class EnumDecl : TypeDecl
                     FullName = type.GetFQN(),
                     Namespace = type.GetNamespace(),
                     PointeeType = GetOrCreateTypeInfo(type.PointeeType),
-						DeclHash = type.Declaration.GetDeclId(),
+						DeclHash = type.GetDeclaration().GetDeclId(),
 						TypeKind = typeKind,
 						Size = type.SizeOf,
 						Alignment = type.AlignOf,
@@ -3608,19 +3655,6 @@ public class EnumDecl : TypeDecl
 					break;
 					
 
-            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Elaborated:
-					return GetOrCreateTypeInfo(type.CanonicalType, typeAttributeFlags);
-					//typeInfo = new ElaboratedTypeInfo()
-					//{
-					//	TypeAttributeFlags = typeAttributeFlags,
-					//	Name = type.Spelling.CString,
-					//	FullName = type.CanonicalType.Spelling.CString,
-					//	Namespace = type.GetNamespace(),
-					//	PointeeType = GetOrCreateTypeInfo(type.CanonicalType),
-					//	DeclHash = type.Declaration.GetDeclId(),
-					//	TypeKind = typeKind,
-					//};
-					//break;
             case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Typedef:
             case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Using:
                 typeInfo = new TypeAliasInfo()
@@ -3630,7 +3664,7 @@ public class EnumDecl : TypeDecl
                     FullName = type.GetFQN(),
                     Namespace = type.GetNamespace(),
                     PointeeType = GetOrCreateTypeInfo(type.CanonicalType),
-						DeclHash = type.Declaration.GetDeclId(),
+						DeclHash = type.GetDeclaration().GetDeclId(),
 						TypeKind = typeKind,
 						Size = type.SizeOf,
 						Alignment = type.AlignOf,
@@ -3643,7 +3677,7 @@ public class EnumDecl : TypeDecl
 						Name = type.Spelling.CString,
 						FullName = type.GetFQN(),
 						Namespace = type.GetNamespace(),
-						DeclHash = type.Declaration.GetDeclId(),
+						DeclHash = type.GetDeclaration().GetDeclId(),
 						TypeKind = typeKind,
 						Size = type.SizeOf,
 						Alignment = type.AlignOf,
@@ -3653,7 +3687,7 @@ public class EnumDecl : TypeDecl
 				case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_Enum:
 					{
 						TypeInfo underlyingTypeInfo;
-						var integerType = type.Declaration.EnumDecl_IntegerType;
+						var integerType = type.GetDeclaration().EnumDecl_IntegerType;
 						if (integerType.kind == ClangSharp.Interop.CXTypeKind.CXType_Invalid)
 						{
 							underlyingTypeInfo = InvalidTypeInfo.Invalid;
@@ -3666,10 +3700,10 @@ public class EnumDecl : TypeDecl
 						typeInfo = new EnumTypeInfo()
 						{
 							TypeAttributeFlags = typeAttributeFlags,
-							Name = type.Declaration.Spelling.CString,
+							Name = type.GetDeclaration().Spelling.CString,
 							FullName = type.GetFQN(),
 							Namespace = type.GetNamespace(),
-							DeclHash = type.Declaration.GetDeclId(),
+							DeclHash = type.GetDeclaration().GetDeclId(),
 							TypeKind = typeKind,
 							Size = type.SizeOf,
 							Alignment = type.AlignOf,
@@ -3749,9 +3783,9 @@ public class EnumDecl : TypeDecl
 					};
 					break;
 
+            //	NOTE:	libclang 22 から DependentTemplateSpecialization は無く、TemplateSpecialization で届く
             case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_TemplateSpecialization:
             case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_DeducedTemplateSpecialization:
-            case ClangSharp.Interop.CX_TypeClass.CX_TypeClass_DependentTemplateSpecialization:
 					typeInfo = new UnknownTypeInfo()
 					{
 						TypeAttributeFlags = typeAttributeFlags,
