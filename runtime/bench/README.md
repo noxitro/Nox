@@ -51,9 +51,12 @@ GitHub のホストランナーは実行ごとに CPU の型番が変わるこ�
 
 ## 手元で走らせる
 
-```powershell
-# runtime.slnx を Release か Master で建てたあと (テストと同じく、ソリューションとは別に建てる)
-msbuild runtime\bench\bench_test.vcxproj /p:Configuration=Release /p:Platform=x64
+`bench_test` もテストと同じく `runtime.slnx` のビルドでは建たない (`<Build Project="false" />`)。
+`runtime.slnx` を Release か Master で建てた後に、リポジトリ直下から vcxproj を直接建てる。
+渡すプロパティの意味と引用符の注意は `runtime/kernel/test/README.md` の「コマンドラインでのビルド」と同じ。
+
+```cmd
+msbuild runtime\bench\bench_test.vcxproj -p:Configuration=Release -p:Platform=x64 -p:SolutionDir=%CD%\runtime\ -p:SolutionName=runtime -p:SolutionPath=%CD%\runtime\runtime.slnx -p:BuildProjectReferences=false -m
 runtime\build\runtime\x64\Release\bench_test.exe --out bench.json
 runtime\build\runtime\x64\Release\bench_test.exe --out bench.json --filter ecs/
 ```

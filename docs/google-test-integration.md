@@ -54,10 +54,14 @@ include 生成から除外している（`bin/source/ReflectionGenerator/Entry.c
 
 ### 3. ソリューションへの登録
 
-- **`runtime/runtime.slnx`**: `/tests/` フォルダに `kernel_test` / `core_test` を置く
+- **`runtime/runtime.slnx`**: `/tests/` フォルダに `kernel_test` / `core_test` と、
+  `core_test` がリンクする `reflection_generated_test` を置く
   - それぞれのテスト対象プロジェクトを `BuildDependency` に持つ
+  - 3 つとも `<Build Project="false" />` が付いていて、ソリューションのビルドでは建たない。
+    ソリューションを建てた後に vcxproj を直接建てる（「テストの実行方法」）
   - 出力は `runtime/build/runtime/x64/<Configuration>/` に落ちる
-    （`OutDir` が `build\$(SolutionName)\...` のため、ランタイム本体と同じ場所）
+    （`OutDir` が `$(SolutionDir)build\$(SolutionName)\...` のため、ランタイム本体と同じ場所。
+    vcxproj を直接建てるときも `SolutionDir` / `SolutionName` を渡してここに揃える）
 
 ### 4. GitHub Actions CI
 
@@ -65,7 +69,8 @@ include 生成から除外している（`bin/source/ReflectionGenerator/Entry.c
 
 **追加された機能**:
 1. vcpkg のセットアップ（Google Test のインストールのため）
-2. `Build & test` マトリクスジョブで `runtime.slnx` をビルド
+2. `Build & test` マトリクスジョブで `runtime.slnx` をビルドし、続く「Build test projects」で
+   `kernel_test` → `reflection_generated_test` → `core_test` の vcxproj を直接建てる
 3. テスト実行ステップ
    - 独立したジョブではなく、各マトリクスジョブの中で実行する
      （同じ構成を 2 回建てないため。かつては Build ジョブと Test ジョブに
@@ -80,13 +85,19 @@ include 生成から除外している（`bin/source/ReflectionGenerator/Entry.c
 
 CI は以下の場合に自動実行されます：
 
-1. **コミット時**: すべてのブランチへの push
-   （`**.md` / `docs/**` だけの変更は除く）
-2. **手動実行**: GitHub UI の「Run workflow」
+1. **コミット時**: すべてのブランチへの push（`ci-media/**` を除く）
+2. **手動実行**: GitHub UI の「Run workflow」（workflow_dispatch）
+
+`paths-ignore` は置いていないので、文書だけの変更でも run は起きます。
+plan ジョブが、文書など（`.md`・`docs/`・ルートの `.gitignore` と `LICENSE`・`tools/bench-site/`）を
+除いた木から `ci_key` を求め、同じ `ci_key` の木が前に CI gate まで通っていれば
+（今の ref か main の記録。main では main 自身の記録だけ）、Windows のジョブを全部飛ばして
+CI gate だけを緑にします。run ごと起こさない形にすると、文書だけの push をした PR で
+必須チェック（CI gate）が報告されず、マージできないまま残るためです。
+詳細は `.github/workflows/ci.yml` 冒頭のコメントの「文書」と plan ジョブの説明を参照。
 
 `pull_request` トリガーは使っていません。同一リポジトリのブランチへの PR は
 push 側と合わせて毎回 2 倍走り、ref が違うので concurrency でも畳めないためです。
-3. **手動実行**: GitHub Actions の UI から workflow_dispatch で手動実行可能
 
 ## テストの実行方法
 
@@ -98,11 +109,25 @@ push 側と合わせて毎回 2 倍走り、ref が違うので concurrency で�
 3. 実行可能ファイルを直接実行、またはテストエクスプローラーから実行
 
 #### コマンドライン
+
+テストプロジェクトはソリューションのビルドでは建たないので、CI の「Build test projects」と同じく、
+ソリューションを建てた後に `kernel_test` → `reflection_generated_test` → `core_test` の順で
+vcxproj を直接建てます。`SolutionDir` は `\` 区切りのまま、末尾に `\` を付けて渡します。
+
 ```cmd
 cd runtime
-msbuild runtime.slnx /p:Configuration=Debug /p:Platform=x64
+msbuild runtime.slnx -p:Configuration=Debug -p:Platform=x64 -m
+set TEST_PROPS=-p:Configuration=Debug -p:Platform=x64 -p:SolutionDir=%CD%\ -p:SolutionName=runtime -p:SolutionPath=%CD%\runtime.slnx -p:BuildProjectReferences=false -m
+msbuild kernel\test\kernel_test.vcxproj %TEST_PROPS%
+msbuild reflection_generated_test\reflection_generated_test.vcxproj %TEST_PROPS%
+msbuild core\test\core_test.vcxproj %TEST_PROPS%
 build\runtime\x64\Debug\kernel_test.exe
+build\runtime\x64\Debug\core_test.exe
 ```
+
+各プロパティの意味と引用符の注意は `runtime/kernel/test/README.md` の「コマンドラインでのビルド」、
+手元でビルドするときの前提（生成器の準備、ワークツリーでのビルド、vcpkg の共有）は
+`docs/local-build.md` を参照。
 
 ### CI での実行
 
@@ -139,7 +164,7 @@ TEST(TestSuiteName, TestName)
 - **タイプ**: Application (.exe)
 - **プラットフォーム**: x64
 - **構成**: Debug, Release, Master
-- **ツールセット**: v145 (Visual Studio 2022)
+- **ツールセット**: v145 (Visual Studio 2026)
 - **依存関係**: kernel.lib
 
 ### ビルド設定
