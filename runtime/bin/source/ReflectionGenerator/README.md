@@ -98,7 +98,7 @@ runtime/reflection_generated/gen/RuntimeTypeDB.<Platform>.<Configuration>.bin
 
 ## EntitySystem / EntityLogic の規則
 
-`Generator/EntityTypeGenerator.cs` が持つ規則。基底が `nox::EntitySystem<` なら System、`nox::legacy::EntityLogic<` なら Logic として扱う。エラーが 1 つでも出ると生成器は終了コード 1 を返し、ビルドは失敗する。
+`Generator/EntityTypeGenerator.cs` が持つ規則。基底が `nox::legacy::EntitySystem<` なら System、`nox::legacy::EntityLogic<` なら Logic として扱う (新しい形の `nox::EntitySystem<` / `nox::EntityLogic<` はまだ拾わない)。エラーが 1 つでも出ると生成器は終了コード 1 を返し、ビルドは失敗する。
 
 ### エラー (ビルドを止める)
 

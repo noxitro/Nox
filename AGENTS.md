@@ -100,6 +100,8 @@ dotnet build Editor/Studio.Wpf/Studio.Wpf.csproj
 dotnet build Editor/Studio.slnx
 ```
 
+AvalonDock は `Dirkster.AvalonDock` (名前空間 `AvalonDock`) を使う。Xceed 版の名前空間 (`Xceed.Wpf.AvalonDock`) やコンポーネントは使わない。
+
 ## Runtime (C++) コーディング規約
 
 原則として [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html) に従う。ただし「最優先ルール」と以下の例外が優先する。
@@ -151,19 +153,19 @@ dotnet build Editor/Studio.slnx
 
 ### Reflection / 属性マクロ
 
-`NOX_ATTR_DECLARATION` / `NOX_ATTR_DECLARE` は型専用ではない。メンバ変数・メンバ関数に加え、グローバル変数・グローバル関数など型以外の宣言にも付く。ReflectionGenerator を直すときも型専用として扱わない。
+属性を付けるマクロには、検査なしの `NOX_ATTR` と、属性の型を `static_assert` で確かめる `NOX_ATTR_TYPE` (型用) / `NOX_ATTR_DECLARE` (型以外の宣言用) がある。`NOX_ATTR_DECLARE` はメンバ変数・メンバ関数に加え、グローバル変数・グローバル関数にも付く。名前空間や関数の引数など、前に `static_assert` を置けない所には `NOX_ATTR` を使う。ReflectionGenerator は名前空間・変数・関数・引数の属性も読むので、直すときも属性を型専用として扱わない。
 
 ### ECS の型の置き場所と書き方
 
 - 名前空間は「モジュール → 種類」の順にする。core は `nox` 直下 (`nox::components` / `nox::services` / `nox::systems` / `nox::entity_logics`)、ほかのモジュールは `nox::render::components` のように置く。
 - 型名に種類を表す語 (`Service` / `System` / `Logic`) は付けず、種類は名前空間だけで表す (`nox::systems::Camera`)。型名を文字列で出す所 (Editor・ログ・プロファイラ) は完全修飾名を使う。種類の名前空間を 2 つ以上同時に `using namespace` しない。ヘッダでは `using namespace` しない (名前空間の別名は可)。
 - 型の完全修飾名は保存データと Editor の通信に使うので、原則として変えない (旧名を読み替える仕組みができるまでは、保存データに載った後には変えられない)。
-- Component / EntitySystem / EntityLogic は、テンプレートの `nox::Component<T>` / `nox::EntitySystem<T, Options...>` / `nox::EntityLogic<T, Options...>` を継承する。テンプレートでない基底 (`IComponentData` / `EntitySystemBase` / `EntityLogicBase`) は `nox::detail` に置き、Component の基底を直接継承しない (Service の基底は当面今の場所のまま。理由は `docs/runtime-ecs.md` §1、§10)。EntitySystem / EntityLogic / Service の基底は共通の印 `nox::detail::UpdaterNodeOwnerBase` を継承し、`RunAfter` / `RunBefore` の相手は登録する翻訳単位で `nox::concepts::OrderTarget` を確かめる。
+- Component / EntitySystem / EntityLogic は、テンプレートの `nox::Component<T>` / `nox::EntitySystem<T, Options...>` / `nox::EntityLogic<T, Options...>` を継承する。テンプレートでない基底 (`IComponentData` / `EntitySystemBase` / `EntityLogicBase`) は `nox::detail` に置き、Component の基底を直接継承しない。Service の基底 (`ServiceBase`) も `nox::detail` にあるが、Service の書き方はまだ決めていない (`docs/runtime-ecs.md` §1、§10)。EntitySystem / EntityLogic / Service の基底は共通の印 `nox::detail::UpdaterNodeOwnerBase` を継承し、`RunAfter` / `RunBefore` の相手は登録する翻訳単位で `nox::concepts::OrderTarget` を確かめる。
 - EntitySystem のメソッドは static の `OnUpdate` / `OnAdd` / `OnRemove` だけで、インスタンスは作れない。オプション (`RequireComponents` / `ExcludeComponents` / `RunAfter` / `RunBefore`) は基底のテンプレート引数に順番自由で並べる。
-- EntityLogic のメソッドは、自由な名前のメンバ関数を `RegisterList` に `Register<&T::Method, Trigger, Options...>` で登録する。オプションは基底と `Register` の両方に書ける (Add / Remove の `Register` には Query を変えるオプションを書けない)。別々に登録したメソッドの間に順番の保証はない。
+- EntityLogic のメソッドは、自由な名前のメンバ関数を、public で static の `GetNodeDescriptor()` が返す `node_descriptor_v<...>` に `Register<&T::Method, Trigger, Options...>` で並べて登録する。オプションは基底と `Register` の両方に書ける (Add / Remove の `Register` には Query を変えるオプションを書けない)。別々に登録したメソッドの間に順番の保証はない。
 - メソッドの中で使うもの (Component、Service、`EntityCommands&` など) は引数で受け取り、オプションにしない。
 - 利用者の System / Logic は全て Update の区間で動く (区間を選ぶ書き方は無い)。
-- 詳細と決めた理由は `docs/runtime-ecs.md`。
+- 詳細と決めた理由は `docs/runtime-ecs.md`。main の実装はまだこの形に揃っていない。主な差 (`nox::concepts::OrderTarget` が無い、オプションをまだ読まない、など) は同じ文書の冒頭にまとめてあるが、全部ではないので、規則が実装済みかはコードで確かめる。
 
 ## Editor / Runtime の構成
 
