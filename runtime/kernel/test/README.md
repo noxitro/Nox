@@ -145,9 +145,9 @@ TEST(TestSuiteName, TestName)
 
 ## CI での扱い
 
-`.github/workflows/ci.yml` の `test` ジョブが `runtime.slnx` を Debug で建て、
-`kernel_test.exe` と `core_test.exe` の両方を実行します。
-どちらか 1 本でも失敗すればジョブが落ちます。
+`.github/workflows/ci.yml` の `build` ジョブ (MSVC / ClangCL × Debug / Release / Master の 6 構成) が、
+それぞれ `kernel_test.exe` と `core_test.exe` を建てて実行します。
+どちらか 1 本でも失敗すればそのジョブが落ちます。
 
 ## core のテストについて
 
