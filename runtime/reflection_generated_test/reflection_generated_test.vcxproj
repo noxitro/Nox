@@ -24,15 +24,18 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <EnableUnitySupport>true</EnableUnitySupport>
+    <EnableUnitySupport Condition="'$(PlatformToolset)'=='ClangCL'">true</EnableUnitySupport>
+    <EnableUnitySupport Condition="'$(PlatformToolset)'=='v145'">false</EnableUnitySupport>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <EnableUnitySupport>true</EnableUnitySupport>
+    <EnableUnitySupport Condition="'$(PlatformToolset)'=='ClangCL'">true</EnableUnitySupport>
+    <EnableUnitySupport Condition="'$(PlatformToolset)'=='v145'">false</EnableUnitySupport>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Master|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <EnableUnitySupport>true</EnableUnitySupport>
+    <EnableUnitySupport Condition="'$(PlatformToolset)'=='ClangCL'">true</EnableUnitySupport>
+    <EnableUnitySupport Condition="'$(PlatformToolset)'=='v145'">false</EnableUnitySupport>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -187,7 +190,9 @@
     <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_7.g.cpp" />
     <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_8.g.cpp" />
     <ClCompile Include="gen\$(Platform)\$(Configuration)\global_decl_9.g.cpp" />
-    <ClCompile Include="reflect.cpp" />
+    <ClCompile Include="reflect.cpp">
+      <PrecompiledHeader Condition="'$(PlatformToolset)'=='v145'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <!--
       InitializeGen / FinalizeGen は本体 (reflection_generated) と同じものを使う。
       呼ぶ先の Register_<Platform>_<Configuration> は、このプロジェクトの gen\ に生成される。
