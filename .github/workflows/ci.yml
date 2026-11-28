@@ -665,9 +665,13 @@ jobs:
           # BuildProjectReferences=false でも参照先の出力パスは解決されるので、
           # リンク入力は変わらない。
           #
-          # 区切りを / にしてあるのは、SolutionDir の末尾が \ だと引数の
-          # 引用符がエスケープ扱いになって壊れるため。Windows は混在を許す。
-          $solutionDir  = (Resolve-Path 'runtime').Path.Replace('\', '/') + '/'
+          # 区切りはソリューションビルドと同じ \ のままにする。以前は / に置き換えて
+          # いたが、MSVC 14.52 で中間ディレクトリが D:/a/.../build\intermediate\... と
+          # 混在すると、生成器が足した entity_type_*.g.cpp の一時ファイル (*.g.asm) を
+          # 開けずに C1083 で落ちた (Debug はコンパイル、Release / Master は core_test の
+          # /LTCG)。末尾の \ は問題にならない。pwsh は空白を含まない引数を引用符で
+          # 囲まず、囲むとき (7.3 以降) は末尾の \ を重ねて渡す。
+          $solutionDir  = (Resolve-Path 'runtime').Path + '\'
           $solutionPath = $solutionDir + 'runtime.slnx'
 
           $projects = @(
@@ -746,7 +750,8 @@ jobs:
         id: bench-build
         if: always() && steps.build.outcome == 'success'
         run: |
-          $solutionDir  = (Resolve-Path 'runtime').Path.Replace('\', '/') + '/'
+          # 区切りを \ のままにする理由は Build test projects のコメントを参照
+          $solutionDir  = (Resolve-Path 'runtime').Path + '\'
           $solutionPath = $solutionDir + 'runtime.slnx'
           msbuild runtime\bench\bench_test.vcxproj `
             /p:Configuration=${{ matrix.configuration }} `
